@@ -19,7 +19,7 @@ const pool = new Pool({
 
 // Verify database connectivity on startup
 pool.connect()
-    .then(() => console.log('Connected to PostgreSQL database'))
+    .then(() => console.log('Connected To SpendWise DataBase!'))
     .catch(err => console.error('Database connection error:', err));
 
 // Export pool instance for use in other modules

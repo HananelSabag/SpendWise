@@ -1,12 +1,14 @@
-// User routes - defines user-related endpoints
+// userRoutes.js
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const { auth } = require('../middleware/auth');
 
-// Register new user route
 router.post('/register', userController.register);
-
-// Login route (we'll implement this later)
 router.post('/login', userController.login);
+router.post('/logout', auth, userController.logout);
+router.get('/profile', auth, userController.getProfile);
+router.put('/profile', auth, userController.updateProfile);
+router.post('/refresh-token', userController.refreshToken);
 
 module.exports = router;

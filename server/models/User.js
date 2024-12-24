@@ -1,60 +1,55 @@
-// User model - handles database operations for users
+// Update server/models/User.js
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 
 class User {
-    // Create new user
     static async create(email, username, password) {
         try {
-            // Hash password before storing
             const hashedPassword = await bcrypt.hash(password, 10);
-            
             const result = await db.query(
                 `INSERT INTO users (email, username, password_hash) 
                  VALUES ($1, $2, $3) 
-                 RETURNING id, email, username`,
+                 RETURNING id, email, username, created_at`,
                 [email, username, hashedPassword]
             );
-            
             return result.rows[0];
         } catch (err) {
+            if (err.code === '23505') { // unique_violation
+                throw new Error('Email already exists');
+            }
             throw new Error('Error creating user: ' + err.message);
         }
     }
-    // Add this method to the User class
-static async verifyPassword(email, password) {
-    try {
-        // Get user by email
+
+    static async findByEmail(email) {
+        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        return result.rows[0];
+    }
+
+    static async updateProfile(userId, data) {
+        const { username, currency, language } = data;
+        const result = await db.query(
+            `UPDATE users 
+             SET username = COALESCE($1, username),
+                 currency = COALESCE($2, currency),
+                 language = COALESCE($3, language),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $4
+             RETURNING id, email, username, currency, language`,
+            [username, currency, language, userId]
+        );
+        return result.rows[0];
+    }
+
+    static async verifyPassword(email, password) {
         const user = await this.findByEmail(email);
-        if (!user) {
-            return null;
-        }
+        if (!user) return null;
+        
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) return null;
 
-        // Verify password
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-        if (!validPassword) {
-            return null;
-        }
-
-        // Return user without password hash
         const { password_hash, ...userWithoutPassword } = user;
         return userWithoutPassword;
-    } catch (err) {
-        throw new Error('Login error: ' + err.message);
-    }
-}
-
-    // Find user by email - will be used for login later
-    static async findByEmail(email) {
-        try {
-            const result = await db.query(
-                'SELECT * FROM users WHERE email = $1',
-                [email]
-            );
-            return result.rows[0];
-        } catch (err) {
-            throw new Error('Error finding user: ' + err.message);
-        }
     }
 }
 
