@@ -1,175 +1,104 @@
 
-# SpendWise: Advanced Personal Finance Management System
+1. יש לנו משתמש אחד - Test User
+2. 8 קטגוריות ברירת מחדל
+3. הכנסות:
+   - הכנסה חוזרת: משכורת חודשית של 15,000₪ 
+   - שתי הכנסות חד פעמיות: פרילנס (2,500₪) ודיבידנד (500₪)
+4. הוצאות:
+   - הוצאה חוזרת: שכירות חודשית של 4,000₪
+   - שלוש הוצאות חד פעמיות: קניות (200₪), אוטובוס (50₪), חשמל (100₪)
 
-SpendWise is a sophisticated full-stack application designed to revolutionize personal finance management through real-time tracking, advanced analytics, and intelligent financial insights.
+החישוב היומי עובד כמו שצריך:
+- הכנסה יומית: ~483.87₪ (15,000₪/31 ימים)
+- הוצאה יומית: ~329.03₪ (4,000₪/31 ימים + 200₪)
+- מאזן נטו: ~154.84₪
 
-## Key Features
+בוא נכתוב הוראות התקנה מפורטות ל-README:
 
-- **Real-time Balance Tracking**
-  - Daily balance updates
-  - Expense categorization
-  - Income management
+```markdown
+# SpendWise - Personal Finance Tracker
 
-- **Smart Analytics**
-  - Expense pattern recognition
-  - Spending forecasts
-  - Budget optimization recommendations
+## התקנת הפרויקט
 
-- **Advanced Security**
-  - JWT authentication
-  - Rate limiting
-  - Data encryption
+### דרישות מקדימות
+- Node.js (גרסה 16 ומעלה)
+- PostgreSQL (גרסה 12 ומעלה)
+- npm או yarn
 
-- **Responsive Design**
-  - Mobile-first approach
-  - Cross-platform compatibility
-  - Intuitive user interface
+### שלבי התקנה
 
-## Tech Stack
-
-### Frontend
-- React 18
-- Tailwind CSS
-- Recharts
-- Axios
-
-### Backend
-- Node.js
-- Express.js
-- PostgreSQL
-- Python (Analytics Engine)
-
-### DevOps
-- Docker
-- JWT Authentication
-- Swagger Documentation
-- Winston Logging
-
-## Quick Start
-
-### Prerequisites
-- Node.js (v14+)
-- PostgreSQL (v12+)
-- Python (v3.8+)
-
-### Installation
-
+1. **שכפול המאגר**
 ```bash
-# Clone repository
-git clone https://github.com/HananelSabag/SpendWise.git
-cd SpendWise
+git clone https://github.com/your-username/spendwise.git
+cd spendwise
+```
 
-# Backend setup
+2. **התקנת חבילות**
+```bash
+# התקנת חבילות צד שרת
 cd server
 npm install
-cp .env.example .env
-# Configure .env file with your credentials
 
-# Frontend setup
+# התקנת חבילות צד לקוח
 cd ../client
 npm install
+```
 
-# Database setup
+3. **הגדרת בסיס הנתונים**
+- פתח את PostgreSQL:
+```bash
 psql -U postgres
+```
+
+- צור בסיס נתונים חדש:
+```sql
 CREATE DATABASE spendwise;
-\q
-
-# Run migrations
-cd ../server
-npm run db:migrate
 ```
 
-### Development Environment
+- חבר לבסיס הנתונים:
+```sql
+\c spendwise
+```
 
+- הרץ את קבצי המיגרציה לפי הסדר:
+```sql
+\i 'path/to/server/db/migrations/init.sql'
+\i 'path/to/server/db/migrations/003_all_tables.sql'
+\i 'path/to/server/db/migrations/004_recurring_transactions.sql'
+\i 'path/to/server/db/migrations/005_balance_calculations.sql'
+```
+
+- הכנס נתוני דוגמה (אופציונלי):
+```sql
+\i 'path/to/server/db/seeds/development.sql'
+```
+
+4. **הגדרת משתני סביבה**
+- צור קובץ `.env` בתיקיית השרת:
+```env
+PORT=5000
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=spendwise
+JWT_SECRET=your_secret_key
+DEFAULT_TIMEZONE=Asia/Jerusalem
+```
+
+5. **הרצת הפרויקט**
 ```bash
-# Start backend server
+# הרצת השרת
 cd server
 npm run dev
 
-# Start frontend development server
-cd ../client
+# הרצת הלקוח (בטרמינל נפרד)
+cd client
 npm run dev
 ```
 
-Access the application:
-- Frontend: http://localhost:5173
-- API: http://localhost:5000
-- API Documentation: http://localhost:5000/api-docs
-
-## Project Structure
-
-```
-SpendWise/
-├── client/                # React frontend
-│   ├── src/
-│   │   ├── components/   # Reusable components
-│   │   ├── pages/        # Page components
-│   │   └── services/     # API services
-├── server/               # Node.js backend
-│   ├── controllers/      # Request handlers
-│   ├── models/          # Database models
-│   ├── routes/          # API routes
-│   └── middleware/      # Custom middleware
-└── python/              # Analytics engine
-    └── analysis/        # Data analysis scripts
+הפרויקט יהיה זמין ב:
+- לקוח: http://localhost:5173
+- שרת: http://localhost:5000
 ```
 
-## API Documentation
-
-Comprehensive API documentation is available at `/api-docs` when running the server. The API follows RESTful principles and includes:
-
-- Authentication endpoints
-- User management
-- Transaction operations
-- Analytics endpoints
-
-## Testing
-
-```bash
-# Run backend tests
-cd server
-npm test
-
-# Run frontend tests
-cd client
-npm test
-```
-
-## Deployment
-
-The application supports various deployment options:
-
-```bash
-# Production build
-cd client
-npm run build
-
-cd ../server
-npm run build
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -m 'Add new feature'`
-4. Push to branch: `git push origin feature/new-feature`
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Author
-
-**Hananel Sabag**
-- GitHub: [@HananelSabag](https://github.com/HananelSabag)
-- LinkedIn: [Hananel Sabag](https://linkedin.com/in/hananel-sabag)
-
-## Acknowledgments
-
-- Modern financial management principles
-- React best practices
-- Node.js design patterns
-- PostgreSQL optimization techniques
-```

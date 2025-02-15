@@ -3,6 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Mail, Lock, User, AlertCircle, Languages } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { validateRegistration, validateField } from '../utils/validation';
+import Input from '../components/common/Input';
+import Button from '../components/common/Button'
+import FloatingMenu from '../components/common/FloatingMenu';
+
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,20 +21,21 @@ const Register = () => {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   // Input change handler with validation
   const handleInputChange = (field, value) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
-    
+
     // Validate field and set error if needed
     const fieldError = validateField(
-      field, 
-      value, 
+      field,
+      value,
       language,
       field === 'confirmPassword' ? formData.password : undefined
     );
-  
+
     if (fieldError) {
       setErrors(prev => ({ ...prev, [field]: fieldError }));
     } else {
@@ -44,7 +49,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Run validation
     const validationErrors = validateRegistration(formData, language);
     if (Object.keys(validationErrors).length > 0) {
@@ -72,7 +77,11 @@ const Register = () => {
         throw new Error(data.message || 'Registration failed');
       }
 
-      navigate('/login');
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 3000);
+
     } catch (err) {
       setErrors({ submit: err.message });
     } finally {
@@ -80,46 +89,66 @@ const Register = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex">
-      {/* Language Toggle Button */}
-      <button
-        onClick={toggleLanguage}
-        className="fixed top-4 right-4 bg-white p-2 rounded-full shadow-lg hover:shadow-xl transition-all"
-      >
-        <Languages className="h-6 w-6 text-teal-500" />
-      </button>
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center gradient-primary">
+        <div className="card p-8 text-center">
+          <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserPlus className="h-10 w-10 text-success" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {t('register.success.title')}
+          </h2>
+          <p className="text-gray-600">
+            {t('register.success.message')}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="min-h-screen gradient-primary flex">
+     {/* Language and Currency Controls */}
+     <FloatingMenu
+        buttons={[
+          {
+            label: t('floatingMenu.changeLanguage'),
+            icon: Languages,
+            onClick: toggleLanguage,
+          },
+        ]}
+      />
       {/* Left side branding */}
-      <div className="hidden lg:flex lg:w-1/2 p-12 items-center justify-center">
+      <div className="hidden lg:flex lg:w-1/2 p-12 items-center justify-center" >
         <div className="max-w-lg">
           <div className="flex items-center mb-8">
-            <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center mr-4">
+            <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center mr-4">
               <span className="text-2xl text-white font-bold">S</span>
             </div>
             <h1 className="text-4xl font-bold text-gray-800">SpendWise</h1>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6" dir={isHebrew ? 'rtl' : 'ltr'} >
             {t('register.features.title')}
           </h2>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-lg text-gray-600 mb-8" dir={isHebrew ? 'rtl' : 'ltr'}>
             {t('register.features.description')}
           </p>
-          <div className="p-6 bg-white rounded-2xl shadow-lg">
-            <div className="flex items-center text-teal-600 mb-4">
-              <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mr-3">
+          <div className="card p-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+            <div className="flex items-center text-primary-500 mb-4">
+              <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-lg">✓</span>
               </div>
               <span className="font-medium">{t('register.features.feature1')}</span>
             </div>
-            <div className="flex items-center text-teal-600 mb-4">
-              <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mr-3">
+            <div className="flex items-center text-primary-500 mb-4">
+              <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-lg">✓</span>
               </div>
               <span className="font-medium">{t('register.features.feature2')}</span>
             </div>
-            <div className="flex items-center text-teal-600">
-              <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mr-3">
+            <div className="flex items-center text-primary-500">
+              <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-lg">✓</span>
               </div>
               <span className="font-medium">{t('register.features.feature3')}</span>
@@ -131,7 +160,7 @@ const Register = () => {
       {/* Right side form */}
       <div className={`w-full lg:w-1/2 flex items-center justify-center p-8 ${isHebrew ? 'rtl' : 'ltr'}`}>
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="card p-8">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800">
                 {t('register.title')}
@@ -142,111 +171,63 @@ const Register = () => {
             </div>
 
             {/* Form area */}
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* Username field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('register.username')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-teal-500" />
-                  </div>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border ${errors.username ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200`}
-                    placeholder={t('register.usernamePlaceholder')}
-                  />
-                  {errors.username && (
-                    <p className="mt-1 text-sm text-red-500">{errors.username}</p>
-                  )}
-                </div>
-              </div>
+            <form className="space-y-6" onSubmit={handleSubmit} dir={isHebrew ? 'rtl' : 'ltr'}>
+              <Input
+                type="text"
+                label={t('register.username')}
+                value={formData.username}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                icon={User}
+                error={errors.username}
+                placeholder={t('register.usernamePlaceholder')}
+              />
 
-              {/* Email field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('register.email')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-teal-500" />
-                  </div>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200`}
-                    placeholder={t('register.emailPlaceholder')}
-                    dir="ltr"
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-                  )}
-                </div>
-              </div>
+              <Input
+                type="email"
+                label={t('register.email')}
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                icon={Mail}
+                error={errors.email}
+                placeholder={t('register.emailPlaceholder')}
+                dir={isHebrew ? 'rtl' : 'ltr'}
+              />
 
-              {/* Password field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('register.password')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-teal-500" />
-                  </div>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border ${errors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200`}
-                    placeholder={t('register.passwordPlaceholder')}
-                    dir="ltr"
-                  />
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-red-500">{errors.password}</p>
-                  )}
-                </div>
-              </div>
+              <Input
+                type="password"
+                label={t('register.password')}
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                icon={Lock}
+                error={errors.password}
+                placeholder={t('register.passwordPlaceholder')}
+                dir={isHebrew ? 'rtl' : 'ltr'}
+              />
 
-              {/* Confirm Password field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('register.confirmPassword')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-teal-500" />
-                  </div>
-                  <input
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200`}
-                    placeholder={t('register.confirmPasswordPlaceholder')}
-                    dir="ltr"
-                  />
-                  {errors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
-                  )}
-                </div>
-              </div>
+              <Input
+                type="password"
+                label={t('register.confirmPassword')}
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                icon={Lock}
+                error={errors.confirmPassword}
+                placeholder={t('register.confirmPasswordPlaceholder')}
+                dir={isHebrew ? 'rtl' : 'ltr'}
+              />
 
-              {/* Submit button */}
-              <button
+              <Button className='bg-primary-400 text-black'
                 type="submit"
+                variant="primary"
+                fullWidth
                 disabled={loading || Object.keys(errors).length > 0}
-                className="w-full py-3 px-4 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? t('register.creatingAccount') : t('register.createAccount')}
-              </button>
+              </Button>
 
               {errors.submit && (
-                <div className="p-4 bg-red-50 rounded-xl border border-red-100 flex items-center">
-                  <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-                  <span className="text-red-600">{errors.submit}</span>
+                <div className="p-4 bg-error-light rounded-xl border border-error flex items-center">
+                  <AlertCircle className="h-5 w-5 text-error mr-2" />
+                  <span className="text-error">{errors.submit}</span>
                 </div>
               )}
             </form>
@@ -255,7 +236,7 @@ const Register = () => {
             <div className="mt-6 text-center">
               <p className="text-gray-600">
                 {t('register.alreadyHaveAccount')}{' '}
-                <Link to="/login" className="text-teal-500 hover:text-teal-600 font-medium">
+                <Link to="/login" className="text-primary-500 hover:text-primary-600 font-medium">
                   {t('register.signInInstead')}
                 </Link>
               </p>

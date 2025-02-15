@@ -1,4 +1,3 @@
-// Update server/middleware/auth.js
 const jwt = require('jsonwebtoken');
 
 const generateTokens = (user) => {
@@ -7,7 +6,7 @@ const generateTokens = (user) => {
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
-  
+
   const refreshToken = jwt.sign(
     { id: user.id },
     process.env.JWT_SECRET,
@@ -24,15 +23,16 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired' });
     }
-    res.status(401).json({ error: 'Please authenticate' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 

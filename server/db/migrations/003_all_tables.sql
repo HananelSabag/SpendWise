@@ -5,6 +5,12 @@ ALTER TABLE users
 ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}',
 ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
 
+-- Update categories table
+ALTER TABLE categories
+ADD COLUMN IF NOT EXISTS icon VARCHAR(50),
+ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'expense',
+ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT false;
+
 -- Create complete expenses table
 CREATE TABLE IF NOT EXISTS expenses (
     id SERIAL PRIMARY KEY,
@@ -16,8 +22,9 @@ CREATE TABLE IF NOT EXISTS expenses (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     receipt_url TEXT,
-    tags TEXT[],
-    recurring_id INTEGER,
+    transaction_type VARCHAR(50) DEFAULT 'one_time',
+    frequency VARCHAR(50),
+    next_date DATE,
     is_recurring BOOLEAN DEFAULT false
 );
 
@@ -31,27 +38,15 @@ CREATE TABLE IF NOT EXISTS income (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_recurring BOOLEAN DEFAULT false,
-    recurring_frequency TEXT, -- 'monthly', 'weekly', etc.
-    source_type TEXT -- 'salary', 'freelance', etc.
+    transaction_type VARCHAR(50) DEFAULT 'one_time',
+    frequency VARCHAR(50),
+    next_date DATE,
+    source_type TEXT
 );
+-- Update expenses table
+ALTER TABLE expenses
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP DEFAULT NULL;
 
--- Create budgets table
-CREATE TABLE IF NOT EXISTS budgets (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    category_id INTEGER REFERENCES categories(id),
-    amount DECIMAL(10,2) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create notifications preferences
-CREATE TABLE IF NOT EXISTS notification_preferences (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) UNIQUE,
-    budget_alerts BOOLEAN DEFAULT true,
-    unusual_spending BOOLEAN DEFAULT true,
-    weekly_summary BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Update income table
+ALTER TABLE income
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP DEFAULT NULL;

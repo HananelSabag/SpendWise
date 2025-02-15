@@ -1,29 +1,44 @@
-export const getStoredToken = (key = 'accessToken') => 
-  localStorage.getItem(key);
+/**
+ * Token management functions
+ */
+export const getStoredToken = () => {
+  try {
+    return localStorage.getItem('token');
+  } catch (error) {
+    console.error('Error accessing localStorage:', error);
+    return null;
+  }
+};
 
-export const setStoredToken = (key, token) => 
+
+export const setStoredToken = (token, key = 'accessToken') => 
   localStorage.setItem(key, token);
 
-export const removeStoredToken = () => {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-};
+export const removeStoredToken = (key = 'accessToken') => 
+  localStorage.removeItem(key);
 
+/**
+ * Formatting functions
+ */
 export const formatCurrency = (amount, currency = 'ILS') => {
-  return new Intl.NumberFormat('he-IL', {
-    style: 'currency',
-    currency: currency
-  }).format(amount);
+  return new Intl.NumberFormat(
+    currency === 'ILS' ? 'he-IL' : 'en-US',
+    {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }
+  ).format(amount);
 };
 
-export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('he-IL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-export const formatNumber = (number) => {
-  return new Intl.NumberFormat('he-IL').format(number);
+export const formatDate = (date, language = 'he') => {
+  return new Date(date).toLocaleDateString(
+    language === 'he' ? 'he-IL' : 'en-US',
+    {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }
+  );
 };
