@@ -1,107 +1,146 @@
-// src/context/DateContext.jsx
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+// DateContext.jsx
+// Centralized date management and synchronization across components
 
-// Create base context
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { useRefresh } from './RefreshContext';
+
 const DateContext = createContext(null);
 
-// Create and export the hook first
-export const useDate = () => {
-  const context = useContext(DateContext);
-  if (!context) {
-    throw new Error('useDate must be used within a DateProvider');
-  }
-  return context;
-};
-
-// Create and export the provider
+/**
+* Provides date management functionality across the application
+* Maintains synchronization with RefreshContext
+* Handles date normalization and validation
+*/
 export const DateProvider = ({ children }) => {
-  // Basic date state
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const now = new Date();
-    now.setHours(12, 0, 0, 0);
-    return now;
-  });
-  const [isCustomDate, setIsCustomDate] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+ // Integration with RefreshContext
+ const { selectedDate: refreshDate, triggerRefresh } = useRefresh();
 
-  // Cache management
-  const cache = useRef(new Map());
+ // Core date state
+ const [selectedDate, setSelectedDate] = useState(() => {
+   const now = new Date();
+   now.setHours(12, 0, 0, 0);
+   return now;
+ });
 
-  // Cache management functions
-  const getDateKey = useCallback((date) => {
-    return date.toISOString().split('T')[0];
-  }, []);
+ // Track date changes
+ const previousDate = useRef(selectedDate);
 
-  const setCacheData = useCallback((date, data) => {
-    cache.current.set(getDateKey(date), {
-      data,
-      timestamp: Date.now()
-    });
-  }, [getDateKey]);
+ /**
+  * Normalize date to noon for consistent comparison
+  * @param {Date} date - Date to normalize
+  * @returns {Date} Normalized date
+  */
+ const normalizeDate = useCallback((date) => {
+   const normalized = new Date(date);
+   normalized.setHours(12, 0, 0, 0);
+   return normalized;
+ }, []);
 
-  const getCacheData = useCallback((date) => {
-    return cache.current.get(getDateKey(date));
-  }, [getDateKey]);
+ /**
+  * Format date based on locale
+  * @param {Date} date - Date to format
+  * @param {string} language - Target language/locale
+  * @returns {string} Formatted date string
+  */
+ const formatDate = useCallback((date = selectedDate, language = 'en') => {
+   return date.toLocaleDateString(
+     language === 'he' ? 'he-IL' : 'en-US',
+     {
+       year: 'numeric',
+       month: 'long',
+       day: 'numeric'
+     }
+   );
+ }, [selectedDate]);
 
-  const cleanCache = useCallback(() => {
-    const fiveMinutes = 5 * 60 * 1000;
-    const now = Date.now();
-    
-    for (const [key, value] of cache.current.entries()) {
-      if (now - value.timestamp > fiveMinutes) {
-        cache.current.delete(key);
-      }
-    }
-  }, []);
+ /**
+  * Check if selected date is today
+  * @returns {boolean} True if selected date is today
+  */
+ const isToday = useCallback(() => {
+   const today = new Date();
+   return selectedDate.toDateString() === today.toDateString();
+ }, [selectedDate]);
 
-  // Date management functions
-  const updateSelectedDate = useCallback((date) => {
-    const normalizedDate = new Date(date);
-    normalizedDate.setHours(12, 0, 0, 0);
-  
-    // Check if the date has actually changed before updating state
-    if (selectedDate.toISOString().split('T')[0] !== normalizedDate.toISOString().split('T')[0]) {
-      setSelectedDate(normalizedDate);
-    }
-  
-    // Determine if the selected date is a custom date
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    
-    setIsCustomDate(normalizedDate.toDateString() !== today.toDateString());
-  }, [selectedDate]);
-  
+ /**
+  * Update selected date and trigger refresh
+  * @param {Date} date - New date to set
+  * @param {boolean} shouldRefresh - Whether to trigger refresh
+  */
+ const updateSelectedDate = useCallback((date, shouldRefresh = true) => {
+   const normalizedDate = normalizeDate(date);
+   setSelectedDate(normalizedDate);
+   
+   if (shouldRefresh) {
+     triggerRefresh('all', normalizedDate);
+   }
+ }, [normalizeDate, triggerRefresh]);
 
-  const resetToToday = useCallback(() => {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    setSelectedDate(today);
-    setIsCustomDate(false);
-  }, []);
+ /**
+  * Reset date to today
+  */
+ const resetToToday = useCallback(() => {
+   const today = new Date();
+   updateSelectedDate(today);
+ }, [updateSelectedDate]);
 
-  const formatDate = useCallback((date = selectedDate, language = 'en') => {
-    return date.toLocaleDateString(
-      language === 'he' ? 'he-IL' : 'en-US',
-      {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }
-    );
-  }, [selectedDate]);
+ /**
+  * Navigate to previous day
+  */
+ const goToPreviousDay = useCallback(() => {
+   const newDate = new Date(selectedDate);
+   newDate.setDate(newDate.getDate() - 1);
+   updateSelectedDate(newDate);
+ }, [selectedDate, updateSelectedDate]);
 
-  const value = {
-    selectedDate,
-    updateSelectedDate,
-    resetToToday,
-    formatDate,
-    isCustomDate,
-    isLoading,
-    setIsLoading,
-    setCacheData,
-    getCacheData,
-    cleanCache
-  };
+ /**
+  * Navigate to next day if not today
+  */
+ const goToNextDay = useCallback(() => {
+   if (!isToday()) {
+     const newDate = new Date(selectedDate);
+     newDate.setDate(newDate.getDate() + 1);
+     updateSelectedDate(newDate);
+   }
+ }, [selectedDate, isToday, updateSelectedDate]);
 
-  return <DateContext.Provider value={value}>{children}</DateContext.Provider>;
+ // Sync with RefreshContext date changes
+ useEffect(() => {
+   if (refreshDate && 
+       refreshDate.getTime() !== previousDate.current.getTime()) {
+     setSelectedDate(normalizeDate(refreshDate));
+     previousDate.current = refreshDate;
+   }
+ }, [refreshDate, normalizeDate]);
+
+ const value = {
+   selectedDate,
+   updateSelectedDate,
+   resetToToday,
+   goToPreviousDay,
+   goToNextDay,
+   isToday,
+   formatDate,
+   normalizeDate
+ };
+
+ return (
+   <DateContext.Provider value={value}>
+     {children}
+   </DateContext.Provider>
+ );
 };
+
+/**
+* Hook to access date management functionality
+* @returns {Object} Date context methods and state
+*/
+export const useDate = () => {
+ const context = useContext(DateContext);
+ if (!context) {
+   throw new Error('useDate must be used within DateProvider');
+ }
+ return context;
+};
+
+export default DateContext;

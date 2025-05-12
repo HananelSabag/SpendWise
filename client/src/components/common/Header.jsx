@@ -1,63 +1,82 @@
-import React, { useEffect, useRef } from "react"; 
-import { Menu, UserCircle, ClipboardList, LogOut, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+// components/common/Header.jsx
+// Contextual header with user dropdown and dynamic navigation
+import React, { useEffect, useRef, useState } from "react"; 
+import { UserCircle, ClipboardList, Home, LogOut, ChevronDown } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../../context/LanguageContext";
 import { useAuth } from "../../context/AuthContext";
 
-const Header = ({ isMenuOpen, setIsMenuOpen, title, greeting }) => {
-  const { t } = useLanguage();
+const Header = ({ title, greeting }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t, language } = useLanguage();
   const { logout } = useAuth();
-  const menuRef = useRef(null);  
+  const userMenuRef = useRef(null);
+  const isRTL = language === 'he';
+  
+  // State for user dropdown
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  
+  // Determine if we're on the home page or transactions page
+  const isHomePage = location.pathname === '/';
+  const isTransactionsPage = location.pathname === '/transactions';
 
-  // Close menu when clicking outside
+  // Enhanced click outside handling for user menu
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
+      if (userMenuRef.current && 
+          !userMenuRef.current.contains(event.target) && 
+          isUserMenuOpen) {
+        setIsUserMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [setIsMenuOpen]);
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-  // Close menu when changing route
-  useEffect(() => {
-    return () => setIsMenuOpen(false);
-  }, [setIsMenuOpen]);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
-  const MenuContent = () => (
+  // Enhanced logout handler
+  const handleLogout = async () => {
+    try {
+      setIsUserMenuOpen(false);
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  // Navigation handlers
+  const goToProfile = () => {
+    setIsUserMenuOpen(false);
+    navigate('/profile');
+  };
+
+  const goToTransactions = () => {
+    navigate('/transactions');
+  };
+  
+  const goToHome = () => {
+    navigate('/');
+  };
+
+  // User menu dropdown
+  const UserMenu = () => (
     <div className="py-2">
-      <Link
-        to="/"
-        className="flex items-center px-4 py-2 text-sm text-primary-700 hover:bg-gray-50 w-full"
-        onClick={() => setIsMenuOpen(false)}
-      >
-        <Home className="h-4 w-4 mr-2 text-primary-700" />
-        {t("home.nav.overview")}
-      </Link>
-      <Link
-        to="/profile"
-        className="flex items-center px-4 py-2 text-sm text-primary-700 hover:bg-gray-50 w-full"
-        onClick={() => setIsMenuOpen(false)}
-      >
-        <UserCircle className="h-4 w-4 mr-2 text-primary-700" />
-        {t("home.nav.profile")}
-      </Link>
-      <Link
-        to="/transactions"
-        className="flex items-center px-4 py-2 text-sm text-primary-600 hover:bg-gray-50 w-full"
-        onClick={() => setIsMenuOpen(false)}
-      >
-        <ClipboardList className="h-4 w-4 mr-2" />
-        {t("home.nav.transctionsMangment")}
-      </Link>
       <button
-        onClick={() => {
-          setIsMenuOpen(false);
-          logout();
-        }}
-        className="flex items-center px-4 py-2 text-sm text-error hover:bg-gray-50 w-full"
+        onClick={goToProfile}
+        className="flex items-center px-4 py-2 text-sm text-primary-700 hover:bg-gray-50 w-full dark:text-primary-400 dark:hover:bg-gray-800"
+      >
+        <UserCircle className="h-4 w-4 mr-2 text-primary-700 dark:text-primary-400" />
+        {t("home.nav.profile")}
+      </button>
+      <button
+        onClick={handleLogout}
+        className="flex items-center px-4 py-2 text-sm text-error hover:bg-gray-50 w-full dark:hover:bg-gray-800"
       >
         <LogOut className="h-4 w-4 mr-2" />
         {t("home.nav.logout")}
@@ -66,65 +85,102 @@ const Header = ({ isMenuOpen, setIsMenuOpen, title, greeting }) => {
   );
 
   return (
-    <header className="bg-primary-300/80 shadow-md">
+    <header className="bg-primary-400 dark:bg-primary-900 shadow-md">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Main Header Row */}
-        <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-primary-500 rounded-xl flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">S</span>
-            </div>
-            <h1 className="text-2xl font-bold text-primary-500">SpendWise</h1>
-          </div>
-
-          {/* Desktop Title/Greeting */}
-          <div className="hidden md:flex flex-1 justify-center mr-32">
-            <h1
-              className={`text-3xl font-bold ${greeting
-                  ? "bg-clip-text text-transparent bg-gradient-to-r from-gray-400 to-gray-700"
-                  : "text-black text-opacity-80"
-                } drop-shadow-sm`}
-              style={{
-                fontFamily: "'Poppins', sans-serif",
-                textShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
-                letterSpacing: "-0.5px",
-              }}
-            >
-              {greeting || title}
-            </h1>
-          </div>
-
-          {/* Menu Button */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-
-            {/* Menu Dropdown */}
-            {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white shadow-lg overflow-hidden
-                             transform transition-all duration-200 ease-out
-                             origin-top-right z-50">
-                <MenuContent />
+        <div className="flex items-center justify-between py-4 relative">
+          {/* Logo area */}
+          <div className="flex items-center gap-3 z-10">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <span className="text-xl font-bold text-white">S</span>
               </div>
+              <h1 className="text-xl font-bold text-white">SpendWise</h1>
+            </Link>
+          </div>
+
+          {/* Greeting - absolutely positioned with better mobile handling */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 top-1/2 -translate-y-1/2 mx-auto hidden sm:block">
+            <div className="bg-white/20 backdrop-blur-sm px-6 py-2 rounded-full whitespace-nowrap">
+              <h1 className="text-xl font-bold text-white">
+                {greeting || title}
+              </h1>
+            </div>
+          </div>
+
+          {/* Right area - navigation buttons */}
+          <div className="flex items-center gap-2 z-10">
+            {/* Contextual button - changes based on current page */}
+            {isHomePage && (
+              <button 
+                onClick={goToTransactions}
+                className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                aria-label="Transactions"
+                title={t("home.nav.transctionsMangment")}
+              >
+                <ClipboardList className="h-6 w-6" />
+              </button>
             )}
+            
+            {isTransactionsPage && (
+              <button 
+                onClick={goToHome}
+                className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                aria-label="Home"
+                title={t("home.nav.overview")}
+              >
+                <Home className="h-6 w-6" />
+              </button>
+            )}
+            
+            {/* If we're not on home or transactions page, show both buttons */}
+            {!isHomePage && !isTransactionsPage && (
+              <>
+                <button 
+                  onClick={goToHome}
+                  className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                  aria-label="Home"
+                  title={t("home.nav.overview")}
+                >
+                  <Home className="h-6 w-6" />
+                </button>
+                <button 
+                  onClick={goToTransactions}
+                  className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                  aria-label="Transactions"
+                  title={t("home.nav.transctionsMangment")}
+                >
+                  <ClipboardList className="h-6 w-6" />
+                </button>
+              </>
+            )}
+            
+            {/* User menu button with dropdown */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors flex items-center gap-1"
+                aria-label="User Menu"
+              >
+                <UserCircle className="h-6 w-6" />
+                <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white shadow-lg overflow-hidden transform transition-all duration-200 ease-out origin-top-right z-50 dark:bg-gray-800 dark:border dark:border-gray-700">
+                  <UserMenu />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Mobile Title/Greeting Row */}
-        <div className="md:hidden text-center py-2">
-          <h2
-            className={`text-lg font-medium ${greeting
-                ? "text-gray-600"
-                : "text-gray-700"
-              } truncate px-2`}
-          >
-            {greeting || title}
-          </h2>
+        {/* Mobile greeting - only visible on small screens */}
+        <div className="sm:hidden text-center py-2 pb-4">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg mx-auto inline-block px-4 py-1">
+            <h2 className="text-lg font-medium text-white truncate px-2">
+              {greeting || title}
+            </h2>
+          </div>
         </div>
       </div>
     </header>

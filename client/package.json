@@ -17,6 +17,7 @@
     "react-calendar": "^5.1.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.28.1",
+    "react-toastify": "^11.0.3",
     "recharts": "^2.15.0"
   },
   "devDependencies": {

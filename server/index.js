@@ -3,10 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const { errorHandler } = require('./middleware/errorHandler');  
 const { apiLimiter } = require('./middleware/rateLimiter');
+// Add the scheduler import
+const scheduler = require('./utils/scheduler'); 
+const logger = require('./utils/logger');
 const app = express();
 
 // CORS configuration
-// We define specific origins for development - in production this should be your domain
 app.use(cors({
   origin: true, 
   credentials: true,
@@ -22,12 +24,10 @@ app.use('/api', apiLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
-    console.log('Request received:', {
-        timestamp: new Date().toISOString(),
+    logger.info('Request received:', {
         method: req.method,
         url: req.url,
-        headers: req.headers,
-        body: req.method === 'POST' ? req.body : undefined
+        ip: req.ip
     });
     next();
 });
@@ -46,6 +46,38 @@ app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+
+// Custom function to ensure database is ready before starting
+const startServer = async () => {
+  try {
+    // Test database connection
+    await db.pool.query('SELECT NOW()');
+    logger.info('Database connection successful');
+    
+    // Start the Express server
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`Server running on port ${PORT}`);
+      
+      // Initialize the scheduler after server is running
+      scheduler.init();
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+      logger.info('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        logger.info('HTTP server closed');
+        db.pool.end();
+      });
+    });
+
+  } catch (err) {
+    logger.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
 
 module.exports = app;

@@ -1,36 +1,43 @@
-import React, { useState, useEffect,useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
-  ArrowUpRight, ArrowDownRight, Plus, Info, TrendingUp, TrendingDown, Activity, CalendarIcon, RotateCcw, HelpCircle, ChevronLeft,
-  ChevronRight
+  ArrowUpRight, ArrowDownRight, Plus, Info, TrendingUp, TrendingDown, 
+  Activity, CalendarIcon, RotateCcw, HelpCircle, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useTransactions } from '../../context/TransactionContext';
-import { useAuth } from '../../context/AuthContext';
+import { useDate } from '../../context/DateContext';
 import CalendarWidget from './Transactions/CalendarWidget';
-
 
 /**
  * BalancePanel Component
  * Displays financial balance information with date selection and period filtering
  */
-const BalancePanel = ({ selectedDate, onDateChange }) => {
+const BalancePanel = () => {
   // Core hooks
-  const { user } = useAuth();
-  const { balances, metadata, loading, error, refreshBalances } = useTransactions();
+  const { balances, metadata, loading, error, refreshData } = useTransactions();
   const { formatAmount } = useCurrency();
   const { t, language } = useLanguage();
+  const { 
+    selectedDate, 
+    updateSelectedDate,
+    formatDate,
+    isCustomDate 
+  } = useDate();
+  
+  // UI refs and state
+  const dateButtonRef = useRef(null);
   const isHebrew = language === 'he';
-  const dateButtonRef = useRef(null); // Ref for date button
-
-  // Local state
   const [period, setPeriod] = useState('daily');
   const [timeUntilReset, setTimeUntilReset] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   
-  const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 768);
-  React.useEffect(() => {
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // Responsive handler
+  useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -39,54 +46,46 @@ const BalancePanel = ({ selectedDate, onDateChange }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Date management
-  const isCustomDate = () => {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    const selected = new Date(selectedDate);
-    selected.setHours(12, 0, 0, 0);
-    return today.getTime() !== selected.getTime();
-  };
   // Navigation functions
   const isToday = () => {
     const today = new Date();
-    const selected = new Date(selectedDate);
-    return today.toDateString() === selected.toDateString();
+    return today.toDateString() === selectedDate.toDateString();
   };
 
   const goToPreviousDay = async () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 1);
-    onDateChange(newDate);
-    await refreshBalances(newDate);
+    newDate.setHours(12, 0, 0, 0);
+    updateSelectedDate(newDate);
+    await refreshData(newDate);
   };
 
   const goToNextDay = async () => {
     const newDate = new Date(selectedDate);
     if (newDate.toDateString() !== new Date().toDateString()) {
       newDate.setDate(newDate.getDate() + 1);
-      onDateChange(newDate);
-      await refreshBalances(newDate);
+      newDate.setHours(12, 0, 0, 0);
+      updateSelectedDate(newDate);
+      await refreshData(newDate);
     }
   };
 
-  // Handle date selection
+  // Date selection handler
   const handleDateSelect = async (date) => {
     const normalizedDate = new Date(date);
     normalizedDate.setHours(12, 0, 0, 0);
     setShowCalendar(false);
-    onDateChange(normalizedDate);
-    await refreshBalances(normalizedDate);
+    updateSelectedDate(normalizedDate);
+    await refreshData(normalizedDate);
   };
 
   // Reset to today handler
   const resetToToday = async () => {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
-    onDateChange(today);
-    await refreshBalances(today);
+    updateSelectedDate(today);
+    await refreshData(today);
   };
-
 
   // Format day names and dates for week view
   const formatWeekDay = (date) => {
@@ -96,12 +95,11 @@ const BalancePanel = ({ selectedDate, onDateChange }) => {
     );
   };
 
-
   // Get period information with formatted dates
   const getPeriodInfo = (period) => {
     if (!metadata.timePeriods || !metadata.timePeriods[period]) return '';
 
-    const formatDate = (date) => new Date(date).toLocaleDateString(
+    const formatDateString = (date) => new Date(date).toLocaleDateString(
       language === 'he' ? 'he-IL' : 'en-US',
       {
         day: 'numeric',
@@ -115,7 +113,7 @@ const BalancePanel = ({ selectedDate, onDateChange }) => {
     switch (period) {
       case 'daily':
         return t('home.balance.period.asOf', {
-          date: formatDate(date)
+          date: formatDateString(date)
         });
 
       case 'weekly': {
@@ -168,6 +166,7 @@ const BalancePanel = ({ selectedDate, onDateChange }) => {
     return () => clearInterval(timer);
   }, [metadata.nextReset]);
 
+  // Tooltip click outside handlers
   useEffect(() => {
     const handleClickOutside = () => {
       setShowTooltip(false);
@@ -175,10 +174,9 @@ const BalancePanel = ({ selectedDate, onDateChange }) => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
-  // Close tooltip when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Check if it's a touch device
       const isTouchDevice = 'ontouchstart' in window;
       if (isTouchDevice && showTooltip) {
         setShowTooltip(false);

@@ -1,8 +1,10 @@
 // Home.jsx
+// Main dashboard component managing layout and child component coordination
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useTransactions } from '../context/TransactionContext';
+import { useDate } from '../context/DateContext';
 import BalancePanel from '../components/home/BalancePanel';
 import ActionsPanel from '../components/home/ActionsPanel';
 import RecentTransactions from '../components/home/RecentTransactions';
@@ -11,38 +13,33 @@ import { Languages, DollarSign } from 'lucide-react';
 import QuickExpenseBar from '../components/home/QuickExpenseBar';
 import Header from "../components/common/Header";
 import FloatingMenu from '../components/common/FloatingMenu';
+import Footer from '../components/common/Footer';
+import AccessibilityMenu from '../components/common/AccessibilityMenu';
+import { useLoadAccessibilitySettings } from '../hooks/useLoadAccessibilitySettings';
 
 const Home = () => {
-  // Hooks
-  const { user, logout } = useAuth();
+  // Core context hooks
+  const { user } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
-  const { toggleCurrency, currency } = useCurrency();
-  const {
-    loading,
-    error,
-    refreshBalances,
-    fetchRecentTransactions
-  } = useTransactions();
+  const { toggleCurrency } = useCurrency();
+  const { selectedDate } = useDate();
+  useLoadAccessibilitySettings(); // Load accessibility settings on every page
 
-  // date state
-  const [selectedPanelDate, setSelectedPanelDate] = useState(() => {
-    const now = new Date();
-    now.setHours(12, 0, 0, 0);
-    return now;
-  });
-
-  // Local state
-  const isHebrew = language === 'he';
+  // UI state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Utility function for Hebrew name detection
-  const isHebrewName = (name) => {
+  // Language direction
+  const isRTL = language === 'he';
+
+  // Hebrew name detection utility
+  const isHebrewName = useCallback((name) => {
     const hebrewRegex = /[\u0590-\u05FF]/;
     return hebrewRegex.test(name);
-  };
+  }, []);
 
+  // Get localized greeting based on time and username
   const getLocalizedGreeting = useCallback(() => {
     const hour = new Date().getHours();
     const username = user?.username || '';
@@ -58,35 +55,18 @@ const Home = () => {
       if (hour >= 18 && hour < 21) return `Good Evening ${username}`;
       return `Good Night ${username}`;
     }
-  }, [user]);
+  }, [user, isHebrewName]);
 
-  // Initial data loading with selectedPanelDate
+  // Initialize component
   useEffect(() => {
-    const loadInitialData = async () => {
-      if (!user) return;
-
-      try {
-        setIsLoading(true);
-
-        await Promise.all([
-          refreshBalances(selectedPanelDate),
-          fetchRecentTransactions(5)
-        ]);
-        setIsInitialized(true);
-      } catch (err) {
-        console.error('Error loading initial data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (!isInitialized) {
-      loadInitialData();
+    if (!isInitialized && user) {
+      setIsInitialized(true);
     }
-  }, [user, refreshBalances, fetchRecentTransactions, isInitialized, selectedPanelDate]);
+    setIsLoading(false);
+  }, [user, isInitialized]);
 
-  // Show loading state until initialization is complete
-  if (isLoading || loading) {
+  // Show loading state
+  if (isLoading) {
     return (
       <div className="min-h-screen gradient-primary flex items-center justify-center">
         <div className="animate-pulse text-xl">Loading...</div>
@@ -94,50 +74,40 @@ const Home = () => {
     );
   }
 
-  // Show error state if any
-  if (error) {
-    return (
-      <div className="min-h-screen gradient-primary flex items-center justify-center">
-        <div className="text-error bg-error-light p-4 rounded-lg">
-          Error loading data: {error}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen gradient-primary">
+    <div className="min-h-screen gradient-primary flex flex-col">
       <Header
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
         greeting={getLocalizedGreeting()}
       />
+
+      {/* Accessibility Menu */}
+      <AccessibilityMenu />
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8" >
-        <BalancePanel
-          selectedDate={selectedPanelDate}
-          onDateChange={setSelectedPanelDate}
-        />
+      <main className="max-w-7xl mx-auto px-4 py-8 w-full flex-grow">
+        <BalancePanel selectedDate={selectedDate} />
 
         {/* Actions Bar */}
         <div className="bg-primary-400 backdrop-blur-sm rounded-b-2xl p-4">
           <div
-            className={`flex flex-col md:flex-row items-center gap-4 md:gap-8 ${isHebrew ? "flex-row-reverse" : ""}`}
-            dir={isHebrew ? "rtl" : "ltr"}
+            className={`flex flex-col md:flex-row items-center gap-4 md:gap-8 ${isRTL ? "flex-row-reverse" : ""}`}
+            dir={isRTL ? "rtl" : "ltr"}
           >
             <div className="flex-1">
-              <ActionsPanel selectedDate={selectedPanelDate} />
+              <ActionsPanel selectedDate={selectedDate} />
             </div>
             <div className="hidden md:block w-px h-12 bg-white/50" />
             <div className="flex-0">
-            <QuickExpenseBar selectedDate={selectedPanelDate} />
+              <QuickExpenseBar selectedDate={selectedDate} />
             </div>
           </div>
         </div>
 
         {/* Recent Transactions */}
         <div className="mt-6 md:mt-8">
-          <RecentTransactions selectedDate={selectedPanelDate} />
+          <RecentTransactions selectedDate={selectedDate} />
         </div>
       </main>
 
@@ -155,6 +125,12 @@ const Home = () => {
             onClick: toggleCurrency,
           },
         ]}
+      />
+      
+      {/* Footer with language and currency toggles */}
+      <Footer 
+        showLanguageToggle={true} 
+        showCurrencyToggle={true}
       />
     </div>
   );

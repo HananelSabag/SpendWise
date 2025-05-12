@@ -1,32 +1,83 @@
-// TransactionContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * TransactionContext.jsx
+ * Centralized transaction state management with improved error handling and refresh capability
+ */
+
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { useRefresh } from './RefreshContext';
-import api from '../utils/api';
+import { useDate } from './DateContext';
+import api, { transactionAPI, forceRefresh as apiForceRefresh } from '../utils/api';
+import { toast } from 'react-toastify';
 
-const TransactionContext = createContext();
+/**
+ * Transaction Context
+ */
+const TransactionContext = createContext(null);
 
-// API Constants
-const FETCH_COOLDOWN = 2000;  // 2 seconds between identical requests
-const REQUEST_TIMEOUT = 10000; // 10 seconds timeout
-const RETRY_COUNT = 3;
-const RETRY_DELAY = 1000;
+/**
+ * Transaction Status Types
+ */
+const TransactionStatus = {
+  ACTIVE: 'active',
+  CANCELLED: 'cancelled',
+  SKIPPED: 'skipped'
+};
 
+/**
+ * Request Manager for preventing duplicate API calls and tracking in-flight requests
+ */
+const RequestManager = {
+  pending: new Map(),
+  
+  /**
+   * Execute a function and track its promise to prevent duplicate calls
+   * @param {string} key - Unique key for the request
+   * @param {Function} fn - Function to execute
+   * @returns {Promise} Result of the function
+   */
+  async execute(key, fn) {
+    // If request is already in progress, return the pending promise
+    if (this.pending.has(key)) {
+      return this.pending.get(key);
+    }
+
+    // Create a new promise
+    const promise = fn();
+    this.pending.set(key, promise);
+
+    try {
+      // Await and return the result
+      return await promise;
+    } finally {
+      // Clean up after completion
+      this.pending.delete(key);
+    }
+  },
+  
+  /**
+   * Clear all pending requests
+   */
+  clear() {
+    this.pending.clear();
+  }
+};
+
+/**
+ * Transaction Provider Component
+ */
 export const TransactionProvider = ({ children }) => {
   // Core hooks
   const { user } = useAuth();
   const { triggerRefresh } = useRefresh();
+  const { selectedDate, normalizeDate } = useDate();
 
-  // Global state
+  // Core states for transactions
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [periodTransactions, setPeriodTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [metadata, setMetadata] = useState({
-    calculatedAt: null,
-    nextReset: null,
-    timePeriods: {}
-  });
+  const [recurringTransactions, setRecurringTransactions] = useState([]);
+  
+  // Balance states
   const [balances, setBalances] = useState({
     daily: { income: 0, expenses: 0, balance: 0 },
     weekly: { income: 0, expenses: 0, balance: 0 },
@@ -34,339 +85,634 @@ export const TransactionProvider = ({ children }) => {
     yearly: { income: 0, expenses: 0, balance: 0 }
   });
 
-  // Request tracking refs
-  const retryCountRef = useRef({});
-  const pendingRequestsRef = useRef({});
+  // UI states
+  const [loading, setLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({
+    recent: false,
+    period: false,
+    recurring: false,
+    balance: false,
+    create: false,
+    update: false,
+    delete: false
+  });
+  const [error, setError] = useState(null);
+  const [isSkippingTransaction, setIsSkippingTransaction] = useState(false);
+  const [skipError, setSkipError] = useState(null);
 
-  // ==================== Request Management ====================
-  const makeRequest = useCallback(async (key, apiCall, retryCount = 0) => {
-    try {
-      // Handle concurrent requests
-      if (pendingRequestsRef.current[key]) {
-        return pendingRequestsRef.current[key];
-      }
+  // Metadata state
+  const [metadata, setMetadata] = useState({
+    calculatedAt: null,
+    nextReset: null,
+    timePeriods: {}
+  });
 
-      // Create request promise
-      pendingRequestsRef.current[key] = apiCall();
-      const result = await Promise.race([
-        pendingRequestsRef.current[key],
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT))
-      ]);
+  // Tracking fetched data for specific dates
+  const fetchedDatesRef = useRef(new Set());
 
-      return result;
-    } catch (error) {
-      // Handle rate limiting
-      if (error?.response?.status === 429) {
-        const retryAfter = parseInt(error.response.headers['retry-after'] || '1', 10);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        return makeRequest(key, apiCall, retryCount);
-      }
-
-      // Handle retries for other errors
-      if (retryCount < RETRY_COUNT) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
-        return makeRequest(key, apiCall, retryCount + 1);
-      }
-
-      throw error;
-    } finally {
-      delete pendingRequestsRef.current[key];
-    }
+  /**
+   * Update loading state for a specific operation
+   * @param {string} operation - Operation name
+   * @param {boolean} isLoading - Loading state
+   */
+  const updateLoadingState = useCallback((operation, isLoading) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      [operation]: isLoading
+    }));
+    
+    // Update global loading state if any operation is loading
+    setLoading(prev => {
+      if (isLoading) return true;
+      
+      // Check if any other operation is still loading
+      const updatedStates = {
+        ...prev,
+        [operation]: isLoading
+      };
+      
+      return Object.values(updatedStates).some(state => state);
+    });
   }, []);
 
-  // ==================== Data Fetching ====================
+  /**
+   * Clear errors
+   */
+  const clearErrors = useCallback(() => {
+    setError(null);
+    setSkipError(null);
+  }, []);
 
-  // Recent transactions for home page
-  const fetchRecentTransactions = useCallback(async (limit = 5, date = new Date()) => {
-    if (!user) return;
+  /**
+   * Handle error with consistent formatting
+   * @param {Error} error - Error object
+   * @param {string} operation - Operation that failed
+   * @param {string} defaultMessage - Default error message
+   * @returns {Object} Formatted error object
+   */
+  const handleError = useCallback((error, operation, defaultMessage) => {
+    console.error(`Error in ${operation}:`, error);
+    
+    const errorObj = {
+      type: error.response?.data?.error || `${operation}_failed`,
+      message: error.response?.data?.message || defaultMessage,
+      originalError: error
+    };
+    
+    return errorObj;
+  }, []);
+
+  /**
+   * fetchRecentTransactions
+   * Loads up to 'limit' recent transactions up to (and including) 'dateArg'.
+   * Default is selectedDate if none provided.
+   */
+  const fetchRecentTransactions = useCallback(async (limit = 5, dateArg = selectedDate) => {
+    if (!user) return [];
+    
+    const normalizedDate = normalizeDate(dateArg);
+    const dateStr = normalizedDate.toISOString().split('T')[0];
+    const requestKey = `recent_${dateStr}_${limit}`;
 
     try {
-      console.log('TransactionContext fetching for date:', date);
-
-      // Check if the date is today (default)
-      const today = new Date();
-      const isDefaultDate = date.toDateString() === today.toDateString();
-
-      if (isDefaultDate) {
-        // For default date (today) - get latest transactions regardless of date
-        const response = await api.get('/transactions/recent', {
-          params: { limit }
-        });
-
-        if (response?.data) {
-          setRecentTransactions(response.data);
-        }
-      } else {
-        // For selected date - get transactions for that specific date
-        const normalizedDate = new Date(date);
-        normalizedDate.setHours(12, 0, 0, 0);
-        const dateKey = normalizedDate.toISOString().split('T')[0];
-
-        const response = await api.get('/transactions/period/day', {
-          params: { date: dateKey }
-        });
-
-        if (response?.data) {
-          // Take only up to 5 transactions from the selected date
-          setRecentTransactions(response.data.slice(0, limit));
-        }
-      }
+      updateLoadingState('recent', true);
+      clearErrors();
+      
+      const result = await RequestManager.execute(requestKey, async () => {
+        const response = await transactionAPI.getRecent(limit, normalizedDate);
+        return response.data;
+      });
+      
+      setRecentTransactions(result);
+      return result;
     } catch (err) {
-      console.error('Error fetching recent transactions:', err);
-      setError('Failed to fetch recent transactions');
-      setRecentTransactions([]);
+      const error = handleError(err, 'fetch', 'Unable to fetch recent transactions');
+      setError(error);
+      return [];
+    } finally {
+      updateLoadingState('recent', false);
     }
-  }, [user]);
+  }, [user, selectedDate, normalizeDate, clearErrors, handleError, updateLoadingState]);
 
-  // Period transactions for management page
-  const fetchPeriodTransactions = useCallback(async (period, date) => {
-    if (!user) return;
+  /**
+   * Get transactions by period
+   */
+  const getByPeriod = useCallback(async (period, date = selectedDate) => {
+    if (!user) return [];
+
+    const normalizedDate = normalizeDate(date);
+    const dateKey = normalizedDate.toISOString().split('T')[0];
+    const requestKey = `period_${period}_${dateKey}`;
 
     try {
-      setLoading(true);
-      setError(null);
-
-      // Normalize date
-      const formattedDate = new Date(date);
-      formattedDate.setHours(12, 0, 0, 0);
-      const dateKey = formattedDate.toISOString().split('T')[0];
-
-      console.log('Context Request:', {
-        period,
-        dateKey,
-        url: `/transactions/period/${period}`
+      updateLoadingState('period', true);
+      clearErrors();
+      
+      const result = await RequestManager.execute(requestKey, async () => {
+        const response = await transactionAPI.getByPeriod(period, normalizedDate);
+        return response.data;
       });
-
-      const response = await api.get(`/transactions/period/${period}`, {
-        params: { date: dateKey }
-      });
-
-      console.log('Context Response:', {
-        status: response.status,
-        dataLength: response.data?.length
-      });
-
-      if (response?.data) {
-        setPeriodTransactions(response.data);
-      } else {
-        setPeriodTransactions([]);
-      }
+      
+      // Mark this date as fetched
+      fetchedDatesRef.current.add(dateKey);
+      
+      setPeriodTransactions(result);
+      return result;
     } catch (err) {
-      console.error('Context Error:', {
-        error: err,
-        response: err.response?.data,
-        status: err.response?.status
+      const error = handleError(err, 'fetch', 'Unable to fetch period transactions');
+      setError(error);
+      return [];
+    } finally {
+      updateLoadingState('period', false);
+    }
+  }, [user, selectedDate, normalizeDate, clearErrors, handleError, updateLoadingState]);
+
+  /**
+   * Get recurring transactions
+   */
+  const getRecurringTransactions = useCallback(async (type = null) => {
+    if (!user) return [];
+
+    const requestKey = `recurring_${type || 'all'}`;
+
+    try {
+      updateLoadingState('recurring', true);
+      clearErrors();
+      
+      const result = await RequestManager.execute(requestKey, async () => {
+        const response = await transactionAPI.getRecurring(type);
+        return response.data;
       });
-      setError('Failed to fetch transactions');
-      setPeriodTransactions([]);
+      
+      setRecurringTransactions(result);
+      return result;
+    } catch (err) {
+      const error = handleError(err, 'fetch', 'Unable to fetch recurring transactions');
+      setError(error);
+      return [];
+    } finally {
+      updateLoadingState('recurring', false);
+    }
+  }, [user, clearErrors, handleError, updateLoadingState]);
+
+  /**
+   * Get balance details
+   */
+  const getBalanceDetails = useCallback(async (date = selectedDate) => {
+    if (!user) return null;
+  
+    const normalizedDate = normalizeDate(date);
+    const dateKey = normalizedDate.toISOString().split('T')[0];
+    const requestKey = `balance_${dateKey}`;
+  
+    try {
+      updateLoadingState('balance', true);
+      clearErrors();
+      
+      const result = await RequestManager.execute(requestKey, async () => {
+        try {
+          const response = await transactionAPI.getBalanceDetails(normalizedDate);
+          return response.data;
+        } catch (err) {
+          console.error('Balance API error:', err);
+          // Return fallback data instead of throwing
+          return {
+            daily: { income: 0, expenses: 0, balance: 0 },
+            weekly: { income: 0, expenses: 0, balance: 0 },
+            monthly: { income: 0, expenses: 0, balance: 0 },
+            yearly: { income: 0, expenses: 0, balance: 0 },
+            metadata: {
+              calculatedAt: new Date().toISOString(),
+              timePeriods: {}
+            }
+          };
+        }
+      });
+      
+      if (result) {
+        setBalances({
+          daily: result.daily || { income: 0, expenses: 0, balance: 0 },
+          weekly: result.weekly || { income: 0, expenses: 0, balance: 0 },
+          monthly: result.monthly || { income: 0, expenses: 0, balance: 0 },
+          yearly: result.yearly || { income: 0, expenses: 0, balance: 0 }
+        });
+        
+        setMetadata(result.metadata || {
+          calculatedAt: null,
+          nextReset: null,
+          timePeriods: {}
+        });
+        
+        return result;
+      }
+      
+      return null;
+    } catch (err) {
+      // Log but don't crash
+      console.error('Error in balance calculation:', err);
+      // Use default values
+      setBalances({
+        daily: { income: 0, expenses: 0, balance: 0 },
+        weekly: { income: 0, expenses: 0, balance: 0 },
+        monthly: { income: 0, expenses: 0, balance: 0 },
+        yearly: { income: 0, expenses: 0, balance: 0 }
+      });
+      return null;
+    } finally {
+      updateLoadingState('balance', false);
+    }
+  }, [user, selectedDate, normalizeDate, clearErrors, updateLoadingState]);
+  
+  /**
+   * Force refresh all transaction data
+   * Clears request tracking and fetches fresh data
+   */
+  const forceRefresh = useCallback(async () => {
+    setLoading(true);
+    RequestManager.clear();
+    
+    try {
+      // Use the API's force refresh first
+      await apiForceRefresh();
+      
+      // Then refresh our context data
+      const normalizedDate = normalizeDate(selectedDate);
+      
+      // Clear the fetched dates tracking
+      fetchedDatesRef.current.clear();
+      
+      // Refetch all data
+      await Promise.all([
+        getBalanceDetails(normalizedDate),
+        fetchRecentTransactions(5, normalizedDate),
+        getByPeriod('day', normalizedDate)
+      ]);
+      
+      toast.success('Data refreshed successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in forceRefresh:', error);
+      toast.error('Failed to refresh data');
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [user]);
-  // Balance details
-  const refreshBalances = useCallback(async (targetDate = new Date()) => {
+  }, [
+    selectedDate, 
+    normalizeDate, 
+    getBalanceDetails, 
+    fetchRecentTransactions, 
+    getByPeriod
+  ]);
+
+  /**
+   * Refresh all data
+   */
+  const refreshData = useCallback(async (date = selectedDate) => {
     if (!user) return;
 
     try {
-      const normalizedDate = new Date(targetDate);
-      normalizedDate.setHours(12, 0, 0, 0);
+      clearErrors();
+      
+      // Clear pending requests to avoid conflicts
+      RequestManager.clear();
 
-      const response = await makeRequest(
-        'refreshBalances',
-        () => api.get('/transactions/balance/details', {
-          params: {
-            date: normalizedDate.toISOString().split('T')[0]
-          }
-        })
-      );
+      // Check if we need to fetch data for this date
+      const normalizedDate = normalizeDate(date);
+      const dateKey = normalizedDate.toISOString().split('T')[0];
+      
+      // Execute refreshes in parallel for better performance
+      await Promise.all([
+        getBalanceDetails(normalizedDate),
+        fetchRecentTransactions(5, normalizedDate),
+        getByPeriod('day', normalizedDate)
+      ]);
 
-      if (response?.data) {
-        setBalances({
-          daily: response.data.daily || { income: 0, expenses: 0, balance: 0 },
-          weekly: response.data.weekly || { income: 0, expenses: 0, balance: 0 },
-          monthly: response.data.monthly || { income: 0, expenses: 0, balance: 0 },
-          yearly: response.data.yearly || { income: 0, expenses: 0, balance: 0 }
-        });
-
-        if (response.data.metadata) {
-          setMetadata(response.data.metadata);
-        }
-      }
-    } catch (err) {
-      console.error('Error refreshing balances:', err);
-      setError('Failed to refresh balances');
+      triggerRefresh('all', normalizedDate);
+    } catch (error) {
+      console.error('Error in refreshData:', error);
+      setError({
+        type: 'refresh_failed',
+        message: 'Failed to refresh data'
+      });
     }
-  }, [user, makeRequest]);
+  }, [
+    user,
+    selectedDate, 
+    normalizeDate,
+    clearErrors,
+    getBalanceDetails,
+    fetchRecentTransactions,
+    getByPeriod,
+    triggerRefresh
+  ]);
 
-
-  // ==================== Transaction Mutations ====================
-
-  // Helper for refreshing data after changes
-  const refreshData = useCallback(async (date) => {
-    await Promise.all([
-      refreshBalances(date),
-      fetchRecentTransactions(5, date),
-      date ? fetchPeriodTransactions('day', date) : null
-    ].filter(Boolean));
-  
-    triggerRefresh('all', date); // Pass the date here
-  }, [refreshBalances, fetchRecentTransactions, fetchPeriodTransactions, triggerRefresh]);
-  // Add transaction
-  const addTransaction = useCallback(async (data) => {
-    if (!user) return;
+  /**
+   * Create new transaction
+   */
+  const createTransaction = useCallback(async (type, data) => {
+    if (!user) return null;
 
     try {
-      const endpoint = `/transactions/${data.type}`;
+      updateLoadingState('create', true);
+      clearErrors();
+
+      // Prepare data for API
       const dataToSend = {
         ...data,
         user_id: user.id,
         amount: parseFloat(data.amount),
-        date: data.date || new Date().toISOString().split('T')[0],
-        is_recurring: Boolean(data.isRecurring),
-        recurring_interval: data.isRecurring ? data.frequency : null,
-        recurring_amount: data.isRecurring ? parseFloat(data.amount) : null,
+        date: data.date || selectedDate.toISOString().split('T')[0],
+        is_recurring: Boolean(data.is_recurring),
+        recurring_interval: data.is_recurring ? data.recurring_interval : null,
+        recurring_amount: data.is_recurring ? parseFloat(data.amount) : null,
+        recurring_end_date: data.recurring_end_date || null,
         category_id: data.category_id ? parseInt(data.category_id) : null
       };
 
-      const response = await makeRequest(
-        'addTransaction',
-        () => api.post(endpoint, dataToSend)
-      );
+      const response = await transactionAPI.create(type, dataToSend);
+      
+      // Show success message
+      toast.success(`${type === 'expense' ? 'Expense' : 'Income'} added successfully`);
 
-      await refreshData(new Date(dataToSend.date));
-      return response?.data;
+      // Refresh data
+      const dateObj = new Date(dataToSend.date);
+      await refreshData(dateObj);
+      
+      // If it's recurring, refresh that list too
+      if (data.is_recurring) {
+        await getRecurringTransactions();
+      }
+      
+      return response.data;
     } catch (err) {
-      console.error('Error adding transaction:', err);
-      throw err;
+      const error = handleError(err, 'creation', 'Failed to create transaction');
+      setError(error);
+      throw error;
+    } finally {
+      updateLoadingState('create', false);
     }
-  }, [user, makeRequest, refreshData]);
+  }, [
+    user,
+    selectedDate,
+    refreshData,
+    getRecurringTransactions,
+    clearErrors,
+    handleError,
+    updateLoadingState
+  ]);
 
-  // Update transaction
-  const updateTransaction = useCallback(async (id, type, data) => {
-    if (!user) return;
+  /**
+   * Update transaction with support for recurring options
+   */
+  const updateTransaction = useCallback(async (type, id, data, updateFuture = false) => {
+    if (!user) return null;
 
     try {
+      updateLoadingState('update', true);
+      clearErrors();
+
+      // Prepare data for submission
       const dataToSend = {
         ...data,
         amount: parseFloat(data.amount),
         is_recurring: Boolean(data.is_recurring),
-        recurring_amount: data.recurring_amount ? parseFloat(data.recurring_amount) : null,
-        date: data.date ? new Date(data.date).toISOString().split('T')[0] : undefined
+        recurring_interval: data.is_recurring ? data.recurring_interval : null,
+        recurring_amount: data.is_recurring ? parseFloat(data.amount) : null,
+        recurring_end_date: data.recurring_end_date || null,
+        updateFuture
       };
 
-      await makeRequest(
-        `updateTransaction_${id}`,
-        () => api.put(`/transactions/${type}/${id}`, dataToSend)
-      );
+      const response = await transactionAPI.update(type, id, dataToSend);
+      
+      // Show success message
+      toast.success(`${type === 'expense' ? 'Expense' : 'Income'} updated successfully`);
 
-      await refreshData(data.date ? new Date(data.date) : null);
+      // Refresh data
+      const dateObj = new Date(data.date);
+      await refreshData(dateObj);
+      
+      // If recurring or updating future occurrences, refresh recurring list
+      if (updateFuture || data.is_recurring) {
+        await getRecurringTransactions();
+      }
+      
+      return response.data;
     } catch (err) {
-      console.error('Error updating transaction:', err);
-      throw err;
+      const error = handleError(err, 'update', 'Failed to update transaction');
+      setError(error);
+      throw error;
+    } finally {
+      updateLoadingState('update', false);
     }
-  }, [user, makeRequest, refreshData]);
+  }, [
+    user,
+    refreshData,
+    getRecurringTransactions,
+    clearErrors,
+    handleError,
+    updateLoadingState
+  ]);
 
-  // Delete transaction
-  const deleteTransaction = useCallback(async (id, type) => {
-    if (!user) return;
+  /**
+   * Delete transaction with support for recurring options
+   */
+  const deleteTransaction = useCallback(async (type, id, deleteFuture = false) => {
+    if (!user) return false;
 
     try {
-      await makeRequest(
-        `deleteTransaction_${id}`,
-        () => api.delete(`/transactions/${type}/${id}`)
-      );
+      updateLoadingState('delete', true);
+      clearErrors();
 
-      await refreshData();
-    } catch (err) {
-      console.error('Error deleting transaction:', err);
-      throw err;
-    }
-  }, [user, makeRequest, refreshData]);
+      await transactionAPI.delete(type, id, deleteFuture);
+      
+      // Show success message
+      toast.success(`${type === 'expense' ? 'Expense' : 'Income'} deleted successfully`);
 
-  // Quick expense
-  const addQuickExpense = useCallback(async (amount, description = 'Quick Expense', date = new Date()) => {
-    if (!user) return;
-  
-    try {
-      const normalizedDate = new Date(date);
-      normalizedDate.setHours(12, 0, 0, 0);
-      const dateKey = normalizedDate.toISOString().split('T')[0];
-  
-      await makeRequest(
-        'addQuickExpense',
-        () => api.post('/transactions/expense', {
-          amount: parseFloat(amount),
-          description,
-          date: dateKey,
-          is_recurring: false
-        })
-      );
-  
-      await refreshData(normalizedDate);
+      // Refresh data
+      await refreshData(selectedDate);
+      
+      // If it affects future occurrences, refresh recurring list
+      if (deleteFuture) {
+        await getRecurringTransactions();
+      }
+      
       return true;
     } catch (err) {
-      console.error('Error adding quick expense:', err);
-      throw err;
+      const error = handleError(err, 'deletion', 'Failed to delete transaction');
+      setError(error);
+      throw error;
+    } finally {
+      updateLoadingState('delete', false);
     }
-  }, [user, makeRequest, refreshData]);
+  }, [
+    user,
+    selectedDate,
+    refreshData,
+    getRecurringTransactions,
+    clearErrors,
+    handleError,
+    updateLoadingState
+  ]);
 
-  // ==================== Initial Load ====================
-  useEffect(() => {
-    let mounted = true;
+  /**
+   * Skip specific occurrence of recurring transaction
+   */
+  const skipTransactionOccurrence = useCallback(async (type, id, skipDate) => {
+    if (!user) return false;
 
-    const loadInitialData = async () => {
-      if (!user) return;
+    try {
+      setIsSkippingTransaction(true);
+      clearErrors();
 
-      try {
-        setLoading(true);
-        await Promise.all([
-          refreshBalances(),
-          fetchRecentTransactions(5)
-        ]);
-      } catch (err) {
-        console.error('Error in initial data load:', err);
-        if (mounted) {
-          setError('Failed to load initial data');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      await transactionAPI.skipOccurrence(type, id, skipDate);
+      
+      // Refresh affected data
+      await refreshData(new Date(skipDate));
+      await getRecurringTransactions();
+      
+      return true;
+    } catch (err) {
+      const error = handleError(err, 'skip', 'Failed to skip transaction occurrence');
+      setSkipError(error);
+      return false;
+    } finally {
+      setIsSkippingTransaction(false);
+    }
+  }, [
+    user,
+    refreshData,
+    getRecurringTransactions,
+    clearErrors,
+    handleError
+  ]);
+
+  /**
+   * Quick add transaction (expense/income)
+   * Simplified version of createTransaction for quick entries
+   */
+  const quickAddTransaction = useCallback(async (type, amount, description = 'Quick Transaction', date = selectedDate) => {
+    if (!user) return null;
+
+    try {
+      updateLoadingState('create', true);
+      clearErrors();
+
+      const data = {
+        amount: parseFloat(amount),
+        description,
+        date: normalizeDate(date).toISOString().split('T')[0],
+        is_recurring: false,
+        user_id: user.id
+      };
+
+      const response = await transactionAPI.create(type, data);
+      
+      // Show success notification
+      toast.success(`Quick ${type} added successfully`);
+      
+      // Refresh data
+      await refreshData(date);
+      
+      return response.data;
+    } catch (err) {
+      const error = handleError(err, 'creation', `Failed to add quick ${type}`);
+      setError(error);
+      throw error;
+    } finally {
+      updateLoadingState('create', false);
+    }
+  }, [
+    user,
+    selectedDate,
+    normalizeDate,
+    refreshData,
+    clearErrors,
+    handleError,
+    updateLoadingState
+  ]);
+
+  // Get daily recurring impact on the balance
+  const recurringDailyImpact = useMemo(() => {
+    if (!recurringTransactions.length) return { total: 0, income: 0, expense: 0 };
+    
+    return recurringTransactions.reduce((acc, tx) => {
+      const amount = Number(tx.daily_amount || 0);
+      
+      if (tx.transaction_type === 'income') {
+        acc.income += amount;
+      } else {
+        acc.expense += amount;
       }
-    };
+      
+      acc.total = acc.income - acc.expense;
+      return acc;
+    }, { total: 0, income: 0, expense: 0 });
+  }, [recurringTransactions]);
 
-    loadInitialData();
-    return () => { mounted = false; };
-  }, [user, refreshBalances, fetchRecentTransactions]);
+  // Initial data load
+  useEffect(() => {
+    if (!user) return;
+    
+    // Only fetch data if we haven't already fetched for this date
+    const dateKey = selectedDate.toISOString().split('T')[0];
+    
+    if (!fetchedDatesRef.current.has(dateKey)) {
+      refreshData(selectedDate);
+    }
+  }, [user, selectedDate, refreshData]);
+
+  // Combine the loading states into the overall loading state
+  // Allows more granular loading indicators while maintaining backwards compatibility
+  const loadingState = useMemo(() => ({
+    ...loadingStates,
+    isLoading: loading
+  }), [loading, loadingStates]);
+
+  // Context value
+  const value = {
+    // Transaction data
+    recentTransactions,
+    periodTransactions,
+    recurringTransactions,
+    balances,
+    metadata,
+    recurringDailyImpact,
+
+    // UI state
+    loading,
+    loadingState,
+    error,
+    isSkippingTransaction,
+    skipError,
+
+    // Transaction operations
+    createTransaction,
+    updateTransaction,
+    deleteTransaction,
+    skipTransactionOccurrence,
+    quickAddTransaction,
+
+    // Data fetching
+    getRecurringTransactions,
+    getByPeriod,
+    refreshData,
+    forceRefresh,
+    getBalanceDetails,
+    fetchRecentTransactions,
+    clearErrors
+  };
 
   return (
-    <TransactionContext.Provider
-      value={{
-        // State
-        balances,
-        metadata,
-        recentTransactions,
-        periodTransactions,
-        loading,
-        error,
-        // Data fetching
-        refreshBalances,
-        fetchRecentTransactions,
-        fetchPeriodTransactions,
-        // Transaction mutations
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        addQuickExpense,
-        // Data refresh
-        refreshData
-      }}
-    >
+    <TransactionContext.Provider value={value}>
       {children}
     </TransactionContext.Provider>
   );
 };
 
+/**
+ * Custom hook to access transaction context
+ */
 export const useTransactions = () => {
   const context = useContext(TransactionContext);
   if (!context) {

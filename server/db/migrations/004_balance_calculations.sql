@@ -1,4 +1,4 @@
--- File: 005_balance_calculations.sql
+-- File: 004_balance_calculations.sql
 -- Functions for calculating daily/weekly/monthly/yearly balances
 
 -- Daily balance calculation

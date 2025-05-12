@@ -23,6 +23,7 @@
     "express-rate-limit": "^7.5.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.46",
+    "node-cron": "^3.0.3",
     "pg": "^8.13.1",
     "python-shell": "^5.0.0",
     "swagger-jsdoc": "^6.2.8",

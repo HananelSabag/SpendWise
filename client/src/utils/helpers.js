@@ -1,6 +1,8 @@
 /**
- * Token management functions
+ * Token management and formatting utilities
  */
+
+// Token management
 export const getStoredToken = () => {
   try {
     return localStorage.getItem('token');
@@ -9,7 +11,6 @@ export const getStoredToken = () => {
     return null;
   }
 };
-
 
 export const setStoredToken = (token, key = 'accessToken') => 
   localStorage.setItem(key, token);
