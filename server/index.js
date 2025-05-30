@@ -1,75 +1,126 @@
-const db = require('./config/db');
 const express = require('express');
 const cors = require('cors');
-const { errorHandler } = require('./middleware/errorHandler');  
-const { apiLimiter } = require('./middleware/rateLimiter');
-// Add the scheduler import
-const scheduler = require('./utils/scheduler'); 
+const helmet = require('helmet');
+const compression = require('compression');
+const dotenv = require('dotenv');
 const logger = require('./utils/logger');
+const { errorHandler } = require('./middleware/errorHandler');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const requestId = require('./middleware/requestId');
+const scheduler = require('./utils/scheduler');
+const db = require('./config/db'); // Move this up before using it
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
 const app = express();
+
+// Security middleware
+app.use(helmet());
+app.use(compression());
 
 // CORS configuration
 app.use(cors({
-  origin: true, 
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000'
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID']
 }));
 
-// Middleware for parsing JSON bodies
-app.use(express.json());
+// Body parser with size limit
+app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting for API routes
+// Request ID middleware
+app.use(requestId);
+
+// API rate limiter
 app.use('/api', apiLimiter);
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
-    logger.info('Request received:', {
-        method: req.method,
-        url: req.url,
-        ip: req.ip
+  req.log.info('Request received', {
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.headers['user-agent']
+  });
+  next();
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    await db.pool.query('SELECT 1');
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV
     });
-    next();
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      error: 'Database connection failed',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
-// API Routes
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/transactions', require('./routes/transactionRoutes'));
+// API routes with versioning
+const API_VERSION = '/api/v1';
+app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
+app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
 
-// 404 Handler - for undefined routes
+// 404 handler
 app.use((req, res, next) => {
-    res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ 
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      message: `Cannot ${req.method} ${req.path}`,
+      timestamp: new Date().toISOString()
+    }
+  });
 });
 
-// Global error handling
+// Global error handler
 app.use(errorHandler);
 
-// Start server
 const PORT = process.env.PORT || 5000;
 
-// Custom function to ensure database is ready before starting
+/**
+ * Start the server only when the database is ready
+ */
 const startServer = async () => {
   try {
-    // Test database connection
     await db.pool.query('SELECT NOW()');
     logger.info('Database connection successful');
-    
-    // Start the Express server
+
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`Server running on port ${PORT}`);
-      
-      // Initialize the scheduler after server is running
+      logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      // Initialize background jobs
       scheduler.init();
     });
 
-    // Handle graceful shutdown
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received, shutting down gracefully');
+    // Graceful shutdown
+    const gracefulShutdown = async (signal) => {
+      logger.info(`${signal} received, shutting down gracefully`);
+      
       server.close(() => {
         logger.info('HTTP server closed');
-        db.pool.end();
       });
-    });
+      
+      // Close database connections
+      await db.pool.end();
+      logger.info('Database connections closed');
+      
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   } catch (err) {
     logger.error('Failed to start server:', err);
@@ -77,7 +128,7 @@ const startServer = async () => {
   }
 };
 
-// Start the server
+// Start server
 startServer();
 
 module.exports = app;

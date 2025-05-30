@@ -1,162 +1,180 @@
 /**
- * User Controller
- * Handles all user-related HTTP requests and responses
+ * User Controller - Updated for new error handling
+ * Handles all user-related HTTP requests
+ * @module controllers/userController
  */
 
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { generateTokens, refreshToken } = require('../middleware/auth');
+const errorCodes = require('../utils/errorCodes');
+const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
-/**
- * Register a new user
- * @route POST /api/users/register
- */
-const register = async (req, res, next) => {
-    try {
-        const { email, username, password } = req.body;
-        
-        // Check for existing user
-        const existingUser = await User.findByEmail(email);
-        if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-
-        // Create new user
-        const newUser = await User.create(email, username, password);
-        res.status(201).json({ message: 'User registered successfully' });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * Login user
- * @route POST /api/users/login
- */
-const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
-        
-        // Verify credentials
-        const user = await User.verifyPassword(email, password);
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: user.id, email: user.email, username: user.username }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1h' }
-        );
-
-        // Send response
-        res.status(200).json({ 
-            token, 
-            user: { 
-                id: user.id, 
-                email: user.email, 
-                username: user.username 
-            } 
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * Get user profile
- * @route GET /api/users/profile
- */
-const getProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const user = await User.findById(userId);
-        
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        res.json({
-            id: user.id,
-            email: user.email,
-            username: user.username
-        });
-    } catch (error) {
-        console.error('Profile fetch error:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-
-/**
- * Update user profile
- * @route PUT /api/users/profile
- */
-const updateProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const updatedUser = await User.updateProfile(userId, req.body);
-
-        res.json({
-            id: updatedUser.id,
-            email: updatedUser.email,
-            username: updatedUser.username
-        });
-    } catch (error) {
-        console.error('Profile update error:', error);
-        res.status(500).json({ 
-            message: 'Profile update failed',
-            error: error.message 
-        });
-    }
-};
-
-/**
- * Refresh JWT token
- * @route POST /api/users/refresh-token
- */
-const refreshToken = async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
+const userController = {
+  /**
+   * Register a new user
+   * @route POST /api/users/register
+   */
+  register: asyncHandler(async (req, res) => {
+    const { email, username, password } = req.body;
+    
+    // Validation
+    if (!email || !username || !password) {
+      throw { ...errorCodes.MISSING_REQUIRED };
     }
 
-    try {
-        // Verify existing token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.id);
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Generate new token
-        const newToken = jwt.sign(
-            { id: user.id, email: user.email, username: user.username },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({ token: newToken });
-    } catch (error) {
-        res.status(401).json({ message: 'Invalid token' });
+    if (password.length < 6) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: 'Password must be at least 6 characters' 
+      };
     }
+
+    // Create user
+    const newUser = await User.create(email, username, password);
+    
+    logger.info('New user registered:', { userId: newUser.id, email });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        id: newUser.id,
+        email: newUser.email,
+        username: newUser.username
+      }
+    });
+  }),
+
+  /**
+   * Login user
+   * @route POST /api/users/login
+   */
+  login: asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      throw { ...errorCodes.MISSING_REQUIRED };
+    }
+
+    // Verify credentials
+    const user = await User.verifyPassword(email, password);
+    if (!user) {
+      throw { ...errorCodes.INVALID_CREDENTIALS };
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    logger.info('User logged in:', { userId: user.id });
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username
+        },
+        accessToken,
+        refreshToken
+      }
+    });
+  }),
+
+  /**
+   * Get user profile
+   * @route GET /api/users/profile
+   */
+  getProfile: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  }),
+
+  /**
+   * Update user profile
+   * @route PUT /api/users/profile
+   */
+  updateProfile: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { username, currentPassword, newPassword } = req.body;
+
+    // Validate password change if requested
+    if (newPassword && !currentPassword) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: 'Current password required to set new password' 
+      };
+    }
+
+    if (newPassword && newPassword.length < 6) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: 'New password must be at least 6 characters' 
+      };
+    }
+
+    const updatedUser = await User.updateProfile(userId, {
+      username,
+      currentPassword,
+      newPassword
+    });
+
+    logger.info('User profile updated:', { userId });
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+  }),
+
+refreshToken: asyncHandler(async (req, res) => {
+  const { refreshToken: token } = req.body;
+
+  if (!token) {
+    throw { ...errorCodes.MISSING_REQUIRED, details: 'Refresh token required' };
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const accessToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+    
+    res.json({ 
+      success: true,
+      data: { accessToken }
+    });
+  } catch (error) {
+    throw { ...errorCodes.INVALID_TOKEN };
+  }
+}),
+  /**
+   * Logout user
+   * @route POST /api/users/logout
+   */
+  logout: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    
+    logger.info('User logged out:', { userId });
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  })
 };
 
-/**
- * Logout user
- * @route POST /api/users/logout
- */
-const logout = async (req, res) => {
-    res.json({ message: 'Logged out successfully' });
-};
-
-module.exports = {
-    register,
-    login,
-    logout,
-    refreshToken,
-    getProfile,
-    updateProfile
-};
+module.exports = userController;

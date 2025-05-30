@@ -1,244 +1,217 @@
-// src/utils/api.js - Simplified version without caching
+// src/utils/api.js - Updated for new backend with React Query support
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
-// API Configuration
+// Get environment variables
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
+const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true';
+
+// Create axios instance with dynamic base URL
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 15000, // 15 seconds timeout
-  withCredentials: true
+  baseURL: `${API_URL}/api/${API_VERSION}`,
+  timeout: 15000,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Debug flag - only enabled in development
-const DEBUG = process.env.NODE_ENV === 'development';
-
-// Simple request deduplication to prevent multiple identical requests
-const pendingRequests = new Map();
-
-/**
- * Debug logger for API operations
- * @param {string} message - Log message
- * @param {any} data - Optional data to log
- */
+// Debug logger
 const log = (message, data = null) => {
-  if (DEBUG) {
-    console.log(`🔍 API: ${message}`, data || '');
+  if (DEBUG_MODE) {
+    console.log(`[API] ${message}`, data);
   }
 };
 
-/**
- * Generate a unique request key for deduplication
- * @param {Object} config - Axios request config
- * @returns {string} Unique request key
- */
-const getRequestKey = (config) => {
-  return `${config.method}:${config.url}:${JSON.stringify(config.params || {})}:${JSON.stringify(config.data || {})}`;
-};
-
-/**
- * Handle authentication failures with redirect
- * @param {string} message - Error message to display
- */
-const handleAuthFailure = (message = 'Session expired. Please log in again.') => {
-  // Clear auth data
-  localStorage.removeItem('token');
-  
-  // Show message to user
-  toast.error(message);
-  
-  // Store the current path for redirecting back after login
-  const currentPath = window.location.pathname;
-  if (currentPath !== '/login') {
-    sessionStorage.setItem('redirectPath', currentPath);
-    window.location.href = '/login';
-  }
-};
-
-// --------------------- REQUEST INTERCEPTOR ---------------------
+// Request interceptor
 api.interceptors.request.use(
-  async (config) => {
-    const requestKey = getRequestKey(config);
-    log('Processing request:', {
-      key: requestKey,
-      method: config.method,
-      url: config.url
-    });
-
-    // For GET requests, check if we already have an identical request in progress
-    if (config.method.toLowerCase() === 'get' && pendingRequests.has(requestKey)) {
-      log('Duplicate request detected - reusing in-flight request:', config.url);
-      const pendingRequest = pendingRequests.get(requestKey);
-      return {
-        ...config,
-        adapter: () => pendingRequest
-      };
-    }
-
-    // Attach authentication token
-    const token = localStorage.getItem('token');
+  (config) => {
+    // Add auth token
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Track this request for deduplication (for GET requests only)
-    if (config.method.toLowerCase() === 'get') {
-      const promise = axios(config)
-        .then(response => {
-          pendingRequests.delete(requestKey);
-          return response;
-        })
-        .catch(error => {
-          pendingRequests.delete(requestKey);
-          throw error;
-        });
-      
-      pendingRequests.set(requestKey, promise);
-      
-      if (config.adapter) {
-        return config;
-      }
-    }
+    // Add request ID
+    config.headers['X-Request-ID'] = crypto.randomUUID();
 
     return config;
   },
   (error) => {
-    log('Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// --------------------- RESPONSE INTERCEPTOR ---------------------
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
-    log('Response received:', {
-      url: response.config.url,
-      status: response.status
-    });
     return response;
   },
-  (error) => {
-    // Get error details
-    const status = error?.response?.status;
-    const errorMessage = error?.response?.data?.message || error.message;
-    const errorCode = error?.response?.data?.error;
-
-    log('Response error:', { 
-      url: error?.config?.url,
-      status, 
-      errorCode, 
-      message: errorMessage 
-    });
-
-    // Handle authentication errors
-    if (status === 401) {
-      handleAuthFailure(errorMessage);
-      return Promise.reject(error);
-    } 
+  async (error) => {
+    const originalRequest = error.config;
     
-    // Handle rate limiting
-    if (status === 429) {
-      toast.warn(errorMessage || 'Too many requests. Please wait and try again.');
-      return Promise.reject(error);
-    } 
-    
-    // Handle server errors
-    if (status >= 500) {
-      toast.error(errorMessage || 'Server error. Please try again later.');
-      return Promise.reject(error);
-    }
-    
-    // Handle specific error types based on error code
-    if (errorCode && !error.config?.suppressToast) {
-      switch (errorCode) {
-        case 'validation_error':
-          // Don't show toast for validation errors - forms should handle these
-          break;
-        case 'duplicate_record':
-          toast.error(errorMessage || 'This record already exists.');
-          break;
-        case 'fetch_failed':
-        case 'creation_failed':
-        case 'update_failed':
-        case 'deletion_failed':
-          toast.error(errorMessage || 'Operation failed. Please try again.');
-          break;
-        case 'balance_failed':
-          // Special handling for balance calculation errors - show warning but don't block UI
-          toast.warn(errorMessage || 'Could not calculate balance. Using default values.');
-          break;
-        default:
-          toast.error(errorMessage || 'An error occurred.');
+    // Handle 401 - Token expired
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          const response = await axios.post('/api/v1/users/refresh-token', {
+            refreshToken
+          });
+          
+          const { accessToken } = response.data.data;
+          localStorage.setItem('accessToken', accessToken);
+          
+          // Retry original request
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed - redirect to login
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
 
+    // Handle other errors
+    const message = error.response?.data?.error?.message || error.message;
+    const code = error.response?.data?.error?.code;
+    
+    // Show toast for specific errors
+    switch (error.response?.status) {
+      case 429:
+        toast.error('Too many requests. Please slow down.');
+        break;
+      case 500:
+        toast.error('Server error. Please try again later.');
+        break;
+      default:
+        if (code !== 'VALIDATION_ERROR' && message) {
+          toast.error(message);
+        }
+    }
+
     return Promise.reject(error);
   }
 );
 
-// Authentication API methods
+// Auth API
 export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
   register: (userData) => api.post('/users/register', userData),
+  logout: () => api.post('/users/logout'),
   getProfile: () => api.get('/users/profile'),
-  refreshToken: (token) => api.post('/users/refresh-token', { token }),
-  logout: () => api.post('/users/logout')
+  updateProfile: (data) => api.put('/users/profile', data),
+  updatePreferences: (preferences) => api.put('/users/preferences', { preferences }),
+  uploadProfilePicture: (file) => {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    return api.post('/users/profile/picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
 };
 
-// Transaction API methods - aligned with backend endpoints
+// Transaction API - All endpoints including new dashboard
 export const transactionAPI = {
-  getAll: (params) => api.get('/transactions', { params }),
-  getRecent: (limit = 5, date = null) => api.get('/transactions/recent', { 
+  // NEW - Single dashboard call instead of 3!
+  getDashboard: (date) => api.get('/transactions/dashboard', { 
+    params: { date: date?.toISOString().split('T')[0] }
+  }),
+  
+  // Legacy endpoints (still supported)
+  getRecent: (limit = 5, date) => api.get('/transactions/recent', { 
     params: { 
       limit, 
-      date: date ? date.toISOString().split('T')[0] : undefined 
+      date: date?.toISOString().split('T')[0]
     }
   }),
+  
   getByPeriod: (period, date) => api.get(`/transactions/period/${period}`, {
     params: { date: date.toISOString().split('T')[0] }
   }),
-  getRecurring: (type = null) => api.get('/transactions/recurring', {
-    params: { type }
+  
+  getRecurring: (type) => api.get('/transactions/recurring', {
+    params: type ? { type } : {}
   }),
+  
   getBalanceDetails: (date) => api.get('/transactions/balance/details', {
     params: { date: date.toISOString().split('T')[0] }
   }),
+  
   getSummary: () => api.get('/transactions/summary'),
-  getBalanceHistory: (period = 'month', limit = 12) => api.get(`/transactions/balance/history/${period}`, {
-    params: { limit }
-  }),
+  
+  getBalanceHistory: (period = 'month', limit = 12) => 
+    api.get(`/transactions/balance/history/${period}`, { params: { limit } }),
+  
+  // CRUD operations
   create: (type, data) => api.post(`/transactions/${type}`, data),
   update: (type, id, data) => api.put(`/transactions/${type}/${id}`, data),
-  delete: (type, id, deleteFuture = false) => api.delete(`/transactions/${type}/${id}`, {
-    params: { deleteFuture }
+  delete: (type, id, deleteFuture = false) => 
+    api.delete(`/transactions/${type}/${id}`, { params: { deleteFuture } }),
+  
+  // Search
+  search: (query, limit = 50) => api.get('/transactions/search', {
+    params: { q: query, limit }
   }),
-  skipOccurrence: (type, id, skipDate) => api.post(`/transactions/${type}/${id}/skip`, {
-    skipDate
-  })
+  
+  // Skip occurrence
+  skipOccurrence: (type, id, skipDate) => 
+    api.post(`/transactions/${type}/${id}/skip`, { skipDate }),
+  
+  // Templates (recurring)
+  getTemplates: () => api.get('/transactions/templates'),
+  updateTemplate: (id, data) => api.put(`/transactions/templates/${id}`, data),
+  deleteTemplate: (id, deleteFuture = false) => 
+    api.delete(`/transactions/templates/${id}`, { params: { deleteFuture } }),
+  skipTemplateDates: (id, dates) => 
+    api.post(`/transactions/templates/${id}/skip`, { dates }),
+  
+  // Categories & Stats
+  getCategoryBreakdown: (startDate, endDate) => 
+    api.get('/transactions/categories/breakdown', {
+      params: { 
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      }
+    }),
+  
+  getStats: (months = 12) => api.get('/transactions/stats', { params: { months } }),
 };
 
-/**
- * Force a complete data refresh
- * Clears all pending requests and fetches fresh data
- */
-export const forceRefresh = async () => {
-  // Clear pending requests
-  log('Clearing all pending requests for refresh');
-  pendingRequests.clear();
+// Utility function to handle API errors
+export const handleAPIError = (error) => {
+  const errorData = error.response?.data?.error || {};
+  return {
+    code: errorData.code || 'UNKNOWN_ERROR',
+    message: errorData.message || 'An unexpected error occurred',
+    status: error.response?.status || 500,
+    timestamp: errorData.timestamp || new Date().toISOString()
+  };
+};
+
+// Export for React Query
+export const queryKeys = {
+  // Auth
+  profile: ['profile'],
   
-  // Force fresh data fetch
-  const today = new Date();
-  try {
-    await Promise.all([
-      transactionAPI.getBalanceDetails(today),
-      transactionAPI.getRecent(5, today),
-      transactionAPI.getByPeriod('day', today)
-    ]);
-    toast.success('Data refreshed successfully');
-    return true;
-  } catch (error) {
-    toast.error('Failed to refresh data');
-    return false;
-  }
+  // Transactions
+  dashboard: (date) => ['dashboard', date?.toISOString().split('T')[0]],
+  transactions: (filters) => ['transactions', filters],
+  recurring: (type) => ['recurring', type],
+  templates: ['templates'],
+  stats: (months) => ['stats', months],
+  categoryBreakdown: (start, end) => ['categoryBreakdown', start, end],
+  balanceHistory: (period) => ['balanceHistory', period],
+  
+  // Invalidation helpers
+  allTransactions: ['transactions'],
+  allDashboard: ['dashboard'],
 };
 
 export default api;

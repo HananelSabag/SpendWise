@@ -1,246 +1,215 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class', // <- allows toggling dark mode by adding a 'dark' class to <html> or <body>
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
+      // CSS Variables for dynamic theming
       colors: {
-        // Primary color palette - blues
+        // Primary palette
         primary: {
-          50:  '#EFF6FF',
-          100: '#DBEAFE',
-          200: '#BFDBFE',
-          300: '#93C5FD',
-          400: '#60A5FA',
-          500: '#3B82F6', // a bit deeper than your current 300 
-          600: '#2563EB',
-          700: '#1D4ED8',
-          800: '#1E40AF',
-          900: '#1E3A8A',
+          50:  'rgb(var(--color-primary-50) / <alpha-value>)',
+          100: 'rgb(var(--color-primary-100) / <alpha-value>)',
+          200: 'rgb(var(--color-primary-200) / <alpha-value>)',
+          300: 'rgb(var(--color-primary-300) / <alpha-value>)',
+          400: 'rgb(var(--color-primary-400) / <alpha-value>)',
+          500: 'rgb(var(--color-primary-500) / <alpha-value>)',
+          600: 'rgb(var(--color-primary-600) / <alpha-value>)',
+          700: 'rgb(var(--color-primary-700) / <alpha-value>)',
+          800: 'rgb(var(--color-primary-800) / <alpha-value>)',
+          900: 'rgb(var(--color-primary-900) / <alpha-value>)',
         },
-
-        // A set of "neutral" or "coolGray" for backgrounds
-        neutral: {
-          50:  '#F9FAFB',
-          100: '#F3F4F6',
-          200: '#E5E7EB',
-          300: '#D1D5DB',
-          400: '#9CA3AF',
-          500: '#6B7280',
-          600: '#4B5563',
-          700: '#374151',
-          800: '#1F2937',
-          900: '#111827',
+        
+        // Semantic colors
+        background: 'rgb(var(--color-background) / <alpha-value>)',
+        foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
+        card: {
+          DEFAULT: 'rgb(var(--color-card) / <alpha-value>)',
+          foreground: 'rgb(var(--color-card-foreground) / <alpha-value>)',
         },
-
-        // Additional color variations for backgrounds, success, and error
-        error: {
-          light: '#FEE2E2',
-          DEFAULT: '#EF4444',
-          dark: '#B91C1C',
-          darker: '#991B1B',
+        muted: {
+          DEFAULT: 'rgb(var(--color-muted) / <alpha-value>)',
+          foreground: 'rgb(var(--color-muted-foreground) / <alpha-value>)',
         },
+        accent: {
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)',
+        },
+        
+        // Status colors
         success: {
-          light: '#D1FAE5',
-          DEFAULT: '#10B981',
-          dark: '#059669',
+          DEFAULT: 'rgb(var(--color-success) / <alpha-value>)',
+          light: 'rgb(var(--color-success-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-success-dark) / <alpha-value>)',
         },
         warning: {
-          light: '#FEF3C7',
-          DEFAULT: '#F59E0B',
-          dark: '#D97706',
+          DEFAULT: 'rgb(var(--color-warning) / <alpha-value>)',
+          light: 'rgb(var(--color-warning-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-warning-dark) / <alpha-value>)',
+        },
+        error: {
+          DEFAULT: 'rgb(var(--color-error) / <alpha-value>)',
+          light: 'rgb(var(--color-error-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-error-dark) / <alpha-value>)',
         },
         info: {
-          light: '#E0F2FE',
-          DEFAULT: '#0EA5E9',
-          dark: '#0284C7',
+          DEFAULT: 'rgb(var(--color-info) / <alpha-value>)',
+          light: 'rgb(var(--color-info-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-info-dark) / <alpha-value>)',
         },
-
-        // Card and page backgrounds
-        card: {
-          DEFAULT: '#F8FAFC',
-          shadow: 'rgba(0, 0, 0, 0.1)',
-          hover: '#F1F5F9',
-        },
-        pageBackground: {
-          DEFAULT: 'linear-gradient(to bottom, #E3F2FD, #BFDBFE)',
-          dark: 'linear-gradient(to bottom, #1E293B, #0F172A)',
-        },
-      },
-
-      // You can define brand new radial or subtle gradient for backgrounds
-      backgroundImage: {
-        'blue-radial': 'radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%)',
-        'dark-gradient': 'linear-gradient(to bottom, #1E293B, #0F172A)',
-      },
-
-      // Slightly bigger radius/ shadows can give a softer look
-      borderRadius: {
-        'xl': '1rem',
-        '2xl': '1.5rem',
-        '3xl': '2rem',
-        '4xl': '2.5rem',
-        'full': '9999px',
-      },
-      boxShadow: {
-        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        'DEFAULT': '0 4px 6px rgba(0, 0, 0, 0.1)',
-        'md': '0 6px 12px rgba(0, 0, 0, 0.08)',
-        'lg': '0 10px 20px rgba(0, 0, 0, 0.15)',
-        'xl': '0 15px 30px rgba(0, 0, 0, 0.1)',
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        // If you want a secondary heading font (poppins, etc.)
-        heading: ['Poppins', 'sans-serif'],
-      },
-      animation: {
-        'fadeIn': 'fadeIn 0.5s ease-in-out',
-        'slideUp': 'slideUp 0.3s ease-out',
-        'slideDown': 'slideDown 0.3s ease-out',
-        'slideLeft': 'slideLeft 0.3s ease-out',
-        'slideRight': 'slideRight 0.3s ease-out',
-        'bounce': 'bounce 1s infinite',
-        'spin': 'spin 1s linear infinite',
-        'ping': 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'ripple': 'ripple 0.7s linear'
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideDown: {
-          '0%': { transform: 'translateY(-10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        slideLeft: {
-          '0%': { transform: 'translateX(10px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        slideRight: {
-          '0%': { transform: 'translateX(-10px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        ripple: {
-          '0%': { width: '0px', height: '0px', opacity: '0.5' },
-          '100%': { width: '200px', height: '200px', opacity: '0' },
+        
+        // Chart colors
+        chart: {
+          1: 'rgb(var(--color-chart-1) / <alpha-value>)',
+          2: 'rgb(var(--color-chart-2) / <alpha-value>)',
+          3: 'rgb(var(--color-chart-3) / <alpha-value>)',
+          4: 'rgb(var(--color-chart-4) / <alpha-value>)',
+          5: 'rgb(var(--color-chart-5) / <alpha-value>)',
         }
-      }
+      },
+      
+      // Typography
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Poppins', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'Consolas', 'monospace'],
+      },
+      
+      // Spacing
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
+      },
+      
+      // Border radius
+      borderRadius: {
+        'xl': 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        '3xl': 'var(--radius-3xl)',
+      },
+      
+      // Animations
+      animation: {
+        'slide-in': 'slide-in 0.2s ease-out',
+        'slide-out': 'slide-out 0.2s ease-in',
+        'fade-in': 'fade-in 0.2s ease-out',
+        'fade-out': 'fade-out 0.2s ease-in',
+        'scale-in': 'scale-in 0.2s ease-out',
+        'spin-slow': 'spin 3s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      
+      keyframes: {
+        'slide-in': {
+          '0%': { transform: 'translateY(-10px)', opacity: 0 },
+          '100%': { transform: 'translateY(0)', opacity: 1 },
+        },
+        'slide-out': {
+          '0%': { transform: 'translateY(0)', opacity: 1 },
+          '100%': { transform: 'translateY(-10px)', opacity: 0 },
+        },
+        'fade-in': {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
+        'fade-out': {
+          '0%': { opacity: 1 },
+          '100%': { opacity: 0 },
+        },
+        'scale-in': {
+          '0%': { transform: 'scale(0.95)', opacity: 0 },
+          '100%': { transform: 'scale(1)', opacity: 1 },
+        },
+      },
+      
+      // Shadows
+      boxShadow: {
+        'sm': '0 1px 2px 0 rgb(var(--color-shadow) / 0.05)',
+        'DEFAULT': '0 1px 3px 0 rgb(var(--color-shadow) / 0.1), 0 1px 2px -1px rgb(var(--color-shadow) / 0.1)',
+        'md': '0 4px 6px -1px rgb(var(--color-shadow) / 0.1), 0 2px 4px -2px rgb(var(--color-shadow) / 0.1)',
+        'lg': '0 10px 15px -3px rgb(var(--color-shadow) / 0.1), 0 4px 6px -4px rgb(var(--color-shadow) / 0.1)',
+        'xl': '0 20px 25px -5px rgb(var(--color-shadow) / 0.1), 0 8px 10px -6px rgb(var(--color-shadow) / 0.1)',
+        '2xl': '0 25px 50px -12px rgb(var(--color-shadow) / 0.25)',
+        'inner': 'inset 0 2px 4px 0 rgb(var(--color-shadow) / 0.05)',
+      },
+      
+      // Screens (breakpoints)
+      screens: {
+        'xs': '475px',
+        '3xl': '1920px',
+      },
     },
   },
   plugins: [
-    function({ addComponents, theme }) {
-      addComponents({
-        // Updated button classes
-        '.btn': {
-          padding: `${theme('spacing.2')} ${theme('spacing.4')}`,
-          borderRadius: theme('borderRadius.lg'),
-          fontWeight: theme('fontWeight.medium'),
-          transition: 'all 200ms',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: theme('spacing.2'),
-        },
-        '.btn-primary': {
-          backgroundColor: theme('colors.primary.500'),
-          color: theme('colors.white'),
-          '&:hover': {
-            backgroundColor: theme('colors.primary.600'),
-          },
-          '&:disabled': {
-            backgroundColor: theme('colors.primary.300'),
-            cursor: 'not-allowed',
-          },
-        },
-        '.btn-secondary': {
-          backgroundColor: theme('colors.white'),
-          color: theme('colors.primary.600'),
-          border: `1px solid ${theme('colors.primary.400')}`,
-          '&:hover': {
-            backgroundColor: theme('colors.primary.50'),
-          },
-        },
-        '.btn-danger': {
-          backgroundColor: theme('colors.error.DEFAULT'),
-          color: theme('colors.white'),
-          '&:hover': {
-            backgroundColor: theme('colors.error.dark'),
-          },
-          '&:disabled': {
-            backgroundColor: theme('colors.error.light'),
-            cursor: 'not-allowed',
-          },
-        },
-
-        // Example of toggling dark mode
-        '.dark-mode-text': {
-          '@apply text-gray-900 dark:text-gray-100': {},
-        },
-
-        '.card': {
-          backgroundColor: theme('colors.card.DEFAULT'),
-          borderRadius: theme('borderRadius.xl'),
-          boxShadow: `0 4px 6px ${theme('colors.card.shadow')}`,
-          padding: theme('spacing.6'),
-          transition: 'all 200ms',
-        },
-        '.card-hover': {
-          '&:hover': {
-            boxShadow: `0 10px 15px -3px ${theme('colors.card.shadow')}`,
-            transform: 'translateY(-2px)',
-          }
-        },
-        '.gradient-primary': {
-          background: theme('colors.pageBackground.DEFAULT'),
-          '&.dark': {
-            background: theme('colors.pageBackground.dark'),
-          },
+    // Custom plugin for CSS variables
+    function({ addBase }) {
+      addBase({
+        ':root': {
+          // Primary colors
+          '--color-primary-50': '239 246 255',
+          '--color-primary-100': '219 234 254',
+          '--color-primary-200': '191 219 254',
+          '--color-primary-300': '147 197 253',
+          '--color-primary-400': '96 165 250',
+          '--color-primary-500': '59 130 246',
+          '--color-primary-600': '37 99 235',
+          '--color-primary-700': '29 78 216',
+          '--color-primary-800': '30 64 175',
+          '--color-primary-900': '30 58 138',
+          
+          // Semantic colors - Light mode
+          '--color-background': '255 255 255',
+          '--color-foreground': '15 23 42',
+          '--color-card': '255 255 255',
+          '--color-card-foreground': '15 23 42',
+          '--color-muted': '248 250 252',
+          '--color-muted-foreground': '100 116 139',
+          '--color-accent': '241 245 249',
+          '--color-accent-foreground': '15 23 42',
+          
+          // Status colors
+          '--color-success': '34 197 94',
+          '--color-success-light': '220 252 231',
+          '--color-success-dark': '21 128 61',
+          '--color-warning': '251 146 60',
+          '--color-warning-light': '254 243 199',
+          '--color-warning-dark': '217 119 6',
+          '--color-error': '239 68 68',
+          '--color-error-light': '254 226 226',
+          '--color-error-dark': '185 28 28',
+          '--color-info': '59 130 246',
+          '--color-info-light': '219 234 254',
+          '--color-info-dark': '29 78 216',
+          
+          // Chart colors
+          '--color-chart-1': '59 130 246',
+          '--color-chart-2': '34 197 94',
+          '--color-chart-3': '251 146 60',
+          '--color-chart-4': '168 85 247',
+          '--color-chart-5': '236 72 153',
+          
+          // Other
+          '--color-shadow': '0 0 0',
+          '--radius-xl': '0.75rem',
+          '--radius-2xl': '1rem',
+          '--radius-3xl': '1.5rem',
         },
         
-        // High contrast mode for accessibility
-        '.high-contrast': {
-          // Text contrast
-          '& body': {
-            color: '#000 !important',
-            backgroundColor: '#fff !important',
-          },
-          // Links and buttons
-          '& a, & button': {
-            color: '#00f !important',
-            backgroundColor: '#fff !important',
-            borderColor: '#00f !important',
-            textDecoration: 'underline !important',
-          },
-          // Form elements
-          '& input, & select, & textarea': {
-            color: '#000 !important',
-            backgroundColor: '#fff !important',
-            borderColor: '#000 !important',
-          },
-          // Headers and emphasis
-          '& h1, & h2, & h3, & h4, & h5, & h6, & strong, & b': {
-            color: '#000 !important',
-          },
-          // Remove gradients and shadows
-          '& *': {
-            boxShadow: 'none !important',
-            textShadow: 'none !important',
-            backgroundImage: 'none !important',
-          },
-          // Add border to improve distinction
-          '& .card, & .btn, & input, & select': {
-            border: '2px solid #000 !important',
-          }
+        '.dark': {
+          // Dark mode overrides
+          '--color-background': '10 10 10',
+          '--color-foreground': '248 250 252',
+          '--color-card': '24 24 27',
+          '--color-card-foreground': '248 250 252',
+          '--color-muted': '39 39 42',
+          '--color-muted-foreground': '161 161 170',
+          '--color-accent': '39 39 42',
+          '--color-accent-foreground': '248 250 252',
+          '--color-shadow': '255 255 255',
         }
       });
     },

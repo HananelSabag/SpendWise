@@ -1,59 +1,144 @@
-import api from './api';
-import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/helpers';
+// src/utils/auth.js - Updated authentication utilities
+import { authAPI } from './api';
 
 /**
- * Handles user login by authenticating credentials and storing token.
- *
- * @param {Object} credentials - User credentials (email, password).
- * @returns {Object} Authenticated user data.
+ * Token management
  */
-export const login = async (credentials) => {
-  try {
-    const response = await api.post('/users/login', credentials);
-    setStoredToken(response.data.token); // Store token securely
-    return response.data; // Return user data to caller
-  } catch (error) {
-    throw new Error(error.response?.data?.message || 'Login failed');
-  }
-};
-
-/**
- * Registers a new user.
- *
- * @param {Object} userData - New user information.
- * @returns {Object} Response data.
- */
-export const register = async (userData) => {
-  try {
-    const response = await api.post('/users/register', userData);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Refreshes authentication token.
- *
- * @returns {Object} Updated token data.
- */
-export const refreshToken = async () => {
-  try {
-    const token = getStoredToken();
-    const response = await api.post('/users/refresh-token', { token });
-    if (response.data.token) {
-      setStoredToken(response.data.token);
+export const tokenManager = {
+  getAccessToken: () => localStorage.getItem('accessToken'),
+  getRefreshToken: () => localStorage.getItem('refreshToken'),
+  
+  setTokens: (accessToken, refreshToken) => {
+    localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
     }
-    return response.data;
-  } catch (error) {
-    removeStoredToken();
-    throw error;
+  },
+  
+  clearTokens: () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  },
+  
+  isTokenExpired: (token) => {
+    if (!token) return true;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
   }
 };
 
 /**
- * Logs out the user by clearing the stored token.
+ * Authentication functions
  */
-export const logout = () => {
-  removeStoredToken();
+export const auth = {
+  /**
+   * Login user
+   * @param {Object} credentials - { email, password }
+   * @returns {Promise<Object>} User data and tokens
+   */
+  login: async (credentials) => {
+    try {
+      const response = await authAPI.login(credentials);
+      const { data } = response.data;
+      
+      // Store tokens
+      if (data.accessToken && data.refreshToken) {
+        tokenManager.setTokens(data.accessToken, data.refreshToken);
+      }
+      
+      return {
+        success: true,
+        user: data.user,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || { 
+          message: 'Login failed',
+          code: 'LOGIN_ERROR'
+        }
+      };
+    }
+  },
+
+  /**
+   * Register new user
+   * @param {Object} userData - Registration data
+   * @returns {Promise<Object>} Result
+   */
+  register: async (userData) => {
+    try {
+      const response = await authAPI.register(userData);
+      return {
+        success: true,
+        message: response.data.message || 'Registration successful'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || {
+          message: 'Registration failed',
+          code: 'REGISTER_ERROR'
+        }
+      };
+    }
+  },
+
+  /**
+   * Logout user
+   * @returns {Promise<void>}
+   */
+  logout: async () => {
+    try {
+      // Call logout endpoint
+      await authAPI.logout();
+    } catch (error) {
+      // Log error but continue with local logout
+      console.error('Logout API error:', error);
+    } finally {
+      // Clear local data
+      tokenManager.clearTokens();
+      // Redirect to login
+      window.location.href = '/login';
+    }
+  },
+
+  /**
+   * Get current user profile
+   * @returns {Promise<Object|null>} User data or null
+   */
+  getCurrentUser: async () => {
+    try {
+      const token = tokenManager.getAccessToken();
+      if (!token || tokenManager.isTokenExpired(token)) {
+        return null;
+      }
+      
+      const response = await authAPI.getProfile();
+      return response.data.data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        tokenManager.clearTokens();
+      }
+      return null;
+    }
+  },
+
+  /**
+   * Check if user is authenticated
+   * @returns {boolean}
+   */
+  isAuthenticated: () => {
+    const token = tokenManager.getAccessToken();
+    return token && !tokenManager.isTokenExpired(token);
+  }
 };
+
+export default auth;

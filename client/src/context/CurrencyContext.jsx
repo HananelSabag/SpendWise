@@ -1,104 +1,136 @@
-// CurrencyContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchExchangeRate } from '../utils/currencyAPI';
+// src/context/CurrencyContext.jsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getExchangeRates, formatCurrency as formatCurrencyUtil } from '../utils/currencyAPI';
 
-// Context for managing currency and exchange rates
 const CurrencyContext = createContext(null);
 
-// Fallback exchange rates in case the API request fails
-const FALLBACK_RATES = {
-  USD: { ILS: 3.6 },
-  ILS: { USD: 0.28 }
-};
-
-// Supported currencies with symbols and metadata
+// Supported currencies
 export const currencies = {
   USD: { symbol: '$', code: 'USD', name: 'US Dollar' },
-  ILS: { symbol: '₪', code: 'ILS', name: 'Israeli Shekel' }
+  ILS: { symbol: '₪', code: 'ILS', name: 'Israeli Shekel' },
+  EUR: { symbol: '€', code: 'EUR', name: 'Euro' }
 };
 
 export const CurrencyProvider = ({ children }) => {
-  const [currency, setCurrency] = useState('ILS'); // Current selected currency
-  const [exchangeRates, setExchangeRates] = useState(FALLBACK_RATES); // Exchange rates storage
-  const [isLoading, setIsLoading] = useState(false); // Loading state for exchange rates
-
-  // Fetch exchange rates whenever the currency changes
-  useEffect(() => {
-    const fetchRates = async () => {
-      if (currency === 'ILS') return; // Skip fetching if currency is ILS
-
-      try {
-        setIsLoading(true);
-        const rate = await fetchExchangeRate('ILS', 'USD'); // Fetch ILS to USD exchange rate
-
-        const newExchangeRates = {
-          USD: { ILS: 1 / rate },
-          ILS: { USD: rate }
-        };
-
-        // Log the updated exchange rates to the console
-        console.log('Exchange Rates Updated:', newExchangeRates);
-
-        setExchangeRates(newExchangeRates);
-      } catch (error) {
-        console.warn('Using fallback rates:', FALLBACK_RATES);
-
-        // Log the fallback exchange rates to the console
-        console.log('Fallback Exchange Rates:', FALLBACK_RATES);
-
-        setExchangeRates(FALLBACK_RATES);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRates();
-  }, [currency]);
-
-  // Convert an amount from one currency to another
-  const convertAmount = useCallback((amount, fromCurrency, toCurrency) => {
-    if (fromCurrency === toCurrency || !amount) return amount; // No conversion needed
-
-    const rate = exchangeRates[fromCurrency]?.[toCurrency] 
-      || FALLBACK_RATES[fromCurrency][toCurrency]; // Use fallback rates if necessary
-
-    return amount * rate; // Perform conversion
-  }, [exchangeRates]);
-
-  // Format an amount based on the selected currency
-  const formatAmount = useCallback((amount, sourceCurrency = 'ILS') => {
-    if (!amount) return currencies[currency].symbol + '0';
-
-    const convertedAmount = convertAmount(amount, sourceCurrency, currency);
-
-    return new Intl.NumberFormat(currency === 'ILS' ? 'he-IL' : 'en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(convertedAmount);
-  }, [currency, convertAmount]);
-
-  // Toggle between USD and ILS
-  const toggleCurrency = useCallback(() => {
-    setCurrency(prev => prev === 'USD' ? 'ILS' : 'USD');
+  // Get initial currency from localStorage or default to ILS
+  const [currency, setCurrency] = useState(() => {
+    return localStorage.getItem('preferredCurrency') || 'ILS';
+  });
+  
+  // Use React Query for exchange rates
+  const { data: exchangeRates, isLoading, error, refetch } = useQuery({
+    queryKey: ['exchangeRates', currency],
+    queryFn: () => getExchangeRates(currency),
+    staleTime: 60 * 60 * 1000, // 1 hour
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours
+    retry: 2,
+    refetchInterval: 60 * 60 * 1000, // Refetch every hour
+    initialData: {
+      USD: currency === 'ILS' ? 0.28 : 1,
+      ILS: currency === 'USD' ? 3.6 : 1,
+      EUR: currency === 'USD' ? 0.92 : currency === 'ILS' ? 0.26 : 1
+    }
+  });
+  
+  // Save currency preference
+  const updateCurrency = useCallback((newCurrency) => {
+    setCurrency(newCurrency);
+    localStorage.setItem('preferredCurrency', newCurrency);
   }, []);
-
+  
+  // Convert amount between currencies
+  const convertAmount = useCallback((amount, fromCurrency, toCurrency = currency) => {
+    if (!amount || fromCurrency === toCurrency) return amount;
+    
+    // If we have the direct rate
+    if (fromCurrency === currency && exchangeRates?.[toCurrency]) {
+      return amount * exchangeRates[toCurrency];
+    }
+    
+    // If we need to convert through the base currency
+    if (exchangeRates?.[fromCurrency] && exchangeRates?.[toCurrency]) {
+      // Convert to base currency first, then to target
+      const inBaseCurrency = amount / exchangeRates[fromCurrency];
+      return inBaseCurrency * exchangeRates[toCurrency];
+    }
+    
+    // Fallback rates
+    const fallbackRates = {
+      USD: { ILS: 3.6, EUR: 0.92 },
+      ILS: { USD: 0.28, EUR: 0.26 },
+      EUR: { USD: 1.09, ILS: 3.91 }
+    };
+    
+    const rate = fallbackRates[fromCurrency]?.[toCurrency];
+    return rate ? amount * rate : amount;
+  }, [currency, exchangeRates]);
+  
+  // Format amount in the selected currency
+  const formatAmount = useCallback((amount, sourceCurrency = 'ILS') => {
+    const convertedAmount = convertAmount(amount, sourceCurrency, currency);
+    return formatCurrencyUtil(convertedAmount, currency);
+  }, [currency, convertAmount]);
+  
+  // Toggle between currencies
+  const toggleCurrency = useCallback(() => {
+    const availableCurrencies = Object.keys(currencies);
+    const currentIndex = availableCurrencies.indexOf(currency);
+    const nextIndex = (currentIndex + 1) % availableCurrencies.length;
+    updateCurrency(availableCurrencies[nextIndex]);
+  }, [currency, updateCurrency]);
+  
+  // Get rate between two currencies
+  const getRate = useCallback((from, to) => {
+    if (from === to) return 1;
+    
+    if (from === currency) {
+      return exchangeRates?.[to] || 1;
+    }
+    
+    if (to === currency) {
+      return 1 / (exchangeRates?.[from] || 1);
+    }
+    
+    // Convert through base currency
+    const fromRate = exchangeRates?.[from] || 1;
+    const toRate = exchangeRates?.[to] || 1;
+    return toRate / fromRate;
+  }, [currency, exchangeRates]);
+  
+  const value = {
+    // Current currency
+    currency,
+    setCurrency: updateCurrency,
+    toggleCurrency,
+    
+    // Currency data
+    currencies,
+    currencySymbol: currencies[currency].symbol,
+    currencyName: currencies[currency].name,
+    
+    // Exchange rates
+    exchangeRates: exchangeRates || {},
+    isLoading,
+    error,
+    refreshRates: refetch,
+    
+    // Conversion methods
+    convertAmount,
+    formatAmount,
+    getRate,
+    
+    // Utility
+    formatCurrency: formatCurrencyUtil
+  };
+  
   return (
-    <CurrencyContext.Provider value={{
-      currency,
-      isLoading,
-      toggleCurrency,
-      formatAmount,
-      convertAmount,
-      currencySymbol: currencies[currency].symbol
-    }}>
+    <CurrencyContext.Provider value={value}>
       {children}
     </CurrencyContext.Provider>
   );
 };
 
-// Custom hook to access the CurrencyContext
 export const useCurrency = () => {
   const context = useContext(CurrencyContext);
   if (!context) {
@@ -106,3 +138,5 @@ export const useCurrency = () => {
   }
   return context;
 };
+
+export default CurrencyContext;

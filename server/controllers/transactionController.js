@@ -1,504 +1,620 @@
 /**
- * Transaction Controller
- * Handles all transaction-related operations with enhanced recurring support
+ * Transaction Controller - Extended Version with Legacy Support
+ * Includes all endpoints expected by current client
+ * @module controllers/transactionController
  */
 
 const Transaction = require('../models/Transaction');
+const RecurringTemplate = require('../models/RecurringTemplate');
+const DBQueries = require('../utils/dbQueries');
+const TimeManager = require('../utils/TimeManager');
+const errorCodes = require('../utils/errorCodes');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 const transactionController = {
   /**
-   * Get all transactions with filtering support
-   * @route GET /api/transactions
+   * Get dashboard data - ONE REQUEST instead of 3!
+   * @route GET /api/v1/transactions/dashboard
    */
-  getAll: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { type, startDate, endDate, category } = req.query;
-
-      // Validate transaction type if provided
-      if (type && !['expense', 'income'].includes(type)) {
-        return res.status(400).json({
-          error: 'invalid_type',
-          message: 'Invalid transaction type. Must be expense or income'
-        });
-      }
-
-      // Validate dates if provided
-      if (startDate && isNaN(new Date(startDate).getTime())) {
-        return res.status(400).json({
-          error: 'invalid_start_date',
-          message: 'Invalid start date format'
-        });
-      }
-      if (endDate && isNaN(new Date(endDate).getTime())) {
-        return res.status(400).json({
-          error: 'invalid_end_date',
-          message: 'Invalid end date format'
-        });
-      }
-
-      const transactions = await Transaction.getAll(type, userId, { 
-        startDate, 
-        endDate, 
-        category 
-      });
-      res.status(200).json(transactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      res.status(500).json({
-        error: 'fetch_failed',
-        message: 'Unable to fetch transactions. Please try again later'
-      });
-    }
-  },
+  getDashboardData: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { date } = req.query;
+    
+    const targetDate = date ? TimeManager.normalize(new Date(date)) : new Date();
+    const dashboardData = await Transaction.getDashboardData(userId, targetDate);
+    
+    res.json({
+      success: true,
+      data: dashboardData,
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Get recent transactions
-   * @route GET /api/transactions/recent
+   * Get recent transactions - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/recent
    */
-  getRecentTransactions: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { limit = 5, date } = req.query;
-
-      if (isNaN(limit) || limit < 1) {
-        return res.status(400).json({
-          error: 'invalid_limit',
-          message: 'Limit must be a positive number'
-        });
-      }
-
-      let upToDate = null;
-      if (date) {
-        const parsedDate = new Date(date);
-        if (isNaN(parsedDate.getTime())) {
-          return res.status(400).json({
-            error: 'invalid_date',
-            message: 'Invalid date format'
-          });
-        }
-        // Optionally normalize to midday
-        parsedDate.setHours(12, 0, 0, 0);
-        upToDate = parsedDate;
-      }
-
-      // Now actually pass upToDate to the model
-      const transactions = await Transaction.getRecentTransactions(
-        userId,
-        parseInt(limit),
-        upToDate // <--- we pass the date here
-      );
-
-      return res.json(transactions);
-    } catch (error) {
-      console.error('Error fetching recent transactions:', error);
-      return res.status(500).json({
-        error: 'fetch_failed',
-        message: 'Failed to fetch recent transactions'
-      });
-    }
-  },
+  getRecent: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { limit = 5, date } = req.query;
+    
+    const targetDate = date ? new Date(date) : new Date();
+    
+    // Use the optimized query to get recent transactions
+    const result = await Transaction.getTransactions(userId, {
+      endDate: TimeManager.formatForDB(targetDate),
+      limit: parseInt(limit),
+      sortBy: 'date',
+      sortOrder: 'DESC'
+    });
+    
+    res.json({
+      success: true,
+      data: result.transactions,
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Get transactions by period
-   * @route GET /api/transactions/period/:period
+   * Get transactions by period - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/period/:period
    */
-  getByPeriod: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { period } = req.params;
-      const date = req.query.date ? new Date(req.query.date) : new Date();
-
-      if (!['day', 'week', 'month', 'year'].includes(period)) {
-        return res.status(400).json({
-          error: 'invalid_period',
-          message: 'Invalid period. Must be day, week, month, or year'
-        });
-      }
-
-      if (isNaN(date.getTime())) {
-        return res.status(400).json({
-          error: 'invalid_date',
-          message: 'Invalid date format'
-        });
-      }
-
-      date.setHours(0, 0, 0, 0);
-      const transactions = await Transaction.getByPeriod(userId, period, date);
-      res.json(transactions);
-    } catch (error) {
-      console.error('Error fetching period transactions:', error);
-      res.status(500).json({
-        error: 'fetch_failed',
-        message: 'Failed to fetch period transactions'
-      });
+  getByPeriod: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { period } = req.params;
+    const { date } = req.query;
+    
+    if (!['day', 'week', 'month', 'year'].includes(period)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid period' };
     }
-  },
+    
+    const targetDate = date ? new Date(date) : new Date();
+    const dateRanges = TimeManager.getDateRanges(targetDate);
+    const range = dateRanges[period === 'day' ? 'daily' : period + 'ly'];
+    
+    const result = await Transaction.getTransactions(userId, {
+      startDate: TimeManager.formatForDB(range.start),
+      endDate: TimeManager.formatForDB(range.end),
+      sortBy: 'date',
+      sortOrder: 'DESC'
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        transactions: result.transactions,
+        period,
+        startDate: range.start,
+        endDate: range.end
+      },
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Get all recurring transactions
-   * @route GET /api/transactions/recurring
+   * Get recurring transactions - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/recurring
    */
-  getRecurring: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { type } = req.query;
-      
-      if (type && !['expense', 'income'].includes(type)) {
-        return res.status(400).json({
-          error: 'invalid_type',
-          message: 'Invalid transaction type. Must be expense or income'
-        });
-      }
-
-      const transactions = await Transaction.getRecurring(userId, type);
-      res.json(transactions);
-    } catch (error) {
-      console.error('Error fetching recurring transactions:', error);
-      res.status(500).json({
-        error: 'fetch_failed',
-        message: 'Failed to fetch recurring transactions'
-      });
+  getRecurring: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { type } = req.query;
+    
+    // Get templates
+    let templates = await RecurringTemplate.getByUser(userId);
+    
+    // Filter by type if specified
+    if (type && ['expense', 'income'].includes(type)) {
+      templates = templates.filter(t => t.type === type);
     }
-  },
-
-  /**
-   * Get balance summary
-   * @route GET /api/transactions/summary
-   */
-  getSummary: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const summary = await Transaction.getSummary(userId);
-      res.status(200).json(summary);
-    } catch (error) {
-      console.error('Error fetching summary:', error);
-      res.status(500).json({
-        error: 'summary_failed',
-        message: 'Unable to fetch balance summary'
-      });
-    }
-  },
-  
-  /**
-   * Get detailed balance calculations
-   * @route GET /api/transactions/balance/details
-   */
-  getBalanceDetails: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const targetDate = req.query.date ? new Date(req.query.date) : new Date();
-      
-      if (isNaN(targetDate.getTime())) {
-        return res.status(400).json({
-          error: 'invalid_date',
-          message: 'Invalid date format provided'
-        });
-      }
-      
-      // Reset time to start of day for consistent calculations
-      targetDate.setHours(0, 0, 0, 0);
-      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-      let weekStart = new Date(startOfMonth);
-      const currentDay = targetDate.getDate();
-      const weekNumber = Math.floor((currentDay - 1) / 7);
-      weekStart.setDate(weekNumber * 7 + 1);
-      
-      try {
-        const balanceDetails = await Transaction.getDetailedBalance(userId, targetDate, {
-          weekStart,
-          monthStart: startOfMonth
+    
+    // Get recent occurrences for each template
+    const recurringWithOccurrences = await Promise.all(
+      templates.map(async (template) => {
+        const occurrences = await Transaction.getTransactions(userId, {
+          templateId: template.id,
+          limit: 5,
+          sortBy: 'date',
+          sortOrder: 'DESC'
         });
         
-        res.status(200).json(balanceDetails);
-      } catch (detailError) {
-        console.error('Error calculating detailed balance:', detailError);
-        
-        // Return default empty data instead of 500 error
-        res.status(200).json({
-          daily: { income: 0, expenses: 0, balance: 0 },
-          weekly: { income: 0, expenses: 0, balance: 0 },
-          monthly: { income: 0, expenses: 0, balance: 0 },
-          yearly: { income: 0, expenses: 0, balance: 0 },
-          metadata: {
-            calculatedAt: new Date().toISOString(),
-            nextReset: null,
-            timePeriods: {
-              daily: { start: targetDate, end: targetDate },
-              weekly: { start: weekStart, end: targetDate },
-              monthly: { start: startOfMonth, end: targetDate },
-              yearly: { start: new Date(targetDate.getFullYear(), 0, 1), end: targetDate }
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error in getBalanceDetails:', error);
-      res.status(500).json({
-        error: 'balance_failed',
-        message: 'Unable to calculate balance details'
-      });
-    }
-  },
+        return {
+          ...template,
+          recentOccurrences: occurrences.transactions,
+          nextOccurrence: TimeManager.getNextOccurrence(
+            occurrences.transactions[0]?.date || template.start_date,
+            template.interval_type,
+            template.day_of_month
+          )
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: recurringWithOccurrences,
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Get balance history for period
-   * @route GET /api/transactions/balance/history/:period?
+   * Get balance details - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/balance/details
    */
-  getBalanceHistory: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { period = 'month' } = req.params;
-      const { limit = 12 } = req.query;
-
-      if (!['day', 'week', 'month', 'year'].includes(period)) {
-        return res.status(400).json({
-          error: 'invalid_period',
-          message: 'Invalid period. Must be day, week, month, or year'
-        });
-      }
-
-      if (isNaN(limit) || limit < 1) {
-        return res.status(400).json({
-          error: 'invalid_limit',
-          message: 'Limit must be a positive number'
-        });
-      }
-
-      const history = await Transaction.getBalanceHistory(userId, period, parseInt(limit));
-      res.json(history);
-    } catch (error) {
-      console.error('Error fetching balance history:', error);
-      res.status(500).json({
-        error: 'history_failed',
-        message: 'Failed to fetch balance history'
-      });
-    }
-  },
+  getBalanceDetails: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { date } = req.query;
+    
+    const targetDate = date ? new Date(date) : new Date();
+    const dashboardData = await Transaction.getDashboardData(userId, targetDate);
+    
+    // Extract balance information
+    const balanceDetails = {
+      daily: dashboardData.daily_balance,
+      weekly: dashboardData.weekly_balance,
+      monthly: dashboardData.monthly_balance,
+      yearly: dashboardData.yearly_balance,
+      calculated_at: dashboardData.metadata.calculated_at,
+      target_date: dashboardData.metadata.target_date
+    };
+    
+    res.json({
+      success: true,
+      data: balanceDetails,
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Create new transaction with recurring support
-   * @route POST /api/transactions/:type
+   * Get summary - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/summary
    */
-  create: async (req, res) => {
-    try {
-      const { type } = req.params;
-      if (!['expense', 'income'].includes(type)) {
-        return res.status(400).json({
-          error: 'invalid_type',
-          message: 'Invalid transaction type. Must be expense or income'
-        });
+  getSummary: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    
+    // Get user statistics and current month data
+    const [stats, monthlyData] = await Promise.all([
+      Transaction.getStats(userId),
+      DBQueries.getMonthlyStats(userId, 1)
+    ]);
+    
+    const summary = {
+      totalIncome: stats.total_income,
+      totalExpenses: stats.total_expenses,
+      netBalance: stats.net_balance,
+      activeTemplates: stats.active_templates,
+      currentMonth: {
+        income: monthlyData[0]?.income || 0,
+        expenses: monthlyData[0]?.expenses || 0,
+        balance: monthlyData[0]?.balance || 0
+      },
+      averages: {
+        dailyExpense: stats.avg_daily_expense,
+        dailyIncome: stats.avg_daily_income
       }
-
-      if (!req.body.amount || isNaN(req.body.amount)) {
-        return res.status(400).json({
-          error: 'invalid_amount',
-          message: 'Amount is required and must be a number'
-        });
-      }
-
-      // Validate recurring transaction data
-      if (req.body.is_recurring) {
-        if (!req.body.recurring_interval) {
-          return res.status(400).json({
-            error: 'missing_interval',
-            message: 'Recurring interval is required for recurring transactions'
-          });
-        }
-
-        if (!['daily', 'weekly', 'monthly'].includes(req.body.recurring_interval)) {
-          return res.status(400).json({
-            error: 'invalid_interval',
-            message: 'Invalid recurring interval. Must be daily, weekly, or monthly'
-          });
-        }
-      }
-
-      // Format and validate date
-      const date = req.body.date ? new Date(req.body.date) : new Date();
-      if (isNaN(date.getTime())) {
-        return res.status(400).json({
-          error: 'invalid_date',
-          message: 'Invalid date format'
-        });
-      }
-
-      const transaction = await Transaction.create(type, {
-        ...req.body,
-        user_id: req.user.id,
-        date: date.toISOString().split('T')[0]
-      });
-
-      res.status(201).json(transaction);
-    } catch (error) {
-      console.error('Error creating transaction:', error);
-      res.status(500).json({
-        error: 'creation_failed',
-        message: 'Failed to create transaction'
-      });
-    }
-  },
+    };
+    
+    res.json({
+      success: true,
+      data: summary,
+      timestamp: new Date().toISOString()
+    });
+  }),
 
   /**
-   * Update transaction with recurring support
-   * @route PUT /api/transactions/:type/:id
+   * Get balance history - LEGACY SUPPORT
+   * @route GET /api/v1/transactions/balance/history/:period
    */
-  update: async (req, res) => {
-    try {
-      const { type, id } = req.params;
-      const { updateFuture } = req.body;
-
-      if (!['expense', 'income'].includes(type)) {
-        return res.status(400).json({
-          error: 'invalid_type',
-          message: 'Invalid transaction type. Must be expense or income'
-        });
-      }
-
-      if (req.body.amount && isNaN(req.body.amount)) {
-        return res.status(400).json({
-          error: 'invalid_amount',
-          message: 'Amount must be a number'
-        });
-      }
-
-      // Validate recurring updates
-      if (req.body.is_recurring) {
-        if (!req.body.recurring_interval) {
-          return res.status(400).json({
-            error: 'missing_interval',
-            message: 'Recurring interval is required for recurring transactions'
-          });
-        }
-
-        if (!['daily', 'weekly', 'monthly'].includes(req.body.recurring_interval)) {
-          return res.status(400).json({
-            error: 'invalid_interval',
-            message: 'Invalid recurring interval. Must be daily, weekly, or monthly'
-          });
-        }
-      }
-
-      // Format and validate date if provided
-      if (req.body.date) {
-        const date = new Date(req.body.date);
-        if (isNaN(date.getTime())) {
-          return res.status(400).json({
-            error: 'invalid_date',
-            message: 'Invalid date format'
-          });
-        }
-        req.body.date = date.toISOString().split('T')[0];
-      }
-
-      const transaction = await Transaction.update(type, id, req.user.id, {
-        ...req.body,
-        updateFuture
-      });
-
-      if (!transaction) {
-        return res.status(404).json({
-          error: 'not_found',
-          message: 'Transaction not found'
-        });
-      }
-
-      res.status(200).json(transaction);
-    } catch (error) {
-      console.error('Error updating transaction:', error);
-      res.status(500).json({
-        error: 'update_failed',
-        message: 'Failed to update transaction'
-      });
+  getBalanceHistory: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { period } = req.params;
+    const { limit = 12 } = req.query;
+    
+    if (!['month', 'year'].includes(period)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid period. Use month or year' };
     }
-  },
-
-  /**
-   * Delete transaction with recurring options
-   * @route DELETE /api/transactions/:type/:id
-   */
-  delete: async (req, res) => {
-    try {
-      const { type, id } = req.params;
-      const { deleteFuture = false } = req.query;
-
-      if (!['expense', 'income'].includes(type)) {
-        return res.status(400).json({
-          error: 'invalid_type',
-          message: 'Invalid transaction type. Must be expense or income'
-        });
-      }
-
-      const success = await Transaction.delete(type, id, req.user.id, deleteFuture);
+    
+    // For now, we only have monthly stats implementation
+    if (period === 'month') {
+      const history = await DBQueries.getMonthlyStats(userId, parseInt(limit));
       
-      if (!success) {
-        return res.status(404).json({
-          error: 'not_found',
-          message: 'Transaction not found'
-        });
-      }
-
-      res.status(200).json({ 
-        message: deleteFuture ? 
-          'Transaction and future occurrences deleted successfully' : 
-          'Transaction deleted successfully'
+      res.json({
+        success: true,
+        data: history.map(item => ({
+          period: item.month,
+          income: item.income,
+          expenses: item.expenses,
+          balance: item.balance
+        })),
+        timestamp: new Date().toISOString()
       });
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
-      res.status(500).json({
-        error: 'deletion_failed',
-        message: 'Failed to delete transaction'
+    } else {
+      // For yearly, aggregate monthly data
+      const monthlyData = await DBQueries.getMonthlyStats(userId, parseInt(limit) * 12);
+      
+      // Group by year
+      const yearlyData = monthlyData.reduce((acc, month) => {
+        const year = new Date(month.month).getFullYear();
+        if (!acc[year]) {
+          acc[year] = { income: 0, expenses: 0, balance: 0 };
+        }
+        acc[year].income += parseFloat(month.income);
+        acc[year].expenses += parseFloat(month.expenses);
+        acc[year].balance += parseFloat(month.balance);
+        return acc;
+      }, {});
+      
+      const history = Object.entries(yearlyData)
+        .map(([year, data]) => ({
+          period: `${year}-01-01`,
+          income: data.income,
+          expenses: data.expenses,
+          balance: data.balance
+        }))
+        .sort((a, b) => new Date(b.period) - new Date(a.period))
+        .slice(0, parseInt(limit));
+      
+      res.json({
+        success: true,
+        data: history,
+        timestamp: new Date().toISOString()
       });
     }
-  },
+  }),
 
   /**
-   * Skip specific occurrence of recurring transaction
-   * @route POST /api/transactions/:type/:id/skip
+   * Skip single transaction occurrence - LEGACY SUPPORT
+   * @route POST /api/v1/transactions/:type/:id/skip
    */
-  skipOccurrence: async (req, res) => {
-    try {
-      const { type, id } = req.params;
-      const { skipDate } = req.body;
+  skipTransactionOccurrence: asyncHandler(async (req, res) => {
+    const { type, id } = req.params;
+    const { skipDate } = req.body;
+    const userId = req.user.id;
+    
+    if (!['expense', 'income'].includes(type)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
+    }
+    
+    if (!skipDate) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Skip date is required' };
+    }
+    
+    // Get the transaction to find its template
+    const transactions = await Transaction.getTransactions(userId, {
+      type,
+      limit: 1
+    });
+    
+    const transaction = transactions.transactions.find(t => t.id === parseInt(id));
+    
+    if (!transaction) {
+      throw { ...errorCodes.NOT_FOUND, message: 'Transaction not found' };
+    }
+    
+    if (!transaction.template_id) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Cannot skip non-recurring transaction' };
+    }
+    
+    // Add skip date to template
+    await RecurringTemplate.skipDates(
+      transaction.template_id, 
+      userId, 
+      [TimeManager.formatForDB(skipDate)]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Transaction occurrence skipped successfully',
+      timestamp: new Date().toISOString()
+    });
+  }),
 
-      if (!skipDate) {
-        return res.status(400).json({
-          error: 'missing_date',
-          message: 'Skip date is required'
-        });
+  // ============ EXISTING METHODS (NO CHANGES) ============
+
+  /**
+   * Get transactions with filters
+   * @route GET /api/v1/transactions
+   */
+  getTransactions: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const {
+      type,
+      startDate,
+      endDate,
+      categoryId,
+      templateId,
+      searchTerm,
+      page = 1,
+      limit = 50,
+      sortBy = 'date',
+      sortOrder = 'DESC'
+    } = req.query;
+
+    if (type && !['expense', 'income'].includes(type)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
+    }
+
+    const options = {
+      type,
+      startDate: startDate ? TimeManager.formatForDB(startDate) : null,
+      endDate: endDate ? TimeManager.formatForDB(endDate) : null,
+      categoryId: categoryId ? parseInt(categoryId) : null,
+      templateId: templateId !== undefined ? parseInt(templateId) : null,
+      searchTerm,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      sortOrder
+    };
+
+    const result = await Transaction.getTransactions(userId, options);
+    
+    res.json({
+      success: true,
+      ...result,
+      timestamp: new Date().toISOString()
+    });
+  }),
+
+  /**
+   * Create new transaction
+   * @route POST /api/v1/transactions/:type
+   */
+  create: asyncHandler(async (req, res) => {
+    const { type } = req.params;
+    const userId = req.user.id;
+    
+    if (!['expense', 'income'].includes(type)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
+    }
+
+    const {
+      amount,
+      description,
+      date,
+      category_id,
+      is_recurring,
+      recurring_interval,
+      day_of_month,
+      recurring_end_date
+    } = req.body;
+
+    if (!amount || amount <= 0) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Amount must be positive' };
+    }
+
+    if (!description?.trim()) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Description is required' };
+    }
+
+    if (is_recurring) {
+      if (!recurring_interval) {
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'Recurring interval is required' };
       }
 
-      const date = new Date(skipDate);
-      if (isNaN(date.getTime())) {
-        return res.status(400).json({
-          error: 'invalid_date',
-          message: 'Invalid skip date format'
-        });
+      if (!['daily', 'weekly', 'monthly'].includes(recurring_interval)) {
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid recurring interval' };
       }
 
-      const success = await Transaction.skipOccurrence(
+      const template = await RecurringTemplate.create({
+        user_id: userId,
         type,
-        id,
-        req.user.id,
-        date.toISOString().split('T')[0]
-      );
+        amount,
+        description,
+        category_id,
+        interval_type: recurring_interval,
+        day_of_month: recurring_interval === 'monthly' ? day_of_month : null,
+        start_date: TimeManager.formatForDB(date || new Date()),
+        end_date: recurring_end_date ? TimeManager.formatForDB(recurring_end_date) : null
+      });
 
-      if (!success) {
-        return res.status(404).json({
-          error: 'not_found',
-          message: 'Recurring transaction not found'
-        });
-      }
+      res.status(201).json({
+        success: true,
+        data: {
+          template,
+          message: 'Recurring transaction created successfully'
+        }
+      });
+    } else {
+      const transaction = await Transaction.create(type, {
+        user_id: userId,
+        amount,
+        description,
+        date: TimeManager.formatForDB(date || new Date()),
+        category_id
+      });
 
-      res.json({ message: 'Transaction occurrence skipped successfully' });
-    } catch (error) {
-      console.error('Error skipping transaction:', error);
-      res.status(500).json({
-        error: 'skip_failed',
-        message: 'Failed to skip transaction occurrence'
+      res.status(201).json({
+        success: true,
+        data: transaction
       });
     }
-  }
+  }),
+
+  /**
+   * Update transaction
+   * @route PUT /api/v1/transactions/:type/:id
+   */
+  update: asyncHandler(async (req, res) => {
+    const { type, id } = req.params;
+    const userId = req.user.id;
+    const { updateFuture, ...updateData } = req.body;
+
+    if (!['expense', 'income'].includes(type)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
+    }
+
+    if (updateData.date) {
+      updateData.date = TimeManager.formatForDB(updateData.date);
+    }
+
+    const transaction = await Transaction.update(type, id, userId, updateData);
+
+    res.json({
+      success: true,
+      data: transaction
+    });
+  }),
+
+  /**
+   * Delete transaction
+   * @route DELETE /api/v1/transactions/:type/:id
+   */
+  delete: asyncHandler(async (req, res) => {
+    const { type, id } = req.params;
+    const userId = req.user.id;
+
+    if (!['expense', 'income'].includes(type)) {
+      throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
+    }
+
+    await Transaction.delete(type, id, userId);
+
+    res.json({
+      success: true,
+      message: 'Transaction deleted successfully'
+    });
+  }),
+
+  /**
+   * Get recurring templates
+   * @route GET /api/v1/transactions/templates
+   */
+  getTemplates: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const templates = await RecurringTemplate.getByUser(userId);
+
+    res.json({
+      success: true,
+      data: templates
+    });
+  }),
+
+  /**
+   * Update recurring template
+   * @route PUT /api/v1/transactions/templates/:id
+   */
+  updateTemplate: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { updateFuture = false, ...updateData } = req.body;
+
+    const template = await RecurringTemplate.update(id, userId, updateData, updateFuture);
+
+    res.json({
+      success: true,
+      data: template,
+      message: updateFuture ? 'Template and future transactions updated' : 'Template updated'
+    });
+  }),
+
+  /**
+   * Delete recurring template
+   * @route DELETE /api/v1/transactions/templates/:id
+   */
+  deleteTemplate: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { deleteFuture = false } = req.query;
+
+    await RecurringTemplate.delete(id, userId, deleteFuture === 'true');
+
+    res.json({
+      success: true,
+      message: deleteFuture === 'true' 
+        ? 'Template and future transactions deleted' 
+        : 'Template deactivated'
+    });
+  }),
+
+  /**
+   * Skip dates for recurring template
+   * @route POST /api/v1/transactions/templates/:id/skip
+   */
+  skipDates: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { dates } = req.body;
+
+    if (!Array.isArray(dates) || dates.length === 0) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Dates array is required' };
+    }
+
+    const formattedDates = dates.map(date => TimeManager.formatForDB(date));
+    
+    await RecurringTemplate.skipDates(id, userId, formattedDates);
+
+    res.json({
+      success: true,
+      message: 'Dates skipped successfully'
+    });
+  }),
+
+  /**
+   * Get statistics
+   * @route GET /api/v1/transactions/stats
+   */
+  getStats: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { months = 12 } = req.query;
+
+    const [userStats, monthlyStats] = await Promise.all([
+      Transaction.getStats(userId),
+      DBQueries.getMonthlyStats(userId, parseInt(months))
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        current: userStats,
+        monthly: monthlyStats
+      }
+    });
+  }),
+
+  /**
+   * Get category breakdown
+   * @route GET /api/v1/transactions/categories/breakdown
+   */
+  getCategoryBreakdown: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Start and end dates are required' };
+    }
+
+    const breakdown = await DBQueries.getCategoryBreakdown(
+      userId,
+      TimeManager.formatForDB(startDate),
+      TimeManager.formatForDB(endDate)
+    );
+
+    res.json({
+      success: true,
+      data: breakdown
+    });
+  }),
+
+  /**
+   * Search transactions
+   * @route GET /api/v1/transactions/search
+   */
+  search: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { q, limit = 50 } = req.query;
+
+    if (!q || q.trim().length < 2) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Search term must be at least 2 characters' };
+    }
+
+    const results = await Transaction.search(userId, q, parseInt(limit));
+
+    res.json({
+      success: true,
+      data: results,
+      query: q
+    });
+  })
 };
 
 module.exports = transactionController;

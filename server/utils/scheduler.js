@@ -1,71 +1,95 @@
 /**
- * utils/scheduler.js
- * Scheduler service for handling recurring tasks like transaction generation
+ * Scheduler Service - Updated for recurring templates
+ * Handles periodic generation of recurring transactions
+ * @module utils/scheduler
  */
+
 const cron = require('node-cron');
 const db = require('../config/db');
 const logger = require('./logger');
 
-/**
- * Scheduler service for running periodic tasks
- */
 const scheduler = {
   /**
-   * Initialize all scheduled tasks
+   * Initialize scheduled tasks
    */
   init() {
-    logger.info('Initializing scheduler');
+    logger.info('Initializing scheduler for recurring transactions');
     
-    // Run recurring transactions generation:
-    // - At server start (immediateRun parameter)
-    // - On the 1st of each month at 00:00
-    // - Every Sunday at 00:00 as a backup
-    this.setupRecurringTransactionsJob(true);
+    // Generate recurring transactions:
+    // - On server start
+    // - Every day at 00:00
+    // - Every Sunday at 00:00 as backup
+    
+    // Run immediately on start
+    this.generateRecurringTransactions();
+    
+    // Daily at midnight
+    cron.schedule('0 0 * * *', () => {
+      logger.info('Running daily recurring transactions generation');
+      this.generateRecurringTransactions();
+    });
+    
+    // Weekly backup on Sunday at midnight
+    cron.schedule('0 0 * * 0', () => {
+      logger.info('Running weekly backup recurring transactions generation');
+      this.generateRecurringTransactions();
+    });
     
     logger.info('Scheduler initialized successfully');
   },
   
   /**
-   * Setup recurring transactions scheduler
-   * @param {boolean} immediateRun - Whether to run immediately on setup
+   * Generate recurring transactions using SQL function
    */
-  setupRecurringTransactionsJob(immediateRun = false) {
-    // Schedule for 1st of each month at midnight
-    cron.schedule('0 0 1 * *', () => {
-      logger.info('Running scheduled monthly recurring transactions generation');
-      this.generateRecurringTransactions();
-    });
+  async generateRecurringTransactions() {
+    const client = await db.pool.connect();
     
-    // Backup schedule every Sunday at midnight
-    cron.schedule('0 0 * * 0', () => {
-      logger.info('Running scheduled weekly recurring transactions generation');
-      this.generateRecurringTransactions();
-    });
-    
-    // Run immediately on server start if requested
-    if (immediateRun) {
-      logger.info('Running initial recurring transactions generation');
-      this.generateRecurringTransactions();
+    try {
+      logger.info('Starting recurring transactions generation...');
+      
+      await client.query('BEGIN');
+      
+      // Call the SQL function that handles all the logic
+      const result = await client.query('SELECT generate_recurring_transactions()');
+      
+      await client.query('COMMIT');
+      
+      logger.info('Recurring transactions generated successfully');
+      
+      // Log statistics
+      const stats = await client.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '1 minute') as new_count,
+          COUNT(*) as total_count
+        FROM (
+          SELECT created_at FROM expenses WHERE template_id IS NOT NULL
+          UNION ALL
+          SELECT created_at FROM income WHERE template_id IS NOT NULL
+        ) t
+      `);
+      
+      logger.info('Generation stats:', {
+        newTransactions: stats.rows[0].new_count,
+        totalRecurring: stats.rows[0].total_count
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Error generating recurring transactions:', error);
+      
+      // Don't throw - scheduler should continue running
+    } finally {
+      client.release();
     }
   },
   
   /**
-   * Generate recurring transactions by calling the database function
+   * Manual trigger for recurring generation
+   * Can be called from admin endpoints
    */
-  async generateRecurringTransactions() {
-    const client = await db.pool.connect();
-    try {
-      logger.info('Generating recurring transactions...');
-      await client.query('BEGIN');
-      await client.query('SELECT generate_recurring_transactions()');
-      await client.query('COMMIT');
-      logger.info('Recurring transactions generated successfully');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error('Error generating recurring transactions:', error);
-    } finally {
-      client.release();
-    }
+  async triggerGeneration() {
+    logger.info('Manual trigger for recurring transactions');
+    await this.generateRecurringTransactions();
   }
 };
 

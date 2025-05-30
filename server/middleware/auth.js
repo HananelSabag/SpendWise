@@ -20,7 +20,13 @@ const auth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ 
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 
     const token = authHeader.split(' ')[1];
@@ -30,25 +36,22 @@ const auth = async (req, res, next) => {
   } catch (error) {
     console.error('Auth middleware error:', error);
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
+      return res.status(401).json({ 
+        error: {
+          code: 'TOKEN_EXPIRED',
+          message: 'Token expired',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ 
+      error: {
+        code: 'INVALID_TOKEN',
+        message: 'Invalid token',
+        timestamp: new Date().toISOString()
+      }
+    });
   }
 };
 
-const refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-    const accessToken = jwt.sign(
-      { id: decoded.id },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-    );
-    res.json({ accessToken });
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid refresh token' });
-  }
-};
-
-module.exports = { auth, generateTokens, refreshToken };
+module.exports = { auth, generateTokens };
