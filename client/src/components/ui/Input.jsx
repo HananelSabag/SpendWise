@@ -18,13 +18,11 @@ const Input = forwardRef(({
   labelClassName = '',
   onBlur,
   onFocus,
-  dir: dirProp,
   ...props
 }, ref) => {
   const { language } = useLanguage();
   const isRTL = language === 'he';
-  const dir = dirProp || (isRTL ? 'rtl' : 'ltr');
-
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   
@@ -54,20 +52,23 @@ const Input = forwardRef(({
     error 
       ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' 
       : 'border-gray-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-gray-700',
-    Icon && 'pl-11',
-    isPassword && 'pr-11',
+    Icon && (isRTL ? 'pr-11' : 'pl-11'),
+    isPassword && (isRTL ? 'pl-11' : 'pr-11'),
     className
   );
 
   return (
     <div className={cn('space-y-1', fullWidth && 'w-full', containerClassName)}>
       {label && (
-        <label className={cn(
-          'block text-sm font-medium text-gray-700 dark:text-gray-300',
-          labelClassName
-        )}>
+        <label 
+          className={cn(
+            'block text-sm font-medium text-gray-700 dark:text-gray-300',
+            labelClassName
+          )}
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-red-500 mx-1">*</span>}
         </label>
       )}
       
@@ -86,7 +87,7 @@ const Input = forwardRef(({
           disabled={disabled}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          dir={dir}
+          dir={isRTL ? 'rtl' : 'ltr'}
           className={inputStyles}
           {...props}
         />
@@ -95,7 +96,10 @@ const Input = forwardRef(({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className={cn(
+              'absolute top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+              isRTL ? 'left-3' : 'right-3'
+            )}
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -103,14 +107,16 @@ const Input = forwardRef(({
       </div>
       
       {error && (
-        <div className="flex items-center gap-1.5 text-sm text-red-500">
+        <div className="flex items-center gap-1.5 text-sm text-red-500" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
       
       {helper && !error && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{helper}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400" dir={isRTL ? 'rtl' : 'ltr'}>
+          {helper}
+        </p>
       )}
     </div>
   );

@@ -3,7 +3,7 @@ import { Languages, DollarSign, MoreVertical } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCurrency } from '../../context/CurrencyContext';
 
-const FloatingMenu = ({ buttons }) => {
+const FloatingMenu = ({ buttons = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -29,16 +29,17 @@ const FloatingMenu = ({ buttons }) => {
     <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 
+        className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg 
+                   hover:bg-gray-100 dark:hover:bg-gray-700
                    transition-all duration-200 ease-out
                    active:scale-95"
       >
-        <MoreVertical className="h-6 w-6" />
+        <MoreVertical className="h-6 w-6 text-gray-700 dark:text-gray-200" />
       </button>
 
       {isOpen && (
         <div 
-          className="bg-white rounded-lg shadow-lg absolute bottom-full mb-2
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg absolute bottom-full mb-2
                      transform transition-all duration-200 ease-out
                      animate-fadeIn"
         >
@@ -47,12 +48,15 @@ const FloatingMenu = ({ buttons }) => {
               <button
                 key={index}
                 onClick={() => handleButtonClick(button.onClick)}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg w-full text-left
+                className="flex items-center gap-2 p-2 
+                           hover:bg-gray-100 dark:hover:bg-gray-700 
+                           rounded-lg w-full text-left
                            transition-colors duration-150 ease-in-out
-                           active:bg-gray-200"
+                           text-gray-700 dark:text-gray-200
+                           active:bg-gray-200 dark:active:bg-gray-600"
               >
                 {button.icon && (
-                  <button.icon className="h-5 w-5 text-primary-500" />
+                  <button.icon className="h-5 w-5 text-primary-500 dark:text-primary-400" />
                 )}
                 <span className="whitespace-nowrap">{button.label}</span>
               </button>

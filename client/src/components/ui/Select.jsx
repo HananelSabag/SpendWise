@@ -2,6 +2,7 @@
 import React, { forwardRef } from 'react';
 import { ChevronDown, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Select = forwardRef(({
   label,
@@ -17,6 +18,9 @@ const Select = forwardRef(({
   labelClassName = '',
   ...props
 }, ref) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
+
   const baseSelectStyles = `
     w-full px-4 py-3 pr-10 rounded-xl border bg-white
     appearance-none cursor-pointer
@@ -30,18 +34,22 @@ const Select = forwardRef(({
     error 
       ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' 
       : 'border-gray-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-gray-700',
+    isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10',
     className
   );
 
   return (
     <div className={cn('space-y-1', fullWidth && 'w-full', containerClassName)}>
       {label && (
-        <label className={cn(
-          'block text-sm font-medium text-gray-700 dark:text-gray-300',
-          labelClassName
-        )}>
+        <label 
+          className={cn(
+            'block text-sm font-medium text-gray-700 dark:text-gray-300',
+            labelClassName
+          )}
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-red-500 mx-1">*</span>}
         </label>
       )}
       
@@ -50,6 +58,7 @@ const Select = forwardRef(({
           ref={ref}
           disabled={disabled}
           className={selectStyles}
+          dir={isRTL ? 'rtl' : 'ltr'}
           {...props}
         >
           {placeholder && (
@@ -64,18 +73,23 @@ const Select = forwardRef(({
           ))}
         </select>
         
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+        <ChevronDown className={cn(
+          'absolute top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none',
+          isRTL ? 'left-3' : 'right-3'
+        )} />
       </div>
       
       {error && (
-        <div className="flex items-center gap-1.5 text-sm text-red-500">
+        <div className="flex items-center gap-1.5 text-sm text-red-500" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
       
       {helper && !error && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{helper}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400" dir={isRTL ? 'rtl' : 'ltr'}>
+          {helper}
+        </p>
       )}
     </div>
   );

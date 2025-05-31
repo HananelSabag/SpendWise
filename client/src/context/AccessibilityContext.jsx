@@ -1,5 +1,5 @@
 // client/src/context/AccessibilityContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AccessibilityContext = createContext(null);
 
@@ -12,77 +12,46 @@ export const useAccessibility = () => {
 };
 
 export const AccessibilityProvider = ({ children }) => {
-  // States
-  const [fontSize, setFontSize] = useState(1);
-  const [highContrast, setHighContrast] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // States with localStorage persistence
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = localStorage.getItem('a11y_fontSize');
+    return saved ? parseFloat(saved) : 1;
+  });
+  
+  const [highContrast, setHighContrast] = useState(() => {
+    return localStorage.getItem('a11y_highContrast') === 'true';
+  });
+  
+  const [darkMode, setDarkMode] = useState(() => {
+    // Check system preference if no saved preference
+    if (!localStorage.getItem('a11y_darkMode')) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return localStorage.getItem('a11y_darkMode') === 'true';
+  });
+  
+  // Fix: Define isCollapsed state properly
+  const [menuCollapsed, setMenuCollapsed] = useState(() => {
+    return localStorage.getItem('a11y_menuCollapsed') === 'true';
+  });
 
-  // טעינת הגדרות בעת הפעלה ראשונית
-  useEffect(() => {
-    const loadSettings = () => {
-      try {
-        // טעינת הגדרות נגישות
-        const savedSettings = localStorage.getItem('accessibilitySettings');
-        if (savedSettings) {
-          const settings = JSON.parse(savedSettings);
-          
-          if (settings.fontSize !== undefined) {
-            setFontSize(settings.fontSize);
-            document.documentElement.style.fontSize = `${settings.fontSize}rem`;
-          }
-          
-          if (settings.highContrast !== undefined) {
-            setHighContrast(settings.highContrast);
-            if (settings.highContrast) {
-              document.documentElement.classList.add('high-contrast');
-            }
-          }
-          
-          if (settings.darkMode !== undefined) {
-            setDarkMode(settings.darkMode);
-            if (settings.darkMode) {
-              document.documentElement.classList.add('dark');
-              document.body.classList.add('dark-mode');
-            }
-          }
-        }
-        
-        // טעינת מצב מוקטן
-        const collapsed = localStorage.getItem('accessibilityCollapsed') === 'true';
-        setIsCollapsed(collapsed);
-      } catch (error) {
-        console.error('Error loading accessibility settings:', error);
-      }
-    };
-
-    loadSettings();
-  }, []);
-
-  // שמירת הגדרות כאשר משתנות
-  useEffect(() => {
-    const settings = { fontSize, highContrast, darkMode };
-    localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
-  }, [fontSize, highContrast, darkMode]);
-
-  // שמירת מצב מוקטן
-  useEffect(() => {
-    localStorage.setItem('accessibilityCollapsed', isCollapsed.toString());
-  }, [isCollapsed]);
-
-  // החלת שינויים על ה-DOM
+  // Effect to apply font size
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}rem`;
+    localStorage.setItem('a11y_fontSize', fontSize.toString());
   }, [fontSize]);
 
+  // Effect to apply high contrast
   useEffect(() => {
     if (highContrast) {
       document.documentElement.classList.add('high-contrast');
     } else {
       document.documentElement.classList.remove('high-contrast');
     }
+    localStorage.setItem('a11y_highContrast', highContrast.toString());
   }, [highContrast]);
 
+  // Effect to apply dark mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -91,35 +60,77 @@ export const AccessibilityProvider = ({ children }) => {
       document.documentElement.classList.remove('dark');
       document.body.classList.remove('dark-mode');
     }
+    localStorage.setItem('a11y_darkMode', darkMode.toString());
   }, [darkMode]);
 
-  // פונקציות עזר
-  const resetSettings = () => {
+  // Effect for menu collapsed state
+  useEffect(() => {
+    localStorage.setItem('a11y_menuCollapsed', menuCollapsed.toString());
+  }, [menuCollapsed]);
+
+  // Enhanced functions with bounds checking
+  const increaseFontSize = useCallback(() => {
+    setFontSize(prev => Math.min(prev + 0.1, 1.5));
+  }, []);
+
+  const decreaseFontSize = useCallback(() => {
+    setFontSize(prev => Math.max(prev - 0.1, 0.8));
+  }, []);
+
+  const setFontSizeWithBounds = useCallback((size) => {
+    const boundedSize = Math.min(Math.max(size, 0.8), 1.5);
+    setFontSize(boundedSize);
+  }, []);
+
+  // Reset all settings
+  const resetSettings = useCallback(() => {
     setFontSize(1);
     setHighContrast(false);
-    setDarkMode(false);
-  };
+    setDarkMode(false); // שינוי: תמיד מחזיר ללייט מוד
+    setMenuCollapsed(false);
+    
+    // Clear all accessibility settings from localStorage
+    localStorage.removeItem('a11y_fontSize');
+    localStorage.removeItem('a11y_highContrast');
+    localStorage.removeItem('a11y_darkMode');
+    localStorage.removeItem('a11y_menuCollapsed');
+  }, []);
 
-  const increaseFontSize = () => {
-    setFontSize(prev => Math.min(prev + 0.1, 1.5));
-  };
+  // Add system theme listener
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      // Only update if user hasn't set a preference
+      if (!localStorage.getItem('a11y_darkMode')) {
+        setDarkMode(e.matches);
+      }
+    };
 
-  const decreaseFontSize = () => {
-    setFontSize(prev => Math.max(prev - 0.1, 0.8));
-  };
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
 
   const value = {
+    // States
     fontSize,
-    setFontSize,
+    highContrast,
+    darkMode,
+    isCollapsed: menuCollapsed,
+    
+    // Setters
+    setFontSize: setFontSizeWithBounds,
+    setHighContrast,
+    setDarkMode,
+    setIsCollapsed: setMenuCollapsed,
+    
+    // Helper functions
     increaseFontSize,
     decreaseFontSize,
-    highContrast,
-    setHighContrast,
-    darkMode,
-    setDarkMode,
-    isCollapsed,
-    setIsCollapsed,
-    resetSettings
+    resetSettings,
+    
+    // Computed values
+    isMinFontSize: fontSize <= 0.8,
+    isMaxFontSize: fontSize >= 1.5
   };
 
   return (

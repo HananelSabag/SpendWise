@@ -16,7 +16,10 @@ const AuthLayout = () => {
       <div className="block lg:hidden px-8 pt-8">
         <div className="max-w-md mx-auto text-center">
           <Link to="/" className="inline-flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center mr-2">
+            <div className={cn(
+              'w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center',
+              isRTL ? 'ml-2' : 'mr-2'
+            )}>
               <span className="text-2xl text-white font-bold">S</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">SpendWise</h1>
@@ -26,10 +29,16 @@ const AuthLayout = () => {
 
       <div className="flex flex-1 flex-col lg:flex-row">
         {/* Branding Section - Desktop */}
-        <div className="hidden lg:flex lg:w-1/2 p-12 items-center justify-center">
+        <div className={cn(
+          'hidden lg:flex lg:w-1/2 p-12 items-center justify-center',
+          isRTL ? 'lg:order-2' : 'lg:order-1'
+        )}>
           <div className="max-w-lg">
             <Link to="/" className="flex items-center mb-8">
-              <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center mr-4">
+              <div className={cn(
+                'w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center',
+                isRTL ? 'ml-4' : 'mr-4'
+              )}>
                 <span className="text-2xl text-white font-bold">S</span>
               </div>
               <h1 className="text-4xl font-bold text-gray-800 dark:text-white">SpendWise</h1>
@@ -45,7 +54,10 @@ const AuthLayout = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
               {[1, 2, 3].map((num) => (
                 <div key={num} className="flex items-center text-primary-500 dark:text-primary-400 mb-4 last:mb-0">
-                  <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-lg flex items-center justify-center mr-3">
+                  <div className={cn(
+                    'w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-lg flex items-center justify-center',
+                    isRTL ? 'ml-3' : 'mr-3'
+                  )}>
                     <span className="text-lg">✓</span>
                   </div>
                   <span className="font-medium">{t(`auth.features.feature${num}`)}</span>
@@ -56,7 +68,10 @@ const AuthLayout = () => {
         </div>
 
         {/* Form Section */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className={cn(
+          'w-full lg:w-1/2 flex items-center justify-center p-8',
+          isRTL ? 'lg:order-1' : 'lg:order-2'
+        )}>
           <div className="w-full max-w-md">
             <Outlet />
           </div>

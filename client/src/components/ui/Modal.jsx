@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Modal = ({
   isOpen,
@@ -18,6 +19,8 @@ const Modal = ({
   ...props
 }) => {
   const modalRef = useRef(null);
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
 
   const sizes = {
     small: 'max-w-md',
@@ -65,6 +68,7 @@ const Modal = ({
             sizes[size],
             className
           )}
+          dir={isRTL ? 'rtl' : 'ltr'}
           {...props}
         >
           {/* Header */}
@@ -79,7 +83,10 @@ const Modal = ({
                 {showCloseButton && (
                   <button
                     onClick={onClose}
-                    className="ml-auto p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className={cn(
+                      'p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+                      !title && 'ml-auto'
+                    )}
                   >
                     <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   </button>

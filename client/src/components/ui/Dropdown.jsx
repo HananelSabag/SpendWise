@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Dropdown = ({
   trigger,
@@ -14,6 +15,8 @@ const Dropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -27,8 +30,8 @@ const Dropdown = ({
   }, []);
 
   const alignments = {
-    left: 'left-0',
-    right: 'right-0',
+    left: isRTL ? 'right-0' : 'left-0',
+    right: isRTL ? 'left-0' : 'right-0',
     center: 'left-1/2 -translate-x-1/2'
   };
 
@@ -54,6 +57,7 @@ const Dropdown = ({
             alignments[align],
             contentClassName
           )}
+          dir={isRTL ? 'rtl' : 'ltr'}
         >
           {children}
         </div>

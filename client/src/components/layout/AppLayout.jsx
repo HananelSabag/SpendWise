@@ -11,11 +11,15 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useCurrency } from '../../context/CurrencyContext';
 
 const AppLayout = () => {
-  const { t, toggleLanguage } = useLanguage();
+  const { t, toggleLanguage, language } = useLanguage();
   const { toggleCurrency } = useCurrency();
+  const isRTL = language === 'he';
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div 
+      className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <Header />
       
       <main className="flex-1">

@@ -9,8 +9,6 @@ import {
   ArrowRight,
   Check,
   X,
-  Eye,
-  EyeOff,
   Shield,
   Zap,
   TrendingUp,
@@ -21,11 +19,15 @@ import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
-import FloatingMenu from '../../components/common/FloatingMenu';
 import { userSchemas, validate } from "../../utils/validationSchemas";
+import { cn } from '../../utils/helpers';
+import FloatingMenu from '../../components/common/FloatingMenu';
+import AccessibilityMenu from '../../components/common/AccessibilityMenu';
+import AccessibilityStatement from '../../components/common/AccessibilityStatement';
 
 const PasswordStrengthIndicator = ({ password }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isRTL = language === 'he';
   
   const getStrength = () => {
     if (!password) return 0;
@@ -67,7 +69,7 @@ const PasswordStrengthIndicator = ({ password }) => {
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isRegistering } = useAuth();
+  const { register, isRegistering, error: authError } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
   const isRTL = language === 'he';
 
@@ -83,6 +85,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showAccessibility, setShowAccessibility] = useState(false);
 
   // Password requirements
   const passwordRequirements = [
@@ -100,36 +103,28 @@ const Register = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-
-    // Real-time validation
-    if (field === 'email' && value) {
-      const emailError = validateEmail(value);
-      if (emailError) {
-        setErrors(prev => ({ ...prev, email: emailError }));
-      }
-    }
-
-    if (field === 'confirmPassword' && value) {
-      if (value !== formData.password) {
-        setErrors(prev => ({ ...prev, confirmPassword: t('validation.passwordsDoNotMatch') }));
-      }
-    }
   };
 
   // Handle step navigation
   const nextStep = () => {
     if (currentStep === 1) {
       // Validate step 1
-      const newErrors = {};
-      if (!formData.username) newErrors.username = t('validation.usernameRequired');
-      if (!formData.email) newErrors.email = t('validation.emailRequired');
-      else {
-        const emailError = validateEmail(formData.email);
-        if (emailError) newErrors.email = emailError;
+      const stepErrors = {};
+      
+      if (!formData.username) {
+        stepErrors.username = t('validation.usernameRequired');
+      } else if (formData.username.length < 3) {
+        stepErrors.username = t('validation.usernameTooShort');
+      }
+      
+      if (!formData.email) {
+        stepErrors.email = t('validation.emailRequired');
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        stepErrors.email = t('validation.emailInvalid');
       }
 
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
+      if (Object.keys(stepErrors).length > 0) {
+        setErrors(stepErrors);
         return;
       }
     }
@@ -138,45 +133,75 @@ const Register = () => {
   };
 
   // Handle form submission
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setErrors({});
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
 
-  // Validate form data
-  const { success, errors: zodErrors } = validate(userSchemas.register, formData);
+    // Validate all fields
+    const { success, errors: validationErrors } = validate(userSchemas.register, formData);
 
-  let newErrors = {};
-  if (!success) newErrors = zodErrors;
+    if (!success) {
+      setErrors(validationErrors);
+      return;
+    }
 
-  //  Check for errors in step 2
-  if (!agreedToTerms) newErrors.terms = t('validation.agreeToTerms');
-  if (formData.password !== formData.confirmPassword) {
-    newErrors.confirmPassword = t('validation.passwordsDoNotMatch');
-  }
+    if (!agreedToTerms) {
+      setErrors({ terms: t('validation.agreeToTerms') });
+      return;
+    }
 
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    setLoading(false);
-    return;
-  }
+    try {
+      // Attempt registration
+      const result = await register(formData);
+      
+      if (result.success) {
+        // Navigate to login with success message
+        navigate('/auth/login', { 
+          state: { 
+            message: t('register.success.message') 
+          } 
+        });
+      } else {
+        // Handle registration error
+        setErrors({ 
+          general: result.error?.message || t('register.errors.registrationFailed') 
+        });
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      setErrors({ 
+        general: t('errors.generic') 
+      });
+    }
+  };
 
-  // Prepare data for registration
-  const result = await register(formData);
-  if (!result.success) {
-    setErrors({ general: result.error.message });
-  }
-  setLoading(false);
-};
+  // Benefits list
+  const benefits = [
+    { icon: Shield, text: t('auth.benefit1') },
+    { icon: Zap, text: t('auth.benefit2') },
+    { icon: TrendingUp, text: t('auth.benefit3') }
+  ];
 
+  const menuButtons = [
+    {
+      icon: Languages,
+      label: language === 'he' ? 'English' : 'עברית',
+      onClick: toggleLanguage
+    }
+  ];
 
   return (
     <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Left Side - Form */}
+      <FloatingMenu buttons={menuButtons} />
+      <AccessibilityMenu />
+        
+      {/* Form Side */}
       <motion.div 
-        className={`w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900 
-          ${isRTL ? 'lg:order-2' : 'lg:order-1'}`}
-        initial={{ opacity: 0, x: -50 }}
+        className={cn(
+          'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
+          isRTL ? 'lg:order-2' : 'lg:order-1'
+        )}
+        initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
       >
@@ -197,7 +222,7 @@ const Register = () => {
                 <span className="text-3xl text-white font-bold">S</span>
               </motion.div>
             </Link>
-            
+              
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               {t('auth.createAccount')}
             </h1>
@@ -206,24 +231,36 @@ const Register = () => {
             </p>
           </motion.div>
 
-          {/* Progress Steps - עדכון כיוון */}
-          <div className={`flex items-center justify-center space-x-4 ${isRTL ? 'space-x-reverse' : ''}`}>
-            <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
-              }`}>
-                {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
+          {/* Progress Steps */}
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-4">
+              <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                  currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                }`}>
+                  {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
+                </div>
+                <span className={cn(
+                  'text-sm font-medium',
+                  isRTL ? 'mr-2' : 'ml-2'
+                )}>
+                  {t('auth.accountInfo')}
+                </span>
               </div>
-              <span className="ml-2 text-sm font-medium">{t('auth.accountInfo')}</span>
-            </div>
-            <div className="w-16 h-0.5 bg-gray-300" />
-            <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
-              }`}>
-                2
+              <div className="w-16 h-0.5 bg-gray-300" />
+              <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                  currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                }`}>
+                  2
+                </div>
+                <span className={cn(
+                  'text-sm font-medium',
+                  isRTL ? 'mr-2' : 'ml-2'
+                )}>
+                  {t('auth.security')}
+                </span>
               </div>
-              <span className="ml-2 text-sm font-medium">{t('auth.security')}</span>
             </div>
           </div>
 
@@ -253,6 +290,7 @@ const Register = () => {
                     placeholder={t('auth.usernamePlaceholder')}
                     icon={User}
                     error={errors.username}
+                    required
                   />
 
                   {/* Email */}
@@ -264,6 +302,7 @@ const Register = () => {
                     placeholder={t('auth.emailPlaceholder')}
                     icon={Mail}
                     error={errors.email}
+                    required
                   />
 
                   <Button
@@ -274,7 +313,10 @@ const Register = () => {
                     onClick={nextStep}
                   >
                     {t('common.continue')}
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className={cn(
+                      'w-5 h-5',
+                      isRTL ? 'mr-2 rotate-180' : 'ml-2'
+                    )} />
                   </Button>
                 </motion.div>
               )}
@@ -291,15 +333,16 @@ const Register = () => {
                   <div>
                     <Input
                       label={t('auth.password')}
-                      type={showPassword ? 'text' : 'password'}
+                      type="password"
                       value={formData.password}
                       onChange={(e) => handleChange('password', e.target.value)}
                       placeholder={t('auth.passwordPlaceholder')}
                       icon={Lock}
                       error={errors.password}
+                      required
                     />
                     <PasswordStrengthIndicator password={formData.password} />
-                    
+                      
                     {/* Password Requirements */}
                     <div className="mt-3 space-y-1">
                       {passwordRequirements.map((req) => (
@@ -323,32 +366,29 @@ const Register = () => {
                   {/* Confirm Password */}
                   <Input
                     label={t('auth.confirmPassword')}
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     placeholder={t('auth.confirmPasswordPlaceholder')}
                     icon={Lock}
                     error={errors.confirmPassword}
+                    required
                   />
 
                   {/* Terms */}
                   <div>
-                    <label className="flex items-start">
+                    <label className="flex items-start cursor-pointer">
                       <input
                         type="checkbox"
                         checked={agreedToTerms}
                         onChange={(e) => setAgreedToTerms(e.target.checked)}
                         className="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                        {t('auth.agreeToTerms')}{' '}
-                        <Link to="/terms" className="text-primary-600 hover:underline">
-                          {t('auth.termsOfService')}
-                        </Link>{' '}
-                        {t('common.and')}{' '}
-                        <Link to="/privacy" className="text-primary-600 hover:underline">
-                          {t('auth.privacyPolicy')}
-                        </Link>
+                      <span className={cn(
+                        'text-sm text-gray-600 dark:text-gray-400',
+                        isRTL ? 'mr-2' : 'ml-2'
+                      )}>
+                        {t('auth.agreeToTerms')}
                       </span>
                     </label>
                     {errors.terms && (
@@ -358,21 +398,25 @@ const Register = () => {
 
                   {/* Error Alert */}
                   <AnimatePresence>
-                    {errors.submit && (
+                    {(errors.general || authError) && (
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                       >
-                        <Alert type="error" dismissible onDismiss={() => setErrors({})}>
-                          {errors.submit}
+                        <Alert 
+                          type="error" 
+                          dismissible 
+                          onDismiss={() => setErrors({})}
+                        >
+                          {errors.general || authError}
                         </Alert>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Buttons - עדכון כיוון */}
-                  <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  {/* Buttons */}
+                  <div className="flex gap-3">
                     <Button
                       type="button"
                       variant="outline"
@@ -410,11 +454,11 @@ const Register = () => {
         </div>
       </motion.div>
 
-      {/* Right Side - Feature Showcase */}
-      <div className={`hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-500 to-primary-700 
-        dark:from-primary-600 dark:to-primary-800 relative overflow-hidden
-        ${isRTL ? 'lg:order-1' : 'lg:order-2'}`}
-      >
+      {/* Feature Showcase Side */}
+      <div className={cn(
+        'hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 relative overflow-hidden',
+        isRTL ? 'lg:order-1' : 'lg:order-2'
+      )}>
         {/* Animated Background */}
         <motion.div
           className="absolute inset-0"
@@ -437,7 +481,7 @@ const Register = () => {
             >
               {t('auth.startJourney')}
             </motion.h2>
-            
+              
             <motion.p 
               className="text-xl mb-12 text-white/90"
               initial={{ opacity: 0, y: 20 }}
@@ -449,19 +493,19 @@ const Register = () => {
 
             {/* Benefits */}
             <div className="space-y-6">
-              {[
-                { icon: Shield, text: t('auth.benefit1') },
-                { icon: Zap, text: t('auth.benefit2') },
-                { icon: TrendingUp, text: t('auth.benefit3') }
-              ].map((benefit, index) => (
+              {benefits.map((benefit, index) => (
                 <motion.div
                   key={index}
-                  className="flex items-center space-x-4"
-                  initial={{ opacity: 0, x: -20 }}
+                  className="flex items-center"
+                  initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.7 + index * 0.1 }}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <div className={cn(
+                    'flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center',
+                    isRTL ? 'ml-4' : 'mr-4'
+                  )}>
                     <benefit.icon className="w-6 h-6" />
                   </div>
                   <p className="text-lg">{benefit.text}</p>
@@ -492,17 +536,6 @@ const Register = () => {
           </div>
         </div>
       </div>
-
-      {/* Add Floating Menu */}
-      <FloatingMenu
-        buttons={[
-          {
-            label: t('floatingMenu.changeLanguage'),
-            icon: Languages,
-            onClick: toggleLanguage,
-          }
-        ]}
-      />
     </div>
   );
 };
