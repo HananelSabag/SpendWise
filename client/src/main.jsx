@@ -2,37 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import App from './App';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import App from './app';
 import './index.css';
 import { queryClient } from './config/queryClient';
 
-// Enable React Query persistence (optional)
-if (typeof window !== 'undefined') {
-  import('@tanstack/query-sync-storage-persister').then(({ persistQueryClient }) => {
-    import('@tanstack/react-query-persist-client').then(({ PersistQueryClientProvider }) => {
-      const persister = {
-        persistClient: async (client) => {
-          const data = JSON.stringify(client);
-          localStorage.setItem('REACT_QUERY_CACHE', data);
-        },
-        restoreClient: async () => {
-          const data = localStorage.getItem('REACT_QUERY_CACHE');
-          return data ? JSON.parse(data) : undefined;
-        },
-        removeClient: async () => {
-          localStorage.removeItem('REACT_QUERY_CACHE');
-        },
-      };
-      
-      // Persist the client
-      persistQueryClient({
-        queryClient,
-        persister,
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
-      });
-    });
-  });
-}
+// Create storage persister
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'REACT_QUERY_CACHE'
+});
 
 // Error boundary for the entire app
 class ErrorBoundary extends React.Component {
@@ -74,7 +54,14 @@ class ErrorBoundary extends React.Component {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider 
+        client={queryClient}
+        persistOptions={{ persister }}
+        onSuccess={() => {
+          // Optional: Handle successful persistence
+          console.log('Query cache persisted successfully');
+        }}
+      >
         <App />
         {process.env.NODE_ENV === 'development' && (
           <ReactQueryDevtools 
@@ -87,7 +74,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             }}
           />
         )}
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

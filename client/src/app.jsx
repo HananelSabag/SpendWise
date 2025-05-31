@@ -1,21 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import { Suspense, lazy, useEffect } from 'react';
 
 // Lazy load pages for better performance
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const Home = lazy(() => import('./pages/Home'));
-const ProfilePage = lazy(() => import('./pages/Profile'));
-const TransactionManagement = lazy(() => import('./components/home/Transactions/TransactionManagement'));
-// TODO: Add Onboarding page
-// const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
 
 // Components
-import PrivateRoute from './components/common/PrivateRoute';
-import LoadingScreen from './components/common/LoadingScreen';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
-// Providers - Organized by dependency order
+// Providers (סדר עוטף נכון!)
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -34,7 +27,6 @@ function App() {
         }
         originalWarn(msg, ...args);
       };
-      
       return () => {
         console.warn = originalWarn;
       };
@@ -49,70 +41,14 @@ function App() {
             <LanguageProvider>
               <DateProvider>
                 <CurrencyProvider>
-                  <Suspense fallback={<LoadingScreen />}>
+                  <Suspense fallback={<LoadingSpinner />}>
                     <Routes>
-                      {/* Public routes */}
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
-
-                      {/* Protected routes */}
-                      <Route
-                        path="/"
-                        element={
-                          <PrivateRoute>
-                            <Home />
-                          </PrivateRoute>
-                        }
-                      />
-                      <Route
-                        path="/transactions"
-                        element={
-                          <PrivateRoute>
-                            <TransactionManagement />
-                          </PrivateRoute>
-                        }
-                      />
-                      <Route
-                        path="/profile"
-                        element={
-                          <PrivateRoute>
-                            <ProfilePage />
-                          </PrivateRoute>
-                        }
-                      />
-
-                      {/* Catch-all route */}
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      {/* Redirect any other route to /login */}
+                      <Route path="*" element={<Navigate to="/login" replace />} />
                     </Routes>
                   </Suspense>
-
-                  {/* Global toast notifications */}
-                  <Toaster
-                    position="top-center"
-                    reverseOrder={false}
-                    gutter={8}
-                    toastOptions={{
-                      duration: 4000,
-                      style: {
-                        borderRadius: '0.5rem',
-                        background: 'rgb(var(--color-card))',
-                        color: 'rgb(var(--color-card-foreground))',
-                        boxShadow: '0 10px 15px -3px rgb(var(--color-shadow) / 0.1), 0 4px 6px -4px rgb(var(--color-shadow) / 0.1)',
-                      },
-                      success: {
-                        iconTheme: {
-                          primary: 'rgb(var(--color-success))',
-                          secondary: 'rgb(var(--color-success-light))',
-                        },
-                      },
-                      error: {
-                        iconTheme: {
-                          primary: 'rgb(var(--color-error))',
-                          secondary: 'rgb(var(--color-error-light))',
-                        },
-                      },
-                    }}
-                  />
                 </CurrencyProvider>
               </DateProvider>
             </LanguageProvider>

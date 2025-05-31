@@ -30,7 +30,8 @@ export const AuthProvider = ({ children }) => {
   } = useQuery({
     queryKey: ['profile'],
     queryFn: () => authAPI.getProfile().then(res => res.data.data),
-    enabled: tokenManager.isAuthenticated(),
+    enabled: !!auth.isAuthenticated(),
+
     retry: 1,
     staleTime: 10 * 60 * 1000, // 10 minutes
     onError: (error) => {
@@ -163,7 +164,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // User data
     user,
-    isAuthenticated: !!user && !tokenManager.isTokenExpired(tokenManager.getAccessToken()),
+    isAuthenticated: auth.isAuthenticated(),
+
     
     // Loading states
     loading: loading || !initialized,

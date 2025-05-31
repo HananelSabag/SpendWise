@@ -1,0 +1,16 @@
+{
+  "name": "SpendWise",
+  "short_name": "SpendWise",
+  "description": "Smart expense tracking with recurring transactions",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -63,31 +63,67 @@ const translations = {
 
   // Authentication
   auth: {
-    loginTitle: 'Sign In',
-    loginSubtitle: 'Welcome back! Please sign in to your account.',
-    registerTitle: 'Sign Up',
-    registerSubtitle: 'Create your SpendWise account',
+    welcomeBack: 'Welcome Back',
+    loginSubtitle: 'Sign in to continue to your account',
+    createAccount: 'Create Account',
+    registerSubtitle: 'Join thousands of users managing their finances',
     email: 'Email',
-    emailPlaceholder: 'Enter your email',
+    emailPlaceholder: 'Enter your email address',
     password: 'Password',
     passwordPlaceholder: 'Enter your password',
     confirmPassword: 'Confirm Password',
     confirmPasswordPlaceholder: 'Confirm your password',
     username: 'Username',
-    usernamePlaceholder: 'Enter your username',
+    usernamePlaceholder: 'Choose a username',
     signIn: 'Sign In',
     signUp: 'Sign Up',
-    signingIn: 'Signing in...',
-    creatingAccount: 'Creating account...',
+    rememberMe: 'Remember me',
     forgotPassword: 'Forgot Password?',
     noAccount: "Don't have an account?",
     alreadyHaveAccount: 'Already have an account?',
-    createAccount: 'Create Account',
-    signInInstead: 'Sign in instead',
-    rememberMe: 'Remember me',
-    invalidCredentials: 'Invalid email or password',
-    loginSuccess: 'Login successful',
-    registerSuccess: 'Registration successful'
+    signUpNow: 'Sign up now',
+    signInNow: 'Sign in now',
+    orContinueWith: 'Or continue with',
+    agreeToTerms: 'I agree to the Terms of Service and Privacy Policy',
+    accountInfo: 'Account Information',
+    security: 'Security',
+    startJourney: 'Start Your Financial Journey',
+    joinThousands: 'Join thousands of users already managing their finances with SpendWise',
+    
+    // Password strength indicators
+    weak: 'Weak',
+    fair: 'Fair',
+    good: 'Good',
+    strong: 'Strong',
+    veryStrong: 'Very Strong',
+    
+    // Password requirements
+    passwordLength: 'At least 8 characters',
+    passwordNumber: 'Contains a number',
+    passwordUpper: 'Contains uppercase letter',
+    passwordLower: 'Contains lowercase letter',
+    
+    // Features section
+    features: {
+      title: 'Smart Finance Management',
+      subtitle: 'Experience the future of personal finance',
+      secure: 'Secure & Private',
+      secureDesc: 'Your data is encrypted and protected',
+      fast: 'Lightning Fast',
+      fastDesc: 'Real-time updates and tracking',
+      smart: 'Smart Analytics',
+      smartDesc: 'Intelligent insights for better decisions'
+    },
+    
+    // Benefits
+    benefit1: 'Bank-level security for your data',
+    benefit2: 'Smart automation features',
+    benefit3: 'Real-time financial insights',
+    
+    // Stats
+    activeUsers: 'Active Users',
+    savedMoney: 'Money Tracked',
+    rating: 'User Rating'
   },
 
   // Home page
@@ -456,31 +492,67 @@ const translations = {
 
     // Authentication
     auth: {
-      loginTitle: 'כניסה לחשבון',
-      loginSubtitle: 'ברוכים הבאים! אנא התחברו לחשבונכם.',
-      registerTitle: 'הרשמה',
-      registerSubtitle: 'צרו את חשבון SpendWise שלכם',
-      email: 'אימייל',
-      emailPlaceholder: 'הזינו את האימייל שלכם',
+      welcomeBack: 'ברוכים השבים',
+      loginSubtitle: 'התחברו כדי להמשיך לחשבון שלכם',
+      createAccount: 'יצירת חשבון',
+      registerSubtitle: 'הצטרפו לאלפי משתמשים המנהלים את הכספים שלהם',
+      email: 'דואר אלקטרוני',
+      emailPlaceholder: 'הזינו את כתובת הדואר האלקטרוני',
       password: 'סיסמה',
-      passwordPlaceholder: 'הזינו את הסיסמה שלכם',
-      confirmPassword: 'אישור סיסמה',
-      confirmPasswordPlaceholder: 'אשרו את הסיסמה שלכם',
+      passwordPlaceholder: 'הזינו סיסמה',
+      confirmPassword: 'אימות סיסמה',
+      confirmPasswordPlaceholder: 'אשרו את הסיסמה',
       username: 'שם משתמש',
-      usernamePlaceholder: 'הזינו שם משתמש',
-      signIn: 'כניסה',
+      usernamePlaceholder: 'בחרו שם משתמש',
+      signIn: 'התחברות',
       signUp: 'הרשמה',
-      signingIn: 'מתחבר...',
-      creatingAccount: 'יוצר חשבון...',
-      forgotPassword: 'שכחתי סיסמה',
-      noAccount: 'אין לכם חשבון?',
-      alreadyHaveAccount: 'יש לכם כבר חשבון?',
-      createAccount: 'צור חשבון',
-      signInInstead: 'התחבר במקום זאת',
       rememberMe: 'זכור אותי',
-      invalidCredentials: 'אימייל או סיסמה לא תקינים',
-      loginSuccess: 'התחברות מוצלחת',
-      registerSuccess: 'הרשמה מוצלחת'
+      forgotPassword: 'שכחת סיסמה?',
+      noAccount: 'אין לך חשבון?',
+      alreadyHaveAccount: 'כבר יש לך חשבון?',
+      signUpNow: 'הירשם עכשיו',
+      signInNow: 'התחבר עכשיו',
+      orContinueWith: 'או המשך באמצעות',
+      agreeToTerms: 'אני מסכים לתנאי השימוש ומדיניות הפרטיות',
+      accountInfo: 'פרטי חשבון',
+      security: 'אבטחה',
+      startJourney: 'התחל את המסע הפיננסי שלך',
+      joinThousands: 'הצטרף לאלפי משתמשים שכבר מנהלים את הכספים שלהם עם SpendWise',
+
+      // Password strength indicators
+      weak: 'חלשה',
+      fair: 'סבירה',
+      good: 'טובה',
+      strong: 'חזקה',
+      veryStrong: 'חזקה מאוד',
+
+      // Password requirements
+      passwordLength: 'לפחות 8 תווים',
+      passwordNumber: 'מכילה מספר',
+      passwordUpper: 'מכילה אות גדולה',
+      passwordLower: 'מכילה אות קטנה',
+
+      // Features section
+      features: {
+        title: 'ניהול פיננסי חכם',
+        subtitle: 'חווה את העתיד של ניהול הכספים האישי',
+        secure: 'מאובטח ופרטי',
+        secureDesc: 'המידע שלך מוצפן ומוגן',
+        fast: 'מהיר במיוחד',
+        fastDesc: 'עדכונים ומעקב בזמן אמת',
+        smart: 'ניתוח חכם',
+        smartDesc: 'תובנות חכמות להחלטות טובות יותר'
+      },
+
+      // Benefits
+      benefit1: 'אבטחה ברמת בנק למידע שלך',
+      benefit2: 'תכונות אוטומציה חכמות',
+      benefit3: 'תובנות פיננסיות בזמן אמת',
+
+      // Stats
+      activeUsers: 'משתמשים פעילים',
+      savedMoney: 'כסף מנוהל',
+      rating: 'דירוג משתמשים'
     },
 
     // Home page
@@ -575,7 +647,7 @@ const translations = {
       frequency: 'תדירות',
       selectDate: 'בחר תאריך',
       endsOn: 'מסתיים ב',
-      updateFuture: 'החל על כל המופעים העתיディים',
+      updateFuture: 'החל על כל המופעים העתידיים',
       noMatchingTransactions: 'לא נמצאו עסקאות תואמות',
       noRecurringTransactions: 'אין עסקאות חוזרות',
       tryDifferentSearch: 'נסו מילת חיפוש או סינון אחר',
@@ -765,7 +837,7 @@ const translations = {
       features: {
         title: 'ניהול חכם של הוצאות',
         description: 'קחו שליטה על הכספים שלכם עם הפלטפורמה האינטואיטיבית שלנו',
-        feature1: 'מעקב אחר הוצאות בזמן אמת',
+        feature1: 'מעקב expenses בזמן אמת',
         feature2: 'הגדרת עסקאות קבועות',
         feature3: 'ניתוח דפוסי הוצאות'
       }
@@ -806,7 +878,7 @@ const translations = {
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('he'); // Default to Hebrew
+  const [language, setLanguage] = useState('en'); // Changed from 'he' to 'en'
   
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'he' ? 'en' : 'he');
