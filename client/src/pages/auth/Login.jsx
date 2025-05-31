@@ -331,7 +331,7 @@ const Login = () => {
               <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                 {t('auth.noAccount')}{' '}
                 <Link 
-                  to="/auth/register" 
+                  to="../register" 
                   className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
                 >
                   {t('auth.signUpNow')}

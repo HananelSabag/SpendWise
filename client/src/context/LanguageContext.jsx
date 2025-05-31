@@ -39,7 +39,8 @@ const translations = {
     error: 'Error',
     success: 'Success',
     warning: 'Warning',
-    info: 'Information'
+    info: 'Information',
+    continue: 'Continue'
   },
 
   // Error messages
@@ -359,7 +360,8 @@ const translations = {
     openSource: 'Open Source',
     accessibilityStatement: 'Accessibility Statement',
     allRightsReserved: 'All rights reserved',
-    close: 'Close'
+    close: 'Close',
+    copyright: 'כל הזכויות שמורות © {{year}} SpendWise'
   },
 
   // Alert notifications
@@ -478,7 +480,8 @@ const translations = {
       error: 'שגיאה',
       success: 'הצלחה',
       warning: 'אזהרה',
-      info: 'מידע'
+      info: 'מידע',
+      continue: 'המשך'
     },
 
     // Navigation
@@ -782,7 +785,8 @@ const translations = {
       openSource: 'קוד פתוח',
       accessibilityStatement: 'הצהרת נגישות',
       allRightsReserved: 'כל הזכויות שמורות',
-      close: 'סגור'
+      close: 'סגור',
+      copyright: 'כל הזכויות שמורות © {{year}} SpendWise'
     },
 
     // Alert notifications

@@ -24,6 +24,7 @@ import { cn } from '../../utils/helpers';
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import AccessibilityStatement from '../../components/common/AccessibilityStatement';
+import AuthFooter from '../../components/auth/AuthFooter';
 
 const PasswordStrengthIndicator = ({ password }) => {
   const { t, language } = useLanguage();
@@ -191,352 +192,356 @@ const Register = () => {
   ];
 
   return (
-    <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
-      <FloatingMenu buttons={menuButtons} />
-      <AccessibilityMenu />
+    <>
+      <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
+        <FloatingMenu buttons={menuButtons} />
+        <AccessibilityMenu />
         
-      {/* Form Side */}
-      <motion.div 
-        className={cn(
-          'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
-          isRTL ? 'lg:order-2' : 'lg:order-1'
-        )}
-        initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Link to="/" className="inline-flex items-center justify-center mb-8">
-              <motion.div 
-                className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="text-3xl text-white font-bold">S</span>
-              </motion.div>
-            </Link>
+        {/* Form Side */}
+        <motion.div 
+          className={cn(
+            'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
+            isRTL ? 'lg:order-2' : 'lg:order-1'
+          )}
+          initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="w-full max-w-md space-y-8">
+            {/* Logo */}
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Link to="/" className="inline-flex items-center justify-center mb-8">
+                <motion.div 
+                  className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span className="text-3xl text-white font-bold">S</span>
+                </motion.div>
+              </Link>
               
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('auth.createAccount')}
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t('auth.registerSubtitle')}
-            </p>
-          </motion.div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {t('auth.createAccount')}
+              </h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
+                {t('auth.registerSubtitle')}
+              </p>
+            </motion.div>
 
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center">
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
-                }`}>
-                  {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center">
+              <div className="flex items-center space-x-4">
+                <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                    currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                  }`}>
+                    {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
+                  </div>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    isRTL ? 'mr-2' : 'ml-2'
+                  )}>
+                    {t('auth.accountInfo')}
+                  </span>
                 </div>
-                <span className={cn(
-                  'text-sm font-medium',
-                  isRTL ? 'mr-2' : 'ml-2'
-                )}>
-                  {t('auth.accountInfo')}
-                </span>
-              </div>
-              <div className="w-16 h-0.5 bg-gray-300" />
-              <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
-                }`}>
-                  2
+                <div className="w-16 h-0.5 bg-gray-300" />
+                <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                    currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                  }`}>
+                    2
+                  </div>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    isRTL ? 'mr-2' : 'ml-2'
+                  )}>
+                    {t('auth.security')}
+                  </span>
                 </div>
-                <span className={cn(
-                  'text-sm font-medium',
-                  isRTL ? 'mr-2' : 'ml-2'
-                )}>
-                  {t('auth.security')}
-                </span>
               </div>
             </div>
-          </div>
 
-          {/* Form */}
-          <motion.form 
-            onSubmit={handleSubmit}
-            className="space-y-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <AnimatePresence mode="wait">
-              {currentStep === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  {/* Username */}
-                  <Input
-                    label={t('auth.username')}
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => handleChange('username', e.target.value)}
-                    placeholder={t('auth.usernamePlaceholder')}
-                    icon={User}
-                    error={errors.username}
-                    required
-                  />
-
-                  {/* Email */}
-                  <Input
-                    label={t('auth.email')}
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder={t('auth.emailPlaceholder')}
-                    icon={Mail}
-                    error={errors.email}
-                    required
-                  />
-
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="large"
-                    fullWidth
-                    onClick={nextStep}
+            {/* Form */}
+            <motion.form 
+              onSubmit={handleSubmit}
+              className="space-y-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <AnimatePresence mode="wait">
+                {currentStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-6"
                   >
-                    {t('common.continue')}
-                    <ArrowRight className={cn(
-                      'w-5 h-5',
-                      isRTL ? 'mr-2 rotate-180' : 'ml-2'
-                    )} />
-                  </Button>
-                </motion.div>
-              )}
-
-              {currentStep === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  {/* Password */}
-                  <div>
+                    {/* Username */}
                     <Input
-                      label={t('auth.password')}
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => handleChange('password', e.target.value)}
-                      placeholder={t('auth.passwordPlaceholder')}
-                      icon={Lock}
-                      error={errors.password}
+                      label={t('auth.username')}
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => handleChange('username', e.target.value)}
+                      placeholder={t('auth.usernamePlaceholder')}
+                      icon={User}
+                      error={errors.username}
                       required
                     />
-                    <PasswordStrengthIndicator password={formData.password} />
-                      
-                    {/* Password Requirements */}
-                    <div className="mt-3 space-y-1">
-                      {passwordRequirements.map((req) => (
-                        <div
-                          key={req.id}
-                          className={`flex items-center text-xs ${
-                            req.check(formData.password) ? 'text-green-500' : 'text-gray-400'
-                          }`}
-                        >
-                          {req.check(formData.password) ? (
-                            <Check className="w-3 h-3 mr-1" />
-                          ) : (
-                            <X className="w-3 h-3 mr-1" />
-                          )}
-                          {req.text}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Confirm Password */}
-                  <Input
-                    label={t('auth.confirmPassword')}
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                    placeholder={t('auth.confirmPasswordPlaceholder')}
-                    icon={Lock}
-                    error={errors.confirmPassword}
-                    required
-                  />
+                    {/* Email */}
+                    <Input
+                      label={t('auth.email')}
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      placeholder={t('auth.emailPlaceholder')}
+                      icon={Mail}
+                      error={errors.email}
+                      required
+                    />
 
-                  {/* Terms */}
-                  <div>
-                    <label className="flex items-start cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                        className="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <span className={cn(
-                        'text-sm text-gray-600 dark:text-gray-400',
-                        isRTL ? 'mr-2' : 'ml-2'
-                      )}>
-                        {t('auth.agreeToTerms')}
-                      </span>
-                    </label>
-                    {errors.terms && (
-                      <p className="mt-1 text-sm text-red-500">{errors.terms}</p>
-                    )}
-                  </div>
-
-                  {/* Error Alert */}
-                  <AnimatePresence>
-                    {(errors.general || authError) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                      >
-                        <Alert 
-                          type="error" 
-                          dismissible 
-                          onDismiss={() => setErrors({})}
-                        >
-                          {errors.general || authError}
-                        </Alert>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Buttons */}
-                  <div className="flex gap-3">
                     <Button
                       type="button"
-                      variant="outline"
-                      size="large"
-                      onClick={() => setCurrentStep(1)}
-                    >
-                      {t('common.back')}
-                    </Button>
-                    <Button
-                      type="submit"
                       variant="primary"
                       size="large"
                       fullWidth
-                      loading={isRegistering}
-                      disabled={!agreedToTerms}
+                      onClick={nextStep}
                     >
-                      {t('auth.createAccount')}
+                      {t('common.continue')}
+                      <ArrowRight className={cn(
+                        'w-5 h-5',
+                        isRTL ? 'mr-2 rotate-180' : 'ml-2'
+                      )} />
                     </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                )}
 
-            {/* Sign In Link */}
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              {t('auth.alreadyHaveAccount')}{' '}
-              <Link 
-                to="/auth/login" 
-                className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
-              >
-                {t('auth.signInNow')}
-              </Link>
-            </p>
-          </motion.form>
-        </div>
-      </motion.div>
+                {currentStep === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-6"
+                  >
+                    {/* Password */}
+                    <div>
+                      <Input
+                        label={t('auth.password')}
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => handleChange('password', e.target.value)}
+                        placeholder={t('auth.passwordPlaceholder')}
+                        icon={Lock}
+                        error={errors.password}
+                        required
+                      />
+                      <PasswordStrengthIndicator password={formData.password} />
+                      
+                      {/* Password Requirements */}
+                      <div className="mt-3 space-y-1">
+                        {passwordRequirements.map((req) => (
+                          <div
+                            key={req.id}
+                            className={`flex items-center text-xs ${
+                              req.check(formData.password) ? 'text-green-500' : 'text-gray-400'
+                            }`}
+                          >
+                            {req.check(formData.password) ? (
+                              <Check className="w-3 h-3 mr-1" />
+                            ) : (
+                              <X className="w-3 h-3 mr-1" />
+                            )}
+                            {req.text}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-      {/* Feature Showcase Side */}
-      <div className={cn(
-        'hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 relative overflow-hidden',
-        isRTL ? 'lg:order-1' : 'lg:order-2'
-      )}>
-        {/* Animated Background */}
-        <motion.div
-          className="absolute inset-0"
-          initial={{ scale: 1.2, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.1 }}
-          transition={{ duration: 1 }}
-        >
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+                    {/* Confirm Password */}
+                    <Input
+                      label={t('auth.confirmPassword')}
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
+                      icon={Lock}
+                      error={errors.confirmPassword}
+                      required
+                    />
+
+                    {/* Terms */}
+                    <div>
+                      <label className="flex items-start cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => setAgreedToTerms(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className={cn(
+                          'text-sm text-gray-600 dark:text-gray-400',
+                          isRTL ? 'mr-2' : 'ml-2'
+                        )}>
+                          {t('auth.agreeToTerms')}
+                        </span>
+                      </label>
+                      {errors.terms && (
+                        <p className="mt-1 text-sm text-red-500">{errors.terms}</p>
+                      )}
+                    </div>
+
+                    {/* Error Alert */}
+                    <AnimatePresence>
+                      {(errors.general || authError) && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                        >
+                          <Alert 
+                            type="error" 
+                            dismissible 
+                            onDismiss={() => setErrors({})}
+                          >
+                            {errors.general || authError}
+                          </Alert>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Buttons */}
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="large"
+                        onClick={() => setCurrentStep(1)}
+                      >
+                        {t('common.back')}
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="large"
+                        fullWidth
+                        loading={isRegistering}
+                        disabled={!agreedToTerms}
+                      >
+                        {t('auth.createAccount')}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Sign In Link */}
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                {t('auth.alreadyHaveAccount')}{' '}
+                <Link 
+                  to="/auth/login" 
+                  className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                >
+                  {t('auth.signInNow')}
+                </Link>
+              </p>
+            </motion.form>
+          </div>
         </motion.div>
 
-        {/* Content */}
-        <div className="relative z-10 flex items-center justify-center w-full p-12">
-          <div className="max-w-lg text-white">
-            <motion.h2 
-              className="text-4xl font-bold mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              {t('auth.startJourney')}
-            </motion.h2>
+        {/* Feature Showcase Side */}
+        <div className={cn(
+          'hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 relative overflow-hidden',
+          isRTL ? 'lg:order-1' : 'lg:order-2'
+        )}>
+          {/* Animated Background */}
+          <motion.div
+            className="absolute inset-0"
+            initial={{ scale: 1.2, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.1 }}
+            transition={{ duration: 1 }}
+          >
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          </motion.div>
+
+          {/* Content */}
+          <div className="relative z-10 flex items-center justify-center w-full p-12">
+            <div className="max-w-lg text-white">
+              <motion.h2 
+                className="text-4xl font-bold mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                {t('auth.startJourney')}
+              </motion.h2>
               
-            <motion.p 
-              className="text-xl mb-12 text-white/90"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              {t('auth.joinThousands')}
-            </motion.p>
+              <motion.p 
+                className="text-xl mb-12 text-white/90"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                {t('auth.joinThousands')}
+              </motion.p>
 
-            {/* Benefits */}
-            <div className="space-y-6">
-              {benefits.map((benefit, index) => (
-                <motion.div
-                  key={index}
-                  className="flex items-center"
-                  initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + index * 0.1 }}
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                >
-                  <div className={cn(
-                    'flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center',
-                    isRTL ? 'ml-4' : 'mr-4'
-                  )}>
-                    <benefit.icon className="w-6 h-6" />
-                  </div>
-                  <p className="text-lg">{benefit.text}</p>
-                </motion.div>
-              ))}
+              {/* Benefits */}
+              <div className="space-y-6">
+                {benefits.map((benefit, index) => (
+                  <motion.div
+                    key={index}
+                    className="flex items-center"
+                    initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
+                    <div className={cn(
+                      'flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center',
+                      isRTL ? 'ml-4' : 'mr-4'
+                    )}>
+                      <benefit.icon className="w-6 h-6" />
+                    </div>
+                    <p className="text-lg">{benefit.text}</p>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Stats */}
+              <motion.div 
+                className="mt-12 grid grid-cols-3 gap-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+              >
+                <div className="text-center">
+                  <div className="text-3xl font-bold">10K+</div>
+                  <div className="text-sm text-white/80">{t('auth.activeUsers')}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">$2M+</div>
+                  <div className="text-sm text-white/80">{t('auth.savedMoney')}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">4.9</div>
+                  <div className="text-sm text-white/80">{t('auth.rating')}</div>
+                </div>
+              </motion.div>
             </div>
-
-            {/* Stats */}
-            <motion.div 
-              className="mt-12 grid grid-cols-3 gap-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-            >
-              <div className="text-center">
-                <div className="text-3xl font-bold">10K+</div>
-                <div className="text-sm text-white/80">{t('auth.activeUsers')}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold">$2M+</div>
-                <div className="text-sm text-white/80">{t('auth.savedMoney')}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold">4.9</div>
-                <div className="text-sm text-white/80">{t('auth.rating')}</div>
-              </div>
-            </motion.div>
           </div>
         </div>
       </div>
-    </div>
+
+      <AuthFooter />
+    </>
   );
 };
 
