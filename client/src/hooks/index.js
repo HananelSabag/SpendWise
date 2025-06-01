@@ -1,3 +1,4 @@
-// Export all hooks for easier imports
-export { useDashboard } from './useDashboard';
+// Export all hooks
+export { default as useDashboard } from './useDashboard';
+export { useTransactionsList, useRecurringTransactionsList } from './useTransactionsList';
 export * from './useApi';

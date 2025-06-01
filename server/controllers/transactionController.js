@@ -110,26 +110,44 @@ const transactionController = {
     }
     
     const targetDate = date ? new Date(date) : new Date();
-    const dateRanges = TimeManager.getDateRanges(targetDate);
-    const range = dateRanges[period === 'day' ? 'daily' : period + 'ly'];
     
-    const result = await Transaction.getTransactions(userId, {
-      startDate: TimeManager.formatForDB(range.start),
-      endDate: TimeManager.formatForDB(range.end),
-      sortBy: 'date',
-      sortOrder: 'DESC'
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        transactions: result.transactions,
-        period,
-        startDate: range.start,
-        endDate: range.end
-      },
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const dateRanges = TimeManager.getDateRanges(targetDate);
+      const range = dateRanges[period === 'day' ? 'daily' : period + 'ly'];
+      
+      const result = await Transaction.getTransactions(userId, {
+        startDate: TimeManager.formatForDB(range.start),
+        endDate: TimeManager.formatForDB(range.end),
+        sortBy: 'date',
+        sortOrder: 'DESC'
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          transactions: result.transactions,
+          period,
+          startDate: range.start,
+          endDate: range.end
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in getByPeriod:', error);
+      
+      // Handle specific SQL errors
+      if (error.code === '42702') { // PostgreSQL ambiguous column error
+        throw { 
+          ...errorCodes.SQL_AMBIGUOUS_COLUMN, 
+          details: 'Database query needs column disambiguation' 
+        };
+      }
+      
+      throw { 
+        ...errorCodes.FETCH_FAILED, 
+        details: error.message || 'Failed to fetch period transactions' 
+      };
+    }
   }),
 
   /**
@@ -709,7 +727,13 @@ const transactionController = {
       });
     } catch (error) {
       await client.query('ROLLBACK');
-      throw error;
+      
+      // Handle specific SQL errors
+      if (error.code === '23505') { // Unique violation
+        throw { ...errorCodes.UNIQUE_VIOLATION, details: 'Expense with the same details already exists' };
+      }
+      
+      throw { ...errorCodes.SQL_ERROR, details: error.message || 'Failed to add expense' };
     } finally {
       client.release();
     }
@@ -767,7 +791,13 @@ const transactionController = {
       });
     } catch (error) {
       await client.query('ROLLBACK');
-      throw error;
+      
+      // Handle specific SQL errors
+      if (error.code === '23505') { // Unique violation
+        throw { ...errorCodes.UNIQUE_VIOLATION, details: 'Income with the same details already exists' };
+      }
+      
+      throw { ...errorCodes.SQL_ERROR, details: error.message || 'Failed to add income' };
     } finally {
       client.release();
     }

@@ -10,7 +10,7 @@ export const DateProvider = ({ children }) => {
   const { language } = useLanguage();
   
   // Initialize with today at noon for consistency
-  const [selectedDate, setSelectedDate] = useState(() => {
+  const [selectedDate, setSelectedDateState] = useState(() => {
     // בדיקה אם יש תאריך שמור ב-localStorage
     const savedDate = localStorage.getItem('selectedDate');
     
@@ -62,7 +62,23 @@ export const DateProvider = ({ children }) => {
     const locale = language === 'he' ? he : enUS;
     return format(date, formatStr, { locale });
   }, [selectedDate, language]);
-  
+
+  // ✅ Fix date setter with proper naming
+  const setSelectedDate = useCallback((date) => {
+    const normalizedDate = normalizeDate(date);
+    setSelectedDateState(normalizedDate);
+    
+    // Save to localStorage
+    localStorage.setItem('selectedDate', normalizedDate.toISOString());
+    
+    console.log('[DateContext] Date changed to:', normalizedDate);
+  }, [normalizeDate]);
+
+  // ✅ Add date for server formatting
+  const getDateForServer = useCallback((date = selectedDate) => {
+    return normalizeDate(date).toISOString().split('T')[0];
+  }, [selectedDate, normalizeDate]);
+
   // Get relative date string
   const getRelativeDateString = useCallback((date = selectedDate) => {
     if (isToday(date)) {
@@ -83,7 +99,7 @@ export const DateProvider = ({ children }) => {
   }, [selectedDate]);
   
   // Update selected date - חיזוק הנירמול והדיבאג
-  const updateSelectedDate = (date) => {
+  const updateSelectedDate = useCallback((date) => {
     if (!date) return;
     
     // וודא שהתאריך הוא אובייקט Date
@@ -98,14 +114,14 @@ export const DateProvider = ({ children }) => {
     console.log('[DEBUG] updateSelectedDate - after normalize:', normalizedDate.toISOString());
     
     // עדכן את הסטייט
-    setSelectedDate(normalizedDate);
+    setSelectedDateState(normalizedDate);
 
     // שמור ב-localStorage לשימור בין טעינות
     localStorage.setItem('selectedDate', normalizedDate.toISOString());
     
     // הדפס את התאריך בפורמט ISO שנשלח לשרת
     console.log('[DEBUG] Date for server API:', normalizedDate.toISOString().split('T')[0]);
-  };
+  }, [normalizeDate]);
   
   // Navigation methods
   const goToPreviousDay = useCallback(() => {
@@ -128,7 +144,7 @@ export const DateProvider = ({ children }) => {
     console.log('[DEBUG] Resetting to today:', today.toISOString());
     
     // עדכן את הסטייט ישירות במקום להשתמש ב-updateSelectedDate
-    setSelectedDate(today);
+    setSelectedDateState(today);
     
     // עדכן את ה-localStorage
     localStorage.setItem('selectedDate', today.toISOString());
@@ -203,40 +219,42 @@ export const DateProvider = ({ children }) => {
       console.log(`[INFO] Currently viewing ${selectedDateStr} instead of today (${todayStr})`);
     }
   }, [selectedDate, isSelectedDateToday, resetToToday]);
-  
-  // הוסף פונקציה חדשה לקבלת תאריך בפורמט לשרת
-  const getDateForServer = useCallback((date = selectedDate) => {
-    // תמיד החזר בפורמט YYYY-MM-DD
-    return new Date(date).toISOString().split('T')[0];
-  }, [selectedDate]);
-  
-  const value = {
-    // Current date
+
+  // Value object
+  const value = useMemo(() => ({
     selectedDate,
+    setSelectedDate,
     updateSelectedDate,
-    
-    // Navigation
+    formatDate,
+    getDateForServer,
+    getRelativeDateString,
+    normalizeDate,
+    getDateRange,
     goToPreviousDay,
     goToNextDay,
     resetToToday,
     canGoNext,
-    
-    // Utilities
-    normalizeDate,
-    formatDate,
+    // Date status helpers
+    isToday: (date = selectedDate) => isToday(normalizeDate(date)),
+    isYesterday: (date = selectedDate) => isYesterday(normalizeDate(date)),
+    isTomorrow: (date = selectedDate) => isTomorrow(normalizeDate(date)),
+    isSelectedDateToday,
+  }), [
+    selectedDate, 
+    setSelectedDate, 
+    updateSelectedDate,
+    formatDate, 
+    getDateForServer, 
     getRelativeDateString,
-    isToday: isSelectedDateToday,
+    normalizeDate,
     getDateRange,
-    
-    // הוסף את הפונקציה החדשה
-    getDateForServer,
-    
-    // Additional helpers
-    isSelectedDate: (date) => {
-      return startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
-    }
-  };
-  
+    goToPreviousDay,
+    goToNextDay,
+    resetToToday,
+    canGoNext,
+    isSelectedDateToday
+  ]);
+
   return (
     <DateContext.Provider value={value}>
       {children}
@@ -247,7 +265,7 @@ export const DateProvider = ({ children }) => {
 export const useDate = () => {
   const context = useContext(DateContext);
   if (!context) {
-    throw new Error('useDate must be used within DateProvider');
+    throw new Error('useDate must be used within a DateProvider');
   }
   return context;
 };

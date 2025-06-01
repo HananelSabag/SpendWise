@@ -189,6 +189,16 @@ class Transaction {
       return await DBQueries.getTransactions(userId, options);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      
+      // Handle specific database errors
+      if (error.code === '42702') {
+        throw {
+          code: 'SQL_AMBIGUOUS_COLUMN',
+          message: 'Database query contains ambiguous column references',
+          details: error.message
+        };
+      }
+      
       throw {
         code: 'FETCH_FAILED',
         message: 'Failed to fetch transactions',

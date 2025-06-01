@@ -15,15 +15,46 @@ export const useTransactions = (filters) => {
   });
 };
 
+// ✅ הוספת hook חדש לרשימת עסקאות
+export const useTransactionsQuery = (filters) => {
+  return useQuery({
+    queryKey: ['transactions-query', filters],
+    queryFn: () => transactionAPI.getAll(filters),
+    enabled: !!filters,
+    select: (response) => {
+      const data = response.data;
+      return {
+        transactions: Array.isArray(data.transactions) ? data.transactions : [],
+        pagination: data.pagination || {},
+        totalCount: data.pagination?.total || 0
+      };
+    }
+  });
+};
+
 export const useRecurringTransactions = (type) => {
   return useQuery({
     queryKey: ['recurring', type],
     queryFn: () => transactionAPI.getRecurring(type),
+    staleTime: 60 * 1000, // דקה אחת
     // ✅ שיפור הטיפול בנתונים
     select: (response) => {
       const data = response.data;
       // וודא שמחזירים מערך תמיד
       return Array.isArray(data.data) ? data.data : [];
+    }
+  });
+};
+
+// ✅ hook לחיפוש עסקאות
+export const useTransactionSearch = (searchTerm, enabled = true) => {
+  return useQuery({
+    queryKey: ['transaction-search', searchTerm],
+    queryFn: () => transactionAPI.search(searchTerm),
+    enabled: enabled && searchTerm && searchTerm.length >= 2,
+    staleTime: 30 * 1000,
+    select: (response) => {
+      return Array.isArray(response.data) ? response.data : [];
     }
   });
 };

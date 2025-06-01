@@ -44,6 +44,10 @@ const TransactionCard = ({
 
   // Format frequency
   const formatFrequency = (interval) => {
+    // ✅ Better handling of null/undefined values
+    if (!interval || interval === null || interval === undefined) {
+      return t('actions.frequencies.oneTime') || 'One-time';
+    }
     return t(`actions.frequencies.${interval}`) || interval;
   };
 

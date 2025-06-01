@@ -165,7 +165,40 @@ export const numbers = {
     });
     
     console.groupEnd();
-  }
+  },
+
+  // ✅ הוסף פונקציות debug נוספות
+  validateTransactionsList: (data, componentName = 'Unknown') => {
+    console.group(`🔍 [${componentName}] Transaction Data Validation`);
+    
+    console.log('Raw data:', data);
+    console.log('Is array:', Array.isArray(data));
+    console.log('Length:', data?.length);
+    console.log('Type:', typeof data);
+    
+    if (data && !Array.isArray(data)) {
+      console.error('❌ Expected array but got:', typeof data);
+      console.log('Data keys:', Object.keys(data));
+    }
+    
+    if (Array.isArray(data) && data.length > 0) {
+      console.log('✅ Sample transaction:', data[0]);
+    }
+    
+    console.groupEnd();
+    
+    return Array.isArray(data) ? data : [];
+  },
+
+  // ✅ פונקציה לתיקון נתוני transactions
+  ensureTransactionsArray: (data) => {
+    if (Array.isArray(data)) return data;
+    if (data?.transactions && Array.isArray(data.transactions)) return data.transactions;
+    if (data?.data?.transactions && Array.isArray(data.data.transactions)) return data.data.transactions;
+    
+    console.warn('[helpers] Could not extract transactions array from:', data);
+    return [];
+  },
 };
 
 /**

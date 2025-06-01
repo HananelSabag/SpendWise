@@ -232,50 +232,50 @@ class DBQueries {
 
     try {
       const offset = (page - 1) * limit;
-      const conditions = ['user_id = $1', 'deleted_at IS NULL'];
+      const conditions = ['t.user_id = $1', 't.deleted_at IS NULL']; // ✅ Fix: specify table alias
       const values = [userId];
       let paramCount = 1;
 
-      // Build dynamic conditions
+      // Build dynamic conditions - ✅ All with table aliases
       if (startDate) {
         paramCount++;
-        conditions.push(`date >= $${paramCount}`);
+        conditions.push(`t.date >= $${paramCount}`);
         values.push(startDate);
       }
 
       if (endDate) {
         paramCount++;
-        conditions.push(`date <= $${paramCount}`);
+        conditions.push(`t.date <= $${paramCount}`);
         values.push(endDate);
       }
 
       if (categoryId) {
         paramCount++;
-        conditions.push(`category_id = $${paramCount}`);
+        conditions.push(`t.category_id = $${paramCount}`);
         values.push(categoryId);
       }
 
       if (templateId !== null) {
         paramCount++;
         if (templateId === 0) {
-          conditions.push('template_id IS NULL');
+          conditions.push('t.template_id IS NULL');
         } else {
-          conditions.push(`template_id = $${paramCount}`);
+          conditions.push(`t.template_id = $${paramCount}`);
           values.push(templateId);
         }
       }
 
       if (searchTerm) {
         paramCount++;
-        conditions.push(`description ILIKE $${paramCount}`);
+        conditions.push(`t.description ILIKE $${paramCount}`);
         values.push(`%${searchTerm}%`);
       }
 
-      // Build queries for both tables
+      // Build queries for both tables - ✅ Fix table aliases throughout
       const buildQuery = (table) => `
         SELECT 
           t.id,
-          '${table.slice(0, -1)}' as type,
+          '${table.slice(0, -1)}' as transaction_type,
           t.amount,
           t.description,
           t.date,

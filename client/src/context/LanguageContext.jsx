@@ -15,47 +15,7 @@ export const useLanguage = () => {
 
 // Complete translations object
 const translations = {
-  calendar: {
-    weekDays: {
-      he: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
-      en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    },
-    previousMonth: {
-      he: 'חודש קודם',
-      en: 'Previous Month'
-    },
-    nextMonth: {
-      he: 'חודש הבא',
-      en: 'Next Month'
-    },
-    today: {
-      he: 'היום',
-      en: 'Today'
-    },
-    // נוסיף עוד תרגומים ללוח שנה
-    weekDaysShort: {
-      he: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
-      en: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-    },
-    months: {
-      he: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
-      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    },
-    monthsShort: {
-      he: ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'],
-      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    },
-    selectDate: {
-      he: 'בחר תאריך',
-      en: 'Select Date'
-    },
-    jumpToToday: {
-      he: 'קפוץ להיום',
-      en: 'Jump to Today'
-    }
-  },
-  
-  // Common translations
+  // English translations
   common: {
     loading: 'Loading...',
     save: 'Save',
@@ -85,7 +45,9 @@ const translations = {
     toggleTheme: 'Toggle Theme',
     toggleLanguage: 'Toggle Language',
     openUserMenu: 'Open User Menu',
-    openMenu: 'Open Menu'
+    openMenu: 'Open Menu',
+    filters: 'Filters',
+    balance: 'Balance',
   },
 
   // Error messages
@@ -199,6 +161,7 @@ const translations = {
       income: 'Income',
       expenses: 'Expenses',
       total: 'Net Balance',
+      balance: 'Balance',
       error: 'Unable to load balance data',
       period: {
         asOf: 'As of {{date}}',
@@ -288,8 +251,10 @@ const translations = {
     },
     frequencies: {
       daily: 'Daily',
-      weekly: 'Weekly',
-      monthly: 'Monthly'
+      weekly: 'Weekly', 
+      monthly: 'Monthly',
+      null: 'One-time',  // ✅ Add for null values
+      oneTime: 'One-time'
     },
     recurringOptions: 'Recurring Options',
     endDate: 'End Date',
@@ -310,7 +275,14 @@ const translations = {
   // Transaction Management
   transactions: {
     title: 'Transaction Management',
-    transactionsForDay: 'Transactions for',
+    description: 'View and manage all your transactions',
+    subtitle: 'Manage all your income and expenses', // ✅ הוסף תרגום חסר
+    searchPlaceholder: 'Search transactions...', // ✅ הוסף תרגום חסר
+    noSearchResults: 'No transactions found for "{{term}}"', // ✅ הוסף תרגום חסר
+    noTransactionsOfType: 'No {{type}} transactions found', // ✅ הוסף תרגום חסר
+    all: 'All', // ✅ הוסף תרגום חסר
+    income: 'Income',  // ✅ Fix the typo from 'incom'
+    expense: 'Expenses',
     recurringTransactions: 'Recurring Transactions',
     addTransaction: 'Add Transaction',
     editTransaction: 'Edit Transaction',
@@ -326,10 +298,10 @@ const translations = {
     endsOn: 'Ends On',
     updateFuture: 'Apply to all future occurrences',
     noMatchingTransactions: 'No matching transactions',
-  noRecurringTransactions: 'No recurring transactions',
-  tryDifferentSearch: 'Try a different search term or filter',
-  createRecurringNote: 'When you create recurring transactions, you\'ll be able to manage them here.',
-  recurringNote: 'This is a recurring {type}. When editing, you can choose to update just this occurrence or all future occurrences.',
+    noRecurringTransactions: 'No recurring transactions',
+    tryDifferentSearch: 'Try a different search term or filter',
+    createRecurringNote: 'When you create recurring transactions, you\'ll be able to manage them here.',
+    recurringNote: 'This is a recurring {type}. When editing, you can choose to update just this occurrence or all future occurrences.',
     filters: {
       title: 'Filters',
       income: 'Income',
@@ -355,7 +327,7 @@ const translations = {
       expense: 'Expenses Only'
     },
     subtitle: 'Manage all your income and expenses',
-    items: 'items',
+    items: 'transactions',
     endOfList: 'End of transaction history',
     tip: 'Try adding new transactions using the button above',
     noTransactionsDesc: 'Your transactions will appear here once you add them',
@@ -672,7 +644,10 @@ const translations = {
       toggleTheme: 'החלף ערכת נושא',
       toggleLanguage: 'החלף שפה',
       openUserMenu: 'פתח תפריט משתמש',
-      openMenu: 'פתח תפריט'
+      openMenu: 'פתח תפריט',
+      filters: 'סינונים',
+      balance: 'יתרה',
+      loading: 'טוען...',
     },
 
     // Error messages
@@ -786,6 +761,7 @@ const translations = {
         income: 'הכנסות',
         expenses: 'הוצאות',
         total: 'יתרה נטו',
+        balance: 'יתרה',
         error: 'לא ניתן לטעון נתוני יתרה',
         period: {
           asOf: 'נכון ל-{{date}}',
@@ -873,7 +849,9 @@ const translations = {
       frequencies: {
         daily: 'יומי',
         weekly: 'שבועי',
-        monthly: 'חודשי'
+        monthly: 'חודשי',
+        null: 'חד פעמי',  // ✅ Add for null values
+        oneTime: 'חד פעמי'
       },
       recurringOptions: 'אפשרויות חזרה',
       endDate: 'תאריך סיום',
@@ -894,76 +872,83 @@ const translations = {
     // Transaction Management
     transactions: {
       title: 'ניהול עסקאות',
-      transactionsForDay: 'עסקאות עבור',
-      recurringTransactions: 'עסקאות קבועות',
-      addTransaction: 'הוסף עסקה',
-      editTransaction: 'ערוך עסקה',
-      editTitle: 'ערוך פרטי עסקה',
-      deleteConfirm: 'מחיקת עסקה',
-      recurring: 'עסקה קבועה',
-      amount: 'סכום',
-      description: 'תיאור',
-      category: 'קטגוריה',
-      date: 'תאריך',
-      frequency: 'תדירות',
-      selectDate: 'בחר תאריך',
-      endsOn: 'מסתיים ב',
-      updateFuture: 'החל על כל המופעים העתידיים',
-      noMatchingTransactions: 'לא נמצאו עסקאות תואמות',
-      noRecurringTransactions: 'אין עסקאות חוזרות',
-      tryDifferentSearch: 'נסו מילת חיפוש או סינון אחר',
-      createRecurringNote: 'כשתצרו עסקאות חוזרות, תוכלו לנהל אותן כאן.',
-      recurringNote: 'זוהי {type} חוזרת. בעת עריכה, תוכלו לבחור לעדכן רק את המופע הזה או את כל המופעים העתידיים.',
+      description: 'צפה ונהל את כל העסקאות שלך',
+      subtitle: 'נהל את כל ההכנסות וההוצאות שלך', // ✅ הוסף תרגום חסר
+      searchPlaceholder: 'Search transactions...', // ✅ הוסף תרגום חסר
+      noSearchResults: 'No transactions found for "{{term}}"', // ✅ הוסף תרגום חסר
+      noTransactionsOfType: 'No {{type}} transactions found', // ✅ הוסף תרגום חסר
+      all: 'All', // ✅ הוסף תרגום חסר
+      income: 'Income',  // ✅ ודא שזה קיים
+      expense: 'Expenses',
+      recurringTransactions: 'Recurring Transactions',
+      addTransaction: 'Add Transaction',
+      editTransaction: 'Edit Transaction',
+      editTitle: 'Edit transaction details',
+      deleteConfirm: 'Delete Transaction',
+      recurring: 'Recurring',
+      amount: 'Amount',
+      description: 'Description',
+      category: 'Category',
+      date: 'Date',
+      frequency: 'Frequency',
+      selectDate: 'Select Date',
+      endsOn: 'Ends On',
+      updateFuture: 'Apply to all future occurrences',
+      noMatchingTransactions: 'No matching transactions',
+      noRecurringTransactions: 'No recurring transactions',
+      tryDifferentSearch: 'Try a different search term or filter',
+      createRecurringNote: 'When you create recurring transactions, you\'ll be able to manage them here.',
+      recurringNote: 'This is a recurring {type}. When editing, you can choose to update just this occurrence or all future occurrences.',
       filters: {
-        title: 'סינונים',
-        income: 'הכנסות',
-        expense: 'הוצאות',
-        recurring: 'קבוע',
-        oneTime: 'חד פעמי',
-        filterButton: 'סינון',
-        showAll: 'הצג הכל'
+        title: 'Filters',
+        income: 'Income',
+        expense: 'Expense',
+        recurring: 'Recurring',
+        oneTime: 'One-time',
+        filterButton: 'Filter',
+        showAll: 'Show All'
       },
-      fetchError: 'נכשל בטעינת עסקאות',
-      deleteError: 'נכשל במחיקת עסקה',
-      updateError: 'נכשל בעדכון עסקה',
-      currentDate: 'חזרה להיום',
-      noTransactions: 'אין עסקאות לתקופה זו',
+      fetchError: 'Failed to load transactions',
+      deleteError: 'Failed to delete transaction',
+      updateError: 'Failed to update transaction',
+      currentDate: 'Back to today',
+      noTransactions: 'No transactions for this period',
       recurringSection: {
-        title: 'עסקאות קבועות',
-        management: 'נהלו את ההכנסות וההוצאות הקבועות שלכם',
-        impact: 'השפעה חודשית'
+        title: 'Recurring Transactions',
+        management: 'Manage your recurring income and expenses',
+        impact: 'Monthly Impact'
       },
       view: {
-        all: 'כל העסקאות',
-        income: 'הכנסות בלבד',
-        expense: 'הוצאות בלבד'
+        all: 'All Transactions',
+        income: 'Income Only',
+        expense: 'Expenses Only'
       },
-      subtitle: 'ניהול כל ההכנסות וההוצאות שלך',
-      items: 'פריטים',
-      endOfList: 'סוף היסטוריית העסקאות',
-      tip: 'נסה להוסיף עסקאות חדשות באמצעות הכפתור למעלה',
-      noTransactionsDesc: 'העסקאות שלך יופיעו כאן לאחר שתוסיף אותן',
-      updateFutureDesc: 'פעולה זו תעדכן את כל המופעים העתידיים של עסקה חוזרת זו',
-      selectCategory: 'בחר קטגוריה',
-      date: 'תאריך',
-      addNew: 'הוסף חדש',
-      edit: 'ערוך עסקה',
+      subtitle: 'Manage all your income and expenses',
+      items: 'עסקאות',
+      endOfList: 'End of transaction history',
+      tip: 'Try adding new transactions using the button above',
+      noTransactionsDesc: 'Your transactions will appear here once you add them',
+      updateFutureDesc: 'This will update all future occurrences of this recurring transaction',
+      selectCategory: 'Select category',
+      date: 'Date',
+      addNew: 'Add New',
+      edit: 'Edit Transaction',
       filters: {
-        amountRange: 'טווח סכומים',
-        dateRange: 'טווח תאריכים',
-        recurringType: 'סוג עסקה',
-        all: 'כל הסוגים',
-        recurring: 'חוזרת',
-        oneTime: 'חד פעמית',
-        title: 'סינונים',
-        minAmount: 'סכום מינימלי',
-        maxAmount: 'סכום מקסימלי',
-        startDate: 'תאריך התחלה',
-        endDate: 'תאריך סיום'
+        amountRange: 'Amount Range',
+        dateRange: 'Date Range',
+        recurringType: 'Transaction Type',
+        all: 'All Types',
+        recurring: 'Recurring',
+        oneTime: 'One-time',
+        title: 'Filters',
+        minAmount: 'Min Amount',
+        maxAmount: 'Max Amount',
+        startDate: 'Start Date',
+        endDate: 'End Date'
       },
       recurringInfo: {
-        title: 'על עסקאות חוזרות',
-        description: 'עסקאות חוזרות נוצרות אוטומטית בהתאם לתדירות שלהן. ניתן לשנות או להפסיק אותן בכל עת.'
+        title: 'About Recurring Transactions',
+        description: 'Recurring transactions are automatically generated based on their frequency. You can modify or stop them at any time.'
       }
     },
 

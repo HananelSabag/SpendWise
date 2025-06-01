@@ -194,13 +194,84 @@ export const transactionAPI = {
     }
   }),
   
-  getByPeriod: (period, date) => api.get(`/transactions/period/${period}`, {
-    params: { date: formatDateForAPI(date) }
-  }),
+  // ✅ תיקון getAll לעבוד עם השרת הקיים
+  getAll: async (params = {}) => {
+    // אם יש period, השתמש ב-getByPeriod במקום
+    if (params.period) {
+      console.log(`📊 [API] Using getByPeriod instead of getAll for period: ${params.period}`);
+      return transactionAPI.getByPeriod(params.period, params.date);
+    }
+    
+    // אחרת השתמש ב-dashboard
+    console.log(`📊 [API] Using getDashboard as fallback for getAll`);
+    const response = await transactionAPI.getDashboard(params.date);
+    
+    // המר לפורמט שהקלינט מצפה לו
+    return {
+      data: {
+        transactions: response.data.data.recent_transactions || [],
+        pagination: {
+          total: response.data.data.recent_transactions?.length || 0,
+          page: 1,
+          limit: response.data.data.recent_transactions?.length || 0
+        }
+      }
+    };
+  },
+
+  // ✅ שיפור getByPeriod
+  getByPeriod: async (period, date) => {
+    const formattedDate = formatDateForAPI(date);
+    console.log(`📊 [API] getByPeriod: ${period} for date: ${formattedDate}`);
+    
+    try {
+      const response = await api.get(`/transactions/period/${period}`, {
+        params: { date: formattedDate }
+      });
+      
+      console.log(`📊 [API] getByPeriod response:`, response.data);
+      
+      // ✅ וודא שהתשובה במבנה הנכון
+      if (response.data?.success && response.data?.data) {
+        return response;
+      } else {
+        // ✅ תקן את המבנה אם צריך
+        return {
+          data: {
+            success: true,
+            data: {
+              transactions: Array.isArray(response.data) ? response.data : []
+            }
+          }
+        };
+      }
+    } catch (error) {
+      console.error('🚨 [API] getByPeriod failed:', error);
+      
+      // ✅ החזר response ריק במקרה של שגיאה
+      return {
+        data: {
+          success: false,
+          data: {
+            transactions: []
+          },
+          error: error.message
+        }
+      };
+    }
+  },
   
-  getRecurring: (type) => api.get('/transactions/recurring', {
-    params: type ? { type } : {}
-  }),
+  // ✅ הוספת פונקציות חדשות ל-transactionAPI
+  getCategories: () => api.get('/categories'),
+  
+  // ✅ פונקציה משופרת לעסקאות חוזרות
+  getRecurring: async (type = null) => {
+    const endpoint = type ? `/transactions/recurring?type=${type}` : '/transactions/recurring';
+    log(`Fetching recurring transactions from: ${endpoint}`);
+    
+    const response = await api.get(endpoint);
+    return response.data;
+  },
   
   getBalanceDetails: (date) => api.get('/transactions/balance/details', {
     params: { date: formatDateForAPI(date) }
@@ -218,9 +289,10 @@ export const transactionAPI = {
     api.delete(`/transactions/${type}/${id}`, { params: { deleteFuture } }),
   
   // Search
-  search: (query, limit = 50) => api.get('/transactions/search', {
-    params: { q: query, limit }
-  }),
+  search: async (searchTerm, limit = 50) => {
+    const response = await api.get(`/transactions/search?q=${encodeURIComponent(searchTerm)}&limit=${limit}`);
+    return response.data;
+  },
   
   // Skip occurrence
   skipOccurrence: (type, id, skipDate) => 

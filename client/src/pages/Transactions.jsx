@@ -1,5 +1,5 @@
 // pages/Transactions.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar,
@@ -13,10 +13,12 @@ import {
   Download,
   Eye
 } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useDashboard } from '../hooks/useDashboard';
+import { useTransactionsList, useRecurringTransactionsList } from '../hooks/useTransactionsList';
 import { useTransactions } from '../context/TransactionContext';
 import { useDate } from '../context/DateContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Layout
 import PageContainer from '../components/layout/PageContainer';
@@ -27,9 +29,10 @@ import TransactionForm from '../components/features/transactions/TransactionForm
 import TransactionFilters from '../components/features/transactions/TransactionFilters';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import RecurringModal from '../components/features/transactions/RecurringModal';
+import CalendarWidget from '../components/common/CalendarWidget';
 
 // UI
-import { Card, Button, Input, Badge, Modal } from '../components/ui';
+import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../components/ui';
 
 /**
  * Transactions Page Component
@@ -37,48 +40,74 @@ import { Card, Button, Input, Badge, Modal } from '../components/ui';
  */
 const Transactions = () => {
   const { t, language } = useLanguage();
-  const { 
-    periodTransactions, 
-    recurringTransactions,
-    loading,
-    getByPeriod,
-    getRecurringTransactions,
-    createTransaction,
-    updateTransaction,
-    deleteTransaction
-  } = useTransactions();
-  const { selectedDate, formatDate } = useDate();
+  const { selectedDate, formatDate, setSelectedDate } = useDate();
   const { formatAmount } = useCurrency();
-  
   const isRTL = language === 'he';
 
-  // State
-  const [view, setView] = useState('all'); // all, income, expense
-  const [period, setPeriod] = useState('month'); // day, week, month, year
+  const { 
+    data: dashboardData, 
+    isLoading: dashboardLoading, 
+    error: dashboardError 
+  } = useDashboard();
+
+  // ✅ Add calendar state
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  // ✅ State definitions first
+  const [view, setView] = useState('all');
+  const [period, setPeriod] = useState('month');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [transactionToDelete, setTransactionToDelete] = useState(null); // שיניתי את השם מ-deleteTransaction ל-transactionToDelete
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
 
-  // Filters
   const [filters, setFilters] = useState({
     categories: [],
     dateRange: null,
     minAmount: null,
     maxAmount: null,
-    recurring: 'all' // all, recurring, oneTime
+    recurring: 'all'
   });
 
-  // Load data
-  useEffect(() => {
-    getByPeriod(period, selectedDate);
-    getRecurringTransactions();
-  }, [period, selectedDate]);
+  // ✅ Hooks after state
+  const {
+    periodTransactions,
+    loading,
+    error,
+    refreshTransactions,
+    getTransactionsByType,
+    searchTransactions,
+    totalCount,
+    period: currentPeriod
+  } = useTransactionsList({
+    period,
+    type: view !== 'all' ? view : null,
+    searchTerm,
+    page: 1,
+    limit: 100
+  });
 
-  // Filter transactions
+  const {
+    data: recurringTransactions = [],
+    isLoading: recurringLoading
+  } = useRecurringTransactionsList();
+
+  const { 
+    createTransaction,
+    updateTransaction,
+    deleteTransaction
+  } = useTransactions();
+
+  // ✅ Filtered transactions calculation with better error handling
   const filteredTransactions = useMemo(() => {
+    // ✅ Defensive programming - וודא שיש array
+    if (!periodTransactions || !Array.isArray(periodTransactions)) {
+      console.warn('[Transactions] periodTransactions is not an array:', periodTransactions);
+      return [];
+    }
+
     let filtered = [...periodTransactions];
 
     // View filter
@@ -95,7 +124,7 @@ const Transactions = () => {
       );
     }
 
-    // Apply other filters...
+    // Apply other filters
     if (filters.categories.length > 0) {
       filtered = filtered.filter(tx => 
         filters.categories.includes(tx.category_id)
@@ -103,75 +132,112 @@ const Transactions = () => {
     }
 
     if (filters.recurring !== 'all') {
-      filtered = filtered.filter(tx => 
-        filters.recurring === 'recurring' ? tx.is_recurring : !tx.is_recurring
-      );
+      if (filters.recurring === 'recurring') {
+        filtered = filtered.filter(tx => tx.template_id !== null);
+      } else if (filters.recurring === 'oneTime') {
+        filtered = filtered.filter(tx => tx.template_id === null);
+      }
     }
 
     return filtered;
   }, [periodTransactions, view, searchTerm, filters]);
 
-  // Calculate totals
+  // ✅ השתמש בנתוני Dashboard במקום לחישוב מאזן מקומי
+  const {
+    periodTransactions: dashboardPeriodTransactions,
+    loading: dashboardLoadingTransactions,
+    error: dashboardErrorTransactions,
+    refreshTransactions: refreshDashboardTransactions,
+    getTransactionsByType: getDashboardTransactionsByType,
+    searchTransactions: searchDashboardTransactions,
+    totalCount: dashboardTotalCount,
+    period: currentDashboardPeriod
+  } = useTransactionsList({
+    period,
+    type: view !== 'all' ? view : null,
+    searchTerm,
+    page: 1,
+    limit: 100
+  });
+
+  // ✅ קבל נתוני מאזן מ-Dashboard במקום חישוב מקומי
+  const balanceData = useMemo(() => {
+    if (!dashboardData?.balances) {
+      return {
+        daily: { income: 0, expenses: 0, balance: 0 },
+        weekly: { income: 0, expenses: 0, balance: 0 },
+        monthly: { income: 0, expenses: 0, balance: 0 },
+        yearly: { income: 0, expenses: 0, balance: 0 }
+      };
+    }
+    return dashboardData.balances;
+  }, [dashboardData]);
+
+  // ✅ הוסף את המשתנה totals שחסר
   const totals = useMemo(() => {
-    const income = filteredTransactions
-      .filter(tx => tx.transaction_type === 'income')
-      .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+    // בחר את התקופה הנוכחית מהמאזן - השתמש ב-monthly כברירת מחדל
+    const currentPeriodData = balanceData.monthly;
     
-    const expenses = filteredTransactions
-      .filter(tx => tx.transaction_type === 'expense')
-      .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+    return {
+      income: currentPeriodData.income || 0,
+      expenses: currentPeriodData.expenses || 0,
+      balance: currentPeriodData.balance || 0,
+      count: dashboardData?.recentTransactions?.length || 0
+    };
+  }, [balanceData, dashboardData]);
 
-    return { income, expenses, balance: income - expenses };
-  }, [filteredTransactions]);
+  // ✅ Define handleTransactionSuccess FIRST - רק פעם אחת!
+  const handleTransactionSuccess = useCallback(() => {
+    refreshTransactions();
+  }, [refreshTransactions]);
 
-  // Recurring impact
-  const recurringImpact = useMemo(() => {
-    // Make sure recurringTransactions is an array
-    const recArray = Array.isArray(recurringTransactions) ? 
-                    recurringTransactions : 
-                    (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
-                    recurringTransactions.data : [];
-    
-    const monthlyIncome = recArray
-      .filter(tx => tx.type === 'income')
-      .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
-    
-    const monthlyExpenses = recArray
-      .filter(tx => tx.type === 'expense')
-      .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
-
-    return { monthlyIncome, monthlyExpenses, monthlyBalance: monthlyIncome - monthlyExpenses };  
-  }, [recurringTransactions]);
-
-  // Handlers
-  const handleEdit = (transaction) => {
+  // ✅ Now define other handlers that depend on handleTransactionSuccess
+  const handleEdit = useCallback((transaction) => {
     setSelectedTransaction(transaction);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleDelete = (transaction) => {
-    setTransactionToDelete(transaction); // שיניתי כאן גם
-  };
+  const handleDelete = useCallback((transaction) => {
+    setTransactionToDelete(transaction);
+  }, []);
 
-  const handleFormClose = () => {
-    setShowForm(false);
+  const handleFormClose = useCallback(() => {
     setSelectedTransaction(null);
-  };
+    setShowForm(false);
+  }, []);
 
-  const handleDeleteConfirm = async (deleteFuture = false) => {
-    if (!transactionToDelete) return; // שיניתי כאן
-    
+  const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false) => {
     try {
-      await deleteTransaction(
-        transactionToDelete.transaction_type, // שיניתי כאן
-        transactionToDelete.id, // שיניתי כאן
-        deleteFuture
-      );
-      setTransactionToDelete(null); // שיניתי כאן
+      await deleteTransaction(transactionToDelete.transaction_type, transactionToDelete.id, deleteFuture);
+      setTransactionToDelete(null);
+      await handleTransactionSuccess(); // ✅ Now this is defined!
     } catch (error) {
       console.error('Delete failed:', error);
     }
-  };
+  }, [deleteTransaction, handleTransactionSuccess]);
+
+  // ✅ בדיקת loading - עכשיו מטפל בשני ההוקים
+  if (loading || recurringLoading || dashboardLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="large" text={t('common.loading')} />
+      </div>
+    );
+  }
+
+  // ✅ בדיקת שגיאות
+  if (error || dashboardError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{t('transactions.fetchError')}</p>
+          <Button onClick={refreshTransactions} variant="outline">
+            {t('common.retry')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Animation variants
   const containerVariants = {
@@ -184,305 +250,233 @@ const Transactions = () => {
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
+  // ✅ Debug logging for development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Transactions] 🔍 Data Debug:', {
+        selectedDate: selectedDate,
+        periodTransactions: periodTransactions,
+        isArray: Array.isArray(periodTransactions),
+        length: periodTransactions?.length,
+        loading,
+        error,
+        totals
+      });
     }
-  };
+  }, [periodTransactions, loading, error, totals, selectedDate]);
+
+  // ✅ Add date change handler
+  const handleDateChange = useCallback((newDate) => {
+    console.log('[Transactions] 📅 Date changed to:', newDate);
+    setSelectedDate(newDate);
+    setShowCalendar(false);
+  }, [setSelectedDate]);
 
   return (
-    <PageContainer maxWidth="7xl">
+    <PageContainer>
       <motion.div
-        className="space-y-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        className="space-y-6"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* Header */}
-        <motion.div variants={itemVariants}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Header with Stats */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                {t('transactions.title')}
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {t('nav.transactions')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {t('transactions.subtitle')}
+                {t('transactions.description')} - {formatDate(selectedDate)}
               </p>
             </div>
-            
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowRecurring(true)}
-                className="group"
-              >
-                <Clock className="w-4 h-4 mr-2 group-hover:animate-spin" />
-                {t('transactions.recurring')}
-                <Badge variant="primary" className="ml-2">
-                  {Array.isArray(recurringTransactions) ? 
-                    recurringTransactions.length : 
-                    (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
-                    recurringTransactions.data.length : 0}
-                </Badge>
-              </Button>
+
+            {/* Quick Stats + Date Selector */}
+            <div className="flex items-center gap-6">
+              {/* Date Selector */}
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  {formatDate(selectedDate, 'MMM dd, yyyy')}
+                </Button>
+                
+                {showCalendar && (
+                  <div className="absolute top-full mt-2 z-50 right-0">
+                    <CalendarWidget
+                      selectedDate={selectedDate}
+                      onDateSelect={handleDateChange}
+                      onClose={() => setShowCalendar(false)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Stats - עכשיו עם נתונים מ-Dashboard */}
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                  +{formatAmount(totals.income)}
+                </div>
+                <div className="text-xs text-gray-500">{t('transactions.income')}</div>
+              </div>
               
-              <Button
-                variant="primary"
-                onClick={() => setShowForm(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {t('transactions.addNew')}
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Stats Cards */}
-        <motion.div 
-          variants={itemVariants}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-        >
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('home.balance.income')}
-                </p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatAmount(totals.income)}
-                </p>
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                  -{formatAmount(totals.expenses)}
+                </div>
+                <div className="text-xs text-gray-500">{t('transactions.expense')}</div>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-500 opacity-20" />
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('home.balance.expenses')}
-                </p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {formatAmount(totals.expenses)}
-                </p>
-              </div>
-              <TrendingDown className="w-8 h-8 text-red-500 opacity-20" />
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('home.balance.total')}
-                </p>
-                <p className={`text-2xl font-bold ${
-                  totals.balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'
+              
+              <div className="text-center">
+                <div className={`text-lg font-bold ${
+                  totals.balance >= 0 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-orange-600 dark:text-orange-400'
                 }`}>
                   {formatAmount(totals.balance)}
-                </p>
+                </div>
+                <div className="text-xs text-gray-500">{t('common.balance')}</div>
               </div>
-              <div className={`w-8 h-8 rounded-full ${
-                totals.balance >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'
-              }`} />
             </div>
-          </Card>
-        </motion.div>
+          </div>
+        </div>
 
-        {/* Filters Bar */}
-        <motion.div variants={itemVariants}>
-          <Card className="p-4">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1">
-                <Input
-                  type="text"
-                  placeholder={t('common.search')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  icon={Search}
-                />
-              </div>
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <Input
+              placeholder={t('transactions.searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              icon={Search}
+              className="w-full"
+            />
+          </div>
 
-              {/* View Tabs */}
-              <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                {['all', 'income', 'expense'].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setView(v)}
-                    className={`px-4 py-2 rounded-md font-medium transition-all ${
-                      view === v 
-                        ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    {t(`transactions.view.${v}`)}
-                  </button>
-                ))}
-              </div>
-
-              {/* Period Selector */}
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 
-                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="day">{t('home.balance.daily')}</option>
-                <option value="week">{t('home.balance.weekly')}</option>
-                <option value="month">{t('home.balance.monthly')}</option>
-                <option value="year">{t('home.balance.yearly')}</option>
-              </select>
-
-              {/* Filter Button */}
+          {/* View Buttons */}
+          <div className="flex gap-2">
+            {['all', 'income', 'expense'].map(type => (
               <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className={showFilters ? 'ring-2 ring-primary-500' : ''}
+                key={type}
+                variant={view === type ? 'primary' : 'outline'}
+                onClick={() => setView(type)}
+                icon={type === 'income' ? TrendingUp : type === 'expense' ? TrendingDown : null}
               >
-                <Filter className="w-4 h-4 mr-2" />
-                {t('transactions.filters.title')}
-                {Object.values(filters).some(f => f && f !== 'all' && (Array.isArray(f) ? f.length > 0 : true)) && (
-                  <Badge variant="primary" className="ml-2">
-                    {Object.values(filters).filter(f => f && f !== 'all' && (Array.isArray(f) ? f.length > 0 : true)).length}
+                {t(`transactions.${type}`)}
+                {type !== 'all' && (
+                  <Badge variant="default" size="small" className="ml-2">
+                    {getTransactionsByType(type).length}
                   </Badge>
                 )}
               </Button>
-            </div>
+            ))}
+          </div>
 
-            {/* Expanded Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                    <TransactionFilters
-                      filters={filters}
-                      onChange={setFilters}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Card>
-        </motion.div>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              icon={Filter}
+            >
+              {t('common.filters')}
+            </Button>
 
-        {/* Recurring Impact Card - if there are recurring transactions */}
-        {recurringTransactions.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <Card className="p-4 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {t('transactions.recurringSection.impact')}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('transactions.recurringSection.management')}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.income')}</p>
-                    <p className="font-semibold text-green-600 dark:text-green-400">
-                      +{formatAmount(recurringImpact.monthlyIncome)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.expenses')}</p>
-                    <p className="font-semibold text-red-600 dark:text-red-400">
-                      -{formatAmount(recurringImpact.monthlyExpenses)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.total')}</p>
-                    <p className={`font-semibold ${
-                      recurringImpact.monthlyBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'
-                    }`}>
-                      {formatAmount(recurringImpact.monthlyBalance)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        )}
+            <Button
+              variant="primary"
+              onClick={() => setShowForm(true)}
+              icon={Plus}
+            >
+              {t('actions.add')}
+            </Button>
+          </div>
+        </div>
 
-        {/* Transactions List */}
-        <motion.div variants={itemVariants}>
+        {/* Filters Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <TransactionFilters
+                filters={filters}
+                onChange={setFilters}
+                onReset={() => setFilters({
+                  categories: [],
+                  dateRange: null,
+                  minAmount: null,
+                  maxAmount: null,
+                  recurring: 'all'
+                })}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Transaction List */}
+        <Card className="p-0">
           <TransactionList
             transactions={filteredTransactions}
             loading={loading}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            emptyMessage={
+              searchTerm 
+                ? t('transactions.noSearchResults', { term: searchTerm })
+                : view !== 'all'
+                  ? t('transactions.noTransactionsOfType', { type: t(`transactions.${view}`) })
+                  : undefined
+            }
           />
-        </motion.div>
+        </Card>
 
-        {/* Modals */}
+        {/* Transaction Form Modal */}
         <AnimatePresence>
-          {/* Transaction Form Modal */}
           {showForm && (
             <Modal
               isOpen={showForm}
               onClose={handleFormClose}
               size="large"
-              title={selectedTransaction ? t('transactions.edit') : t('transactions.addNew')}
+              title={selectedTransaction ? t('transactions.editTransaction') : t('actions.title')}
             >
               <TransactionForm
                 transaction={selectedTransaction}
                 onClose={handleFormClose}
                 onSave={async (data) => {
-                  if (selectedTransaction) {
-                    await updateTransaction(
-                      data.transaction_type,
-                      selectedTransaction.id,
-                      data
-                    );
-                  } else {
-                    await createTransaction(data.transaction_type, data);
+                  try {
+                    if (selectedTransaction) {
+                      await updateTransaction(data.transaction_type, selectedTransaction.id, data);
+                    } else {
+                      await createTransaction(data.transaction_type, data);
+                    }
+                    handleFormClose();
+                    await handleTransactionSuccess();
+                  } catch (error) {
+                    console.error('Save failed:', error);
                   }
-                  handleFormClose();
                 }}
+                loading={false}
               />
             </Modal>
           )}
-
-          {/* Delete Confirmation */}
-          {transactionToDelete && ( // שיניתי כאן
-            <DeleteTransaction
-              transaction={transactionToDelete} // שיניתי כאן
-              onClose={() => setTransactionToDelete(null)} // שיניתי כאן
-              onConfirm={handleDeleteConfirm}
-            />
-          )}
-
-          {/* Recurring Transactions Modal */}
-          {showRecurring && (
-            <RecurringModal
-              isOpen={showRecurring}
-              onClose={() => setShowRecurring(false)}
-              transactions={Array.isArray(recurringTransactions) ? 
-                           recurringTransactions : 
-                           (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
-                           recurringTransactions.data : []}
-            />
-          )}
         </AnimatePresence>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteTransaction
+          transaction={transactionToDelete}
+          isOpen={!!transactionToDelete}
+          onClose={() => setTransactionToDelete(null)}
+          onConfirm={handleDeleteConfirm}
+          loading={false}
+        />
       </motion.div>
     </PageContainer>
   );

@@ -97,6 +97,11 @@ module.exports = {
     message: 'Database error',
     status: 500
   },
+  SQL_AMBIGUOUS_COLUMN: {
+    code: 'SQL_AMBIGUOUS_COLUMN',
+    message: 'Database query contains ambiguous column references',
+    status: 500
+  },
   CREATE_FAILED: {
     code: 'CREATE_FAILED',
     message: 'Failed to create resource',
@@ -125,6 +130,11 @@ module.exports = {
   STATS_FAILED: {
     code: 'STATS_FAILED',
     message: 'Failed to fetch statistics',
+    status: 500
+  },
+  SQL_ERROR: {
+    code: 'SQL_ERROR',
+    message: 'Database query error',
     status: 500
   },
 

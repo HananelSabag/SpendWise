@@ -75,9 +75,12 @@ const scheduler = {
       
     } catch (error) {
       await client.query('ROLLBACK');
-      logger.error('Error generating recurring transactions:', error);
-      
-      // Don't throw - scheduler should continue running
+      logger.error('Failed to generate recurring transactions:', {
+        error: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      throw error;
     } finally {
       client.release();
     }
