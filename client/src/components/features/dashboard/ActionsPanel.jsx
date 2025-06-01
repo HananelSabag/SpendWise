@@ -63,11 +63,13 @@ const ActionsPanel = () => {
   // Categories (should come from API/context eventually)
   const categories = {
     income: [
+      { id: 0, name: 'General', icon: Tag, color: 'gray' }, // Add default General category
       { id: 1, name: 'Salary', icon: DollarSign, color: 'green' },
       { id: 2, name: 'Freelance', icon: FileText, color: 'blue' },
       { id: 3, name: 'Investments', icon: TrendingUp, color: 'purple' },
     ],
     expense: [
+      { id: 0, name: 'General', icon: Tag, color: 'gray' }, // Add default General category
       { id: 4, name: 'Rent', icon: Home, color: 'red' },
       { id: 5, name: 'Groceries', icon: ShoppingCart, color: 'orange' },
       { id: 6, name: 'Transportation', icon: Car, color: 'yellow' },
@@ -126,7 +128,7 @@ const ActionsPanel = () => {
     setFormData(prev => ({
       ...prev,
       is_recurring: type.isRecurring,
-      category_id: categories[type.type][0].id,
+      category_id: 0, // Default to General category (ID 0)
     }));
     setError('');
   };
@@ -241,7 +243,7 @@ const ActionsPanel = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('actions.quickActions')}
+            {t('actions.title')} {/* שימוש בכותרת אחרת */}
           </h3>
           <Badge variant="primary" className="text-xs">
             {t('actions.new')}

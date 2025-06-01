@@ -69,8 +69,8 @@ class DBQueries {
             e.amount,
             e.description,
             e.date,
-            c.name as category_name,
-            c.icon as category_icon,
+            COALESCE(c.name, 'General') as category_name,
+            COALESCE(c.icon, 'tag') as category_icon,
             e.template_id,
             e.created_at
           FROM expenses e
@@ -90,8 +90,8 @@ class DBQueries {
             i.amount,
             i.description,
             i.date,
-            c.name as category_name,
-            c.icon as category_icon,
+            COALESCE(c.name, 'General') as category_name,
+            COALESCE(c.icon, 'tag') as category_icon,
             i.template_id,
             i.created_at
           FROM income i

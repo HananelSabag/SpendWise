@@ -16,7 +16,8 @@ import {
   Clock,
   Sparkles,
   Plus,
-  MoreHorizontal
+  MoreHorizontal,
+  X // Adding the missing X icon
 } from 'lucide-react';
 
 // Features
@@ -33,14 +34,53 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { selectedDate, formatDate } = useDate();
-  const [loading, setLoading] = useState(true);
-  // Remove auto-hiding welcome banner
-  // const [showWelcome, setShowWelcome] = useState(true);
+  const [loading, setLoading] = useState(true); // Starting with active loading
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({
+    dailyAverage: 0,
+    monthlyGoal: 0,
+    recurringActive: 0,
+    savedThisMonth: 0,
+    loading: true
+  });
   
   const isRTL = language === 'he';
 
-  // Get personalized greeting
+  // Function to load statistics data - currently generates random numbers
+  const loadDashboardStats = async () => {
+    try {
+      setTimeout(() => {
+        setDashboardStats({
+          dailyAverage: Math.floor(Math.random() * 300) + 100, // 100-400
+          monthlyGoal: Math.floor(Math.random() * 50) + 50, // 50-100%
+          recurringActive: Math.floor(Math.random() * 10) + 5, // 5-15
+          savedThisMonth: Math.floor(Math.random() * 2000) + 500, // 500-2500
+          loading: false
+        });
+      }, 1000); // Shortened delay from 1500 to 1000
+    } catch (error) {
+      console.error("Error loading dashboard stats:", error);
+      setDashboardStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Fix for the main loading mechanism - ensuring it finishes
+  useEffect(() => {
+    console.log("[DEBUG] Starting dashboard loading");
+    
+    // Set a shorter timer to ensure it completes
+    const timer = setTimeout(() => {
+      console.log("[DEBUG] Ending dashboard loading");
+      setLoading(false);
+    }, 800);
+    
+    // Load statistics in parallel
+    loadDashboardStats();
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Function to get a time-appropriate greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     const name = user?.username || '';
@@ -50,20 +90,6 @@ const Dashboard = () => {
     if (hour < 21) return `${t('home.greeting.evening')}, ${name}! 🌆`;
     return `${t('home.greeting.night')}, ${name}! 🌙`;
   };
-
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Remove auto-hiding welcome timer
-  /*
-  useEffect(() => {
-    const timer = setTimeout(() => setShowWelcome(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-  */
 
   // Animation variants
   const containerVariants = {
@@ -244,9 +270,13 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('dashboard.stats.dailyAverage')}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      ₪245
-                    </p>
+                    {dashboardStats.loading ? (
+                      <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
+                    ) : (
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        ₪{dashboardStats.dailyAverage}
+                      </p>
+                    )}
                   </div>
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                     <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -261,9 +291,13 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('dashboard.stats.monthlyGoal')}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      68%
-                    </p>
+                    {dashboardStats.loading ? (
+                      <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
+                    ) : (
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {dashboardStats.monthlyGoal}%
+                      </p>
+                    )}
                   </div>
                   <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                     <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -278,9 +312,13 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('dashboard.stats.recurringActive')}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      12
-                    </p>
+                    {dashboardStats.loading ? (
+                      <div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
+                    ) : (
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {dashboardStats.recurringActive}
+                      </p>
+                    )}
                   </div>
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                     <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -295,9 +333,13 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('dashboard.stats.savedThisMonth')}
                     </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      ₪1,240
-                    </p>
+                    {dashboardStats.loading ? (
+                      <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
+                    ) : (
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        ₪{dashboardStats.savedThisMonth}
+                      </p>
+                    )}
                   </div>
                   <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                     <ArrowUpRight className="w-6 h-6 text-green-600 dark:text-green-400" />

@@ -31,6 +31,10 @@ import RecurringModal from '../components/features/transactions/RecurringModal';
 // UI
 import { Card, Button, Input, Badge, Modal } from '../components/ui';
 
+/**
+ * Transactions Page Component
+ * Main page for managing all transactions with filtering, searching, and CRUD operations
+ */
 const Transactions = () => {
   const { t, language } = useLanguage();
   const { 
@@ -38,7 +42,10 @@ const Transactions = () => {
     recurringTransactions,
     loading,
     getByPeriod,
-    getRecurringTransactions 
+    getRecurringTransactions,
+    createTransaction,
+    updateTransaction,
+    deleteTransaction
   } = useTransactions();
   const { selectedDate, formatDate } = useDate();
   const { formatAmount } = useCurrency();
@@ -95,6 +102,12 @@ const Transactions = () => {
       );
     }
 
+    if (filters.recurring !== 'all') {
+      filtered = filtered.filter(tx => 
+        filters.recurring === 'recurring' ? tx.is_recurring : !tx.is_recurring
+      );
+    }
+
     return filtered;
   }, [periodTransactions, view, searchTerm, filters]);
 
@@ -111,6 +124,19 @@ const Transactions = () => {
     return { income, expenses, balance: income - expenses };
   }, [filteredTransactions]);
 
+  // Recurring impact
+  const recurringImpact = useMemo(() => {
+    const monthlyIncome = recurringTransactions
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
+    
+    const monthlyExpenses = recurringTransactions
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
+
+    return { monthlyIncome, monthlyExpenses, monthlyBalance: monthlyIncome - monthlyExpenses };  
+  }, [recurringTransactions]);
+
   // Handlers
   const handleEdit = (transaction) => {
     setSelectedTransaction(transaction);
@@ -124,6 +150,21 @@ const Transactions = () => {
   const handleFormClose = () => {
     setShowForm(false);
     setSelectedTransaction(null);
+  };
+
+  const handleDeleteConfirm = async (deleteFuture = false) => {
+    if (!deleteTransaction) return;
+    
+    try {
+      await deleteTransaction(
+        deleteTransaction.transaction_type,
+        deleteTransaction.id,
+        deleteFuture
+      );
+      setDeleteTransaction(null);
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
   };
 
   // Animation variants
@@ -299,6 +340,11 @@ const Transactions = () => {
               >
                 <Filter className="w-4 h-4 mr-2" />
                 {t('transactions.filters.title')}
+                {Object.values(filters).some(f => f && f !== 'all' && (Array.isArray(f) ? f.length > 0 : true)) && (
+                  <Badge variant="primary" className="ml-2">
+                    {Object.values(filters).filter(f => f && f !== 'all' && (Array.isArray(f) ? f.length > 0 : true)).length}
+                  </Badge>
+                )}
               </Button>
             </div>
 
@@ -324,6 +370,50 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
+        {/* Recurring Impact Card - if there are recurring transactions */}
+        {recurringTransactions.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card className="p-4 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {t('transactions.recurringSection.impact')}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('transactions.recurringSection.management')}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.income')}</p>
+                    <p className="font-semibold text-green-600 dark:text-green-400">
+                      +{formatAmount(recurringImpact.monthlyIncome)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.expenses')}</p>
+                    <p className="font-semibold text-red-600 dark:text-red-400">
+                      -{formatAmount(recurringImpact.monthlyExpenses)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.balance.total')}</p>
+                    <p className={`font-semibold ${
+                      recurringImpact.monthlyBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'
+                    }`}>
+                      {formatAmount(recurringImpact.monthlyBalance)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Transactions List */}
         <motion.div variants={itemVariants}>
           <TransactionList
@@ -347,6 +437,18 @@ const Transactions = () => {
               <TransactionForm
                 transaction={selectedTransaction}
                 onClose={handleFormClose}
+                onSave={async (data) => {
+                  if (selectedTransaction) {
+                    await updateTransaction(
+                      data.transaction_type,
+                      selectedTransaction.id,
+                      data
+                    );
+                  } else {
+                    await createTransaction(data.transaction_type, data);
+                  }
+                  handleFormClose();
+                }}
               />
             </Modal>
           )}
@@ -356,6 +458,7 @@ const Transactions = () => {
             <DeleteTransaction
               transaction={deleteTransaction}
               onClose={() => setDeleteTransaction(null)}
+              onConfirm={handleDeleteConfirm}
             />
           )}
 

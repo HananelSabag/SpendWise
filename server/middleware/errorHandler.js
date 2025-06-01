@@ -35,6 +35,17 @@ const formatError = (err) => {
   }
 
   if (err.code === '23503') { // Foreign key violation
+    // Check if it's a category reference issue
+    if (err.detail?.includes('category_id')) {
+      return {
+        error: {
+          code: 'INVALID_CATEGORY',
+          message: 'Invalid category reference. Using default category instead.',
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+    
     return {
       error: {
         code: 'INVALID_REFERENCE',

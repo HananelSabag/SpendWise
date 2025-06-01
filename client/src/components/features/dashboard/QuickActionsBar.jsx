@@ -66,10 +66,12 @@ const QuickActionsBar = () => {
       const today = new Date();
       console.log('[INFO] Adding transaction with today\'s date:', today.toISOString().split('T')[0]);
       
+      // Add default "General" category (ID 0) for quick transactions
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
-        t('quickExpense.defaultDescription')
+        t('quickExpense.defaultDescription'),
+        0  // Use 0 as the ID for the default "General" category
       );
       
       // Alert if selected date is not today
@@ -132,10 +134,10 @@ const QuickActionsBar = () => {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Zap className="w-4 h-4 text-yellow-500" />
-          {t('quickExpense.title')}
+          {t('quickExpense.fast')} {/* שינוי הכותרת מ-'title' ל-'fast' */}
         </h3>
         <Badge variant="warning" className="text-xs">
-          {t('quickExpense.fast')}
+          {t('quickExpense.title')} {/* העברנו את הכותרת המקורית לבאדג' */}
         </Badge>
       </div>
 
