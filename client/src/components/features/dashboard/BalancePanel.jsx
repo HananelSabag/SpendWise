@@ -58,10 +58,10 @@ const BalancePanel = ({
 
   // הגדרת מערך התקופות
   const periods = [
-    { id: 'daily', label: t('home.balance.periods.daily') },
-    { id: 'weekly', label: t('home.balance.periods.weekly') },
-    { id: 'monthly', label: t('home.balance.periods.monthly') },
-    { id: 'yearly', label: t('home.balance.periods.yearly') }
+    { id: 'daily', label: t('dashboard.balance.periods.daily') },
+    { id: 'weekly', label: t('dashboard.balance.periods.weekly') },
+    { id: 'monthly', label: t('dashboard.balance.periods.monthly') },
+    { id: 'yearly', label: t('dashboard.balance.periods.yearly') }
   ];
   
   // ✅ הוספת פונקציה לוודא פורמט תקין
@@ -112,8 +112,6 @@ const BalancePanel = ({
   const handleResetToday = () => {
     resetToToday();
     console.log('[BalancePanel] Reset to today triggered');
-    // גם רענן את הנתונים כשמחליפים תאריך
-    setTimeout(() => refreshData(), 100);
   };
 
   // Debug log - הפחתת דיבאגים מיותרים
@@ -164,7 +162,7 @@ const BalancePanel = ({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary-500" />
-            {t('home.balance.title')}
+            {t('dashboard.balance.title')}
           </h2>
           
           {/* Date Navigation */}
@@ -219,7 +217,7 @@ const BalancePanel = ({
                 size="small"
                 onClick={resetToToday}
                 className="p-1.5"
-                title={t('home.balance.backToToday')}
+                title={t('dashboard.balance.backToToday')}
               >
                 <RotateCcw className="w-4 h-4" />
               </Button>
@@ -257,7 +255,7 @@ const BalancePanel = ({
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                {t('home.balance.income')}
+                {t('dashboard.balance.income')}
               </span>
               <ArrowUpRight className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
@@ -281,7 +279,7 @@ const BalancePanel = ({
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                {t('home.balance.expenses')}
+                {t('dashboard.balance.expenses')}
               </span>
               <ArrowDownRight className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
@@ -313,7 +311,7 @@ const BalancePanel = ({
                   ? 'text-blue-700 dark:text-blue-300'
                   : 'text-orange-700 dark:text-orange-300'
               }`}>
-                {t('home.balance.total')}
+                {t('dashboard.balance.total')}
               </span>
               {currentBalance.balance >= 0 ? (
                 <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />

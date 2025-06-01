@@ -14,11 +14,13 @@ import {
   Zap,
   Check,
   AlertCircle,
-  Languages
+  Languages,
+  LogIn  // ✅ הוספתי את LogIn החסר
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
+import LoadingSpinner from '../../components/ui/LoadingSpinner'; // ✅ הוספתי את LoadingSpinner החסר
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import { userSchemas, validate } from "../../utils/validationSchemas";
@@ -82,12 +84,13 @@ const Login = () => {
   }, []);
 
   // Handle input change with validation
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
     
     // Clear error when user types
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -115,7 +118,8 @@ const Login = () => {
         }
         
         // בדיקה כדי לוודא שהנתיב קיים ותקין
-        const targetPath = from === '/dashboard' ? '/' : from;
+        // ✅ תיקון נתיב הניווט - השתמש ב-dashboard במקום home
+        const targetPath = from === '/dashboard' ? '/dashboard' : from;
         
         console.log("[DEBUG] Navigating to:", targetPath);
         
@@ -186,175 +190,152 @@ const Login = () => {
                   <span className="text-3xl text-white font-bold">S</span>
                 </motion.div>
               </Link>
-              
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {t('auth.welcomeBack')}
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {t('auth.loginSubtitle')}
-              </p>
             </motion.div>
 
-            {/* Form */}
-            <motion.form 
-              onSubmit={handleSubmit}
-              className="space-y-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              method="post"
-              id="login-form"
-              autoComplete="on" // תיקנתי את הכתיב - autoComplete ולא autocomplete
-              name="login-form"
-            >
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {t('auth.welcomeBack')}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                {t('auth.loginSubtitle')}
+              </p>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
-              <div className="space-y-2">
-                <Input
-                  type="email"
-                  label={t('auth.email')}
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder={t('auth.emailPlaceholder')}
-                  icon={Mail}
-                  error={errors.email}
-                  required
-                  name="email" // בדיוק כך - שם סטנדרטי שדפדפנים מזהים
-                  id="email"
-                  autoComplete="username" // הסרתי את ה-"email" והשארתי רק "username"
-                />
-                <AnimatePresence>
-                  {formData.email && !errors.email && focusedField !== 'email' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className={cn(
-                        'absolute top-3',
-                        isRTL ? 'left-3' : 'right-3'
-                      )}
-                    >
-                      <Check className="w-5 h-5 text-green-500" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('auth.password')}
-                  </label>
-                  <Link 
-                    to="/auth/forgot-password" 
-                    className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                  >
-                    {t('auth.forgotPassword')}
-                  </Link>
-                </div>
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder={t('auth.passwordPlaceholder')}
-                  icon={Lock}
-                  error={errors.password}
-                  required
-                  name="password" // השם קריטי
-                  id="password"
-                  autoComplete="current-password" // אוטוקומפליט תקין לסיסמה
-                />
-              </div>
-
-              {/* Remember Me */}
-              <div className="flex items-center justify-between">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                  />
-                  <span className={cn(
-                    'text-sm text-gray-600 dark:text-gray-400',
-                    isRTL ? 'mr-2' : 'ml-2'
-                  )}>
-                    {t('auth.rememberMe')}
-                  </span>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('auth.email')}
                 </label>
-                
-                {/* Dev Quick Login */}
-                {process.env.NODE_ENV === 'development' && (
-                  <button
-                    type="button"
-                    onClick={quickLogin}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Quick Login
-                  </button>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange} // ✅ תיקון handleChange
+                  placeholder={t('auth.emailPlaceholder')}
+                  className={`appearance-none relative block w-full px-3 py-3 border ${
+                    errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
                 )}
               </div>
 
-              {/* Error Alert */}
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('auth.password')}
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={formData.password}
+                    onChange={handleChange} // ✅ תיקון handleChange
+                    placeholder={t('auth.passwordPlaceholder')}
+                    className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
+                      errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  <button
+                    type="button"
+                    className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    checked={rememberMe} // ✅ הוספתי checked
+                    onChange={(e) => setRememberMe(e.target.checked)} // ✅ הוספתי onChange
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                    {t('auth.rememberMe')}
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <a
+                    href="#"
+                    className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                  >
+                    {t('auth.forgotPassword')}
+                  </a>
+                </div>
+              </div>
+
+              {/* Error Message */}
               <AnimatePresence>
-                {(errors.general || authError) && (
+                {authError && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
+                    className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg"
                   >
-                    <Alert 
-                      type="error" 
-                      dismissible 
-                      onDismiss={() => setErrors({})}
-                    >
-                      {errors.general || authError}
-                    </Alert>
+                    {t('auth.invalidCredentials')}
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Submit Button */}
               <Button
-                type="submit" // בטופס, תמיד צריך type="submit"
-                variant="primary"
-                size="large"
+                type="submit"
                 fullWidth
                 loading={isLoggingIn}
-                className="relative overflow-hidden group"
-                name="login" // פשוט יותר ועדיף
-                id="login-submit" 
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
               >
-                <span className="relative z-10 flex items-center justify-center">
-                  {t('auth.signIn')}
-                  <ArrowRight className={cn(
-                    'w-5 h-5 transition-transform group-hover:translate-x-1',
-                    isRTL ? 'mr-2 rotate-180' : 'ml-2'
-                  )} />
-                </span>
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-primary-600 to-primary-700"
-                  initial={{ x: '-100%' }}
-                  whileHover={{ x: 0 }}
-                  transition={{ duration: 0.3 }}
-                />
+                {isLoggingIn ? (
+                  <LoadingSpinner size="small" />
+                ) : (
+                  <>
+                    <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                      <LogIn className="h-5 w-5 text-primary-500 group-hover:text-primary-400" />
+                    </span>
+                    {t('auth.signIn')}
+                  </>
+                )}
               </Button>
 
               {/* Sign Up Link */}
-              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-                {t('auth.noAccount')}{' '}
-                <Link 
-                  to="../register" 
-                  className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                >
-                  {t('auth.signUpNow')}
-                </Link>
-              </p>
-            </motion.form>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('auth.noAccount')}{' '}
+                  <Link
+                    to="/register"
+                    className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                  >
+                    {t('auth.signUpNow')}
+                  </Link>
+                </p>
+              </div>
+            </form>
           </div>
         </motion.div>
 

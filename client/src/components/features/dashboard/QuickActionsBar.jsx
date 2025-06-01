@@ -70,7 +70,7 @@ const QuickActionsBar = () => {
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
-        t('quickExpense.defaultDescription'),
+        t('dashboard.quickActions.defaultDescription'),
         8  // השתמש ב-ID 8 שהוא הקטגוריה "General" מה-seed data
       );
       
@@ -93,7 +93,7 @@ const QuickActionsBar = () => {
         
         // If user is viewing a date other than today, offer to switch to today
         if (todayWarning) {
-          if (window.confirm(t('quickExpense.switchToToday'))) {
+          if (window.confirm(t('dashboard.quickActions.switchToToday'))) {
             resetToToday();
           }
         }
@@ -134,10 +134,10 @@ const QuickActionsBar = () => {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Zap className="w-4 h-4 text-yellow-500" />
-          {t('quickExpense.fast')} {/* שינוי הכותרת מ-'title' ל-'fast' */}
+          {t('dashboard.quickActions.fast')} {/* ✅ תיקון המפתח */}
         </h3>
         <Badge variant="warning" className="text-xs">
-          {t('quickExpense.title')} {/* העברנו את הכותרת המקורית לבאדג' */}
+          {t('dashboard.quickActions.title')} {/* ✅ תיקון המפתח */}
         </Badge>
       </div>
 
@@ -149,7 +149,7 @@ const QuickActionsBar = () => {
             type="text"
             value={amount}
             onChange={handleAmountChange}
-            placeholder={t('quickExpense.placeholder')}
+            placeholder={t('dashboard.quickActions.placeholder')}
             className={`w-full px-4 py-3 pr-12 text-lg font-semibold rounded-lg border 
               ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}
               bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent
@@ -210,7 +210,7 @@ const QuickActionsBar = () => {
                   className="flex items-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  {t('quickExpense.added')}
+                  {t('dashboard.quickActions.added')}
                 </motion.div>
               ) : (
                 <motion.div
@@ -220,7 +220,7 @@ const QuickActionsBar = () => {
                   className="flex items-center gap-2"
                 >
                   <MinusCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  {t('quickExpense.addExpense')}
+                  {t('dashboard.quickActions.addExpense')}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -241,7 +241,7 @@ const QuickActionsBar = () => {
       {/* התראה אם מסתכלים בתאריך שונה מהיום */}
       {todayWarning && (
         <div className="text-xs text-amber-600 dark:text-amber-400 mb-2 mt-1">
-          <p>{t('quickExpense.todayWarning')}</p>
+          <p>{t('dashboard.quickActions.todayWarning')}</p> {/* ✅ תיקון המפתח */}
         </div>
       )}
     </Card>

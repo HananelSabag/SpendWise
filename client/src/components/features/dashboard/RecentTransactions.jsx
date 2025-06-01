@@ -40,7 +40,7 @@ const RecentTransactions = ({
       <div className="inline-flex items-center justify-center p-2 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
         <Package className="w-5 h-5 text-gray-400" />
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-gray-500 dark:text-gray-400 text-center py-8">
         {t('dashboard.transactions.noTransactions')}
       </p>
     </div>
@@ -88,15 +88,14 @@ const RecentTransactions = ({
     <Card className="p-3 overflow-hidden" data-component="RecentTransactions">
       {/* Header with View All link */}
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           {t('dashboard.transactions.recent')}
-        </h2>
+        </h3>
         <Link 
-          to="/transactions"
-          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center"
+          to="/transactions" 
+          className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-sm font-medium"
         >
           {t('dashboard.transactions.viewAll')}
-          <Eye className="w-3 h-3 ml-1" />
         </Link>
       </div>
       

@@ -35,6 +35,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
           <button
             onClick={onClose}
             className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -45,11 +46,11 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.features')}</h3>
           <ul className="list-disc pl-5 space-y-1">
-            <li>תאימות לקוראי מסך</li>
-            <li>ניגודיות צבעים מתכווננת</li>
-            <li>אפשרות להגדלת טקסט</li>
-            <li>תמיכה בניווט מקלדת</li>
-            <li>תמיכה בשפות עברית ואנגלית</li>
+            <li>{isRTL ? 'תאימות לקוראי מסך' : 'Screen reader compatibility'}</li>
+            <li>{isRTL ? 'ניגודיות צבעים מתכווננת' : 'Adjustable color contrast'}</li>
+            <li>{isRTL ? 'אפשרות להגדלת טקסט' : 'Text size adjustment'}</li>
+            <li>{isRTL ? 'תמיכה בניווט מקלדת' : 'Keyboard navigation support'}</li>
+            <li>{isRTL ? 'תמיכה בשפות עברית ואנגלית' : 'Hebrew and English language support'}</li>
           </ul>
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.level')}</h3>

@@ -173,9 +173,9 @@ const Transactions = () => {
     return dashboardData.balances;
   }, [dashboardData]);
 
-  // ✅ הוסף את המשתנה totals שחסר
+  // ✅ תיקון המפתחות לתרגומים נכונים
   const totals = useMemo(() => {
-    // בחר את התקופה הנוכחית מהמאזן - השתמש ב-monthly כברירת מחדל
+    // בחר את התקופה הנוכחית מהמאזן - השתמש ב-dashboard במקום balance
     const currentPeriodData = balanceData.monthly;
     
     return {

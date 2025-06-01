@@ -16,9 +16,34 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAccessibility } from '../../context/AccessibilityContext'; // Import new context
+// ✅ תוודא שקונטקסט הנגישות קיים או צור אותו
+// import { useAccessibility } from '../../context/AccessibilityContext';
 import AccessibilityStatement from './AccessibilityStatement';
 
+// ✅ זמנית - מימוש פשוט לפונקציות נגישות עד שייווצר הקונטקסט
+const useAccessibility = () => {
+  const [fontSize, setFontSize] = useState(1);
+  const [highContrast, setHighContrast] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  return {
+    fontSize,
+    increaseFontSize: () => setFontSize(prev => Math.min(prev + 0.1, 1.5)),
+    decreaseFontSize: () => setFontSize(prev => Math.max(prev - 0.1, 0.8)),
+    highContrast,
+    setHighContrast,
+    darkMode,
+    setDarkMode,
+    isCollapsed,
+    setIsCollapsed,
+    resetSettings: () => {
+      setFontSize(1);
+      setHighContrast(false);
+      setDarkMode(false);
+    }
+  };
+};
 
 /**
  * AccessibilityMenu Component
@@ -41,7 +66,7 @@ const AccessibilityMenu = () => {
     isCollapsed,
     setIsCollapsed,
     resetSettings
-  } = useAccessibility(); // Use accessibility context
+  } = useAccessibility();
   
   const isHebrew = language === 'he';
 

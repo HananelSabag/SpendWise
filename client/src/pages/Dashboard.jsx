@@ -99,10 +99,10 @@ const Dashboard = () => {
     const hour = new Date().getHours();
     const name = user?.username || '';
     
-    if (hour < 12) return `${t('home.greeting.morning')}, ${name}! ☀️`;
-    if (hour < 17) return `${t('home.greeting.afternoon')}, ${name}! 🌤️`;
-    if (hour < 21) return `${t('home.greeting.evening')}, ${name}! 🌆`;
-    return `${t('home.greeting.night')}, ${name}! 🌙`;
+    if (hour < 12) return `${t('dashboard.greeting.morning')}, ${name}! ☀️`;
+    if (hour < 17) return `${t('dashboard.greeting.afternoon')}, ${name}! 🌤️`;
+    if (hour < 21) return `${t('dashboard.greeting.evening')}, ${name}! 🌆`;
+    return `${t('dashboard.greeting.night')}, ${name}! 🌙`;
   };
 
   // Animation variants
@@ -147,7 +147,7 @@ const Dashboard = () => {
     setShowFloatingMenu(!showFloatingMenu);
   };
 
-  // ✅ בדוק אם הדשבורד עדיין נטען
+  // ✅ בדוק אם הדשבורד עדיין נטען - תיקון שם המפתח
   if (loading || isDashboardLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -156,15 +156,20 @@ const Dashboard = () => {
     );
   }
 
-  // ✅ בדוק שגיאות
+  // ✅ בדוק שגיאות - שימוש במפתח הנכון
   if (dashboardError) {
+    const refreshData = () => {
+      window.location.reload(); // פתרון זמני עד שיהיה refresh function
+    };
+    
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card className="p-6 text-center">
-          <p className="text-red-600 dark:text-red-400">
-            {t('common.errorLoading')} {dashboardError.message}
-          </p>
-        </Card>
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{t('dashboard.balance.error')}</p>
+          <Button onClick={refreshData} variant="outline">
+            {t('common.retry')}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -301,7 +306,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.dailyAverage')}
+                      {t('dashboard.stats.dailyAverage') || 'Daily Average'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
@@ -322,7 +327,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.monthlyGoal')}
+                      {t('dashboard.stats.monthlyGoal') || 'Monthly Goal'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
@@ -343,7 +348,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.recurringActive')}
+                      {t('dashboard.stats.recurringActive') || 'Active Recurring'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
@@ -364,7 +369,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.savedThisMonth')}
+                      {t('dashboard.stats.savedThisMonth') || 'Saved This Month'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
@@ -418,7 +423,7 @@ const Dashboard = () => {
                       className="justify-start"
                       icon={Clock}
                     >
-                      {t('actions.recurring')}
+                      {t('transactions.recurring')}
                     </Button>
                   </div>
                 </motion.div>

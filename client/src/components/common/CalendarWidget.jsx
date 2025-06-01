@@ -92,16 +92,12 @@ const CalendarWidget = ({
     return date.toDateString() === selectedDate.toDateString();
   };
 
-  // נגדיר ברירת מחדל למערך הימים במקרה ש-t() לא מחזיר ערך
-  const weekDays = t('calendar.weekDays') || (
-    isRTL ? 
-      ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'] :
-      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  );
+  // ✅ שימוש במפתח הנכון לימי השבוע עם fallback
+  const weekDays = t('calendar.weekDays');
 
-  // נוודא שweekDays הוא תמיד מערך
+  // נוודא שweekDays הוא תמיד מערך עם fallback מפורש
   const weekDaysArray = Array.isArray(weekDays) ? weekDays : (
-    isRTL ? 
+    language === 'he' ? 
       ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'] :
       ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   );

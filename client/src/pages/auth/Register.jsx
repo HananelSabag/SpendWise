@@ -225,12 +225,211 @@ const Register = () => {
                 </motion.div>
               </Link>
               
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {t('auth.createAccount')}
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {t('auth.registerSubtitle')}
-              </p>
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  {t('auth.createAccount')}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {t('auth.registerSubtitle')}
+                </p>
+              </div>
+
+              {/* Register Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Username Field */}
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('auth.username')}
+                  </label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder={t('auth.usernamePlaceholder')}
+                    className={`appearance-none relative block w-full px-3 py-3 border ${
+                      errors.username ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  {errors.username && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username}</p>
+                  )}
+                </div>
+
+                {/* Email Field */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('auth.email')}
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder={t('auth.emailPlaceholder')}
+                    className={`appearance-none relative block w-full px-3 py-3 border ${
+                      errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('auth.password')}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder={t('auth.passwordPlaceholder')}
+                      className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
+                        errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    />
+                    <button
+                      type="button"
+                      className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('auth.confirmPassword')}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
+                      className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    />
+                    <button
+                      type="button"
+                      className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                {/* Terms and Conditions */}
+                <div>
+                  <label className="flex items-start cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className={cn(
+                      'text-sm text-gray-600 dark:text-gray-400',
+                      isRTL ? 'mr-2' : 'ml-2'
+                    )}>
+                      {t('auth.agreeToTerms')}
+                    </span>
+                  </label>
+                  {errors.terms && (
+                    <p className="mt-1 text-sm text-red-500">{errors.terms}</p>
+                  )}
+                </div>
+
+                {/* Error Alert */}
+                <AnimatePresence>
+                  {(errors.general || authError) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                    >
+                      <Alert 
+                        type="error" 
+                        dismissible 
+                        onDismiss={() => setErrors({})}
+                      >
+                        {errors.general || authError}
+                      </Alert>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  fullWidth
+                  loading={isRegistering}
+                  className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                >
+                  {isRegistering ? (
+                    <LoadingSpinner size="small" />
+                  ) : (
+                    <>
+                      <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <UserPlus className="h-5 w-5 text-primary-500 group-hover:text-primary-400" />
+                      </span>
+                      {t('auth.signUp')}
+                    </>
+                  )}
+                </Button>
+
+                {/* Sign In Link */}
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {t('auth.alreadyHaveAccount')}{' '}
+                    <Link
+                      to="/auth/login"
+                      className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                    >
+                      {t('auth.signInNow')}
+                    </Link>
+                  </p>
+                </div>
+              </form>
             </motion.div>
 
             {/* Progress Steps */}
