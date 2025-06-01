@@ -1,17 +1,455 @@
-import React, { useState } from 'react';
+// components/features/transactions/TransactionForm.jsx
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  DollarSign,
+  Calendar,
+  Tag,
+  FileText,
+  RefreshCw,
+  Clock,
+  AlertCircle,
+  X,
+  Check,
+  ChevronDown,
+  Info,
+  Loader,
+  TrendingUp, // הוסף ייבוא חסר
+  TrendingDown // הוסף ייבוא חסר
+} from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useCurrency } from '../../../context/CurrencyContext';
+import { useDate } from '../../../context/DateContext';
+import { cn, dateHelpers, numbers } from '../../../utils/helpers';
+import { Input, Select, Button, Alert, Badge } from '../../ui';
+import CalendarWidget from '../../common/CalendarWidget';
 
-const TransactionForm = ({ transaction, onClose }) => {
-  const { t } = useLanguage();
+/**
+ * TransactionForm Component
+ * Modern form for creating and editing transactions
+ * Supports both one-time and recurring transactions
+ */
+const TransactionForm = ({ 
+  transaction,
+  onClose,
+  onSave,
+  loading = false,
+  className = ''
+}) => {
+  const { t, language } = useLanguage();
+  const { currency } = useCurrency();
+  const { selectedDate } = useDate();
+  const isRTL = language === 'he';
+  
   const isEditing = !!transaction;
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    transaction_type: transaction?.transaction_type || 'expense',
+    amount: transaction?.amount || '',
+    description: transaction?.description || '',
+    date: transaction?.date || selectedDate.toISOString().split('T')[0],
+    category_id: transaction?.category_id || null,
+    is_recurring: transaction?.is_recurring || false,
+    recurring_interval: transaction?.recurring_interval || 'monthly',
+    recurring_end_date: transaction?.recurring_end_date || null,
+    recurring_start_date: transaction?.recurring_start_date || null,
+    updateFuture: false
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showRecurringOptions, setShowRecurringOptions] = useState(formData.is_recurring);
+  const [useEndDate, setUseEndDate] = useState(!!formData.recurring_end_date);
+  const [saving, setSaving] = useState(false);
+
+  // Categories
+  const categories = {
+    income: [
+      { id: 1, name: 'Salary' },
+      { id: 2, name: 'Freelance' },
+      { id: 3, name: 'Investments' }
+    ],
+    expense: [
+      { id: 4, name: 'Rent' },
+      { id: 5, name: 'Groceries' },
+      { id: 6, name: 'Transportation' },
+      { id: 7, name: 'Utilities' },
+      { id: 8, name: 'Entertainment' }
+    ]
+  };
+
+  // Get categories for current type
+  const currentCategories = [
+    { id: 9, name: 'General' },
+    ...(categories[formData.transaction_type] || [])
+  ];
+
+  // Validation
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.amount || numbers.parseAmount(formData.amount) <= 0) {
+      newErrors.amount = t('actions.errors.invalidAmount');
+    }
+    
+    if (!formData.description?.trim()) {
+      newErrors.description = t('forms.errors.descriptionRequired');
+    }
+    
+    if (!formData.date) {
+      newErrors.date = t('actions.errors.invalidDate');
+    }
+    
+    if (formData.is_recurring && useEndDate && !formData.recurring_end_date) {
+      newErrors.recurring_end_date = t('forms.errors.endDateRequired');
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle input changes
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error for this field
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  // Handle submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setSaving(true);
+    try {
+      await onSave?.({
+        ...formData,
+        amount: numbers.parseAmount(formData.amount),
+        recurring_end_date: useEndDate ? formData.recurring_end_date : null,
+        category_id: formData.category_id || 9 // Default to General
+      });
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Animation variants
+  const formVariants = {
+    initial: { opacity: 0, scale: 0.95 },
+    animate: { 
+      opacity: 1, 
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }
+    }
+  };
+
+  const sectionVariants = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { 
+      opacity: 1, 
+      height: "auto",
+      transition: {
+        height: { duration: 0.3, ease: "easeInOut" },
+        opacity: { duration: 0.2, delay: 0.1 }
+      }
+    }
+  };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">
-        {isEditing ? t('transactions.editTransaction') : t('transactions.addTransaction')}
-      </h2>
-      {/* Form content */}
-    </div>
+    <motion.div
+      variants={formVariants}
+      initial="initial"
+      animate="animate"
+      className={cn('space-y-6', className)}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {isEditing ? t('transactions.editTransaction') : t('actions.title')}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          {isEditing ? t('transactions.editTitle') : t('actions.fillDetails')}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Transaction Type Tabs */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('actions.selectType')}
+          </label>
+          <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+            {['expense', 'income'].map(type => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleChange('transaction_type', type)}
+                className={cn(
+                  'flex-1 px-4 py-2 rounded-lg font-medium transition-all',
+                  formData.transaction_type === type
+                    ? type === 'expense'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-green-500 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                )}
+              >
+                {type === 'expense' ? (
+                  <>
+                    <TrendingDown className="w-4 h-4 inline mr-2" />
+                    {t('home.balance.expenses')}
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="w-4 h-4 inline mr-2" />
+                    {t('home.balance.income')}
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div>
+          <Input
+            label={t('actions.amount')}
+            type="text"
+            value={formData.amount}
+            onChange={(e) => handleChange('amount', e.target.value)}
+            placeholder="0.00"
+            icon={DollarSign}
+            error={errors.amount}
+            required
+            className="text-lg"
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <Input
+            label={t('actions.description')}
+            type="text"
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            placeholder={t('actions.descriptionPlaceholder')}
+            icon={FileText}
+            error={errors.description}
+            required
+          />
+        </div>
+
+        {/* Date & Category Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('transactions.date')}
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className={cn(
+                  'w-full px-4 py-3 rounded-xl border bg-white dark:bg-gray-800',
+                  'flex items-center justify-between transition-all',
+                  errors.date 
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                  {dateHelpers.format(formData.date, 'PP', language)}
+                </span>
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              </button>
+              
+              <AnimatePresence>
+                {showCalendar && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute z-10 mt-2"
+                  >
+                    <CalendarWidget
+                      selectedDate={new Date(formData.date)}
+                      onDateSelect={(date) => {
+                        handleChange('date', date.toISOString().split('T')[0]);
+                        setShowCalendar(false);
+                      }}
+                      onClose={() => setShowCalendar(false)}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {errors.date && (
+              <p className="mt-1 text-sm text-red-500 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.date}
+              </p>
+            )}
+          </div>
+
+          {/* Category */}
+          <div>
+            <Select
+              label={t('actions.category')}
+              value={formData.category_id || ''}
+              onChange={(e) => handleChange('category_id', e.target.value ? parseInt(e.target.value) : null)}
+              options={currentCategories.map(cat => ({
+                value: cat.id,
+                label: t(`categories.${cat.name}`)
+              }))}
+              placeholder={t('actions.selectCategory')}
+            />
+          </div>
+        </div>
+
+        {/* Recurring Toggle */}
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.is_recurring}
+              onChange={(e) => {
+                handleChange('is_recurring', e.target.checked);
+                setShowRecurringOptions(e.target.checked);
+              }}
+              className="w-5 h-5 rounded text-primary-500 focus:ring-primary-500"
+            />
+            <span className={cn(
+              'text-sm font-medium text-gray-700 dark:text-gray-300',
+              isRTL ? 'mr-3' : 'ml-3'
+            )}>
+              {t('transactions.recurring')}
+            </span>
+            <Badge variant="primary" size="small" className={cn(isRTL ? 'mr-2' : 'ml-2')}>
+              <RefreshCw className="w-3 h-3 mr-1" />
+              {t('actions.recurring')}
+            </Badge>
+          </label>
+
+          {/* Recurring Options */}
+          <AnimatePresence>
+            {showRecurringOptions && formData.is_recurring && (
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="mt-4 space-y-4"
+              >
+                {/* Frequency */}
+                <Select
+                  label={t('actions.frequency')}
+                  value={formData.recurring_interval}
+                  onChange={(e) => handleChange('recurring_interval', e.target.value)}
+                  options={[
+                    { value: 'daily', label: t('actions.frequencies.daily') },
+                    { value: 'weekly', label: t('actions.frequencies.weekly') },
+                    { value: 'monthly', label: t('actions.frequencies.monthly') }
+                  ]}
+                />
+
+                {/* End Date Option */}
+                <div>
+                  <label className="flex items-center cursor-pointer mb-3">
+                    <input
+                      type="checkbox"
+                      checked={useEndDate}
+                      onChange={(e) => setUseEndDate(e.target.checked)}
+                      className="w-4 h-4 rounded text-primary-500"
+                    />
+                    <span className={cn(
+                      'text-sm text-gray-700 dark:text-gray-300',
+                      isRTL ? 'mr-2' : 'ml-2'
+                    )}>
+                      {t('transactions.endsOn')}
+                    </span>
+                  </label>
+                  
+                  {useEndDate && (
+                    <Input
+                      type="date"
+                      value={formData.recurring_end_date || ''}
+                      onChange={(e) => handleChange('recurring_end_date', e.target.value)}
+                      min={formData.date}
+                      error={errors.recurring_end_date}
+                    />
+                  )}
+                </div>
+
+                {/* Update Future Option for Editing */}
+                {isEditing && (
+                  <label className="flex items-start cursor-pointer p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <input
+                      type="checkbox"
+                      checked={formData.updateFuture}
+                      onChange={(e) => handleChange('updateFuture', e.target.checked)}
+                      className="w-4 h-4 rounded text-primary-500 mt-0.5"
+                    />
+                    <div className={cn(isRTL ? 'mr-3' : 'ml-3')}>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('transactions.updateFuture')}
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {t('transactions.updateFutureDesc')}
+                      </p>
+                    </div>
+                  </label>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={saving}
+          >
+            {t('common.cancel')}
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            loading={saving || loading}
+            disabled={saving || loading}
+            className="min-w-[120px]"
+          >
+            {saving ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                {t('common.saving')}
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                {isEditing ? t('common.save') : t('actions.add')}
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </motion.div>
   );
 };
 

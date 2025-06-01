@@ -115,6 +115,56 @@ export const numbers = {
     const cleaned = String(value).replace(/[^\d.-]/g, '');
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
+  },
+  
+  // ✅ הוספת פונקציות חדשות לעיבוד נתוני dashboard
+  ensureNumber: (value, defaultValue = 0) => {
+    if (value == null || isNaN(value)) return defaultValue;
+    return typeof value === 'number' ? value : parseFloat(value) || defaultValue;
+  },
+  
+  // עיבוד balance data מהשרת
+  processBalanceData: (rawBalance) => {
+    if (!rawBalance || typeof rawBalance !== 'object') {
+      return { income: 0, expenses: 0, balance: 0, total: 0 };
+    }
+    
+    const income = numbers.ensureNumber(rawBalance.income);
+    const expenses = numbers.ensureNumber(rawBalance.expenses);
+    const balance = numbers.ensureNumber(rawBalance.balance, income - expenses);
+    
+    return {
+      income,
+      expenses,
+      balance,
+      total: balance // for backward compatibility
+    };
+  },
+  
+  // ✅ הוסף פונקציית דיבאג חדשה
+  debugHookUsage: () => {
+    console.group('🔍 [HOOK-DEBUG] Dashboard Hook Analysis');
+    console.log('📊 Active hooks in useDashboard:', window._dashboardHookCount || 0);
+    console.log('🎯 Primary hook ID:', window._primaryDashboardHook || 'none');
+    console.log('📋 All components using dashboard data:');
+    
+    // בדוק אילו קומפוננטים עשויים להשתמש בהוק
+    const possibleComponents = [
+      'BalancePanel',
+      'RecentTransactions', 
+      'ActionsPanel',
+      'QuickActionsBar',
+      'Dashboard'
+    ];
+    
+    possibleComponents.forEach(comp => {
+      const elements = document.querySelectorAll(`[data-component="${comp}"]`);
+      if (elements.length > 0) {
+        console.log(`   ✅ ${comp}: ${elements.length} instance(s)`);
+      }
+    });
+    
+    console.groupEnd();
   }
 };
 

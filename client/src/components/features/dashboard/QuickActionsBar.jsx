@@ -66,12 +66,12 @@ const QuickActionsBar = () => {
       const today = new Date();
       console.log('[INFO] Adding transaction with today\'s date:', today.toISOString().split('T')[0]);
       
-      // Add default "General" category (ID 8) for quick transactions - changed from 0 to 8
+      // ✅ שינוי: השתמש בקטגוריה ברירת מחדל ID 8 במקום null
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
         t('quickExpense.defaultDescription'),
-        8  // Use 8 as the ID for the default "General" category (last item in seed data)
+        8  // השתמש ב-ID 8 שהוא הקטגוריה "General" מה-seed data
       );
       
       // Alert if selected date is not today

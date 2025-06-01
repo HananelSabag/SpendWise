@@ -51,30 +51,31 @@ class ErrorBoundary extends React.Component {
 }
 
 // Render the app
+console.log('🔧 [MAIN] React version:', React.version);
+console.log('🔧 [MAIN] Environment:', import.meta.env.MODE);
+
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <PersistQueryClientProvider 
-        client={queryClient}
-        persistOptions={{ persister }}
-        onSuccess={() => {
-          // Optional: Handle successful persistence
-          console.log('Query cache persisted successfully');
-        }}
-      >
-        <App />
-        {process.env.NODE_ENV === 'development' && (
-          <ReactQueryDevtools 
-            initialIsOpen={false} 
-            position="bottom-right"
-            toggleButtonProps={{
-              style: {
-                marginBottom: '60px',
-              },
-            }}
-          />
-        )}
-      </PersistQueryClientProvider>
-    </ErrorBoundary>
-  </React.StrictMode>
+  // ✅ הסר StrictMode לפרודקשן-like behavior
+  <ErrorBoundary>
+    <PersistQueryClientProvider 
+      client={queryClient}
+      persistOptions={{ persister }}
+      onSuccess={() => {
+        console.log('Query cache persisted successfully');
+      }}
+    >
+      <App />
+      {process.env.NODE_ENV === 'development' && (
+        <ReactQueryDevtools 
+          initialIsOpen={false} 
+          position="bottom-right"
+          toggleButtonProps={{
+            style: {
+              marginBottom: '60px',
+            },
+          }}
+        />
+      )}
+    </PersistQueryClientProvider>
+  </ErrorBoundary>
 );

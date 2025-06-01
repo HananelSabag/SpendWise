@@ -348,6 +348,38 @@ const translations = {
       title: 'Recurring Transactions',
       management: 'Manage your recurring income and expenses',
       impact: 'Monthly Impact'
+    },
+    view: {
+      all: 'All Transactions',
+      income: 'Income Only',
+      expense: 'Expenses Only'
+    },
+    subtitle: 'Manage all your income and expenses',
+    items: 'items',
+    endOfList: 'End of transaction history',
+    tip: 'Try adding new transactions using the button above',
+    noTransactionsDesc: 'Your transactions will appear here once you add them',
+    updateFutureDesc: 'This will update all future occurrences of this recurring transaction',
+    selectCategory: 'Select category',
+    date: 'Date',
+    addNew: 'Add New',
+    edit: 'Edit Transaction',
+    filters: {
+      amountRange: 'Amount Range',
+      dateRange: 'Date Range',
+      recurringType: 'Transaction Type',
+      all: 'All Types',
+      recurring: 'Recurring',
+      oneTime: 'One-time',
+      title: 'Filters',
+      minAmount: 'Min Amount',
+      maxAmount: 'Max Amount',
+      startDate: 'Start Date',
+      endDate: 'End Date'
+    },
+    recurringInfo: {
+      title: 'About Recurring Transactions',
+      description: 'Recurring transactions are automatically generated based on their frequency. You can modify or stop them at any time.'
     }
   },
 
@@ -900,6 +932,38 @@ const translations = {
         title: 'עסקאות קבועות',
         management: 'נהלו את ההכנסות וההוצאות הקבועות שלכם',
         impact: 'השפעה חודשית'
+      },
+      view: {
+        all: 'כל העסקאות',
+        income: 'הכנסות בלבד',
+        expense: 'הוצאות בלבד'
+      },
+      subtitle: 'ניהול כל ההכנסות וההוצאות שלך',
+      items: 'פריטים',
+      endOfList: 'סוף היסטוריית העסקאות',
+      tip: 'נסה להוסיף עסקאות חדשות באמצעות הכפתור למעלה',
+      noTransactionsDesc: 'העסקאות שלך יופיעו כאן לאחר שתוסיף אותן',
+      updateFutureDesc: 'פעולה זו תעדכן את כל המופעים העתידיים של עסקה חוזרת זו',
+      selectCategory: 'בחר קטגוריה',
+      date: 'תאריך',
+      addNew: 'הוסף חדש',
+      edit: 'ערוך עסקה',
+      filters: {
+        amountRange: 'טווח סכומים',
+        dateRange: 'טווח תאריכים',
+        recurringType: 'סוג עסקה',
+        all: 'כל הסוגים',
+        recurring: 'חוזרת',
+        oneTime: 'חד פעמית',
+        title: 'סינונים',
+        minAmount: 'סכום מינימלי',
+        maxAmount: 'סכום מקסימלי',
+        startDate: 'תאריך התחלה',
+        endDate: 'תאריך סיום'
+      },
+      recurringInfo: {
+        title: 'על עסקאות חוזרות',
+        description: 'עסקאות חוזרות נוצרות אוטומטית בהתאם לתדירות שלהן. ניתן לשנות או להפסיק אותן בכל עת.'
       }
     },
 

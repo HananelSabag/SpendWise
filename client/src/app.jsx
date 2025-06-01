@@ -15,11 +15,13 @@ import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { TransactionProvider } from './context/TransactionContext'; // הוספת ייבוא של TransactionProvider
 
 // Lazy-load only the pages that actually exist
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Transactions = lazy(() => import('./pages/Transactions')); // הוספת ייבוא של עמוד העסקאות
 
 // Simple 404 component
 const NotFoundPage = () => (
@@ -75,9 +77,14 @@ const AppContent = () => {
             !isAuthenticated ? <Register /> : <Navigate to="/" replace />
           } />
           
-          {/* Protected Routes - Make this exact path */}
+          {/* Protected Routes */}
           <Route path="/" element={
             isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+          } />
+          
+          {/* הוספת ניתוב לעמוד העסקאות */}
+          <Route path="/transactions" element={
+            isAuthenticated ? <Transactions /> : <Navigate to="/login" replace />
           } />
           
           {/* Catch-all 404 Route */}
@@ -96,7 +103,7 @@ const AppContent = () => {
   );
 };
 
-// Main App component with providers - Force light mode with explicit class
+// Main App component with providers - בדיקה שאין כפילות
 function App() {
   // Force light mode on document body directly
   useEffect(() => {
@@ -106,24 +113,35 @@ function App() {
     
     // Also clear dark mode setting from localStorage
     localStorage.removeItem('a11y_darkMode');
+    
+    // ✅ הוסף דיבאג לבדוק כמה פעמים App נטען
+    console.log('🚀 App component mounted at:', new Date().toISOString());
   }, []);
 
   return (
-    <Router>
+    <Router 
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <AuthProvider>
         <ThemeProvider initialMode="light">
           <AccessibilityProvider initialDarkMode={false}>
             <LanguageProvider>
               <DateProvider>
-                <CurrencyProvider>
-                  <Suspense fallback={
-                    <div className="h-screen w-screen flex items-center justify-center">
-                      <LoadingSpinner size="large" />
-                    </div>
-                  }>
-                    <AppContent />
-                  </Suspense>
-                </CurrencyProvider>
+                {/* ✅ ודא שTransactionProvider רק פעם אחת */}
+                <TransactionProvider>
+                  <CurrencyProvider>
+                    <Suspense fallback={
+                      <div className="h-screen w-screen flex items-center justify-center">
+                        <LoadingSpinner size="large" />
+                      </div>
+                    }>
+                      <AppContent />
+                    </Suspense>
+                  </CurrencyProvider>
+                </TransactionProvider>
               </DateProvider>
             </LanguageProvider>
           </AccessibilityProvider>

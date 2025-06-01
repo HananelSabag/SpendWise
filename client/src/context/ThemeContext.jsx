@@ -11,8 +11,13 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider = ({ children }) => {
+export const ThemeProvider = ({ children, initialMode = null }) => {
   const [theme, setTheme] = useState(() => {
+    // אם יש initialMode, השתמש בו
+    if (initialMode) {
+      return initialMode;
+    }
+    
     // Get initial theme from localStorage or system preference
     const stored = localStorage.getItem('theme');
     if (stored) return stored;
@@ -33,9 +38,11 @@ export const ThemeProvider = ({ children }) => {
       root.classList.remove('dark');
     }
     
-    // Save to localStorage
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    // Save to localStorage רק אם לא במצב force
+    if (!initialMode) {
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme, initialMode]);
 
   // Listen for system theme changes
   useEffect(() => {

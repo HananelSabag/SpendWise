@@ -1,10 +1,11 @@
 // pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDate } from '../context/DateContext';
 import { TransactionProvider } from '../context/TransactionContext';
+import { useDashboard } from '../hooks/useDashboard'; // ✅ הוסף import של הוק הראשי
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -17,7 +18,7 @@ import {
   Sparkles,
   Plus,
   MoreHorizontal,
-  X // Adding the missing X icon
+  X
 } from 'lucide-react';
 
 // Features
@@ -34,7 +35,15 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { selectedDate, formatDate } = useDate();
-  const [loading, setLoading] = useState(true); // Starting with active loading
+  
+  // ✅ קריאה יחידה להוק dashboard בקומפוננט הראשי
+  const { 
+    data: dashboardData, 
+    isLoading: isDashboardLoading, 
+    error: dashboardError 
+  } = useDashboard();
+  
+  const [loading, setLoading] = useState(true);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [dashboardStats, setDashboardStats] = useState({
     dailyAverage: 0,
@@ -45,6 +54,16 @@ const Dashboard = () => {
   });
   
   const isRTL = language === 'he';
+  const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
+  
+  useEffect(() => {
+    // Debug רק במקרים מיוחדים של פיתוח
+    const debugMode = localStorage.getItem('debug_dashboard') === 'true' && process.env.NODE_ENV === 'development';
+    
+    if (debugMode) {
+      console.log(`📊 [DASHBOARD] Dashboard component mounted`);
+    }
+  }, []);
 
   // Function to load statistics data - currently generates random numbers
   const loadDashboardStats = async () => {
@@ -64,17 +83,12 @@ const Dashboard = () => {
     }
   };
 
-  // Fix for the main loading mechanism - ensuring it finishes
+  // Fix for the main loading mechanism
   useEffect(() => {
-    console.log("[DEBUG] Starting dashboard loading");
-    
-    // Set a shorter timer to ensure it completes
     const timer = setTimeout(() => {
-      console.log("[DEBUG] Ending dashboard loading");
       setLoading(false);
     }, 800);
     
-    // Load statistics in parallel
     loadDashboardStats();
     
     return () => clearTimeout(timer);
@@ -133,7 +147,8 @@ const Dashboard = () => {
     setShowFloatingMenu(!showFloatingMenu);
   };
 
-  if (loading) {
+  // ✅ בדוק אם הדשבורד עדיין נטען
+  if (loading || isDashboardLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="large" text={t('common.loading')} />
@@ -141,9 +156,22 @@ const Dashboard = () => {
     );
   }
 
+  // ✅ בדוק שגיאות
+  if (dashboardError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-6 text-center">
+          <p className="text-red-600 dark:text-red-400">
+            {t('common.errorLoading')} {dashboardError.message}
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <TransactionProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <motion.div
             variants={containerVariants}
@@ -165,7 +193,6 @@ const Dashboard = () => {
                   <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
                   <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
                   <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
-                  {/* Add more subtle animated shapes */}
                   <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
                 </div>
                 
@@ -215,9 +242,12 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Left Column - Balance & Actions */}
               <div className="xl:col-span-2 space-y-6">
-                {/* Balance Panel */}
+                {/* Balance Panel - ✅ העבר נתונים דרך props */}
                 <motion.div variants={itemVariants}>
-                  <BalancePanel />
+                  <BalancePanel 
+                    balanceData={dashboardData?.balances}
+                    recurringInfo={dashboardData?.recurringInfo}
+                  />
                 </motion.div>
 
                 {/* Quick Expense Bar - Mobile */}
@@ -238,9 +268,12 @@ const Dashboard = () => {
                   <QuickActionsBar />
                 </motion.div>
 
-                {/* Recent Transactions */}
+                {/* Recent Transactions - ✅ העבר נתונים דרך props */}
                 <motion.div variants={itemVariants}>
-                  <RecentTransactions />
+                  <RecentTransactions 
+                    transactions={dashboardData?.recentTransactions}
+                    loading={isDashboardLoading}
+                  />
                 </motion.div>
                 
                 {/* New Colorful Tips Card */}
@@ -349,63 +382,63 @@ const Dashboard = () => {
             </motion.div>
           </motion.div>
         </div>
-      </div>
-      
-      {/* Floating Action Button */}
-      <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40`}>
-        <div className="flex flex-col items-end space-y-3">
-          {/* Floating Menu */}
-          <AnimatePresence>
-            {showFloatingMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2"
-              >
-                <div className="flex flex-col space-y-2">
-                  <Button 
-                    variant="ghost" 
-                    size="small" 
-                    className="justify-start"
-                    icon={TrendingUp}
-                  >
-                    {t('actions.addIncome')}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="small" 
-                    className="justify-start"
-                    icon={TrendingDown}
-                  >
-                    {t('actions.addExpense')}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="small" 
-                    className="justify-start"
-                    icon={Clock}
-                  >
-                    {t('actions.recurring')}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          {/* Main Floating Button */}
-          <Button
-            variant="primary"
-            className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center"
-            onClick={toggleFloatingMenu}
-            aria-label={t('actions.quickAdd')}
-          >
-            {showFloatingMenu ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Plus className="w-6 h-6" />
-            )}
-          </Button>
+
+        {/* Floating Action Button */}
+        <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40`}>
+          <div className="flex flex-col items-end space-y-3">
+            {/* Floating Menu */}
+            <AnimatePresence>
+              {showFloatingMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2"
+                >
+                  <div className="flex flex-col space-y-2">
+                    <Button 
+                      variant="ghost" 
+                      size="small" 
+                      className="justify-start"
+                      icon={TrendingUp}
+                    >
+                      {t('actions.addIncome')}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="small" 
+                      className="justify-start"
+                      icon={TrendingDown}
+                    >
+                      {t('actions.addExpense')}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="small" 
+                      className="justify-start"
+                      icon={Clock}
+                    >
+                      {t('actions.recurring')}
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Main Floating Button */}
+            <Button
+              variant="primary"
+              className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center"
+              onClick={toggleFloatingMenu}
+              aria-label={t('actions.quickAdd')}
+            >
+              {showFloatingMenu ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Plus className="w-6 h-6" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
       

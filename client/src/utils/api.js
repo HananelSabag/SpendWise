@@ -24,52 +24,84 @@ const log = (message, data = null) => {
   }
 };
 
-// Request interceptor
+// Request interceptor - ✅ לוגים קונציזיים יותר
 api.interceptors.request.use(
   (config) => {
+    const requestId = crypto.randomUUID();
+    
+    // ✅ לוג רק אם לא recurring/templates או אם debug מפורש
+    const isDashboardRequest = config.url?.includes('/dashboard');
+    const isRecurringRequest = config.url?.includes('/recurring') || config.url?.includes('/templates');
+    const debugMode = localStorage.getItem('debug_api') === 'true';
+    
+    if (isDashboardRequest || debugMode || (!isRecurringRequest)) {
+      console.log(`🌐 [API] ${config.method?.toUpperCase()} ${config.url}`);
+    }
+    
     // Add auth token
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Add request ID
-    config.headers['X-Request-ID'] = crypto.randomUUID();
+    config.headers['X-Request-ID'] = requestId;
+    config.metadata = { requestId, startTime: Date.now() };
 
     return config;
   },
   (error) => {
+    console.error(`❌ [API-REQUEST-ERROR]`, error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
+// Response interceptor - ✅ לוגים קונציזיים יותר
 api.interceptors.response.use(
   (response) => {
+    const duration = Date.now() - response.config.metadata.startTime;
+    
+    // ✅ לוג רק בקריאות חשובות או debug
+    const isDashboardRequest = response.config.url?.includes('/dashboard');
+    const isRecurringRequest = response.config.url?.includes('/recurring') || response.config.url?.includes('/templates');
+    const isProfileRequest = response.config.url?.includes('/profile');
+    const debugMode = localStorage.getItem('debug_api') === 'true';
+    
+    if (isDashboardRequest || isProfileRequest || debugMode || (!isRecurringRequest)) {
+      console.log(`✅ [API] ${response.config.url} (${duration}ms)`);
+    }
+    
     return response;
   },
   async (error) => {
+    const duration = error.config?.metadata ? Date.now() - error.config.metadata.startTime : 'unknown';
+    console.error(`❌ [API] ${error.config?.url} failed (${duration}ms)`);
+    
     const originalRequest = error.config;
     
     // Handle 401 - Token expired
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log(`🔄 [API-RETRY] Attempting token refresh for request: ${requestId}`);
       originalRequest._retry = true;
       
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
+          console.log(`🔄 [API-RETRY] Refreshing token...`);
           const response = await axios.post('/api/v1/users/refresh-token', {
             refreshToken
           });
           
           const { accessToken } = response.data.data;
           localStorage.setItem('accessToken', accessToken);
+          console.log(`✅ [API-RETRY] Token refreshed successfully`);
           
           // Retry original request
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          console.log(`🔄 [API-RETRY] Retrying original request: ${requestId}`);
           return api(originalRequest);
         }
       } catch (refreshError) {
+        console.error(`❌ [API-RETRY] Token refresh failed:`, refreshError);
         // Refresh failed - redirect to login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -146,7 +178,8 @@ export const transactionAPI = {
   // NEW - Single dashboard call instead of 3!
   getDashboard: (date) => {
     const formattedDate = formatDateForAPI(date);
-    console.log('[DEBUG] API getDashboard date:', formattedDate);
+    console.log(`📊 [TRANSACTION-API] getDashboard called with date: ${formattedDate}`);
+    console.log(`📊 [TRANSACTION-API] Original date object:`, date);
     
     return api.get('/transactions/dashboard', { 
       params: { date: formattedDate }

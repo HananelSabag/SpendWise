@@ -43,12 +43,16 @@ export const auth = {
    */
   login: async (credentials) => {
     try {
+      console.log(`🔑 [AUTH-LOGIN] Attempting login for: ${credentials.email}`);
       const response = await authAPI.login(credentials);
       const { data } = response.data;
+      
+      console.log(`✅ [AUTH-LOGIN] Login response:`, data);
       
       // Store tokens
       if (data.accessToken && data.refreshToken) {
         tokenManager.setTokens(data.accessToken, data.refreshToken);
+        console.log(`✅ [AUTH-LOGIN] Tokens stored successfully`);
       }
       
       return {
@@ -58,6 +62,7 @@ export const auth = {
         refreshToken: data.refreshToken
       };
     } catch (error) {
+      console.error(`❌ [AUTH-LOGIN] Login failed:`, error);
       return {
         success: false,
         error: error.response?.data?.error || { 
@@ -138,6 +143,21 @@ export const auth = {
   isAuthenticated: () => {
     const token = tokenManager.getAccessToken();
     return token && !tokenManager.isTokenExpired(token);
+  },
+  
+  /**
+   * Get authentication status
+   * @returns {Object} { hasToken, isExpired, isAuthenticated }
+   */
+  getAuthStatus: () => {
+    const token = tokenManager.getAccessToken();
+    const isExpired = token ? tokenManager.isTokenExpired(token) : true;
+    
+    return {
+      hasToken: !!token,
+      isExpired,
+      isAuthenticated: !!token && !isExpired
+    };
   }
 };
 

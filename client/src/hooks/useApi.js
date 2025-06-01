@@ -18,14 +18,25 @@ export const useTransactions = (filters) => {
 export const useRecurringTransactions = (type) => {
   return useQuery({
     queryKey: ['recurring', type],
-    queryFn: () => transactionAPI.getRecurring(type)
+    queryFn: () => transactionAPI.getRecurring(type),
+    // ✅ שיפור הטיפול בנתונים
+    select: (response) => {
+      const data = response.data;
+      // וודא שמחזירים מערך תמיד
+      return Array.isArray(data.data) ? data.data : [];
+    }
   });
 };
 
 export const useTemplates = () => {
   return useQuery({
     queryKey: ['templates'],
-    queryFn: () => transactionAPI.getTemplates()
+    queryFn: () => transactionAPI.getTemplates(),
+    // ✅ שיפור הטיפול בנתונים
+    select: (response) => {
+      const data = response.data;
+      return Array.isArray(data.data) ? data.data : [];
+    }
   });
 };
 
@@ -134,6 +145,19 @@ export const useUpdatePreferences = () => {
     onSuccess: () => {
       toast.success('Preferences updated');
       queryClient.invalidateQueries(['profile']);
+    }
+  });
+};
+
+// ✅ הוספת הוק חדש לקטגוריות
+export const useCategories = () => {
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: () => transactionAPI.getCategories(),
+    staleTime: 10 * 60 * 1000, // 10 דקות - קטגוריות לא משתנות הרבה
+    select: (response) => {
+      const data = response.data;
+      return Array.isArray(data.data) ? data.data : [];
     }
   });
 };

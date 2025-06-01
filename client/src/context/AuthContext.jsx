@@ -21,7 +21,15 @@ export const AuthProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const [initialized, setInitialized] = useState(false);
   
-  // User profile query
+  // ✅ לוג רק פעם אחת בלבד
+  useEffect(() => {
+    if (!window._authProviderInitialized) {
+      console.log(`🔐 [AUTH-PROVIDER] Provider initialized, isAuthenticated: ${auth.isAuthenticated()}`);
+      window._authProviderInitialized = true;
+    }
+  }, []);
+  
+  // User profile query - ✅ אמור לרוץ פעם אחת בלבד
   const { 
     data: user, 
     isLoading: loading, 
@@ -29,13 +37,28 @@ export const AuthProvider = ({ children }) => {
     refetch: refetchProfile 
   } = useQuery({
     queryKey: ['profile'],
-    queryFn: () => authAPI.getProfile().then(res => res.data.data),
+    queryFn: () => {
+      console.log(`🌐 [AUTH-API] Profile request starting`);
+      const startTime = Date.now();
+      
+      return authAPI.getProfile().then(res => {
+        const endTime = Date.now();
+        console.log(`✅ [AUTH-API] Profile completed in ${endTime - startTime}ms`);
+        return res.data.data;
+      }).catch(error => {
+        const endTime = Date.now();
+        console.error(`❌ [AUTH-API] Profile failed after ${endTime - startTime}ms:`, error);
+        throw error;
+      });
+    },
     enabled: !!auth.isAuthenticated(),
-
     retry: 1,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000, // 10 דקות
+    refetchOnMount: false, // ✅ לא לרענן בכל mount
+    refetchOnWindowFocus: false, // ✅ לא לרענן בפוקוס
     onError: (error) => {
       if (error.response?.status === 401) {
+        console.log(`🔓 [AUTH-ERROR] 401 error - clearing tokens`);
         tokenManager.clearTokens();
       }
     }
@@ -43,15 +66,32 @@ export const AuthProvider = ({ children }) => {
   
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: (credentials) => auth.login(credentials),
+    mutationFn: (credentials) => {
+      console.log(`🔑 [LOGIN] 🔥 ATTEMPTING LOGIN 🔥 for user:`, credentials.email);
+      const startTime = Date.now();
+      
+      return auth.login(credentials).then(result => {
+        const endTime = Date.now();
+        console.log(`✅ [LOGIN] Login completed in ${endTime - startTime}ms`);
+        console.log(`✅ [LOGIN] Login result:`, result);
+        return result;
+      }).catch(error => {
+        const endTime = Date.now();
+        console.error(`❌ [LOGIN] Login failed after ${endTime - startTime}ms:`, error);
+        throw error;
+      });
+    },
     onSuccess: (data) => {
+      console.log(`🎉 [LOGIN-SUCCESS] Login successful, invalidating profile query`);
       if (data.success) {
         queryClient.invalidateQueries(['profile']);
         
         // Check if user needs onboarding
         if (data.user?.needsOnboarding) {
+          console.log(`🚀 [LOGIN-SUCCESS] User needs onboarding, navigating to /onboarding`);
           navigate('/onboarding');
         } else {
+          console.log(`🏠 [LOGIN-SUCCESS] User authenticated, navigating to /`);
           navigate('/');
         }
         
@@ -59,6 +99,7 @@ export const AuthProvider = ({ children }) => {
       }
     },
     onError: (error) => {
+      console.error(`❌ [LOGIN-ERROR] Login mutation error:`, error);
       toast.error(error.message || 'Login failed');
     }
   });
@@ -98,15 +139,17 @@ export const AuthProvider = ({ children }) => {
     }
   });
   
-  // Initialize auth state
+  // Initialize auth state - ✅ לוג רק פעם אחת
   useEffect(() => {
     const initAuth = async () => {
       const token = tokenManager.getAccessToken();
       
       if (token && !tokenManager.isTokenExpired(token)) {
-        // Token exists and is valid, profile query will run automatically
+        if (!window._authInitLogged) {
+          console.log(`✅ [AUTH-INIT] Valid token exists`);
+          window._authInitLogged = true;
+        }
       } else {
-        // No valid token
         tokenManager.clearTokens();
       }
       
@@ -164,8 +207,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // User data
     user,
-    isAuthenticated: auth.isAuthenticated(),
-
+    isAuthenticated: !!user && auth.isAuthenticated(), // ✅ וודא שיש גם user וגם token
     
     // Loading states
     loading: loading || !initialized,

@@ -60,7 +60,7 @@ const Transactions = () => {
   const [showForm, setShowForm] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [deleteTransaction, setDeleteTransaction] = useState(null);
+  const [transactionToDelete, setTransactionToDelete] = useState(null); // שיניתי את השם מ-deleteTransaction ל-transactionToDelete
 
   // Filters
   const [filters, setFilters] = useState({
@@ -126,11 +126,17 @@ const Transactions = () => {
 
   // Recurring impact
   const recurringImpact = useMemo(() => {
-    const monthlyIncome = recurringTransactions
+    // Make sure recurringTransactions is an array
+    const recArray = Array.isArray(recurringTransactions) ? 
+                    recurringTransactions : 
+                    (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
+                    recurringTransactions.data : [];
+    
+    const monthlyIncome = recArray
       .filter(tx => tx.type === 'income')
       .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
     
-    const monthlyExpenses = recurringTransactions
+    const monthlyExpenses = recArray
       .filter(tx => tx.type === 'expense')
       .reduce((sum, tx) => sum + (tx.monthly_amount || 0), 0);
 
@@ -144,7 +150,7 @@ const Transactions = () => {
   };
 
   const handleDelete = (transaction) => {
-    setDeleteTransaction(transaction);
+    setTransactionToDelete(transaction); // שיניתי כאן גם
   };
 
   const handleFormClose = () => {
@@ -153,15 +159,15 @@ const Transactions = () => {
   };
 
   const handleDeleteConfirm = async (deleteFuture = false) => {
-    if (!deleteTransaction) return;
+    if (!transactionToDelete) return; // שיניתי כאן
     
     try {
       await deleteTransaction(
-        deleteTransaction.transaction_type,
-        deleteTransaction.id,
+        transactionToDelete.transaction_type, // שיניתי כאן
+        transactionToDelete.id, // שיניתי כאן
         deleteFuture
       );
-      setDeleteTransaction(null);
+      setTransactionToDelete(null); // שיניתי כאן
     } catch (error) {
       console.error('Delete failed:', error);
     }
@@ -220,7 +226,10 @@ const Transactions = () => {
                 <Clock className="w-4 h-4 mr-2 group-hover:animate-spin" />
                 {t('transactions.recurring')}
                 <Badge variant="primary" className="ml-2">
-                  {recurringTransactions.length}
+                  {Array.isArray(recurringTransactions) ? 
+                    recurringTransactions.length : 
+                    (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
+                    recurringTransactions.data.length : 0}
                 </Badge>
               </Button>
               
@@ -454,10 +463,10 @@ const Transactions = () => {
           )}
 
           {/* Delete Confirmation */}
-          {deleteTransaction && (
+          {transactionToDelete && ( // שיניתי כאן
             <DeleteTransaction
-              transaction={deleteTransaction}
-              onClose={() => setDeleteTransaction(null)}
+              transaction={transactionToDelete} // שיניתי כאן
+              onClose={() => setTransactionToDelete(null)} // שיניתי כאן
               onConfirm={handleDeleteConfirm}
             />
           )}
@@ -467,7 +476,10 @@ const Transactions = () => {
             <RecurringModal
               isOpen={showRecurring}
               onClose={() => setShowRecurring(false)}
-              transactions={recurringTransactions}
+              transactions={Array.isArray(recurringTransactions) ? 
+                           recurringTransactions : 
+                           (recurringTransactions?.data && Array.isArray(recurringTransactions.data)) ?
+                           recurringTransactions.data : []}
             />
           )}
         </AnimatePresence>

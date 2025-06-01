@@ -1,6 +1,6 @@
 // src/context/TransactionContext.jsx
 // Simplified version using React Query hooks
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query'; // Make sure this is imported
 import axios from 'axios'; // Add axios import
 import api, { transactionAPI } from '../utils/api'; // Make sure API utilities are imported
@@ -31,16 +31,33 @@ export const useTransactions = () => {
  */
 export const TransactionProvider = ({ children }) => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('accessToken');
   const { user } = useAuth();
   
-  // Main dashboard data - replaces 3 separate calls
-  const dashboardQuery = useDashboard();
+  const providerId = useRef(`tx-provider-${Math.random().toString(36).substr(2, 9)}`).current;
   
-  // Recurring transactions
+  useEffect(() => {
+    // ✅ לוג רק במקרים מיוחדים
+    const debugMode = localStorage.getItem('debug_transactions') === 'true';
+    const isFirstProvider = !window._primaryTransactionProvider;
+    
+    if (user?.email && isFirstProvider) {
+      // לוג רק אם זה ה-provider הראשון
+      console.log(`💰 [TRANSACTION-PROVIDER] [${providerId}] Ready - User: ${user.email}`);
+      window._primaryTransactionProvider = providerId;
+    } else if (debugMode && user?.email) {
+      // לוג נוסף רק אם debug מפורש
+      console.log(`💰 [TRANSACTION-PROVIDER] [${providerId}] Secondary provider for: ${user.email}`);
+    }
+    
+    return () => {
+      if (window._primaryTransactionProvider === providerId) {
+        window._primaryTransactionProvider = null;
+      }
+    };
+  }, [providerId, user?.email]);
+  
+  // ✅ רק recurring & templates - ללא לוגים
   const recurringQuery = useRecurringTransactions();
-  
-  // Templates
   const templatesQuery = useTemplates();
   
   // Mutations
@@ -48,23 +65,9 @@ export const TransactionProvider = ({ children }) => {
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
   
-  // Extract data from queries
-  const {
-    recentTransactions = [],
-    balances = {
-      daily: { income: 0, expenses: 0, balance: 0 },
-      weekly: { income: 0, expenses: 0, balance: 0 },
-      monthly: { income: 0, expenses: 0, balance: 0 },
-      yearly: { income: 0, expenses: 0, balance: 0 }
-    },
-    recurringInfo = {},
-    metadata = {}
-  } = dashboardQuery.data || {};
-  
-  // Loading states
-  const loading = dashboardQuery.isLoading || recurringQuery.isLoading;
+  // Loading states - רק recurring & templates
+  const loading = recurringQuery.isLoading;
   const loadingStates = {
-    dashboard: dashboardQuery.isLoading,
     recurring: recurringQuery.isLoading,
     templates: templatesQuery.isLoading,
     create: createMutation.isLoading,
@@ -72,8 +75,8 @@ export const TransactionProvider = ({ children }) => {
     delete: deleteMutation.isLoading
   };
   
-  // Error handling
-  const error = dashboardQuery.error || recurringQuery.error;
+  // Error handling - רק recurring error
+  const error = recurringQuery.error;
   
   // Transaction operations (simplified)
   const createTransaction = async (type, data) => {
@@ -92,72 +95,40 @@ export const TransactionProvider = ({ children }) => {
   };
   
   // Quick add transaction
-  const quickAddTransaction = async (type, amount, description = 'Quick transaction') => {
+  const quickAddTransaction = async (type, amount, description = 'Quick transaction', categoryId = null) => {
     try {
-      // Create a date at noon to avoid timezone edge cases
       const today = new Date();
-      today.setHours(12, 0, 0, 0);
-      
-      // Get timezone offset in minutes and convert to hours
-      const tzOffset = today.getTimezoneOffset();
-      
-      // Get the date in local timezone
-      const localDate = new Date(today.getTime() - (tzOffset * 60000));
-      
-      // Format as YYYY-MM-DD ensuring we use local date
-      const formattedDate = localDate.toISOString().substring(0, 10);
-      
-      console.log(`[DEBUG] Adding quick ${type} with date: ${formattedDate} (local time)`);
-      console.log(`[DEBUG] Current timezone offset: ${tzOffset} minutes`);
+      const formattedDate = today.toISOString().split('T')[0];
       
       const payload = {
         amount,
         description,
         date: formattedDate,
-        category_id: null,
+        category_id: categoryId || 8,
         notes: ''
       };
       
-      // Use the API utility instead of direct axios
-      const endpoint = `/transactions/${type}`;
-      const response = await api.post(endpoint, payload);
+      const response = await api.post(`/transactions/${type}`, payload);
       
-      // Trigger dashboard refresh event
-      window.dispatchEvent(new CustomEvent('dashboard-refresh-requested', { 
-        detail: { queryKey: 'dashboard' }
-      }));
-      
-      // Also trigger the existing event
+      // Trigger refresh - ללא לוגים מיותרים
+      window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
       window.dispatchEvent(new CustomEvent('transaction-added'));
       
       return response.data;
     } catch (error) {
-      console.error('Error adding quick transaction:', error);
+      console.error(`❌ [QUICK-ADD] Failed:`, error);
       throw error;
     }
   };
   
-  // Refresh data
+  // Refresh data - רק recurring & templates
   const refreshData = () => {
-    dashboardQuery.refetch();
     recurringQuery.refetch();
     templatesQuery.refetch();
   };
   
-  const processBalanceData = (data) => {
-    if (!data) return { income: 0, expenses: 0, total: 0 };
-    
-    return {
-      income: numbers.parseAmount(data.income),
-      expenses: numbers.parseAmount(data.expenses),
-      total: numbers.parseAmount(data.income - data.expenses)
-    };
-  };
-
-  // Calculate the daily impact of all recurring transactions.
-  // Always ensure `recurring` is an array.
+  // Calculate the daily impact of all recurring transactions
   const recurringDailyImpact = React.useMemo(() => {
-    // Use Array.isArray to guarantee recurring is always an array.
     const rawRecurring = recurringQuery.data?.data;
     const recurring = Array.isArray(rawRecurring) ? rawRecurring : [];
 
@@ -179,17 +150,11 @@ export const TransactionProvider = ({ children }) => {
       return acc;
     }, { total: 0, income: 0, expense: 0 });
   }, [recurringQuery.data]);
-
   
   const value = {
-    // Data
-    recentTransactions,
-    periodTransactions: recentTransactions, // For backward compatibility
+    // Data - רק recurring & templates
     recurringTransactions: recurringQuery.data || [],
     templates: templatesQuery.data || [],
-    balances,
-    metadata,
-    recurringInfo,
     recurringDailyImpact,
     
     // UI States
@@ -205,14 +170,11 @@ export const TransactionProvider = ({ children }) => {
     
     // Data fetching
     refreshData,
-    forceRefresh: refreshData, // Alias for backward compatibility
+    forceRefresh: refreshData,
     
     // Additional methods for backward compatibility
     getRecurringTransactions: () => recurringQuery.refetch(),
-    getByPeriod: (period) => dashboardQuery.refetch(),
-    fetchRecentTransactions: () => dashboardQuery.refetch(),
-    getBalanceDetails: () => dashboardQuery.refetch(),
-    clearErrors: () => {} // No longer needed with React Query
+    clearErrors: () => {}
   };
   
   return (

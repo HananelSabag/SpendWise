@@ -12,19 +12,21 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  Clock as ClockIcon // נשנה את השם כדי למנוע התנגשות
+  Clock as ClockIcon
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useTransactions } from '../../../context/TransactionContext';
-import { useCurrency } from '../../../context/CurrencyContext';
-import { useDate } from '../../../context/DateContext';
+import { useCurrency } from '../../../context/CurrencyContext'; // ✅ הוסף import חסר
+import { useDate } from '../../../context/DateContext'; // ✅ הוסף import חסר
 import { Card, Badge, Button } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
 import { numbers } from '../../../utils/helpers';
 
-const BalancePanel = () => {
+// ✅ שנה את הקומפוננט לקבל נתונים דרך props
+const BalancePanel = ({ 
+  balanceData = null, 
+  recurringInfo = null 
+}) => {
   const { t, language } = useLanguage();
-  const { balances, loading, error, refreshData } = useTransactions();
   const { formatAmount } = useCurrency();
   const { 
     selectedDate, 
@@ -38,14 +40,7 @@ const BalancePanel = () => {
     getDateForServer 
   } = useDate();
   
-  // הגדרת מערך התקופות החסר
-  const periods = [
-    { id: 'daily', label: t('home.balance.periods.daily') },
-    { id: 'weekly', label: t('home.balance.periods.weekly') },
-    { id: 'monthly', label: t('home.balance.periods.monthly') },
-    { id: 'yearly', label: t('home.balance.periods.yearly') }
-  ];
-  
+  // ✅ הגדרת period לפני השימוש בו
   const [period, setPeriod] = useState('daily');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -54,6 +49,48 @@ const BalancePanel = () => {
   
   const isRTL = language === 'he';
 
+  // ✅ הוסף מידע דיבאג לקומפוננט
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🎨 [BALANCE-PANEL] Component mounted, receiving data via props`);
+    }
+  }, []);
+
+  // הגדרת מערך התקופות
+  const periods = [
+    { id: 'daily', label: t('home.balance.periods.daily') },
+    { id: 'weekly', label: t('home.balance.periods.weekly') },
+    { id: 'monthly', label: t('home.balance.periods.monthly') },
+    { id: 'yearly', label: t('home.balance.periods.yearly') }
+  ];
+  
+  // ✅ הוספת פונקציה לוודא פורמט תקין
+  const ensureBalanceFormat = (balanceData, periodKey) => {
+    if (!balanceData) {
+      console.warn(`[WARN] Missing balance data for ${periodKey}`);
+      return { income: 0, expenses: 0, balance: 0 };
+    }
+    
+    return {
+      income: typeof balanceData.income === 'number' ? balanceData.income : parseFloat(balanceData.income || 0),
+      expenses: typeof balanceData.expenses === 'number' ? balanceData.expenses : parseFloat(balanceData.expenses || 0),
+      balance: typeof balanceData.balance === 'number' ? balanceData.balance : 
+               (parseFloat(balanceData.income || 0) - parseFloat(balanceData.expenses || 0))
+    };
+  };
+
+  // ✅ עכשיו period מוגדר וניתן לשימוש - עם memoization
+  const currentBalance = React.useMemo(() => {
+    return ensureBalanceFormat(balanceData?.[period], period);
+  }, [balanceData, period]);
+  
+  // ✅ הסר לוג מיותר - רק אם יש debug מפורש
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && localStorage.getItem('debug_balance') === 'true') {
+      console.log(`[BALANCE-PANEL] Current balance for ${period}:`, currentBalance);
+    }
+  }, [period, currentBalance]);
+  
   // בדיקה אם התאריך הנוכחי מסונכרן
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -79,31 +116,15 @@ const BalancePanel = () => {
     setTimeout(() => refreshData(), 100);
   };
 
-  // Add safety check for balances format
-  const ensureBalanceFormat = (balanceData, periodKey) => {
-    if (!balanceData) {
-      console.warn(`[WARN] Missing balance data for ${periodKey}`);
-      return { income: 0, expenses: 0, balance: 0 };
-    }
-    
-    // Make sure each property exists and is a number
-    return {
-      income: typeof balanceData.income === 'number' ? balanceData.income : parseFloat(balanceData.income || 0),
-      expenses: typeof balanceData.expenses === 'number' ? balanceData.expenses : parseFloat(balanceData.expenses || 0),
-      balance: typeof balanceData.balance === 'number' ? balanceData.balance : 
-               (parseFloat(balanceData.income || 0) - parseFloat(balanceData.expenses || 0))
-    };
-  };
-
-  // Get current balance with safety check
-  const currentBalance = ensureBalanceFormat(balances?.[period], period);
-
-  // Debug log
+  // Debug log - הפחתת דיבאגים מיותרים
   useEffect(() => {
-    console.log('[DEBUG] BalancePanel selectedDate:', selectedDate);
-    console.log('[DEBUG] BalancePanel formatted date for API:', getDateForServer(selectedDate));
-    console.log('[DEBUG] BalancePanel balances:', balances);
-  }, [selectedDate, balances, getDateForServer]);
+    // מעקב דיבאג רק בפעם הראשונה ולא בכל רינדור
+    const shouldLog = localStorage.getItem('debug_balances') === 'true';
+    
+    if (shouldLog) {
+      console.log('[INFO] BalancePanel using date:', getDateForServer(selectedDate));
+    }
+  }, [selectedDate, getDateForServer]);
 
   // Animation variants
   const cardVariants = {
@@ -137,7 +158,7 @@ const BalancePanel = () => {
   };
   
   return (
-    <Card className="p-0 overflow-hidden">
+    <Card className="p-0 overflow-hidden" data-component="BalancePanel">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -173,9 +194,8 @@ const BalancePanel = () => {
                   <CalendarWidget
                     selectedDate={selectedDate}
                     onDateSelect={(date) => {
-                      updateSelectedDate(new Date(date)); // ודא שזה אובייקט חדש
+                      updateSelectedDate(new Date(date));
                       setShowCalendar(false);
-                      refreshData(); // הכרח רענון
                     }}
                     onClose={() => setShowCalendar(false)}
                   />
@@ -197,46 +217,15 @@ const BalancePanel = () => {
               <Button
                 variant="ghost"
                 size="small"
-                onClick={handleResetToday}
+                onClick={resetToToday}
                 className="p-1.5"
                 title={t('home.balance.backToToday')}
               >
                 <RotateCcw className="w-4 h-4" />
               </Button>
             )}
-            
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="small"
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
-                className="p-1.5"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
-              
-              {showTooltip && (
-                <div className="absolute top-full mt-2 right-0 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg z-50">
-                  {t('home.balance.tooltip')}
-                </div>
-              )}
-            </div>
           </div>
         </div>
-        
-        {/* הודעת התראה אם לא מציגים את היום הנוכחי */}
-        {dateWarning && (
-          <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-1.5 rounded-md text-center animate-pulse">
-            {t('home.balance.viewingPastDate')}
-            <button 
-              className="underline ml-1 font-medium"
-              onClick={handleResetToday}
-            >
-              {t('home.balance.backToToday')}
-            </button>
-          </div>
-        )}
         
         {/* Period Tabs */}
         <div className="flex gap-1 mt-4 p-1 bg-white/50 dark:bg-gray-800/50 rounded-lg">
@@ -258,106 +247,95 @@ const BalancePanel = () => {
       
       {/* Balance Cards */}
       <div className="p-6">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-500">
-            {t('home.balance.error')}
-            <p className="text-sm mt-2">{error.message || 'Unknown error'}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Income Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Income Card */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                {t('home.balance.income')}
+              </span>
+              <ArrowUpRight className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
             <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800"
+              variants={numberVariants}
+              initial="initial"
+              animate="animate"
+              key={`${period}-income`}
+              className="text-2xl font-bold text-green-700 dark:text-green-300"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  {t('home.balance.income')}
-                </span>
-                <ArrowUpRight className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <motion.div
-                variants={numberVariants}
-                initial="initial"
-                animate="animate"
-                key={`${period}-income`}
-                className="text-2xl font-bold text-green-700 dark:text-green-300"
-              >
-                {formatValue(currentBalance.income)}
-              </motion.div>
+              {formatValue(currentBalance.income)}
             </motion.div>
-            
-            {/* Expenses Card */}
+          </motion.div>
+          
+          {/* Expenses Card */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                {t('home.balance.expenses')}
+              </span>
+              <ArrowDownRight className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
             <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800"
+              variants={numberVariants}
+              initial="initial"
+              animate="animate"
+              key={`${period}-expenses`}
+              className="text-2xl font-bold text-red-700 dark:text-red-300"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                  {t('home.balance.expenses')}
-                </span>
-                <ArrowDownRight className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-              <motion.div
-                variants={numberVariants}
-                initial="initial"
-                animate="animate"
-                key={`${period}-expenses`}
-                className="text-2xl font-bold text-red-700 dark:text-red-300"
-              >
-                {formatValue(currentBalance.expenses)}
-              </motion.div>
+              {formatValue(currentBalance.expenses)}
             </motion.div>
-            
-            {/* Balance Card */}
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              className={`rounded-xl p-4 border ${
+          </motion.div>
+          
+          {/* Balance Card */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className={`rounded-xl p-4 border ${
+              currentBalance.balance >= 0
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-sm font-medium ${
                 currentBalance.balance >= 0
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                  : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-orange-700 dark:text-orange-300'
+              }`}>
+                {t('home.balance.total')}
+              </span>
+              {currentBalance.balance >= 0 ? (
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              )}
+            </div>
+            <motion.div
+              variants={numberVariants}
+              initial="initial"
+              animate="animate"
+              key={`${period}-balance`}
+              className={`text-2xl font-bold ${
+                currentBalance.balance >= 0
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-orange-700 dark:text-orange-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-sm font-medium ${
-                  currentBalance.balance >= 0
-                    ? 'text-blue-700 dark:text-blue-300'
-                    : 'text-orange-700 dark:text-orange-300'
-                }`}>
-                  {t('home.balance.total')}
-                </span>
-                {currentBalance.balance >= 0 ? (
-                  <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                ) : (
-                  <TrendingDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                )}
-              </div>
-              <motion.div
-                variants={numberVariants}
-                initial="initial"
-                animate="animate"
-                key={`${period}-balance`}
-                className={`text-2xl font-bold ${
-                  currentBalance.balance >= 0
-                    ? 'text-blue-700 dark:text-blue-300'
-                    : 'text-orange-700 dark:text-orange-300'
-                }`}
-              >
-                {formatValue(currentBalance.balance)}
-              </motion.div>
+              {formatValue(currentBalance.balance)}
             </motion.div>
-          </div>
-        )}
+          </motion.div>
+        </div>
       </div>
     </Card>
   );
