@@ -21,7 +21,8 @@ import { TransactionProvider } from './context/TransactionContext'; // הוספ�
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Transactions = lazy(() => import('./pages/Transactions')); // הוספת ייבוא של עמוד העסקאות
+const Transactions = lazy(() => import('./pages/Transactions'));
+const Profile = lazy(() => import('./pages/Profile')); // ✅ הוספת ייבוא של עמוד הפרופיל
 
 // Simple 404 component
 const NotFoundPage = () => (
@@ -85,6 +86,11 @@ const AppContent = () => {
           {/* הוספת ניתוב לעמוד העסקאות */}
           <Route path="/transactions" element={
             isAuthenticated ? <Transactions /> : <Navigate to="/login" replace />
+          } />
+          
+          {/* ✅ הוספת ניתוב לעמוד הפרופיל */}
+          <Route path="/profile" element={
+            isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
           } />
           
           {/* Catch-all 404 Route */}

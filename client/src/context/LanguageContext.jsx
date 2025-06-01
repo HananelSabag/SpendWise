@@ -306,11 +306,6 @@ const translations = {
     quickActions: 'Quick Actions',
     quickAdd: 'Quick Add',
     new: 'New',
-    amount: 'Amount', // ✅ הוספתי
-    category: 'Category', // ✅ הוספתי
-    date: 'Date', // ✅ הוספתי
-    frequency: 'Frequency', // ✅ הוספתי
-    success: 'Transaction Added Successfully!', // ✅ הוספתי
     
     // Transaction types
     oneTimeExpense: 'One-time Expense',
@@ -336,14 +331,6 @@ const translations = {
     addIncome: 'Add Income',
     addExpense: 'Add Expense',
     
-    // Frequencies - ✅ הוספתי חלק זה
-    frequencies: {
-      daily: 'Daily',
-      weekly: 'Weekly',
-      monthly: 'Monthly',
-      yearly: 'Yearly'
-    },
-    
     // Errors
     errors: {
       addingTransaction: 'Error adding transaction',
@@ -353,9 +340,8 @@ const translations = {
     }
   },
 
-  // Categories - ✅ הוספתי title
+  // Categories
   categories: {
-    title: 'Categories', // ✅ הוספתי
     Salary: 'Salary',
     Freelance: 'Freelance',
     Investments: 'Investments',
@@ -365,14 +351,6 @@ const translations = {
     Utilities: 'Utilities',
     Entertainment: 'Entertainment',
     General: 'General'
-  },
-
-  // ✅ הוספת home במקום dashboard בכמה מקומות
-  home: {
-    balance: {
-      income: 'Income',
-      expenses: 'Expenses'
-    }
   },
 
   // Profile
@@ -394,10 +372,30 @@ const translations = {
     tabs: {
       general: 'General',
       security: 'Security',
-      preferences: 'Preferences'
+      preferences: 'Preferences',
+      billing: 'Billing' // ✅ הוספתי
     },
     
+    // ✅ הוספת תרגומים חסרים
+    stats: {
+      totalTransactions: 'Total Transactions',
+      thisMonth: 'This Month',
+      activeDays: 'Member For',
+      successRate: 'Success Rate',
+      days: 'days',
+      months: 'months',
+      years: 'years'
+    },
+    
+    quickActions: 'Quick Actions',
+    exportData: 'Export Data',
+    notifications: 'Notifications',
+    comingSoon: 'Coming Soon',
+    logoutConfirm: 'Confirm Logout',
+    logoutConfirmDesc: 'Are you sure you want to logout?',
+    
     securitySettings: 'Security Settings',
+    billingSettings: 'Billing & Subscription',
     passwordRequirements: 'Password requirements',
     passwordMinLength: 'Minimum 8 characters',
     passwordRequireNumber: 'Must contain at least one number',
@@ -807,11 +805,6 @@ const translations = {
       quickActions: 'פעולות מהירות',
       quickAdd: 'הוספה מהירה',
       new: 'חדש',
-      amount: 'סכום', // ✅ הוספתי
-      category: 'קטגוריה', // ✅ הוספתי
-      date: 'תאריך', // ✅ הוספתי
-      frequency: 'תדירות', // ✅ הוספתי
-      success: 'העסקה נוספה בהצלחה!', // ✅ הוספתי
       
       // Transaction types
       oneTimeExpense: 'הוצאה חד פעמית',
@@ -837,14 +830,6 @@ const translations = {
       addIncome: 'הוסף הכנסה',
       addExpense: 'הוסף הוצאה',
       
-      // Frequencies - ✅ הוספתי חלק זה
-      frequencies: {
-        daily: 'יומי',
-        weekly: 'שבועי',
-        monthly: 'חודשי',
-        yearly: 'שנתי'
-      },
-      
       // Errors
       errors: {
         addingTransaction: 'שגיאה בהוספת עסקה',
@@ -854,9 +839,8 @@ const translations = {
       }
     },
 
-    // Categories - ✅ הוספתי title
+    // Categories
     categories: {
-      title: 'קטגוריות', // ✅ הוספתי
       Salary: 'משכורת',
       Freelance: 'עבודה עצמאית',
       Investments: 'השקעות',
@@ -866,14 +850,6 @@ const translations = {
       Utilities: 'שירותים',
       Entertainment: 'בילויים',
       General: 'כללי'
-    },
-
-    // ✅ הוספת home במקום dashboard בכמה מקומות
-    home: {
-      balance: {
-        income: 'הכנסות',
-        expenses: 'הוצאות'
-      }
     },
 
     // Profile
@@ -895,10 +871,30 @@ const translations = {
       tabs: {
         general: 'כללי',
         security: 'אבטחה',
-        preferences: 'העדפות'
+        preferences: 'העדפות',
+        billing: 'חיוב' // ✅ הוספתי
       },
       
+      // ✅ הוספת תרגומים חסרים
+      stats: {
+        totalTransactions: 'סך עסקאות',
+        thisMonth: 'החודש',
+        activeDays: 'חבר כבר',
+        successRate: 'אחוז הצלחה',
+        days: 'ימים',
+        months: 'חודשים',
+        years: 'שנים'
+      },
+      
+      quickActions: 'פעולות מהירות',
+      exportData: 'ייצא נתונים',
+      notifications: 'התראות',
+      comingSoon: 'בקרוב',
+      logoutConfirm: 'אישור התנתקות',
+      logoutConfirmDesc: 'האם אתה בטוח שברצונך להתנתק?',
+      
       securitySettings: 'הגדרות אבטחה',
+      billingSettings: 'חיוב ומנוי',
       passwordRequirements: 'דרישות סיסמה',
       passwordMinLength: 'מינימום 8 תווים',
       passwordRequireNumber: 'חייב להכיל לפחות מספר אחד',

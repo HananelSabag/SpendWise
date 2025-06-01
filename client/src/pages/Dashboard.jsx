@@ -18,7 +18,8 @@ import {
   Sparkles,
   Plus,
   MoreHorizontal,
-  X
+  X,
+  User
 } from 'lucide-react';
 
 // Features
@@ -30,6 +31,7 @@ import RecentTransactions from '../components/features/dashboard/RecentTransacti
 // UI Components
 import { Card, Badge, LoadingSpinner, Button } from '../components/ui';
 import AccessibilityMenu from '../components/common/AccessibilityMenu';
+import { Link } from 'react-router-dom'; // ✅ הוספת import חסר ל-Link
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -425,6 +427,17 @@ const Dashboard = () => {
                     >
                       {t('transactions.recurring')}
                     </Button>
+                    {/* ✅ הוספת קישור לפרופיל בתפריט הצף */}
+                    <Link to="/profile">
+                      <Button 
+                        variant="ghost" 
+                        size="small" 
+                        className="justify-start w-full"
+                        icon={User}
+                      >
+                        {t('nav.profile')}
+                      </Button>
+                    </Link>
                   </div>
                 </motion.div>
               )}

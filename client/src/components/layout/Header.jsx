@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import { Avatar } from '../ui';
+import { cn } from '../../utils/helpers';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +27,7 @@ const Header = () => {
   const { t, language, toggleLanguage } = useLanguage();
   const { darkMode, setDarkMode } = useAccessibility();
   const location = useLocation();
+  const { pathname } = location;
   const isRTL = language === 'he';
   
   // Check if the path is active
@@ -161,13 +163,17 @@ const Header = () => {
                     </p>
                   </div>
                   
+                  {/* Profile Link */}
                   <Link
-                    to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                    role="menuitem"
+                    to="/profile" // ✅ תיקון הניתוב לפרופיל
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-2 rounded-lg transition-colors',
+                      'hover:bg-gray-100 dark:hover:bg-gray-700',
+                      'text-gray-700 dark:text-gray-300'
+                    )}
                     onClick={() => setShowDropdown(false)}
                   >
-                    <User className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" />
+                    <User className="w-4 h-4" />
                     {t('nav.profile')}
                   </Link>
                   
