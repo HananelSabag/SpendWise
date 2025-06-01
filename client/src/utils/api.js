@@ -100,6 +100,17 @@ api.interceptors.response.use(
   }
 );
 
+// Helper function to format dates consistently for API calls
+const formatDateForAPI = (date) => {
+  if (!date) return undefined;
+  
+  // Make sure we have a Date object
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  // Always send YYYY-MM-DD format to the server
+  return dateObj.toISOString().split('T')[0];
+};
+
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
@@ -117,23 +128,41 @@ export const authAPI = {
   },
 };
 
+// Helper function to trigger dashboard refresh without direct queryClient dependency
+const invalidateAndRefreshQueries = async (queryKey) => {
+  // Instead of accessing queryClient directly, dispatch a custom event
+  // that will be caught by the appropriate components
+  const event = new CustomEvent('dashboard-refresh-requested', { 
+    detail: { queryKey }
+  });
+  window.dispatchEvent(event);
+  
+  console.log(`[API] Refresh requested for: ${queryKey}`);
+  return true;
+};
+
 // Transaction API - All endpoints including new dashboard
 export const transactionAPI = {
   // NEW - Single dashboard call instead of 3!
-  getDashboard: (date) => api.get('/transactions/dashboard', { 
-    params: { date: date?.toISOString().split('T')[0] }
-  }),
+  getDashboard: (date) => {
+    const formattedDate = formatDateForAPI(date);
+    console.log('[DEBUG] API getDashboard date:', formattedDate);
+    
+    return api.get('/transactions/dashboard', { 
+      params: { date: formattedDate }
+    });
+  },
   
   // Legacy endpoints (still supported)
   getRecent: (limit = 5, date) => api.get('/transactions/recent', { 
     params: { 
       limit, 
-      date: date?.toISOString().split('T')[0]
+      date: formatDateForAPI(date)
     }
   }),
   
   getByPeriod: (period, date) => api.get(`/transactions/period/${period}`, {
-    params: { date: date.toISOString().split('T')[0] }
+    params: { date: formatDateForAPI(date) }
   }),
   
   getRecurring: (type) => api.get('/transactions/recurring', {
@@ -141,7 +170,7 @@ export const transactionAPI = {
   }),
   
   getBalanceDetails: (date) => api.get('/transactions/balance/details', {
-    params: { date: date.toISOString().split('T')[0] }
+    params: { date: formatDateForAPI(date) }
   }),
   
   getSummary: () => api.get('/transactions/summary'),
@@ -176,12 +205,20 @@ export const transactionAPI = {
   getCategoryBreakdown: (startDate, endDate) => 
     api.get('/transactions/categories/breakdown', {
       params: { 
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
+        startDate: formatDateForAPI(startDate),
+        endDate: formatDateForAPI(endDate)
       }
     }),
   
   getStats: (months = 12) => api.get('/transactions/stats', { params: { months } }),
+  
+  // Function to force refresh dashboard data
+  forceRefreshDashboard: async () => {
+    return invalidateAndRefreshQueries('dashboard');
+  },
+  
+  // Convenience method for dashboard refresh
+  refreshDashboard: () => transactionAPI.forceRefreshDashboard(),
 };
 
 // Utility function to handle API errors
@@ -201,7 +238,7 @@ export const queryKeys = {
   profile: ['profile'],
   
   // Transactions
-  dashboard: (date) => ['dashboard', date?.toISOString().split('T')[0]],
+  dashboard: (date) => ['dashboard', formatDateForAPI(date)],
   transactions: (filters) => ['transactions', filters],
   recurring: (type) => ['recurring', type],
   templates: ['templates'],

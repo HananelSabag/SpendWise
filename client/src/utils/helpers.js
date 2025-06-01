@@ -96,6 +96,25 @@ export const numbers = {
   
   clamp: (value, min, max) => {
     return Math.min(Math.max(value, min), max);
+  },
+  
+  formatAmount: (amount) => {
+    // Check if amount is null, undefined or NaN
+    if (amount == null || isNaN(amount)) {
+      return '0';
+    }
+    
+    // Convert to number and handle decimals
+    const num = parseFloat(amount);
+    return num.toFixed(Math.abs(num) < 1000 ? 2 : 0);
+  },
+
+  parseAmount: (value) => {
+    if (!value) return 0;
+    // Remove all non-numeric characters except decimal point and minus
+    const cleaned = String(value).replace(/[^\d.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
   }
 };
 

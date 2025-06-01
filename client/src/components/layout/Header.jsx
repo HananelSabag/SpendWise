@@ -1,150 +1,283 @@
 // components/layout/Header.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
-  UserCircle, 
-  ClipboardList, 
+  Menu, 
+  X, 
   Home, 
-  LogOut, 
-  ChevronDown,
-  Settings,
-  User
+  CreditCard, 
+  User, 
+  LogOut,
+  Moon,
+  Sun,
+  Bell,
+  ChevronDown
 } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import Dropdown from '../ui/Dropdown';
+import { useLanguage } from '../../context/LanguageContext';
+import { useAccessibility } from '../../context/AccessibilityContext';
+import { Avatar } from '../ui';
 
-const Header = ({ title, greeting }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { t, language } = useLanguage();
+const Header = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const { user, logout } = useAuth();
+  const { t, language, toggleLanguage } = useLanguage();
+  const { darkMode, setDarkMode } = useAccessibility();
+  const location = useLocation();
   const isRTL = language === 'he';
   
-  const isHomePage = location.pathname === '/dashboard';
-  const isTransactionsPage = location.pathname === '/transactions';
+  // Check if the path is active
+  const isActivePath = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
+  // Animation variants
+  const menuVariants = {
+    closed: {
+      opacity: 0,
+      y: -20,
+      transition: { duration: 0.2 }
+    },
+    open: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3, staggerChildren: 0.07 }
     }
   };
 
-  const navigationItems = [
-    {
-      path: '/dashboard',
-      icon: Home,
-      label: t('nav.home'),
-      show: !isHomePage
-    },
-    {
-      path: '/transactions',
-      icon: ClipboardList,
-      label: t('nav.transactions'),
-      show: !isTransactionsPage
-    }
+  const itemVariants = {
+    closed: { opacity: 0, x: isRTL ? 20 : -20 },
+    open: { opacity: 1, x: 0 }
+  };
+
+  // Updated navigation items - only include pages that exist
+  const navigation = [
+    { name: t('nav.dashboard'), href: '/', icon: Home },
+    { name: t('nav.transactions'), href: '/transactions', icon: CreditCard },
+    { name: t('nav.profile'), href: '/profile', icon: User }
   ];
 
   return (
-    <header className="bg-primary-400 dark:bg-primary-900 shadow-md">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <span className="text-xl font-bold text-white">S</span>
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Logo and Navigation */}
+          <div className="flex">
+            {/* Logo */}
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" className="flex items-center">
+                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">
+                  SpendWise
+                </span>
+              </Link>
             </div>
-            <h1 className="text-xl font-bold text-white">SpendWise</h1>
-          </Link>
-
-          {/* Center Title/Greeting */}
-          {(greeting || title) && (
-            <div className="absolute left-1/2 transform -translate-x-1/2 hidden sm:block">
-              <div className="bg-white/20 backdrop-blur-sm px-6 py-2 rounded-full">
-                <h1 className="text-xl font-bold text-white">
-                  {greeting || title}
-                </h1>
-              </div>
-            </div>
-          )}
-
-          {/* Right Navigation */}
-          <div className="flex items-center gap-2">
-            {/* Navigation Buttons */}
-            {navigationItems
-              .filter(item => item.show)
-              .map(item => (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
-                  aria-label={item.label}
-                  title={item.label}
-                >
-                  <item.icon className="h-6 w-6" />
-                </button>
-              ))}
             
-            {/* User Menu */}
-            <Dropdown
-              trigger={
-                <button className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors flex items-center gap-1">
-                  <UserCircle className="h-6 w-6" />
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              }
-              align="right"
+            {/* Desktop Navigation */}
+            <nav className="hidden md:ml-6 md:flex md:space-x-4 rtl:space-x-reverse">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                    isActivePath(item.href)
+                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                  }`}
+                  aria-current={isActivePath(item.href) ? 'page' : undefined}
+                >
+                  <item.icon className={`h-5 w-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          {/* Right side actions */}
+          <div className="flex items-center">
+            {/* Theme toggle */}
+            <button
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label={t('common.toggleTheme')}
             >
-              <div className="py-2">
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.username}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user?.email}
-                  </p>
-                </div>
-                
-                <Dropdown.Item onClick={() => navigate('/profile')}>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {t('nav.profile')}
+              <Sun className="h-5 w-5 hidden dark:block" />
+              <Moon className="h-5 w-5 block dark:hidden" />
+            </button>
+            
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 hidden sm:block ml-2"
+              aria-label={t('common.toggleLanguage')}
+            >
+              <span className="text-sm font-medium">
+                {language === 'en' ? 'עב' : 'EN'}
+              </span>
+            </button>
+
+            {/* User Dropdown */}
+            <div className="ml-3 relative">
+              <div>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center max-w-xs rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  id="user-menu"
+                  aria-haspopup="true"
+                >
+                  <span className="sr-only">{t('common.openUserMenu')}</span>
+                  <div className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <Avatar 
+                      size="small" 
+                      name={user?.username || 'User'} 
+                      src={user?.avatar} 
+                    />
+                    <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {user?.username || 'User'}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   </div>
-                </Dropdown.Item>
-                
-                <Dropdown.Item onClick={() => navigate('/settings')}>
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    {t('nav.settings')}
-                  </div>
-                </Dropdown.Item>
-                
-                <Dropdown.Divider />
-                
-                <Dropdown.Item onClick={handleLogout} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
-                  <div className="flex items-center gap-2">
-                    <LogOut className="h-4 w-4" />
-                    {t('nav.logout')}
-                  </div>
-                </Dropdown.Item>
+                </button>
               </div>
-            </Dropdown>
+              
+              {/* User Dropdown Menu */}
+              {showDropdown && (
+                <div
+                  className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none"
+                  role="menu"
+                  aria-orientation="vertical"
+                  aria-labelledby="user-menu"
+                >
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {user?.username || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {user?.email || 'user@example.com'}
+                    </p>
+                  </div>
+                  
+                  <Link
+                    to="/profile"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    role="menuitem"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <User className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400" />
+                    {t('nav.profile')}
+                  </Link>
+                  
+                  <button
+                    onClick={() => {
+                      logout();
+                      setShowDropdown(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+                    role="menuitem"
+                  >
+                    <LogOut className="h-4 w-4 mr-3 text-red-500 dark:text-red-400" />
+                    {t('auth.logout')}
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Mobile menu button */}
+            <div className="flex md:hidden ml-3">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                aria-expanded={isOpen}
+              >
+                <span className="sr-only">
+                  {isOpen ? t('common.closeMenu') : t('common.openMenu')}
+                </span>
+                {isOpen ? (
+                  <X className="block h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Title */}
-        {(greeting || title) && (
-          <div className="sm:hidden text-center py-2 pb-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg mx-auto inline-block px-4 py-1">
-              <h2 className="text-lg font-medium text-white truncate px-2">
-                {greeting || title}
-              </h2>
+      {/* Mobile menu */}
+      <motion.div
+        className={`md:hidden ${isOpen ? 'block' : 'hidden'}`}
+        initial="closed"
+        animate={isOpen ? "open" : "closed"}
+        variants={menuVariants}
+      >
+        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200 dark:border-gray-700">
+          {navigation.map((item) => (
+            <motion.div key={item.name} variants={itemVariants}>
+              <Link
+                to={item.href}
+                className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                  isActivePath(item.href)
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
+                aria-current={isActivePath(item.href) ? 'page' : undefined}
+                onClick={() => setIsOpen(false)}
+              >
+                <item.icon className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+                {item.name}
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+        
+        {/* Mobile menu additional actions */}
+        <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center px-5">
+            <div className="flex-shrink-0">
+              <Avatar size="small" name={user?.username || 'User'} src={user?.avatar} />
+            </div>
+            <div className={`${isRTL ? 'mr-3' : 'ml-3'}`}>
+              <div className="text-base font-medium text-gray-800 dark:text-gray-200">
+                {user?.username || 'User'}
+              </div>
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {user?.email || 'user@example.com'}
+              </div>
             </div>
           </div>
-        )}
-      </div>
+          
+          <div className="mt-3 px-2 space-y-1">
+            <motion.div variants={itemVariants}>
+              <button
+                onClick={() => {
+                  toggleLanguage();
+                  setIsOpen(false);
+                }}
+                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                {language === 'en' ? 'עברית' : 'English'}
+              </button>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <button
+                onClick={() => {
+                  logout();
+                  setIsOpen(false);
+                }}
+                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-800"
+              >
+                <LogOut className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'} text-red-500 dark:text-red-400`} />
+                {t('auth.logout')}
+              </button>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
     </header>
   );
 };

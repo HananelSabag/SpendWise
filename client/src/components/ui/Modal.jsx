@@ -1,115 +1,134 @@
 // components/ui/Modal.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../utils/helpers';
-import { useLanguage } from '../../context/LanguageContext';
 
-const Modal = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-  footer,
-  size = 'default',
-  closeOnBackdrop = true,
-  closeOnEscape = true,
+const sizes = {
+  small: "max-w-md",
+  medium: "max-w-lg",
+  large: "max-w-2xl",
+  xl: "max-w-4xl",
+  full: "max-w-full mx-4"
+};
+
+const Modal = ({ 
+  isOpen, 
+  onClose, 
+  children, 
+  title, 
+  size = "medium", 
+  className = "",
   showCloseButton = true,
-  className = '',
-  contentClassName = '',
-  ...props
+  preventBackdropClose = false,
+  // החלק החשוב: אופציה לביטול הצגת כותרת וכפתור סגירה מובנים
+  hideHeader = false
 }) => {
-  const modalRef = useRef(null);
-  const { language } = useLanguage();
-  const isRTL = language === 'he';
-
-  const sizes = {
-    small: 'max-w-md',
-    default: 'max-w-lg',
-    large: 'max-w-2xl',
-    full: 'max-w-5xl'
-  };
-
+  // נהל את לחיצת ESC כדי לסגור את המודל
   useEffect(() => {
     const handleEscape = (e) => {
-      if (closeOnEscape && e.key === 'Escape') {
+      if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
 
+  // מנע גלילה בגוף המסמך כשהמודל פתוח
+  useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-
+    
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
+      document.body.style.overflow = 'unset';
     };
-  }, [isOpen, closeOnEscape, onClose]);
+  }, [isOpen]);
 
+  // וריאנטים להנפשה
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  };
+
+  const modalVariants = {
+    hidden: { scale: 0.95, opacity: 0 },
+    visible: { 
+      scale: 1, 
+      opacity: 1,
+      transition: { type: "spring", duration: 0.4 }
+    },
+    exit: { scale: 0.95, opacity: 0, transition: { duration: 0.2 } }
+  };
+
+  // סגור רק כשלוחצים על המשטח האפור, לא על המודל עצמו
+  const handleBackdropClick = (e) => {
+    if (!preventBackdropClose && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // אם המודל לא פתוח, אל תחזיר כלום
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/50 transition-opacity"
-          onClick={closeOnBackdrop ? onClose : undefined}
-        />
-
-        {/* Modal */}
-        <div
-          ref={modalRef}
-          className={cn(
-            'relative inline-block w-full align-bottom bg-white dark:bg-gray-800',
-            'rounded-xl text-left overflow-hidden shadow-xl',
-            'transform transition-all sm:my-8 sm:align-middle',
-            sizes[size],
-            className
-          )}
-          dir={isRTL ? 'rtl' : 'ltr'}
-          {...props}
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 backdrop-blur-sm"
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={backdropVariants}
+          onClick={handleBackdropClick}
+          data-testid="modal-backdrop"
         >
-          {/* Header */}
-          {(title || showCloseButton) && (
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                {title && (
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {title}
-                  </h3>
-                )}
+          <motion.div
+            className={cn(
+              "relative bg-white dark:bg-gray-800 w-full rounded-xl shadow-xl overflow-hidden",
+              sizes[size],
+              className
+            )}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="modal-content"
+          >
+            {/* כותרת רק אם לא מוסתרת */}
+            {!hideHeader && title && (
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {title}
+                </h3>
                 {showCloseButton && (
                   <button
+                    className="p-1 text-gray-500 rounded-lg hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
                     onClick={onClose}
-                    className={cn(
-                      'p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-                      !title && 'ml-auto'
-                    )}
+                    aria-label="Close"
+                    data-testid="modal-close-button"
                   >
-                    <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    <X className="w-5 h-5" />
                   </button>
                 )}
               </div>
+            )}
+            <div className="p-4 overflow-y-auto max-h-[80vh]">
+              {children}
             </div>
-          )}
-
-          {/* Content */}
-          <div className={cn('px-6 py-4', contentClassName)}>
-            {children}
-          </div>
-
-          {/* Footer */}
-          {footer && (
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              {footer}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.getElementById('portal-root') || document.body);
 };
 
 export default Modal;

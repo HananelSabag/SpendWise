@@ -14,7 +14,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  Sparkles
+  Sparkles,
+  Plus,
+  MoreHorizontal
 } from 'lucide-react';
 
 // Features
@@ -24,14 +26,17 @@ import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
 
 // UI Components
-import { Card, Badge, LoadingSpinner } from '../components/ui';
+import { Card, Badge, LoadingSpinner, Button } from '../components/ui';
+import AccessibilityMenu from '../components/common/AccessibilityMenu';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { selectedDate, formatDate } = useDate();
   const [loading, setLoading] = useState(true);
-  const [showWelcome, setShowWelcome] = useState(true);
+  // Remove auto-hiding welcome banner
+  // const [showWelcome, setShowWelcome] = useState(true);
+  const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   
   const isRTL = language === 'he';
 
@@ -52,11 +57,13 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Hide welcome after 5 seconds
+  // Remove auto-hiding welcome timer
+  /*
   useEffect(() => {
     const timer = setTimeout(() => setShowWelcome(false), 5000);
     return () => clearTimeout(timer);
   }, []);
+  */
 
   // Animation variants
   const containerVariants = {
@@ -93,12 +100,11 @@ const Dashboard = () => {
         stiffness: 200,
         damping: 20
       }
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9,
-      transition: { duration: 0.3 }
     }
+  };
+
+  const toggleFloatingMenu = () => {
+    setShowFloatingMenu(!showFloatingMenu);
   };
 
   if (loading) {
@@ -120,57 +126,64 @@ const Dashboard = () => {
             className="space-y-6"
             dir={isRTL ? 'rtl' : 'ltr'}
           >
-            {/* Welcome Banner */}
-            <AnimatePresence>
-              {showWelcome && (
-                <motion.div
-                  variants={welcomeVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className="relative overflow-hidden"
-                >
-                  <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-6 sm:p-8">
-                    {/* Animated Background Pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="absolute -top-4 -right-4 w-24 h-24 bg-white rounded-full blur-2xl animate-pulse" />
-                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full blur-3xl animate-pulse delay-700" />
+            {/* Welcome Banner - Always visible now */}
+            <motion.div
+              variants={welcomeVariants}
+              initial="initial"
+              animate="animate"
+              className="relative overflow-hidden"
+            >
+              <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-6 sm:p-8 shadow-lg">
+                {/* Enhanced Animated Background Pattern */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
+                  <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
+                  {/* Add more subtle animated shapes */}
+                  <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
+                        {getGreeting()}
+                        <motion.div
+                          animate={{ rotate: [0, 10, -10, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                        >
+                          <Sparkles className="w-6 h-6" />
+                        </motion.div>
+                      </h1>
+                      <p className="text-white/90 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {formatDate(selectedDate, language === 'he' ? 'PPP' : 'PPPP')}
+                      </p>
                     </div>
                     
-                    <div className="relative z-10">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                          <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
-                            {getGreeting()}
-                            <motion.div
-                              animate={{ rotate: [0, 10, -10, 0] }}
-                              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                            >
-                              <Sparkles className="w-6 h-6" />
-                            </motion.div>
-                          </h1>
-                          <p className="text-white/90 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(selectedDate, language === 'he' ? 'PPP' : 'PPPP')}
-                          </p>
-                        </div>
-                        
-                        {/* Quick Stats */}
-                        <div className="flex gap-4">
-                          <Badge 
-                            variant="default" 
-                            className="bg-white/20 text-white border-white/30 px-4 py-2"
-                          >
-                            <Activity className="w-4 h-4 mr-1" />
-                            {t('common.active')}
-                          </Badge>
-                        </div>
-                      </div>
+                    {/* Quick Stats */}
+                    <div className="flex flex-wrap gap-3">
+                      <Badge 
+                        variant="default" 
+                        className="bg-white/20 text-white border-white/30 px-4 py-2"
+                      >
+                        <Activity className="w-4 h-4 mr-2" />
+                        {t('common.active')}
+                      </Badge>
+                      
+                      {/* Add more badges for visual richness */}
+                      <Badge 
+                        variant="default" 
+                        className="bg-primary-700/50 text-white border-white/30 px-4 py-2"
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {new Date().toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {month: 'short'})}
+                      </Badge>
                     </div>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
 
             {/* Main Grid Layout */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -203,6 +216,19 @@ const Dashboard = () => {
                 <motion.div variants={itemVariants}>
                   <RecentTransactions />
                 </motion.div>
+                
+                {/* New Colorful Tips Card */}
+                <motion.div variants={itemVariants}>
+                  <Card className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white p-4 border-0 shadow-lg">
+                    <h3 className="font-semibold text-lg mb-2 flex items-center">
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      {t('dashboard.tips.title') || "Finance Tip"}
+                    </h3>
+                    <p className="text-sm text-white/90">
+                      {t('dashboard.tips.content') || "Track your daily expenses to identify spending patterns and potential savings opportunities."}
+                    </p>
+                  </Card>
+                </motion.div>
               </div>
             </div>
 
@@ -212,7 +238,7 @@ const Dashboard = () => {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8"
             >
               {/* Daily Average Card */}
-              <Card className="p-4 hover:shadow-lg transition-shadow">
+              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -229,7 +255,7 @@ const Dashboard = () => {
               </Card>
 
               {/* Monthly Goal Card */}
-              <Card className="p-4 hover:shadow-lg transition-shadow">
+              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-gray-800 dark:to-gray-900 border-green-100 dark:border-green-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -246,7 +272,7 @@ const Dashboard = () => {
               </Card>
 
               {/* Recurring Count Card */}
-              <Card className="p-4 hover:shadow-lg transition-shadow">
+              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-purple-100 dark:border-purple-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -263,7 +289,7 @@ const Dashboard = () => {
               </Card>
 
               {/* This Month Saved Card */}
-              <Card className="p-4 hover:shadow-lg transition-shadow">
+              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-gray-800 dark:to-gray-900 border-green-100 dark:border-green-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -282,6 +308,67 @@ const Dashboard = () => {
           </motion.div>
         </div>
       </div>
+      
+      {/* Floating Action Button */}
+      <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40`}>
+        <div className="flex flex-col items-end space-y-3">
+          {/* Floating Menu */}
+          <AnimatePresence>
+            {showFloatingMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2"
+              >
+                <div className="flex flex-col space-y-2">
+                  <Button 
+                    variant="ghost" 
+                    size="small" 
+                    className="justify-start"
+                    icon={TrendingUp}
+                  >
+                    {t('actions.addIncome')}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="small" 
+                    className="justify-start"
+                    icon={TrendingDown}
+                  >
+                    {t('actions.addExpense')}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="small" 
+                    className="justify-start"
+                    icon={Clock}
+                  >
+                    {t('actions.recurring')}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Main Floating Button */}
+          <Button
+            variant="primary"
+            className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center"
+            onClick={toggleFloatingMenu}
+            aria-label={t('actions.quickAdd')}
+          >
+            {showFloatingMenu ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Plus className="w-6 h-6" />
+            )}
+          </Button>
+        </div>
+      </div>
+      
+      {/* Accessibility Menu */}
+      <AccessibilityMenu />
     </TransactionProvider>
   );
 };

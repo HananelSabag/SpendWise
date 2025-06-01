@@ -17,146 +17,191 @@ class DBQueries {
    */
   static async getDashboardData(userId, targetDate = new Date()) {
     const client = await db.pool.connect();
-    
+
     try {
-      // Normalize date to midnight
-      targetDate.setHours(0, 0, 0, 0);
+      // Normalize the date string to ensure correct format (YYYY-MM-DD)
+      let dateStr;
+      
+      // Handle different date input formats
+      if (targetDate instanceof Date) {
+        dateStr = targetDate.toISOString().split('T')[0];
+      } else if (typeof targetDate === 'string') {
+        // Validate the date string format
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (dateRegex.test(targetDate)) {
+          dateStr = targetDate;
+        } else {
+          // Try to parse the date string
+          const parsedDate = new Date(targetDate);
+          dateStr = parsedDate.toISOString().split('T')[0];
+        }
+      } else {
+        // Default to today if input is invalid
+        dateStr = new Date().toISOString().split('T')[0];
+      }
+      
+      console.log('[DEBUG] getDashboardData called for userId:', userId, 'date:', dateStr);
+      console.log('[DEBUG][getDashboardData] userId:', userId, 'targetDate:', dateStr);
+
+      // הוסף לוגיקה לדיבוג טובה יותר של תאריכים
+      const checkDates = await client.query(`
+        SELECT date FROM expenses 
+        WHERE user_id = $1 
+        ORDER BY date DESC 
+        LIMIT 5
+      `, [userId]);
+      
+      console.log('[DEBUG] Most recent transaction dates:', checkDates.rows.map(r => r.date));
       
       const result = await client.query(`
-        WITH date_params AS (
-          SELECT 
-            $2::date as target_date,
-            DATE_TRUNC('week', $2::date) as week_start,
-            DATE_TRUNC('month', $2::date) as month_start,
-            DATE_TRUNC('year', $2::date) as year_start
-        ),
-        -- Recent transactions with smart limits
-        recent_transactions AS (
-          SELECT * FROM (
-            SELECT 
-              e.id,
-              'expense' as type,
-              e.amount,
-              e.description,
-              e.date,
-              c.name as category_name,
-              c.icon as category_icon,
-              e.template_id,
-              e.created_at
-            FROM expenses e
-            LEFT JOIN categories c ON e.category_id = c.id
-            WHERE e.user_id = $1 
-              AND e.deleted_at IS NULL
-              AND e.date <= (SELECT target_date FROM date_params)
-            ORDER BY e.date DESC, e.created_at DESC
-            LIMIT 10
-          ) expenses_recent
-          
-          UNION ALL
-          
-          SELECT * FROM (
-            SELECT 
-              i.id,
-              'income' as type,
-              i.amount,
-              i.description,
-              i.date,
-              c.name as category_name,
-              c.icon as category_icon,
-              i.template_id,
-              i.created_at
-            FROM income i
-            LEFT JOIN categories c ON i.category_id = c.id
-            WHERE i.user_id = $1 
-              AND i.deleted_at IS NULL
-              AND i.date <= (SELECT target_date FROM date_params)
-            ORDER BY i.date DESC, i.created_at DESC
-            LIMIT 10
-          ) income_recent
-        ),
-        -- Balance calculations for all periods
-        balance_data AS (
-          SELECT 
-            -- Daily
-            (SELECT * FROM get_period_balance($1, 
-              (SELECT target_date FROM date_params), 
-              (SELECT target_date FROM date_params)
-            )) as daily,
-            -- Weekly
-            (SELECT * FROM get_period_balance($1, 
-              (SELECT week_start FROM date_params), 
-              (SELECT target_date FROM date_params)
-            )) as weekly,
-            -- Monthly
-            (SELECT * FROM get_period_balance($1, 
-              (SELECT month_start FROM date_params), 
-              (SELECT target_date FROM date_params)
-            )) as monthly,
-            -- Yearly
-            (SELECT * FROM get_period_balance($1, 
-              (SELECT year_start FROM date_params), 
-              (SELECT target_date FROM date_params)
-            )) as yearly
-        ),
-        -- Active recurring templates
-        recurring_summary AS (
-          SELECT 
-            COUNT(*) FILTER (WHERE type = 'income') as income_count,
-            COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
-            COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as recurring_income,
-            COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as recurring_expense
-          FROM recurring_templates
-          WHERE user_id = $1 AND is_active = true
-        ),
-        -- User stats
-        user_stats AS (
-          SELECT * FROM get_user_stats($1)
-        ),
-        -- Categories for quick expense
-        user_categories AS (
-          SELECT 
-            id,
-            name,
-            icon,
-            type
-          FROM categories
-          WHERE type = 'expense' OR type IS NULL
-          ORDER BY is_default DESC, name ASC
-        )
-        -- Combine all results
+      WITH date_params AS (
         SELECT 
-          -- Recent transactions
-          (SELECT json_agg(t.* ORDER BY t.date DESC, t.created_at DESC) 
-           FROM recent_transactions t) as recent_transactions,
-          
-          -- Balance data
-          (SELECT row_to_json(daily) FROM balance_data) as daily_balance,
-          (SELECT row_to_json(weekly) FROM balance_data) as weekly_balance,
-          (SELECT row_to_json(monthly) FROM balance_data) as monthly_balance,
-          (SELECT row_to_json(yearly) FROM balance_data) as yearly_balance,
-          
-          -- Recurring info
-          (SELECT row_to_json(recurring_summary)) as recurring_info,
-          
-          -- User stats
-          (SELECT row_to_json(user_stats)) as statistics,
-          
-          -- Categories
-          (SELECT json_agg(c.*) FROM user_categories c) as categories,
-          
-          -- Metadata
-          json_build_object(
-            'calculated_at', NOW(),
-            'target_date', (SELECT target_date FROM date_params),
-            'periods', json_build_object(
-              'week_start', (SELECT week_start FROM date_params),
-              'month_start', (SELECT month_start FROM date_params),
-              'year_start', (SELECT year_start FROM date_params)
-            )
-          ) as metadata;
-      `, [userId, targetDate]);
+          $2::date as target_date,
+          DATE_TRUNC('week', $2::date) as week_start,
+          DATE_TRUNC('month', $2::date) as month_start,
+          DATE_TRUNC('year', $2::date) as year_start
+      ),
+      recent_transactions AS (
+        SELECT * FROM (
+          SELECT 
+            e.id,
+            'expense' as type,
+            e.amount,
+            e.description,
+            e.date,
+            c.name as category_name,
+            c.icon as category_icon,
+            e.template_id,
+            e.created_at
+          FROM expenses e
+          LEFT JOIN categories c ON e.category_id = c.id
+          WHERE e.user_id = $1 
+            AND e.deleted_at IS NULL
+          ORDER BY e.date DESC, e.created_at DESC
+          LIMIT 10
+        ) expenses_recent
+        
+        UNION ALL
+        
+        SELECT * FROM (
+          SELECT 
+            i.id,
+            'income' as type,
+            i.amount,
+            i.description,
+            i.date,
+            c.name as category_name,
+            c.icon as category_icon,
+            i.template_id,
+            i.created_at
+          FROM income i
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE i.user_id = $1 
+            AND i.deleted_at IS NULL
+          ORDER BY i.date DESC, i.created_at DESC
+          LIMIT 10
+        ) income_recent
+      ),
+      balance_data AS (
+        SELECT 
+          get_period_balance($1, (SELECT target_date::date FROM date_params), (SELECT target_date::date FROM date_params)) as daily,
+          get_period_balance($1, (SELECT week_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as weekly,
+          get_period_balance($1, (SELECT month_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as monthly,
+          get_period_balance($1, (SELECT year_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as yearly
+      ),
+      recurring_summary AS (
+        SELECT 
+          COUNT(*) FILTER (WHERE type = 'income') as income_count,
+          COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
+          COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as recurring_income,
+          COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as recurring_expense
+        FROM recurring_templates
+        WHERE user_id = $1 AND is_active = true
+      ),
+      user_stats AS (
+        SELECT * FROM get_user_stats($1)
+      ),
+      user_categories AS (
+        SELECT 
+          id,
+          name,
+          icon,
+          type
+        FROM categories
+        WHERE type = 'expense' OR type IS NULL
+        ORDER BY is_default DESC, name ASC
+      )
+      SELECT 
+        (SELECT json_agg(t.* ORDER BY t.date DESC, t.created_at DESC) 
+         FROM recent_transactions t) as recent_transactions,
+        bd.daily as daily_balance,
+        bd.weekly as weekly_balance,
+        bd.monthly as monthly_balance,
+        bd.yearly as yearly_balance,
+(SELECT row_to_json(r) FROM recurring_summary r) as recurring_info,
+(SELECT row_to_json(u) FROM user_stats u) as statistics,
+        (SELECT json_agg(c.*) FROM user_categories c) as categories,
+        json_build_object(
+          'calculated_at', NOW(),
+          'target_date', (SELECT target_date FROM date_params),
+          'periods', json_build_object(
+            'week_start', (SELECT week_start FROM date_params),
+            'month_start', (SELECT month_start FROM date_params),
+            'year_start', (SELECT year_start FROM date_params)
+          )
+        ) as metadata
+      FROM balance_data bd`, [userId, dateStr]);
 
-      return result.rows[0];
+      // Process the balance data - convert from string tuple to JSON object
+      const processBalanceData = (balanceStr) => {
+        // Check if the balance is already an object
+        if (typeof balanceStr === 'object' && balanceStr !== null) {
+          return balanceStr;
+        }
+        
+        // Handle string tuple format "(income,expenses,balance)"
+        if (typeof balanceStr === 'string' && balanceStr.startsWith('(') && balanceStr.endsWith(')')) {
+          const values = balanceStr.substring(1, balanceStr.length - 1).split(',').map(Number);
+          return {
+            income: values[0] || 0,
+            expenses: values[1] || 0,
+            balance: values[2] || 0
+          };
+        }
+        
+        // Default fallback
+        return { income: 0, expenses: 0, balance: 0 };
+      };
+
+      const dashboardData = result.rows[0];
+      
+      // Process all balance data
+      dashboardData.daily_balance = processBalanceData(dashboardData.daily_balance);
+      dashboardData.weekly_balance = processBalanceData(dashboardData.weekly_balance);
+      dashboardData.monthly_balance = processBalanceData(dashboardData.monthly_balance);
+      dashboardData.yearly_balance = processBalanceData(dashboardData.yearly_balance);
+      
+      console.log('[DEBUG] Processed balance data:', {
+        daily: dashboardData.daily_balance,
+        weekly: dashboardData.weekly_balance,
+        monthly: dashboardData.monthly_balance,
+        yearly: dashboardData.yearly_balance
+      });
+
+      // הוסף השאילתה להצגת עסקאות באותו היום לצורכי דיבוג
+      const todayTransactions = await client.query(`
+        SELECT * FROM expenses 
+        WHERE user_id = $1 AND date = $2
+        ORDER BY created_at DESC
+      `, [userId, dateStr]);
+      
+      console.log(`[DEBUG] Transactions on ${dateStr}:`, 
+        todayTransactions.rows.length > 0 
+          ? todayTransactions.rows.map(t => `ID: ${t.id}, Amount: ${t.amount}, Date: ${t.date}`)
+          : 'No transactions found'
+      );
+      
+      return dashboardData;
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       throw error;
@@ -197,19 +242,19 @@ class DBQueries {
         conditions.push(`date >= $${paramCount}`);
         values.push(startDate);
       }
-      
+
       if (endDate) {
         paramCount++;
         conditions.push(`date <= $${paramCount}`);
         values.push(endDate);
       }
-      
+
       if (categoryId) {
         paramCount++;
         conditions.push(`category_id = $${paramCount}`);
         values.push(categoryId);
       }
-      
+
       if (templateId !== null) {
         paramCount++;
         if (templateId === 0) {
@@ -219,7 +264,7 @@ class DBQueries {
           values.push(templateId);
         }
       }
-      
+
       if (searchTerm) {
         paramCount++;
         conditions.push(`description ILIKE $${paramCount}`);
@@ -275,7 +320,7 @@ class DBQueries {
       values.push(limit, offset);
 
       const result = await db.query(finalQuery, values);
-      
+
       const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
       const transactions = result.rows.map(row => {
         const { total_count, ...transaction } = row;

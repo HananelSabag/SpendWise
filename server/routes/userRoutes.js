@@ -4,7 +4,6 @@ const { auth } = require('../middleware/auth');
 const userController = require('../controllers/userController');
 const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
-const { authLimiter } = require('../middleware/rateLimiter');
 
 /**
  * @route   POST /api/v1/users/register
@@ -20,8 +19,7 @@ router.post('/register',
  * @desc    User login
  */
 router.post('/login', 
-  authLimiter, 
-  validate.user,
+  validate.user,  // Keep only essential middleware
   userController.login
 );
 

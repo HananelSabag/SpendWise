@@ -15,6 +15,46 @@ export const useLanguage = () => {
 
 // Complete translations object
 const translations = {
+  calendar: {
+    weekDays: {
+      he: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
+      en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    },
+    previousMonth: {
+      he: 'חודש קודם',
+      en: 'Previous Month'
+    },
+    nextMonth: {
+      he: 'חודש הבא',
+      en: 'Next Month'
+    },
+    today: {
+      he: 'היום',
+      en: 'Today'
+    },
+    // נוסיף עוד תרגומים ללוח שנה
+    weekDaysShort: {
+      he: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
+      en: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+    },
+    months: {
+      he: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    },
+    monthsShort: {
+      he: ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'],
+      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    },
+    selectDate: {
+      he: 'בחר תאריך',
+      en: 'Select Date'
+    },
+    jumpToToday: {
+      he: 'קפוץ להיום',
+      en: 'Jump to Today'
+    }
+  },
+  
   // Common translations
   common: {
     loading: 'Loading...',
@@ -40,7 +80,12 @@ const translations = {
     success: 'Success',
     warning: 'Warning',
     info: 'Information',
-    continue: 'Continue'
+    continue: 'Continue',
+    active: 'Active',
+    toggleTheme: 'Toggle Theme',
+    toggleLanguage: 'Toggle Language',
+    openUserMenu: 'Open User Menu',
+    openMenu: 'Open Menu'
   },
 
   // Error messages
@@ -56,9 +101,12 @@ const translations = {
   // Navigation
   nav: {
     home: 'Home',
+    dashboard: 'Dashboard', // Added missing translation
     transactions: 'Transactions',
+    reports: 'Reports', // Added missing translation
+    settings: 'Settings', // Added missing translation
     profile: 'Profile',
-    logout: 'Logout',
+    logout: 'Logout', // Add explicit logout key
     userMenu: 'User Menu'
   },
 
@@ -90,6 +138,7 @@ const translations = {
     security: 'Security',
     startJourney: 'Start Your Financial Journey',
     joinThousands: 'Join thousands of users already managing their finances with SpendWise',
+    logout: 'Logout',
     
     // Password strength indicators
     weak: 'Weak',
@@ -159,7 +208,29 @@ const translations = {
       backToToday: 'Back to today',
       tooltip: 'Click the calendar to jump to any date. Use arrows to navigate day by day.',
       nextReset: 'Daily reset in: {{time}}',
-      calculateError: 'Unable to calculate balance'
+      calculateError: 'Unable to calculate balance',
+      periods: {
+        daily: {
+          en: 'Daily',
+          he: 'יומי'
+        },
+        weekly: {
+          en: 'Weekly',
+          he: 'שבועי'
+        },
+        monthly: {
+          en: 'Monthly',
+          he: 'חודשי'
+        },
+        yearly: {
+          en: 'Yearly',
+          he: 'שנתי'
+        }
+      },
+      viewingPastDate: {
+        en: 'You are viewing a past date. New transactions are added to today\'s date.',
+        he: 'אתה צופה בתאריך קודם. פעולות חדשות נוספות לתאריך הנוכחי.'
+      }
     },
     transactions: {
       recent: 'Recent Transactions',
@@ -170,36 +241,64 @@ const translations = {
     }
   },
 
-  // Actions Panel
+  // Quick Actions/Expenses
+  quickExpense: {
+    title: 'Quick Actions',
+    placeholder: 'Enter amount',
+    addExpense: 'Add Expense',
+    addIncome: 'Add Income',
+    defaultDescription: 'Quick transaction',
+    added: 'Added!',
+    fast: 'Quick Entry',
+    todayWarning: {
+      en: 'Transaction will be added to today, not the displayed date',
+      he: 'הפעולה תתווסף להיום, לא לתאריך המוצג'
+    },
+    switchToToday: {
+      en: 'Transaction added! Switch to today\'s view to see it?',
+      he: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?'
+    }
+  },
+
+  // Actions
   actions: {
     title: 'Add Transaction',
-    buttontitle: 'Add Transaction',
-    panel: {
-      subtitle: 'Select a transaction type to get started'
-    },
+    buttontitle: 'Add New Transaction',
+    quickActions: 'Quick Actions',
+    new: 'New',
     oneTimeExpense: 'One-time Expense',
+    oneTimeExpenseDesc: 'Add a single expense transaction',
     recurringExpense: 'Recurring Expense',
+    recurringExpenseDesc: 'Set up a repeating expense',
     oneTimeIncome: 'One-time Income',
+    oneTimeIncomeDesc: 'Add a single income transaction',
     recurringIncome: 'Recurring Income',
+    recurringIncomeDesc: 'Set up a repeating income',
+    fillDetails: 'Fill in transaction details',
+    selectType: 'Select transaction type',
     amount: 'Amount',
     amountPlaceholder: 'Enter amount',
     description: 'Description',
     descriptionPlaceholder: 'Enter description',
     category: 'Category',
     frequency: 'Frequency',
+    date: {
+      en: 'Date',
+      he: 'תאריך'
+    },
     frequencies: {
       daily: 'Daily',
       weekly: 'Weekly',
       monthly: 'Monthly'
     },
+    recurringOptions: 'Recurring Options',
+    endDate: 'End Date',
     options: 'Options',
     add: 'Add Transaction',
-    quickExpense: {
-      placeholder: 'Amount',
-      add: 'Add Expense',
-      addIncome: 'Add Income',
-      error: 'Error adding transaction'
-    },
+    addIncome: 'Add Income',
+    addExpense: 'Add Expense',
+    recurring: 'Recurring',
+    quickAdd: 'Quick Add', // Ensure this key is properly defined
     errors: {
       addingTransaction: 'Error adding transaction',
       invalidAmount: 'Please enter a valid amount',
@@ -358,10 +457,23 @@ const translations = {
     supportTitle: 'Support',
     supportDescription: 'For questions and support, please contact:',
     openSource: 'Open Source',
+    legal: 'Legal', // Added missing translation
+    privacy: 'Privacy Policy', // Added missing translation
+    terms: 'Terms of Service', // Added missing translation
+    accessibility: 'Accessibility', // Added missing translation
     accessibilityStatement: 'Accessibility Statement',
     allRightsReserved: 'All rights reserved',
     close: 'Close',
-    copyright: 'כל הזכויות שמורות © {{year}} SpendWise'
+    copyright: 'כל הזכויות שמורות © {{year}} SpendWise',
+    privacyShort: 'Privacy', // Added missing translation
+    accessibilityShort: 'Accessibility', // Added missing translation
+    
+    // Add these new keys
+    description: 'Smart personal finance management tool to help you track expenses and manage your budget efficiently.',
+    navigation: 'Navigation',
+    legal: 'Legal',
+    madeWith: 'Made with',
+    inIsrael: 'in Israel',
   },
 
   // Alert notifications
@@ -454,6 +566,48 @@ const translations = {
     }
   },
 
+  // Dashboard translations
+  dashboard: {
+    title: 'Dashboard',
+    subtitle: 'Overview of your finances',
+    greeting: {
+      morning: 'Good Morning',
+      afternoon: 'Good Afternoon',
+      evening: 'Good Evening',
+      night: 'Good Night'
+    },
+    stats: {
+      dailyAverage: 'Daily Average',
+      monthlyGoal: 'Monthly Goal',
+      recurringActive: 'Active Recurring',
+      savedThisMonth: 'Saved This Month'
+    },
+    balance: {
+      title: 'Balance Overview',
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+      income: 'Income',
+      expenses: 'Expenses',
+      total: 'Net Balance',
+      error: 'Unable to load balance data',
+      tooltip: 'Click the calendar to jump to any date'
+    },
+    transactions: {
+      recent: 'Recent Transactions',
+      viewAll: 'View All',
+      noTransactions: 'No transactions yet',
+      fetchError: 'Unable to load transactions'
+    },
+    
+    // Ensure tips section is properly defined
+    tips: {
+      title: 'Finance Tip',
+      content: 'Track your daily expenses to identify spending patterns and potential savings opportunities.'
+    }
+  },
+
   // Hebrew translations
   he: {
     // Common
@@ -481,15 +635,33 @@ const translations = {
       success: 'הצלחה',
       warning: 'אזהרה',
       info: 'מידע',
-      continue: 'המשך'
+      continue: 'המשך',
+      active: 'פעיל',
+      toggleTheme: 'החלף ערכת נושא',
+      toggleLanguage: 'החלף שפה',
+      openUserMenu: 'פתח תפריט משתמש',
+      openMenu: 'פתח תפריט'
+    },
+
+    // Error messages
+    errors: {
+      generic: 'אירעה שגיאה. אנא נסו שוב.',
+      network: 'שגיאת רשת. אנא בדקו את החיבור שלכם.',
+      validation: 'אנא בדקו את הטופס שגיאות.',
+      unauthorized: 'אין לכם הרשאה לבצע פעולה זו.',
+      notFound: 'הפריט המבוקש לא נמצא.',
+      server: 'שגיאת שרת. אנא נסו שוב מאוחר יותר.'
     },
 
     // Navigation
     nav: {
       home: 'בית',
+      dashboard: 'לוח בקרה', // Added missing translation
       transactions: 'עסקאות',
+      reports: 'דוחות', // Added missing translation
+      settings: 'הגדרות', // Added missing translation
       profile: 'פרופיל',
-      logout: 'יציאה',
+      logout: 'התנתק', // Add explicit logout key
       userMenu: 'תפריט משתמש'
     },
 
@@ -521,20 +693,21 @@ const translations = {
       security: 'אבטחה',
       startJourney: 'התחל את המסע הפיננסי שלך',
       joinThousands: 'הצטרף לאלפי משתמשים שכבר מנהלים את הכספים שלהם עם SpendWise',
-
+      logout: 'התנתק',
+      
       // Password strength indicators
       weak: 'חלשה',
       fair: 'סבירה',
       good: 'טובה',
       strong: 'חזקה',
       veryStrong: 'חזקה מאוד',
-
+      
       // Password requirements
       passwordLength: 'לפחות 8 תווים',
       passwordNumber: 'מכילה מספר',
       passwordUpper: 'מכילה אות גדולה',
       passwordLower: 'מכילה אות קטנה',
-
+      
       // Features section
       features: {
         title: 'ניהול פיננסי חכם',
@@ -546,12 +719,12 @@ const translations = {
         smart: 'ניתוח חכם',
         smartDesc: 'תובנות חכמות להחלטות טובות יותר'
       },
-
+      
       // Benefits
       benefit1: 'אבטחה ברמת בנק למידע שלך',
       benefit2: 'תכונות אוטומציה חכמות',
       benefit3: 'תובנות פיננסיות בזמן אמת',
-
+      
       // Stats
       activeUsers: 'משתמשים פעילים',
       savedMoney: 'כסף מנוהל',
@@ -565,6 +738,12 @@ const translations = {
         afternoon: 'צהריים טובים',
         evening: 'ערב טוב',
         night: 'לילה טוב'
+      },
+      nav: {
+        overview: 'סקירה כללית',
+        transactionsManagement: 'ניהול עסקאות',
+        profile: 'פרופיל',
+        logout: 'יציאה'
       },
       balance: {
         title: 'סקירת יתרה',
@@ -584,7 +763,29 @@ const translations = {
         backToToday: 'חזרה להיום',
         tooltip: 'לחצו על לוח השנה כדי לקפוץ לכל תאריך. השתמשו בחיצים כדי לנווט יום אחר יום.',
         nextReset: 'איפוס יומי בעוד: {{time}}',
-        calculateError: 'לא ניתן לחשב יתרה'
+        calculateError: 'לא ניתן לחשב יתרה',
+        periods: {
+          daily: {
+            en: 'Daily',
+            he: 'יומי'
+          },
+          weekly: {
+            en: 'Weekly',
+            he: 'שבועי'
+          },
+          monthly: {
+            en: 'Monthly',
+            he: 'חודשי'
+          },
+          yearly: {
+            en: 'Yearly',
+            he: 'שנתי'
+          }
+        },
+        viewingPastDate: {
+          en: 'You are viewing a past date. New transactions are added to today\'s date.',
+          he: 'אתה צופה בתאריך קודם. פעולות חדשות נוספות לתאריך הנוכחי.'
+        }
       },
       transactions: {
         recent: 'עסקאות אחרונות',
@@ -595,36 +796,61 @@ const translations = {
       }
     },
 
-    // Actions Panel
-    actions: {
-      title: 'הוספת עסקה',
-      buttontitle: 'הוסף עסקה',
-      panel: {
-        subtitle: 'בחרו סוג עסקה כדי להתחיל'
+    // Quick Actions/Expenses
+    quickExpense: {
+      title: 'פעולות מהירות',
+      placeholder: 'הזן סכום',
+      addExpense: 'הוסף הוצאה',
+      addIncome: 'הוסף הכנסה',
+      defaultDescription: 'עסקה מהירה',
+      added: 'נוסף!',
+      fast: 'הזנה מהירה',
+      todayWarning: {
+        en: 'Transaction will be added to today, not the displayed date',
+        he: 'הפעולה תתווסף להיום, לא לתאריך המוצג'
       },
-      oneTimeExpense: 'הוצאה חד-פעמית',
+      switchToToday: {
+        en: 'Transaction added! Switch to today\'s view to see it?',
+        he: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?'
+      }
+    },
+
+    // Actions
+    actions: {
+      title: 'הוסף עסקה',
+      buttontitle: 'הוסף עסקה חדשה',
+      quickActions: 'פעולות מהירות',
+      new: 'חדש',
+      oneTimeExpense: 'הוצאה חד פעמית',
+      oneTimeExpenseDesc: 'הוסף עסקת הוצאה בודדת',
       recurringExpense: 'הוצאה קבועה',
-      oneTimeIncome: 'הכנסה חד-פעמית',
+      recurringExpenseDesc: 'הגדר הוצאה חוזרת',
+      oneTimeIncome: 'הכנסה חד פעמית',
+      oneTimeIncomeDesc: 'הוסף עסקת הכנסה בודדת',
       recurringIncome: 'הכנסה קבועה',
+      recurringIncomeDesc: 'הגדר הכנסה חוזרת',
+      fillDetails: 'מלא את פרטי העסקה',
+      selectType: 'בחר סוג עסקה',
       amount: 'סכום',
-      amountPlaceholder: 'הזינו סכום',
+      amountPlaceholder: 'הזן סכום',
       description: 'תיאור',
-      descriptionPlaceholder: 'הזינו תיאור',
+      descriptionPlaceholder: 'הזן תיאור',
       category: 'קטגוריה',
       frequency: 'תדירות',
+      date: 'תאריך',
       frequencies: {
         daily: 'יומי',
         weekly: 'שבועי',
         monthly: 'חודשי'
       },
+      recurringOptions: 'אפשרויות חזרה',
+      endDate: 'תאריך סיום',
       options: 'אפשרויות',
       add: 'הוסף עסקה',
-      quickExpense: {
-        placeholder: 'סכום',
-        add: 'הוסף הוצאה',
-        addIncome: 'הוסף הכנסה',
-        error: 'שגיאה בהוספת עסקה'
-      },
+      addIncome: 'הוסף הכנסה',
+      addExpense: 'הוסף הוצאה',
+      recurring: 'חוזר',
+      quickAdd: 'הוספה מהירה', // Ensure this key is properly defined in Hebrew
       errors: {
         addingTransaction: 'שגיאה בהוספת עסקה',
         invalidAmount: 'אנא הזינו סכום תקין',
@@ -783,10 +1009,23 @@ const translations = {
       supportTitle: 'תמיכה',
       supportDescription: 'לשאלות ותמיכה, אנא צרו קשר:',
       openSource: 'קוד פתוח',
+      legal: 'משפטי', // Added missing translation
+      privacy: 'מדיניות פרטיות', // Added missing translation
+      terms: 'תנאי שימוש', // Added missing translation
+      accessibility: 'נגישות', // Added missing translation
       accessibilityStatement: 'הצהרת נגישות',
       allRightsReserved: 'כל הזכויות שמורות',
       close: 'סגור',
-      copyright: 'כל הזכויות שמורות © {{year}} SpendWise'
+      copyright: 'כל הזכויות שמורות © {{year}} SpendWise',
+      privacyShort: 'פרטיות', // Added missing translation
+      accessibilityShort: 'נגישות', // Added missing translation
+      
+      // Add these new keys in Hebrew
+      description: 'כלי חכם לניהול פיננסי אישי שעוזר לך לעקוב אחר הוצאות ולנהל את התקציב שלך ביעילות.',
+      navigation: 'ניווט',
+      legal: 'משפטי',
+      madeWith: 'נעשה עם',
+      inIsrael: 'בישראל',
     },
 
     // Alert notifications
@@ -865,7 +1104,7 @@ const translations = {
       signInInstead: 'התחברו במקום זאת',
       success: {
         title: 'החשבון נוצר!',
-        message: 'החשבון שלכם נוצר בהצלחה. מעביר לעמוד התחברות...'
+        message: 'החשבון שלכם נוצר בהצלחה. מעביר לעמוד התחבות...'
       },
       features: {
         title: 'התחילו לנהל את הכספים שלכם',
@@ -876,6 +1115,48 @@ const translations = {
       },
       errors: {
         registrationFailed: 'ההרשמה נכשלה. אנא נסו שוב.'
+      }
+    },
+
+    // Dashboard translations
+    dashboard: {
+      title: 'לוח בקרה',
+      subtitle: 'סקירת המצב הפיננסי שלך',
+      greeting: {
+        morning: 'בוקר טוב',
+        afternoon: 'צהריים טובים',
+        evening: 'ערב טוב',
+        night: 'לילה טוב'
+      },
+      stats: {
+        dailyAverage: 'ממוצע יומי',
+        monthlyGoal: 'יעד חודשי',
+        recurringActive: 'הוראות קבע פעילות',
+        savedThisMonth: 'נחסך החודש'
+      },
+      balance: {
+        title: 'סקירת יתרה',
+        daily: 'יומי',
+        weekly: 'שבועי',
+        monthly: 'חודשי',
+        yearly: 'שנתי',
+        income: 'הכנסות',
+        expenses: 'הוצאות',
+        total: 'יתרה נטו',
+        error: 'לא ניתן לטעון נתוני יתרה',
+        tooltip: 'לחץ על לוח השנה כדי לקפוץ לתאריך'
+      },
+      transactions: {
+        recent: 'עסקאות אחרונות',
+        viewAll: 'הצג הכל',
+        noTransactions: 'אין עסקאות עדיין',
+        fetchError: 'לא ניתן לטעון עסקאות'
+      },
+      
+      // Ensure tips section is properly defined in Hebrew
+      tips: {
+        title: 'טיפ פיננסי',
+        content: 'עקוב אחר ההוצאות היומיות שלך כדי לזהות דפוסי הוצאות והזדמנויות חיסכון פוטנציאליות.'
       }
     }
   }
@@ -891,25 +1172,22 @@ export const LanguageProvider = ({ children }) => {
   // Get translation function
   const t = (key, params = {}) => {
     const keys = key.split('.');
-    
-    // First try to get from the current language
     let translation = language === 'he' ? translations.he : translations;
     
     for (const k of keys) {
-      if (translation && translation[k]) {
-        translation = translation[k];
-      } else {
-        // Fallback to English if Hebrew translation not found
-        translation = translations;
-        for (const k of keys) {
-          if (translation && translation[k]) {
-            translation = translation[k];
-          } else {
-            console.warn(`Translation not found for key: ${key}`);
-            return key;
-          }
-        }
+      if (!translation) break;
+      
+      translation = translation[k];
+      
+      // טיפול מיוחד במקרים של אובייקטים עם תרגומים לפי שפה
+      if (translation && typeof translation === 'object' && 'he' in translation && 'en' in translation) {
+        return translation[language];
       }
+    }
+    
+    if (!translation) {
+      console.warn(`Translation not found for key: ${key}`);
+      return key;
     }
     
     // Handle parameter substitution

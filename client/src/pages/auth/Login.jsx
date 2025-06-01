@@ -25,7 +25,7 @@ import { userSchemas, validate } from "../../utils/validationSchemas";
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import AccessibilityStatement from '../../components/common/AccessibilityStatement';
-import AuthFooter from '../../components/auth/AuthFooter';
+import Footer from '../../components/layout/Footer';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -114,8 +114,13 @@ const Login = () => {
           localStorage.setItem('rememberMe', 'true');
         }
         
+        // בדיקה כדי לוודא שהנתיב קיים ותקין
+        const targetPath = from === '/dashboard' ? '/' : from;
+        
+        console.log("[DEBUG] Navigating to:", targetPath);
+        
         // Navigate to dashboard or previous location
-        navigate(from, { replace: true });
+        navigate(targetPath, { replace: true });
       } else {
         // Handle login error
         setErrors({ 
@@ -197,6 +202,10 @@ const Login = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
+              method="post"
+              id="login-form"
+              autoComplete="on" // תיקנתי את הכתיב - autoComplete ולא autocomplete
+              name="login-form"
             >
               {/* Email Field */}
               <div className="space-y-2">
@@ -211,6 +220,9 @@ const Login = () => {
                   icon={Mail}
                   error={errors.email}
                   required
+                  name="email" // בדיוק כך - שם סטנדרטי שדפדפנים מזהים
+                  id="email"
+                  autoComplete="username" // הסרתי את ה-"email" והשארתי רק "username"
                 />
                 <AnimatePresence>
                   {formData.email && !errors.email && focusedField !== 'email' && (
@@ -243,7 +255,7 @@ const Login = () => {
                   </Link>
                 </div>
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   onFocus={() => setFocusedField('password')}
@@ -252,6 +264,9 @@ const Login = () => {
                   icon={Lock}
                   error={errors.password}
                   required
+                  name="password" // השם קריטי
+                  id="password"
+                  autoComplete="current-password" // אוטוקומפליט תקין לסיסמה
                 />
               </div>
 
@@ -305,12 +320,14 @@ const Login = () => {
 
               {/* Submit Button */}
               <Button
-                type="submit"
+                type="submit" // בטופס, תמיד צריך type="submit"
                 variant="primary"
                 size="large"
                 fullWidth
                 loading={isLoggingIn}
                 className="relative overflow-hidden group"
+                name="login" // פשוט יותר ועדיף
+                id="login-submit" 
               >
                 <span className="relative z-10 flex items-center justify-center">
                   {t('auth.signIn')}
@@ -417,7 +434,7 @@ const Login = () => {
           </div>
         </div>
       </div>
-      <AuthFooter />
+      <Footer />
     </>
   );
 };

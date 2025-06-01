@@ -24,11 +24,20 @@ class TimeManager {
 
   /**
    * Format date for database (YYYY-MM-DD)
-   * @param {Date} date - Date to format
+   * @param {Date|string} date - Date to format
    * @returns {string} Formatted date
    */
   formatForDB(date) {
-    return this.normalize(date).toISOString().split('T')[0];
+    // If date is already a string in YYYY-MM-DD format, return it as is
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    
+    // Handle date objects or other date string formats
+    const d = new Date(date);
+    
+    // Use direct string creation instead of toISOString to avoid timezone issues
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   /**

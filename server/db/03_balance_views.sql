@@ -39,14 +39,29 @@ RETURNS TABLE(
     expenses DECIMAL(10,2),
     balance DECIMAL(10,2)
 ) AS $$
+DECLARE
+    dbg RECORD;
 BEGIN
+    -- Debug logging
+    FOR dbg IN
+        SELECT db.*
+        FROM daily_balances db
+        WHERE db.user_id = p_user_id
+          AND db.date BETWEEN p_start_date AND p_end_date
+    LOOP
+        RAISE NOTICE '[DEBUG daily_balances] user_id=%, date=%, income=%, expenses=%', dbg.user_id, dbg.date, dbg.income, dbg.expenses;
+    END LOOP;
+
+    -- Insert another debug statement to verify date range
+    RAISE NOTICE '[DEBUG get_period_balance] p_user_id=%, p_start_date=%, p_end_date=%', p_user_id, p_start_date, p_end_date;
+
     RETURN QUERY
     SELECT 
-        COALESCE(SUM(CASE WHEN net_amount < 0 THEN -net_amount ELSE 0 END), 0)::DECIMAL(10,2) as income,
-        COALESCE(SUM(CASE WHEN net_amount > 0 THEN net_amount ELSE 0 END), 0)::DECIMAL(10,2) as expenses,
-        COALESCE(SUM(-net_amount), 0)::DECIMAL(10,2) as balance
-    FROM daily_balances
-    WHERE user_id = p_user_id 
-    AND date BETWEEN p_start_date AND p_end_date;
+        COALESCE(SUM(db.income), 0)::DECIMAL(10,2) as income,
+        COALESCE(SUM(db.expenses), 0)::DECIMAL(10,2) as expenses,
+        (COALESCE(SUM(db.income), 0) - COALESCE(SUM(db.expenses), 0))::DECIMAL(10,2) as balance
+    FROM daily_balances db
+    WHERE db.user_id = p_user_id 
+    AND db.date BETWEEN p_start_date AND p_end_date;
 END;
 $$ LANGUAGE plpgsql;

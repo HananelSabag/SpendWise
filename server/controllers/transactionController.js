@@ -18,15 +18,56 @@ const transactionController = {
    */
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const { date } = req.query;
-    
-    const targetDate = date ? TimeManager.normalize(new Date(date)) : new Date();
-    const dashboardData = await Transaction.getDashboardData(userId, targetDate);
-    
+    // קבל תאריך מה-query אם קיים
+    let targetDate = req.query?.date ? new Date(req.query.date) : new Date();
+    console.log('[DEBUG] getDashboardData called for userId:', userId, 'date:', req.query?.date);
+
+    const result = await DBQueries.getDashboardData(userId, targetDate);
+
+    console.log('[DEBUG] getDashboardData result from DB:', JSON.stringify(result, null, 2));
+
+    // Ensure numeric values
+    const ensureNumeric = (value) => {
+      const num = parseFloat(value);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const processBalance = (balance) => {
+      // If balance is already an object with the correct properties
+      if (balance && typeof balance === 'object' && 'income' in balance) {
+        return {
+          income: ensureNumeric(balance.income),
+          expenses: ensureNumeric(balance.expenses),
+          total: ensureNumeric(balance.income - balance.expenses)
+        };
+      }
+      
+      // Fallback if for some reason we still have string or another format
+      console.warn('[WARNING] Unexpected balance format:', balance);
+      return {
+        income: 0,
+        expenses: 0,
+        total: 0
+      };
+    };
+
+    const responseData = {
+      daily: processBalance(result.daily_balance),
+      weekly: processBalance(result.weekly_balance),
+      monthly: processBalance(result.monthly_balance),
+      yearly: processBalance(result.yearly_balance),
+      recent_transactions: result.recent_transactions || [],
+      recurring_info: result.recurring_info || {},
+      statistics: result.statistics || {},
+      categories: result.categories || [],
+      metadata: result.metadata || {}
+    };
+
+    console.log('[DEBUG] getDashboardData responseData:', JSON.stringify(responseData, null, 2));
+
     res.json({
       success: true,
-      data: dashboardData,
-      timestamp: new Date().toISOString()
+      data: responseData
     });
   }),
 
@@ -614,6 +655,122 @@ const transactionController = {
       data: results,
       query: q
     });
+  }),
+
+  /**
+   * Add new expense - LEGACY SUPPORT
+   * @route POST /api/v1/transactions/expense
+   */
+  addExpense: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { amount, description, date, category_id, notes } = req.body;
+    
+    // Debug log the received date from client
+    console.log(`[DEBUG] Received expense with date: ${date}`);
+    
+    // IMPORTANT: Preserve the exact date string from the client 
+    // instead of creating a new Date object that could change the day
+    let formattedDate;
+    
+    if (date) {
+      // If the date is already in YYYY-MM-DD format, use it directly
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        formattedDate = date;
+      } else {
+        // Otherwise parse it but be careful with timezone
+        const dateObj = new Date(date);
+        // Use UTC methods to avoid timezone issues
+        formattedDate = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+      }
+    } else {
+      // If no date provided, use current date in local timezone of server
+      const now = new Date();
+      formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    
+    console.log(`[DEBUG] Using formatted date for expense: ${formattedDate}`);
+    
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const result = await client.query(`
+        INSERT INTO expenses (user_id, amount, description, date, category_id, notes)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [userId, amount, description, formattedDate, category_id, notes]);
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }),
+
+  /**
+   * Add new income - LEGACY SUPPORT
+   * @route POST /api/v1/transactions/income
+   */
+  addIncome: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { amount, description, date, category_id, notes } = req.body;
+    
+    // Debug log the received date from client
+    console.log(`[DEBUG] Received income with date: ${date}`);
+    
+    // IMPORTANT: Preserve the exact date string from the client
+    // instead of creating a new Date object that could change the day
+    let formattedDate;
+    
+    if (date) {
+      // If the date is already in YYYY-MM-DD format, use it directly
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        formattedDate = date;
+      } else {
+        // Otherwise parse it but be careful with timezone
+        const dateObj = new Date(date);
+        // Use UTC methods to avoid timezone issues
+        formattedDate = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+      }
+    } else {
+      // If no date provided, use current date in local timezone of server
+      const now = new Date();
+      formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    
+    console.log(`[DEBUG] Using formatted date for income: ${formattedDate}`);
+    
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const result = await client.query(`
+        INSERT INTO income (user_id, amount, description, date, category_id, notes)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [userId, amount, description, formattedDate, category_id, notes]);
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   })
 };
 

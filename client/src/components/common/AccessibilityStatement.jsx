@@ -1,112 +1,75 @@
 // components/common/AccessibilityStatement.jsx
 // Modal component for displaying accessibility statement as required by Israeli law
 import React from 'react';
+import { motion } from 'framer-motion';
 import { X, LifeBuoy } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 const AccessibilityStatement = ({ isOpen, onClose }) => {
-  const { language } = useLanguage();
-  const isHebrew = language === 'he';
-  
+  const { t, language } = useLanguage();
+  const isRTL = language === 'he';
+  const currentYear = new Date().getFullYear();
+
   if (!isOpen) return null;
-  
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full mx-4 overflow-hidden"
-        dir={isHebrew ? 'rtl' : 'ltr'}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* Header */}
-        <div className="bg-primary-50 dark:bg-primary-900 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-primary-700 dark:text-primary-100 flex items-center gap-2">
-            <LifeBuoy className="w-5 h-5" />
-            {isHebrew ? 'הצהרת נגישות' : 'Accessibility Statement'}
+        <div className="flex justify-between items-center mb-4 border-b pb-3 border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            {t('accessibility.statement.title')}
           </h2>
-          <button 
+          <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-primary-100 transition-colors"
-            aria-label={isHebrew ? "סגור" : "Close"}
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <X className="h-6 w-6 text-primary-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
         
-        {/* Content */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6 text-gray-700 dark:text-gray-200">
-          {/* תקן ישראלי IS 5568 */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              {isHebrew ? 'עמידה בתקן נגישות' : 'Accessibility Standard Compliance'}
-            </h3>
-            <p className="mb-4">
-              {isHebrew 
-                ? 'אתר זה תואם לדרישות תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013 ועומד בדרישות תקן ישראלי IS 5568 ברמת AA.'
-                : 'This site complies with the Israeli Equal Rights for Persons with Disabilities Regulations (Service Accessibility Adjustments) and meets the requirements of Israeli Standard IS 5568 at AA level.'}
-            </p>
+        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+          <p>{t('accessibility.statement.intro')}</p>
+          
+          <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.features')}</h3>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>תאימות לקוראי מסך</li>
+            <li>ניגודיות צבעים מתכווננת</li>
+            <li>אפשרות להגדלת טקסט</li>
+            <li>תמיכה בניווט מקלדת</li>
+            <li>תמיכה בשפות עברית ואנגלית</li>
+          </ul>
+          
+          <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.level')}</h3>
+          <p>{t('accessibility.statement.levelDescription')}</p>
+          
+          <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.contact')}</h3>
+          <p>{t('accessibility.statement.contactDescription')}</p>
+          <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mt-2">
+            <p><strong>Email:</strong> accessibility@spendwise.com</p>
+            <p><strong>{t('accessibility.statement.phone')}:</strong> 03-1234567</p>
           </div>
-
-          {/* רשימת התאמות הנגישות */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              {isHebrew ? 'אמצעי נגישות באתר' : 'Accessibility Features'}
-            </h3>
-            <ul className="list-disc list-inside space-y-2">
-              <li>{isHebrew ? 'תמיכה בתוכנות קורא מסך' : 'Screen reader support'}</li>
-              <li>{isHebrew ? 'ניווט מלא באמצעות מקלדת' : 'Full keyboard navigation'}</li>
-              <li>{isHebrew ? 'התאמת גודל טקסט' : 'Text size adjustment'}</li>
-              <li>{isHebrew ? 'ניגודיות צבעים גבוהה' : 'High color contrast'}</li>
-              <li>{isHebrew ? 'תיאורי תמונות חלופיים' : 'Alternative text for images'}</li>
-              <li>{isHebrew ? 'מבנה אתר ברור וקבוע' : 'Clear and consistent site structure'}</li>
-            </ul>
+          
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
+            <p>© {currentYear} SpendWise</p>
+            <p>{t('accessibility.compliance')}</p>
+            <p>עדכון אחרון: 01/01/{currentYear}</p>
           </div>
-
-          {/* פרטי קשר רכז נגישות */}
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              {isHebrew ? 'פרטי רכז הנגישות' : 'Accessibility Coordinator'}
-            </h3>
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <p className="font-medium">
-                {isHebrew ? 'שם: ' : 'Name: '} 
-                <span>ישראל ישראלי</span>
-              </p>
-              <p className="font-medium">
-                {isHebrew ? 'טלפון: ' : 'Phone: '}
-                <a href="tel:+972-3-1234567" className="text-primary-600 dark:text-primary-400">03-1234567</a>
-              </p>
-              <p className="font-medium">
-                {isHebrew ? 'דוא"ל: ' : 'Email: '}
-                <a href="mailto:accessibility@spendwise.com" className="text-primary-600 dark:text-primary-400">
-                  accessibility@spendwise.com
-                </a>
-              </p>
-              <p className="mt-2 text-sm">
-                {isHebrew 
-                  ? 'זמן המענה המקסימלי לפניות: עד 48 שעות עבודה'
-                  : 'Maximum response time: up to 48 business hours'}
-              </p>
-            </div>
-          </div>
-
-          {/* תאריך עדכון אחרון */}
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {isHebrew 
-              ? 'הצהרת הנגישות עודכנה לאחרונה בתאריך: 01.01.2024'
-              : 'Last updated: January 1, 2024'}
-          </p>
         </div>
-
-        {/* Footer */}
-        <div className="bg-gray-50 dark:bg-gray-700 p-4 border-t border-gray-200 dark:border-gray-600 flex justify-end">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-          >
-            {isHebrew ? 'סגור' : 'Close'}
-          </button>
-        </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

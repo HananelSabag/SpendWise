@@ -81,6 +81,11 @@ const formatError = (err) => {
  * Error handler middleware
  */
 const errorHandler = (err, req, res, next) => {
+  // בדיקה אם כבר נשלחה תשובה
+  if (res.headersSent) {
+    return next(err);
+  }
+
   // Log error
   logger.error('Request error:', {
     error: err.message,

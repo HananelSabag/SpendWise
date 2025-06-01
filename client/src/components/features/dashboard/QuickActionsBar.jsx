@@ -1,5 +1,5 @@
 // components/features/dashboard/QuickExpenseBar.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MinusCircle, 
@@ -11,21 +11,32 @@ import {
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
 import { useCurrency } from '../../../context/CurrencyContext';
+import { useDate } from '../../../context/DateContext';
 import { Card, Button, Badge } from '../../ui';
-import { validateTransactionAmount, formatAmountInput } from '../../../utils/validation';
+import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 
 const QuickActionsBar = () => {
   const { t, language } = useLanguage();
-  const { quickAddTransaction } = useTransactions();
+  const { quickAddTransaction, refreshData } = useTransactions(); // Add refreshData here
   const { formatAmount, currency } = useCurrency();
+  const { selectedDate, getDateForServer, resetToToday } = useDate();
   
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [todayWarning, setTodayWarning] = useState(false);
   const inputRef = useRef(null);
   
   const isRTL = language === 'he';
+
+  // בדוק אם התאריך הנבחר הוא היום
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const selectedDay = getDateForServer(selectedDate);
+    
+    setTodayWarning(selectedDay !== today);
+  }, [selectedDate, getDateForServer]);
 
   // Quick amount buttons
   const quickAmounts = [10, 25, 50, 100, 250];
@@ -36,9 +47,14 @@ const QuickActionsBar = () => {
   };
 
   const handleSubmit = async (type = 'expense') => {
-    const validationError = validateTransactionAmount(amount, language);
-    if (validationError) {
-      setError(validationError);
+    // השתמש ב-validation schema הקיים במקום בפונקציה מותאמת אישית
+    const { success, errors: validationErrors } = validate(
+      transactionSchemas.quickAdd,
+      { amount, type }
+    );
+
+    if (!success) {
+      setError(validationErrors.amount || t('actions.errors.invalidAmount'));
       return;
     }
 
@@ -46,17 +62,39 @@ const QuickActionsBar = () => {
       setLoading(true);
       setError('');
       
+      // Use current date with timezone consideration
+      const today = new Date();
+      console.log('[INFO] Adding transaction with today\'s date:', today.toISOString().split('T')[0]);
+      
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
         t('quickExpense.defaultDescription')
       );
       
+      // Alert if selected date is not today
+      if (todayWarning) {
+        console.log('[INFO] Transaction added to today\'s date, but viewing a different date');
+      }
+      
       // Success animation
       setSuccess(true);
       setTimeout(() => {
         setAmount('');
         setSuccess(false);
+        
+        // Force refresh data after adding transaction
+        if (refreshData) {
+          console.log('[INFO] Refreshing dashboard data after transaction');
+          refreshData();
+        }
+        
+        // If user is viewing a date other than today, offer to switch to today
+        if (todayWarning) {
+          if (window.confirm(t('quickExpense.switchToToday'))) {
+            resetToToday();
+          }
+        }
       }, 2000);
       
     } catch (err) {
@@ -64,6 +102,11 @@ const QuickActionsBar = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAmountChange = (e) => {
+    setAmount(amountValidation.formatAmountInput(e.target.value));
+    setError('');
   };
 
   const successVariants = {
@@ -103,10 +146,7 @@ const QuickActionsBar = () => {
             ref={inputRef}
             type="text"
             value={amount}
-            onChange={(e) => {
-              setAmount(formatAmountInput(e.target.value));
-              setError('');
-            }}
+            onChange={handleAmountChange}
             placeholder={t('quickExpense.placeholder')}
             className={`w-full px-4 py-3 pr-12 text-lg font-semibold rounded-lg border 
               ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}
@@ -195,6 +235,13 @@ const QuickActionsBar = () => {
           </Button>
         </div>
       </div>
+
+      {/* התראה אם מסתכלים בתאריך שונה מהיום */}
+      {todayWarning && (
+        <div className="text-xs text-amber-600 dark:text-amber-400 mb-2 mt-1">
+          <p>{t('quickExpense.todayWarning')}</p>
+        </div>
+      )}
     </Card>
   );
 };

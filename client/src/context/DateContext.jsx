@@ -11,16 +11,50 @@ export const DateProvider = ({ children }) => {
   
   // Initialize with today at noon for consistency
   const [selectedDate, setSelectedDate] = useState(() => {
+    // בדיקה אם יש תאריך שמור ב-localStorage
+    const savedDate = localStorage.getItem('selectedDate');
+    
+    // ביצוע בדיקת תאריך חכמה יותר - אם התאריך שמור הוא מיום קודם ועכשיו בוקר, נאפס ליום הנוכחי
+    if (savedDate) {
+      try {
+        const date = new Date(savedDate);
+        const today = new Date();
+        const savedDay = new Date(date).setHours(0, 0, 0, 0);
+        const currentDay = new Date(today).setHours(0, 0, 0, 0);
+        
+        // אם זה יום חדש או אם התאריך השמור הוא בעתיד, השתמש בתאריך הנוכחי
+        if (savedDay < currentDay || savedDay > currentDay) {
+          console.log('[INFO] Starting with today\'s date');
+          const now = new Date();
+          now.setHours(12, 0, 0, 0);
+          return now;
+        }
+        
+        // אחרת השתמש בתאריך השמור
+        date.setHours(12, 0, 0, 0);
+        return date;
+      } catch (error) {
+        console.error('Invalid saved date:', error);
+      }
+    }
+    
+    // ברירת מחדל: היום הנוכחי בשעה 12:00
     const now = new Date();
     now.setHours(12, 0, 0, 0);
     return now;
   });
   
-  // Normalize date to noon
+  // נירמול תאריכים לפורמט אחיד - שיפור עם תיעוד
   const normalizeDate = useCallback((date) => {
-    const normalized = new Date(date);
-    normalized.setHours(12, 0, 0, 0);
-    return normalized;
+    if (!date) return new Date();
+    
+    // וודא שהתאריך הוא אובייקט Date
+    const dateObj = date instanceof Date ? new Date(date) : new Date(date);
+    
+    // קבע שעה ל-12:00 לעקביות
+    dateObj.setHours(12, 0, 0, 0);
+    
+    return dateObj;
   }, []);
   
   // Format date based on locale
@@ -48,14 +82,30 @@ export const DateProvider = ({ children }) => {
     return isToday(selectedDate);
   }, [selectedDate]);
   
-  // Update selected date
-  const updateSelectedDate = useCallback((date) => {
-    const normalizedDate = normalizeDate(date);
-    setSelectedDate(normalizedDate);
+  // Update selected date - חיזוק הנירמול והדיבאג
+  const updateSelectedDate = (date) => {
+    if (!date) return;
     
-    // Save to localStorage for persistence
+    // וודא שהתאריך הוא אובייקט Date
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // הדפס את התאריך לפני הנירמול לצורכי דיבוג
+    console.log('[DEBUG] updateSelectedDate - before normalize:', dateObj.toISOString());
+    
+    // נרמל את התאריך ל-12:00
+    const normalizedDate = normalizeDate(dateObj);
+    
+    console.log('[DEBUG] updateSelectedDate - after normalize:', normalizedDate.toISOString());
+    
+    // עדכן את הסטייט
+    setSelectedDate(normalizedDate);
+
+    // שמור ב-localStorage לשימור בין טעינות
     localStorage.setItem('selectedDate', normalizedDate.toISOString());
-  }, [normalizeDate]);
+    
+    // הדפס את התאריך בפורמט ISO שנשלח לשרת
+    console.log('[DEBUG] Date for server API:', normalizedDate.toISOString().split('T')[0]);
+  };
   
   // Navigation methods
   const goToPreviousDay = useCallback(() => {
@@ -70,10 +120,23 @@ export const DateProvider = ({ children }) => {
     }
   }, [selectedDate, updateSelectedDate]);
   
+  // הפונקציה לאיפוס התאריך להיום - שיפור כדי לוודא שזה באמת עובד
   const resetToToday = useCallback(() => {
-    updateSelectedDate(new Date());
-  }, [updateSelectedDate]);
-  
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    
+    console.log('[DEBUG] Resetting to today:', today.toISOString());
+    
+    // עדכן את הסטייט ישירות במקום להשתמש ב-updateSelectedDate
+    setSelectedDate(today);
+    
+    // עדכן את ה-localStorage
+    localStorage.setItem('selectedDate', today.toISOString());
+    
+    // רענן את הדף אם נדרש
+    window.dispatchEvent(new CustomEvent('date-reset'));
+  }, []);
+
   // Get date range for period
   const getDateRange = useCallback((period = 'day', date = selectedDate) => {
     const start = startOfDay(date);
@@ -113,21 +176,39 @@ export const DateProvider = ({ children }) => {
     return !isSelectedDateToday();
   }, [isSelectedDateToday]);
   
-  // Initialize from localStorage
+  // שיפור: הוספת בדיקה יומית לתאריך
   React.useEffect(() => {
-    const savedDate = localStorage.getItem('selectedDate');
-    if (savedDate) {
-      try {
-        const date = new Date(savedDate);
-        // Only use saved date if it's not in the future
-        if (date <= new Date()) {
-          setSelectedDate(normalizeDate(date));
-        }
-      } catch (error) {
-        console.error('Invalid saved date:', error);
+    // פונקציה שבודקת אם היום השתנה מאז הביקור האחרון
+    const checkForNewDay = () => {
+      const lastVisit = localStorage.getItem('lastVisitDate');
+      const today = new Date().toISOString().split('T')[0];
+      
+      // אם היום השתנה, אפס את התאריך הנבחר להיום
+      if (lastVisit && lastVisit !== today && isSelectedDateToday()) {
+        resetToToday();
       }
+      
+      // עדכן את תאריך הביקור האחרון
+      localStorage.setItem('lastVisitDate', today);
+    };
+    
+    // הפעל את הבדיקה בטעינה
+    checkForNewDay();
+    
+    // גם בדוק אם היום הנוכחי שונה מהתאריך הנבחר, הצג זאת בלוג
+    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    if (selectedDateStr !== todayStr) {
+      console.log(`[INFO] Currently viewing ${selectedDateStr} instead of today (${todayStr})`);
     }
-  }, [normalizeDate]);
+  }, [selectedDate, isSelectedDateToday, resetToToday]);
+  
+  // הוסף פונקציה חדשה לקבלת תאריך בפורמט לשרת
+  const getDateForServer = useCallback((date = selectedDate) => {
+    // תמיד החזר בפורמט YYYY-MM-DD
+    return new Date(date).toISOString().split('T')[0];
+  }, [selectedDate]);
   
   const value = {
     // Current date
@@ -146,6 +227,9 @@ export const DateProvider = ({ children }) => {
     getRelativeDateString,
     isToday: isSelectedDateToday,
     getDateRange,
+    
+    // הוסף את הפונקציה החדשה
+    getDateForServer,
     
     // Additional helpers
     isSelectedDate: (date) => {

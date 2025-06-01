@@ -12,10 +12,12 @@ import {
   X,
   RotateCcw,
   Eye,
-  ChevronLeft
+  ChevronLeft,
+  BookOpen
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAccessibility } from '../../context/AccessibilityContext'; // Import new context
+import AccessibilityStatement from './AccessibilityStatement';
 
 
 /**
@@ -25,6 +27,7 @@ import { useAccessibility } from '../../context/AccessibilityContext'; // Import
  */
 const AccessibilityMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
   const menuRef = useRef(null);
   const { t, language } = useLanguage();
   const {
@@ -63,6 +66,20 @@ const AccessibilityMenu = () => {
     setIsCollapsed(!isCollapsed);
   };
 
+  // Toggle menu visibility
+  const toggleMenu = () => setIsOpen(!isOpen);
+
+  // Close menu
+  const closeMenu = () => setIsOpen(false);
+
+  // Toggle accessibility statement
+  const toggleStatement = () => {
+    setShowStatement(!showStatement);
+    if (!showStatement) {
+      closeMenu();
+    }
+  };
+
   return (
     <div 
       className={`fixed z-50 transition-all duration-300 ${isCollapsed ? 'right-0' : 'right-6'} bottom-24`} 
@@ -93,7 +110,7 @@ const AccessibilityMenu = () => {
           
           {/* Main accessibility toggle button */}
           <button
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={toggleMenu}
             className="p-3 bg-primary-500 text-white rounded-full shadow-lg hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
             aria-label={t('accessibility.menu')}
             title={t('accessibility.menu')}
@@ -193,26 +210,44 @@ const AccessibilityMenu = () => {
                   </button>
                 </div>
 
+                {/* Accessibility Statement Button - NEW */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={toggleStatement}
+                    className="w-full py-2 px-3 flex items-center justify-between bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-lg transition-colors"
+                  >
+                    <span className="flex items-center">
+                      <BookOpen className="w-5 h-5 mr-2" />
+                      {t('accessibility.accessibilityStatement')}
+                    </span>
+                    <span className="text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
+                      חובה
+                    </span>
+                  </button>
+                </div>
+
                 {/* Reset button */}
-                <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={resetSettings}
-                    className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm font-medium text-gray-700 flex items-center justify-center gap-2 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300"
+                    className="w-full py-2 px-3 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <RotateCcw className="w-4 h-4 mr-2" />
                     {t('accessibility.resetSettings')}
                   </button>
                 </div>
-              </div>
 
-              {/* Legal notice - required for compliance */}
-              <div className="bg-gray-50 p-3 text-xs text-gray-500 border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400">
-                {t('accessibility.compliance')}
+                {/* Legal notice - required for compliance */}
+                <div className="bg-gray-50 p-3 text-xs text-gray-500 border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400">
+                  {t('accessibility.compliance')}
+                </div>
               </div>
             </div>
           )}
         </div>
       )}
+      {/* Accessibility Statement Modal */}
+      <AccessibilityStatement isOpen={showStatement} onClose={() => setShowStatement(false)} />
     </div>
   );
 };

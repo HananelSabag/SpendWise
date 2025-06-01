@@ -54,13 +54,23 @@ const userController = {
     const { email, password } = req.body;
     
     if (!email || !password) {
-      throw { ...errorCodes.MISSING_REQUIRED };
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_REQUIRED',
+          message: 'Email and password are required'
+        }
+      });
     }
 
     // Verify credentials
     const user = await User.verifyPassword(email, password);
     if (!user) {
-      throw { ...errorCodes.INVALID_CREDENTIALS };
+      return res.status(401).json({
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid email or password'
+        }
+      });
     }
 
     // Generate tokens
@@ -68,7 +78,8 @@ const userController = {
 
     logger.info('User logged in:', { userId: user.id });
 
-    res.json({
+    // Make sure we return here to prevent any further execution
+    return res.json({
       success: true,
       data: {
         user: {

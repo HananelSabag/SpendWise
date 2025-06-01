@@ -11,7 +11,17 @@ export const useAccessibility = () => {
   return context;
 };
 
-export const AccessibilityProvider = ({ children }) => {
+export const AccessibilityProvider = ({ children, initialDarkMode = false }) => {
+  // Clear any existing dark mode setting on initial load
+  useEffect(() => {
+    // Force light mode on initial load if initialDarkMode is false
+    if (initialDarkMode === false) {
+      localStorage.removeItem('a11y_darkMode');
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark-mode');
+    }
+  }, [initialDarkMode]);
+
   // States with localStorage persistence
   const [fontSize, setFontSize] = useState(() => {
     const saved = localStorage.getItem('a11y_fontSize');
@@ -23,11 +33,23 @@ export const AccessibilityProvider = ({ children }) => {
   });
   
   const [darkMode, setDarkMode] = useState(() => {
-    // Check system preference if no saved preference
-    if (!localStorage.getItem('a11y_darkMode')) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // IMPORTANT: Override localStorage if initialDarkMode is explicitly false
+    if (initialDarkMode === false) {
+      return false;
     }
-    return localStorage.getItem('a11y_darkMode') === 'true';
+    
+    // Otherwise check localStorage
+    if (localStorage.getItem('a11y_darkMode') !== null) {
+      return localStorage.getItem('a11y_darkMode') === 'true';
+    }
+    
+    // Then check initialDarkMode prop
+    if (initialDarkMode !== undefined) {
+      return initialDarkMode;
+    }
+    
+    // Finally fallback to system preference (but prioritize light mode)
+    return false; // Default to light mode instead of system preference
   });
   
   // Fix: Define isCollapsed state properly

@@ -15,7 +15,13 @@ import {
   DollarSign,
   Tag,
   FileText,
-  Check
+  Check,
+  TrendingUp,  // הוספנו את TrendingUp
+  Home,        // הוספנו אייקונים נוספים שחסרים
+  ShoppingCart,
+  Car,
+  Zap,
+  Tv
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
@@ -23,7 +29,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useDate } from '../../../context/DateContext';
 import { Card, Button, Input, Select, Modal, Alert, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
-import { validateTransactionAmount, formatAmountInput } from '../../../utils/validation';
+import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 
 const ActionsPanel = () => {
   const { t, language } = useLanguage();
@@ -125,19 +131,34 @@ const ActionsPanel = () => {
     setError('');
   };
 
-  // Handle form submission
+  // Handle amount change
+  const handleAmountChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      amount: amountValidation.formatAmountInput(e.target.value)
+    }));
+  };
+
+  // Handle form submission with schema validation
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate amount
-    const amountError = validateTransactionAmount(formData.amount, language);
-    if (amountError) {
-      setError(amountError);
-      return;
-    }
 
-    if (!formData.description.trim()) {
-      setError(t('actions.errors.descriptionRequired'));
+    // Validate using transaction schema
+    const { success, errors: validationErrors } = validate(
+      transactionSchemas.create,
+      {
+        amount: parseFloat(formData.amount),
+        description: formData.description,
+        date: new Date(formData.date),
+        category_id: formData.category_id,
+        is_recurring: formData.is_recurring,
+        recurring_interval: formData.recurring_interval,
+        recurring_end_date: formData.recurring_end_date ? new Date(formData.recurring_end_date) : null
+      }
+    );
+
+    if (!success) {
+      setError(Object.values(validationErrors)[0] || t('actions.errors.formErrors'));
       return;
     }
 
@@ -147,7 +168,7 @@ const ActionsPanel = () => {
       
       await createTransaction(activeType.type, {
         ...formData,
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(formData.amount)
       });
       
       // Success animation
@@ -247,6 +268,8 @@ const ActionsPanel = () => {
             onClose={() => !loading && setIsOpen(false)}
             size="large"
             className="max-w-4xl"
+            // הוסף את הפרמטר החדש כדי למנוע כפל כותרת וכפתור סגירה
+            hideHeader={true}
           >
             <motion.div
               variants={modalVariants}
@@ -254,7 +277,7 @@ const ActionsPanel = () => {
               animate="visible"
               exit="exit"
             >
-              {/* Modal Header */}
+              {/* Modal Header - עכשיו רק אחד מופיע */}
               <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 -m-6 mb-6 rounded-t-xl">
                 <div className="flex items-center justify-between text-white">
                   <div>
@@ -323,10 +346,7 @@ const ActionsPanel = () => {
                       label={t('actions.amount')}
                       type="text"
                       value={formData.amount}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        amount: formatAmountInput(e.target.value) 
-                      }))}
+                      onChange={handleAmountChange}
                       placeholder="0.00"
                       icon={DollarSign}
                       required

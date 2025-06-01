@@ -11,7 +11,8 @@ import {
   HelpCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Activity
+  Activity,
+  Clock as ClockIcon // נשנה את השם כדי למנוע התנגשות
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
@@ -19,30 +20,90 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useDate } from '../../../context/DateContext';
 import { Card, Badge, Button } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
+import { numbers } from '../../../utils/helpers';
 
 const BalancePanel = () => {
   const { t, language } = useLanguage();
   const { balances, loading, error, refreshData } = useTransactions();
   const { formatAmount } = useCurrency();
-  const { selectedDate, updateSelectedDate, formatDate, isToday, canGoNext, goToPreviousDay, goToNextDay, resetToToday } = useDate();
+  const { 
+    selectedDate, 
+    updateSelectedDate, 
+    formatDate, 
+    isToday, 
+    canGoNext, 
+    goToPreviousDay, 
+    goToNextDay, 
+    resetToToday, 
+    getDateForServer 
+  } = useDate();
+  
+  // הגדרת מערך התקופות החסר
+  const periods = [
+    { id: 'daily', label: t('home.balance.periods.daily') },
+    { id: 'weekly', label: t('home.balance.periods.weekly') },
+    { id: 'monthly', label: t('home.balance.periods.monthly') },
+    { id: 'yearly', label: t('home.balance.periods.yearly') }
+  ];
   
   const [period, setPeriod] = useState('daily');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [dateWarning, setDateWarning] = useState(false);
   const calendarRef = useRef(null);
   
   const isRTL = language === 'he';
 
-  // Period tabs
-  const periods = [
-    { id: 'daily', label: t('home.balance.daily'), icon: Calendar },
-    { id: 'weekly', label: t('home.balance.weekly'), icon: Clock },
-    { id: 'monthly', label: t('home.balance.monthly'), icon: TrendingUp },
-    { id: 'yearly', label: t('home.balance.yearly'), icon: Activity }
-  ];
+  // בדיקה אם התאריך הנוכחי מסונכרן
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const selectedDay = getDateForServer(selectedDate);
+    setDateWarning(selectedDay !== today);
+  }, [selectedDate, getDateForServer]);
 
-  // Get current balance
-  const currentBalance = balances[period] || { income: 0, expenses: 0, balance: 0 };
+  // ניקוי להתראה אחרי זמן קצר
+  useEffect(() => {
+    if (dateWarning) {
+      const timer = setTimeout(() => {
+        setDateWarning(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [dateWarning]);
+  
+  // חיזוק פונקציית איפוס התאריך
+  const handleResetToday = () => {
+    resetToToday();
+    console.log('[BalancePanel] Reset to today triggered');
+    // גם רענן את הנתונים כשמחליפים תאריך
+    setTimeout(() => refreshData(), 100);
+  };
+
+  // Add safety check for balances format
+  const ensureBalanceFormat = (balanceData, periodKey) => {
+    if (!balanceData) {
+      console.warn(`[WARN] Missing balance data for ${periodKey}`);
+      return { income: 0, expenses: 0, balance: 0 };
+    }
+    
+    // Make sure each property exists and is a number
+    return {
+      income: typeof balanceData.income === 'number' ? balanceData.income : parseFloat(balanceData.income || 0),
+      expenses: typeof balanceData.expenses === 'number' ? balanceData.expenses : parseFloat(balanceData.expenses || 0),
+      balance: typeof balanceData.balance === 'number' ? balanceData.balance : 
+               (parseFloat(balanceData.income || 0) - parseFloat(balanceData.expenses || 0))
+    };
+  };
+
+  // Get current balance with safety check
+  const currentBalance = ensureBalanceFormat(balances?.[period], period);
+
+  // Debug log
+  useEffect(() => {
+    console.log('[DEBUG] BalancePanel selectedDate:', selectedDate);
+    console.log('[DEBUG] BalancePanel formatted date for API:', getDateForServer(selectedDate));
+    console.log('[DEBUG] BalancePanel balances:', balances);
+  }, [selectedDate, balances, getDateForServer]);
 
   // Animation variants
   const cardVariants = {
@@ -71,6 +132,10 @@ const BalancePanel = () => {
     }
   };
 
+  const formatValue = (value) => {
+    return numbers.formatAmount(value || 0);
+  };
+  
   return (
     <Card className="p-0 overflow-hidden">
       {/* Header */}
@@ -97,7 +162,7 @@ const BalancePanel = () => {
                 variant="outline"
                 size="small"
                 onClick={() => setShowCalendar(!showCalendar)}
-                className="min-w-[140px]"
+                className={`min-w-[140px] ${dateWarning ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30' : ''}`}
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 {formatDate(selectedDate, 'PP')}
@@ -108,9 +173,9 @@ const BalancePanel = () => {
                   <CalendarWidget
                     selectedDate={selectedDate}
                     onDateSelect={(date) => {
-                      updateSelectedDate(date);
+                      updateSelectedDate(new Date(date)); // ודא שזה אובייקט חדש
                       setShowCalendar(false);
-                      refreshData(date);
+                      refreshData(); // הכרח רענון
                     }}
                     onClose={() => setShowCalendar(false)}
                   />
@@ -132,7 +197,7 @@ const BalancePanel = () => {
               <Button
                 variant="ghost"
                 size="small"
-                onClick={resetToToday}
+                onClick={handleResetToday}
                 className="p-1.5"
                 title={t('home.balance.backToToday')}
               >
@@ -159,6 +224,19 @@ const BalancePanel = () => {
             </div>
           </div>
         </div>
+        
+        {/* הודעת התראה אם לא מציגים את היום הנוכחי */}
+        {dateWarning && (
+          <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-1.5 rounded-md text-center animate-pulse">
+            {t('home.balance.viewingPastDate')}
+            <button 
+              className="underline ml-1 font-medium"
+              onClick={handleResetToday}
+            >
+              {t('home.balance.backToToday')}
+            </button>
+          </div>
+        )}
         
         {/* Period Tabs */}
         <div className="flex gap-1 mt-4 p-1 bg-white/50 dark:bg-gray-800/50 rounded-lg">
@@ -187,6 +265,7 @@ const BalancePanel = () => {
         ) : error ? (
           <div className="text-center py-8 text-red-500">
             {t('home.balance.error')}
+            <p className="text-sm mt-2">{error.message || 'Unknown error'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -210,7 +289,7 @@ const BalancePanel = () => {
                 key={`${period}-income`}
                 className="text-2xl font-bold text-green-700 dark:text-green-300"
               >
-                {formatAmount(currentBalance.income)}
+                {formatValue(currentBalance.income)}
               </motion.div>
             </motion.div>
             
@@ -234,7 +313,7 @@ const BalancePanel = () => {
                 key={`${period}-expenses`}
                 className="text-2xl font-bold text-red-700 dark:text-red-300"
               >
-                {formatAmount(currentBalance.expenses)}
+                {formatValue(currentBalance.expenses)}
               </motion.div>
             </motion.div>
             
@@ -274,7 +353,7 @@ const BalancePanel = () => {
                     : 'text-orange-700 dark:text-orange-300'
                 }`}
               >
-                {formatAmount(currentBalance.balance)}
+                {formatValue(currentBalance.balance)}
               </motion.div>
             </motion.div>
           </div>

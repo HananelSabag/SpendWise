@@ -1,6 +1,9 @@
 // src/context/TransactionContext.jsx
 // Simplified version using React Query hooks
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Make sure this is imported
+import axios from 'axios'; // Add axios import
+import api, { transactionAPI } from '../utils/api'; // Make sure API utilities are imported
 import { useAuth } from './AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { 
@@ -10,6 +13,7 @@ import {
   useRecurringTransactions,
   useTemplates 
 } from '../hooks/useApi';
+import { numbers } from '../utils/helpers';
 
 const TransactionContext = createContext(null);
 
@@ -26,6 +30,8 @@ export const useTransactions = () => {
  * Much simpler and more efficient than the old version
  */
 export const TransactionProvider = ({ children }) => {
+  const queryClient = useQueryClient();
+  const token = localStorage.getItem('accessToken');
   const { user } = useAuth();
   
   // Main dashboard data - replaces 3 separate calls
@@ -86,13 +92,49 @@ export const TransactionProvider = ({ children }) => {
   };
   
   // Quick add transaction
-  const quickAddTransaction = async (type, amount, description = 'Quick Transaction') => {
-    return createTransaction(type, {
-      amount: parseFloat(amount),
-      description,
-      date: new Date().toISOString().split('T')[0],
-      is_recurring: false
-    });
+  const quickAddTransaction = async (type, amount, description = 'Quick transaction') => {
+    try {
+      // Create a date at noon to avoid timezone edge cases
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      
+      // Get timezone offset in minutes and convert to hours
+      const tzOffset = today.getTimezoneOffset();
+      
+      // Get the date in local timezone
+      const localDate = new Date(today.getTime() - (tzOffset * 60000));
+      
+      // Format as YYYY-MM-DD ensuring we use local date
+      const formattedDate = localDate.toISOString().substring(0, 10);
+      
+      console.log(`[DEBUG] Adding quick ${type} with date: ${formattedDate} (local time)`);
+      console.log(`[DEBUG] Current timezone offset: ${tzOffset} minutes`);
+      
+      const payload = {
+        amount,
+        description,
+        date: formattedDate,
+        category_id: null,
+        notes: ''
+      };
+      
+      // Use the API utility instead of direct axios
+      const endpoint = `/transactions/${type}`;
+      const response = await api.post(endpoint, payload);
+      
+      // Trigger dashboard refresh event
+      window.dispatchEvent(new CustomEvent('dashboard-refresh-requested', { 
+        detail: { queryKey: 'dashboard' }
+      }));
+      
+      // Also trigger the existing event
+      window.dispatchEvent(new CustomEvent('transaction-added'));
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error adding quick transaction:', error);
+      throw error;
+    }
   };
   
   // Refresh data
@@ -102,26 +144,42 @@ export const TransactionProvider = ({ children }) => {
     templatesQuery.refetch();
   };
   
-  // Recurring daily impact
-  const recurringDailyImpact = React.useMemo(() => {
-    const recurring = recurringQuery.data || [];
+  const processBalanceData = (data) => {
+    if (!data) return { income: 0, expenses: 0, total: 0 };
     
+    return {
+      income: numbers.parseAmount(data.income),
+      expenses: numbers.parseAmount(data.expenses),
+      total: numbers.parseAmount(data.income - data.expenses)
+    };
+  };
+
+  // Calculate the daily impact of all recurring transactions.
+  // Always ensure `recurring` is an array.
+  const recurringDailyImpact = React.useMemo(() => {
+    // Use Array.isArray to guarantee recurring is always an array.
+    const rawRecurring = recurringQuery.data?.data;
+    const recurring = Array.isArray(rawRecurring) ? rawRecurring : [];
+
     return recurring.reduce((acc, item) => {
-      const dailyAmount = item.daily_amount || 
-        (item.interval_type === 'monthly' ? item.amount / 30 : 
-         item.interval_type === 'weekly' ? item.amount / 7 : 
-         item.amount);
-      
+      const dailyAmount =
+        item.daily_amount ||
+        (item.interval_type === 'monthly'
+          ? item.amount / 30
+          : item.interval_type === 'weekly'
+          ? item.amount / 7
+          : item.amount);
+
       if (item.type === 'income') {
         acc.income += dailyAmount;
       } else {
         acc.expense += dailyAmount;
       }
-      
       acc.total = acc.income - acc.expense;
       return acc;
     }, { total: 0, income: 0, expense: 0 });
   }, [recurringQuery.data]);
+
   
   const value = {
     // Data

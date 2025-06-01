@@ -92,10 +92,18 @@ const CalendarWidget = ({
     return date.toDateString() === selectedDate.toDateString();
   };
 
+  // נגדיר ברירת מחדל למערך הימים במקרה ש-t() לא מחזיר ערך
   const weekDays = t('calendar.weekDays') || (
-    isRTL 
-      ? ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
-      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    isRTL ? 
+      ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'] :
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  );
+
+  // נוודא שweekDays הוא תמיד מערך
+  const weekDaysArray = Array.isArray(weekDays) ? weekDays : (
+    isRTL ? 
+      ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'] :
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   );
 
   return (
@@ -136,7 +144,7 @@ const CalendarWidget = ({
 
       {/* Week days */}
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {weekDays.map((day) => (
+        {weekDaysArray.map((day) => ( // השתמש ב-weekDaysArray במקום weekDays
           <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-2">
             {day}
           </div>

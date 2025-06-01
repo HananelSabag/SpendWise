@@ -24,7 +24,7 @@ import { cn } from '../../utils/helpers';
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import AccessibilityStatement from '../../components/common/AccessibilityStatement';
-import AuthFooter from '../../components/auth/AuthFooter';
+import Footer from '../../components/layout/Footer';
 
 const PasswordStrengthIndicator = ({ password }) => {
   const { t, language } = useLanguage();
@@ -540,7 +540,7 @@ const Register = () => {
         </div>
       </div>
 
-      <AuthFooter />
+      <Footer />
     </>
   );
 };

@@ -103,10 +103,9 @@ export const transactionSchemas = {
   
   quickAdd: z.object({
     amount: z.string()
-      .regex(/^\d+(\.\d{1,2})?$/, 'Invalid amount format')
-      .transform(val => parseFloat(val))
-      .refine(val => val > 0, 'Amount must be positive')
-      .refine(val => val <= 1000000, 'Amount too large'),
+      .min(1, 'Amount is required')
+      .transform(val => amountValidation.formatAmountInput(val))
+      .refine(val => amountValidation.validateAmount(val), 'Invalid amount'),
     type: z.enum(['expense', 'income'])
   })
 };
@@ -235,5 +234,30 @@ export const zodResolver = (schema) => async (data) => {
       };
     }
     throw error;
+  }
+};
+
+/**
+ * Amount validation helpers
+ */
+export const amountValidation = {
+  formatAmountInput: (value) => {
+    if (!value) return '';
+    // Remove any non-digit characters except decimal point and minus
+    const cleaned = value.replace(/[^\d.-]/g, '');
+    // Handle decimal points
+    const parts = cleaned.split('.');
+    if (parts.length > 2) return value;
+    // Allow only 2 decimal places
+    if (parts[1]?.length > 2) {
+      return `${parts[0]}.${parts[1].slice(0, 2)}`;
+    }
+    return cleaned;
+  },
+
+  validateAmount: (amount) => {
+    if (!amount) return false;
+    const num = parseFloat(amount);
+    return !isNaN(num) && num > 0 && num <= 1000000;
   }
 };
