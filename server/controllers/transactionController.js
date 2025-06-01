@@ -412,7 +412,7 @@ const transactionController = {
       amount,
       description,
       date,
-      category_id,
+      category_id = 8, // Default to General category (ID 8) if not provided
       is_recurring,
       recurring_interval,
       day_of_month,
@@ -663,7 +663,7 @@ const transactionController = {
    */
   addExpense: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const { amount, description, date, category_id, notes } = req.body;
+    const { amount, description, date, category_id = 8, notes } = req.body;
     
     // Debug log the received date from client
     console.log(`[DEBUG] Received expense with date: ${date}`);
@@ -721,7 +721,7 @@ const transactionController = {
    */
   addIncome: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const { amount, description, date, category_id, notes } = req.body;
+    const { amount, description, date, category_id = 8, notes } = req.body;
     
     // Debug log the received date from client
     console.log(`[DEBUG] Received income with date: ${date}`);

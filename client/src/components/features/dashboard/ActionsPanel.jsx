@@ -60,21 +60,21 @@ const ActionsPanel = () => {
     date: selectedDate.toISOString().split('T')[0],
   });
 
-  // Categories (should come from API/context eventually)
+  // Categories - עדכון ראשון
   const categories = {
     income: [
-      { id: 0, name: 'General', icon: Tag, color: 'gray' }, // Add default General category
+      { id: 8, name: 'General', icon: Tag, color: 'gray' }, // Updated ID from 0 to 8
       { id: 1, name: 'Salary', icon: DollarSign, color: 'green' },
       { id: 2, name: 'Freelance', icon: FileText, color: 'blue' },
       { id: 3, name: 'Investments', icon: TrendingUp, color: 'purple' },
     ],
     expense: [
-      { id: 0, name: 'General', icon: Tag, color: 'gray' }, // Add default General category
-      { id: 4, name: 'Rent', icon: Home, color: 'red' },
-      { id: 5, name: 'Groceries', icon: ShoppingCart, color: 'orange' },
-      { id: 6, name: 'Transportation', icon: Car, color: 'yellow' },
-      { id: 7, name: 'Utilities', icon: Zap, color: 'gray' },
-      { id: 8, name: 'Entertainment', icon: Tv, color: 'pink' },
+      { id: 8, name: 'General', icon: Tag, color: 'gray' }, // Updated ID from 0 to 8
+      { id: 3, name: 'Rent', icon: Home, color: 'red' },
+      { id: 4, name: 'Groceries', icon: ShoppingCart, color: 'orange' },
+      { id: 5, name: 'Transportation', icon: Car, color: 'yellow' },
+      { id: 6, name: 'Utilities', icon: Zap, color: 'gray' },
+      { id: 7, name: 'Entertainment', icon: Tv, color: 'pink' },
     ],
   };
 
@@ -122,13 +122,13 @@ const ActionsPanel = () => {
     },
   ];
 
-  // Handle type selection
+  // Handle type selection - עדכון שני
   const handleTypeSelect = (type) => {
     setActiveType(type);
     setFormData(prev => ({
       ...prev,
       is_recurring: type.isRecurring,
-      category_id: 0, // Default to General category (ID 0)
+      category_id: 8, // Default to General category (ID 8) - changed from 0 to 8
     }));
     setError('');
   };

@@ -66,12 +66,12 @@ const QuickActionsBar = () => {
       const today = new Date();
       console.log('[INFO] Adding transaction with today\'s date:', today.toISOString().split('T')[0]);
       
-      // Add default "General" category (ID 0) for quick transactions
+      // Add default "General" category (ID 8) for quick transactions - changed from 0 to 8
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
         t('quickExpense.defaultDescription'),
-        0  // Use 0 as the ID for the default "General" category
+        8  // Use 8 as the ID for the default "General" category (last item in seed data)
       );
       
       // Alert if selected date is not today

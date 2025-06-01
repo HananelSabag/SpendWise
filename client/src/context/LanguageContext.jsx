@@ -374,7 +374,7 @@ const translations = {
     Transportation: 'Transportation',
     Utilities: 'Utilities',
     Entertainment: 'Entertainment',
-    General: 'General'
+    General: 'General'  // קטגוריית ברירת מחדל נמצאת
   },
 
   // Profile Page
@@ -926,7 +926,7 @@ const translations = {
       Transportation: 'תחבורה',
       Utilities: 'שירותים',
       Entertainment: 'בילויים',
-      General: 'כללי'
+      General: 'כללי'  // קטגוריית ברירת מחדל נמצאת
     },
 
     // Profile Page
