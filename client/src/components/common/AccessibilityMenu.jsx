@@ -16,11 +16,11 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-// ✅ תוודא שקונטקסט הנגישות קיים או צור אותו
+// Ensure accessibility context exists or create it
 // import { useAccessibility } from '../../context/AccessibilityContext';
 import AccessibilityStatement from './AccessibilityStatement';
 
-// ✅ זמנית - מימוש פשוט לפונקציות נגישות עד שייווצר הקונטקסט
+// Temporary - simple implementation for accessibility functions until context is created
 const useAccessibility = () => {
   const [fontSize, setFontSize] = useState(1);
   const [highContrast, setHighContrast] = useState(false);
@@ -246,7 +246,7 @@ const AccessibilityMenu = () => {
                       {t('accessibility.accessibilityStatement')}
                     </span>
                     <span className="text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
-                      חובה
+                      Required
                     </span>
                   </button>
                 </div>

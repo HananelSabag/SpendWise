@@ -15,12 +15,12 @@ import {
   Check,
   AlertCircle,
   Languages,
-  LogIn  // ✅ הוספתי את LogIn החסר
+  LogIn  // ✅ Added missing LogIn import
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
-import LoadingSpinner from '../../components/ui/LoadingSpinner'; // ✅ הוספתי את LoadingSpinner החסר
+import LoadingSpinner from '../../components/ui/LoadingSpinner'; // ✅ Added missing LoadingSpinner import
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import { userSchemas, validate } from "../../utils/validationSchemas";
@@ -117,8 +117,8 @@ const Login = () => {
           localStorage.setItem('rememberMe', 'true');
         }
         
-        // בדיקה כדי לוודא שהנתיב קיים ותקין
-        // ✅ תיקון נתיב הניווט - השתמש ב-dashboard במקום home
+        // Check to ensure the path exists and is valid
+        // ✅ Navigation path fix - use dashboard instead of home
         const targetPath = from === '/dashboard' ? '/dashboard' : from;
         
         console.log("[DEBUG] Navigating to:", targetPath);
@@ -215,7 +215,7 @@ const Login = () => {
                   autoComplete="email"
                   required
                   value={formData.email}
-                  onChange={handleChange} // ✅ תיקון handleChange
+                  onChange={handleChange} // ✅ Fixed handleChange
                   placeholder={t('auth.emailPlaceholder')}
                   className={`appearance-none relative block w-full px-3 py-3 border ${
                     errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
@@ -240,7 +240,7 @@ const Login = () => {
                     autoComplete="current-password"
                     required
                     value={formData.password}
-                    onChange={handleChange} // ✅ תיקון handleChange
+                    onChange={handleChange} // ✅ Fixed handleChange
                     placeholder={t('auth.passwordPlaceholder')}
                     className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
                       errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
@@ -271,8 +271,8 @@ const Login = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    checked={rememberMe} // ✅ הוספתי checked
-                    onChange={(e) => setRememberMe(e.target.checked)} // ✅ הוספתי onChange
+                    checked={rememberMe} // ✅ Added checked
+                    onChange={(e) => setRememberMe(e.target.checked)} // ✅ Added onChange
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">

@@ -41,7 +41,7 @@ const ProfileInfo = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // ✅ עדכון useEffect כדי לוודא שגם תמונות קיימות מוצגות נכון
+  // Update useEffect to ensure existing images are displayed correctly
   useEffect(() => {
     if (user) {
       setFormData({
@@ -49,7 +49,7 @@ const ProfileInfo = () => {
         email: user.email || ''
       });
       
-      // ✅ וידוא שתמונת הפרופיל הקיימת מוצגת עם URL מלא
+      // Ensure existing profile picture is displayed with full URL
       let imageUrl = user.preferences?.profilePicture;
       if (imageUrl && !imageUrl.startsWith('http')) {
         imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${imageUrl}`;
@@ -59,7 +59,7 @@ const ProfileInfo = () => {
     }
   }, [user]);
 
-  // ✅ עדכון handleInputChange להסיר שדות מיותרים
+  // Update handleInputChange to remove unnecessary fields
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -114,18 +114,18 @@ const ProfileInfo = () => {
     setUploadingPhoto(true);
     
     try {
-      // ✅ העלאת התמונה תחילה
+      // Upload image first
       const uploadResponse = await authAPI.uploadProfilePicture(file);
       console.log('Upload response:', uploadResponse);
       
-      // ✅ קבלת הנתיב מהתגובה - השרת כבר מחזיר URL מלא
+      // Get path from response - server already returns full URL
       const imageUrl = uploadResponse.data.data.path;
       console.log('Image URL from server:', imageUrl);
       
-      // ✅ עדכון state מיידי
+      // Immediate state update
       setProfileImage(imageUrl);
       
-      // ✅ עדכון preferences בנפרד
+      // Update preferences separately
       await authAPI.updatePreferences({
         ...user?.preferences,
         profilePicture: imageUrl
@@ -148,7 +148,7 @@ const ProfileInfo = () => {
     setSavingProfile(true);
     
     try {
-      // ✅ עדכון פרופיל בסיסי - רק username ו-email
+      // Basic profile update - only username and email
       const profileUpdate = {};
       if (formData.username !== user?.username) profileUpdate.username = formData.username;
       if (formData.email !== user?.email) profileUpdate.email = formData.email;
@@ -157,7 +157,7 @@ const ProfileInfo = () => {
         await updateProfile(profileUpdate);
       }
       
-      // ✅ עדכון תמונת פרופיל אם השתנתה (עם URL מלא)
+      // Update profile picture if changed (with full URL)
       const currentImageUrl = user?.preferences?.profilePicture && !user.preferences.profilePicture.startsWith('http')
         ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.preferences.profilePicture}`
         : user?.preferences?.profilePicture;
@@ -240,20 +240,20 @@ const ProfileInfo = () => {
               src={profileImage}
               className="ring-4 ring-gray-200 dark:ring-gray-700"
               onError={(e) => {
-                // ✅ אם התמונה לא נטענת, רשום לקונסול
+                // If image fails to load, log to console
                 console.log('Profile image failed to load:', profileImage);
                 console.log('Error details:', e);
               }}
             />
             
-            {/* ✅ Debug info - רק במצב פיתוח */}
+            {/* Debug info - development only */}
             {process.env.NODE_ENV === 'development' && profileImage && (
               <div className="absolute -bottom-10 left-0 text-xs text-gray-500 bg-white dark:bg-gray-800 p-1 rounded shadow-sm border max-w-[300px] break-all">
                 {t('profile.profilePhoto')}: {profileImage}
               </div>
             )}
             
-            {/* ✅ כפתור תמיד זמין - לא תלוי ב-isEditing */}
+            {/* Button always available - not dependent on isEditing */}
             <button
               onClick={() => fileInputRef.current?.click()}
               className={cn(
@@ -287,7 +287,7 @@ const ProfileInfo = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('profile.photoHelper')}
             </p>
-            {/* ✅ כפתור גלוי נוסף */}
+            {/* Additional visible button */}
             <Button
               variant="outline"
               size="small"

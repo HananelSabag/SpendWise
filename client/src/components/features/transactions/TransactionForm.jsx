@@ -23,6 +23,10 @@ import { useDate } from '../../../context/DateContext';
 import { cn, dateHelpers, numbers } from '../../../utils/helpers';
 import { Input, Select, Button, Alert, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
+import toast from 'react-hot-toast';
+import { useCategories } from '../../../hooks/useApi';
+import Modal from '../../ui/Modal';
+import CategoryManager from '../categories/CategoryManager';
 
 /**
  * TransactionForm Component
@@ -39,6 +43,7 @@ const TransactionForm = ({
   const { t, language } = useLanguage();
   const { currency } = useCurrency();
   const { selectedDate } = useDate();
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const isRTL = language === 'he';
   
   const isEditing = !!transaction;
@@ -62,6 +67,9 @@ const TransactionForm = ({
   const [showRecurringOptions, setShowRecurringOptions] = useState(formData.is_recurring);
   const [useEndDate, setUseEndDate] = useState(!!formData.recurring_end_date);
   const [saving, setSaving] = useState(false);
+  const [convertToTemplate, setConvertToTemplate] = useState(false);
+  const [dayOfWeek, setDayOfWeek] = useState(new Date().getDay());
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Categories
   const categories = {
@@ -80,10 +88,9 @@ const TransactionForm = ({
   };
 
   // Get categories for current type
-  const currentCategories = [
-    { id: 9, name: 'General' },
-    ...(categories[formData.transaction_type] || [])
-  ];
+  const currentCategories = allCategories.filter(cat => 
+    cat.type === formData.transaction_type || cat.type === null || cat.name === 'General'
+  );
 
   // Validation
   const validateForm = () => {
@@ -127,12 +134,32 @@ const TransactionForm = ({
     
     setSaving(true);
     try {
-      await onSave?.({
+      const saveData = {
         ...formData,
         amount: numbers.parseAmount(formData.amount),
         recurring_end_date: useEndDate ? formData.recurring_end_date : null,
-        category_id: formData.category_id || 9 // Default to General
-      });
+        category_id: formData.category_id || 9,
+        day_of_week: formData.recurring_interval === 'weekly' ? dayOfWeek : null,
+        day_of_month: formData.recurring_interval === 'monthly' ? new Date(formData.date).getDate() : null
+      };
+      
+      // If converting to template, create both transaction and template
+      if (convertToTemplate && !formData.is_recurring) {
+        // First create the one-time transaction
+        await onSave?.(saveData);
+        
+        // Then create the recurring template
+        await onSave?.({
+          ...saveData,
+          is_recurring: true,
+          recurring_interval: 'monthly',
+          recurring_start_date: formData.date
+        });
+        
+        toast.success(t('transactions.convertedToRecurring'));
+      } else {
+        await onSave?.(saveData);
+      }
     } catch (error) {
       console.error('Save failed:', error);
     } finally {
@@ -208,12 +235,12 @@ const TransactionForm = ({
                 {type === 'expense' ? (
                   <>
                     <TrendingDown className="w-4 h-4 inline mr-2" />
-                    {t('home.balance.expenses')}
+                    {t('transactions.expense')}
                   </>
                 ) : (
                   <>
                     <TrendingUp className="w-4 h-4 inline mr-2" />
-                    {t('home.balance.income')}
+                    {t('transactions.income')}
                   </>
                 )}
               </button>
@@ -224,7 +251,7 @@ const TransactionForm = ({
         {/* Amount */}
         <div>
           <Input
-            label={t('actions.amount')}
+            label={t('common.amount')}
             type="text"
             value={formData.amount}
             onChange={(e) => handleChange('amount', e.target.value)}
@@ -239,7 +266,7 @@ const TransactionForm = ({
         {/* Description */}
         <div>
           <Input
-            label={t('actions.description')}
+            label={t('common.description')}
             type="text"
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
@@ -255,7 +282,7 @@ const TransactionForm = ({
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('transactions.date')}
+              {t('common.date')}
             </label>
             <div className="relative">
               <button
@@ -306,16 +333,39 @@ const TransactionForm = ({
 
           {/* Category */}
           <div>
-            <Select
-              label={t('actions.category')}
-              value={formData.category_id || ''}
-              onChange={(e) => handleChange('category_id', e.target.value ? parseInt(e.target.value) : null)}
-              options={currentCategories.map(cat => ({
-                value: cat.id,
-                label: t(`categories.${cat.name}`)
-              }))}
-              placeholder={t('actions.selectCategory')}
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('common.category')}
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="small"
+                onClick={() => setShowCategoryManager(true)}
+                className="text-xs"
+              >
+                <Tag className="w-3 h-3 mr-1" />
+                {t('categories.manageCategories')}
+              </Button>
+            </div>
+            {categoriesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+              </div>
+            ) : (
+              <select
+                value={formData.category_id || ''}
+                onChange={(e) => handleChange('category_id', e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+              >
+                <option value="">{t('transactions.selectCategory')}</option>
+                {currentCategories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.is_default ? t(`categories.${cat.name}`) : cat.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -339,7 +389,7 @@ const TransactionForm = ({
             </span>
             <Badge variant="primary" size="small" className={cn(isRTL ? 'mr-2' : 'ml-2')}>
               <RefreshCw className="w-3 h-3 mr-1" />
-              {t('actions.recurring')}
+              {t('transactions.recurring')}
             </Badge>
           </label>
 
@@ -355,15 +405,41 @@ const TransactionForm = ({
               >
                 {/* Frequency */}
                 <Select
-                  label={t('actions.frequency')}
+                  label={t('transactions.frequency')}
                   value={formData.recurring_interval}
                   onChange={(e) => handleChange('recurring_interval', e.target.value)}
                   options={[
-                    { value: 'daily', label: t('actions.frequencies.daily') },
-                    { value: 'weekly', label: t('actions.frequencies.weekly') },
-                    { value: 'monthly', label: t('actions.frequencies.monthly') }
+                    { value: 'daily', label: t('transactions.frequencies.daily') },
+                    { value: 'weekly', label: t('transactions.frequencies.weekly') },
+                    { value: 'monthly', label: t('transactions.frequencies.monthly') }
                   ]}
                 />
+
+                {/* Day of Week for Weekly Recurring */}
+                {formData.is_recurring && formData.recurring_interval === 'weekly' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Day of Week
+                    </label>
+                    <select
+                      value={dayOfWeek}
+                      onChange={(e) => setDayOfWeek(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                    >
+                      {[
+                        { value: 0, label: 'Sunday' },
+                        { value: 1, label: 'Monday' },
+                        { value: 2, label: 'Tuesday' },
+                        { value: 3, label: 'Wednesday' },
+                        { value: 4, label: 'Thursday' },
+                        { value: 5, label: 'Friday' },
+                        { value: 6, label: 'Saturday' }
+                      ].map(day => (
+                        <option key={day.value} value={day.value}>{day.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* End Date Option */}
                 <div>
@@ -417,6 +493,35 @@ const TransactionForm = ({
           </AnimatePresence>
         </div>
 
+        {/* Convert to Template - Only for new non-recurring transactions */}
+        {!isEditing && !formData.is_recurring && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={convertToTemplate}
+                onChange={(e) => setConvertToTemplate(e.target.checked)}
+                className="w-5 h-5 rounded text-primary-500 focus:ring-primary-500"
+              />
+              <span className={cn(
+                'text-sm font-medium text-gray-700 dark:text-gray-300',
+                isRTL ? 'mr-3' : 'ml-3'
+              )}>
+                Create recurring template
+              </span>
+              <Badge variant="info" size="small" className={cn(isRTL ? 'mr-2' : 'ml-2')}>
+                <Info className="w-3 h-3 mr-1" />
+                {t('actions.new')}
+              </Badge>
+            </label>
+            {convertToTemplate && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                This will create both a one-time transaction and a recurring template for future use.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
           <Button
@@ -449,6 +554,16 @@ const TransactionForm = ({
           </Button>
         </div>
       </form>
+
+      {/* Category Manager Modal */}
+      <Modal
+        isOpen={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        title={t('categories.manageCategories')}
+        size="large"
+      >
+        <CategoryManager />
+      </Modal>
     </motion.div>
   );
 };

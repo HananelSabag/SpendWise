@@ -39,6 +39,7 @@ app.use(requestId);
 // API rate limiter
 app.use('/api', apiLimiter);
 
+
 // Request logging
 app.use((req, res, next) => {
   req.log.info('Request received', {
@@ -73,6 +74,7 @@ app.get('/health', async (req, res) => {
 const API_VERSION = '/api/v1';
 app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
 app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
+app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
 
 // 404 handler
 app.use((req, res, next) => {

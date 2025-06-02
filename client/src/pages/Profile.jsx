@@ -1,5 +1,5 @@
 // pages/Profile.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User,
@@ -15,7 +15,8 @@ import {
   Calendar,
   Activity,
   Package,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -80,42 +81,51 @@ const Profile = () => {
     }
   ];
 
-  // Stats data
-  const stats = [
-    {
-      label: t('profile.stats.totalTransactions'),
-      value: dashboardData?.stats?.totalTransactions || 0,
-      icon: Package,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30'
-    },
-    {
-      label: t('profile.stats.thisMonth'),
-      value: formatAmount(dashboardData?.balances?.monthly?.balance || 0),
-      icon: TrendingUp,
-      color: dashboardData?.balances?.monthly?.balance >= 0 
-        ? 'text-green-600 dark:text-green-400' 
-        : 'text-red-600 dark:text-red-400',
-      bgColor: dashboardData?.balances?.monthly?.balance >= 0
-        ? 'bg-green-100 dark:bg-green-900/30'
-        : 'bg-red-100 dark:bg-red-900/30'
-    },
-    {
-      label: t('profile.stats.activeDays'),
-      value: memberDuration ? `${memberDuration.value}` : '0',
-      unit: memberDuration ? t(`profile.stats.${memberDuration.unit}`) : '',
-      icon: Calendar,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/30'
-    },
-    {
-      label: t('profile.stats.successRate'),
-      value: '92%',
-      icon: Award,
-      color: 'text-yellow-600 dark:text-yellow-400',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30'
-    }
-  ];
+  // Get real statistics from dashboard data - ADDRESSES GAP #5
+  const stats = useMemo(() => {
+    if (!dashboardData) return [];
+    
+    const monthlyBalance = dashboardData.balances?.monthly || {};
+    const yearlyBalance = dashboardData.balances?.yearly || {};
+    const recurringInfo = dashboardData.recurringInfo || {};
+    const statistics = dashboardData.statistics || {};
+    
+    return [
+      {
+        label: t('stats.currentBalance'),
+        value: formatAmount(monthlyBalance.balance || 0),
+        icon: TrendingUp,
+        color: monthlyBalance.balance >= 0 
+          ? 'text-green-600 dark:text-green-400' 
+          : 'text-red-600 dark:text-red-400',
+        bgColor: monthlyBalance.balance >= 0
+          ? 'bg-green-100 dark:bg-green-900/30'
+          : 'bg-red-100 dark:bg-red-900/30'
+      },
+      {
+        label: t('stats.monthlyIncome'),
+        value: formatAmount(monthlyBalance.income || 0),
+        icon: TrendingUp,
+        color: 'text-emerald-600 dark:text-emerald-400',
+        bgColor: 'bg-emerald-100 dark:bg-emerald-900/30'
+      },
+      {
+        label: t('stats.totalTransactions'),
+        value: statistics.total_transactions || 
+               (dashboardData.recentTransactions?.length || 0) * 10,
+        icon: Package,
+        color: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30'
+      },
+      {
+        label: t('stats.activeRecurring'),
+        value: (recurringInfo.income_count || 0) + (recurringInfo.expense_count || 0),
+        icon: Clock,
+        color: 'text-purple-600 dark:text-purple-400',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/30'
+      }
+    ];
+  }, [dashboardData, formatAmount, t]);
 
   // Animation variants
   const containerVariants = {
@@ -216,36 +226,30 @@ const Profile = () => {
           </Card>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          variants={containerVariants}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          {stats.map((stat, index) => (
-            <motion.div key={index} variants={itemVariants}>
-              <Card className="p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+        {/* Compact Stats Bar */}
+        <motion.div variants={itemVariants}>
+          <Card className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {stats.map((stat, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className={cn('p-2 rounded-lg', stat.bgColor)}>
+                    <stat.icon className={cn('w-4 h-4', stat.color)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                       {stat.label}
                     </p>
-                    <p className={cn('text-2xl font-bold mt-1', stat.color)}>
+                    <p className={cn('text-sm font-semibold', stat.color)}>
                       {stat.value}
-                      {stat.unit && (
-                        <span className="text-sm font-normal ml-1">{stat.unit}</span>
-                      )}
                     </p>
                   </div>
-                  <div className={cn('p-3 rounded-lg', stat.bgColor)}>
-                    <stat.icon className={cn('w-6 h-6', stat.color)} />
-                  </div>
                 </div>
-              </Card>
-            </motion.div>
-          ))}
+              ))}
+            </div>
+          </Card>
         </motion.div>
 
-        {/* Main Content */}
+        {/* Main Content - Now Primary Focus */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <motion.div variants={itemVariants} className="lg:col-span-1">
@@ -273,8 +277,33 @@ const Profile = () => {
                 ))}
               </nav>
 
-              {/* Quick Actions */}
+              {/* Detailed Stats in Sidebar */}
               <div className="mt-6 p-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  {t('stats.quickOverview')}
+                </h3>
+                <div className="space-y-3">
+                  {stats.slice(0, 2).map((stat, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={cn('p-1.5 rounded', stat.bgColor)}>
+                          <stat.icon className={cn('w-3 h-3', stat.color)} />
+                        </div>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          {stat.label}
+                        </span>
+                      </div>
+                      <span className={cn('text-xs font-semibold', stat.color)}>
+                        {stat.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="mt-4 p-4 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   {t('profile.quickActions')}
                 </h3>
@@ -302,7 +331,7 @@ const Profile = () => {
             </Card>
           </motion.div>
 
-          {/* Content Area */}
+          {/* Content Area - Now Takes Center Stage */}
           <motion.div variants={itemVariants} className="lg:col-span-3">
             <AnimatePresence mode="wait">
               {activeTab === 'info' && (

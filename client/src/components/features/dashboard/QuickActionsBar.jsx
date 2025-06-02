@@ -1,23 +1,28 @@
-// components/features/dashboard/QuickExpenseBar.jsx
+// components/features/dashboard/QuickActionsBar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MinusCircle, 
   PlusCircle, 
-  ArrowDownRight,
   Check,
-  Zap
+  Zap,
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { useDate } from '../../../context/DateContext';
-import { Card, Button, Badge } from '../../ui';
+import { Card, Button, Badge, Modal } from '../../ui';
+import ActionsPanel from './ActionsPanel';
 import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 
 const QuickActionsBar = () => {
   const { t, language } = useLanguage();
-  const { quickAddTransaction, refreshData } = useTransactions(); // Add refreshData here
+  const { quickAddTransaction, refreshData } = useTransactions();
   const { formatAmount, currency } = useCurrency();
   const { selectedDate, getDateForServer, resetToToday } = useDate();
   
@@ -26,20 +31,26 @@ const QuickActionsBar = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [todayWarning, setTodayWarning] = useState(false);
+  const [showActionsPanel, setShowActionsPanel] = useState(false);
   const inputRef = useRef(null);
   
   const isRTL = language === 'he';
 
-  // בדוק אם התאריך הנבחר הוא היום
+  // Check if selected date is today
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     const selectedDay = getDateForServer(selectedDate);
-    
     setTodayWarning(selectedDay !== today);
   }, [selectedDate, getDateForServer]);
 
-  // Quick amount buttons
-  const quickAmounts = [10, 25, 50, 100, 250];
+  // Enhanced quick amounts with visual improvements
+  const quickAmounts = [
+    { value: 10, color: 'bg-blue-100 text-blue-600 hover:bg-blue-200' },
+    { value: 25, color: 'bg-green-100 text-green-600 hover:bg-green-200' },
+    { value: 50, color: 'bg-purple-100 text-purple-600 hover:bg-purple-200' },
+    { value: 100, color: 'bg-orange-100 text-orange-600 hover:bg-orange-200' },
+    { value: 250, color: 'bg-red-100 text-red-600 hover:bg-red-200' }
+  ];
 
   const handleQuickAmount = (value) => {
     setAmount(value.toString());
@@ -47,7 +58,6 @@ const QuickActionsBar = () => {
   };
 
   const handleSubmit = async (type = 'expense') => {
-    // השתמש ב-validation schema הקיים במקום בפונקציה מותאמת אישית
     const { success, errors: validationErrors } = validate(
       transactionSchemas.quickAdd,
       { amount, type }
@@ -62,36 +72,22 @@ const QuickActionsBar = () => {
       setLoading(true);
       setError('');
       
-      // Use current date with timezone consideration
-      const today = new Date();
-      console.log('[INFO] Adding transaction with today\'s date:', today.toISOString().split('T')[0]);
-      
-      // ✅ שינוי: השתמש בקטגוריה ברירת מחדל ID 8 במקום null
       await quickAddTransaction(
         type, 
         parseFloat(amount), 
         t('dashboard.quickActions.defaultDescription'),
-        8  // השתמש ב-ID 8 שהוא הקטגוריה "General" מה-seed data
+        8
       );
       
-      // Alert if selected date is not today
-      if (todayWarning) {
-        console.log('[INFO] Transaction added to today\'s date, but viewing a different date');
-      }
-      
-      // Success animation
       setSuccess(true);
       setTimeout(() => {
         setAmount('');
         setSuccess(false);
         
-        // Force refresh data after adding transaction
         if (refreshData) {
-          console.log('[INFO] Refreshing dashboard data after transaction');
           refreshData();
         }
         
-        // If user is viewing a date other than today, offer to switch to today
         if (todayWarning) {
           if (window.confirm(t('dashboard.quickActions.switchToToday'))) {
             resetToToday();
@@ -111,6 +107,7 @@ const QuickActionsBar = () => {
     setError('');
   };
 
+  // Animation variants
   const successVariants = {
     initial: { scale: 0, opacity: 0 },
     animate: { 
@@ -129,122 +126,200 @@ const QuickActionsBar = () => {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 200
+      }
+    }
+  };
+
   return (
-    <Card className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Zap className="w-4 h-4 text-yellow-500" />
-          {t('actions.quickAdd')}
-        </h3>
-        <Badge variant="warning" className="text-xs">
-          {t('actions.quickActions')}
-        </Badge>
-      </div>
+    <>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <Card className="p-6 bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900 border-0 shadow-xl relative overflow-hidden">
+          {/* Enhanced background decoration */}
+          <div className="absolute inset-0">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 rounded-full blur-2xl animate-pulse"></div>
+            <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-gradient-to-br from-yellow-400/10 to-orange-400/10 rounded-full blur-lg animate-pulse delay-500"></div>
+          </div>
+          
+          <div className="relative z-10">
+            {/* Header */}
+            <motion.div variants={itemVariants} className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl shadow-lg">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                    {t('actions.quickActions')}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {t('dashboard.quickActions.subtitle') || 'Fast transaction entry'}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="success" className="text-xs font-medium px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-cyan-600 text-white border-0">
+                <Sparkles className="w-3 h-3 mr-1" />
+                {t('dashboard.quickActions.fast') || 'Fast'}
+              </Badge>
+            </motion.div>
 
-      <div className="space-y-3">
-        {/* Amount Input */}
-        <div className="relative">
-          <input
-            ref={inputRef}
-            type="text"
-            value={amount}
-            onChange={handleAmountChange}
-            placeholder={t('dashboard.quickActions.placeholder')}
-            className={`w-full px-4 py-3 pr-12 text-lg font-semibold rounded-lg border 
-              ${error ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}
-              bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent
-              transition-all`}
-            dir={isRTL ? 'rtl' : 'ltr'}
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
-            {currency === 'ILS' ? '₪' : currency === 'USD' ? '$' : '€'}
-          </span>
-        </div>
-
-        {/* Quick Amount Buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {quickAmounts.map((value) => (
-            <button
-              key={value}
-              onClick={() => handleQuickAmount(value)}
-              className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 
-                       dark:hover:bg-gray-700 rounded-md transition-colors"
-            >
-              +{value}
-            </button>
-          ))}
-        </div>
-
-        {/* Error Message */}
-        <AnimatePresence>
-          {error && (
-            <motion.p
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              className="text-sm text-red-500"
-            >
-              {error}
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant="danger"
-            size="small"
-            fullWidth
-            onClick={() => handleSubmit('expense')}
-            disabled={!amount || loading || success}
-            className="group"
-          >
-            <AnimatePresence mode="wait">
-              {success ? (
+            {/* Today Warning */}
+            <AnimatePresence>
+              {todayWarning && (
                 <motion.div
-                  key="success"
-                  variants={successVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4"
                 >
-                  <Check className="w-4 h-4" />
-                  {t('dashboard.quickActions.added')}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="add"
-                  initial={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2"
-                >
-                  <MinusCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  {t('dashboard.quickActions.addExpense')}
+                  <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      {t('dashboard.quickActions.todayWarning')}
+                    </p>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </Button>
-          
-          <Button
-            variant="success"
-            size="small"
-            onClick={() => handleSubmit('income')}
-            disabled={!amount || loading || success}
-            className="group"
-          >
-            <PlusCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          </Button>
-        </div>
-      </div>
 
-      {/* התראה אם מסתכלים בתאריך שונה מהיום */}
-      {todayWarning && (
-        <div className="text-xs text-amber-600 dark:text-amber-400 mb-2 mt-1">
-          <p>{t('dashboard.quickActions.todayWarning')}</p>
-        </div>
-      )}
-    </Card>
+            <div className="space-y-5">
+              {/* Amount Input */}
+              <motion.div variants={itemVariants} className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  placeholder={t('dashboard.quickActions.placeholder')}
+                  className={`w-full px-5 py-4 pr-20 text-xl font-bold rounded-xl border-2 
+                    ${error 
+                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                      : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'
+                    }
+                    bg-white dark:bg-gray-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none
+                    transition-all duration-200 placeholder-gray-400 shadow-sm`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <span className="text-lg font-bold text-gray-500">
+                    {currency === 'ILS' ? '₪' : currency === 'USD' ? '$' : '€'}
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Quick Amount Pills */}
+              <motion.div variants={itemVariants} className="flex gap-2 flex-wrap">
+                {quickAmounts.map((item) => (
+                  <motion.button
+                    key={item.value}
+                    onClick={() => handleQuickAmount(item.value)}
+                    className={`px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 
+                               ${item.color} transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md`}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    +{item.value}
+                  </motion.button>
+                ))}
+              </motion.div>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+                  >
+                    <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                      {error}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Action Buttons */}
+              <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="danger"
+                  size="default"
+                  onClick={() => handleSubmit('expense')}
+                  disabled={!amount || loading || success}
+                  className="group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 py-3"
+                >
+                  <AnimatePresence mode="wait">
+                    {success ? (
+                      <motion.div
+                        key="success"
+                        variants={successVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="flex items-center gap-2"
+                      >
+                        <Check className="w-4 h-4" />
+                        ✨
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="expense"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
+                      >
+                        <TrendingDown className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        <span>{t('transactions.expense')}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Button>
+                
+                <Button
+                  variant="success"
+                  size="default"
+                  onClick={() => handleSubmit('income')}
+                  disabled={!amount || loading || success}
+                  className="group bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 py-3"
+                >
+                  <TrendingUp className="w-4 h-4 group-hover:scale-110 transition-transform mr-2" />
+                  <span>{t('transactions.income')}</span>
+                </Button>
+              </motion.div>
+
+              {/* Help text */}
+              <motion.div variants={itemVariants} className="text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('dashboard.quickActions.defaultDescription') || 'Quick entry for common transactions'}
+                </p>
+              </motion.div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    </>
   );
 };
 

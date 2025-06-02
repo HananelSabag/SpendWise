@@ -24,12 +24,12 @@ const log = (message, data = null) => {
   }
 };
 
-// Request interceptor - ✅ לוגים קונציזיים יותר
+// Request interceptor - Concise logging
 api.interceptors.request.use(
   (config) => {
     const requestId = crypto.randomUUID();
     
-    // ✅ לוג רק אם לא recurring/templates או אם debug מפורש
+    // Log only if not recurring/templates or if debug is explicit
     const isDashboardRequest = config.url?.includes('/dashboard');
     const isRecurringRequest = config.url?.includes('/recurring') || config.url?.includes('/templates');
     const debugMode = localStorage.getItem('debug_api') === 'true';
@@ -55,12 +55,12 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - ✅ לוגים קונציזיים יותר
+// Response interceptor - Concise logging
 api.interceptors.response.use(
   (response) => {
     const duration = Date.now() - response.config.metadata.startTime;
     
-    // ✅ לוג רק בקריאות חשובות או debug
+    // Log only for important calls or debug
     const isDashboardRequest = response.config.url?.includes('/dashboard');
     const isRecurringRequest = response.config.url?.includes('/recurring') || response.config.url?.includes('/templates');
     const isProfileRequest = response.config.url?.includes('/profile');
@@ -143,7 +143,7 @@ const formatDateForAPI = (date) => {
   return dateObj.toISOString().split('T')[0];
 };
 
-// ✅ Helper function לטיפול ב-URLs של תמונות
+// Helper function for handling image URLs
 const getFullImageUrl = (imagePath) => {
   if (!imagePath) return null;
   if (imagePath.startsWith('http')) return imagePath;
@@ -155,7 +155,7 @@ export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
   register: (userData) => api.post('/users/register', userData),
   logout: () => api.post('/users/logout'),
-  // ✅ תיקון העלאת תמונת פרופיל - נתיב תקין
+  // Profile picture upload fix - correct path
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -166,7 +166,7 @@ export const authAPI = {
       },
     });
     
-    // ✅ המר נתיב יחסי ל-URL מלא
+    // Convert relative path to full URL
     if (response.data?.data?.path) {
       response.data.data.path = getFullImageUrl(response.data.data.path);
     }
@@ -174,9 +174,9 @@ export const authAPI = {
     return response;
   },
   
-  // ✅ עדכון פרופיל - רק שדות קיימים בדטאבייס
+  // Profile update - only existing database fields
   updateProfile: async (data) => {
-    // ✅ רק username ו-email מותרים לעדכון בפרופיל הבסיסי
+    // Only username and email are allowed for basic profile update
     const allowedFields = ['username', 'email'];
     const profileData = {};
     
@@ -193,16 +193,16 @@ export const authAPI = {
     return api.put('/users/profile', profileData);
   },
 
-  // ✅ עדכון preferences - רק תמונת פרופיל ו-settings
+  // Preferences update - only profile picture and settings
   updatePreferences: async (preferences) => {
     return api.put('/users/preferences', { preferences });
   },
 
-  // ✅ קבלת פרופיל משתמש - נתיב תקין
+  // Get user profile - correct path
   getProfile: async () => {
     const response = await api.get('/users/profile');
     
-    // ✅ המר נתיבי תמונות יחסיים ל-URLs מלאים
+    // Convert relative image paths to full URLs
     if (response.data?.data?.preferences?.profilePicture) {
       response.data.data.preferences.profilePicture = getFullImageUrl(
         response.data.data.preferences.profilePicture
@@ -247,19 +247,19 @@ export const transactionAPI = {
     }
   }),
   
-  // ✅ תיקון getAll לעבוד עם השרת הקיים
+  // Fix getAll to work with existing server
   getAll: async (params = {}) => {
-    // אם יש period, השתמש ב-getByPeriod במקום
+    // If there's a period, use getByPeriod instead
     if (params.period) {
       console.log(`📊 [API] Using getByPeriod instead of getAll for period: ${params.period}`);
       return transactionAPI.getByPeriod(params.period, params.date);
     }
     
-    // אחרת השתמש ב-dashboard
+    // Otherwise use dashboard
     console.log(`📊 [API] Using getDashboard as fallback for getAll`);
     const response = await transactionAPI.getDashboard(params.date);
     
-    // המר לפורמט שהקלינט מצפה לו
+    // Convert to expected client format
     return {
       data: {
         transactions: response.data.data.recent_transactions || [],
@@ -272,7 +272,7 @@ export const transactionAPI = {
     };
   },
 
-  // ✅ שיפור getByPeriod
+  // Improved getByPeriod
   getByPeriod: async (period, date) => {
     const formattedDate = formatDateForAPI(date);
     console.log(`📊 [API] getByPeriod: ${period} for date: ${formattedDate}`);
@@ -284,11 +284,11 @@ export const transactionAPI = {
       
       console.log(`📊 [API] getByPeriod response:`, response.data);
       
-      // ✅ וודא שהתשובה במבנה הנכון
+      // Ensure response is in correct structure
       if (response.data?.success && response.data?.data) {
         return response;
       } else {
-        // ✅ תקן את המבנה אם צריך
+        // Fix structure if needed
         return {
           data: {
             success: true,
@@ -301,7 +301,7 @@ export const transactionAPI = {
     } catch (error) {
       console.error('🚨 [API] getByPeriod failed:', error);
       
-      // ✅ החזר response ריק במקרה של שגיאה
+      // Return empty response in case of error
       return {
         data: {
           success: false,
@@ -314,10 +314,15 @@ export const transactionAPI = {
     }
   },
   
-  // ✅ הוספת פונקציות חדשות ל-transactionAPI
+  // Add new functions to transactionAPI
   getCategories: () => api.get('/categories'),
   
-  // ✅ פונקציה משופרת לעסקאות חוזרות
+  // Category CRUD operations
+  createCategory: (data) => api.post('/categories', data),
+  updateCategory: (id, data) => api.put(`/categories/${id}`, data),
+  deleteCategory: (id) => api.delete(`/categories/${id}`),
+  
+  // Improved function for recurring transactions
   getRecurring: async (type = null) => {
     const endpoint = type ? `/transactions/recurring?type=${type}` : '/transactions/recurring';
     log(`Fetching recurring transactions from: ${endpoint}`);
@@ -411,5 +416,5 @@ export const queryKeys = {
 
 export default api;
 
-// ✅ ייצוא הפונקציה לשימוש במקומות אחרים
+// Export for use in other places
 export { getFullImageUrl };

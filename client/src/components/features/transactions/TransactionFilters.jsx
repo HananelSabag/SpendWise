@@ -18,6 +18,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/helpers';
 import { Input, Button, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
+import { useCategories } from '../../../hooks/useApi';
 
 /**
  * TransactionFilters Component
@@ -32,6 +33,7 @@ const TransactionFilters = ({
 }) => {
   const { t, language } = useLanguage();
   const isRTL = language === 'he';
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState(null);
@@ -42,19 +44,6 @@ const TransactionFilters = ({
     date: false,
     recurring: false
   });
-
-  // Categories list
-  const categories = [
-    { id: 1, name: 'Salary', type: 'income' },
-    { id: 2, name: 'Freelance', type: 'income' },
-    { id: 3, name: 'Investments', type: 'income' },
-    { id: 4, name: 'Rent', type: 'expense' },
-    { id: 5, name: 'Groceries', type: 'expense' },
-    { id: 6, name: 'Transportation', type: 'expense' },
-    { id: 7, name: 'Utilities', type: 'expense' },
-    { id: 8, name: 'Entertainment', type: 'expense' },
-    { id: 9, name: 'General', type: null }
-  ];
 
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -213,38 +202,44 @@ const TransactionFilters = ({
           icon={Tag}
           section="categories"
         >
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            {categories.map(category => {
-              const isSelected = filters.categories?.includes(category.id);
-              
-              return (
-                <label
-                  key={category.id}
-                  className={cn(
-                    'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all',
-                    isSelected
-                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => {
-                      const newCategories = e.target.checked
-                        ? [...(filters.categories || []), category.id]
-                        : (filters.categories || []).filter(id => id !== category.id);
-                      handleFilterChange('categories', newCategories);
-                    }}
-                    className="w-4 h-4 rounded text-primary-500"
-                  />
-                  <span className="text-sm">
-                    {t(`categories.${category.name}`)}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+          {categoriesLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {categories.map(category => {
+                const isSelected = filters.categories?.includes(category.id);
+                
+                return (
+                  <label
+                    key={category.id}
+                    className={cn(
+                      'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all',
+                      isSelected
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const newCategories = e.target.checked
+                          ? [...(filters.categories || []), category.id]
+                          : (filters.categories || []).filter(id => id !== category.id);
+                        handleFilterChange('categories', newCategories);
+                      }}
+                      className="w-4 h-4 rounded text-primary-500"
+                    />
+                    <span className="text-sm">
+                      {category.is_default ? t(`categories.${category.name}`) : category.name}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </FilterSection>
 
         {/* Amount Range */}
@@ -268,6 +263,32 @@ const TransactionFilters = ({
               onChange={(e) => handleFilterChange('maxAmount', e.target.value ? parseFloat(e.target.value) : null)}
               icon={DollarSign}
             />
+          </div>
+          
+          <div className="mt-3">
+            <label className="text-xs text-gray-600 dark:text-gray-400">
+              {t('transactions.filters.commonAmounts')}
+            </label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {[
+                { label: '< 50', max: 50 },
+                { label: '50-100', min: 50, max: 100 },
+                { label: '100-500', min: 100, max: 500 },
+                { label: '> 500', min: 500 }
+              ].map((range) => (
+                <Button
+                  key={range.label}
+                  variant="ghost"
+                  size="small"
+                  onClick={() => {
+                    handleFilterChange('minAmount', range.min || null);
+                    handleFilterChange('maxAmount', range.max || null);
+                  }}
+                >
+                  {range.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </FilterSection>
 
@@ -313,6 +334,44 @@ const TransactionFilters = ({
                 }
               </button>
             </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="text-xs text-gray-600 dark:text-gray-400 w-full mb-1">
+              {t('transactions.filters.quickRanges')}
+            </label>
+            {[
+              { label: t('common.today'), days: 0 },
+              { label: t('common.last7Days'), days: 7 },
+              { label: t('common.last30Days'), days: 30 },
+              { label: t('common.last90Days'), days: 90 },
+              { label: t('common.thisMonth'), month: true },
+              { label: t('common.lastMonth'), lastMonth: true }
+            ].map((range) => (
+              <Button
+                key={range.label}
+                variant="ghost"
+                size="small"
+                onClick={() => {
+                  const end = new Date();
+                  let start = new Date();
+                  
+                  if (range.days !== undefined) {
+                    start.setDate(end.getDate() - range.days);
+                  } else if (range.month) {
+                    start = new Date(end.getFullYear(), end.getMonth(), 1);
+                  } else if (range.lastMonth) {
+                    start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+                    end.setDate(0);
+                  }
+                  
+                  handleFilterChange('startDate', start.toISOString().split('T')[0]);
+                  handleFilterChange('endDate', end.toISOString().split('T')[0]);
+                }}
+              >
+                {range.label}
+              </Button>
+            ))}
           </div>
         </FilterSection>
 

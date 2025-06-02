@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDate } from '../context/DateContext';
-import { TransactionProvider } from '../context/TransactionContext';
-import { useDashboard } from '../hooks/useDashboard'; // ✅ הוסף import של הוק הראשי
+import { TransactionProvider, useTransactions } from '../context/TransactionContext';
+import { useDashboard } from '../hooks/useDashboard';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -18,27 +18,25 @@ import {
   Sparkles,
   Plus,
   MoreHorizontal,
-  X,
-  User
+  Check
 } from 'lucide-react';
 
 // Features
 import BalancePanel from '../components/features/dashboard/BalancePanel';
-import ActionsPanel from '../components/features/dashboard/ActionsPanel';
-import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
+import QuickActionsBar from '../components/features/dashboard/QuickActionsBar'; 
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
+import ActionsPanel from '../components/features/dashboard/ActionsPanel';
 
 // UI Components
-import { Card, Badge, LoadingSpinner, Button } from '../components/ui';
-import AccessibilityMenu from '../components/common/AccessibilityMenu';
-import { Link } from 'react-router-dom'; // ✅ הוספת import חסר ל-Link
+import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { selectedDate, formatDate } = useDate();
   
-  // ✅ קריאה יחידה להוק dashboard בקומפוננט הראשי
+  // ✅ Single call to dashboard hook in main component
   const { 
     data: dashboardData, 
     isLoading: isDashboardLoading, 
@@ -46,7 +44,6 @@ const Dashboard = () => {
   } = useDashboard();
   
   const [loading, setLoading] = useState(true);
-  const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [dashboardStats, setDashboardStats] = useState({
     dailyAverage: 0,
     monthlyGoal: 0,
@@ -59,7 +56,7 @@ const Dashboard = () => {
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   
   useEffect(() => {
-    // Debug רק במקרים מיוחדים של פיתוח
+    // Debug only in special development cases
     const debugMode = localStorage.getItem('debug_dashboard') === 'true' && process.env.NODE_ENV === 'development';
     
     if (debugMode) {
@@ -145,11 +142,7 @@ const Dashboard = () => {
     }
   };
 
-  const toggleFloatingMenu = () => {
-    setShowFloatingMenu(!showFloatingMenu);
-  };
-
-  // ✅ בדוק אם הדשבורד עדיין נטען - תיקון שם המפתח
+  // ✅ Check if dashboard is still loading - fixed key name
   if (loading || isDashboardLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -158,10 +151,10 @@ const Dashboard = () => {
     );
   }
 
-  // ✅ בדוק שגיאות - שימוש במפתח הנכון
+  // ✅ Check errors - use correct key
   if (dashboardError) {
     const refreshData = () => {
-      window.location.reload(); // פתרון זמני עד שיהיה refresh function
+      window.location.reload(); // Temporary solution until refresh function is available
     };
     
     return (
@@ -245,57 +238,61 @@ const Dashboard = () => {
               </Card>
             </motion.div>
 
-            {/* Main Grid Layout */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              {/* Left Column - Balance & Actions */}
-              <div className="xl:col-span-2 space-y-6">
-                {/* Balance Panel - ✅ העבר נתונים דרך props */}
-                <motion.div variants={itemVariants}>
-                  <BalancePanel 
-                    balanceData={dashboardData?.balances}
-                    recurringInfo={dashboardData?.recurringInfo}
-                  />
+            {/* Main Grid Layout - REDESIGNED FOR BETTER UX */}
+            <div className="space-y-6">
+              {/* Top Section: Balance Panel - Full Width */}
+              <motion.div variants={itemVariants}>
+                <BalancePanel 
+                  balanceData={dashboardData?.balances}
+                  recurringInfo={dashboardData?.recurringInfo}
+                />
+              </motion.div>
+
+              {/* Middle Section: Actions + Quick Actions */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Left: Main Actions Panel - Prominent Position */}
+                <motion.div variants={itemVariants} className="xl:col-span-2">
+                  <ActionsCard />
                 </motion.div>
 
-                {/* Quick Expense Bar - Mobile */}
-                <motion.div variants={itemVariants} className="xl:hidden">
+                {/* Right: Enhanced Quick Actions */}
+                <motion.div variants={itemVariants} className="xl:col-span-1">
                   <QuickActionsBar />
-                </motion.div>
-
-                {/* Actions Panel */}
-                <motion.div variants={itemVariants}>
-                  <ActionsPanel />
                 </motion.div>
               </div>
 
-              {/* Right Column - Recent Transactions & Quick Expense */}
-              <div className="space-y-6">
-                {/* Quick Expense Bar - Desktop */}
-                <motion.div variants={itemVariants} className="hidden xl:block">
-                  <QuickActionsBar />
-                </motion.div>
+              {/* Bottom Section: Recent Transactions - Full Width */}
+              <motion.div variants={itemVariants}>
+                <RecentTransactions 
+                  transactions={dashboardData?.recentTransactions}
+                  loading={isDashboardLoading}
+                />
+              </motion.div>
 
-                {/* Recent Transactions - ✅ העבר נתונים דרך props */}
-                <motion.div variants={itemVariants}>
-                  <RecentTransactions 
-                    transactions={dashboardData?.recentTransactions}
-                    loading={isDashboardLoading}
-                  />
-                </motion.div>
-                
-                {/* New Colorful Tips Card */}
-                <motion.div variants={itemVariants}>
-                  <Card className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white p-4 border-0 shadow-lg">
-                    <h3 className="font-semibold text-lg mb-2 flex items-center">
-                      <Sparkles className="w-5 h-5 mr-2" />
-                      {t('dashboard.tips.title')}
-                    </h3>
-                    <p className="text-sm text-white/90">
-                      {t('dashboard.tips.content')}
-                    </p>
-                  </Card>
-                </motion.div>
-              </div>
+              {/* Enhanced Tips Section */}
+              <motion.div variants={itemVariants}>
+                <Card className="bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 text-white p-6 border-0 shadow-xl relative overflow-hidden">
+                  {/* Animated background */}
+                  <div className="absolute inset-0">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+                  </div>
+                  
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-xl">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg mb-1">
+                        {t('dashboard.tips.title')}
+                      </h3>
+                      <p className="text-white/90">
+                        {t('dashboard.tips.content')}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Bottom Stats Cards */}
@@ -389,80 +386,205 @@ const Dashboard = () => {
             </motion.div>
           </motion.div>
         </div>
+      </div>
+    </TransactionProvider>
+  );
+};
 
-        {/* Floating Action Button */}
-        <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40`}>
-          <div className="flex flex-col items-end space-y-3">
-            {/* Floating Menu */}
-            <AnimatePresence>
-              {showFloatingMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2"
-                >
-                  <div className="flex flex-col space-y-2">
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      icon={TrendingUp}
-                    >
-                      {t('actions.addIncome')}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      icon={TrendingDown}
-                    >
-                      {t('actions.addExpense')}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      icon={Clock}
-                    >
-                      {t('transactions.recurring')}
-                    </Button>
-                    {/* ✅ הוספת קישור לפרופיל בתפריט הצף */}
-                    <Link to="/profile">
-                      <Button 
-                        variant="ghost" 
-                        size="small" 
-                        className="justify-start w-full"
-                        icon={User}
-                      >
-                        {t('nav.profile')}
-                      </Button>
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+// Add ActionsCard component above the main Dashboard component
+const ActionsCard = () => {
+  const { t, language } = useLanguage();
+  const [showActionsPanel, setShowActionsPanel] = useState(false);
+  const [selectedActionType, setSelectedActionType] = useState(null); // NEW: Track which action was selected
+  const isRTL = language === 'he';
+
+  // Handle direct action selection - opens form immediately
+  const handleDirectAction = (actionType) => {
+    setSelectedActionType(actionType);
+    setShowActionsPanel(true);
+  };
+
+  // Handle full panel open - shows type selection
+  const handleFullPanel = () => {
+    setSelectedActionType(null);
+    setShowActionsPanel(true);
+  };
+
+  const actionTypes = [
+    {
+      id: 'expense',
+      title: t('actions.oneTimeExpense'),
+      subtitle: t('actions.oneTimeExpenseDesc'),
+      icon: ArrowDownRight,
+      color: 'red',
+      actionData: {
+        id: 'expense',
+        type: 'expense',
+        isRecurring: false,
+        icon: ArrowDownRight,
+        title: t('actions.oneTimeExpense'),
+        description: t('actions.oneTimeExpenseDesc'),
+        gradient: 'from-red-500 to-red-600',
+      }
+    },
+    {
+      id: 'income', 
+      title: t('actions.oneTimeIncome'),
+      subtitle: t('actions.oneTimeIncomeDesc'),
+      icon: ArrowUpRight,
+      color: 'green',
+      actionData: {
+        id: 'income',
+        type: 'income',
+        isRecurring: false,
+        icon: ArrowUpRight,
+        title: t('actions.oneTimeIncome'),
+        description: t('actions.oneTimeIncomeDesc'),
+        gradient: 'from-green-500 to-green-600',
+      }
+    },
+    {
+      id: 'recurring-expense',
+      title: t('actions.recurringExpense'),
+      subtitle: t('actions.recurringExpenseDesc'),
+      icon: Clock,
+      color: 'blue',
+      actionData: {
+        id: 'recurring-expense',
+        type: 'expense',
+        isRecurring: true,
+        icon: Clock,
+        title: t('actions.recurringExpense'),
+        description: t('actions.recurringExpenseDesc'),
+        gradient: 'from-blue-500 to-blue-600',
+      }
+    },
+    {
+      id: 'recurring-income',
+      title: t('actions.recurringIncome'),
+      subtitle: t('actions.recurringIncomeDesc'),
+      icon: TrendingUp,
+      color: 'purple',
+      actionData: {
+        id: 'recurring-income',
+        type: 'income',
+        isRecurring: true,
+        icon: TrendingUp,
+        title: t('actions.recurringIncome'),
+        description: t('actions.recurringIncomeDesc'),
+        gradient: 'from-purple-500 to-purple-600',
+      }
+    }
+  ];
+
+  return (
+    <>
+      <Card className="p-8 bg-gradient-to-br from-white via-gray-50 to-indigo-50 dark:from-gray-800 dark:via-gray-900 dark:to-indigo-900 border-0 shadow-xl relative overflow-hidden">
+        {/* Premium background decoration */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-2xl"></div>
+          <div className="absolute top-1/2 left-1/2 w-20 h-20 bg-gradient-to-br from-yellow-400/10 to-orange-400/10 rounded-full blur-xl animate-pulse"></div>
+        </div>
+
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                {t('actions.title')}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                {t('actions.chooseAction')}
+              </p>
+            </div>
             
-            {/* Main Floating Button */}
-            <Button
-              variant="primary"
-              className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center"
-              onClick={toggleFloatingMenu}
-              aria-label={t('actions.quickAdd')}
-            >
-              {showFloatingMenu ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Plus className="w-6 h-6" />
-              )}
-            </Button>
+            <Badge variant="primary" className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0">
+              <Sparkles className="w-4 h-4 mr-2" />
+              {t('actions.smart')}
+            </Badge>
+          </div>
+
+          {/* Action Cards - NOW OPEN SPECIFIC FORMS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {actionTypes.map((action, index) => (
+              <motion.button
+                key={action.id}
+                onClick={() => handleDirectAction(action.actionData)}
+                className="group p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className={`inline-flex p-4 rounded-xl bg-${action.color}-100 dark:bg-${action.color}-900/30 mb-4 group-hover:scale-110 transition-transform`}>
+                  <action.icon className={`w-6 h-6 text-${action.color}-600 dark:text-${action.color}-400`} />
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {action.title}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {action.subtitle}
+                </p>
+                
+                {/* Direct action indicator */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Feature highlights - UPDATED FOR 4 CARDS */}
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              {t('actions.directEntry')}
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-300"></div>
+              {t('actions.smartDefaults')}
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-500"></div>
+              {t('actions.fullCustomization')}
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-700"></div>
+              {t('actions.recurringOptions')}
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Accessibility Menu */}
-      <AccessibilityMenu />
-    </TransactionProvider>
+      </Card>
+
+      {/* Actions Panel Modal - PASSES SELECTED ACTION TYPE */}
+      <AnimatePresence>
+        {showActionsPanel && (
+          <Modal
+            isOpen={showActionsPanel}
+            onClose={() => {
+              setShowActionsPanel(false);
+              setSelectedActionType(null);
+            }}
+            size="large"
+            className="max-w-4xl"
+            hideHeader={true}
+          >
+            <ActionsPanel 
+              onClose={() => {
+                setShowActionsPanel(false);
+                setSelectedActionType(null);
+              }}
+              initialActionType={selectedActionType} // NEW: Pass the selected action
+            />
+          </Modal>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

@@ -46,11 +46,11 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.features')}</h3>
           <ul className="list-disc pl-5 space-y-1">
-            <li>{isRTL ? 'תאימות לקוראי מסך' : 'Screen reader compatibility'}</li>
-            <li>{isRTL ? 'ניגודיות צבעים מתכווננת' : 'Adjustable color contrast'}</li>
-            <li>{isRTL ? 'אפשרות להגדלת טקסט' : 'Text size adjustment'}</li>
-            <li>{isRTL ? 'תמיכה בניווט מקלדת' : 'Keyboard navigation support'}</li>
-            <li>{isRTL ? 'תמיכה בשפות עברית ואנגלית' : 'Hebrew and English language support'}</li>
+            <li>{isRTL ? 'Screen reader compatibility' : 'Screen reader compatibility'}</li>
+            <li>{isRTL ? 'Adjustable color contrast' : 'Adjustable color contrast'}</li>
+            <li>{isRTL ? 'Text size adjustment' : 'Text size adjustment'}</li>
+            <li>{isRTL ? 'Keyboard navigation support' : 'Keyboard navigation support'}</li>
+            <li>{isRTL ? 'Hebrew and English language support' : 'Hebrew and English language support'}</li>
           </ul>
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.level')}</h3>
@@ -66,7 +66,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
             <p>© {currentYear} SpendWise</p>
             <p>{t('accessibility.compliance')}</p>
-            <p>עדכון אחרון: 01/01/{currentYear}</p>
+            <p>Last updated: 01/01/{currentYear}</p>
           </div>
         </div>
       </motion.div>

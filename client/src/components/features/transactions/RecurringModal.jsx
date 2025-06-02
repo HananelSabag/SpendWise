@@ -16,13 +16,18 @@ import {
   Info,
   ChevronDown,
   AlertCircle,
-  Package
+  Package,
+  Pause,
+  Play,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Modal, Input, Badge, Button, Card } from '../../ui';
 import TransactionCard from './TransactionCard';
+import SkipDatesModal from './SkipDatesModal';
+import toast from 'react-hot-toast';
 
 /**
  * RecurringModal Component
@@ -44,6 +49,8 @@ const RecurringModal = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, income, expense
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showSkipDates, setShowSkipDates] = useState(false);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -145,6 +152,21 @@ const RecurringModal = ({
     }
   };
 
+  // Add pause/resume handler
+  const handleToggleActive = async (template) => {
+    try {
+      await api.put(`/transactions/templates/${template.id}`, {
+        is_active: !template.is_active
+      });
+      
+      toast.success(template.is_active ? t('transactions.paused') : t('transactions.resumed'));
+      // Refresh data
+      queryClient.invalidateQueries(['recurring']);
+    } catch (error) {
+      toast.error(t('common.error'));
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -191,7 +213,7 @@ const RecurringModal = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('home.balance.income')}
+                    {t('transactions.income')}
                   </p>
                   <p className="text-xl font-bold text-green-600 dark:text-green-400">
                     {formatAmount(totals.income)}
@@ -207,7 +229,7 @@ const RecurringModal = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('home.balance.expenses')}
+                    {t('transactions.expense')}
                   </p>
                   <p className="text-xl font-bold text-red-600 dark:text-red-400">
                     {formatAmount(totals.expense)}
@@ -223,7 +245,7 @@ const RecurringModal = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('home.balance.total')}
+                    {t('common.balance')}
                   </p>
                   <p className={cn(
                     'text-xl font-bold',
@@ -258,9 +280,9 @@ const RecurringModal = ({
                 size="default"
                 onClick={() => setFilterType(type)}
               >
-                {type === 'all' && t('common.all')}
-                {type === 'income' && t('home.balance.income')}
-                {type === 'expense' && t('home.balance.expenses')}
+                {type === 'all' && t('transactions.all')}
+                {type === 'income' && t('transactions.income')}
+                {type === 'expense' && t('transactions.expense')}
               </Button>
             ))}
           </div>
@@ -312,7 +334,7 @@ const RecurringModal = ({
                           </div>
                           <div className="text-left">
                             <h3 className="font-semibold text-gray-900 dark:text-white">
-                              {t(`actions.frequencies.${frequency}`)}
+                              {t(`transactions.frequencies.${frequency}`)}
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               {items.length} {t('transactions.items')}
@@ -338,22 +360,80 @@ const RecurringModal = ({
                           >
                             <div className="p-4 space-y-3">
                               {items.map((transaction) => (
-                                <TransactionCard
-                                  key={transaction.id}
-                                  transaction={{
-                                    ...transaction,
-                                    transaction_type: transaction.type,
-                                    recurring_interval: transaction.interval_type
-                                  }}
-                                  onEdit={() => {
-                                    onEdit?.(transaction);
-                                    onClose();
-                                  }}
-                                  onDelete={() => {
-                                    onDelete?.(transaction);
-                                  }}
-                                  variant="compact"
-                                />
+                                <div key={transaction.id} className="relative">
+                                  <TransactionCard
+                                    transaction={{
+                                      ...transaction,
+                                      transaction_type: transaction.type,
+                                      recurring_interval: transaction.interval_type
+                                    }}
+                                    onEdit={() => {
+                                      onEdit?.(transaction);
+                                      onClose();
+                                    }}
+                                    onDelete={() => {
+                                      onDelete?.(transaction);
+                                    }}
+                                    variant="compact"
+                                  />
+                                  
+                                  {/* Enhanced Action Buttons */}
+                                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                                    {/* Skip Dates Button - GAP #3 */}
+                                    <Button
+                                      variant="ghost"
+                                      size="small"
+                                      onClick={() => {
+                                        setSelectedTemplate(transaction);
+                                        setShowSkipDates(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-700"
+                                      title={t('transactions.skipDates')}
+                                    >
+                                      <CalendarIcon className="w-4 h-4" />
+                                    </Button>
+                                    
+                                    {/* Pause/Resume Button - GAP #3 */}
+                                    <Button
+                                      variant="ghost"
+                                      size="small"
+                                      onClick={() => handleToggleActive(transaction)}
+                                      className={transaction.is_active ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}
+                                      title={transaction.is_active ? t('transactions.pause') : t('transactions.resume')}
+                                    >
+                                      {transaction.is_active ? (
+                                        <Pause className="w-4 h-4" />
+                                      ) : (
+                                        <Play className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                    
+                                    {/* Edit Button */}
+                                    <Button
+                                      variant="ghost"
+                                      size="small"
+                                      onClick={() => {
+                                        onEdit?.(transaction);
+                                        onClose();
+                                      }}
+                                      className="text-gray-600 hover:text-gray-700"
+                                      title={t('common.edit')}
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                    
+                                    {/* Delete Button */}
+                                    <Button
+                                      variant="ghost"
+                                      size="small"
+                                      onClick={() => onDelete?.(transaction)}
+                                      className="text-red-600 hover:text-red-700"
+                                      title={t('common.delete')}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
                               ))}
                             </div>
                           </motion.div>
@@ -378,6 +458,21 @@ const RecurringModal = ({
           </div>
         </div>
       </div>
+      
+      {/* Skip Dates Modal - GAP #3 */}
+      {showSkipDates && (
+        <SkipDatesModal
+          isOpen={showSkipDates}
+          onClose={() => {
+            setShowSkipDates(false);
+            setSelectedTemplate(null);
+          }}
+          template={selectedTemplate}
+          onSuccess={() => {
+            queryClient.invalidateQueries(['recurring']);
+          }}
+        />
+      )}
     </Modal>
   );
 };

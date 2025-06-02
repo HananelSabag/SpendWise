@@ -23,6 +23,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useAccessibility } from '../../../context/AccessibilityContext';
 import { cn } from '../../../utils/helpers';
 import { Card, Input, Button, Alert, Badge } from '../../ui';
+import { authAPI } from '../../../utils/api';
 import toast from 'react-hot-toast';
 
 /**
@@ -219,7 +220,8 @@ const ProfileSettings = ({ user }) => {
   const sections = [
     { id: 'preferences', label: t('profile.preferences'), icon: Globe },
     { id: 'security', label: t('profile.security'), icon: Shield },
-    { id: 'custom', label: t('profile.customPreferences'), icon: Database }
+    { id: 'custom', label: t('profile.customPreferences'), icon: Database },
+    { id: 'advanced', label: t('profile.advanced'), icon: Database }
   ];
 
   return (
@@ -568,6 +570,136 @@ const ProfileSettings = ({ user }) => {
               </Button>
             </div>
           )}
+        </Card>
+      )}
+
+      {/* Advanced Preferences Section - ADDRESSES GAP #1: Full JSONB preferences editor */}
+      {activeSection === 'advanced' && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+            {t('profile.advancedPreferences')}
+          </h3>
+          
+          <div className="space-y-6">
+            {/* JSON Editor for all preferences */}
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-4">
+                {t('profile.preferencesEditor')}
+              </h4>
+              
+              <Alert type="info" className="mb-4">
+                <Info className="w-4 h-4" />
+                <p className="text-sm">
+                  {t('profile.preferencesEditorInfo')}
+                </p>
+              </Alert>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('profile.rawPreferences')}
+                  </label>
+                  <textarea
+                    value={JSON.stringify(user?.preferences || {}, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setCustomPreferences(parsed);
+                      } catch (err) {
+                        // Invalid JSON, don't update
+                      }
+                    }}
+                    className="w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 font-mono text-sm"
+                    spellCheck={false}
+                  />
+                </div>
+                
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    setSavingSettings(true);
+                    try {
+                      await authAPI.updatePreferences(customPreferences);
+                      toast.success(t('profile.preferencesUpdated'));
+                    } catch (error) {
+                      toast.error(t('profile.saveError'));
+                    } finally {
+                      setSavingSettings(false);
+                    }
+                  }}
+                  loading={savingSettings}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {t('profile.saveAllPreferences')}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Common Preferences UI */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-4">
+                {t('profile.commonPreferences')}
+              </h4>
+              
+              <div className="space-y-4">
+                {/* Notification Preferences */}
+                <div>
+                  <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    {t('profile.notificationPreferences')}
+                  </h5>
+                  <div className="space-y-2">
+                    {['email', 'push', 'sms', 'recurring', 'reminders'].map(notifType => (
+                      <label key={notifType} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={customPreferences.notifications?.[notifType] !== false}
+                          onChange={(e) => {
+                            setCustomPreferences(prev => ({
+                              ...prev,
+                              notifications: {
+                                ...prev.notifications,
+                                [notifType]: e.target.checked
+                              }
+                            }));
+                          }}
+                          className="mr-3"
+                        />
+                        <span className="text-sm">{t(`profile.notifications.${notifType}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Privacy Preferences */}
+                <div>
+                  <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    {t('profile.privacyPreferences')}
+                  </h5>
+                  <div className="space-y-2">
+                    {['showProfile', 'showStats', 'allowAnalytics'].map(privacyType => (
+                      <label key={privacyType} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={customPreferences.privacy?.[privacyType] !== false}
+                          onChange={(e) => {
+                            setCustomPreferences(prev => ({
+                              ...prev,
+                              privacy: {
+                                ...prev.privacy,
+                                [privacyType]: e.target.checked
+                              }
+                            }));
+                          }}
+                          className="mr-3"
+                        />
+                        <span className="text-sm">{t(`profile.privacy.${privacyType}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
     </div>

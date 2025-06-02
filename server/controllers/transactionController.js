@@ -105,7 +105,7 @@ const transactionController = {
     const { period } = req.params;
     const { date } = req.query;
     
-    if (!['day', 'week', 'month', 'year'].includes(period)) {
+    if (!['day', 'week', 'month', 'year', '3months'].includes(period)) {
       throw { ...errorCodes.INVALID_INPUT, details: 'Invalid period' };
     }
     
@@ -113,7 +113,22 @@ const transactionController = {
     
     try {
       const dateRanges = TimeManager.getDateRanges(targetDate);
-      const range = dateRanges[period === 'day' ? 'daily' : period + 'ly'];
+      
+      // ✅ תיקון: הוסף טיפול מיוחד ב-'3months'
+      let range;
+      if (period === '3months') {
+        // חישוב מיוחד ל-90 ימים אחורה
+        const endDate = new Date(targetDate);
+        const startDate = new Date(targetDate);
+        startDate.setDate(startDate.getDate() - 90);
+        
+        range = {
+          start: startDate,
+          end: endDate
+        };
+      } else {
+        range = dateRanges[period === 'day' ? 'daily' : period + 'ly'];
+      }
       
       const result = await Transaction.getTransactions(userId, {
         startDate: TimeManager.formatForDB(range.start),

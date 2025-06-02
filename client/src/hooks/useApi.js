@@ -15,7 +15,7 @@ export const useTransactions = (filters) => {
   });
 };
 
-// ✅ הוספת hook חדש לרשימת עסקאות
+// Add new hook for transaction list
 export const useTransactionsQuery = (filters) => {
   return useQuery({
     queryKey: ['transactions-query', filters],
@@ -36,17 +36,17 @@ export const useRecurringTransactions = (type) => {
   return useQuery({
     queryKey: ['recurring', type],
     queryFn: () => transactionAPI.getRecurring(type),
-    staleTime: 60 * 1000, // דקה אחת
-    // ✅ שיפור הטיפול בנתונים
+    staleTime: 60 * 1000, // One minute
+    // Improve data handling
     select: (response) => {
       const data = response.data;
-      // וודא שמחזירים מערך תמיד
+      // Ensure we always return an array
       return Array.isArray(data.data) ? data.data : [];
     }
   });
 };
 
-// ✅ hook לחיפוש עסקאות
+// Hook for transaction search
 export const useTransactionSearch = (searchTerm, enabled = true) => {
   return useQuery({
     queryKey: ['transaction-search', searchTerm],
@@ -63,7 +63,7 @@ export const useTemplates = () => {
   return useQuery({
     queryKey: ['templates'],
     queryFn: () => transactionAPI.getTemplates(),
-    // ✅ שיפור הטיפול בנתונים
+    // Improve data handling
     select: (response) => {
       const data = response.data;
       return Array.isArray(data.data) ? data.data : [];
@@ -184,12 +184,12 @@ export const useUpdatePreferences = () => {
   });
 };
 
-// ✅ הוספת הוק חדש לקטגוריות
+// Add new hook for categories
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => transactionAPI.getCategories(),
-    staleTime: 10 * 60 * 1000, // 10 דקות - קטגוריות לא משתנות הרבה
+    staleTime: 10 * 60 * 1000, // 10 minutes - categories don't change often
     select: (response) => {
       const data = response.data;
       return Array.isArray(data.data) ? data.data : [];
@@ -197,7 +197,38 @@ export const useCategories = () => {
   });
 };
 
-// ✅ הוספת hook להעלאת תמונת פרופיל
+// Add category mutations
+export const useCreateCategory = () => {
+  return useMutation({
+    mutationFn: (data) => transactionAPI.createCategory(data),
+    onSuccess: () => {
+      toast.success('Category created successfully');
+      queryClient.invalidateQueries(['categories']);
+    }
+  });
+};
+
+export const useUpdateCategory = () => {
+  return useMutation({
+    mutationFn: ({ id, data }) => transactionAPI.updateCategory(id, data),
+    onSuccess: () => {
+      toast.success('Category updated successfully');
+      queryClient.invalidateQueries(['categories']);
+    }
+  });
+};
+
+export const useDeleteCategory = () => {
+  return useMutation({
+    mutationFn: (id) => transactionAPI.deleteCategory(id),
+    onSuccess: () => {
+      toast.success('Category deleted successfully');
+      queryClient.invalidateQueries(['categories']);
+    }
+  });
+};
+
+// Add hook for profile picture upload
 export const useUploadProfilePicture = () => {
   return useMutation({
     mutationFn: (file) => authAPI.uploadProfilePicture(file),
