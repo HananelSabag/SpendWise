@@ -105,30 +105,42 @@ class User {
     const client = await db.pool.connect();
     
     try {
-      await client.query('BEGIN');
-      
-      const { username, currentPassword, newPassword, preferences } = data;
+      const { 
+        username, 
+        currentPassword, 
+        newPassword,
+        preferences 
+      } = data;
+
       const updates = [];
       const values = [];
       let paramCount = 1;
 
       // Handle username update
-      if (username !== undefined) {
+      if (username) {
         updates.push(`username = $${paramCount}`);
         values.push(username);
         paramCount++;
       }
 
-      // Handle preferences update
-      if (preferences !== undefined) {
+      // ✅ Handle preferences update - מיזוג עם קיימים
+      if (preferences) {
+        // קבלת preferences קיימים
+        const existingResult = await client.query(
+          'SELECT preferences FROM users WHERE id = $1',
+          [userId]
+        );
+        
+        const existingPrefs = existingResult.rows[0]?.preferences || {};
+        const mergedPrefs = { ...existingPrefs, ...preferences };
+        
         updates.push(`preferences = $${paramCount}`);
-        values.push(JSON.stringify(preferences));
+        values.push(JSON.stringify(mergedPrefs));
         paramCount++;
       }
 
       // Handle password update
       if (newPassword) {
-        // Verify current password first
         const user = await client.query(
           'SELECT password_hash FROM users WHERE id = $1',
           [userId]
@@ -163,23 +175,30 @@ class User {
         };
       }
 
-      // Add userId as last parameter
-      values.push(userId);
-      
+      // ✅ ביצוע העדכון
       const query = `
         UPDATE users 
-        SET ${updates.join(', ')}
+        SET ${updates.join(', ')}, updated_at = NOW()
         WHERE id = $${paramCount}
-        RETURNING id, email, username, preferences, last_login;
+        RETURNING id, username, email, preferences, created_at, updated_at
       `;
-
+      
+      values.push(userId);
+      
       const result = await client.query(query, values);
       
-      await client.query('COMMIT');
+      if (!result.rows[0]) {
+        throw { ...errorCodes.NOT_FOUND };
+      }
+
+      return {
+        success: true,
+        data: {
+          user: result.rows[0]
+        }
+      };
       
-      return result.rows[0];
     } catch (error) {
-      await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();

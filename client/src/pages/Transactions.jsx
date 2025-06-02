@@ -250,8 +250,23 @@ const Transactions = () => {
     }
   };
 
-  // ✅ Debug logging for development
+  // Add itemVariants definition
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  };
+
+  // ✅ Fix conditional useEffect - move condition inside hook
   useEffect(() => {
+    // Only log in development, but always call the hook
     if (process.env.NODE_ENV === 'development') {
       console.log('[Transactions] 🔍 Data Debug:', {
         selectedDate: selectedDate,
@@ -281,70 +296,73 @@ const Transactions = () => {
         className="space-y-6"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* Header with Stats */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {t('nav.transactions')}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {t('transactions.description')} - {formatDate(selectedDate)}
-              </p>
-            </div>
-
-            {/* Quick Stats + Date Selector */}
-            <div className="flex items-center gap-6">
-              {/* Date Selector */}
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  className="flex items-center gap-2"
-                >
+        {/* Header with Stats - Redesigned to match Profile/Dashboard */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 text-white p-6 border-0 shadow-md">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">
+                  {t('nav.transactions')}
+                </h1>
+                <p className="text-white/80 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  {formatDate(selectedDate, 'MMM dd, yyyy')}
-                </Button>
-                
-                {showCalendar && (
-                  <div className="absolute top-full mt-2 z-50 right-0">
-                    <CalendarWidget
-                      selectedDate={selectedDate}
-                      onDateSelect={handleDateChange}
-                      onClose={() => setShowCalendar(false)}
-                    />
-                  </div>
-                )}
+                  {formatDate(selectedDate, language === 'he' ? 'PPP' : 'PPPP')}
+                </p>
               </div>
 
-              {/* Stats - עכשיו עם נתונים מ-Dashboard */}
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                  +{formatAmount(totals.income)}
+              {/* Stats Row */}
+              <div className="flex items-center gap-6">
+                {/* Date Selector */}
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="flex items-center gap-2 bg-white/20 text-white hover:bg-white/30"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    {formatDate(selectedDate, 'MMM dd, yyyy')}
+                  </Button>
+                  
+                  {showCalendar && (
+                    <div className="absolute top-full mt-2 z-50 right-0">
+                      <CalendarWidget
+                        selectedDate={selectedDate}
+                        onDateSelect={handleDateChange}
+                        onClose={() => setShowCalendar(false)}
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs text-gray-500">{t('transactions.income')}</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                  -{formatAmount(totals.expenses)}
+
+                {/* Stats */}
+                <div className="flex items-center gap-4">
+                  <div className="text-center px-4 py-2 bg-white/10 rounded-lg">
+                    <div className="text-lg font-bold text-white flex items-center gap-1">
+                      <TrendingUp className="w-4 h-4 text-green-300" />
+                      {formatAmount(totals.income)}
+                    </div>
+                    <div className="text-xs text-white/80">{t('transactions.income')}</div>
+                  </div>
+                  
+                  <div className="text-center px-4 py-2 bg-white/10 rounded-lg">
+                    <div className="text-lg font-bold text-white flex items-center gap-1">
+                      <TrendingDown className="w-4 h-4 text-red-300" />
+                      {formatAmount(totals.expenses)}
+                    </div>
+                    <div className="text-xs text-white/80">{t('transactions.expense')}</div>
+                  </div>
+                  
+                  <div className="text-center px-4 py-2 bg-white/10 rounded-lg">
+                    <div className="text-lg font-bold text-white">
+                      {formatAmount(totals.balance)}
+                    </div>
+                    <div className="text-xs text-white/80">{t('common.balance')}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500">{t('transactions.expense')}</div>
-              </div>
-              
-              <div className="text-center">
-                <div className={`text-lg font-bold ${
-                  totals.balance >= 0 
-                    ? 'text-blue-600 dark:text-blue-400' 
-                    : 'text-orange-600 dark:text-orange-400'
-                }`}>
-                  {formatAmount(totals.balance)}
-                </div>
-                <div className="text-xs text-gray-500">{t('common.balance')}</div>
               </div>
             </div>
-          </div>
-        </div>
+          </Card>
+        </motion.div>
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4">

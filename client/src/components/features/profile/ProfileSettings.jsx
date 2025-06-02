@@ -11,16 +11,11 @@ import {
   Eye,
   EyeOff,
   Check,
-  X,
-  Smartphone,
-  Mail,
-  MessageSquare,
   Shield,
   Database,
-  Trash2,
-  Download,
   AlertCircle,
-  Save
+  Save,
+  Info
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -54,22 +49,16 @@ const ProfileSettings = ({ user }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   
-  // Notification preferences
-  const [notifications, setNotifications] = useState({
-    email: user?.preferences?.notifications?.email ?? true,
-    push: user?.preferences?.notifications?.push ?? true,
-    sms: user?.preferences?.notifications?.sms ?? false,
-    marketing: user?.preferences?.notifications?.marketing ?? false,
-    updates: user?.preferences?.notifications?.updates ?? true,
-    reminders: user?.preferences?.notifications?.reminders ?? true
+  // Custom Preferences
+  const [customPreferences, setCustomPreferences] = useState(() => {
+    const prefs = user?.preferences || {};
+    const { phone, location, website, profilePicture, ...custom } = prefs;
+    return custom;
   });
-
-  // Privacy settings
-  const [privacy, setPrivacy] = useState({
-    showProfile: user?.preferences?.privacy?.showProfile ?? true,
-    showStats: user?.preferences?.privacy?.showStats ?? false,
-    allowAnalytics: user?.preferences?.privacy?.allowAnalytics ?? true
-  });
+  
+  const [newPrefKey, setNewPrefKey] = useState('');
+  const [newPrefValue, setNewPrefValue] = useState('');
+  const [newPrefType, setNewPrefType] = useState('string');
 
   // Handle language change
   const handleLanguageChange = (lang) => {
@@ -145,18 +134,19 @@ const ProfileSettings = ({ user }) => {
     }
   };
 
-  // Save notification preferences
-  const saveNotifications = async () => {
+  // Custom Preferences functions
+  const saveCustomPreferences = async () => {
     setSavingSettings(true);
     
     try {
       await updateProfile({
         preferences: {
-          notifications
+          ...user?.preferences,
+          ...customPreferences
         }
       });
       
-      toast.success(t('profile.notificationsSaved'));
+      toast.success(t('profile.customPreferencesSaved'));
     } catch (error) {
       toast.error(t('profile.saveError'));
     } finally {
@@ -164,32 +154,72 @@ const ProfileSettings = ({ user }) => {
     }
   };
 
-  // Save privacy settings
-  const savePrivacy = async () => {
-    setSavingSettings(true);
-    
-    try {
-      await updateProfile({
-        preferences: {
-          privacy
-        }
-      });
-      
-      toast.success(t('profile.privacySaved'));
-    } catch (error) {
-      toast.error(t('profile.saveError'));
-    } finally {
-      setSavingSettings(false);
+  const addCustomPreference = () => {
+    if (!newPrefKey.trim()) {
+      toast.error(t('profile.errors.keyRequired'));
+      return;
     }
+    
+    if (customPreferences.hasOwnProperty(newPrefKey)) {
+      toast.error(t('profile.errors.keyExists'));
+      return;
+    }
+    
+    let value = newPrefValue;
+    if (newPrefType === 'number') value = Number(value);
+    if (newPrefType === 'boolean') value = value === 'true';
+    if (newPrefType === 'json') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        toast.error(t('profile.errors.invalidJson'));
+        return;
+      }
+    }
+    
+    setCustomPreferences(prev => ({
+      ...prev,
+      [newPrefKey]: value
+    }));
+    
+    setNewPrefKey('');
+    setNewPrefValue('');
+    toast.success(t('profile.preferenceAdded'));
   };
 
-  // Section tabs
+  const removeCustomPreference = (key) => {
+    setCustomPreferences(prev => {
+      const newPrefs = { ...prev };
+      delete newPrefs[key];
+      return newPrefs;
+    });
+    toast.success(t('profile.preferenceRemoved'));
+  };
+
+  const updateCustomPreference = (key, value, type = 'string') => {
+    let processedValue = value;
+    if (type === 'number') processedValue = Number(value);
+    if (type === 'boolean') processedValue = value === 'true';
+    if (type === 'json') {
+      try {
+        processedValue = JSON.parse(value);
+      } catch {
+        toast.error(t('profile.errors.invalidJson'));
+        return;
+      }
+    }
+    
+    setCustomPreferences(prev => ({
+      ...prev,
+      [key]: processedValue
+    }));
+  };
+
+  // Section tabs - simplified to only include actually implemented features
   const sections = [
     { id: 'preferences', label: t('profile.preferences'), icon: Globe },
     { id: 'security', label: t('profile.security'), icon: Shield },
-    { id: 'notifications', label: t('profile.notifications'), icon: Bell },
-    { id: 'privacy', label: t('profile.privacy'), icon: Lock },
-    { id: 'data', label: t('profile.dataManagement'), icon: Database }
+    { id: 'custom', label: t('profile.customPreferences'), icon: Database }
   ];
 
   return (
@@ -412,182 +442,132 @@ const ProfileSettings = ({ user }) => {
               </div>
             </div>
 
-            {/* Two-Factor Authentication */}
-            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-start justify-between">
+            {/* Feature Notice */}
+            <Alert variant="info" className="mt-6">
+              <div className="flex">
+                <Info className="w-5 h-5 mr-3 text-blue-500" />
                 <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white">
-                    {t('profile.twoFactor')}
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {t('profile.twoFactorDesc')}
+                  <h4 className="font-medium">{t('profile.additionalSecurity')}</h4>
+                  <p className="text-sm">
+                    {t('profile.additionalSecurityDesc')}
                   </p>
                 </div>
-                <Badge variant="warning">
-                  {t('profile.comingSoon')}
-                </Badge>
               </div>
-            </div>
+            </Alert>
           </div>
         </Card>
       )}
 
-      {/* Notifications Section */}
-      {activeSection === 'notifications' && (
+      {/* Custom Preferences Section */}
+      {activeSection === 'custom' && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            {t('profile.notificationPreferences')}
+            {t('profile.customPreferencesTitle')}
           </h3>
           
+          {/* Add New Preference */}
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-4">
+              {t('profile.addNewPreference')}
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Input
+                label={t('profile.preferenceKey')}
+                value={newPrefKey}
+                onChange={(e) => setNewPrefKey(e.target.value)}
+                placeholder="myCustomSetting"
+              />
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('profile.preferenceType')}
+                </label>
+                <select
+                  value={newPrefType}
+                  onChange={(e) => setNewPrefType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                >
+                  <option value="string">{t('profile.typeString')}</option>
+                  <option value="number">{t('profile.typeNumber')}</option>
+                  <option value="boolean">{t('profile.typeBoolean')}</option>
+                  <option value="json">{t('profile.typeJson')}</option>
+                </select>
+              </div>
+              
+              <Input
+                label={t('profile.preferenceValue')}
+                value={newPrefValue}
+                onChange={(e) => setNewPrefValue(e.target.value)}
+                placeholder={
+                  newPrefType === 'boolean' ? 'true/false' :
+                  newPrefType === 'number' ? '123' :
+                  newPrefType === 'json' ? '{"key": "value"}' :
+                  'My value'
+                }
+              />
+              
+              <div className="flex items-end">
+                <Button
+                  variant="primary"
+                  onClick={addCustomPreference}
+                  className="w-full"
+                >
+                  {t('profile.addPreference')}
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Existing Custom Preferences */}
           <div className="space-y-4">
-            {[
-              { key: 'email', icon: Mail, label: t('profile.emailNotifications'), desc: t('profile.emailNotificationsDesc') },
-              { key: 'push', icon: Smartphone, label: t('profile.pushNotifications'), desc: t('profile.pushNotificationsDesc') },
-              { key: 'sms', icon: MessageSquare, label: t('profile.smsNotifications'), desc: t('profile.smsNotificationsDesc') },
-              { key: 'reminders', icon: Bell, label: t('profile.reminders'), desc: t('profile.remindersDesc') },
-              { key: 'updates', icon: Bell, label: t('profile.productUpdates'), desc: t('profile.productUpdatesDesc') },
-              { key: 'marketing', icon: Mail, label: t('profile.marketingEmails'), desc: t('profile.marketingEmailsDesc') }
-            ].map(item => (
-              <label
-                key={item.key}
-                className="flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={notifications[item.key]}
-                  onChange={(e) => setNotifications(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                  className="mt-1 w-5 h-5 rounded text-primary-500 focus:ring-primary-500"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <item.icon className="w-5 h-5 text-gray-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {item.label}
-                    </span>
+            {Object.entries(customPreferences).length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                {t('profile.noCustomPreferences')}
+              </div>
+            ) : (
+              Object.entries(customPreferences).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">{key}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {typeof value} = {JSON.stringify(value)}
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                    {item.desc}
-                  </p>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      size="small"
+                      value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                      onChange={(e) => updateCustomPreference(key, e.target.value, typeof value)}
+                      className="w-48"
+                    />
+                    
+                    <Button
+                      variant="danger"
+                      size="small"
+                      onClick={() => removeCustomPreference(key)}
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </label>
-            ))}
+              ))
+            )}
           </div>
           
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="primary"
-              onClick={saveNotifications}
-              loading={savingSettings}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {t('profile.saveNotifications')}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Privacy Section */}
-      {activeSection === 'privacy' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            {t('profile.privacySettings')}
-          </h3>
-          
-          <div className="space-y-4">
-            {[
-              { key: 'showProfile', label: t('profile.publicProfile'), desc: t('profile.publicProfileDesc') },
-              { key: 'showStats', label: t('profile.shareStats'), desc: t('profile.shareStatsDesc') },
-              { key: 'allowAnalytics', label: t('profile.analytics'), desc: t('profile.analyticsDesc') }
-            ].map(item => (
-              <label
-                key={item.key}
-                className="flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer transition-colors"
+          {Object.entries(customPreferences).length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="primary"
+                onClick={saveCustomPreferences}
+                loading={savingSettings}
               >
-                <input
-                  type="checkbox"
-                  checked={privacy[item.key]}
-                  onChange={(e) => setPrivacy(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                  className="mt-1 w-5 h-5 rounded text-primary-500 focus:ring-primary-500"
-                />
-                <div className="flex-1">
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {item.label}
-                  </span>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                    {item.desc}
-                  </p>
-                </div>
-              </label>
-            ))}
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="primary"
-              onClick={savePrivacy}
-              loading={savingSettings}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {t('profile.savePrivacy')}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Data Management Section */}
-      {activeSection === 'data' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            {t('profile.dataManagement')}
-          </h3>
-          
-          <div className="space-y-6">
-            {/* Export Data */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                <div className="flex-1">
-                  <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                    {t('profile.exportData')}
-                  </h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    {t('profile.exportDataDesc')}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="small"
-                    className="mt-3"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    {t('profile.downloadData')}
-                  </Button>
-                </div>
-              </div>
+                <Save className="w-4 h-4 mr-2" />
+                {t('profile.saveCustomPreferences')}
+              </Button>
             </div>
-
-            {/* Delete Account */}
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
-                <div className="flex-1">
-                  <h4 className="font-medium text-red-900 dark:text-red-100">
-                    {t('profile.deleteAccount')}
-                  </h4>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                    {t('profile.deleteAccountDesc')}
-                  </p>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    className="mt-3"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {t('profile.deleteAccountButton')}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </Card>
       )}
     </div>

@@ -1,5 +1,5 @@
 // components/features/profile/ProfileInfo.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -10,9 +10,6 @@ import {
   X,
   Shield,
   Calendar,
-  MapPin,
-  Phone,
-  Globe,
   Loader,
   Check,
   AlertCircle
@@ -28,8 +25,8 @@ import toast from 'react-hot-toast';
  * ProfileInfo Component
  * User profile information and editing
  */
-const ProfileInfo = ({ user }) => {
-  const { updateProfile } = useAuth();
+const ProfileInfo = () => {
+  const { user, updateProfile } = useAuth();
   const { t, language } = useLanguage();
   const isRTL = language === 'he';
   const fileInputRef = useRef(null);
@@ -37,26 +34,65 @@ const ProfileInfo = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  
+  const [profileImage, setProfileImage] = useState(null);
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    phone: user?.preferences?.phone || '',
-    location: user?.preferences?.location || '',
-    website: user?.preferences?.website || ''
+    username: '',
+    email: ''
   });
-  
   const [errors, setErrors] = useState({});
-  const [profileImage, setProfileImage] = useState(user?.preferences?.profilePicture || null);
 
-  // Handle input changes
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear error
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
+  // ✅ עדכון useEffect כדי לוודא שגם תמונות קיימות מוצגות נכון
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        username: user.username || '',
+        email: user.email || ''
+      });
+      
+      // ✅ וידוא שתמונת הפרופיל הקיימת מוצגת עם URL מלא
+      let imageUrl = user.preferences?.profilePicture;
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${imageUrl}`;
+      }
+      console.log('Setting profile image URL:', imageUrl);
+      setProfileImage(imageUrl);
     }
+  }, [user]);
+
+  // ✅ עדכון handleInputChange להסיר שדות מיותרים
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.username?.trim()) {
+      newErrors.username = t('profile.errors.usernameRequired');
+    } else if (formData.username.length < 3) {
+      newErrors.username = t('profile.errors.usernameTooShort');
+    }
+    
+    if (!formData.email?.trim()) {
+      newErrors.email = t('profile.errors.emailRequired');
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = t('profile.errors.emailInvalid');
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handle photo upload
@@ -78,42 +114,31 @@ const ProfileInfo = ({ user }) => {
     setUploadingPhoto(true);
     
     try {
-      const formData = new FormData();
-      formData.append('profilePicture', file);
+      // ✅ העלאת התמונה תחילה
+      const uploadResponse = await authAPI.uploadProfilePicture(file);
+      console.log('Upload response:', uploadResponse);
       
-      const response = await authAPI.uploadProfilePicture(file);
-      const imageUrl = response.data.data.path;
+      // ✅ קבלת הנתיב מהתגובה - השרת כבר מחזיר URL מלא
+      const imageUrl = uploadResponse.data.data.path;
+      console.log('Image URL from server:', imageUrl);
       
+      // ✅ עדכון state מיידי
       setProfileImage(imageUrl);
+      
+      // ✅ עדכון preferences בנפרד
+      await authAPI.updatePreferences({
+        ...user?.preferences,
+        profilePicture: imageUrl
+      });
+      
       toast.success(t('profile.photoUploaded'));
     } catch (error) {
       console.error('Upload failed:', error);
-      toast.error(t('profile.errors.uploadFailed'));
+      const errorMessage = error.response?.data?.error?.message || t('profile.errors.uploadFailed');
+      toast.error(errorMessage);
     } finally {
       setUploadingPhoto(false);
     }
-  };
-
-  // Validate form
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.username?.trim()) {
-      newErrors.username = t('validation.usernameRequired');
-    } else if (formData.username.length < 3) {
-      newErrors.username = t('validation.usernameTooShort');
-    }
-    
-    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = t('validation.invalidPhone');
-    }
-    
-    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
-      newErrors.website = t('validation.invalidWebsite');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   // Handle save
@@ -123,21 +148,33 @@ const ProfileInfo = ({ user }) => {
     setSavingProfile(true);
     
     try {
-      await updateProfile({
-        username: formData.username,
-        preferences: {
-          phone: formData.phone,
-          location: formData.location,
-          website: formData.website,
+      // ✅ עדכון פרופיל בסיסי - רק username ו-email
+      const profileUpdate = {};
+      if (formData.username !== user?.username) profileUpdate.username = formData.username;
+      if (formData.email !== user?.email) profileUpdate.email = formData.email;
+      
+      if (Object.keys(profileUpdate).length > 0) {
+        await updateProfile(profileUpdate);
+      }
+      
+      // ✅ עדכון תמונת פרופיל אם השתנתה (עם URL מלא)
+      const currentImageUrl = user?.preferences?.profilePicture && !user.preferences.profilePicture.startsWith('http')
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.preferences.profilePicture}`
+        : user?.preferences?.profilePicture;
+        
+      if (profileImage !== currentImageUrl) {
+        await authAPI.updatePreferences({
+          ...user?.preferences,
           profilePicture: profileImage
-        }
-      });
+        });
+      }
       
       setIsEditing(false);
       toast.success(t('profile.updateSuccess'));
     } catch (error) {
       console.error('Update failed:', error);
-      toast.error(t('profile.updateError'));
+      const errorMessage = error.response?.data?.error?.message || t('profile.updateError');
+      toast.error(errorMessage);
     } finally {
       setSavingProfile(false);
     }
@@ -147,58 +184,11 @@ const ProfileInfo = ({ user }) => {
   const handleCancel = () => {
     setFormData({
       username: user?.username || '',
-      email: user?.email || '',
-      phone: user?.preferences?.phone || '',
-      location: user?.preferences?.location || '',
-      website: user?.preferences?.website || ''
+      email: user?.email || ''
     });
     setErrors({});
     setIsEditing(false);
   };
-
-  // Info fields
-  const infoFields = [
-    {
-      icon: User,
-      label: t('profile.username'),
-      value: formData.username,
-      field: 'username',
-      editable: true,
-      required: true
-    },
-    {
-      icon: Mail,
-      label: t('profile.email'),
-      value: formData.email,
-      field: 'email',
-      editable: false,
-      helper: t('profile.emailNotEditable')
-    },
-    {
-      icon: Phone,
-      label: t('profile.phone'),
-      value: formData.phone,
-      field: 'phone',
-      editable: true,
-      placeholder: t('profile.phonePlaceholder')
-    },
-    {
-      icon: MapPin,
-      label: t('profile.location'),
-      value: formData.location,
-      field: 'location',
-      editable: true,
-      placeholder: t('profile.locationPlaceholder')
-    },
-    {
-      icon: Globe,
-      label: t('profile.website'),
-      value: formData.website,
-      field: 'website',
-      editable: true,
-      placeholder: 'https://example.com'
-    }
-  ];
 
   return (
     <Card className="p-6">
@@ -249,25 +239,37 @@ const ProfileInfo = ({ user }) => {
               name={user?.username}
               src={profileImage}
               className="ring-4 ring-gray-200 dark:ring-gray-700"
+              onError={(e) => {
+                // ✅ אם התמונה לא נטענת, רשום לקונסול
+                console.log('Profile image failed to load:', profileImage);
+                console.log('Error details:', e);
+              }}
             />
             
-            {isEditing && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(
-                  'absolute inset-0 flex items-center justify-center',
-                  'bg-black/50 rounded-full opacity-0 group-hover:opacity-100',
-                  'transition-opacity cursor-pointer'
-                )}
-                disabled={uploadingPhoto}
-              >
-                {uploadingPhoto ? (
-                  <Loader className="w-6 h-6 text-white animate-spin" />
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
-              </button>
+            {/* ✅ Debug info - רק במצב פיתוח */}
+            {process.env.NODE_ENV === 'development' && profileImage && (
+              <div className="absolute -bottom-10 left-0 text-xs text-gray-500 bg-white dark:bg-gray-800 p-1 rounded shadow-sm border max-w-[300px] break-all">
+                URL: {profileImage}
+              </div>
             )}
+            
+            {/* ✅ כפתור תמיד זמין - לא תלוי ב-isEditing */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                'absolute inset-0 flex items-center justify-center',
+                'bg-black/50 rounded-full opacity-0 group-hover:opacity-100',
+                'transition-opacity cursor-pointer'
+              )}
+              disabled={uploadingPhoto}
+              title={t('profile.changePhoto')}
+            >
+              {uploadingPhoto ? (
+                <Loader className="w-6 h-6 text-white animate-spin" />
+              ) : (
+                <Camera className="w-6 h-6 text-white" />
+              )}
+            </button>
             
             <input
               ref={fileInputRef}
@@ -278,26 +280,55 @@ const ProfileInfo = ({ user }) => {
             />
           </div>
           
-          <div>
+          <div className="flex-1">
             <h3 className="font-medium text-gray-900 dark:text-white">
               {t('profile.profilePhoto')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('profile.photoHelper')}
             </p>
+            {/* ✅ כפתור גלוי נוסף */}
+            <Button
+              variant="outline"
+              size="small"
+              className="mt-2"
+              onClick={() => fileInputRef.current?.click()}
+              loading={uploadingPhoto}
+              disabled={uploadingPhoto}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              {uploadingPhoto ? t('profile.uploading') : t('profile.changePhoto')}
+            </Button>
           </div>
         </div>
 
         {/* Info Fields */}
         <div className="space-y-4">
-          {infoFields.map((field) => (
+          {[
+            {
+              icon: User,
+              label: t('profile.username'),
+              value: formData.username,
+              field: 'username',
+              editable: true,
+              required: true
+            },
+            {
+              icon: Mail,
+              label: t('profile.email'),
+              value: formData.email,
+              field: 'email',
+              editable: false,
+              helper: t('profile.emailNotEditable')
+            }
+          ].map((field) => (
             <div key={field.field}>
               {isEditing && field.editable ? (
                 <Input
                   label={field.label}
                   type="text"
                   value={field.value}
-                  onChange={(e) => handleChange(field.field, e.target.value)}
+                  onChange={(e) => handleInputChange(field.field, e.target.value)}
                   placeholder={field.placeholder}
                   icon={field.icon}
                   error={errors[field.field]}

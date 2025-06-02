@@ -166,6 +166,10 @@ export const useUpdateProfile = () => {
     onSuccess: () => {
       toast.success('Profile updated successfully');
       queryClient.invalidateQueries(['profile']);
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to update profile';
+      toast.error(message);
     }
   });
 };
@@ -189,6 +193,23 @@ export const useCategories = () => {
     select: (response) => {
       const data = response.data;
       return Array.isArray(data.data) ? data.data : [];
+    }
+  });
+};
+
+// ✅ הוספת hook להעלאת תמונת פרופיל
+export const useUploadProfilePicture = () => {
+  return useMutation({
+    mutationFn: (file) => authAPI.uploadProfilePicture(file),
+    onSuccess: (data) => {
+      toast.success('Profile picture updated successfully');
+      queryClient.invalidateQueries(['profile']);
+      return data;
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to upload image';
+      toast.error(message);
+      throw error;
     }
   });
 };

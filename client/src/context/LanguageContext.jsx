@@ -422,7 +422,50 @@ const translations = {
     lastLoginInfo: 'Last login',
     logout: 'Logout',
     financialSummary: 'Financial Summary',
-    accountActivity: 'Account Activity'
+    accountActivity: 'Account Activity',
+    
+    // ✅ הוספת תרגומים חסרים לפרופיל
+    phone: 'Phone',
+    phonePlaceholder: 'Enter phone number',
+    location: 'Location', 
+    locationPlaceholder: 'Enter location',
+    website: 'Website',
+    accountInfo: 'Account Information',
+    verified: 'Verified',
+    photoHelper: 'Click to upload or change your profile photo',
+    changePhoto: 'Change Photo',
+    uploading: 'Uploading...',
+    photoUploaded: 'Photo uploaded successfully',
+    
+    // Custom preferences translations
+    customPreferences: 'Custom Preferences',
+    customPreferencesTitle: 'Manage Custom Settings',
+    addNewPreference: 'Add New Preference',
+    preferenceKey: 'Setting Name',
+    preferenceType: 'Data Type',
+    preferenceValue: 'Value',
+    addPreference: 'Add Setting',
+    noCustomPreferences: 'No custom preferences yet',
+    preferenceAdded: 'Preference added successfully',
+    preferenceRemoved: 'Preference removed successfully',
+    saveCustomPreferences: 'Save Custom Preferences',
+    customPreferencesSaved: 'Custom preferences saved successfully',
+    
+    // Type options
+    typeString: 'Text',
+    typeNumber: 'Number', 
+    typeBoolean: 'True/False',
+    typeJson: 'JSON Object',
+    
+    // Error messages
+    errors: {
+      keyRequired: 'Setting name is required',
+      keyExists: 'Setting name already exists',
+      invalidJson: 'Invalid JSON format',
+      invalidFileType: 'Please select an image file',
+      fileTooLarge: 'File size must be less than 5MB',
+      uploadFailed: 'Failed to upload image'
+    }
   },
 
   // Calendar
@@ -875,53 +918,63 @@ const translations = {
         billing: 'חיוב' // ✅ הוספתי
       },
       
-      // ✅ הוספת תרגומים חסרים
-      stats: {
-        totalTransactions: 'סך עסקאות',
-        thisMonth: 'החודש',
-        activeDays: 'חבר כבר',
-        successRate: 'אחוז הצלחה',
-        days: 'ימים',
-        months: 'חודשים',
-        years: 'שנים'
-      },
+      // ✅ הוספת תרגומים חסרים להתקנות פרופיל
+      preferences: 'Preferences',
+      privacy: 'Privacy',
+      security: 'Security',
+      dataManagement: 'Data Management',
+      languageChanged: 'Language changed successfully',
+      currencyChanged: 'Currency changed successfully', 
+      themeChanged: 'Theme changed successfully',
+      passwordChanged: 'Password changed successfully',
+      incorrectPassword: 'Current password is incorrect',
+      passwordChangeError: 'Failed to change password',
+      notificationsSaved: 'Notifications saved successfully',
+      privacySaved: 'Privacy settings saved successfully',
+      saveError: 'Failed to save settings',
+      updatePassword: 'Update Password',
+      twoFactor: 'Two-Factor Authentication',
+      twoFactorDesc: 'Add an extra layer of security to your account',
       
-      quickActions: 'פעולות מהירות',
-      exportData: 'ייצא נתונים',
-      notifications: 'התראות',
-      comingSoon: 'בקרוב',
-      logoutConfirm: 'אישור התנתקות',
-      logoutConfirmDesc: 'האם אתה בטוח שברצונך להתנתק?',
+      // Notification preferences
+      notificationPreferences: 'Notification Preferences',
+      emailNotifications: 'Email notifications',
+      emailNotificationsDesc: 'Receive notifications via email',
+      pushNotifications: 'Push notifications', 
+      pushNotificationsDesc: 'Receive push notifications in browser',
+      smsNotifications: 'SMS notifications',
+      smsNotificationsDesc: 'Receive notifications via SMS',
+      reminders: 'Transaction reminders',
+      remindersDesc: 'Get reminders for recurring transactions',
+      productUpdates: 'Product updates',
+      productUpdatesDesc: 'Receive updates about new features',
+      marketingEmails: 'Marketing emails',
+      marketingEmailsDesc: 'Receive promotional emails',
+      saveNotifications: 'Save Notifications',
       
-      securitySettings: 'הגדרות אבטחה',
-      billingSettings: 'חיוב ומנוי',
-      passwordRequirements: 'דרישות סיסמה',
-      passwordMinLength: 'מינימום 8 תווים',
-      passwordRequireNumber: 'חייב להכיל לפחות מספר אחד',
-      securityTip: 'טיפ אבטחה',
-      securityTipText: 'שמרו על הסיסמה שלכם והחליפו אותה באופן קבוע',
+      // Privacy settings
+      privacySettings: 'Privacy Settings',
+      publicProfile: 'Public profile',
+      publicProfileDesc: 'Allow others to view your profile',
+      shareStats: 'Share statistics',
+      shareStatsDesc: 'Allow sharing of anonymized usage data',
+      analytics: 'Analytics tracking',
+      analyticsDesc: 'Help improve our service with usage analytics',
+      savePrivacy: 'Save Privacy Settings',
       
-      language: 'שפה',
-      theme: 'נושא',
-      lightTheme: 'בהיר',
-      darkTheme: 'כהה',
+      // Profile photo
+      profilePhoto: 'Profile Photo',
+      accountStatus: 'Account Status',
+      notSet: 'Not set',
       
-      notificationsPreferences: 'העדפות התראות',
-      emailNotifications: 'התראות דואר אלקטרוני',
-      loginAlerts: 'התראות כניסה',
-      monthlySummaries: 'סיכומים חודשיים',
+      // Data management
+      downloadData: 'Download My Data',
+      exportDataDesc: 'Export all your data in a portable format',
+      deleteAccount: 'Delete Account',
+      deleteAccountDesc: 'Permanently delete your account and all data',
+      deleteAccountButton: 'Delete Account',
       
-      dataManagement: 'ניהול נתונים',
-      exportExplanation: 'ייצאו את הנתונים שלכם לגיבוי',
-      exportFeatureComingSoon: 'תכונת ייצוא בקרוב...',
-      
-      appPreferences: 'העדפות יישום',
-      memberSince: 'חבר מאז',
-      lastLogin: 'התחברות אחרונה',
-      lastLoginInfo: 'התחברות אחרונה',
-      logout: 'התנתק',
-      financialSummary: 'סיכום כספי',
-      accountActivity: 'פעילות חשבון'
+      // ...existing code...
     },
 
     // Calendar

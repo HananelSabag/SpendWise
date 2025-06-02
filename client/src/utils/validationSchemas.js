@@ -51,7 +51,61 @@ export const userSchemas = {
   }, {
     message: "Current password required to change password",
     path: ["currentPassword"],
-  })
+  }),
+  
+  // ✅ JSONB preferences validation - פתרון מלא לפער
+  preferences: {
+    // Profile picture validation - רק זה קיים
+    profilePicture: {
+      required: false,
+      fileTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+      maxSize: 5 * 1024 * 1024, // 5MB
+      message: 'Invalid image file'
+    },
+    
+    // Notification preferences (nested JSONB)
+    notifications: {
+      email: { type: 'boolean', default: true },
+      push: { type: 'boolean', default: true },
+      sms: { type: 'boolean', default: false },
+      marketing: { type: 'boolean', default: false },
+      updates: { type: 'boolean', default: true },
+      reminders: { type: 'boolean', default: true }
+    },
+    
+    // Privacy preferences (nested JSONB)  
+    privacy: {
+      showProfile: { type: 'boolean', default: true },
+      showStats: { type: 'boolean', default: false },
+      allowAnalytics: { type: 'boolean', default: true }
+    },
+
+    // ✅ Custom preferences validator
+    custom: {
+      validateCustomKey: (key) => {
+        return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key) && key.length <= 50;
+      },
+      validateCustomValue: (value, type) => {
+        switch (type) {
+          case 'string':
+            return typeof value === 'string' && value.length <= 500;
+          case 'number':
+            return typeof value === 'number' && !isNaN(value);
+          case 'boolean':
+            return typeof value === 'boolean';
+          case 'json':
+            try {
+              if (typeof value === 'string') JSON.parse(value);
+              return true;
+            } catch {
+              return false;
+            }
+          default:
+            return false;
+        }
+      }
+    }
+  }
 };
 
 /**
@@ -242,22 +296,72 @@ export const zodResolver = (schema) => async (data) => {
  */
 export const amountValidation = {
   formatAmountInput: (value) => {
-    if (!value) return '';
-    // Remove any non-digit characters except decimal point and minus
-    const cleaned = value.replace(/[^\d.-]/g, '');
-    // Handle decimal points
+    // Remove non-numeric characters except decimal point
+    const cleaned = value.replace(/[^\d.]/g, '');
+    
+    // Ensure only one decimal point
     const parts = cleaned.split('.');
-    if (parts.length > 2) return value;
-    // Allow only 2 decimal places
-    if (parts[1]?.length > 2) {
-      return `${parts[0]}.${parts[1].slice(0, 2)}`;
+    if (parts.length > 2) {
+      return parts[0] + '.' + parts.slice(1).join('');
     }
+    
+    // Limit decimal places to 2
+    if (parts[1] && parts[1].length > 2) {
+      return parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
     return cleaned;
   },
-
+  
   validateAmount: (amount) => {
-    if (!amount) return false;
     const num = parseFloat(amount);
     return !isNaN(num) && num > 0 && num <= 1000000;
+  }
+};
+
+/**
+ * Profile image validation helpers
+ */
+export const imageValidation = {
+  validateFile: (file) => {
+    if (!file) return { valid: false, error: 'No file provided' };
+    
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Invalid file type. Only JPEG, PNG and WebP are allowed' };
+    }
+    
+    // Check file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      return { valid: false, error: 'File size must be less than 5MB' };
+    }
+    
+    return { valid: true };
+  },
+  
+  createImagePreview: (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  },
+  
+  // ✅ פונקציה נוספת לטיפול בתמונות
+  getImageDimensions: (file) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({
+          width: img.width,
+          height: img.height,
+          aspectRatio: img.width / img.height
+        });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   }
 };

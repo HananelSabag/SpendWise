@@ -77,18 +77,6 @@ const Profile = () => {
       label: t('profile.tabs.preferences'), 
       icon: Settings,
       color: 'text-purple-600 dark:text-purple-400'
-    },
-    { 
-      id: 'security', 
-      label: t('profile.tabs.security'), 
-      icon: Shield,
-      color: 'text-green-600 dark:text-green-400'
-    },
-    { 
-      id: 'billing', 
-      label: t('profile.tabs.billing'), 
-      icon: CreditCard,
-      color: 'text-orange-600 dark:text-orange-400'
     }
   ];
 
@@ -336,44 +324,6 @@ const Profile = () => {
                   exit={{ opacity: 0, x: -20 }}
                 >
                   <ProfileSettings user={user} />
-                </motion.div>
-              )}
-              
-              {activeTab === 'security' && (
-                <motion.div
-                  key="security"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <Card className="p-6">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-                      {t('profile.securitySettings')}
-                    </h2>
-                    {/* Security content will go here */}
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {t('profile.comingSoon')}
-                    </p>
-                  </Card>
-                </motion.div>
-              )}
-              
-              {activeTab === 'billing' && (
-                <motion.div
-                  key="billing"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <Card className="p-6">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-                      {t('profile.billingSettings')}
-                    </h2>
-                    {/* Billing content will go here */}
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {t('profile.comingSoon')}
-                    </p>
-                  </Card>
                 </motion.div>
               )}
             </AnimatePresence>

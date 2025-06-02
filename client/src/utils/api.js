@@ -143,21 +143,74 @@ const formatDateForAPI = (date) => {
   return dateObj.toISOString().split('T')[0];
 };
 
+// ✅ Helper function לטיפול ב-URLs של תמונות
+const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  return `${API_URL}${imagePath}`;
+};
+
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
   register: (userData) => api.post('/users/register', userData),
   logout: () => api.post('/users/logout'),
-  getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data),
-  updatePreferences: (preferences) => api.put('/users/preferences', { preferences }),
-  uploadProfilePicture: (file) => {
+  // ✅ תיקון העלאת תמונת פרופיל - נתיב תקין
+  uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
-    return api.post('/users/profile/picture', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    
+    const response = await api.post('/users/profile/picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
+    
+    // ✅ המר נתיב יחסי ל-URL מלא
+    if (response.data?.data?.path) {
+      response.data.data.path = getFullImageUrl(response.data.data.path);
+    }
+    
+    return response;
   },
+  
+  // ✅ עדכון פרופיל - רק שדות קיימים בדטאבייס
+  updateProfile: async (data) => {
+    // ✅ רק username ו-email מותרים לעדכון בפרופיל הבסיסי
+    const allowedFields = ['username', 'email'];
+    const profileData = {};
+    
+    allowedFields.forEach(field => {
+      if (data[field] !== undefined) {
+        profileData[field] = data[field];
+      }
+    });
+    
+    if (Object.keys(profileData).length === 0) {
+      throw new Error('No valid profile fields to update');
+    }
+    
+    return api.put('/users/profile', profileData);
+  },
+
+  // ✅ עדכון preferences - רק תמונת פרופיל ו-settings
+  updatePreferences: async (preferences) => {
+    return api.put('/users/preferences', { preferences });
+  },
+
+  // ✅ קבלת פרופיל משתמש - נתיב תקין
+  getProfile: async () => {
+    const response = await api.get('/users/profile');
+    
+    // ✅ המר נתיבי תמונות יחסיים ל-URLs מלאים
+    if (response.data?.data?.preferences?.profilePicture) {
+      response.data.data.preferences.profilePicture = getFullImageUrl(
+        response.data.data.preferences.profilePicture
+      );
+    }
+    
+    return response;
+  }
 };
 
 // Helper function to trigger dashboard refresh without direct queryClient dependency
@@ -357,3 +410,6 @@ export const queryKeys = {
 };
 
 export default api;
+
+// ✅ ייצוא הפונקציה לשימוש במקומות אחרים
+export { getFullImageUrl };
