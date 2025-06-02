@@ -7,9 +7,10 @@ import { cn } from '../../utils/helpers';
 
 const sizes = {
   small: "max-w-md",
-  medium: "max-w-lg",
+  medium: "max-w-lg", 
   large: "max-w-2xl",
   xl: "max-w-4xl",
+  xxl: "max-w-6xl w-[90vw] h-[90vh]",
   full: "max-w-full mx-4"
 };
 
@@ -119,7 +120,10 @@ const Modal = ({
                 )}
               </div>
             )}
-            <div className="p-4 overflow-y-auto max-h-[80vh]">
+            <div className={cn(
+              "p-4 overflow-y-auto",
+              size === 'xxl' ? "max-h-[85vh]" : "max-h-[90vh]"
+            )}>
               {children}
             </div>
           </motion.div>

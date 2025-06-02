@@ -206,6 +206,22 @@ const TransactionFilters = ({
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
             </div>
+          ) : categories.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                {t('categories.noCategoriesFound')}
+              </p>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => {
+                  // Could navigate to categories page
+                  window.location.href = '/categories';
+                }}
+              >
+                {t('categories.manage')}
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 mt-3">
               {categories.map(category => {
@@ -235,6 +251,11 @@ const TransactionFilters = ({
                     <span className="text-sm">
                       {category.is_default ? t(`categories.${category.name}`) : category.name}
                     </span>
+                    {category.is_default && (
+                      <Badge variant="secondary" size="small" className="ml-auto">
+                        {t('categories.default')}
+                      </Badge>
+                    )}
                   </label>
                 );
               })}

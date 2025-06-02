@@ -84,7 +84,8 @@ const translations = {
     profile: 'Profile',
     settings: 'Settings',
     reports: 'Reports',
-    logout: 'Logout'
+    logout: 'Logout',
+    categories: 'Categories' // ADDED
   },
 
   // Authentication
@@ -419,25 +420,55 @@ const translations = {
   // Categories
   categories: {
     title: 'Categories',
-    addNew: 'Add New Category',
-    userCategories: 'My Categories',
-    defaultCategories: 'Default Categories',
-    name: 'Name',
-    description: 'Description',
-    type: 'Type',
-    icon: 'Icon',
+    manage: 'Manage Categories',
+    manageCategories: 'Manage Categories',
+    wizardSubtitle: 'Organize your finances like a wizard',
+    addNew: 'Add Category',
     create: 'Create Category',
+    createFirst: 'Create First Category',
     edit: 'Edit Category',
     delete: 'Delete Category',
     deleteConfirm: 'Are you sure you want to delete this category?',
+    name: 'Category Name',
+    nameRequired: 'Category name is required',
+    description: 'Description',
+    descriptionPlaceholder: 'Optional category description',
+    type: 'Type',
+    icon: 'Icon',
+    userCategories: 'My Categories',
+    userCategoriesDesc: 'Your personal categories',
+    defaultCategories: 'Default Categories',
+    defaultCategoriesDesc: 'Built-in system categories',
+    noUserCategories: 'You haven\'t created any custom categories yet',
+    noUserCategoriesDesc: 'Create custom categories to organize your finances',
     default: 'Default',
-    noUserCategories: 'No custom categories yet. Create your first category!',
-    createSuccess: 'Category created successfully',
-    updateSuccess: 'Category updated successfully',
-    deleteSuccess: 'Category deleted successfully',
-    deleteError: 'Cannot delete this category',
-    descriptionPlaceholder: 'Enter category description (optional)',
-    manageCategories: 'Manage Categories',
+    selectCategory: 'Select Category',
+    selectCategoryHint: 'Please select a category for this transaction',
+    noCategoriesFound: 'No categories found',
+    createCategoriesFirst: 'Create new categories first',
+    searchPlaceholder: 'Search categories...',
+    created: 'Category created successfully',
+    updated: 'Category updated successfully',
+    deleted: 'Category deleted successfully',
+    saveFailed: 'Failed to save category',
+    deleteFailed: 'Failed to delete category',
+    
+    // Filter options
+    filter: {
+      all: 'All',
+      income: 'Income',
+      expense: 'Expense'
+    },
+    
+    // Statistics
+    stats: {
+      total: 'Total Categories',
+      personal: 'Personal Categories',
+      default: 'Default'
+    },
+    
+    // Default category names
+    General: 'General',
     Salary: 'Salary',
     Freelance: 'Freelance',
     Investments: 'Investments',
@@ -446,9 +477,13 @@ const translations = {
     Transportation: 'Transportation',
     Utilities: 'Utilities',
     Entertainment: 'Entertainment',
-    General: 'General'
+    Food: 'Food',
+    Shopping: 'Shopping',
+    Health: 'Health',
+    Education: 'Education',
+    Travel: 'Travel'
   },
-
+  
   // Profile
   profile: {
     title: 'Profile',
@@ -746,17 +781,17 @@ const translations = {
       saving: 'שומר...',
       copyright: '© {{year}} SpendWise. כל הזכויות שמורות.',
       period: 'תקופה',
-      summary: 'סיכום'
+      summary: 'סיכום',
+      manage: 'נהל',
+      optional: 'אופציונלי'
     },
 
     // Navigation
     nav: {
-      dashboard: 'לוח בקרה',
+      dashboard: 'דשבורד',
       transactions: 'עסקאות',
       profile: 'פרופיל',
-      settings: 'הגדרות',
-      reports: 'דוחות',
-      logout: 'התנתק'
+      categories: 'קטגוריות' // ADDED
     },
 
     // Authentication
@@ -1062,36 +1097,70 @@ const translations = {
     // Categories
     categories: {
       title: 'קטגוריות',
-      addNew: 'הוסף קטגוריה חדשה',
-      userCategories: 'הקטגוריות שלי',
-      defaultCategories: 'קטגוריות ברירת מחדל',
-      name: 'שם',
-      description: 'תיאור',
-      type: 'סוג',
-      icon: 'אייקון',
+      manage: 'נהל קטגוריות',
+      manageCategories: 'ניהול קטגוריות',
+      wizardSubtitle: 'ארגן את הכספים שלך כמו אשף',
+      addNew: 'הוסף קטגוריה',
       create: 'צור קטגוריה',
+      createFirst: 'צור קטגוריה ראשונה',
       edit: 'ערוך קטגוריה',
       delete: 'מחק קטגוריה',
-      deleteConfirm: 'האם אתה בטוח שברצונך למחוק את הקטגוריה?',
+      deleteConfirm: 'האם אתה בטוח שברצונך למחוק קטגוריה זו?',
+      name: 'שם הקטגוריה',
+      nameRequired: 'שם הקטגוריה נדרש',
+      description: 'תיאור',
+      descriptionPlaceholder: 'תיאור אופציונלי לקטגוריה',
+      type: 'סוג',
+      icon: 'אייקון',
+      userCategories: 'הקטגוריות שלי',
+      userCategoriesDesc: 'הקטגוריות האישיות שלך',
+      defaultCategories: 'קטגוריות ברירת מחדל',
+      defaultCategoriesDesc: 'קטגוריות מובנות במערכת',
+      noUserCategories: 'עדיין לא יצרת קטגוריות משלך',
+      noUserCategoriesDesc: 'צור קטגוריות מותאמות אישית לניהול הכספים שלך',
       default: 'ברירת מחדל',
-      noUserCategories: 'אין קטגוריות מותאמות אישית עדיין. צור את הקטגוריה הראשונה!',
-      createSuccess: 'הקטגוריה נוצרה בהצלחה',
-      updateSuccess: 'הקטגוריה עודכנה בהצלחה',
-      deleteSuccess: 'הקטגוריה נמחקה בהצלחה',
-      deleteError: 'לא ניתן למחוק את הקטגוריה',
-      descriptionPlaceholder: 'הזן תיאור קטגוריה (אופציונלי)',
-      manageCategories: 'נהל קטגוריות',
+      selectCategory: 'בחר קטגוריה',
+      selectCategoryHint: 'אנא בחר קטגוריה עבור העסקה',
+      noCategoriesFound: 'לא נמצאו קטגוריות',
+      createCategoriesFirst: 'צור קטגוריות חדשות תחילה',
+      searchPlaceholder: 'חפש קטגוריות...',
+      created: 'הקטגוריה נוצרה בהצלחה',
+      updated: 'הקטגוריה עודכנה בהצלחה',
+      deleted: 'הקטגוריה נמחקה בהצלחה',
+      saveFailed: 'שמירת הקטגוריה נכשלה',
+      deleteFailed: 'מחיקת הקטגוריה נכשלה',
+      
+      // Filter options
+      filter: {
+        all: 'הכל',
+        income: 'הכנסות',
+        expense: 'הוצאות'
+      },
+      
+      // Statistics
+      stats: {
+        total: 'סה״כ קטגוריות',
+        personal: 'קטגוריות אישיות',
+        default: 'ברירת מחדל'
+      },
+      
+      // Default category names
+      General: 'כללי',
       Salary: 'משכורת',
       Freelance: 'עבודה עצמאית',
       Investments: 'השקעות',
       Rent: 'שכירות',
-      Groceries: 'קניות',
+      Groceries: 'קניות מזון',
       Transportation: 'תחבורה',
-      Utilities: 'שירותים',
+      Utilities: 'חשבונות',
       Entertainment: 'בילויים',
-      General: 'כללי'
+      Food: 'אוכל',
+      Shopping: 'קניות',
+      Health: 'בריאות',
+      Education: 'חינוך',
+      Travel: 'נסיעות'
     },
-
+    
     // Profile
     profile: {
       title: 'פרופיל',

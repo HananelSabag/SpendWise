@@ -205,23 +205,45 @@ class User {
     }
   }
 
-  /**
-   * Update user preferences
-   * @param {number} userId - User's ID
-   * @param {Object} preferences - New preferences
-   * @returns {Promise<Object>} Updated preferences
-   */
-  static async updatePreferences(userId, preferences) {
-    const query = `
+// Add this updated method to your existing User.js file:
+
+/**
+ * Update user preferences - FIXED to properly merge preferences
+ * @param {number} userId - User's ID
+ * @param {Object} preferences - New preferences to merge
+ * @returns {Promise<Object>} Updated preferences
+ */
+static async updatePreferences(userId, preferences) {
+  try {
+    // First, get the existing user data to merge preferences
+    const existingQuery = 'SELECT preferences FROM users WHERE id = $1';
+    const existingResult = await db.query(existingQuery, [userId]);
+    
+    if (existingResult.rows.length === 0) {
+      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+    }
+    
+    // Get existing preferences or empty object
+    const existingPreferences = existingResult.rows[0].preferences || {};
+    
+    // Merge new preferences with existing ones (new ones override)
+    const mergedPreferences = { ...existingPreferences, ...preferences };
+    
+    // Update with merged preferences
+    const updateQuery = `
       UPDATE users 
       SET preferences = $1
       WHERE id = $2
       RETURNING preferences;
     `;
     
-    const result = await db.query(query, [JSON.stringify(preferences), userId]);
+    const result = await db.query(updateQuery, [JSON.stringify(mergedPreferences), userId]);
     return result.rows[0]?.preferences || {};
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    throw error;
   }
+}
 }
 
 module.exports = User;

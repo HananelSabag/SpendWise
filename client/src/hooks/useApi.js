@@ -184,7 +184,7 @@ export const useUpdatePreferences = () => {
   });
 };
 
-// Add new hook for categories
+// CRITICAL UPDATE: Add new hooks for categories - FIXES GAP #4
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
@@ -197,13 +197,16 @@ export const useCategories = () => {
   });
 };
 
-// Add category mutations
 export const useCreateCategory = () => {
   return useMutation({
     mutationFn: (data) => transactionAPI.createCategory(data),
     onSuccess: () => {
       toast.success('Category created successfully');
       queryClient.invalidateQueries(['categories']);
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to create category';
+      toast.error(message);
     }
   });
 };
@@ -214,6 +217,10 @@ export const useUpdateCategory = () => {
     onSuccess: () => {
       toast.success('Category updated successfully');
       queryClient.invalidateQueries(['categories']);
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to update category';
+      toast.error(message);
     }
   });
 };
@@ -224,11 +231,15 @@ export const useDeleteCategory = () => {
     onSuccess: () => {
       toast.success('Category deleted successfully');
       queryClient.invalidateQueries(['categories']);
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to delete category';
+      toast.error(message);
     }
   });
 };
 
-// Add hook for profile picture upload
+// CRITICAL UPDATE: Add hook for profile picture upload - FIXES PROFILE IMAGE ISSUE
 export const useUploadProfilePicture = () => {
   return useMutation({
     mutationFn: (file) => authAPI.uploadProfilePicture(file),

@@ -26,6 +26,7 @@ import BalancePanel from '../components/features/dashboard/BalancePanel';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar'; 
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
 import ActionsPanel from '../components/features/dashboard/ActionsPanel';
+import StatsChart from '../components/features/dashboard/StatsChart';
 
 // UI Components
 import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
@@ -44,14 +45,55 @@ const Dashboard = () => {
   } = useDashboard();
   
   const [loading, setLoading] = useState(true);
-  const [dashboardStats, setDashboardStats] = useState({
-    dailyAverage: 0,
-    monthlyGoal: 0,
-    recurringActive: 0,
-    savedThisMonth: 0,
-    loading: true
-  });
-  
+
+  // ✅ REPLACE RANDOM STATS WITH REAL DATA
+  const dashboardStats = React.useMemo(() => {
+    if (!dashboardData) {
+      return {
+        dailyAverage: 0,
+        monthlyGoal: 0,
+        recurringActive: 0,
+        savedThisMonth: 0,
+        loading: isDashboardLoading
+      };
+    }
+
+    const monthly = dashboardData.balances?.monthly || {};
+    const daily = dashboardData.balances?.daily || {};
+    const weekly = dashboardData.balances?.weekly || {};
+    const yearly = dashboardData.balances?.yearly || {};
+    const recurring = dashboardData.recurringInfo || {};
+    const recentTransactions = dashboardData.recentTransactions || [];
+    
+    // Calculate real daily average from monthly expenses
+    const realDailyAverage = monthly.expenses > 0 ? Math.round(monthly.expenses / 30) : 0;
+    
+    // Calculate savings percentage as monthly goal
+    const totalMonthlyActivity = (monthly.income || 0) + (monthly.expenses || 0);
+    const savingsPercentage = totalMonthlyActivity > 0 
+      ? Math.round(((monthly.income || 0) / totalMonthlyActivity) * 100)
+      : 0;
+    
+    // Real recurring transactions count
+    const recurringCount = (recurring.income_count || 0) + (recurring.expense_count || 0);
+    
+    // Calculate actual savings this month (positive balance)
+    const actualSavings = Math.max(0, monthly.balance || 0);
+    
+    return {
+      dailyAverage: realDailyAverage,
+      monthlyGoal: Math.min(100, savingsPercentage), // Cap at 100%
+      recurringActive: recurringCount,
+      savedThisMonth: actualSavings,
+      loading: isDashboardLoading,
+      // Add extra real data for richer display
+      totalTransactions: recentTransactions.length,
+      weeklyTrend: weekly.balance > daily.balance ? 'up' : 'down',
+      monthlyIncome: monthly.income || 0,
+      monthlyExpenses: monthly.expenses || 0
+    };
+  }, [dashboardData, isDashboardLoading]);
+
   const isRTL = language === 'he';
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   
@@ -64,31 +106,11 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Function to load statistics data - currently generates random numbers
-  const loadDashboardStats = async () => {
-    try {
-      setTimeout(() => {
-        setDashboardStats({
-          dailyAverage: Math.floor(Math.random() * 300) + 100, // 100-400
-          monthlyGoal: Math.floor(Math.random() * 50) + 50, // 50-100%
-          recurringActive: Math.floor(Math.random() * 10) + 5, // 5-15
-          savedThisMonth: Math.floor(Math.random() * 2000) + 500, // 500-2500
-          loading: false
-        });
-      }, 1000); // Shortened delay from 1500 to 1000
-    } catch (error) {
-      console.error("Error loading dashboard stats:", error);
-      setDashboardStats(prev => ({ ...prev, loading: false }));
-    }
-  };
-
   // Fix for the main loading mechanism
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
     }, 800);
-    
-    loadDashboardStats();
     
     return () => clearTimeout(timer);
   }, []);
@@ -261,6 +283,11 @@ const Dashboard = () => {
                 </motion.div>
               </div>
 
+              {/* NEW: Charts Section */}
+              <motion.div variants={itemVariants}>
+                <StatsChart period="month" showTitle={true} />
+              </motion.div>
+
               {/* Bottom Section: Recent Transactions - Full Width */}
               <motion.div variants={itemVariants}>
                 <RecentTransactions 
@@ -295,12 +322,12 @@ const Dashboard = () => {
               </motion.div>
             </div>
 
-            {/* Bottom Stats Cards */}
+            {/* Bottom Stats Cards - NOW WITH REAL DATA */}
             <motion.div 
               variants={itemVariants}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8"
             >
-              {/* Daily Average Card */}
+              {/* Daily Average Card - REAL DATA */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -310,9 +337,16 @@ const Dashboard = () => {
                     {dashboardStats.loading ? (
                       <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        ₪{dashboardStats.dailyAverage}
-                      </p>
+                      <div>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          ₪{dashboardStats.dailyAverage}
+                        </p>
+                        {dashboardStats.monthlyExpenses > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            מתוך ₪{dashboardStats.monthlyExpenses} חודשי
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -321,19 +355,26 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* Monthly Goal Card */}
+              {/* Monthly Goal Card - REAL SAVINGS PERCENTAGE */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-gray-800 dark:to-gray-900 border-green-100 dark:border-green-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.monthlyGoal') || 'Monthly Goal'}
+                      {t('dashboard.stats.savingsRate') || 'Savings Rate'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {dashboardStats.monthlyGoal}%
-                      </p>
+                      <div>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {dashboardStats.monthlyGoal}%
+                        </p>
+                        {dashboardStats.monthlyIncome > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            הכנסה vs הוצאות
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -342,7 +383,7 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* Recurring Count Card */}
+              {/* Recurring Count Card - REAL COUNT */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-purple-100 dark:border-purple-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -352,9 +393,16 @@ const Dashboard = () => {
                     {dashboardStats.loading ? (
                       <div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {dashboardStats.recurringActive}
-                      </p>
+                      <div>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {dashboardStats.recurringActive}
+                        </p>
+                        {dashboardStats.recurringActive > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            עסקאות אוטומטיות
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -363,23 +411,36 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* This Month Saved Card */}
-              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-gray-800 dark:to-gray-900 border-green-100 dark:border-green-900/30">
+              {/* This Month Saved Card - REAL BALANCE */}
+              <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-emerald-50 to-white dark:from-gray-800 dark:to-gray-900 border-emerald-100 dark:border-emerald-900/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('dashboard.stats.savedThisMonth') || 'Saved This Month'}
+                      {t('dashboard.stats.monthlyBalance') || 'Monthly Balance'}
                     </p>
                     {dashboardStats.loading ? (
                       <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
                     ) : (
-                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        ₪{dashboardStats.savedThisMonth}
-                      </p>
+                      <div>
+                        <p className={`text-2xl font-bold ${
+                          dashboardStats.savedThisMonth >= 0 
+                            ? 'text-emerald-600 dark:text-emerald-400' 
+                            : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          ₪{Math.abs(dashboardStats.savedThisMonth)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {dashboardStats.savedThisMonth >= 0 ? 'חיסכון' : 'גירעון'} החודש
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <ArrowUpRight className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    {dashboardStats.savedThisMonth >= 0 ? (
+                      <ArrowUpRight className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <ArrowDownRight className="w-6 h-6 text-red-600 dark:text-red-400" />
+                    )}
                   </div>
                 </div>
               </Card>

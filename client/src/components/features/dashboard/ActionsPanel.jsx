@@ -26,11 +26,13 @@ import { useDate } from '../../../context/DateContext';
 import { Card, Button, Input, Select, Alert, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
 import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
+import { useCategories } from '../../../hooks/useApi';
 
 const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null }) => {
   const { t, language } = useLanguage();
   const { createTransaction } = useTransactions();
   const { selectedDate } = useDate();
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const isRTL = language === 'he';
   
   // States
@@ -53,24 +55,6 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     recurring_end_date: null,
     date: selectedDate.toISOString().split('T')[0],
   });
-
-  // Enhanced categories with better icons and colors
-  const categories = {
-    income: [
-      { id: 8, name: 'General', icon: Tag, color: 'slate', bg: 'bg-slate-100 dark:bg-slate-800' },
-      { id: 1, name: 'Salary', icon: DollarSign, color: 'emerald', bg: 'bg-emerald-100 dark:bg-emerald-900' },
-      { id: 2, name: 'Freelance', icon: FileText, color: 'blue', bg: 'bg-blue-100 dark:bg-blue-900' },
-      { id: 3, name: 'Investments', icon: TrendingUp, color: 'purple', bg: 'bg-purple-100 dark:bg-purple-900' },
-    ],
-    expense: [
-      { id: 8, name: 'General', icon: Tag, color: 'slate', bg: 'bg-slate-100 dark:bg-slate-800' },
-      { id: 3, name: 'Rent', icon: Home, color: 'red', bg: 'bg-red-100 dark:bg-red-900' },
-      { id: 4, name: 'Groceries', icon: ShoppingCart, color: 'orange', bg: 'bg-orange-100 dark:bg-orange-900' },
-      { id: 5, name: 'Transportation', icon: Car, color: 'yellow', bg: 'bg-yellow-100 dark:bg-yellow-900' },
-      { id: 6, name: 'Utilities', icon: Zap, color: 'indigo', bg: 'bg-indigo-100 dark:bg-indigo-900' },
-      { id: 7, name: 'Entertainment', icon: Tv, color: 'pink', bg: 'bg-pink-100 dark:bg-pink-900' },
-    ],
-  };
 
   // Enhanced transaction types with better design
   const transactionTypes = [
@@ -258,6 +242,82 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     }
   };
 
+  // Replace hardcoded categories with API data
+  const getCategoriesForType = (type) => {
+    // ✅ FIX: Show all categories for both types, let user choose
+    return allCategories.filter(cat => {
+      // Show default categories for all types
+      if (cat.is_default) return true;
+      
+      // Show user categories that match the transaction type
+      if (!cat.is_default && cat.type === type) return true;
+      
+      return false;
+    }).map(cat => ({
+      id: cat.id,
+      name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
+      icon: getIconForCategory(cat.name),
+      color: getColorForCategory(cat.name),
+      bg: getBgForCategory(cat.name)
+    }));
+  };
+
+  // Helper functions for category display
+  const getIconForCategory = (name) => {
+    const iconMap = {
+      'General': Tag,
+      'Salary': DollarSign,
+      'Freelance': FileText,
+      'Investments': TrendingUp,
+      'Rent': Home,
+      'Groceries': ShoppingCart,
+      'Transportation': Car,
+      'Utilities': Zap,
+      'Entertainment': Tv
+    };
+    return iconMap[name] || Tag;
+  };
+
+  const getColorForCategory = (name) => {
+    const colorMap = {
+      'General': 'slate',
+      'Salary': 'emerald',
+      'Freelance': 'blue',
+      'Investments': 'purple',
+      'Rent': 'red',
+      'Groceries': 'orange',
+      'Transportation': 'yellow',
+      'Utilities': 'indigo',
+      'Entertainment': 'pink'
+    };
+    return colorMap[name] || 'slate';
+  };
+
+  const getBgForCategory = (name) => {
+    const color = getColorForCategory(name);
+    return `bg-${color}-100 dark:bg-${color}-900`;
+  };
+
+  // Get categories for current transaction type
+  const currentCategories = getCategoriesForType(activeType?.type || 'expense');
+
+  // Set default category when type changes
+  useEffect(() => {
+    if (activeType && allCategories.length > 0) {
+      console.log('🔍 [ACTIONS-DEBUG] All categories:', allCategories);
+      console.log('🔍 [ACTIONS-DEBUG] Current categories for type:', activeType.type, currentCategories);
+      
+      // Default to General category (ID 8) or first available
+      const generalCategory = allCategories.find(cat => cat.name === 'General' && cat.is_default);
+      const defaultCategory = generalCategory || currentCategories[0];
+      
+      if (defaultCategory) {
+        console.log('🔍 [ACTIONS-DEBUG] Setting default category:', defaultCategory);
+        setFormData(prev => ({ ...prev, category_id: defaultCategory.id }));
+      }
+    }
+  }, [activeType, allCategories]);
+
   return (
     <motion.div
       variants={containerVariants}
@@ -439,7 +499,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
               </motion.div>
             )}
 
-            {/* STEP 1: TRANSACTION FORM - Enhanced Mobile Design */}
+            {/* STEP 1: TRANSACTION FORM - Redesigned for Better UX */}
             {currentStep === 1 && activeType && (
               <motion.form
                 key="transaction-form"
@@ -448,249 +508,242 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="space-y-6"
+                className="space-y-3"
               >
-                {/* Amount Input - Hero Section */}
-                <Card className="p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-2 border-gray-100 dark:border-gray-700">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    {t('actions.amount')} <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.amount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, amount: amountValidation.formatAmountInput(e.target.value) }))}
-                      placeholder="0.00"
-                      className="w-full text-2xl sm:text-3xl font-bold py-4 px-6 pr-16 rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all"
-                      required
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <DollarSign className="w-6 h-6 text-gray-400" />
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Description Input */}
-                <Card className="p-4 sm:p-6">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    {t('actions.description')} <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder={t('actions.descriptionPlaceholder')}
-                      className="w-full py-3 px-4 pr-12 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all"
-                      required
-                    />
-                    <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  </div>
-                </Card>
-
-                {/* Category Selection - Enhanced Mobile Grid */}
-                <Card className="p-4 sm:p-6">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                    {t('actions.category')}
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {categories[activeType.type].map((cat) => (
-                      <motion.button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                        className={`p-3 sm:p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 text-center min-h-[80px] ${
-                          formData.category_id === cat.id
-                            ? `border-indigo-500 ${cat.bg} shadow-lg shadow-indigo-500/20`
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-800'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <cat.icon className={`w-5 h-5 ${formData.category_id === cat.id ? `text-${cat.color}-600` : 'text-gray-500'}`} />
-                        <span className={`text-xs sm:text-sm font-medium ${formData.category_id === cat.id ? `text-${cat.color}-700 dark:text-${cat.color}-300` : 'text-gray-600 dark:text-gray-400'}`}>
-                          {t(`categories.${cat.name}`)}
-                        </span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </Card>
-
-                {/* Date Selection */}
-                <Card className="p-4 sm:p-6">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    {t('actions.date')}
-                  </label>
-                  <div className="relative">
-                    <Button
-                      ref={dateButtonRef}
-                      type="button"
-                      variant="outline"
-                      fullWidth
-                      onClick={() => setShowCalendar(!showCalendar)}
-                      className="justify-between py-3 px-4 text-left border-2 hover:border-indigo-300"
-                    >
-                      <span className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-gray-500" />
-                        <span className="font-medium">
-                          {new Date(formData.date).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </span>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
-                    </Button>
-                    
-                    {showCalendar && (
-                      <div className="absolute top-full mt-2 z-50 w-full">
-                        <CalendarWidget
-                          selectedDate={new Date(formData.date)}
-                          onDateSelect={(date) => {
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              date: date.toISOString().split('T')[0] 
-                            }));
-                            setShowCalendar(false);
-                          }}
-                          onClose={() => setShowCalendar(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Recurring Options - Enhanced */}
-                {activeType.isRecurring && (
-                  <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-blue-500 rounded-lg">
-                        <Repeat className="w-5 h-5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white">
-                        {t('actions.recurringOptions')}
-                      </h4>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          {t('actions.frequency')}
-                        </label>
-                        <select
-                          value={formData.recurring_interval}
-                          onChange={(e) => setFormData(prev => ({ ...prev, recurring_interval: e.target.value }))}
-                          className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
-                        >
-                          <option value="daily">{t('actions.frequencies.daily')}</option>
-                          <option value="weekly">{t('actions.frequencies.weekly')}</option>
-                          <option value="monthly">{t('actions.frequencies.monthly')}</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          {t('actions.endDate')} <span className="text-gray-500">({t('common.optional')})</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.recurring_end_date || ''}
-                          onChange={(e) => setFormData(prev => ({ ...prev, recurring_end_date: e.target.value }))
-                          }
-                          min={formData.date}
-                          className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
-                        />
+                {/* Two-Column Layout for Amount & Description */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Amount Input - Right-sized */}
+                  <Card className="p-3">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      {t('actions.amount')} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.amount}
+                        onChange={(e) => setFormData(prev => ({ ...prev, amount: amountValidation.formatAmountInput(e.target.value) }))}
+                        placeholder="150.00"
+                        className="w-full text-lg font-bold py-2.5 px-3 pr-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <span className="text-sm font-medium text-gray-400">₪</span>
                       </div>
                     </div>
                   </Card>
+
+                  {/* Description Input - Compact */}
+                  <Card className="p-3">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      {t('actions.description')} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.description}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Coffee with friends"
+                        className="w-full py-2.5 px-3 pr-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <FileText className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Category & Date Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Category Selection - Compact & Smart */}
+                  <Card className="p-3 md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      {t('actions.category')}
+                    </label>
+                    
+                    {categoriesLoading ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+                      </div>
+                    ) : currentCategories.length === 0 ? (
+                      <div className="text-center py-4">
+                        <Tag className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                        <p className="text-xs text-gray-500">{t('categories.noCategoriesFound')}</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {currentCategories.slice(0, 8).map((cat) => {
+                          const IconComponent = cat.icon;
+                          return (
+                            <motion.button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
+                              className={`p-2 rounded-lg border-2 transition-all flex flex-col items-center gap-1 text-center min-h-[55px] ${
+                                formData.category_id === cat.id
+                                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-800'
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              title={cat.name}
+                            >
+                              <IconComponent className={`w-4 h-4 ${formData.category_id === cat.id ? 'text-indigo-600' : 'text-gray-500'}`} />
+                              <span className={`text-xs font-medium leading-tight truncate w-full ${formData.category_id === cat.id ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                                {cat.name.length > 8 ? cat.name.substring(0, 6) + '...' : cat.name}
+                              </span>
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Date Selection - Compact */}
+                  <Card className="p-3">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      {t('actions.date')}
+                    </label>
+                    <div className="relative">
+                      <Button
+                        ref={dateButtonRef}
+                        type="button"
+                        variant="outline"
+                        fullWidth
+                        onClick={() => setShowCalendar(!showCalendar)}
+                        className="justify-between py-2 px-2 text-left border-2 hover:border-indigo-300 h-auto text-xs"
+                      >
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-gray-500" />
+                          <span className="font-medium truncate">
+                            {new Date(formData.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </span>
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
+                      </Button>
+                      
+                      {showCalendar && (
+                        <div className="absolute top-full mt-2 z-50 right-0">
+                          <CalendarWidget
+                            selectedDate={new Date(formData.date)}
+                            onDateSelect={(date) => {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                date: date.toISOString().split('T')[0] 
+                              }));
+                              setShowCalendar(false);
+                            }}
+                            onClose={() => setShowCalendar(false)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Recurring Options - Collapsible */}
+                {activeType.isRecurring && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <Card className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1 bg-blue-500 rounded-md">
+                          <Repeat className="w-4 h-4 text-white" />
+                        </div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
+                          {t('actions.recurringOptions')}
+                        </h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('actions.frequency')}
+                          </label>
+                          <select
+                            value={formData.recurring_interval}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurring_interval: e.target.value }))}
+                            className="w-full py-2 px-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          >
+                            <option value="daily">{t('actions.frequencies.daily')}</option>
+                            <option value="weekly">{t('actions.frequencies.weekly')}</option>
+                            <option value="monthly">{t('actions.frequencies.monthly')}</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('actions.endDate')}
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.recurring_end_date || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurring_end_date: e.target.value }))}
+                            min={formData.date}
+                            className="w-full py-2 px-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
                 )}
 
-                {/* Error Display */}
+                {/* Error Display - Minimal */}
                 <AnimatePresence>
                   {error && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
                     >
-                      <Alert type="error" dismissible onDismiss={() => setError('')}>
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-5 h-5" />
-                          <span className="font-medium">{error}</span>
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-red-800">
+                          <div className="w-4 h-4 rounded-full bg-red-200 flex items-center justify-center">
+                            <X className="w-3 h-3" />
+                          </div>
+                          <span className="text-sm font-medium">{error}</span>
+                          <button
+                            onClick={() => setError('')}
+                            className="ml-auto text-red-600 hover:text-red-800"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                      </Alert>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Success Animation - Enhanced */}
+                {/* Success Animation - Minimal */}
                 <AnimatePresence>
                   {success && (
                     <motion.div
                       variants={successVariants}
                       initial="initial"
                       animate="animate"
-                      className="text-center py-8"
+                      className="text-center py-4"
                     >
-                      <div className="relative inline-block">
+                      <div className="inline-flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
                         <motion.div
-                          className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full shadow-2xl"
-                          animate={{
-                            scale: [1, 1.1, 1],
-                            rotate: [0, 10, -10, 0],
-                          }}
-                          transition={{
-                            duration: 1,
-                            repeat: 2,
-                            ease: "easeInOut"
-                          }}
+                          className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 0.5 }}
                         >
-                          <Check className="w-10 h-10 text-white" />
+                          <Check className="w-5 h-5 text-white" />
                         </motion.div>
-                        
-                        {/* Enhanced sparkle effects */}
-                        {[...Array(8)].map((_, i) => (
-                          <motion.div
-                            key={i}
-                            className="absolute w-3 h-3 bg-yellow-400 rounded-full"
-                            style={{
-                              top: '25%',
-                              left: '50%',
-                            }}
-                            animate={{
-                              x: [0, (i - 3.5) * 50],
-                              y: [0, -40 - (i % 2) * 25],
-                              opacity: [0, 1, 0],
-                              scale: [0, 1.5, 0],
-                            }}
-                            transition={{
-                              duration: 2,
-                              delay: 0.3 + i * 0.1,
-                              ease: "easeOut"
-                            }}
-                          />
-                        ))}
+                        <div className="text-left">
+                          <h3 className="text-sm font-semibold text-green-800">
+                            {t('actions.success')}
+                          </h3>
+                          <p className="text-xs text-green-600">
+                            {t('actions.transactionAdded')}
+                          </p>
+                        </div>
                       </div>
-                      
-                      <motion.h3 
-                        className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                      >
-                        {t('actions.success')} ✨
-                      </motion.h3>
-                      
-                      <motion.p 
-                        className="text-gray-600 dark:text-gray-400"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 }}
-                      >
-                        {t('actions.transactionAdded')}
-                      </motion.p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -700,17 +753,18 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
         </div>
       </div>
 
-      {/* ENHANCED FOOTER - Fixed, Smart Actions */}
+      {/* MINIMAL FOOTER - Streamlined */}
       {currentStep === 1 && activeType && !success && (
-        <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6 bg-white dark:bg-gray-800">
-          <div className="flex gap-3">
+        <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
+          <div className="flex gap-2">
             {!initialActionType && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={goBackToTypeSelection}
                 disabled={loading}
-                className="flex-1 sm:flex-none"
+                size="small"
+                className="px-4"
               >
                 {t('common.back')}
               </Button>
@@ -720,7 +774,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
               variant="primary"
               loading={loading}
               disabled={loading || !formData.amount || !formData.description}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all py-3"
+              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md hover:shadow-lg py-2.5"
               onClick={handleSubmit}
             >
               {loading ? (
@@ -728,14 +782,14 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                   />
-                  {t('common.loading')}
+                  <span className="text-sm">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5" />
-                  {t('actions.add')}
+                  <Check className="w-4 h-4" />
+                  <span className="text-sm font-medium">{t('actions.add')}</span>
                 </div>
               )}
             </Button>

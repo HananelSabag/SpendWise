@@ -171,12 +171,12 @@ const RecurringModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="xl"
+      size="xxl"
       className="max-h-[90vh] overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 -m-6 mb-6">
+        <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 mb-6">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
@@ -198,6 +198,24 @@ const RecurringModal = ({
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+
+        {/* Update the modal header section */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl">
+            <div className="relative">
+              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('transactions.recurringManager.title')}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {t('transactions.recurringManager.subtitle')}
+            </p>
           </div>
         </div>
 
@@ -289,7 +307,7 @@ const RecurringModal = ({
         </div>
 
         {/* Transaction Groups */}
-        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+        <div className="flex-1 overflow-y-auto">
           {filteredTransactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">

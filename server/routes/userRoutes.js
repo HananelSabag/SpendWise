@@ -109,20 +109,27 @@ router.post('/profile/picture',
       const User = require('../models/User');
       const filePath = `/uploads/profiles/${req.file.filename}`;
       
+      console.log(`📸 [PROFILE-UPLOAD] Saving profile picture: ${filePath} for user ${req.user.id}`);
+      
       await User.updatePreferences(req.user.id, {
         profilePicture: filePath
       });
+
+      console.log(`✅ [PROFILE-UPLOAD] Profile picture updated successfully for user ${req.user.id}`);
 
       res.json({
         success: true,
         data: {
           filename: req.file.filename,
           path: filePath,
-          size: req.file.size
+          size: req.file.size,
+          fullUrl: `${req.protocol}://${req.get('host')}${filePath}`
         },
         timestamp: new Date().toISOString()
       });
     } catch (err) {
+      console.error(`❌ [PROFILE-UPLOAD] Error uploading profile picture:`, err);
+      
       // Delete uploaded file on error
       if (req.file) {
         const fs = require('fs').promises;

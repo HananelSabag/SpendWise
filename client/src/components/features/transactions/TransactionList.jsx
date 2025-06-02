@@ -1,11 +1,13 @@
 // components/features/transactions/TransactionList.jsx
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Package, Clock, Search } from 'lucide-react';
+import { Calendar, Package, Clock, Search, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useDate } from '../../../context/DateContext';
+import { useCurrency } from '../../../context/CurrencyContext';
 import TransactionCard from './TransactionCard';
 import LoadingSpinner from '../../ui/LoadingSpinner';
+import { cn } from '../../../utils/helpers';
 
 /**
  * TransactionList Component
@@ -21,6 +23,7 @@ const TransactionList = ({
 }) => {
   const { t, language } = useLanguage();
   const { formatDate } = useDate();
+  const { formatAmount } = useCurrency();
   const isRTL = language === 'he';
 
   // Group transactions by date
@@ -35,11 +38,13 @@ const TransactionList = ({
           date: transaction.date,
           transactions: [],
           totalIncome: 0,
-          totalExpenses: 0
+          totalExpenses: 0,
+          count: 0
         };
       }
       
       groups[dateKey].transactions.push(transaction);
+      groups[dateKey].count++;
       
       if (transaction.transaction_type === 'income') {
         groups[dateKey].totalIncome += parseFloat(transaction.amount);
@@ -60,26 +65,28 @@ const TransactionList = ({
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.1,
+        delayChildren: 0.1
       }
     }
   };
 
   const groupVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         type: "spring",
         stiffness: 100,
-        damping: 15
+        damping: 15,
+        staggerChildren: 0.05
       }
     }
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, x: isRTL ? 20 : -20 },
+    hidden: { opacity: 0, x: isRTL ? 30 : -30 },
     visible: {
       opacity: 1,
       x: 0,
@@ -91,12 +98,13 @@ const TransactionList = ({
     }
   };
 
-  // Empty state variants
+  // Enhanced empty state
   const emptyVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
+    hidden: { opacity: 0, scale: 0.9, y: 20 },
     visible: {
       opacity: 1,
       scale: 1,
+      y: 0,
       transition: {
         type: "spring",
         stiffness: 200,
@@ -107,8 +115,18 @@ const TransactionList = ({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <LoadingSpinner size="large" text={t('common.loading')} />
+      <div className="flex justify-center items-center py-16">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="large" />
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+              {t('common.loading')}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('transactions.loadingTransactions')}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -119,24 +137,33 @@ const TransactionList = ({
         variants={emptyVariants}
         initial="hidden"
         animate="visible"
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 text-center"
+        className="bg-gradient-to-br from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center"
       >
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-          <Package className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+        {/* Enhanced empty state icon */}
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-2xl mb-6 shadow-sm">
+          <Search className="w-10 h-10 text-gray-400 dark:text-gray-500" />
         </div>
         
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
           {t('transactions.noTransactions')}
         </h3>
         
-        <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
+        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6 leading-relaxed">
           {emptyMessage || t('transactions.noTransactionsDesc')}
         </p>
         
-        {/* Helpful tips */}
-        <div className="mt-6 bg-primary-50 dark:bg-primary-900/20 rounded-lg p-4 max-w-md mx-auto">
-          <p className="text-sm text-primary-700 dark:text-primary-300">
-            💡 {t('transactions.tip')}
+        {/* Enhanced helpful tips */}
+        <div className="bg-gradient-to-br from-primary-50 via-primary-50 to-blue-50 dark:from-primary-900/20 dark:via-primary-900/10 dark:to-blue-900/20 rounded-xl p-6 max-w-md mx-auto border border-primary-200 dark:border-primary-800">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-primary-100 dark:bg-primary-900/50 rounded-lg">
+              <Package className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            </div>
+            <h4 className="font-semibold text-primary-900 dark:text-primary-100">
+              {t('transactions.quickTip')}
+            </h4>
+          </div>
+          <p className="text-sm text-primary-700 dark:text-primary-300 leading-relaxed">
+            {t('transactions.emptyStateTip')}
           </p>
         </div>
       </motion.div>
@@ -144,89 +171,128 @@ const TransactionList = ({
   }
 
   return (
-    <motion.div
-      variants={listVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      {groupedTransactions.map((group, groupIndex) => (
-        <motion.div
-          key={group.date}
-          variants={groupVariants}
-          custom={groupIndex}
-          className="space-y-3"
-        >
-          {/* Date Header */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {formatDate(new Date(group.date), 'PPPP')}
-              </h3>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                ({group.transactions.length} {t('transactions.items')})
-              </span>
+    <div className="space-y-8">
+      <motion.div
+        variants={listVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
+      >
+        {groupedTransactions.map((group, groupIndex) => (
+          <motion.div
+            key={group.date}
+            variants={groupVariants}
+            custom={groupIndex}
+            className="space-y-4"
+          >
+            {/* Enhanced Date Header */}
+            <div className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                {/* Date Info */}
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-900/50 rounded-xl">
+                    <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                      {formatDate(new Date(group.date), 'EEEE, MMMM dd')}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      {group.count} {t('transactions.items')} • {formatDate(new Date(group.date), 'yyyy')}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Enhanced Daily Summary */}
+                <div className="flex items-center gap-4">
+                  {group.totalIncome > 0 && (
+                    <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-xl border border-green-200 dark:border-green-800">
+                      <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-bold text-green-700 dark:text-green-300">
+                        +{formatAmount(group.totalIncome)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {group.totalExpenses > 0 && (
+                    <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-xl border border-red-200 dark:border-red-800">
+                      <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                        -{formatAmount(group.totalExpenses)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Net Balance */}
+                  <div className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm",
+                    (group.totalIncome - group.totalExpenses) >= 0 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' 
+                      : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300'
+                  )}>
+                    <DollarSign className="w-4 h-4" />
+                    <span>
+                      {(group.totalIncome - group.totalExpenses) >= 0 ? '+' : ''}
+                      {formatAmount(group.totalIncome - group.totalExpenses)}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
             
-            {/* Daily Summary */}
-            <div className="flex items-center gap-4 text-sm">
-              {group.totalIncome > 0 && (
-                <span className="text-green-600 dark:text-green-400 font-medium">
-                  +{group.totalIncome.toFixed(2)}
-                </span>
-              )}
-              {group.totalExpenses > 0 && (
-                <span className="text-red-600 dark:text-red-400 font-medium">
-                  -{group.totalExpenses.toFixed(2)}
-                </span>
-              )}
-              <span className={`font-bold ${
-                (group.totalIncome - group.totalExpenses) >= 0 
-                  ? 'text-blue-600 dark:text-blue-400' 
-                  : 'text-orange-600 dark:text-orange-400'
-              }`}>
-                = {(group.totalIncome - group.totalExpenses).toFixed(2)}
-              </span>
+            {/* Transactions Grid */}
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {group.transactions.map((transaction, index) => (
+                  <motion.div
+                    key={`${transaction.id}-${transaction.transaction_type}`}
+                    variants={cardVariants}
+                    custom={index}
+                    layout
+                    exit={{ 
+                      opacity: 0, 
+                      scale: 0.9,
+                      x: isRTL ? 50 : -50,
+                      transition: { duration: 0.2 }
+                    }}
+                  >
+                    <TransactionCard
+                      transaction={transaction}
+                      onEdit={() => onEdit?.(transaction)}
+                      onDelete={() => onDelete?.(transaction)}
+                      variant="default"
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-          </div>
-          
-          {/* Transactions */}
-          <div className="space-y-2">
-            <AnimatePresence mode="popLayout">
-              {group.transactions.map((transaction, index) => (
-                <motion.div
-                  key={`${transaction.id}-${transaction.transaction_type}`}
-                  variants={cardVariants}
-                  custom={index}
-                  layout
-                  exit={{ opacity: 0, scale: 0.9 }}
-                >
-                  <TransactionCard
-                    transaction={transaction}
-                    onEdit={() => onEdit?.(transaction)}
-                    onDelete={() => onDelete?.(transaction)}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        ))}
+      </motion.div>
       
-      {/* End of list indicator */}
+      {/* Enhanced End of list indicator */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="text-center py-4"
+        className="text-center py-8"
       >
-        <div className="inline-flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-          <Clock className="w-4 h-4" />
-          <span>{t('transactions.endOfList')}</span>
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('transactions.endOfList')}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('transactions.totalItems', { count: transactions.length })}
+            </p>
+          </div>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 

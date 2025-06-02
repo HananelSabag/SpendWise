@@ -1,186 +1,67 @@
-// components/features/profile/ProfileInfo.jsx
-import React, { useState, useRef, useEffect } from 'react';
+// pages/profile/ProfileInfo.jsx
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  User,
-  Mail,
-  Camera,
-  Edit2,
-  Save,
+import { 
+  User, 
+  Mail, 
+  Calendar, 
+  Shield, 
+  Edit2, 
+  Save, 
   X,
-  Shield,
-  Calendar,
-  Loader,
-  Check,
+  Camera, // Added for profile picture upload
+  Upload, // Added for upload button
   AlertCircle
 } from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
-import { cn } from '../../../utils/helpers';
-import { Card, Input, Button, Alert, Avatar } from '../../ui';
-import { authAPI } from '../../../utils/api';
+import { useAuth } from '../../../context/AuthContext';
+import { useUpdateProfile, useUploadProfilePicture } from '../../../hooks/useApi'; // Added upload hook
+import { Card, Button, Input, Alert, Avatar } from '../../ui';
+import { dateHelpers, cn } from '../../../utils/helpers';
 import toast from 'react-hot-toast';
+import { queryClient } from '../../../config/queryClient';
 
-/**
- * ProfileInfo Component
- * User profile information and editing
- */
-const ProfileInfo = () => {
-  const { user, updateProfile } = useAuth();
+const ProfileInfo = ({ user }) => {
   const { t, language } = useLanguage();
-  const isRTL = language === 'he';
-  const fileInputRef = useRef(null);
+  const { user: authUser } = useAuth();
+  const updateProfileMutation = useUpdateProfile();
+  const uploadMutation = useUploadProfilePicture(); // NEW: Profile picture upload mutation
   
   const [isEditing, setIsEditing] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
   const [formData, setFormData] = useState({
-    username: '',
-    email: ''
+    username: user?.username || '',
+    email: user?.email || ''
   });
   const [errors, setErrors] = useState({});
+  
+  const isRTL = language === 'he';
 
-  // Update useEffect to ensure existing images are displayed correctly
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        username: user.username || '',
-        email: user.email || ''
-      });
-      
-      // Ensure existing profile picture is displayed with full URL
-      let imageUrl = user.preferences?.profilePicture;
-      if (imageUrl && !imageUrl.startsWith('http')) {
-        imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${imageUrl}`;
-      }
-      console.log('Setting profile image URL:', imageUrl);
-      setProfileImage(imageUrl);
-    }
-  }, [user]);
-
-  // Update handleInputChange to remove unnecessary fields
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: ''
-      }));
-    }
-  };
-
-  // Validate form
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.username?.trim()) {
-      newErrors.username = t('profile.errors.usernameRequired');
-    } else if (formData.username.length < 3) {
-      newErrors.username = t('profile.errors.usernameTooShort');
-    }
-    
-    if (!formData.email?.trim()) {
-      newErrors.email = t('profile.errors.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('profile.errors.emailInvalid');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle photo upload
-  const handlePhotoUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('profile.errors.invalidFileType'));
-      return;
-    }
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB
-      toast.error(t('profile.errors.fileTooLarge'));
-      return;
-    }
-    
-    setUploadingPhoto(true);
-    
-    try {
-      // Upload image first
-      const uploadResponse = await authAPI.uploadProfilePicture(file);
-      console.log('Upload response:', uploadResponse);
-      
-      // Get path from response - server already returns full URL
-      const imageUrl = uploadResponse.data.data.path;
-      console.log('Image URL from server:', imageUrl);
-      
-      // Immediate state update
-      setProfileImage(imageUrl);
-      
-      // Update preferences separately
-      await authAPI.updatePreferences({
-        ...user?.preferences,
-        profilePicture: imageUrl
-      });
-      
-      toast.success(t('profile.photoUploaded'));
-    } catch (error) {
-      console.error('Upload failed:', error);
-      const errorMessage = error.response?.data?.error?.message || t('profile.errors.uploadFailed');
-      toast.error(errorMessage);
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  // Handle save
   const handleSave = async () => {
-    if (!validateForm()) return;
-    
-    setSavingProfile(true);
-    
+    // Validate
+    const newErrors = {};
+    if (!formData.username.trim()) {
+      newErrors.username = t('validation.usernameRequired');
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = t('validation.emailRequired');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = t('validation.emailInvalid');
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     try {
-      // Basic profile update - only username and email
-      const profileUpdate = {};
-      if (formData.username !== user?.username) profileUpdate.username = formData.username;
-      if (formData.email !== user?.email) profileUpdate.email = formData.email;
-      
-      if (Object.keys(profileUpdate).length > 0) {
-        await updateProfile(profileUpdate);
-      }
-      
-      // Update profile picture if changed (with full URL)
-      const currentImageUrl = user?.preferences?.profilePicture && !user.preferences.profilePicture.startsWith('http')
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.preferences.profilePicture}`
-        : user?.preferences?.profilePicture;
-        
-      if (profileImage !== currentImageUrl) {
-        await authAPI.updatePreferences({
-          ...user?.preferences,
-          profilePicture: profileImage
-        });
-      }
-      
+      await updateProfileMutation.mutateAsync(formData);
       setIsEditing(false);
-      toast.success(t('profile.updateSuccess'));
+      setErrors({});
     } catch (error) {
-      console.error('Update failed:', error);
-      const errorMessage = error.response?.data?.error?.message || t('profile.updateError');
-      toast.error(errorMessage);
-    } finally {
-      setSavingProfile(false);
+      console.error('Failed to update profile:', error);
     }
   };
 
-  // Cancel editing
   const handleCancel = () => {
     setFormData({
       username: user?.username || '',
@@ -190,214 +71,204 @@ const ProfileInfo = () => {
     setIsEditing(false);
   };
 
+  // CRITICAL UPDATE: Handle profile picture upload - FIXES PROFILE IMAGE ISSUE
+  const handleProfilePictureChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(t('profile.invalidImageType'));
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('profile.imageTooLarge'));
+      return;
+    }
+
+    try {
+      // Upload the file
+      const result = await uploadMutation.mutateAsync(file);
+      
+      // The backend returns the full URL in result.data.data.path
+      console.log('Upload successful:', result.data);
+      
+      // Refresh profile data to get the new image
+      queryClient.invalidateQueries(['profile']);
+    } catch (error) {
+      console.error('Profile picture upload failed:', error);
+    }
+  };
+
+  const infoItems = [
+    {
+      label: t('profile.username'),
+      value: user?.username,
+      icon: User
+    },
+    {
+      label: t('profile.email'),
+      value: user?.email,
+      icon: Mail
+    },
+    {
+      label: t('profile.memberSince'),
+      value: user?.created_at ? dateHelpers.format(user.created_at, 'PPP', language) : '-',
+      icon: Calendar
+    },
+    {
+      label: t('profile.lastLogin'),
+      value: user?.last_login ? dateHelpers.formatRelative(user.last_login, language) : t('profile.never'),
+      icon: Shield
+    }
+  ];
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           {t('profile.personalInformation')}
-        </h2>
-        
-        {!isEditing ? (
+        </h3>
+        {!isEditing && (
           <Button
             variant="outline"
             size="small"
             onClick={() => setIsEditing(true)}
+            icon={Edit2}
           >
-            <Edit2 className="w-4 h-4 mr-2" />
             {t('common.edit')}
           </Button>
-        ) : (
-          <div className="flex gap-2">
+        )}
+      </div>
+
+      {/* Profile Picture Section - CRITICAL UPDATE FOR PROFILE IMAGE */}
+      <div className="flex flex-col items-center mb-6">
+        <div 
+          className="relative group cursor-pointer"
+          onClick={() => document.getElementById('profile-picture-upload').click()}
+        >
+          <Avatar
+            size="lg"
+            name={user?.username}
+            src={user?.preferences?.profilePicture}
+            className="ring-4 ring-gray-100 dark:ring-gray-800 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
+          />
+          
+          {/* Upload overlay - Shows on hover */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+            <Camera className="w-6 h-6 text-white mb-1" />
+            <span className="text-xs text-white font-medium">
+              {t('profile.changePhoto')}
+            </span>
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            id="profile-picture-upload"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleProfilePictureChange}
+            className="hidden"
+            disabled={uploadMutation.isLoading}
+          />
+          
+          {/* Loading overlay */}
+          {uploadMutation.isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
+        
+        {/* Upload instructions */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center max-w-xs">
+          {t('profile.photoHelper')}
+        </p>
+      </div>
+
+      {/* Profile Information */}
+      {isEditing ? (
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+          <Input
+            label={t('profile.username')}
+            value={formData.username}
+            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+            error={errors.username}
+            icon={User}
+            required
+          />
+          
+          <Input
+            label={t('profile.email')}
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            error={errors.email}
+            icon={Mail}
+            required
+          />
+
+          <Alert type="info">
+            <AlertCircle className="w-4 h-4" />
+            <p className="text-sm">{t('profile.emailNotEditable')}</p>
+          </Alert>
+
+          <div className="flex justify-end gap-3 pt-4">
             <Button
-              variant="ghost"
-              size="small"
+              type="button"
+              variant="outline"
               onClick={handleCancel}
-              disabled={savingProfile}
+              disabled={updateProfileMutation.isLoading}
             >
               <X className="w-4 h-4 mr-2" />
               {t('common.cancel')}
             </Button>
             <Button
+              type="submit"
               variant="primary"
-              size="small"
-              onClick={handleSave}
-              loading={savingProfile}
+              loading={updateProfileMutation.isLoading}
             >
               <Save className="w-4 h-4 mr-2" />
               {t('common.save')}
             </Button>
           </div>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        {/* Profile Photo */}
-        <div className="flex items-center gap-6">
-          <div className="relative group">
-            <Avatar
-              size="xl"
-              name={user?.username}
-              src={profileImage}
-              className="ring-4 ring-gray-200 dark:ring-gray-700"
-              onError={(e) => {
-                // If image fails to load, log to console
-                console.log('Profile image failed to load:', profileImage);
-                console.log('Error details:', e);
-              }}
-            />
-            
-            {/* Debug info - development only */}
-            {process.env.NODE_ENV === 'development' && profileImage && (
-              <div className="absolute -bottom-10 left-0 text-xs text-gray-500 bg-white dark:bg-gray-800 p-1 rounded shadow-sm border max-w-[300px] break-all">
-                {t('profile.profilePhoto')}: {profileImage}
-              </div>
-            )}
-            
-            {/* Button always available - not dependent on isEditing */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'absolute inset-0 flex items-center justify-center',
-                'bg-black/50 rounded-full opacity-0 group-hover:opacity-100',
-                'transition-opacity cursor-pointer'
-              )}
-              disabled={uploadingPhoto}
-              title={t('profile.changePhoto')}
-            >
-              {uploadingPhoto ? (
-                <Loader className="w-6 h-6 text-white animate-spin" />
-              ) : (
-                <Camera className="w-6 h-6 text-white" />
-              )}
-            </button>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </div>
-          
-          <div className="flex-1">
-            <h3 className="font-medium text-gray-900 dark:text-white">
-              {t('profile.profilePhoto')}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('profile.photoHelper')}
-            </p>
-            {/* Additional visible button */}
-            <Button
-              variant="outline"
-              size="small"
-              className="mt-2"
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploadingPhoto}
-              disabled={uploadingPhoto}
-            >
-              <Camera className="w-4 h-4 mr-2" />
-              {uploadingPhoto ? t('profile.uploading') : t('profile.changePhoto')}
-            </Button>
-          </div>
-        </div>
-
-        {/* Info Fields */}
+        </form>
+      ) : (
         <div className="space-y-4">
-          {[
-            {
-              icon: User,
-              label: t('profile.username'),
-              value: formData.username,
-              field: 'username',
-              editable: true,
-              required: true
-            },
-            {
-              icon: Mail,
-              label: t('profile.email'),
-              value: formData.email,
-              field: 'email',
-              editable: false,
-              helper: t('profile.emailNotEditable')
-            }
-          ].map((field) => (
-            <div key={field.field}>
-              {isEditing && field.editable ? (
-                <Input
-                  label={field.label}
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => handleInputChange(field.field, e.target.value)}
-                  placeholder={field.placeholder}
-                  icon={field.icon}
-                  error={errors[field.field]}
-                  required={field.required}
-                  helper={field.helper}
-                />
-              ) : (
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {field.label}
-                  </label>
-                  <div className={cn(
-                    'flex items-center gap-3 p-3',
-                    'bg-gray-50 dark:bg-gray-900/50 rounded-xl',
-                    'border border-gray-200 dark:border-gray-700'
-                  )}>
-                    <field.icon className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-900 dark:text-white">
-                      {field.value || (
-                        <span className="text-gray-400">
-                          {field.placeholder || t('common.notSet')}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  {field.helper && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {field.helper}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Account Info */}
-        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="font-medium text-gray-900 dark:text-white mb-4">
-            {t('profile.accountInfo')}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Calendar className="w-4 h-4" />
-                {t('profile.memberSince')}
+          {infoItems.map((item, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="flex items-start gap-3"
+            >
+              <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <item.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </div>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {new Date(user?.created_at).toLocaleDateString(
-                  language === 'he' ? 'he-IL' : 'en-US',
-                  { year: 'numeric', month: 'long', day: 'numeric' }
-                )}
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Shield className="w-4 h-4" />
-                {t('profile.accountStatus')}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full" />
-                <p className="font-medium text-green-600 dark:text-green-400">
-                  {t('profile.verified')}
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {item.label}
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {item.value}
                 </p>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Account Status */}
+      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium text-green-700 dark:text-green-300">
+            {t('profile.verified')}
+          </span>
         </div>
       </div>
     </Card>

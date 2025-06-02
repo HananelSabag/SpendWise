@@ -90,7 +90,7 @@ const Transactions = () => {
     totalCount,
     period: currentPeriod
   } = useTransactionsList({
-    period: selectedPeriod, // ✅ Use selectedPeriod instead of period
+    period: selectedPeriod, // ✅ Added missing comma here
     type: view !== 'all' ? view : null,
     searchTerm,
     page: 1,
@@ -298,9 +298,9 @@ const Transactions = () => {
         className="space-y-6"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* HEADER with clarification of what's displayed */}
+        {/* ENHANCED HEADER with better organization */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white p-8 border-0 shadow-2xl relative overflow-hidden">
+          <Card className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white border-0 shadow-2xl relative overflow-hidden">
             {/* Enhanced Background Pattern */}
             <div className="absolute inset-0">
               <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
@@ -309,136 +309,166 @@ const Transactions = () => {
               <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
             </div>
             
-            <div className="relative z-10">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                {/* Left Section - Title with clear info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                      <Activity className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h1 className="text-3xl lg:text-4xl font-bold mb-2 flex items-center gap-2">
-                        {t('nav.transactions')}
-                        <motion.div
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                        >
-                          <Sparkles className="w-6 h-6" />
-                        </motion.div>
-                      </h1>
-                      {/* Display clearly what's shown by default */}
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5" />
-                        <span className="text-white/90 text-lg">
-                          {periods.find(p => p.key === selectedPeriod)?.label} - 
-                          <span className="font-bold ml-2">
-                            {view === 'all' ? t('transactions.all') : t(`transactions.${view}`)}
-                          </span>
-                        </span>
-                      </div>
-                      {/* Display quick statistics */}
-                      <div className="text-white/70 text-sm mt-1">
-                        {t('transactions.showing')} {filteredTransactions.length} {t('transactions.items')}
-                        {periodTransactions?.length !== filteredTransactions.length && (
-                          <span className="text-amber-200">
-                            {' '}({t('transactions.filtered')} {periodTransactions?.length})
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            <div className="relative z-10 p-6 lg:p-8">
+              {/* Top Section - Title and Action Button */}
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+                {/* Title Section */}
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <Activity className="w-8 h-8" />
                   </div>
-
-                  {/* Quick Stats Row with accurate data */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-green-300" />
-                        <span className="text-white/80 text-sm">{t('transactions.income')}</span>
-                      </div>
-                      <div className="text-xl font-bold text-green-300">
-                        {formatAmount(totals.income)}
-                      </div>
-                      <div className="text-white/60 text-xs">
-                        {getTransactionsByType('income').length} {t('transactions.items')}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingDown className="w-4 h-4 text-red-300" />
-                        <span className="text-white/80 text-sm">{t('transactions.expense')}</span>
-                      </div>
-                      <div className="text-xl font-bold text-red-300">
-                        {formatAmount(totals.expenses)}
-                      </div>
-                      <div className="text-white/60 text-xs">
-                        {getTransactionsByType('expense').length} {t('transactions.items')}
-                      </div>
-                    </div>
-
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Activity className="w-4 h-4 text-blue-300" />
-                        <span className="text-white/80 text-sm">{t('common.balance')}</span>
-                      </div>
-                      <div className={`text-xl font-bold ${totals.balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                        {formatAmount(totals.balance)}
-                      </div>
-                    </div>
-
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Clock className="w-4 h-4 text-purple-300" />
-                        <span className="text-white/80 text-sm">{periods.find(p => p.key === selectedPeriod)?.label}</span>
-                      </div>
-                      <div className="text-xl font-bold text-purple-300">
-                        {periodTransactions?.length || 0}
-                      </div>
-                      <div className="text-white/60 text-xs">
-                        {t('transactions.totalTransactions')}
-                      </div>
+                  <div>
+                    <h1 className="text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2">
+                      {t('nav.transactions')}
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                      </motion.div>
+                    </h1>
+                    <div className="flex items-center gap-2 text-white/90">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-base">
+                        {periods.find(p => p.key === selectedPeriod)?.label}
+                      </span>
+                      <span className="text-white/70">•</span>
+                      <span className="font-medium">
+                        {view === 'all' ? t('transactions.all') : t(`transactions.${view}`)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Section - Period Selector */}
-                <div className="flex flex-col lg:flex-row items-center gap-4">
-                  {/* Period selector with clear indication */}
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl p-2 border border-white/30">
-                    {periods.map((periodOption) => (
-                      <button
-                        key={periodOption.key}
-                        onClick={() => setSelectedPeriod(periodOption.key)}
-                        className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${
-                          selectedPeriod === periodOption.key 
-                            ? 'bg-white text-indigo-600 shadow-sm' 
-                            : 'text-white/80 hover:text-white hover:bg-white/20'
-                        }`}
-                      >
-                        {periodOption.label}
-                      </button>
-                    ))}
-                  </div>
-
+                {/* Action Button */}
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRecurring(true)}
+                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-4 py-3 font-semibold whitespace-nowrap backdrop-blur-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Clock className="w-5 h-5" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                      </div>
+                      <span className="hidden sm:inline">{t('transactions.recurringManagement')}</span>
+                      <span className="sm:hidden">{t('transactions.manage')}</span>
+                      <Badge variant="default" size="small" className="bg-white/20 text-white border-white/30">
+                        {recurringTransactions.length}
+                      </Badge>
+                    </div>
+                  </Button>
+                  
                   <Button
                     variant="default"
                     onClick={() => setShowActionsPanel(true)}
-                    className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-8 py-3 font-semibold"
+                    className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-6 py-3 font-semibold whitespace-nowrap"
                   >
                     <Plus className="w-5 h-5 mr-2" />
-                    {t('transactions.addTransaction')}
+                    {t('transactions.smartActions')}
                   </Button>
+                </div>
+              </div>
+
+              {/* Period Selector - Better positioned */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-2 text-white/70 text-sm">
+                  <span>{t('transactions.showing')} {filteredTransactions.length} {t('transactions.items')}</span>
+                  {periodTransactions?.length !== filteredTransactions.length && (
+                    <span className="text-amber-200">
+                      ({t('transactions.filtered')} {periodTransactions?.length})
+                    </span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl p-1 border border-white/20">
+                  {periods.map((periodOption) => (
+                    <button
+                      key={periodOption.key}
+                      onClick={() => setSelectedPeriod(periodOption.key)}
+                      className={`px-3 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap ${
+                        selectedPeriod === periodOption.key 
+                          ? 'bg-white text-indigo-600 shadow-sm' 
+                          : 'text-white/80 hover:text-white hover:bg-white/20'
+                      }`}
+                    >
+                      {periodOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stats Grid - Improved layout */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 bg-green-500/20 rounded-lg">
+                      <TrendingUp className="w-3 h-3 lg:w-4 lg:h-4 text-green-300" />
+                    </div>
+                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.income')}</span>
+                  </div>
+                  <div className="text-lg lg:text-xl font-bold text-green-300 mb-1">
+                    {formatAmount(totals.income)}
+                  </div>
+                  <div className="text-white/60 text-xs">
+                    {getTransactionsByType('income').length} {t('transactions.items')}
+                  </div>
+                </div>
+                
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 bg-red-500/20 rounded-lg">
+                      <TrendingDown className="w-3 h-3 lg:w-4 lg:h-4 text-red-300" />
+                    </div>
+                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.expense')}</span>
+                  </div>
+                  <div className="text-lg lg:text-xl font-bold text-red-300 mb-1">
+                    {formatAmount(totals.expenses)}
+                  </div>
+                  <div className="text-white/60 text-xs">
+                    {getTransactionsByType('expense').length} {t('transactions.items')}
+                  </div>
+                </div>
+
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 bg-blue-500/20 rounded-lg">
+                      <Activity className="w-3 h-3 lg:w-4 lg:h-4 text-blue-300" />
+                    </div>
+                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('common.balance')}</span>
+                  </div>
+                  <div className={`text-lg lg:text-xl font-bold mb-1 ${totals.balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                    {formatAmount(totals.balance)}
+                  </div>
+                  <div className="text-white/60 text-xs">
+                    {totals.balance >= 0 ? t('common.positive') : t('common.negative')}
+                  </div>
+                </div>
+
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 bg-purple-500/20 rounded-lg">
+                      <Clock className="w-3 h-3 lg:w-4 lg:h-4 text-purple-300" />
+                    </div>
+                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.total')}</span>
+                  </div>
+                  <div className="text-lg lg:text-xl font-bold text-purple-300 mb-1">
+                    {periodTransactions?.length || 0}
+                  </div>
+                  <div className="text-white/60 text-xs">
+                    {periods.find(p => p.key === selectedPeriod)?.label}
+                  </div>
                 </div>
               </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* CONTROL PANEL with filter clarification */}
+        {/* ENHANCED CONTROL PANEL */}
         <motion.div variants={itemVariants}>
-          <Card className="p-6 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900 border-0 shadow-lg">
-            <div className="space-y-6">
+          <Card className="p-4 lg:p-6 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900 border-0 shadow-lg">
+            <div className="space-y-4 lg:space-y-6">
               {/* Search Bar */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -449,7 +479,7 @@ const Transactions = () => {
                   placeholder={t('transactions.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 text-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder-gray-400"
+                  className="w-full pl-12 pr-12 py-3 lg:py-4 text-base lg:text-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl lg:rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder-gray-400"
                 />
                 {searchTerm && (
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
@@ -460,14 +490,14 @@ const Transactions = () => {
                 )}
               </div>
 
-              {/* Filter Controls */}
-              <div className="flex flex-wrap items-center gap-4">
+              {/* Filter Controls - Improved layout */}
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
                 {/* Type Filter Pills */}
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {t('transactions.filters.type')}:
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {[
                       { key: 'all', icon: Activity, label: t('transactions.all') },
                       { key: 'income', icon: ArrowUpRight, label: t('transactions.income') },
@@ -478,10 +508,10 @@ const Transactions = () => {
                         variant={view === key ? 'primary' : 'outline'}
                         size="small"
                         onClick={() => setView(key)}
-                        className="rounded-full px-4 py-2 flex items-center gap-2 transition-all hover:scale-105"
+                        className="rounded-full px-3 py-2 flex items-center gap-2 transition-all hover:scale-105 text-sm"
                       >
                         <Icon className="w-4 h-4" />
-                        {label}
+                        <span className="hidden sm:inline">{label}</span>
                         <Badge variant="default" size="small" className="ml-1 bg-white/20">
                           {key === 'all' ? periodTransactions?.length || 0 : getTransactionsByType(key).length}
                         </Badge>
@@ -491,109 +521,94 @@ const Transactions = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-3 ml-auto">
-                  <Button
-                    variant={showFilters ? 'primary' : 'outline'}
-                    size="small"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="rounded-full px-4 py-2"
-                  >
-                    <Filter className="w-4 h-4 mr-2" />
-                    {t('common.filters')}
-                    {/* ✅ אינדיקטור פילטרים פעילים */}
-                    {(filters.categories.length > 0 || filters.dateRange || filters.minAmount || filters.maxAmount) && (
-                      <Badge variant="default" size="small" className="ml-2 bg-primary-100 text-primary-600">
-                        {[
-                          filters.categories.length,
-                          filters.dateRange ? 1 : 0,
-                          filters.minAmount ? 1 : 0,
-                          filters.maxAmount ? 1 : 0
-                        ].filter(Boolean).length}
-                      </Badge>
-                    )}
-                  </Button>
-
+                <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
-                    size="small"
                     onClick={() => setShowRecurring(true)}
-                    className="rounded-full px-4 py-2"
+                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-4 py-3 font-semibold whitespace-nowrap backdrop-blur-sm"
                   >
-                    <Clock className="w-4 h-4 mr-2" />
-                    {t('transactions.recurring')}
-                    <Badge variant="default" size="small" className="ml-2">
-                      {recurringTransactions.length}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Clock className="w-5 h-5" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                      </div>
+                      <span className="hidden sm:inline">{t('transactions.recurringManagement')}</span>
+                      <span className="sm:hidden">{t('transactions.manage')}</span>
+                      <Badge variant="default" size="small" className="bg-white/20 text-white border-white/30">
+                        {recurringTransactions.length}
+                      </Badge>
+                    </div>
                   </Button>
-
+                  
                   <Button
-                    variant="outline"
-                    size="small"
-                    onClick={refreshTransactions}
-                    className="rounded-full px-4 py-2"
+                    variant="default"
+                    onClick={() => setShowActionsPanel(true)}
+                    className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-6 py-3 font-semibold whitespace-nowrap"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <Plus className="w-5 h-5 mr-2" />
+                    {t('transactions.smartActions')}
                   </Button>
                 </div>
               </div>
 
-              {/* ✅ Active Filters Summary with detailed info */}
+              {/* Active Filters Summary - Better organized */}
               {(searchTerm || view !== 'all' || filters.categories.length > 0 || selectedPeriod !== 'month') && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
+                  className="flex flex-wrap items-center gap-2 lg:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
                 >
-                  <span className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-2 lg:mb-0">
                     <Activity className="w-4 h-4" />
                     {t('common.active')}:
                   </span>
                   
-                  {/* Period Badge */}
-                  {selectedPeriod !== 'month' && (
-                    <Badge variant="outline" size="small" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                      📅 {periods.find(p => p.key === selectedPeriod)?.label}
-                    </Badge>
-                  )}
-                  
-                  {searchTerm && (
-                    <Badge variant="outline" size="small" className="bg-blue-50 text-blue-700 border-blue-200">
-                      🔍 "{searchTerm}"
-                    </Badge>
-                  )}
-                  
-                  {view !== 'all' && (
-                    <Badge variant="primary" size="small">
-                      📊 {t(`transactions.${view}`)}
-                    </Badge>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Period Badge */}
+                    {selectedPeriod !== 'month' && (
+                      <Badge variant="outline" size="small" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                        📅 {periods.find(p => p.key === selectedPeriod)?.label}
+                      </Badge>
+                    )}
+                    
+                    {searchTerm && (
+                      <Badge variant="outline" size="small" className="bg-blue-50 text-blue-700 border-blue-200">
+                        🔍 "{searchTerm.length > 15 ? searchTerm.slice(0, 15) + '...' : searchTerm}"
+                      </Badge>
+                    )}
+                    
+                    {view !== 'all' && (
+                      <Badge variant="primary" size="small">
+                        📊 {t(`transactions.${view}`)}
+                      </Badge>
+                    )}
 
-                  {/* ✅ Display results summary */}
-                  <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
-                    ✅ {filteredTransactions.length} {t('transactions.results')}
-                  </Badge>
-                  
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setView('all');
-                      setSelectedPeriod('month');
-                      setFilters({
-                        categories: [],
-                        dateRange: null,
-                        minAmount: null,
-                        maxAmount: null,
-                        recurring: 'all'
-                      });
-                    }}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-3 py-1"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    {t('transactions.filters.clearAll')}
-                  </Button>
+                    <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
+                      ✅ {filteredTransactions.length} {t('transactions.results')}
+                    </Badge>
+                    
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setView('all');
+                        setSelectedPeriod('month');
+                        setFilters({
+                          categories: [],
+                          dateRange: null,
+                          minAmount: null,
+                          maxAmount: null,
+                          recurring: 'all'
+                        });
+                      }}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-2 py-1 text-xs"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      {t('transactions.filters.clearAll')}
+                    </Button>
+                  </div>
                 </motion.div>
               )}
             </div>
@@ -706,8 +721,11 @@ const Transactions = () => {
                         setShowFloatingMenu(false);
                       }}
                     >
-                      <Clock className="w-4 h-4 mr-2" />
-                      {t('transactions.recurring')}
+                      <div className="flex items-center mr-2">
+                        <Clock className="w-4 h-4" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      </div>
+                      {t('transactions.manageRecurring')}
                     </Button>
                     <Button 
                       variant="ghost" 

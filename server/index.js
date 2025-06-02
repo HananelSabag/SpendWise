@@ -8,7 +8,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
 const scheduler = require('./utils/scheduler');
-const db = require('./config/db'); // Move this up before using it
+const db = require('./config/db');
 
 // Load environment variables
 dotenv.config();
@@ -32,13 +32,22 @@ app.use(cors({
 
 // Body parser with size limit
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path) => {
+    // Allow CORS for uploaded files
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
 
 // Request ID middleware
 app.use(requestId);
 
 // API rate limiter
 app.use('/api', apiLimiter);
-
 
 // Request logging
 app.use((req, res, next) => {
@@ -74,6 +83,8 @@ app.get('/health', async (req, res) => {
 const API_VERSION = '/api/v1';
 app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
 app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
+
+// CRITICAL UPDATE: Add category routes - FIXES GAP #4
 app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
 
 // 404 handler

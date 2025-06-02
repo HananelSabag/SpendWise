@@ -185,7 +185,7 @@ const Profile = () => {
                 <Avatar
                   size="xl"
                   name={user?.username}
-                  src={user?.profilePicture}
+                  src={user?.preferences?.profilePicture}
                   className="ring-4 ring-white/30 group-hover:ring-white/50 transition-all"
                 />
                 <div className="absolute -bottom-2 -right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg">

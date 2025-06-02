@@ -80,14 +80,14 @@ api.interceptors.response.use(
     
     // Handle 401 - Token expired
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log(`🔄 [API-RETRY] Attempting token refresh for request: ${requestId}`);
+      console.log(`🔄 [API-RETRY] Attempting token refresh for request: ${originalRequest.metadata?.requestId}`);
       originalRequest._retry = true;
       
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
           console.log(`🔄 [API-RETRY] Refreshing token...`);
-          const response = await axios.post('/api/v1/users/refresh-token', {
+          const response = await axios.post(`${API_URL}/api/${API_VERSION}/users/refresh-token`, {
             refreshToken
           });
           
@@ -97,7 +97,7 @@ api.interceptors.response.use(
           
           // Retry original request
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          console.log(`🔄 [API-RETRY] Retrying original request: ${requestId}`);
+          console.log(`🔄 [API-RETRY] Retrying original request`);
           return api(originalRequest);
         }
       } catch (refreshError) {
@@ -147,7 +147,14 @@ const formatDateForAPI = (date) => {
 const getFullImageUrl = (imagePath) => {
   if (!imagePath) return null;
   if (imagePath.startsWith('http')) return imagePath;
-  return `${API_URL}${imagePath}`;
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  
+  // Ensure no double slashes
+  if (imagePath.startsWith('/')) {
+    return `${apiUrl}${imagePath}`;
+  }
+  return `${apiUrl}/${imagePath}`;
 };
 
 // Auth API
@@ -155,10 +162,13 @@ export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
   register: (userData) => api.post('/users/register', userData),
   logout: () => api.post('/users/logout'),
-  // Profile picture upload fix - correct path
+  
+  // Profile picture upload - FIXES PROFILE IMAGE ISSUE
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
+    
+    console.log('📸 [API] Uploading profile picture:', file.name);
     
     const response = await api.post('/users/profile/picture', formData, {
       headers: {
@@ -166,9 +176,11 @@ export const authAPI = {
       },
     });
     
+    console.log('✅ [API] Profile picture upload response:', response.data);
+    
     // Convert relative path to full URL
     if (response.data?.data?.path) {
-      response.data.data.path = getFullImageUrl(response.data.data.path);
+      response.data.data.fullUrl = getFullImageUrl(response.data.data.path);
     }
     
     return response;
@@ -204,9 +216,9 @@ export const authAPI = {
     
     // Convert relative image paths to full URLs
     if (response.data?.data?.preferences?.profilePicture) {
-      response.data.data.preferences.profilePicture = getFullImageUrl(
-        response.data.data.preferences.profilePicture
-      );
+      const originalPath = response.data.data.preferences.profilePicture;
+      response.data.data.preferences.profilePicture = getFullImageUrl(originalPath);
+      console.log('🖼️ [API] Profile image URL:', response.data.data.preferences.profilePicture);
     }
     
     return response;
@@ -226,7 +238,7 @@ const invalidateAndRefreshQueries = async (queryKey) => {
   return true;
 };
 
-// Transaction API - All endpoints including new dashboard
+// Transaction API - All endpoints including categories
 export const transactionAPI = {
   // NEW - Single dashboard call instead of 3!
   getDashboard: (date) => {
@@ -246,6 +258,12 @@ export const transactionAPI = {
       date: formatDateForAPI(date)
     }
   }),
+  
+  // Categories - FIXED IMPLEMENTATION
+  getCategories: () => api.get('/categories'),
+  createCategory: (data) => api.post('/categories', data),
+  updateCategory: (id, data) => api.put(`/categories/${id}`, data),
+  deleteCategory: (id) => api.delete(`/categories/${id}`),
   
   // Fix getAll to work with existing server
   getAll: async (params = {}) => {
@@ -313,14 +331,6 @@ export const transactionAPI = {
       };
     }
   },
-  
-  // Add new functions to transactionAPI
-  getCategories: () => api.get('/categories'),
-  
-  // Category CRUD operations
-  createCategory: (data) => api.post('/categories', data),
-  updateCategory: (id, data) => api.put(`/categories/${id}`, data),
-  deleteCategory: (id) => api.delete(`/categories/${id}`),
   
   // Improved function for recurring transactions
   getRecurring: async (type = null) => {
@@ -409,9 +419,13 @@ export const queryKeys = {
   categoryBreakdown: (start, end) => ['categoryBreakdown', start, end],
   balanceHistory: (period) => ['balanceHistory', period],
   
+  // Categories - NEW FOR GAP #4
+  categories: ['categories'],
+  
   // Invalidation helpers
   allTransactions: ['transactions'],
   allDashboard: ['dashboard'],
+  allCategories: ['categories'],
 };
 
 export default api;

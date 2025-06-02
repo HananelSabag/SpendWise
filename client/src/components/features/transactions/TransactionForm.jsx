@@ -72,25 +72,20 @@ const TransactionForm = ({
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Categories
-  const categories = {
-    income: [
-      { id: 1, name: 'Salary' },
-      { id: 2, name: 'Freelance' },
-      { id: 3, name: 'Investments' }
-    ],
-    expense: [
-      { id: 4, name: 'Rent' },
-      { id: 5, name: 'Groceries' },
-      { id: 6, name: 'Transportation' },
-      { id: 7, name: 'Utilities' },
-      { id: 8, name: 'Entertainment' }
-    ]
-  };
-
-  // Get categories for current type
+  // Remove hardcoded categories - use API data instead
   const currentCategories = allCategories.filter(cat => 
     cat.type === formData.transaction_type || cat.type === null || cat.name === 'General'
   );
+
+  // Add default category selection logic
+  useEffect(() => {
+    if (currentCategories.length > 0 && !formData.category_id) {
+      // Find General category or use first available
+      const generalCategory = currentCategories.find(cat => cat.name === 'General');
+      const defaultCategory = generalCategory || currentCategories[0];
+      setFormData(prev => ({ ...prev, category_id: defaultCategory.id }));
+    }
+  }, [currentCategories, formData.category_id]);
 
   // Validation
   const validateForm = () => {
@@ -345,7 +340,7 @@ const TransactionForm = ({
                 className="text-xs"
               >
                 <Tag className="w-3 h-3 mr-1" />
-                {t('categories.manageCategories')}
+                {t('categories.manage')}
               </Button>
             </div>
             {categoriesLoading ? (
@@ -357,14 +352,36 @@ const TransactionForm = ({
                 value={formData.category_id || ''}
                 onChange={(e) => handleChange('category_id', e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                required
               >
-                <option value="">{t('transactions.selectCategory')}</option>
-                {currentCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.is_default ? t(`categories.${cat.name}`) : cat.name}
-                  </option>
-                ))}
+                <option value="">{t('categories.selectCategory')}</option>
+                {/* Group categories by type */}
+                {formData.transaction_type === 'expense' && (
+                  <optgroup label={t('transactions.expense')}>
+                    {currentCategories.filter(cat => cat.type === 'expense' || cat.name === 'General').map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.is_default ? t(`categories.${cat.name}`) : cat.name}
+                        {cat.is_default && ' (Default)'}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {formData.transaction_type === 'income' && (
+                  <optgroup label={t('transactions.income')}>
+                    {currentCategories.filter(cat => cat.type === 'income' || cat.name === 'General').map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.is_default ? t(`categories.${cat.name}`) : cat.name}
+                        {cat.is_default && ' (Default)'}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+            )}
+            {!formData.category_id && (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                {t('categories.selectCategoryHint')}
+              </p>
             )}
           </div>
         </div>

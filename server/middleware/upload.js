@@ -96,9 +96,24 @@ const deleteOldProfilePicture = async (req, res, next) => {
       const preferences = user.rows[0]?.preferences || {};
       
       if (preferences.profilePicture) {
-        // Delete old file
-        const oldPath = path.join(__dirname, '..', preferences.profilePicture);
-        await fs.unlink(oldPath).catch(() => {}); // Ignore if file doesn't exist
+        // Convert relative path to absolute path
+        let oldPath;
+        if (preferences.profilePicture.startsWith('/uploads/')) {
+          // Remove leading slash and create absolute path
+          oldPath = path.join(__dirname, '..', preferences.profilePicture.substring(1));
+        } else {
+          oldPath = path.join(__dirname, '..', preferences.profilePicture);
+        }
+        
+        // Check if file exists before trying to delete
+        try {
+          await fs.access(oldPath);
+          await fs.unlink(oldPath);
+          console.log(`✅ [UPLOAD] Deleted old profile picture: ${oldPath}`);
+        } catch (deleteError) {
+          // File doesn't exist or can't be deleted - not a critical error
+          console.log(`⚠️ [UPLOAD] Could not delete old profile picture: ${oldPath}`);
+        }
       }
     } catch (error) {
       console.error('Error deleting old profile picture:', error);

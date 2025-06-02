@@ -16,25 +16,27 @@ class Category {
    */
   static async getAll(userId = null) {
     try {
+      // ✅ PROPERLY FIXED: Get defaults + user's custom categories without duplicates
       const query = `
-        SELECT 
-          id, name, description, icon, type, is_default,
-          created_at
+        SELECT DISTINCT
+          id, name, description, icon, type, is_default, created_at
         FROM categories
         WHERE is_default = true
-           OR id IN (
+           OR (is_default = false AND id IN (
              SELECT DISTINCT category_id 
              FROM (
-               SELECT category_id FROM expenses WHERE user_id = $1
+               SELECT category_id FROM expenses WHERE user_id = $1 AND category_id IS NOT NULL
                UNION
-               SELECT category_id FROM income WHERE user_id = $1
+               SELECT category_id FROM income WHERE user_id = $1 AND category_id IS NOT NULL
              ) user_categories
-             WHERE category_id IS NOT NULL
-           )
+           ))
         ORDER BY is_default DESC, type, name;
       `;
       
       const result = await db.query(query, [userId]);
+      
+      console.log(`[CATEGORY-DEBUG] Retrieved ${result.rows.length} categories (8 defaults + user categories)`);
+      
       return result.rows;
     } catch (error) {
       console.error('Error fetching categories:', error);
