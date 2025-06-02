@@ -275,7 +275,7 @@ class DBQueries {
       const buildQuery = (table) => `
         SELECT 
           t.id,
-          '${table.slice(0, -1)}' as transaction_type,
+          '${table === 'expenses' ? 'expense' : 'income'}' as transaction_type,
           t.amount,
           t.description,
           t.date,

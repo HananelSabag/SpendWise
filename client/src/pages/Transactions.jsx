@@ -39,21 +39,18 @@ import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../components
  * Main page for managing all transactions with filtering, searching, and CRUD operations
  */
 const Transactions = () => {
+  // ✅ ALL HOOKS MUST BE CALLED IN THE EXACT SAME ORDER EVERY TIME
+  // Context hooks first - always called
   const { t, language } = useLanguage();
   const { selectedDate, formatDate, setSelectedDate } = useDate();
   const { formatAmount } = useCurrency();
-  const isRTL = language === 'he';
-
   const { 
-    data: dashboardData, 
-    isLoading: dashboardLoading, 
-    error: dashboardError 
-  } = useDashboard();
+    createTransaction,
+    updateTransaction,
+    deleteTransaction
+  } = useTransactions();
 
-  // ✅ Add calendar state
-  const [showCalendar, setShowCalendar] = useState(false);
-
-  // ✅ State definitions first
+  // ✅ State hooks - always called in same order
   const [view, setView] = useState('all');
   const [period, setPeriod] = useState('month');
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +59,7 @@ const Transactions = () => {
   const [showRecurring, setShowRecurring] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
-
+  const [showCalendar, setShowCalendar] = useState(false);
   const [filters, setFilters] = useState({
     categories: [],
     dateRange: null,
@@ -71,7 +68,13 @@ const Transactions = () => {
     recurring: 'all'
   });
 
-  // ✅ Hooks after state
+  // ✅ Data hooks - always called in same order
+  const { 
+    data: dashboardData, 
+    isLoading: dashboardLoading, 
+    error: dashboardError 
+  } = useDashboard();
+
   const {
     periodTransactions,
     loading,
@@ -94,15 +97,11 @@ const Transactions = () => {
     isLoading: recurringLoading
   } = useRecurringTransactionsList();
 
-  const { 
-    createTransaction,
-    updateTransaction,
-    deleteTransaction
-  } = useTransactions();
+  // ✅ Computed values - always calculated
+  const isRTL = language === 'he';
 
-  // ✅ Filtered transactions calculation with better error handling
+  // ✅ Memoized values - always calculated in same order
   const filteredTransactions = useMemo(() => {
-    // ✅ Defensive programming - וודא שיש array
     if (!periodTransactions || !Array.isArray(periodTransactions)) {
       console.warn('[Transactions] periodTransactions is not an array:', periodTransactions);
       return [];
@@ -142,25 +141,6 @@ const Transactions = () => {
     return filtered;
   }, [periodTransactions, view, searchTerm, filters]);
 
-  // ✅ השתמש בנתוני Dashboard במקום לחישוב מאזן מקומי
-  const {
-    periodTransactions: dashboardPeriodTransactions,
-    loading: dashboardLoadingTransactions,
-    error: dashboardErrorTransactions,
-    refreshTransactions: refreshDashboardTransactions,
-    getTransactionsByType: getDashboardTransactionsByType,
-    searchTransactions: searchDashboardTransactions,
-    totalCount: dashboardTotalCount,
-    period: currentDashboardPeriod
-  } = useTransactionsList({
-    period,
-    type: view !== 'all' ? view : null,
-    searchTerm,
-    page: 1,
-    limit: 100
-  });
-
-  // ✅ קבל נתוני מאזן מ-Dashboard במקום חישוב מקומי
   const balanceData = useMemo(() => {
     if (!dashboardData?.balances) {
       return {
@@ -173,9 +153,7 @@ const Transactions = () => {
     return dashboardData.balances;
   }, [dashboardData]);
 
-  // ✅ תיקון המפתחות לתרגומים נכונים
   const totals = useMemo(() => {
-    // בחר את התקופה הנוכחית מהמאזן - השתמש ב-dashboard במקום balance
     const currentPeriodData = balanceData.monthly;
     
     return {
@@ -186,12 +164,11 @@ const Transactions = () => {
     };
   }, [balanceData, dashboardData]);
 
-  // ✅ Define handleTransactionSuccess FIRST - רק פעם אחת!
+  // ✅ Callback hooks - always called in same order
   const handleTransactionSuccess = useCallback(() => {
     refreshTransactions();
   }, [refreshTransactions]);
 
-  // ✅ Now define other handlers that depend on handleTransactionSuccess
   const handleEdit = useCallback((transaction) => {
     setSelectedTransaction(transaction);
     setShowForm(true);
@@ -210,13 +187,34 @@ const Transactions = () => {
     try {
       await deleteTransaction(transactionToDelete.transaction_type, transactionToDelete.id, deleteFuture);
       setTransactionToDelete(null);
-      await handleTransactionSuccess(); // ✅ Now this is defined!
+      await handleTransactionSuccess();
     } catch (error) {
       console.error('Delete failed:', error);
     }
   }, [deleteTransaction, handleTransactionSuccess]);
 
-  // ✅ בדיקת loading - עכשיו מטפל בשני ההוקים
+  const handleDateChange = useCallback((newDate) => {
+    console.log('[Transactions] 📅 Date changed to:', newDate);
+    setSelectedDate(newDate);
+    setShowCalendar(false);
+  }, [setSelectedDate]);
+
+  // ✅ Effect hooks - always called in same order
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Transactions] 🔍 Data Debug:', {
+        selectedDate: selectedDate,
+        periodTransactions: periodTransactions,
+        isArray: Array.isArray(periodTransactions),
+        length: periodTransactions?.length,
+        loading,
+        error,
+        totals
+      });
+    }
+  }, [periodTransactions, loading, error, totals, selectedDate]);
+
+  // ✅ Early returns AFTER all hooks are called
   if (loading || recurringLoading || dashboardLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -225,7 +223,6 @@ const Transactions = () => {
     );
   }
 
-  // ✅ בדיקת שגיאות
   if (error || dashboardError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -250,7 +247,6 @@ const Transactions = () => {
     }
   };
 
-  // Add itemVariants definition
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -263,29 +259,6 @@ const Transactions = () => {
       }
     }
   };
-
-  // ✅ Fix conditional useEffect - move condition inside hook
-  useEffect(() => {
-    // Only log in development, but always call the hook
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Transactions] 🔍 Data Debug:', {
-        selectedDate: selectedDate,
-        periodTransactions: periodTransactions,
-        isArray: Array.isArray(periodTransactions),
-        length: periodTransactions?.length,
-        loading,
-        error,
-        totals
-      });
-    }
-  }, [periodTransactions, loading, error, totals, selectedDate]);
-
-  // ✅ Add date change handler
-  const handleDateChange = useCallback((newDate) => {
-    console.log('[Transactions] 📅 Date changed to:', newDate);
-    setSelectedDate(newDate);
-    setShowCalendar(false);
-  }, [setSelectedDate]);
 
   return (
     <PageContainer>

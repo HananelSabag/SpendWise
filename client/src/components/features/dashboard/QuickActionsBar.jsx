@@ -134,10 +134,10 @@ const QuickActionsBar = () => {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Zap className="w-4 h-4 text-yellow-500" />
-          {t('dashboard.quickActions.fast')} {/* ✅ תיקון המפתח */}
+          {t('actions.quickAdd')}
         </h3>
         <Badge variant="warning" className="text-xs">
-          {t('dashboard.quickActions.title')} {/* ✅ תיקון המפתח */}
+          {t('actions.quickActions')}
         </Badge>
       </div>
 
@@ -241,7 +241,7 @@ const QuickActionsBar = () => {
       {/* התראה אם מסתכלים בתאריך שונה מהיום */}
       {todayWarning && (
         <div className="text-xs text-amber-600 dark:text-amber-400 mb-2 mt-1">
-          <p>{t('dashboard.quickActions.todayWarning')}</p> {/* ✅ תיקון המפתח */}
+          <p>{t('dashboard.quickActions.todayWarning')}</p>
         </div>
       )}
     </Card>

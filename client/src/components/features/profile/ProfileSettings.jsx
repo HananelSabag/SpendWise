@@ -476,7 +476,7 @@ const ProfileSettings = ({ user }) => {
                 label={t('profile.preferenceKey')}
                 value={newPrefKey}
                 onChange={(e) => setNewPrefKey(e.target.value)}
-                placeholder="myCustomSetting"
+                placeholder={t('profile.placeholders.customKey')}
               />
               
               <div>
@@ -500,10 +500,10 @@ const ProfileSettings = ({ user }) => {
                 value={newPrefValue}
                 onChange={(e) => setNewPrefValue(e.target.value)}
                 placeholder={
-                  newPrefType === 'boolean' ? 'true/false' :
-                  newPrefType === 'number' ? '123' :
-                  newPrefType === 'json' ? '{"key": "value"}' :
-                  'My value'
+                  newPrefType === 'boolean' ? t('profile.placeholders.boolean') :
+                  newPrefType === 'number' ? t('profile.placeholders.number') :
+                  newPrefType === 'json' ? t('profile.placeholders.json') :
+                  t('profile.placeholders.string')
                 }
               />
               

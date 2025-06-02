@@ -1,5 +1,5 @@
 // client/src/context/LanguageContext.jsx
-// Enhanced language context with organized translations
+// Enhanced language context with complete organized translations
 
 import React, { createContext, useContext, useState } from 'react';
 
@@ -57,14 +57,17 @@ const translations = {
     toggleLanguage: 'Toggle Language',
     openUserMenu: 'Open User Menu',
     openMenu: 'Open Menu',
-    // ✅ הוספת מפתחות חדשים לקומפוננטים של common
+    closeMenu: 'Close Menu',
     floatingMenu: 'Floating Menu',
     accessibility: 'Accessibility',
     statement: 'Statement',
     compliance: 'Compliance',
     hide: 'Hide',
     show: 'Show',
-    menu: 'Menu'
+    menu: 'Menu',
+    notSet: 'Not set',
+    saving: 'Saving...',
+    copyright: '© {{year}} SpendWise. All rights reserved.'
   },
 
   // Navigation
@@ -74,12 +77,7 @@ const translations = {
     profile: 'Profile',
     settings: 'Settings',
     reports: 'Reports',
-    logout: 'Logout',
-    userMenu: 'User Menu',
-    toggleTheme: 'Toggle Theme',
-    toggleLanguage: 'Toggle Language',
-    openUserMenu: 'Open User Menu',
-    openMenu: 'Open Menu'
+    logout: 'Logout'
   },
 
   // Authentication
@@ -89,6 +87,8 @@ const translations = {
     loginSubtitle: 'Sign in to continue to your account',
     createAccount: 'Create Account',
     registerSubtitle: 'Join thousands of users managing their finances',
+    startJourney: 'Start Your Financial Journey',
+    joinThousands: 'Join thousands who are already saving smarter',
     
     // Form fields
     email: 'Email',
@@ -106,6 +106,7 @@ const translations = {
     logout: 'Logout',
     rememberMe: 'Remember me',
     forgotPassword: 'Forgot Password?',
+    agreeToTerms: 'I agree to the Terms of Service and Privacy Policy',
     
     // Links
     noAccount: "Don't have an account?",
@@ -115,6 +116,33 @@ const translations = {
     
     // Messages
     invalidCredentials: 'Invalid email or password',
+    welcomeTitle: 'Welcome to Smart Finance',
+    welcomeDescription: 'Take control of your financial future with intelligent expense tracking',
+    
+    // Benefits
+    benefit1: 'Bank-level Security',
+    benefit2: 'Real-time Analytics',
+    benefit3: 'Smart Insights',
+    
+    // Stats
+    activeUsers: 'Active Users',
+    savedMoney: 'Saved',
+    rating: 'Rating',
+    
+    // Password requirements
+    passwordLength: 'At least 8 characters',
+    passwordNumber: 'Contains a number',
+    passwordUpper: 'Contains uppercase letter',
+    passwordLower: 'Contains lowercase letter',
+    weak: 'Weak',
+    fair: 'Fair',
+    good: 'Good',
+    strong: 'Strong',
+    veryStrong: 'Very Strong',
+    
+    // Steps
+    accountInfo: 'Account Info',
+    security: 'Security',
     
     // Features showcase
     features: {
@@ -125,7 +153,10 @@ const translations = {
       fast: 'Lightning Fast',
       fastDesc: 'Real-time updates and tracking',
       smart: 'Smart Analytics',
-      smartDesc: 'Intelligent insights for better decisions'
+      smartDesc: 'Intelligent insights for better decisions',
+      feature1: 'Track expenses effortlessly',
+      feature2: 'Set and achieve financial goals',
+      feature3: 'Get personalized insights'
     }
   },
 
@@ -162,11 +193,12 @@ const translations = {
       recent: 'Recent Transactions',
       viewAll: 'View All',
       noTransactions: 'No transactions yet',
+      noTransactionsDesc: 'Start tracking your finances by adding your first transaction',
       fetchError: 'Unable to load transactions'
     },
     
     quickActions: {
-      title: 'Quick Actions',
+      title: 'Quick Add',
       fast: 'Quick Entry',
       placeholder: 'Enter amount',
       addExpense: 'Add Expense',
@@ -207,6 +239,8 @@ const translations = {
     noTransactionsOfType: 'No {{type}} transactions found',
     noTransactions: 'No transactions for this period',
     noTransactionsDesc: 'Your transactions will appear here once you add them',
+    noMatchingTransactions: 'No matching transactions',
+    tryDifferentSearch: 'Try a different search term or filter',
     
     // Actions
     addTransaction: 'Add Transaction',
@@ -214,10 +248,11 @@ const translations = {
     editTransaction: 'Edit Transaction',
     editTitle: 'Edit transaction details',
     deleteConfirm: 'Delete Transaction',
+    selectDate: 'Select Date',
     
     // Form fields
     selectCategory: 'Select category',
-    selectDate: 'Select Date',
+    date: 'Date',
     endsOn: 'Ends On',
     updateFuture: 'Apply to all future occurrences',
     updateFutureDesc: 'This will update all future occurrences of this recurring transaction',
@@ -232,7 +267,7 @@ const translations = {
     },
     noRecurringTransactions: 'No recurring transactions',
     createRecurringNote: 'When you create recurring transactions, you\'ll be able to manage them here.',
-    recurringNote: 'This is a recurring {type}. When editing, you can choose to update just this occurrence or all future occurrences.',
+    recurringNote: 'This is a recurring {{type}}. When editing, you can choose to update just this occurrence or all future occurrences.',
     
     // Frequencies
     frequency: 'Frequency',
@@ -248,6 +283,7 @@ const translations = {
     // Filters
     filters: {
       title: 'Filters',
+      type: 'Transaction Type',
       showAll: 'Show All',
       filterButton: 'Filter',
       amountRange: 'Amount Range',
@@ -262,19 +298,10 @@ const translations = {
       oneTime: 'One-time'
     },
     
-    // View options
-    view: {
-      all: 'All Transactions',
-      income: 'Income Only',
-      expense: 'Expenses Only'
-    },
-    
     // Messages
     fetchError: 'Failed to load transactions',
     deleteError: 'Failed to delete transaction',
     updateError: 'Failed to update transaction',
-    noMatchingTransactions: 'No matching transactions',
-    tryDifferentSearch: 'Try a different search term or filter',
     items: 'transactions',
     endOfList: 'End of transaction history',
     tip: 'Try adding new transactions using the button above',
@@ -285,7 +312,6 @@ const translations = {
       description: 'Recurring transactions are automatically generated based on their frequency. You can modify or stop them at any time.'
     }
   },
-
   // Transaction Card
   transactionCard: {
     editButton: 'Edit transaction',
@@ -320,16 +346,30 @@ const translations = {
     // Form
     fillDetails: 'Fill in transaction details',
     selectType: 'Select transaction type',
-    amountPlaceholder: 'Enter amount',
+    amount: 'Amount',
+    description: 'Description',
     descriptionPlaceholder: 'Enter description',
-    recurringOptions: 'Recurring Options',
+    selectCategory: 'Select Category',
+    category: 'Category',
+    date: 'Date',
+    frequency: 'Frequency',
     endDate: 'End Date',
-    options: 'Options',
+    recurringOptions: 'Recurring Options',
+    recurring: 'Recurring',
     
     // Actions
     add: 'Add Transaction',
     addIncome: 'Add Income',
     addExpense: 'Add Expense',
+    success: 'Success!',
+    
+    // Frequencies
+    frequencies: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      oneTime: 'One-time'
+    },
     
     // Errors
     errors: {
@@ -342,6 +382,7 @@ const translations = {
 
   // Categories
   categories: {
+    title: 'Categories',
     Salary: 'Salary',
     Freelance: 'Freelance',
     Investments: 'Investments',
@@ -357,26 +398,40 @@ const translations = {
   profile: {
     title: 'Profile',
     personalInformation: 'Personal Information',
+    profilePhoto: 'Profile Photo',
     username: 'Username',
     email: 'Email',
+    phone: 'Phone',
+    location: 'Location',
+    website: 'Website',
     emailNotEditable: 'Email cannot be changed',
     changePassword: 'Change Password',
     currentPassword: 'Current Password',
     newPassword: 'New Password',
     confirmPassword: 'Confirm New Password',
+    changePhoto: 'Change Photo',
+    uploadPhoto: 'Upload Photo',
+    photoHelper: 'JPG, PNG or GIF. Max size 5MB',
+    uploading: 'Uploading...',
+    photoUploaded: 'Photo uploaded successfully',
+    
     save: 'Save Changes',
     cancel: 'Cancel',
     updateSuccess: 'Profile updated successfully',
     updateError: 'Failed to update profile',
+    accountInfo: 'Account Information',
+    accountStatus: 'Account Status',
+    verified: 'Verified',
+    memberSince: 'Member Since',
+    lastLogin: 'Last Login',
     
     tabs: {
       general: 'General',
       security: 'Security',
       preferences: 'Preferences',
-      billing: 'Billing' // ✅ הוספתי
+      billing: 'Billing'
     },
     
-    // ✅ הוספת תרגומים חסרים
     stats: {
       totalTransactions: 'Total Transactions',
       thisMonth: 'This Month',
@@ -394,50 +449,27 @@ const translations = {
     logoutConfirm: 'Confirm Logout',
     logoutConfirmDesc: 'Are you sure you want to logout?',
     
+    // Settings
+    preferences: 'Preferences',
+    appPreferences: 'App Preferences',
     securitySettings: 'Security Settings',
     billingSettings: 'Billing & Subscription',
-    passwordRequirements: 'Password requirements',
-    passwordMinLength: 'Minimum 8 characters',
-    passwordRequireNumber: 'Must contain at least one number',
-    securityTip: 'Security Tip',
-    securityTipText: 'Keep your password secure and change it regularly',
-    
     language: 'Language',
+    currency: 'Currency',
     theme: 'Theme',
     lightTheme: 'Light',
     darkTheme: 'Dark',
+    languageChanged: 'Language changed successfully',
+    currencyChanged: 'Currency changed successfully',
+    themeChanged: 'Theme changed successfully',
+    passwordChanged: 'Password changed successfully',
+    incorrectPassword: 'Current password is incorrect',
+    passwordChangeError: 'Failed to change password',
+    updatePassword: 'Update Password',
+    additionalSecurity: 'Additional Security',
+    additionalSecurityDesc: 'Two-factor authentication and other security features coming soon',
     
-    notificationsPreferences: 'Notification Preferences',
-    emailNotifications: 'Email notifications',
-    loginAlerts: 'Login alerts',
-    monthlySummaries: 'Monthly summaries',
-    
-    dataManagement: 'Data Management',
-    exportExplanation: 'Export your data to keep a backup',
-    exportFeatureComingSoon: 'Export feature coming soon...',
-    
-    appPreferences: 'App Preferences',
-    memberSince: 'Member Since',
-    lastLogin: 'Last Login',
-    lastLoginInfo: 'Last login',
-    logout: 'Logout',
-    financialSummary: 'Financial Summary',
-    accountActivity: 'Account Activity',
-    
-    // ✅ הוספת תרגומים חסרים לפרופיל
-    phone: 'Phone',
-    phonePlaceholder: 'Enter phone number',
-    location: 'Location', 
-    locationPlaceholder: 'Enter location',
-    website: 'Website',
-    accountInfo: 'Account Information',
-    verified: 'Verified',
-    photoHelper: 'Click to upload or change your profile photo',
-    changePhoto: 'Change Photo',
-    uploading: 'Uploading...',
-    photoUploaded: 'Photo uploaded successfully',
-    
-    // Custom preferences translations
+    // Custom preferences
     customPreferences: 'Custom Preferences',
     customPreferencesTitle: 'Manage Custom Settings',
     addNewPreference: 'Add New Preference',
@@ -453,18 +485,62 @@ const translations = {
     
     // Type options
     typeString: 'Text',
-    typeNumber: 'Number', 
+    typeNumber: 'Number',
     typeBoolean: 'True/False',
     typeJson: 'JSON Object',
     
+    // Placeholders
+    placeholders: {
+      customKey: 'myCustomSetting',
+      boolean: 'true/false',
+      number: '123',
+      json: '{"key": "value"}',
+      string: 'My value'
+    },
+    
     // Error messages
     errors: {
+      usernameRequired: 'Username is required',
+      usernameTooShort: 'Username must be at least 3 characters',
+      emailRequired: 'Email is required',
+      emailInvalid: 'Invalid email format',
       keyRequired: 'Setting name is required',
       keyExists: 'Setting name already exists',
       invalidJson: 'Invalid JSON format',
       invalidFileType: 'Please select an image file',
       fileTooLarge: 'File size must be less than 5MB',
       uploadFailed: 'Failed to upload image'
+    }
+  },
+
+  // Forms
+  forms: {
+    errors: {
+      descriptionRequired: 'Description is required',
+      endDateRequired: 'End date is required'
+    }
+  },
+
+  // Validation
+  validation: {
+    required: 'This field is required',
+    usernameRequired: 'Username is required',
+    usernameTooShort: 'Username must be at least 3 characters',
+    emailRequired: 'Email is required',
+    emailInvalid: 'Invalid email format',
+    passwordTooShort: 'Password must be at least 8 characters',
+    passwordNeedsNumber: 'Password must contain at least one number',
+    passwordsDontMatch: 'Passwords do not match',
+    agreeToTerms: 'You must agree to the terms'
+  },
+
+  // Register specific
+  register: {
+    success: {
+      message: 'Registration successful! Please login to continue.'
+    },
+    errors: {
+      registrationFailed: 'Registration failed. Please try again.'
     }
   },
 
@@ -508,6 +584,12 @@ const translations = {
     }
   },
 
+  // Floating Menu
+  floatingMenu: {
+    changeLanguage: 'Change Language',
+    switchCurrency: 'Switch Currency'
+  },
+
   // Footer
   footer: {
     description: 'Smart personal finance management tool to help you track expenses and manage your budget efficiently.',
@@ -534,27 +616,6 @@ const translations = {
     unauthorized: 'You are not authorized to perform this action.',
     notFound: 'The requested item was not found.',
     server: 'Server error. Please try again later.'
-  },
-
-  // Alert notifications
-  alerts: {
-    success: {
-      title: 'Success!',
-      defaultMessage: 'Operation completed successfully'
-    },
-    error: {
-      title: 'Error!',
-      defaultMessage: 'An error occurred'
-    },
-    warning: {
-      title: 'Warning!',
-      defaultMessage: 'Please check the information'
-    },
-    info: {
-      title: 'Information',
-      defaultMessage: 'Here is some information'
-    },
-    dismiss: 'Dismiss'
   },
 
   // === HEBREW TRANSLATIONS ===
@@ -599,14 +660,17 @@ const translations = {
       toggleLanguage: 'החלף שפה',
       openUserMenu: 'פתח תפריט משתמש',
       openMenu: 'פתח תפריט',
-      // ✅ הוספת מפתחות חדשים לקומפוננטים של common
+      closeMenu: 'סגור תפריט',
       floatingMenu: 'תפריט צף',
       accessibility: 'נגישות',
       statement: 'הצהרה',
       compliance: 'תאימות',
       hide: 'הסתר',
       show: 'הצג',
-      menu: 'תפריט'
+      menu: 'תפריט',
+      notSet: 'לא הוגדר',
+      saving: 'שומר...',
+      copyright: '© {{year}} SpendWise. כל הזכויות שמורות.'
     },
 
     // Navigation
@@ -616,12 +680,7 @@ const translations = {
       profile: 'פרופיל',
       settings: 'הגדרות',
       reports: 'דוחות',
-      logout: 'התנתק',
-      userMenu: 'תפריט משתמש',
-      toggleTheme: 'החלף ערכת נושא',
-      toggleLanguage: 'החלף שפה',
-      openUserMenu: 'פתח תפריט משתמש',
-      openMenu: 'פתח תפריט'
+      logout: 'התנתק'
     },
 
     // Authentication
@@ -631,6 +690,8 @@ const translations = {
       loginSubtitle: 'התחברו כדי להמשיך לחשבון שלכם',
       createAccount: 'יצירת חשבון',
       registerSubtitle: 'הצטרפו לאלפי משתמשים המנהלים את הכספים שלהם',
+      startJourney: 'התחילו את המסע הפיננסי שלכם',
+      joinThousands: 'הצטרפו לאלפים שכבר חוסכים בחוכמה',
       
       // Form fields
       email: 'דואר אלקטרוני',
@@ -648,6 +709,7 @@ const translations = {
       logout: 'התנתק',
       rememberMe: 'זכור אותי',
       forgotPassword: 'שכחת סיסמה?',
+      agreeToTerms: 'אני מסכים לתנאי השימוש ומדיניות הפרטיות',
       
       // Links
       noAccount: 'אין לך חשבון?',
@@ -657,6 +719,33 @@ const translations = {
       
       // Messages
       invalidCredentials: 'דואר אלקטרוני או סיסמה לא תקינים',
+      welcomeTitle: 'ברוכים הבאים לניהול פיננסי חכם',
+      welcomeDescription: 'קחו שליטה על העתיד הפיננסי שלכם עם מעקב הוצאות חכם',
+      
+      // Benefits
+      benefit1: 'אבטחה ברמה בנקאית',
+      benefit2: 'ניתוח בזמן אמת',
+      benefit3: 'תובנות חכמות',
+      
+      // Stats
+      activeUsers: 'משתמשים פעילים',
+      savedMoney: 'נחסך',
+      rating: 'דירוג',
+      
+      // Password requirements
+      passwordLength: 'לפחות 8 תווים',
+      passwordNumber: 'מכיל מספר',
+      passwordUpper: 'מכיל אות גדולה',
+      passwordLower: 'מכיל אות קטנה',
+      weak: 'חלש',
+      fair: 'בינוני',
+      good: 'טוב',
+      strong: 'חזק',
+      veryStrong: 'חזק מאוד',
+      
+      // Steps
+      accountInfo: 'פרטי חשבון',
+      security: 'אבטחה',
       
       // Features showcase
       features: {
@@ -667,7 +756,10 @@ const translations = {
         fast: 'מהיר במיוחד',
         fastDesc: 'עדכונים ומעקב בזמן אמת',
         smart: 'ניתוח חכם',
-        smartDesc: 'תובנות חכמות להחלטות טובות יותר'
+        smartDesc: 'תובנות חכמות להחלטות טובות יותר',
+        feature1: 'עקבו אחר ההוצאות בקלות',
+        feature2: 'הגדירו והשיגו יעדים פיננסיים',
+        feature3: 'קבלו תובנות מותאמות אישית'
       }
     },
 
@@ -704,11 +796,12 @@ const translations = {
         recent: 'עסקאות אחרונות',
         viewAll: 'הצג הכל',
         noTransactions: 'אין עסקאות עדיין',
+        noTransactionsDesc: 'התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה',
         fetchError: 'לא ניתן לטעון עסקאות'
       },
       
       quickActions: {
-        title: 'פעולות מהירות',
+        title: 'הוספה מהירה',
         fast: 'הזנה מהירה',
         placeholder: 'הזן סכום',
         addExpense: 'הוסף הוצאה',
@@ -749,6 +842,8 @@ const translations = {
       noTransactionsOfType: 'לא נמצאו עסקאות {{type}}',
       noTransactions: 'אין עסקאות לתקופה זו',
       noTransactionsDesc: 'העסקאות שלך יופיעו כאן לאחר שתוסיף אותן',
+      noMatchingTransactions: 'אין עסקאות תואמות',
+      tryDifferentSearch: 'נסה מונח חיפוש או סינון אחר',
       
       // Actions
       addTransaction: 'הוסף עסקה',
@@ -756,10 +851,11 @@ const translations = {
       editTransaction: 'ערוך עסקה',
       editTitle: 'ערוך פרטי עסקה',
       deleteConfirm: 'מחק עסקה',
+      selectDate: 'בחר תאריך',
       
       // Form fields
       selectCategory: 'בחר קטגוריה',
-      selectDate: 'בחר תאריך',
+      date: 'תאריך',
       endsOn: 'מסתיים ב',
       updateFuture: 'החל על כל המופעים העתידיים',
       updateFutureDesc: 'זה יעדכן את כל המופעים העתידיים של עסקה קבועה זו',
@@ -774,7 +870,7 @@ const translations = {
       },
       noRecurringTransactions: 'אין עסקאות קבועות',
       createRecurringNote: 'כשתיצור עסקאות קבועות, תוכל לנהל אותן כאן.',
-      recurringNote: 'זו עסקה קבועה מסוג {type}. בעריכה, תוכל לבחור לעדכן רק את המופע הזה או את כל המופעים העתידיים.',
+      recurringNote: 'זו עסקה קבועה מסוג {{type}}. בעריכה, תוכל לבחור לעדכן רק את המופע הזה או את כל המופעים העתידיים.',
       
       // Frequencies
       frequency: 'תדירות',
@@ -790,6 +886,7 @@ const translations = {
       // Filters
       filters: {
         title: 'סינונים',
+        type: 'סוג עסקה',
         showAll: 'הצג הכל',
         filterButton: 'סנן',
         amountRange: 'טווח סכומים',
@@ -804,19 +901,10 @@ const translations = {
         oneTime: 'חד פעמיות'
       },
       
-      // View options
-      view: {
-        all: 'כל העסקאות',
-        income: 'הכנסות בלבד',
-        expense: 'הוצאות בלבד'
-      },
-      
       // Messages
       fetchError: 'נכשל בטעינת עסקאות',
       deleteError: 'נכשל במחיקת עסקה',
       updateError: 'נכשל בעדכון עסקה',
-      noMatchingTransactions: 'אין עסקאות תואמות',
-      tryDifferentSearch: 'נסה מונח חיפוש או סינון אחר',
       items: 'עסקאות',
       endOfList: 'סוף היסטוריית העסקאות',
       tip: 'נסה להוסיף עסקאות חדשות באמצעות הכפתור למעלה',
@@ -862,16 +950,30 @@ const translations = {
       // Form
       fillDetails: 'מלא את פרטי העסקה',
       selectType: 'בחר סוג עסקה',
-      amountPlaceholder: 'הזן סכום',
+      amount: 'סכום',
+      description: 'תיאור',
       descriptionPlaceholder: 'הזן תיאור',
-      recurringOptions: 'אפשרויות חזרה',
+      selectCategory: 'בחר קטגוריה',
+      category: 'קטגוריה',
+      date: 'תאריך',
+      frequency: 'תדירות',
       endDate: 'תאריך סיום',
-      options: 'אפשרויות',
+      recurringOptions: 'אפשרויות חזרה',
+      recurring: 'קבוע',
       
       // Actions
       add: 'הוסף עסקה',
       addIncome: 'הוסף הכנסה',
       addExpense: 'הוסף הוצאה',
+      success: 'הצלחה!',
+      
+      // Frequencies
+      frequencies: {
+        daily: 'יומי',
+        weekly: 'שבועי',
+        monthly: 'חודשי',
+        oneTime: 'חד פעמי'
+      },
       
       // Errors
       errors: {
@@ -884,6 +986,7 @@ const translations = {
 
     // Categories
     categories: {
+      title: 'קטגוריות',
       Salary: 'משכורת',
       Freelance: 'עבודה עצמאית',
       Investments: 'השקעות',
@@ -899,82 +1002,150 @@ const translations = {
     profile: {
       title: 'פרופיל',
       personalInformation: 'מידע אישי',
+      profilePhoto: 'תמונת פרופיל',
       username: 'שם משתמש',
       email: 'דואר אלקטרוני',
+      phone: 'טלפון',
+      location: 'מיקום',
+      website: 'אתר אינטרנט',
       emailNotEditable: 'לא ניתן לשנות את הדואר האלקטרוני',
       changePassword: 'שינוי סיסמה',
       currentPassword: 'סיסמה נוכחית',
       newPassword: 'סיסמה חדשה',
       confirmPassword: 'אישור סיסמה חדשה',
+      changePhoto: 'שנה תמונה',
+      uploadPhoto: 'העלה תמונה',
+      photoHelper: 'JPG, PNG או GIF. גודל מקסימלי 5MB',
+      uploading: 'מעלה...',
+      photoUploaded: 'התמונה הועלתה בהצלחה',
+      
       save: 'שמור שינויים',
       cancel: 'ביטול',
       updateSuccess: 'הפרופיל עודכן בהצלחה',
       updateError: 'נכשל בעדכון הפרופיל',
+      accountInfo: 'פרטי חשבון',
+      accountStatus: 'סטטוס חשבון',
+      verified: 'מאומת',
+      memberSince: 'חבר מאז',
+      lastLogin: 'התחברות אחרונה',
       
       tabs: {
         general: 'כללי',
         security: 'אבטחה',
         preferences: 'העדפות',
-        billing: 'חיוב' // ✅ הוספתי
+        billing: 'חיוב'
       },
       
-      // ✅ הוספת תרגומים חסרים להתקנות פרופיל
-      preferences: 'Preferences',
-      privacy: 'Privacy',
-      security: 'Security',
-      dataManagement: 'Data Management',
-      languageChanged: 'Language changed successfully',
-      currencyChanged: 'Currency changed successfully', 
-      themeChanged: 'Theme changed successfully',
-      passwordChanged: 'Password changed successfully',
-      incorrectPassword: 'Current password is incorrect',
-      passwordChangeError: 'Failed to change password',
-      notificationsSaved: 'Notifications saved successfully',
-      privacySaved: 'Privacy settings saved successfully',
-      saveError: 'Failed to save settings',
-      updatePassword: 'Update Password',
-      twoFactor: 'Two-Factor Authentication',
-      twoFactorDesc: 'Add an extra layer of security to your account',
+      stats: {
+        totalTransactions: 'סך העסקאות',
+        thisMonth: 'החודש',
+        activeDays: 'חבר כבר',
+        successRate: 'אחוז הצלחה',
+        days: 'ימים',
+        months: 'חודשים',
+        years: 'שנים'
+      },
       
-      // Notification preferences
-      notificationPreferences: 'Notification Preferences',
-      emailNotifications: 'Email notifications',
-      emailNotificationsDesc: 'Receive notifications via email',
-      pushNotifications: 'Push notifications', 
-      pushNotificationsDesc: 'Receive push notifications in browser',
-      smsNotifications: 'SMS notifications',
-      smsNotificationsDesc: 'Receive notifications via SMS',
-      reminders: 'Transaction reminders',
-      remindersDesc: 'Get reminders for recurring transactions',
-      productUpdates: 'Product updates',
-      productUpdatesDesc: 'Receive updates about new features',
-      marketingEmails: 'Marketing emails',
-      marketingEmailsDesc: 'Receive promotional emails',
-      saveNotifications: 'Save Notifications',
+      quickActions: 'פעולות מהירות',
+      exportData: 'ייצוא נתונים',
+      notifications: 'התראות',
+      comingSoon: 'בקרוב',
+      logoutConfirm: 'אישור התנתקות',
+      logoutConfirmDesc: 'האם אתה בטוח שברצונך להתנתק?',
       
-      // Privacy settings
-      privacySettings: 'Privacy Settings',
-      publicProfile: 'Public profile',
-      publicProfileDesc: 'Allow others to view your profile',
-      shareStats: 'Share statistics',
-      shareStatsDesc: 'Allow sharing of anonymized usage data',
-      analytics: 'Analytics tracking',
-      analyticsDesc: 'Help improve our service with usage analytics',
-      savePrivacy: 'Save Privacy Settings',
+      // Settings
+      preferences: 'העדפות',
+      appPreferences: 'העדפות אפליקציה',
+      securitySettings: 'הגדרות אבטחה',
+      billingSettings: 'חיוב ומנוי',
+      language: 'שפה',
+      currency: 'מטבע',
+      theme: 'ערכת נושא',
+      lightTheme: 'בהיר',
+      darkTheme: 'כהה',
+      languageChanged: 'השפה שונתה בהצלחה',
+      currencyChanged: 'המטבע שונה בהצלחה',
+      themeChanged: 'ערכת הנושא שונתה בהצלחה',
+      passwordChanged: 'הסיסמה שונתה בהצלחה',
+      incorrectPassword: 'הסיסמה הנוכחית שגויה',
+      passwordChangeError: 'נכשל בשינוי הסיסמה',
+      updatePassword: 'עדכן סיסמה',
+      additionalSecurity: 'אבטחה נוספת',
+      additionalSecurityDesc: 'אימות דו-שלבי ותכונות אבטחה נוספות בקרוב',
       
-      // Profile photo
-      profilePhoto: 'Profile Photo',
-      accountStatus: 'Account Status',
-      notSet: 'Not set',
+      // Custom preferences
+      customPreferences: 'העדפות מותאמות אישית',
+      customPreferencesTitle: 'נהל הגדרות מותאמות אישית',
+      addNewPreference: 'הוסף העדפה חדשה',
+      preferenceKey: 'שם ההגדרה',
+      preferenceType: 'סוג נתונים',
+      preferenceValue: 'ערך',
+      addPreference: 'הוסף הגדרה',
+      noCustomPreferences: 'אין העדפות מותאמות אישית עדיין',
+      preferenceAdded: 'ההעדפה נוספה בהצלחה',
+      preferenceRemoved: 'ההעדפה הוסרה בהצלחה',
+      saveCustomPreferences: 'שמור העדפות מותאמות אישית',
+      customPreferencesSaved: 'ההעדפות המותאמות אישית נשמרו בהצלחה',
       
-      // Data management
-      downloadData: 'Download My Data',
-      exportDataDesc: 'Export all your data in a portable format',
-      deleteAccount: 'Delete Account',
-      deleteAccountDesc: 'Permanently delete your account and all data',
-      deleteAccountButton: 'Delete Account',
+      // Type options
+      typeString: 'טקסט',
+      typeNumber: 'מספר',
+      typeBoolean: 'אמת/שקר',
+      typeJson: 'אובייקט JSON',
       
-      // ...existing code...
+      // Placeholders
+      placeholders: {
+        customKey: 'myCustomSetting',
+        boolean: 'true/false',
+        number: '123',
+        json: '{"key": "value"}',
+        string: 'הערך שלי'
+      },
+      
+      // Error messages
+      errors: {
+        usernameRequired: 'שם משתמש נדרש',
+        usernameTooShort: 'שם המשתמש חייב להכיל לפחות 3 תווים',
+        emailRequired: 'דואר אלקטרוני נדרש',
+        emailInvalid: 'פורמט דואר אלקטרוני לא תקין',
+        keyRequired: 'שם ההגדרה נדרש',
+        keyExists: 'שם ההגדרה כבר קיים',
+        invalidJson: 'פורמט JSON לא תקין',
+        invalidFileType: 'אנא בחר קובץ תמונה',
+        fileTooLarge: 'גודל הקובץ חייב להיות קטן מ-5MB',
+        uploadFailed: 'העלאת התמונה נכשלה'
+      }
+    },
+
+    // Forms
+    forms: {
+      errors: {
+        descriptionRequired: 'תיאור נדרש',
+        endDateRequired: 'תאריך סיום נדרש'
+      }
+    },
+
+    // Validation
+    validation: {
+      required: 'שדה זה נדרש',
+      usernameRequired: 'שם משתמש נדרש',
+      usernameTooShort: 'שם המשתמש חייב להכיל לפחות 3 תווים',
+      emailRequired: 'דואר אלקטרוני נדרש',
+      emailInvalid: 'פורמט דואר אלקטרוני לא תקין',
+      passwordTooShort: 'הסיסמה חייבת להכיל לפחות 8 תווים',
+      passwordNeedsNumber: 'הסיסמה חייבת להכיל לפחות מספר אחד',
+      passwordsDontMatch: 'הסיסמאות אינן תואמות',
+      agreeToTerms: 'עליך להסכים לתנאים'
+    },
+
+    // Register specific
+    register: {
+      success: {
+        message: 'ההרשמה הצליחה! אנא התחבר כדי להמשיך.'
+      },
+      errors: {
+        registrationFailed: 'ההרשמה נכשלה. אנא נסה שוב.'
+      }
     },
 
     // Calendar
@@ -1017,6 +1188,12 @@ const translations = {
       }
     },
 
+    // Floating Menu
+    floatingMenu: {
+      changeLanguage: 'שנה שפה',
+      switchCurrency: 'החלף מטבע'
+    },
+
     // Footer
     footer: {
       description: 'כלי חכם לניהול פיננסי אישי שעוזר לך לעקוב אחר הוצאות ולנהל את התקציב שלך ביעילות.',
@@ -1039,37 +1216,16 @@ const translations = {
     errors: {
       generic: 'אירעה שגיאה. אנא נסו שוב.',
       network: 'שגיאת רשת. אנא בדקו את החיבור שלכם.',
-      validation: 'אנא בדקו את הטופס שגיאות.',
+      validation: 'אנא בדקו את הטופס לשגיאות.',
       unauthorized: 'אין לכם הרשאה לבצע פעולה זו.',
       notFound: 'הפריט המבוקש לא נמצא.',
       server: 'שגיאת שרת. אנא נסו שוב מאוחר יותר.'
-    },
-
-    // Alert notifications
-    alerts: {
-      success: {
-        title: 'הצלחה!',
-        defaultMessage: 'הפעולה הושלמה בהצלחה'
-      },
-      error: {
-        title: 'שגיאה!',
-        defaultMessage: 'אירעה שגיאה'
-      },
-      warning: {
-        title: 'אזהרה!',
-        defaultMessage: 'אנא בדקו את המידע'
-      },
-      info: {
-        title: 'מידע',
-        defaultMessage: 'הנה קצת מידע'
-      },
-      dismiss: 'התעלם'
     }
   }
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en'); // Changed from 'he' to 'en'
+  const [language, setLanguage] = useState('en');
   
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'he' ? 'en' : 'he');
@@ -1082,13 +1238,7 @@ export const LanguageProvider = ({ children }) => {
     
     for (const k of keys) {
       if (!translation) break;
-      
       translation = translation[k];
-      
-      // טיפול מיוחד במקרים של אובייקטים עם תרגומים לפי שפה
-      if (translation && typeof translation === 'object' && 'he' in translation && 'en' in translation) {
-        return translation[language];
-      }
     }
     
     if (!translation) {

@@ -249,7 +249,7 @@ const ProfileInfo = () => {
             {/* ✅ Debug info - רק במצב פיתוח */}
             {process.env.NODE_ENV === 'development' && profileImage && (
               <div className="absolute -bottom-10 left-0 text-xs text-gray-500 bg-white dark:bg-gray-800 p-1 rounded shadow-sm border max-w-[300px] break-all">
-                URL: {profileImage}
+                {t('profile.profilePhoto')}: {profileImage}
               </div>
             )}
             
