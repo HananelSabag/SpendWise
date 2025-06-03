@@ -326,33 +326,6 @@ const Profile = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Quick Actions */}
-              <div className="mt-4 p-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  {t('profile.quickActions')}
-                </h3>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="small"
-                    fullWidth
-                    className="justify-start"
-                  >
-                    <Database className="w-4 h-4 mr-2" />
-                    {t('profile.exportData')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="small"
-                    fullWidth
-                    className="justify-start"
-                  >
-                    <Bell className="w-4 h-4 mr-2" />
-                    {t('profile.notifications')}
-                  </Button>
-                </div>
-              </div>
             </Card>
           </motion.div>
 

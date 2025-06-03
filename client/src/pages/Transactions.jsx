@@ -725,7 +725,7 @@ const Transactions = () => {
                         <Clock className="w-4 h-4" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
                       </div>
-                      {t('transactions.manageRecurring')}
+                      {t('transactions.recurringManagement')}
                     </Button>
                     <Button 
                       variant="ghost" 

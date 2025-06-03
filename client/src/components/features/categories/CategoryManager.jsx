@@ -11,7 +11,7 @@ import {
   ShoppingCart, Home, Car, Zap, Music, Coffee, Heart,
   Book, Briefcase, DollarSign, Utensils, Gamepad2,
   Plane, GraduationCap, Camera, Gift, Palette,
-  TrendingUp, TrendingDown, Crown, Shield,
+  TrendingUp, TrendingDown, Crown, Shield, Search, Filter,
   // ✅ ADD: More useful icons (reasonable amount)
   Smartphone, Laptop, Fuel, Dumbbell, Pill, Baby,
   PawPrint, Bus, CreditCard, Banknote, PiggyBank,
@@ -48,6 +48,7 @@ const CategoryManager = () => {
   const [deleting, setDeleting] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIconCategory, setSelectedIconCategory] = useState('general');
 
   // 🎨 IMPROVED ICON COLLECTION - Reasonable amount, well organized
   const iconCategories = {
@@ -189,7 +190,7 @@ const CategoryManager = () => {
         });
       } else {
         const result = await createMutation.mutateAsync(formData);
-        console.log('✅ [CATEGORY] Created:', result); // ✅ ADD: Debug log
+        console.log('✅ [CATEGORY] Created:', result);
         toast.success(t('categories.created'), {
           icon: '🎉',
           duration: 3000
@@ -243,209 +244,347 @@ const CategoryManager = () => {
     }
   };
 
-  // 🎨 PREMIUM ANIMATIONS
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
+  // Handle create new category
+  const handleCreateNew = () => {
+    resetForm();
+    setShowForm(true);
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.9 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 25
-      }
-    }
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1 },
-    hover: { 
-      scale: 1.02,
-      y: -4,
-      transition: { type: "spring", stiffness: 400, damping: 25 }
-    }
-  };
-
-  if (!showForm) return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="large" />
+      </div>
+    );
+  }
 
   return (
-    <Modal
-      isOpen={showForm}
-      onClose={() => {
-        setShowForm(false);
-        resetForm();
-      }}
-      title={
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-            <Tag className="w-5 h-5 text-white" />
-          </div>
-          <span>
-            {editingCategory ? t('categories.edit') : t('categories.create')}
-          </span>
-        </div>
-      }
-      size="large"
-    >
-      <div className="space-y-6">
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      {/* Remove duplicate header - Modal already has header */}
+      
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            label={t('categories.name')}
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            error={errors.name}
-            required
-            placeholder="למשל: קפה וארוחות"
+            placeholder={t('categories.searchPlaceholder')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
           />
+        </div>
+
+        {/* Type Filter */}
+        <div className="flex gap-2">
+          {['all', 'expense', 'income'].map(type => (
+            <Button
+              key={type}
+              variant={filterType === type ? "primary" : "outline"}
+              size="small"
+              onClick={() => setFilterType(type)}
+              className="whitespace-nowrap"
+            >
+              {type === 'all' ? (
+                <>
+                  <Filter className="w-4 h-4 mr-2" />
+                  {t('common.all')}
+                </>
+              ) : type === 'expense' ? (
+                <>
+                  <TrendingDown className="w-4 h-4 mr-2" />
+                  {t('transactions.expense')}
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  {t('transactions.income')}
+                </>
+              )}
+            </Button>
+          ))}
+        </div>
+        
+        {/* Add Create Button to filters row */}
+        <Button
+          onClick={handleCreateNew}
+          className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 whitespace-nowrap"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {t('categories.addNew')}
+        </Button>
+      </div>
+
+      {/* Categories Grid */}
+      <div className="space-y-8">
+        {/* User Categories */}
+        {userCategories.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              {t('categories.userCategories')} ({userCategories.length})
+            </h3>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              variants={{
+                visible: {
+                  transition: {
+                    staggerChildren: 0.1
+                  }
+                }
+              }}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence>
+                {userCategories.map((category, index) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    index={index}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    deleting={deleting === category.id}
+                    isDefault={false}
+                    getIconComponent={getIconComponent}
+                    t={t}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Default Categories */}
+        {defaultCategories.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-500" />
+              {t('categories.defaultCategories')} ({defaultCategories.length})
+            </h3>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              variants={{
+                visible: {
+                  transition: {
+                    staggerChildren: 0.1
+                  }
+                }
+              }}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence>
+                {defaultCategories.map((category, index) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    index={index}
+                    onEdit={null} // Can't edit default categories
+                    onDelete={null} // Can't delete default categories
+                    deleting={false}
+                    isDefault={true}
+                    getIconComponent={getIconComponent}
+                    t={t}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {processedCategories.length === 0 && (
+          <div className="text-center py-12">
+            <Tag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {searchTerm ? t('categories.noResults') : t('categories.noCategories')}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {searchTerm 
+                ? t('categories.tryDifferentSearch')
+                : t('categories.createFirstCategory')
+              }
+            </p>
+            {!searchTerm && (
+              <Button
+                onClick={handleCreateNew}
+                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {t('categories.createFirst')}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Category Form Modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          resetForm();
+        }}
+        title={
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+              <Tag className="w-5 h-5 text-white" />
+            </div>
+            <span>
+              {editingCategory ? t('categories.edit') : t('categories.create')}
+            </span>
+          </div>
+        }
+        size="large"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label={t('categories.name')}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              error={errors.name}
+              required
+              placeholder="למשל: קפה וארוחות"
+            />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('categories.type')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['expense', 'income'].map(type => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant={formData.type === type ? "primary" : "outline"}
+                    onClick={() => setFormData({ ...formData, type })}
+                    className={cn(
+                      "justify-center",
+                      formData.type === type && "ring-2 ring-primary-500 ring-offset-2"
+                    )}
+                  >
+                    {type === 'expense' ? (
+                      <>
+                        <TrendingDown className="w-4 h-4 mr-2" />
+                        {t('transactions.expense')}
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        {t('transactions.income')}
+                      </>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
           
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('categories.type')}
+              {t('categories.description')} 
+              <span className="text-gray-500 text-xs">({t('common.optional')})</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {['expense', 'income'].map(type => (
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder={t('categories.descriptionPlaceholder')}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          
+          {/* Icon Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+              {t('categories.icon')}
+            </label>
+            
+            {/* Icon Category Tabs */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {Object.keys(iconCategories).map(categoryKey => (
                 <Button
-                  key={type}
+                  key={categoryKey}
                   type="button"
-                  variant={formData.type === type ? "primary" : "outline"}
-                  onClick={() => setFormData({ ...formData, type })}
-                  className={cn(
-                    "justify-center",
-                    formData.type === type && "ring-2 ring-primary-500 ring-offset-2"
-                  )}
+                  variant={selectedIconCategory === categoryKey ? "primary" : "outline"}
+                  size="small"
+                  onClick={() => setSelectedIconCategory(categoryKey)}
                 >
-                  {type === 'expense' ? (
-                    <>
-                      <TrendingDown className="w-4 h-4 mr-2" />
-                      {t('transactions.expense')}
-                    </>
-                  ) : (
-                    <>
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      {t('transactions.income')}
-                    </>
-                  )}
+                  {categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)}
                 </Button>
               ))}
             </div>
+            
+            {/* Icon Grid */}
+            <div className="grid grid-cols-6 md:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+              {iconCategories[selectedIconCategory].map(({ name, icon: IconComponent, label }) => (
+                <motion.button
+                  key={name}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, icon: name })}
+                  className={cn(
+                    'p-3 rounded-xl border-2 transition-all group relative',
+                    formData.icon === name
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-110'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:scale-105'
+                  )}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title={label}
+                >
+                  <IconComponent className={cn(
+                    'w-6 h-6 mx-auto transition-colors',
+                    formData.icon === name 
+                      ? 'text-primary-600 dark:text-primary-400' 
+                      : 'text-gray-500 group-hover:text-primary-500'
+                  )} />
+                  
+                  {/* Selection indicator */}
+                  {formData.icon === name && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center"
+                    >
+                      <Star className="w-3 h-3 text-white" />
+                    </motion.div>
+                  )}
+                </motion.button>
+              ))}
+            </div>
           </div>
-        </div>
-        
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('categories.description')} 
-            <span className="text-gray-500 text-xs">({t('common.optional')})</span>
-          </label>
-          <textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder={t('categories.descriptionPlaceholder')}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          />
-        </div>
-        
-        {/* Icon Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-            {t('categories.icon')}
-          </label>
           
-          {/* Icon Category Tabs */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {Object.keys(iconCategories).map(categoryKey => (
-              <Button
-                key={categoryKey}
-                type="button"
-                variant={selectedIconCategory === categoryKey ? "primary" : "outline"}
-                size="small"
-                onClick={() => setSelectedIconCategory(categoryKey)}
-              >
-                {categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)}
-              </Button>
-            ))}
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowForm(false);
+                resetForm();
+              }}
+              disabled={saving}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={saving}
+              disabled={saving || !formData.name.trim()}
+              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {editingCategory ? t('common.save') : t('common.create')}
+            </Button>
           </div>
-          
-          {/* Icon Grid */}
-          <div className="grid grid-cols-6 md:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
-            {iconCategories[selectedIconCategory].map(({ name, icon: IconComponent, label }) => (
-              <motion.button
-                key={name}
-                type="button"
-                onClick={() => setFormData({ ...formData, icon: name })}
-                className={cn(
-                  'p-3 rounded-xl border-2 transition-all group relative',
-                  formData.icon === name
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-110'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:scale-105'
-                )}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title={label}
-              >
-                <IconComponent className={cn(
-                  'w-6 h-6 mx-auto transition-colors',
-                  formData.icon === name 
-                    ? 'text-primary-600 dark:text-primary-400' 
-                    : 'text-gray-500 group-hover:text-primary-500'
-                )} />
-                
-                {/* Selection indicator */}
-                {formData.icon === name && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center"
-                  >
-                    <Star className="w-3 h-3 text-white" />
-                  </motion.div>
-                )}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setShowForm(false);
-              resetForm();
-            }}
-            disabled={saving}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            loading={saving}
-            disabled={saving || !formData.name.trim()}
-            className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {editingCategory ? t('common.save') : t('common.create')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
+        </form>
+      </Modal>
+    </div>
   );
 };
 
