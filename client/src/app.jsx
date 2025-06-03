@@ -14,7 +14,6 @@ import { LanguageProvider } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
-import { ThemeProvider } from './context/ThemeContext';
 import { TransactionProvider } from './context/TransactionContext';
 
 // Lazy-load pages
@@ -134,25 +133,23 @@ function App() {
       }}
     >
       <AuthProvider>
-        <ThemeProvider initialMode="light">
-          <AccessibilityProvider initialDarkMode={false}>
-            <LanguageProvider>
-              <DateProvider>
-                <TransactionProvider>
-                  <CurrencyProvider>
-                    <Suspense fallback={
-                      <div className="h-screen w-screen flex items-center justify-center">
-                        <LoadingSpinner size="large" />
-                      </div>
-                    }>
-                      <AppContent />
-                    </Suspense>
-                  </CurrencyProvider>
-                </TransactionProvider>
-              </DateProvider>
-            </LanguageProvider>
-          </AccessibilityProvider>
-        </ThemeProvider>
+        <AccessibilityProvider initialDarkMode={false}>
+          <LanguageProvider>
+            <DateProvider>
+              <TransactionProvider>
+                <CurrencyProvider>
+                  <Suspense fallback={
+                    <div className="h-screen w-screen flex items-center justify-center">
+                      <LoadingSpinner size="large" />
+                    </div>
+                  }>
+                    <AppContent />
+                  </Suspense>
+                </CurrencyProvider>
+              </TransactionProvider>
+            </DateProvider>
+          </LanguageProvider>
+        </AccessibilityProvider>
       </AuthProvider>
     </Router>
   );

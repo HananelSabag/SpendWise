@@ -25,71 +25,29 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   const queryClient = useQueryClient();
   const targetDate = date || selectedDate;
   
-  // ✅ OPTIMIZATION: Add dependency tracking
   const isAuthenticated = useRef(localStorage.getItem('accessToken'));
   const hookInstanceId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   const formattedDate = getDateForServer(targetDate);
   
-  // ✅ OPTIMIZATION: Reduce console.log in production
-  const debugMode = process.env.NODE_ENV === 'development' && localStorage.getItem('debug_dashboard') === 'true';
-  
-  // ✅ שיפור מעקב ההוקים עם stack trace מפורט
+  // ✅ SIMPLIFIED: Reduce debugging overhead in production
   useEffect(() => {
     const debugMode = localStorage.getItem('debug_dashboard') === 'true';
-    const isProduction = process.env.NODE_ENV === 'production';
     
     activeHooks.add(hookInstanceId);
     
-    // ✅ שמור stack trace מפורט כדי לזהות מי קרא להוק
-    const stackTrace = new Error().stack;
-    const callerLines = stackTrace.split('\n').slice(1, 6); // קח 5 שורות ראשונות
-    const relevantCaller = callerLines.find(line => 
-      line.includes('.jsx') || line.includes('.js') && !line.includes('useDashboard')
-    ) || 'unknown';
-    
-    // ✅ תמיד לוג אם יש יותר מהוק אחד כדי לזהות את הבעיה
-    const shouldLog = debugMode || 
-                     (!isProduction && activeHooks.size === 1) || 
-                     activeHooks.size > 1;
-    
-    if (shouldLog) {
-      console.log(`🚀 [DASHBOARD-HOOK] [${hookInstanceId}] Hook initialized. Total active hooks: ${activeHooks.size}`);
+    // ✅ ONLY log in debug mode or if duplicates detected
+    if (debugMode || activeHooks.size > 1) {
+      console.log(`🚀 [DASHBOARD-HOOK] [${hookInstanceId}] Active hooks: ${activeHooks.size}`);
       
-      // ✅ הצג מידע מפורט אם יש יותר מהוק אחד
       if (activeHooks.size > 1) {
-        console.warn(`⚠️ [DASHBOARD-HOOK] DUPLICATE DETECTED! Hook #${activeHooks.size}`);
-        console.warn(`📍 [DASHBOARD-HOOK] Called from component:`, relevantCaller.trim());
-        console.warn(`🔍 [DASHBOARD-HOOK] Full call stack:`);
-        callerLines.forEach((line, i) => {
-          if (line.includes('.jsx') || line.includes('.js')) {
-            console.warn(`   ${i + 1}. ${line.trim()}`);
-          }
-        });
-        console.warn(`🔍 [DASHBOARD-HOOK] All active hooks:`, Array.from(activeHooks));
-        
-        // ✅ REMOVED: Automatic debugger breakpoint that was stopping execution
-        // Instead, provide detailed logging for manual debugging
-        console.error(`🚨 [DASHBOARD-HOOK] PERFORMANCE WARNING: Multiple dashboard hooks detected!`);
-        console.error(`💡 [DASHBOARD-HOOK] To manually debug, open DevTools and inspect the stack traces above`);
-        console.error(`🔧 [DASHBOARD-HOOK] To enable debug mode, run: localStorage.setItem('debug_dashboard', 'true')`);
+        console.error(`🚨 [CRITICAL] Multiple dashboard hooks detected!`);
+        console.error(`💡 [FIX] Only Dashboard.jsx should call useDashboard()`);
+        console.error(`🔧 [FIX] Other components should receive props`);
       }
-    }
-    
-    // מסמן את הוק הראשי רק אם אין עדיין
-    if (!window._primaryDashboardHook) {
-      window._primaryDashboardHook = hookInstanceId;
     }
     
     return () => {
       activeHooks.delete(hookInstanceId);
-      
-      if (shouldLog || window._primaryDashboardHook === hookInstanceId) {
-        console.log(`💀 [DASHBOARD-HOOK] [${hookInstanceId}] Hook destroyed. Remaining hooks: ${activeHooks.size}`);
-        
-        if (window._primaryDashboardHook === hookInstanceId) {
-          window._primaryDashboardHook = null;
-        }
-      }
     };
   }, [hookInstanceId]);
   
@@ -126,13 +84,13 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     queryFn: () => {
       serverCallCount++;
       
-      if (debugMode) {
-        console.log(`🌐 [API-CALL] #${serverCallCount} Sending dashboard request for: ${formattedDate}`);
+      // ✅ ONLY log if debug mode enabled
+      if (localStorage.getItem('debug_dashboard') === 'true') {
+        console.log(`🌐 [API-CALL] #${serverCallCount} Dashboard request: ${formattedDate}`);
       }
       
       return transactionAPI.getDashboard(targetDate);
     },
-    // ✅ OPTIMIZATION: Add gcTime for better memory management
     enabled: !!targetDate && !!isAuthenticated.current,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes after last use

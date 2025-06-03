@@ -111,12 +111,14 @@ const deleteOldProfilePicture = async (req, res, next) => {
           await fs.unlink(oldPath);
           console.log(`✅ [UPLOAD] Deleted old profile picture: ${oldPath}`);
         } catch (deleteError) {
-          // File doesn't exist or can't be deleted - not a critical error
-          console.log(`⚠️ [UPLOAD] Could not delete old profile picture: ${oldPath}`);
+          // Log the specific error and set a warning flag
+          console.error(`❌ [UPLOAD] Failed to delete old profile picture: ${oldPath}`, deleteError);
+          req.profilePictureDeletionWarning = `Could not delete previous profile picture: ${deleteError.message}`;
         }
       }
     } catch (error) {
-      console.error('Error deleting old profile picture:', error);
+      console.error('❌ [UPLOAD] Error in deleteOldProfilePicture middleware:', error);
+      // Don't fail the request, but log the error properly
     }
   }
   next();

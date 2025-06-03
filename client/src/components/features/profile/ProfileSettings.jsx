@@ -6,23 +6,22 @@ import {
   DollarSign,
   Moon,
   Sun,
-  Bell,
-  Lock,
-  Eye,
-  EyeOff,
   Check,
   Shield,
   Database,
   AlertCircle,
   Save,
-  Info
+  Info,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { useAccessibility } from '../../../context/AccessibilityContext';
 import { cn } from '../../../utils/helpers';
-import { Card, Input, Button, Alert, Badge } from '../../ui';
+import { Card, Input, Button, Alert } from '../../ui';
 import { authAPI } from '../../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -31,7 +30,7 @@ import toast from 'react-hot-toast';
  * User preferences and settings management
  */
 const ProfileSettings = ({ user }) => {
-  const { updateProfile } = useAuth();
+  const { updateProfile, isUpdatingProfile } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const { currency, setCurrency } = useCurrency();
   const { darkMode, setDarkMode } = useAccessibility();
@@ -105,7 +104,7 @@ const ProfileSettings = ({ user }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle password change
+  // Handle password change - Fixed to use AuthContext
   const handlePasswordChange = async () => {
     if (!validatePassword()) return;
     
@@ -140,13 +139,7 @@ const ProfileSettings = ({ user }) => {
     setSavingSettings(true);
     
     try {
-      await updateProfile({
-        preferences: {
-          ...user?.preferences,
-          ...customPreferences
-        }
-      });
-      
+      await authAPI.updatePreferences(customPreferences);
       toast.success(t('profile.customPreferencesSaved'));
     } catch (error) {
       toast.error(t('profile.saveError'));
@@ -216,7 +209,7 @@ const ProfileSettings = ({ user }) => {
     }));
   };
 
-  // Section tabs - simplified to only include actually implemented features
+  // Section tabs
   const sections = [
     { id: 'preferences', label: t('profile.preferences'), icon: Globe },
     { id: 'security', label: t('profile.security'), icon: Shield },
@@ -435,7 +428,7 @@ const ProfileSettings = ({ user }) => {
                 <Button
                   variant="primary"
                   onClick={handlePasswordChange}
-                  loading={savingSettings}
+                  loading={savingSettings || isUpdatingProfile}
                   className="w-full sm:w-auto"
                 >
                   <Shield className="w-4 h-4 mr-2" />

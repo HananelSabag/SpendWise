@@ -39,6 +39,12 @@ const StatsChart = ({
   const { formatAmount } = useCurrency();
   const isRTL = language === 'he';
   
+  // ✅ REMOVED: Duplicate useDashboard() call
+  // const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
+  
+  // ✅ REMOVED: Duplicate useTransactionsList() call since we have dashboard data
+  // const { periodTransactions, loading: transactionsLoading } = useTransactionsList({...});
+  
   // State for range selection
   const [selectedRange, setSelectedRange] = useState('month');
   const [chartType, setChartType] = useState('trend'); // 'trend' | 'category'
@@ -77,9 +83,6 @@ const StatsChart = ({
     }
   ];
 
-  // ✅ REMOVED: Duplicate useDashboard() call
-  // const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
-  
   // Get detailed transaction data for selected range
   const currentRange = ranges.find(r => r.key === selectedRange);
   const { 
@@ -156,7 +159,8 @@ const StatsChart = ({
   // Calculate statistics for selected range
   // ✅ OPTIMIZATION: Memoize expensive calculations
   const stats = useMemo(() => {
-    const transactions = periodTransactions || dashboardData?.recentTransactions || [];
+    // ✅ FIX: Use only dashboardData from props
+    const transactions = dashboardData?.recentTransactions || [];
     
     if (transactions.length === 0) {
       return {
@@ -219,9 +223,10 @@ const StatsChart = ({
       incomeCount: totals.incomeCount,
       expenseCount: totals.expenseCount
     };
-  }, [periodTransactions, dashboardData, currentRange, generateTrendData]);
+  }, [dashboardData, currentRange, generateTrendData]);
 
-  const isLoading = dashboardLoading || transactionsLoading;
+  // ✅ SIMPLIFIED: Use only dashboard loading state
+  const isLoading = dashboardLoading;
 
   // ✅ OPTIMIZATION: Reduce debug logs in production
   useEffect(() => {

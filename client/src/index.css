@@ -415,3 +415,80 @@
     border: 1px solid #e5e7eb;
   }
 }
+
+/* High Contrast Mode Styles - ADD THIS SECTION */
+.high-contrast {
+  /* Stronger text contrast */
+  --color-foreground: 0 0 0; /* Pure black text */
+  --color-muted-foreground: 64 64 64; /* Dark gray for secondary text */
+  
+  /* Enhanced background contrasts */
+  --color-background: 255 255 255; /* Pure white background */
+  --color-muted: 240 240 240; /* Light gray for muted elements */
+  
+  /* Stronger border contrasts */
+  --tw-border-opacity: 1;
+}
+
+.high-contrast.dark {
+  /* Dark mode high contrast */
+  --color-foreground: 255 255 255; /* Pure white text */
+  --color-muted-foreground: 200 200 200; /* Light gray for secondary text */
+  
+  --color-background: 0 0 0; /* Pure black background */
+  --color-muted: 32 32 32; /* Dark gray for muted elements */
+}
+
+/* High contrast specific overrides */
+.high-contrast * {
+  /* Force stronger borders */
+  border-color: currentColor !important;
+}
+
+.high-contrast .card {
+  /* Stronger card borders */
+  @apply border-2 border-gray-900 dark:border-gray-100;
+}
+
+.high-contrast .btn {
+  /* Enhanced button contrast */
+  @apply border-2 font-bold;
+}
+
+.high-contrast .btn-primary {
+  @apply bg-blue-700 border-blue-900 text-white;
+}
+
+.high-contrast .btn-outline {
+  @apply border-gray-900 dark:border-gray-100 text-gray-900 dark:text-gray-100;
+}
+
+.high-contrast input,
+.high-contrast textarea,
+.high-contrast select {
+  /* Stronger form element borders */
+  @apply border-2 border-gray-900 dark:border-gray-100;
+}
+
+.high-contrast .text-gray-500,
+.high-contrast .text-gray-600,
+.high-contrast .text-muted-foreground {
+  /* Make muted text more visible */
+  @apply text-gray-900 dark:text-gray-100;
+}
+
+.high-contrast .bg-gray-50,
+.high-contrast .bg-gray-100 {
+  /* Stronger background contrasts */
+  @apply bg-gray-200 dark:bg-gray-800;
+}
+
+/* Focus indicators for high contrast */
+.high-contrast *:focus {
+  outline: 3px solid #000 !important;
+  outline-offset: 2px !important;
+}
+
+.high-contrast.dark *:focus {
+  outline: 3px solid #fff !important;
+}

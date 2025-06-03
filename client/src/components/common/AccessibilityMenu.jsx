@@ -16,34 +16,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-// Ensure accessibility context exists or create it
-// import { useAccessibility } from '../../context/AccessibilityContext';
+import { useAccessibility } from '../../context/AccessibilityContext'; // ✅ Use real context
 import AccessibilityStatement from './AccessibilityStatement';
-
-// Temporary - simple implementation for accessibility functions until context is created
-const useAccessibility = () => {
-  const [fontSize, setFontSize] = useState(1);
-  const [highContrast, setHighContrast] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  return {
-    fontSize,
-    increaseFontSize: () => setFontSize(prev => Math.min(prev + 0.1, 1.5)),
-    decreaseFontSize: () => setFontSize(prev => Math.max(prev - 0.1, 0.8)),
-    highContrast,
-    setHighContrast,
-    darkMode,
-    setDarkMode,
-    isCollapsed,
-    setIsCollapsed,
-    resetSettings: () => {
-      setFontSize(1);
-      setHighContrast(false);
-      setDarkMode(false);
-    }
-  };
-};
 
 /**
  * AccessibilityMenu Component
@@ -65,8 +39,10 @@ const AccessibilityMenu = () => {
     setDarkMode,
     isCollapsed,
     setIsCollapsed,
-    resetSettings
-  } = useAccessibility();
+    resetSettings,
+    isMinFontSize,
+    isMaxFontSize
+  } = useAccessibility(); // ✅ Now using real context
   
   const isHebrew = language === 'he';
 
@@ -173,7 +149,7 @@ const AccessibilityMenu = () => {
                       onClick={decreaseFontSize}
                       className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                       aria-label={t('accessibility.decreaseFontSize')}
-                      disabled={fontSize <= 0.8}
+                      disabled={isMinFontSize} // ✅ Use context values
                     >
                       <ZoomOut className="w-5 h-5" />
                     </button>
@@ -187,7 +163,7 @@ const AccessibilityMenu = () => {
                       onClick={increaseFontSize}
                       className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                       aria-label={t('accessibility.increaseFontSize')}
-                      disabled={fontSize >= 1.5}
+                      disabled={isMaxFontSize} // ✅ Use context values
                     >
                       <ZoomIn className="w-5 h-5" />
                     </button>

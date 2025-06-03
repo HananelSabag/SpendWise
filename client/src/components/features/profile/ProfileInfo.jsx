@@ -9,23 +9,20 @@ import {
   Edit2, 
   Save, 
   X,
-  Camera, // Added for profile picture upload
-  Upload, // Added for upload button
+  Camera,
   AlertCircle
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
-import { useUpdateProfile, useUploadProfilePicture } from '../../../hooks/useApi'; // Added upload hook
+import { useUploadProfilePicture } from '../../../hooks/useApi';
 import { Card, Button, Input, Alert, Avatar } from '../../ui';
-import { dateHelpers, cn } from '../../../utils/helpers';
+import { dateHelpers } from '../../../utils/helpers';
 import toast from 'react-hot-toast';
-import { queryClient } from '../../../config/queryClient';
 
 const ProfileInfo = ({ user }) => {
   const { t, language } = useLanguage();
-  const { user: authUser } = useAuth();
-  const updateProfileMutation = useUpdateProfile();
-  const uploadMutation = useUploadProfilePicture(); // NEW: Profile picture upload mutation
+  const { updateProfile, isUpdatingProfile } = useAuth();
+  const uploadMutation = useUploadProfilePicture();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -54,7 +51,7 @@ const ProfileInfo = ({ user }) => {
     }
 
     try {
-      await updateProfileMutation.mutateAsync(formData);
+      await updateProfile(formData);
       setIsEditing(false);
       setErrors({});
     } catch (error) {
@@ -71,7 +68,6 @@ const ProfileInfo = ({ user }) => {
     setIsEditing(false);
   };
 
-  // CRITICAL UPDATE: Handle profile picture upload - FIXES PROFILE IMAGE ISSUE
   const handleProfilePictureChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,16 +86,18 @@ const ProfileInfo = ({ user }) => {
     }
 
     try {
-      // Upload the file
-      const result = await uploadMutation.mutateAsync(file);
+      console.log(`🖼️ [PROFILE] Uploading image: ${file.name}`);
       
-      // The backend returns the full URL in result.data.data.path
-      console.log('Upload successful:', result.data);
+      await uploadMutation.mutateAsync(file);
       
-      // Refresh profile data to get the new image
-      queryClient.invalidateQueries(['profile']);
+      // Clear file input
+      const fileInput = document.getElementById('profile-picture-upload');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
     } catch (error) {
-      console.error('Profile picture upload failed:', error);
+      console.error(`❌ [PROFILE] Upload failed:`, error);
     }
   };
 
@@ -144,7 +142,7 @@ const ProfileInfo = ({ user }) => {
         )}
       </div>
 
-      {/* Profile Picture Section - CRITICAL UPDATE FOR PROFILE IMAGE */}
+      {/* Profile Picture Section - Fixed */}
       <div className="flex flex-col items-center mb-6">
         <div 
           className="relative group cursor-pointer"
@@ -157,7 +155,7 @@ const ProfileInfo = ({ user }) => {
             className="ring-4 ring-gray-100 dark:ring-gray-800 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
           />
           
-          {/* Upload overlay - Shows on hover */}
+          {/* Upload overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
             <Camera className="w-6 h-6 text-white mb-1" />
             <span className="text-xs text-white font-medium">
@@ -221,7 +219,7 @@ const ProfileInfo = ({ user }) => {
               type="button"
               variant="outline"
               onClick={handleCancel}
-              disabled={updateProfileMutation.isLoading}
+              disabled={isUpdatingProfile}
             >
               <X className="w-4 h-4 mr-2" />
               {t('common.cancel')}
@@ -229,7 +227,7 @@ const ProfileInfo = ({ user }) => {
             <Button
               type="submit"
               variant="primary"
-              loading={updateProfileMutation.isLoading}
+              loading={isUpdatingProfile}
             >
               <Save className="w-4 h-4 mr-2" />
               {t('common.save')}

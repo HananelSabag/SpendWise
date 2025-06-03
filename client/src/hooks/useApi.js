@@ -321,12 +321,34 @@ export const useDeleteCategory = () => {
 export const useUploadProfilePicture = () => {
   return useMutation({
     mutationFn: (file) => authAPI.uploadProfilePicture(file),
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      console.log('📸 [UPLOAD] Profile picture uploaded successfully:', response.data);
+      
+      // Update the profile query data immediately with the new image URL
+      queryClient.setQueryData(['profile'], (oldData) => {
+        if (!oldData) return oldData;
+        
+        const newImageUrl = response.data.data.fullUrl || response.data.data.path;
+        
+        return {
+          ...oldData,
+          preferences: {
+            ...oldData.preferences,
+            profilePicture: newImageUrl
+          }
+        };
+      });
+      
+      // Also invalidate to ensure fresh data
+      setTimeout(() => {
+        queryClient.invalidateQueries(['profile']);
+      }, 500);
+      
       toast.success('Profile picture updated successfully');
-      queryClient.invalidateQueries(['profile']);
-      return data;
+      return response;
     },
     onError: (error) => {
+      console.error('📸 [UPLOAD] Profile picture upload failed:', error);
       const message = error.response?.data?.error?.message || 'Failed to upload image';
       toast.error(message);
       throw error;

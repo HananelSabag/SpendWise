@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
   
-  // User profile query - ✅ אמור לרוץ פעם אחת בלבד
+  // User profile query - Enhanced with better data handling
   const { 
     data: user, 
     isLoading: loading, 
@@ -44,7 +44,15 @@ export const AuthProvider = ({ children }) => {
       return authAPI.getProfile().then(res => {
         const endTime = Date.now();
         console.log(`✅ [AUTH-API] Profile completed in ${endTime - startTime}ms`);
-        return res.data.data;
+        
+        // Ensure profile picture URL is properly formatted
+        const userData = res.data.data;
+        if (userData.preferences?.profilePicture && !userData.preferences.profilePicture.startsWith('http')) {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          userData.preferences.profilePicture = `${apiUrl}${userData.preferences.profilePicture}`;
+        }
+        
+        return userData;
       }).catch(error => {
         const endTime = Date.now();
         console.error(`❌ [AUTH-API] Profile failed after ${endTime - startTime}ms:`, error);
@@ -53,9 +61,9 @@ export const AuthProvider = ({ children }) => {
     },
     enabled: !!auth.isAuthenticated(),
     retry: 1,
-    staleTime: 10 * 60 * 1000, // 10 דקות
-    refetchOnMount: false, // ✅ לא לרענן בכל mount
-    refetchOnWindowFocus: false, // ✅ לא לרענן בפוקוס
+    staleTime: 5 * 60 * 1000, // Reduced to 5 minutes for faster image updates
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     onError: (error) => {
       if (error.response?.status === 401) {
         console.log(`🔓 [AUTH-ERROR] 401 error - clearing tokens`);
@@ -127,15 +135,35 @@ export const AuthProvider = ({ children }) => {
     }
   });
   
-  // Update profile mutation
+  // Update profile mutation - Enhanced
   const updateProfileMutation = useMutation({
     mutationFn: (data) => authAPI.updateProfile(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['profile']);
+    onSuccess: (response) => {
+      // Properly merge updated data with existing user data
+      queryClient.setQueryData(['profile'], (oldData) => {
+        const updatedData = response.data.data;
+        
+        // Preserve profile picture URL formatting
+        if (updatedData.preferences?.profilePicture && !updatedData.preferences.profilePicture.startsWith('http')) {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          updatedData.preferences.profilePicture = `${apiUrl}${updatedData.preferences.profilePicture}`;
+        }
+        
+        return {
+          ...oldData,
+          ...updatedData,
+          preferences: {
+            ...oldData?.preferences,
+            ...updatedData.preferences
+          }
+        };
+      });
+      
       toast.success('Profile updated successfully');
     },
     onError: (error) => {
-      toast.error('Failed to update profile');
+      const message = error.response?.data?.error?.message || 'Failed to update profile';
+      toast.error(message);
     }
   });
   
@@ -207,7 +235,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // User data
     user,
-    isAuthenticated: !!user && auth.isAuthenticated(), // ✅ וודא שיש גם user וגם token
+    isAuthenticated: !!user && auth.isAuthenticated(),
     
     // Loading states
     loading: loading || !initialized,
@@ -221,7 +249,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
-    refreshToken: refetchProfile,
+    refreshProfile: refetchProfile, // Added to public API
     
     // Loading states for mutations
     isLoggingIn: loginMutation.isLoading,

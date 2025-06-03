@@ -121,6 +121,19 @@ router.put('/preferences',
         });
       }
       
+      // Validate preferences schema
+      const validationErrors = validatePreferences(preferences);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_PREFERENCES',
+            message: 'Invalid preferences format',
+            details: validationErrors,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+      
       const User = require('../models/User');
       const updated = await User.updatePreferences(userId, preferences);
       
@@ -134,6 +147,48 @@ router.put('/preferences',
     }
   }
 );
+
+/**
+ * Validate preferences object structure
+ */
+function validatePreferences(preferences) {
+  const errors = [];
+  const allowedKeys = ['profilePicture', 'theme', 'notifications', 'currency', 'language', 'dateFormat'];
+  
+  // Check for unknown keys
+  Object.keys(preferences).forEach(key => {
+    if (!allowedKeys.includes(key)) {
+      errors.push(`Unknown preference key: ${key}`);
+    }
+  });
+  
+  // Validate specific fields
+  if (preferences.profilePicture !== undefined && typeof preferences.profilePicture !== 'string') {
+    errors.push('profilePicture must be a string');
+  }
+  
+  if (preferences.theme !== undefined && !['light', 'dark'].includes(preferences.theme)) {
+    errors.push('theme must be either "light" or "dark"');
+  }
+  
+  if (preferences.notifications !== undefined && typeof preferences.notifications !== 'object') {
+    errors.push('notifications must be an object');
+  }
+  
+  if (preferences.currency !== undefined && typeof preferences.currency !== 'string') {
+    errors.push('currency must be a string');
+  }
+  
+  if (preferences.language !== undefined && typeof preferences.language !== 'string') {
+    errors.push('language must be a string');
+  }
+  
+  if (preferences.dateFormat !== undefined && typeof preferences.dateFormat !== 'string') {
+    errors.push('dateFormat must be a string');
+  }
+  
+  return errors;
+}
 
 /**
  * @route   POST /api/v1/users/profile/picture
@@ -165,7 +220,7 @@ router.post('/profile/picture',
 
       console.log(`✅ [PROFILE-UPLOAD] Profile picture updated successfully for user ${req.user.id}`);
 
-      res.json({
+      const response = {
         success: true,
         data: {
           filename: req.file.filename,
@@ -174,7 +229,14 @@ router.post('/profile/picture',
           fullUrl: `${req.protocol}://${req.get('host')}${filePath}`
         },
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      // Include warning if old profile picture couldn't be deleted
+      if (req.profilePictureDeletionWarning) {
+        response.warning = req.profilePictureDeletionWarning;
+      }
+
+      res.json(response);
     } catch (err) {
       console.error(`❌ [PROFILE-UPLOAD] Error uploading profile picture:`, err);
       

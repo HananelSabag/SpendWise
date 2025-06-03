@@ -179,7 +179,7 @@ export const authAPI = {
     throw new Error('Test email only available in development');
   },
 
-  // Profile picture upload - FIXES PROFILE IMAGE ISSUE
+  // Profile picture upload - Enhanced with better URL handling
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -194,9 +194,13 @@ export const authAPI = {
     
     console.log('✅ [API] Profile picture upload response:', response.data);
     
-    // Convert relative path to full URL
+    // Ensure proper URL formatting
     if (response.data?.data?.path) {
-      response.data.data.fullUrl = getFullImageUrl(response.data.data.path);
+      const fullUrl = getFullImageUrl(response.data.data.path);
+      response.data.data.fullUrl = fullUrl;
+      
+      // Also set the main path to the full URL for consistency
+      response.data.data.profilePicture = fullUrl;
     }
     
     return response;

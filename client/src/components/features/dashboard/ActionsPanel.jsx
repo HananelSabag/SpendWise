@@ -34,6 +34,10 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   const { t, language } = useLanguage();
   const { createTransaction } = useTransactions();
   const { selectedDate } = useDate();
+  
+  // ✅ CORRECT: This component doesn't need dashboard data
+  // It only creates transactions, so no useDashboard() call needed
+  
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const isRTL = language === 'he';
   
@@ -261,10 +265,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   // Replace hardcoded categories with API data
   const getCategoriesForType = (type) => {
     // ✅ FIX: Show all categories for both types, let user choose
-    return allCategories.filter(cat => {
-      // Show all categories regardless of type for better UX
-      return true;
-    }).map(cat => ({
+    return allCategories.filter(cat => cat.is_active !== false).map(cat => ({
       id: cat.id,
       name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
       icon: getIconForCategory(cat.name),
@@ -325,16 +326,16 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   // Set default category when type changes
   useEffect(() => {
     if (activeType && allCategories.length > 0) {
-      const defaultCategory = allCategories.find(cat => cat.is_default && cat.name === 'General');
-      if (defaultCategory) {
+      const categories = getCategoriesForType(activeType.type);
+      if (categories.length > 0 && !formData.category_id) {
         setFormData(prev => ({
           ...prev,
-          category_id: defaultCategory.id
+          category_id: categories[0].id
         }));
       }
     }
   }, [activeType, allCategories]);
-
+  
   return (
     <motion.div
       variants={containerVariants}
