@@ -11,11 +11,15 @@ import {
   ShoppingCart, Home, Car, Zap, Music, Coffee, Heart,
   Book, Briefcase, DollarSign, Utensils, Gamepad2,
   Plane, GraduationCap, Camera, Gift, Palette,
-  TrendingUp, TrendingDown, Crown, Shield
+  TrendingUp, TrendingDown, Crown, Shield,
+  // ✅ ADD: More useful icons (reasonable amount)
+  Smartphone, Laptop, Fuel, Dumbbell, Pill, Baby,
+  PawPrint, Bus, CreditCard, Banknote, PiggyBank,
+  ShoppingBag, Pizza, Wine, Phone, MapPin
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '../../../hooks/useApi';
-import { Card, Button, Input, Badge, Modal } from '../../ui';
+import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../../ui';
 import { cn } from '../../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -45,43 +49,68 @@ const CategoryManager = () => {
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🎨 PREMIUM ICON COLLECTION - Organized by category
+  // 🎨 IMPROVED ICON COLLECTION - Reasonable amount, well organized
   const iconCategories = {
     general: [
       { name: 'tag', icon: Tag, label: 'General' },
       { name: 'star', icon: Star, label: 'Favorite' },
-      { name: 'sparkles', icon: Sparkles, label: 'Special' }
+      { name: 'sparkles', icon: Sparkles, label: 'Special' },
+      { name: 'crown', icon: Crown, label: 'Premium' },
+      { name: 'gift', icon: Gift, label: 'Gifts' },
+      { name: 'heart', icon: Heart, label: 'Love' }
     ],
     shopping: [
       { name: 'shopping-cart', icon: ShoppingCart, label: 'Shopping' },
-      { name: 'gift', icon: Gift, label: 'Gifts' },
-      { name: 'palette', icon: Palette, label: 'Fashion' }
+      { name: 'shopping-bag', icon: ShoppingBag, label: 'Shopping Bag' },
+      { name: 'palette', icon: Palette, label: 'Fashion' },
+      { name: 'camera', icon: Camera, label: 'Electronics' },
+      { name: 'smartphone', icon: Smartphone, label: 'Phone' },
+      { name: 'laptop', icon: Laptop, label: 'Computer' }
     ],
     home: [
       { name: 'home', icon: Home, label: 'Home' },
       { name: 'zap', icon: Zap, label: 'Utilities' },
-      { name: 'car', icon: Car, label: 'Transport' }
+      { name: 'car', icon: Car, label: 'Car' },
+      { name: 'fuel', icon: Fuel, label: 'Gas' },
+      { name: 'phone', icon: Phone, label: 'Bills' },
+      { name: 'map-pin', icon: MapPin, label: 'Location' }
     ],
-    lifestyle: [
-      { name: 'utensils', icon: Utensils, label: 'Food' },
+    food: [
+      { name: 'utensils', icon: Utensils, label: 'Restaurant' },
       { name: 'coffee', icon: Coffee, label: 'Coffee' },
-      { name: 'music', icon: Music, label: 'Entertainment' },
-      { name: 'gamepad2', icon: Gamepad2, label: 'Gaming' }
+      { name: 'pizza', icon: Pizza, label: 'Fast Food' },
+      { name: 'wine', icon: Wine, label: 'Drinks' }
+    ],
+    transport: [
+      { name: 'car', icon: Car, label: 'Car' },
+      { name: 'bus', icon: Bus, label: 'Public Transport' },
+      { name: 'plane', icon: Plane, label: 'Travel' },
+      { name: 'fuel', icon: Fuel, label: 'Gas' }
     ],
     work: [
       { name: 'briefcase', icon: Briefcase, label: 'Work' },
       { name: 'book', icon: Book, label: 'Education' },
-      { name: 'graduation-cap', icon: GraduationCap, label: 'Learning' }
+      { name: 'graduation-cap', icon: GraduationCap, label: 'Learning' },
+      { name: 'laptop', icon: Laptop, label: 'Tech' }
     ],
     health: [
       { name: 'heart', icon: Heart, label: 'Health' },
-      { name: 'camera', icon: Camera, label: 'Hobbies' },
-      { name: 'plane', icon: Plane, label: 'Travel' }
+      { name: 'dumbbell', icon: Dumbbell, label: 'Fitness' },
+      { name: 'pill', icon: Pill, label: 'Medicine' },
+      { name: 'baby', icon: Baby, label: 'Baby' },
+      { name: 'paw-print', icon: PawPrint, label: 'Pets' }
     ],
     money: [
-      { name: 'dollar-sign', icon: DollarSign, label: 'Income' },
+      { name: 'dollar-sign', icon: DollarSign, label: 'Money' },
+      { name: 'credit-card', icon: CreditCard, label: 'Credit Card' },
+      { name: 'banknote', icon: Banknote, label: 'Cash' },
+      { name: 'piggy-bank', icon: PiggyBank, label: 'Savings' },
       { name: 'trending-up', icon: TrendingUp, label: 'Investment' },
       { name: 'trending-down', icon: TrendingDown, label: 'Expense' }
+    ],
+    entertainment: [
+      { name: 'music', icon: Music, label: 'Music' },
+      { name: 'gamepad2', icon: Gamepad2, label: 'Gaming' }
     ]
   };
 
@@ -159,7 +188,8 @@ const CategoryManager = () => {
           duration: 3000
         });
       } else {
-        await createMutation.mutateAsync(formData);
+        const result = await createMutation.mutateAsync(formData);
+        console.log('✅ [CATEGORY] Created:', result); // ✅ ADD: Debug log
         toast.success(t('categories.created'), {
           icon: '🎉',
           duration: 3000
@@ -168,7 +198,11 @@ const CategoryManager = () => {
       
       setShowForm(false);
       resetForm();
-      refetch(); // Force refresh to get updated data
+      
+      // ✅ FIX: Force immediate refetch
+      await refetch();
+      console.log('✅ [CATEGORY] Categories refetched after creation');
+      
     } catch (error) {
       console.error('Save failed:', error);
       toast.error(t('categories.saveFailed'));
@@ -245,250 +279,173 @@ const CategoryManager = () => {
     }
   };
 
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-8 max-h-[80vh] overflow-y-auto"
-      dir={isRTL ? 'rtl' : 'ltr'}
-    >
-      {/* 🌟 PREMIUM HEADER - FIXED TEXTS */}
-      <motion.div variants={itemVariants} className="text-center">
-        <div className="relative inline-block">
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl blur-lg opacity-30"
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.3, 0.5, 0.3]
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          <div className="relative bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-2xl shadow-xl">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <Crown className="w-8 h-8" />
-              <h2 className="text-2xl font-bold">
-                {t('categories.manageCategories')}
-              </h2>
-            </div>
-            <p className="text-purple-100">
-              ✨ {t('categories.wizardSubtitle')}
-            </p>
-          </div>
-        </div>
-      </motion.div>
+  if (!showForm) return null;
 
-      {/* 🎛️ SMART CONTROLS - FIXED TEXTS */}
-      <motion.div variants={itemVariants}>
-        <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            {/* Search */}
-            <div className="flex-1 w-full lg:w-auto">
-              <Input
-                placeholder={t('categories.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-white dark:bg-gray-800"
-              />
-            </div>
-            
-            {/* Type Filter */}
-            <div className="flex gap-2">
-              {['all', 'income', 'expense'].map(type => (
+  return (
+    <Modal
+      isOpen={showForm}
+      onClose={() => {
+        setShowForm(false);
+        resetForm();
+      }}
+      title={
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+            <Tag className="w-5 h-5 text-white" />
+          </div>
+          <span>
+            {editingCategory ? t('categories.edit') : t('categories.create')}
+          </span>
+        </div>
+      }
+      size="large"
+    >
+      <div className="space-y-6">
+        {/* Basic Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label={t('categories.name')}
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            error={errors.name}
+            required
+            placeholder="למשל: קפה וארוחות"
+          />
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('categories.type')}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {['expense', 'income'].map(type => (
                 <Button
                   key={type}
-                  variant={filterType === type ? "primary" : "outline"}
-                  size="small"
-                  onClick={() => setFilterType(type)}
+                  type="button"
+                  variant={formData.type === type ? "primary" : "outline"}
+                  onClick={() => setFormData({ ...formData, type })}
                   className={cn(
-                    "transition-all",
-                    filterType === type && "shadow-lg transform scale-105"
+                    "justify-center",
+                    formData.type === type && "ring-2 ring-primary-500 ring-offset-2"
                   )}
                 >
-                  {type === 'all' && '🌟 '}
-                  {type === 'income' && '💰 '}
-                  {type === 'expense' && '💸 '}
-                  {t(`categories.filter.${type}`)}
+                  {type === 'expense' ? (
+                    <>
+                      <TrendingDown className="w-4 h-4 mr-2" />
+                      {t('transactions.expense')}
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      {t('transactions.income')}
+                    </>
+                  )}
                 </Button>
               ))}
             </div>
-            
-            {/* Add Button */}
-            <Button
-              variant="primary"
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('categories.addNew')}
-            </Button>
           </div>
-        </Card>
-      </motion.div>
-
-      {/* 📊 STATS OVERVIEW - FIXED TEXTS */}
-      <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm">{t('categories.stats.total')}</p>
-                <p className="text-2xl font-bold">{processedCategories.length}</p>
-              </div>
-              <Shield className="w-8 h-8 text-green-200" />
-            </div>
-          </Card>
-          
-          <Card className="p-4 bg-gradient-to-r from-blue-400 to-cyan-500 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm">{t('categories.stats.personal')}</p>
-                <p className="text-2xl font-bold">{userCategories.length}</p>
-              </div>
-              <Star className="w-8 h-8 text-blue-200" />
-            </div>
-          </Card>
-          
-          <Card className="p-4 bg-gradient-to-r from-purple-400 to-pink-500 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm">{t('categories.stats.default')}</p>
-                <p className="text-2xl font-bold">{defaultCategories.length}</p>
-              </div>
-              <Crown className="w-8 h-8 text-purple-200" />
-            </div>
-          </Card>
         </div>
-      </motion.div>
-
-      {/* 👤 USER CATEGORIES - FIXED TEXTS */}
-      <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Star className="w-6 h-6" />
-              {t('categories.userCategories')}
-            </h3>
-            <p className="text-indigo-100 mt-1">{t('categories.userCategoriesDesc')}</p>
-          </div>
+        
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('categories.description')} 
+            <span className="text-gray-500 text-xs">({t('common.optional')})</span>
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t('categories.descriptionPlaceholder')}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+        </div>
+        
+        {/* Icon Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+            {t('categories.icon')}
+          </label>
           
-          {userCategories.length === 0 ? (
-            <div className="p-12 text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", delay: 0.2 }}
+          {/* Icon Category Tabs */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {Object.keys(iconCategories).map(categoryKey => (
+              <Button
+                key={categoryKey}
+                type="button"
+                variant={selectedIconCategory === categoryKey ? "primary" : "outline"}
+                size="small"
+                onClick={() => setSelectedIconCategory(categoryKey)}
               >
-                <Sparkles className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h4 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                  {t('categories.noUserCategories')}
-                </h4>
-                <p className="text-gray-500 dark:text-gray-500 mb-6">
-                  {t('categories.noUserCategoriesDesc')}
-                </p>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(true);
-                  }}
-                  className="bg-gradient-to-r from-purple-500 to-indigo-600"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t('categories.createFirst')}
-                </Button>
-              </motion.div>
-            </div>
-          ) : (
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {userCategories.map((category, index) => (
-                  <CategoryCard
-                    key={`user-${category.id}`}
-                    category={category}
-                    index={index}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    deleting={deleting === category.id}
-                    getIconComponent={getIconComponent}
-                    t={t}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </Card>
-      </motion.div>
-
-      {/* 🏛️ DEFAULT CATEGORIES - FIXED TEXTS */}
-      <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Crown className="w-6 h-6" />
-              {t('categories.defaultCategories')}
-            </h3>
-            <p className="text-emerald-100 mt-1">{t('categories.defaultCategoriesDesc')}</p>
-          </div>
-          
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {defaultCategories.map((category, index) => (
-              <CategoryCard
-                key={`default-${category.id}`}
-                category={category}
-                index={index}
-                isDefault={true}
-                getIconComponent={getIconComponent}
-                t={t}
-              />
+                {categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)}
+              </Button>
             ))}
           </div>
-        </Card>
-      </motion.div>
-
-      {/* 🎨 CATEGORY FORM MODAL */}
-      <Modal
-        isOpen={showForm}
-        onClose={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-              <Tag className="w-5 h-5 text-white" />
-            </div>
-            <span>
-              {editingCategory ? t('categories.edit') : t('categories.create')}
-            </span>
+          
+          {/* Icon Grid */}
+          <div className="grid grid-cols-6 md:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+            {iconCategories[selectedIconCategory].map(({ name, icon: IconComponent, label }) => (
+              <motion.button
+                key={name}
+                type="button"
+                onClick={() => setFormData({ ...formData, icon: name })}
+                className={cn(
+                  'p-3 rounded-xl border-2 transition-all group relative',
+                  formData.icon === name
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-110'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:scale-105'
+                )}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title={label}
+              >
+                <IconComponent className={cn(
+                  'w-6 h-6 mx-auto transition-colors',
+                  formData.icon === name 
+                    ? 'text-primary-600 dark:text-primary-400' 
+                    : 'text-gray-500 group-hover:text-primary-500'
+                )} />
+                
+                {/* Selection indicator */}
+                {formData.icon === name && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center"
+                  >
+                    <Star className="w-3 h-3 text-white" />
+                  </motion.div>
+                )}
+              </motion.button>
+            ))}
           </div>
-        }
-        size="large"
-      >
-        <CategoryForm
-          formData={formData}
-          setFormData={setFormData}
-          errors={errors}
-          onSubmit={handleSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            resetForm();
-          }}
-          saving={saving}
-          editingCategory={editingCategory}
-          iconCategories={iconCategories}
-          t={t}
-          isRTL={isRTL}
-        />
-      </Modal>
-    </motion.div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setShowForm(false);
+              resetForm();
+            }}
+            disabled={saving}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={saving}
+            disabled={saving || !formData.name.trim()}
+            className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {editingCategory ? t('common.save') : t('common.create')}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 };
 

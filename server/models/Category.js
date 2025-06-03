@@ -16,26 +16,18 @@ class Category {
    */
   static async getAll(userId = null) {
     try {
-      // ✅ PROPERLY FIXED: Get defaults + user's custom categories without duplicates
+      // ✅ FIXED: Based on actual schema - all categories are shared
+      // Only default categories exist in the current schema
       const query = `
         SELECT DISTINCT
           id, name, description, icon, type, is_default, created_at
         FROM categories
-        WHERE is_default = true
-           OR (is_default = false AND id IN (
-             SELECT DISTINCT category_id 
-             FROM (
-               SELECT category_id FROM expenses WHERE user_id = $1 AND category_id IS NOT NULL
-               UNION
-               SELECT category_id FROM income WHERE user_id = $1 AND category_id IS NOT NULL
-             ) user_categories
-           ))
         ORDER BY is_default DESC, type, name;
       `;
       
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query);
       
-      console.log(`[CATEGORY-DEBUG] Retrieved ${result.rows.length} categories (8 defaults + user categories)`);
+      console.log(`[CATEGORY-DEBUG] Retrieved ${result.rows.length} categories`);
       
       return result.rows;
     } catch (error) {
@@ -45,7 +37,7 @@ class Category {
   }
 
   /**
-   * Create a new category
+   * Create a new category - DISABLED until schema supports user categories
    * @param {Object} data - Category data
    * @returns {Promise<Object>} Created category
    */
@@ -53,6 +45,7 @@ class Category {
     const { name, description, icon, type } = data;
     
     try {
+      // ✅ FIXED: Create category without user_id (shared categories)
       const query = `
         INSERT INTO categories (name, description, icon, type, is_default)
         VALUES ($1, $2, $3, $4, false)
@@ -61,6 +54,8 @@ class Category {
       
       const values = [name, description, icon, type];
       const result = await db.query(query, values);
+      
+      console.log(`[CATEGORY-DEBUG] Created category:`, result.rows[0]);
       
       return result.rows[0];
     } catch (error) {
@@ -101,8 +96,7 @@ class Category {
           name = COALESCE($1, name),
           description = COALESCE($2, description),
           icon = COALESCE($3, icon),
-          type = COALESCE($4, type),
-          created_at = NOW()
+          type = COALESCE($4, type)
         WHERE id = $5 AND is_default = false
         RETURNING *;
       `;

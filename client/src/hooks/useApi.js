@@ -33,10 +33,19 @@ export const useTransactionsQuery = (filters) => {
 };
 
 export const useRecurringTransactions = (type) => {
+  // ✅ ADD: Get auth status to prevent unnecessary calls
+  const isAuthenticated = localStorage.getItem('accessToken');
+  
   return useQuery({
     queryKey: ['recurring', type],
     queryFn: () => transactionAPI.getRecurring(type),
+    // ✅ ADD: Only run when authenticated
+    enabled: !!isAuthenticated,
     staleTime: 60 * 1000, // One minute
+    // ✅ ADD: Disable window focus refetch for unauthenticated users
+    refetchOnWindowFocus: !!isAuthenticated,
+    // ✅ ADD: Disable mount refetch for unauthenticated users  
+    refetchOnMount: !!isAuthenticated,
     // Improve data handling
     select: (response) => {
       const data = response.data;
@@ -60,9 +69,18 @@ export const useTransactionSearch = (searchTerm, enabled = true) => {
 };
 
 export const useTemplates = () => {
+  // ✅ ADD: Get auth status to prevent unnecessary calls
+  const isAuthenticated = localStorage.getItem('accessToken');
+  
   return useQuery({
     queryKey: ['templates'],
     queryFn: () => transactionAPI.getTemplates(),
+    // ✅ ADD: Only run when authenticated
+    enabled: !!isAuthenticated,
+    // ✅ ADD: Disable window focus refetch for unauthenticated users
+    refetchOnWindowFocus: !!isAuthenticated,
+    // ✅ ADD: Disable mount refetch for unauthenticated users
+    refetchOnMount: !!isAuthenticated,
     // Improve data handling
     select: (response) => {
       const data = response.data;
@@ -153,10 +171,16 @@ export const useDeleteTemplate = () => {
  * Auth Hooks
  */
 export const useProfile = () => {
+  const isAuthenticated = localStorage.getItem('accessToken');
+  
   return useQuery({
     queryKey: ['profile'],
     queryFn: () => authAPI.getProfile(),
-    staleTime: 10 * 60 * 1000, // Profile data fresh for 10 minutes
+    // ✅ ADD: Auth guards
+    enabled: !!isAuthenticated,
+    refetchOnWindowFocus: false, // ✅ DISABLED: Profile rarely changes
+    refetchOnMount: !!isAuthenticated,
+    staleTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour - profile is stable
   });
 };
 
@@ -184,15 +208,67 @@ export const useUpdatePreferences = () => {
   });
 };
 
+/**
+ * Password Reset Hooks - Enhanced for email service
+ */
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: (email) => authAPI.forgotPassword(email),
+    onSuccess: (response) => {
+      // Check if it's development mode with email sent
+      const data = response.data;
+      if (data.data?.resetUrl && data.data?.note) {
+        // Development mode - email was sent but also show URL
+        toast.success('Password reset email sent! (Check console for dev link)');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔗 [DEV] Direct reset link:', data.data.resetUrl);
+        }
+      } else if (data.data?.token) {
+        // Development fallback mode
+        toast.success('Email service unavailable - check console for reset link');
+        console.log('🔗 [DEV] Reset link:', data.data.resetUrl);
+      } else {
+        // Production mode or normal success
+        toast.success('Reset link sent to your email');
+      }
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to send reset link';
+      toast.error(message);
+    }
+  });
+};
+
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: ({ token, newPassword }) => authAPI.resetPassword(token, newPassword),
+    onSuccess: () => {
+      toast.success('Password reset successfully');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to reset password';
+      toast.error(message);
+    }
+  });
+};
+
 // CRITICAL UPDATE: Add new hooks for categories - FIXES GAP #4
 export const useCategories = () => {
+  const isAuthenticated = localStorage.getItem('accessToken');
+  
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => transactionAPI.getCategories(),
-    staleTime: 10 * 60 * 1000, // 10 minutes - categories don't change often
+    enabled: !!isAuthenticated,
+    refetchOnWindowFocus: false,
+    refetchOnMount: !!isAuthenticated,
+    staleTime: 5 * 60 * 1000, // ✅ REDUCED: 5 minutes so new categories appear faster
     select: (response) => {
+      console.log('📁 [CATEGORIES] Raw response:', response.data); // ✅ ADD: Debug log
       const data = response.data;
-      return Array.isArray(data.data) ? data.data : [];
+      const categories = Array.isArray(data.data) ? data.data : [];
+      console.log('📁 [CATEGORIES] Processed categories:', categories); // ✅ ADD: Debug log
+      return categories;
     }
   });
 };
@@ -200,11 +276,13 @@ export const useCategories = () => {
 export const useCreateCategory = () => {
   return useMutation({
     mutationFn: (data) => transactionAPI.createCategory(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('📁 [CATEGORIES] Created successfully:', response.data); // ✅ ADD: Debug log
       toast.success('Category created successfully');
       queryClient.invalidateQueries(['categories']);
     },
     onError: (error) => {
+      console.error('📁 [CATEGORIES] Create failed:', error); // ✅ ADD: Debug log
       const message = error.response?.data?.error?.message || 'Failed to create category';
       toast.error(message);
     }
@@ -252,6 +330,20 @@ export const useUploadProfilePicture = () => {
       const message = error.response?.data?.error?.message || 'Failed to upload image';
       toast.error(message);
       throw error;
+    }
+  });
+};
+
+// Add test email hook for development
+export const useTestEmail = () => {
+  return useMutation({
+    mutationFn: (email) => authAPI.testEmail(email),
+    onSuccess: () => {
+      toast.success('Test email sent successfully!');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.error?.message || 'Failed to send test email';
+      toast.error(message);
     }
   });
 };

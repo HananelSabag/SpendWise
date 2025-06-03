@@ -167,6 +167,18 @@ export const authAPI = {
   register: (userData) => api.post('/users/register', userData),
   logout: () => api.post('/users/logout'),
   
+  // Password reset functionality - Enhanced
+  forgotPassword: (email) => api.post('/users/forgot-password', { email }),
+  resetPassword: (token, newPassword) => api.post('/users/reset-password', { token, newPassword }),
+  
+  // Test email for development
+  testEmail: (email) => {
+    if (process.env.NODE_ENV === 'development') {
+      return api.post('/users/test-email', { email });
+    }
+    throw new Error('Test email only available in development');
+  },
+
   // Profile picture upload - FIXES PROFILE IMAGE ISSUE
   uploadProfilePicture: async (file) => {
     const formData = new FormData();
@@ -264,10 +276,22 @@ export const transactionAPI = {
   }),
   
   // Categories - FIXED IMPLEMENTATION
-  getCategories: () => api.get('/categories'),
-  createCategory: (data) => api.post('/categories', data),
-  updateCategory: (id, data) => api.put(`/categories/${id}`, data),
-  deleteCategory: (id) => api.delete(`/categories/${id}`),
+  getCategories: () => {
+    console.log('📁 [API] Fetching categories');
+    return api.get('/categories');
+  },
+  createCategory: (data) => {
+    console.log('📁 [API] Creating category:', data);
+    return api.post('/categories', data);
+  },
+  updateCategory: (id, data) => {
+    console.log('📁 [API] Updating category:', id, data);
+    return api.put(`/categories/${id}`, data);
+  },
+  deleteCategory: (id) => {
+    console.log('📁 [API] Deleting category:', id);
+    return api.delete(`/categories/${id}`);
+  },
   
   // Fix getAll to work with existing server
   getAll: async (params = {}) => {

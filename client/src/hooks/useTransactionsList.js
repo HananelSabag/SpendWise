@@ -13,6 +13,9 @@ export const useTransactionsList = (options = {}) => {
   
   const { selectedDate, getDateForServer } = useDate();
   const targetDate = getDateForServer ? getDateForServer(selectedDate) : selectedDate.toISOString().split('T')[0];
+  
+  // ✅ ADD: Check authentication status
+  const isAuthenticated = localStorage.getItem('accessToken');
 
   const {
     data,
@@ -67,7 +70,11 @@ export const useTransactionsList = (options = {}) => {
         };
       }
     },
-    enabled: true,
+    // ✅ ADD: Only run when authenticated
+    enabled: !!isAuthenticated,
+    // ✅ ADD: Disable unnecessary refetches for unauthenticated users
+    refetchOnWindowFocus: !!isAuthenticated,
+    refetchOnMount: !!isAuthenticated,
     staleTime: 30 * 1000,
     retry: 2,
     select: (response) => {
@@ -125,6 +132,8 @@ export const useTransactionsList = (options = {}) => {
 };
 
 export const useRecurringTransactionsList = () => {
+  const isAuthenticated = localStorage.getItem('accessToken');
+  
   return useQuery({
     queryKey: ['recurring-transactions'],
     queryFn: async () => {
@@ -132,6 +141,10 @@ export const useRecurringTransactionsList = () => {
       const response = await transactionAPI.getRecurring();
       return response;
     },
+    // ✅ ADD: Auth guards
+    enabled: !!isAuthenticated,
+    refetchOnWindowFocus: !!isAuthenticated,
+    refetchOnMount: !!isAuthenticated,
     select: (response) => {
       const data = response?.data || response;
       return Array.isArray(data.data) ? data.data : [];

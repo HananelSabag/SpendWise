@@ -232,7 +232,14 @@ const Dashboard = () => {
                       </h1>
                       <p className="text-white/90 flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        {formatDate(selectedDate, language === 'he' ? 'PPP' : 'PPPP')}
+                        {/* ✅ FIX: Use local timezone date formatting */}
+                        {(() => {
+                          const date = selectedDate || new Date();
+                          const formatOptions = language === 'he' 
+                            ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+                            : { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                          return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
+                        })()}
                       </p>
                     </div>
                     
@@ -252,7 +259,11 @@ const Dashboard = () => {
                         className="bg-primary-700/50 text-white border-white/30 px-4 py-2"
                       >
                         <Calendar className="w-4 h-4 mr-2" />
-                        {new Date().toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {month: 'short'})}
+                        {/* ✅ FIX: Use local timezone for month display */}
+                        {(() => {
+                          const today = new Date();
+                          return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'short' });
+                        })()}
                       </Badge>
                     </div>
                   </div>
@@ -285,7 +296,11 @@ const Dashboard = () => {
 
               {/* NEW: Charts Section */}
               <motion.div variants={itemVariants}>
-                <StatsChart period="month" showTitle={true} />
+                <StatsChart 
+                  dashboardData={dashboardData}
+                  loading={isDashboardLoading}
+                  className="lg:col-span-2" 
+                />
               </motion.div>
 
               {/* Bottom Section: Recent Transactions - Full Width */}

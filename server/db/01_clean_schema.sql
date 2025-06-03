@@ -92,3 +92,16 @@ CREATE INDEX idx_expenses_user_date ON expenses(user_id, date) WHERE deleted_at 
 CREATE INDEX idx_income_user_date ON income(user_id, date) WHERE deleted_at IS NULL;
 CREATE INDEX idx_expenses_template ON expenses(template_id) WHERE template_id IS NOT NULL;
 CREATE INDEX idx_income_template ON income(template_id) WHERE template_id IS NOT NULL;
+
+-- Password reset tokens table
+CREATE TABLE password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for password reset tokens
+CREATE INDEX idx_password_reset_tokens ON password_reset_tokens(token, used, expires_at);

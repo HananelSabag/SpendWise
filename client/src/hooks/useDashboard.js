@@ -25,8 +25,13 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   const queryClient = useQueryClient();
   const targetDate = date || selectedDate;
   
+  // ✅ OPTIMIZATION: Add dependency tracking
+  const isAuthenticated = useRef(localStorage.getItem('accessToken'));
   const hookInstanceId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   const formattedDate = getDateForServer(targetDate);
+  
+  // ✅ OPTIMIZATION: Reduce console.log in production
+  const debugMode = process.env.NODE_ENV === 'development' && localStorage.getItem('debug_dashboard') === 'true';
   
   // ✅ שיפור מעקב ההוקים עם stack trace מפורט
   useEffect(() => {
@@ -121,33 +126,21 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     queryFn: () => {
       serverCallCount++;
       
-      // ✅ לוג רק מהוק הראשי או אם debug מפורש
-      const debugMode = localStorage.getItem('debug_dashboard') === 'true';
-      const shouldLog = debugMode || window._primaryDashboardHook === hookInstanceId;
-      
-      if (shouldLog) {
-        console.log(`🌐 [API-CALL] #${serverCallCount} [${hookInstanceId}] Sending dashboard request for: ${formattedDate}`);
+      if (debugMode) {
+        console.log(`🌐 [API-CALL] #${serverCallCount} Sending dashboard request for: ${formattedDate}`);
       }
       
-      const startTime = Date.now();
-      
-      return transactionAPI.getDashboard(targetDate).then(result => {
-        const endTime = Date.now();
-        if (shouldLog) {
-          console.log(`✅ [API-RESPONSE] #${serverCallCount} [${hookInstanceId}] Completed in ${endTime - startTime}ms`);
-        }
-        return result;
-      }).catch(error => {
-        const endTime = Date.now();
-        console.error(`❌ [API-ERROR] #${serverCallCount} [${hookInstanceId}] Failed after ${endTime - startTime}ms:`, error);
-        throw error;
-      });
+      return transactionAPI.getDashboard(targetDate);
     },
-    enabled: !!targetDate,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
+    // ✅ OPTIMIZATION: Add gcTime for better memory management
+    enabled: !!targetDate && !!isAuthenticated.current,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes after last use
+    refetchOnWindowFocus: !!isAuthenticated.current,
+    refetchOnMount: !!isAuthenticated.current,
+    refetchInterval: false,
+    // ✅ OPTIMIZATION: Add notifyOnChangeProps to reduce re-renders
+    notifyOnChangeProps: ['data', 'error', 'isLoading'],
     select: React.useCallback((response) => {
       const data = response.data.data;
       
@@ -205,7 +198,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       }
       
       return result;
-    }, [hookInstanceId, formattedDate]),
+    }, [hookInstanceId, formattedDate, isAuthenticated]), // ✅ Add isAuthenticated to dependencies
   });
 };
 

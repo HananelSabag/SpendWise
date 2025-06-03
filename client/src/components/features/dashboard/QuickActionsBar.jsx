@@ -10,7 +10,9 @@ import {
   TrendingUp,
   TrendingDown,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Activity
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
@@ -147,6 +149,36 @@ const QuickActionsBar = () => {
       }
     }
   };
+
+  const quickActions = [
+    {
+      id: 'expense',
+      title: t('actions.quickExpense'),
+      subtitle: t('actions.quickExpenseDesc'),
+      icon: TrendingDown,
+      color: 'red',
+      gradient: 'from-red-500 to-red-600',
+      actionType: 'expense'
+    },
+    {
+      id: 'income',
+      title: t('actions.quickIncome'),
+      subtitle: t('actions.quickIncomeDesc'),
+      icon: TrendingUp,
+      color: 'green',
+      gradient: 'from-green-500 to-green-600',
+      actionType: 'income'
+    },
+    {
+      id: 'recurring',
+      title: t('actions.recurringSetup'),
+      subtitle: t('actions.recurringSetupDesc'),
+      icon: Clock,
+      color: 'blue',
+      gradient: 'from-blue-500 to-blue-600',
+      actionType: 'recurring'
+    }
+  ];
 
   return (
     <>
@@ -318,6 +350,61 @@ const QuickActionsBar = () => {
             </div>
           </div>
         </Card>
+
+        {/* Quick Actions Secondary Panel (Newly Added) */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mt-4"
+        >
+          <Card className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md rounded-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('actions.quickActions')}
+              </h4>
+              <Badge variant="primary" className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0">
+                <Activity className="w-3 h-3 mr-1" />
+                {t('common.active')}
+              </Badge>
+            </div>
+
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {quickActions.map((action) => (
+                <motion.button
+                  key={action.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSubmit(action.actionType)}
+                  className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 transition-all group"
+                >
+                  <div className={`p-3 rounded-xl bg-gradient-to-br ${action.gradient} group-hover:scale-110 transition-transform`}>
+                    <action.icon className="w-5 h-5 text-white" />
+                  </div>
+                  
+                  <div className="flex-1 ml-4 text-left">
+                    <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      {action.title}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {action.subtitle}
+                    </p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                {t('dashboard.quickActionsHint')}
+              </p>
+            </div>
+          </Card>
+        </motion.div>
       </motion.div>
     </>
   );

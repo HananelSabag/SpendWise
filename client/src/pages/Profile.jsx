@@ -54,9 +54,26 @@ const Profile = () => {
   // Calculate member duration
   const getMemberDuration = () => {
     if (!user?.created_at) return null;
-    const joinDate = new Date(user.created_at);
+    
+    // ✅ FIX: Use local timezone date handling to prevent timezone shifts
+    const joinDate = new Date(user.created_at + 'T12:00:00'); // Add noon to prevent timezone issues
     const now = new Date();
-    const diffInDays = Math.floor((now - joinDate) / (1000 * 60 * 60 * 24));
+    
+    // Calculate difference using local timezone methods
+    const joinYear = joinDate.getFullYear();
+    const joinMonth = joinDate.getMonth();
+    const joinDay = joinDate.getDate();
+    
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth();
+    const nowDay = now.getDate();
+    
+    // Create normalized dates for accurate calculation
+    const normalizedJoinDate = new Date(joinYear, joinMonth, joinDay);
+    const normalizedNowDate = new Date(nowYear, nowMonth, nowDay);
+    
+    const diffInMs = normalizedNowDate - normalizedJoinDate;
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
     if (diffInDays < 30) return { value: diffInDays, unit: 'days' };
     if (diffInDays < 365) return { value: Math.floor(diffInDays / 30), unit: 'months' };
@@ -201,7 +218,15 @@ const Profile = () => {
                 <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                   <Badge variant="default" className="bg-white/20 text-white border-white/30">
                     <Activity className="w-4 h-4 mr-1" />
-                    {t('profile.memberSince')} {dateHelpers.format(user?.created_at, 'MMM yyyy', language)}
+                    {/* ✅ FIX: Use local timezone formatting */}
+                    {t('profile.memberSince')} {(() => {
+                      if (!user?.created_at) return '';
+                      const date = new Date(user.created_at + 'T12:00:00');
+                      return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                        year: 'numeric',
+                        month: 'short'
+                      });
+                    })()}
                   </Badge>
                   
                   {user?.isPremium && (

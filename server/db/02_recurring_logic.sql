@@ -7,6 +7,7 @@ DECLARE
     template RECORD;
     next_date DATE;
     generation_end_date DATE;
+    last_generated_date DATE;
 BEGIN
     -- Set generation period (3 months ahead)
     generation_end_date := CURRENT_DATE + INTERVAL '3 months';
@@ -19,38 +20,73 @@ BEGIN
     LOOP
         -- Find last generated date for this template
         EXECUTE format('
-            SELECT COALESCE(MAX(date), $1 - INTERVAL ''1 day'') 
+            SELECT MAX(date) 
             FROM %I 
-            WHERE template_id = $2 AND deleted_at IS NULL',
+            WHERE template_id = $1 AND deleted_at IS NULL',
             CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
-        ) INTO next_date USING template.start_date, template.id;
+        ) INTO last_generated_date USING template.id;
+        
+        -- ✅ CRITICAL FIX: Set starting point correctly
+        IF last_generated_date IS NULL THEN
+            -- NEW template: Start from the actual start_date (include it!)
+            next_date := template.start_date;
+        ELSE
+            -- EXISTING template: Start from day after last generated
+            next_date := last_generated_date;
+        END IF;
         
         -- Generate transactions until generation_end_date
-        WHILE next_date < generation_end_date AND (template.end_date IS NULL OR next_date <= template.end_date) LOOP
-            -- Calculate next occurrence
-            next_date := CASE template.interval_type
-                WHEN 'daily' THEN next_date + INTERVAL '1 day'
-                WHEN 'weekly' THEN next_date + INTERVAL '1 week'
-                WHEN 'monthly' THEN 
-                    -- Smart monthly calculation
-                    CASE 
-                        WHEN template.day_of_month IS NOT NULL THEN
-                            -- Next month on specific day
-                            (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                             (template.day_of_month - 1) * INTERVAL '1 day')::DATE
-                        ELSE
-                            next_date + INTERVAL '1 month'
-                    END
-            END;
+        WHILE next_date <= generation_end_date AND (template.end_date IS NULL OR next_date <= template.end_date) LOOP
             
-            -- Skip if in the past
+            -- ✅ FIX: For existing templates, calculate NEXT occurrence first
+            IF last_generated_date IS NOT NULL THEN
+                next_date := CASE template.interval_type
+                    WHEN 'daily' THEN next_date + INTERVAL '1 day'
+                    WHEN 'weekly' THEN next_date + INTERVAL '1 week'
+                    WHEN 'monthly' THEN 
+                        -- Smart monthly calculation
+                        CASE 
+                            WHEN template.day_of_month IS NOT NULL THEN
+                                -- Next month on specific day
+                                (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
+                                 (template.day_of_month - 1) * INTERVAL '1 day')::DATE
+                            ELSE
+                                next_date + INTERVAL '1 month'
+                        END
+                END;
+            END IF;
+            
+            -- Skip if in the past (but allow today!)
             IF next_date < CURRENT_DATE THEN
-                CONTINUE;
+                -- ✅ FIX: For new templates on first iteration, don't skip start_date
+                IF last_generated_date IS NULL AND next_date = template.start_date AND next_date = CURRENT_DATE THEN
+                    -- This is a new template starting today - DON'T skip it!
+                ELSE
+                    CONTINUE;
+                END IF;
             END IF;
             
             -- Skip if beyond template end date
             IF template.end_date IS NOT NULL AND next_date > template.end_date THEN
                 EXIT;
+            END IF;
+            
+            -- ✅ FIX: Skip if date is in skip_dates array
+            IF template.skip_dates IS NOT NULL AND next_date = ANY(template.skip_dates) THEN
+                -- Calculate next occurrence and continue
+                next_date := CASE template.interval_type
+                    WHEN 'daily' THEN next_date + INTERVAL '1 day'
+                    WHEN 'weekly' THEN next_date + INTERVAL '1 week'
+                    WHEN 'monthly' THEN 
+                        CASE 
+                            WHEN template.day_of_month IS NOT NULL THEN
+                                (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
+                                 (template.day_of_month - 1) * INTERVAL '1 day')::DATE
+                            ELSE
+                                next_date + INTERVAL '1 month'
+                        END
+                END;
+                CONTINUE;
             END IF;
             
             -- Insert transaction
@@ -61,6 +97,25 @@ BEGIN
                 CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
             ) USING template.user_id, template.amount, template.description, 
                     next_date, template.category_id, template.id;
+            
+            -- ✅ FIX: For new templates, NOW calculate next occurrence after inserting
+            IF last_generated_date IS NULL THEN
+                last_generated_date := next_date; -- Mark that we're no longer "new"
+            END IF;
+            
+            -- Calculate next occurrence for next iteration
+            next_date := CASE template.interval_type
+                WHEN 'daily' THEN next_date + INTERVAL '1 day'
+                WHEN 'weekly' THEN next_date + INTERVAL '1 week'
+                WHEN 'monthly' THEN 
+                    CASE 
+                        WHEN template.day_of_month IS NOT NULL THEN
+                            (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
+                             (template.day_of_month - 1) * INTERVAL '1 day')::DATE
+                        ELSE
+                            next_date + INTERVAL '1 month'
+                    END
+            END;
         END LOOP;
     END LOOP;
 END;

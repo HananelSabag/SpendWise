@@ -108,8 +108,7 @@ class User {
       const { 
         username, 
         currentPassword, 
-        newPassword,
-        preferences 
+        newPassword 
       } = data;
 
       const updates = [];
@@ -120,22 +119,6 @@ class User {
       if (username) {
         updates.push(`username = $${paramCount}`);
         values.push(username);
-        paramCount++;
-      }
-
-      // ✅ Handle preferences update - מיזוג עם קיימים
-      if (preferences) {
-        // קבלת preferences קיימים
-        const existingResult = await client.query(
-          'SELECT preferences FROM users WHERE id = $1',
-          [userId]
-        );
-        
-        const existingPrefs = existingResult.rows[0]?.preferences || {};
-        const mergedPrefs = { ...existingPrefs, ...preferences };
-        
-        updates.push(`preferences = $${paramCount}`);
-        values.push(JSON.stringify(mergedPrefs));
         paramCount++;
       }
 
@@ -205,45 +188,120 @@ class User {
     }
   }
 
-// Add this updated method to your existing User.js file:
+  /**
+   * Update user preferences - FIXED to properly merge preferences
+   * @param {number} userId - User's ID
+   * @param {Object} preferences - New preferences to merge
+   * @returns {Promise<Object>} Updated preferences
+   */
+  static async updatePreferences(userId, preferences) {
+    try {
+      // First, get the existing user data to merge preferences
+      const existingQuery = 'SELECT preferences FROM users WHERE id = $1';
+      const existingResult = await db.query(existingQuery, [userId]);
+      
+      if (existingResult.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+      }
+      
+      // Get existing preferences or empty object
+      const existingPreferences = existingResult.rows[0].preferences || {};
+      
+      // Merge new preferences with existing ones (new ones override)
+      const mergedPreferences = { ...existingPreferences, ...preferences };
+      
+      // Update with merged preferences
+      const updateQuery = `
+        UPDATE users 
+        SET preferences = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING preferences;
+      `;
+      
+      const result = await db.query(updateQuery, [JSON.stringify(mergedPreferences), userId]);
+      return result.rows[0]?.preferences || {};
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      throw error;
+    }
+  }
 
-/**
- * Update user preferences - FIXED to properly merge preferences
- * @param {number} userId - User's ID
- * @param {Object} preferences - New preferences to merge
- * @returns {Promise<Object>} Updated preferences
- */
-static async updatePreferences(userId, preferences) {
-  try {
-    // First, get the existing user data to merge preferences
-    const existingQuery = 'SELECT preferences FROM users WHERE id = $1';
-    const existingResult = await db.query(existingQuery, [userId]);
-    
-    if (existingResult.rows.length === 0) {
+  /**
+   * Create password reset token
+   * @param {string} email - User's email
+   * @returns {Promise<Object>} Reset token info
+   */
+  static async createPasswordResetToken(email) {
+    const user = await this.findByEmail(email);
+    if (!user) {
       throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
     }
-    
-    // Get existing preferences or empty object
-    const existingPreferences = existingResult.rows[0].preferences || {};
-    
-    // Merge new preferences with existing ones (new ones override)
-    const mergedPreferences = { ...existingPreferences, ...preferences };
-    
-    // Update with merged preferences
-    const updateQuery = `
-      UPDATE users 
-      SET preferences = $1
-      WHERE id = $2
-      RETURNING preferences;
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    const query = `
+      INSERT INTO password_reset_tokens (user_id, token, expires_at)
+      VALUES ($1, $2, $3)
+      RETURNING token, expires_at;
     `;
-    
-    const result = await db.query(updateQuery, [JSON.stringify(mergedPreferences), userId]);
-    return result.rows[0]?.preferences || {};
-  } catch (error) {
-    console.error('Error updating preferences:', error);
-    throw error;
+
+    const result = await db.query(query, [user.id, token, expiresAt]);
+    return { ...result.rows[0], email: user.email };
   }
-}
+
+  /**
+   * Reset password with token
+   * @param {string} token - Reset token
+   * @param {string} newPassword - New password
+   * @returns {Promise<boolean>} Success status
+   */
+  static async resetPassword(token, newPassword) {
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // Validate token
+      const tokenQuery = `
+        SELECT rt.user_id, rt.expires_at, rt.used
+        FROM password_reset_tokens rt
+        WHERE rt.token = $1 AND rt.used = false AND rt.expires_at > NOW()
+      `;
+      
+      const tokenResult = await client.query(tokenQuery, [token]);
+      
+      if (tokenResult.rows.length === 0) {
+        throw { ...errorCodes.INVALID_TOKEN, message: 'Invalid or expired reset token' };
+      }
+
+      const { user_id } = tokenResult.rows[0];
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await client.query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+        [hashedPassword, user_id]
+      );
+
+      // Mark token as used
+      await client.query(
+        'UPDATE password_reset_tokens SET used = true WHERE token = $1',
+        [token]
+      );
+
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = User;

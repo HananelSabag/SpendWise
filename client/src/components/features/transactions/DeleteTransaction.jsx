@@ -52,7 +52,15 @@ const DeleteTransaction = ({
     {
       id: 'single',
       title: 'Delete this occurrence only',
-      description: `Remove just this specific ${transactionType} on ${dateHelpers.format(transaction.date, 'PP', language)}. The recurring pattern will continue for future dates.`,
+      // ✅ FIX: Use local timezone date formatting
+      description: `Remove just this specific ${transactionType} on ${(() => {
+        const date = new Date(transaction.date + 'T12:00:00');
+        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      })()}. The recurring pattern will continue for future dates.`,
       icon: Calendar,
       color: 'blue',
       recommended: true
@@ -60,7 +68,15 @@ const DeleteTransaction = ({
     {
       id: 'future',
       title: 'Stop this recurring transaction',
-      description: `Cancel this ${transactionType} from ${dateHelpers.format(transaction.date, 'PP', language)} onwards. All future occurrences will be removed.`,
+      // ✅ FIX: Use local timezone date formatting
+      description: `Cancel this ${transactionType} from ${(() => {
+        const date = new Date(transaction.date + 'T12:00:00');
+        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      })()} onwards. All future occurrences will be removed.`,
       icon: Repeat,
       color: 'red',
       warning: true
@@ -227,7 +243,15 @@ const DeleteTransaction = ({
                 <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {dateHelpers.format(transaction.date, 'PP', language)}
+                    {/* ✅ FIX: Use local timezone date formatting */}
+                    {(() => {
+                      const date = new Date(transaction.date + 'T12:00:00');
+                      return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      });
+                    })()}
                   </span>
                   
                   {transaction.category_name && (
@@ -356,7 +380,15 @@ const DeleteTransaction = ({
                                     <p className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
                                       This will also cancel the next occurrence on{' '}
-                                      {dateHelpers.format(transaction.next_recurrence_date, 'PP', language)}
+                                      {/* ✅ FIX: Use local timezone date formatting */}
+                                      {(() => {
+                                        const date = new Date(transaction.next_recurrence_date + 'T12:00:00');
+                                        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        });
+                                      })()}
                                     </p>
                                   </div>
                                 )}

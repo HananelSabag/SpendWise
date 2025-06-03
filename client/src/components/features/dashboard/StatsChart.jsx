@@ -1,884 +1,493 @@
 /**
- * StatsChart Component - PREMIUM UI/UX REDESIGN
- * Historical data visualization with modern design
- * ADDRESSES GAP #5: Balance history and category breakdown charts
+ * StatsChart Component - Option 2: Flexible Ranges
+ * NOW RECEIVES DASHBOARD DATA AS PROPS - NO MORE DUPLICATE HOOKS!
+ * Displays transaction statistics with configurable time ranges
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
   PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart
-} from 'recharts';
+  Calendar,
+  DollarSign,
+  Activity,
+  Target,
+  Info
+} from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
-import { useDashboard } from '../../../hooks/useDashboard';
-import { Card, Button, LoadingSpinner, Badge } from '../../ui';
-import { 
-  TrendingUp, 
-  PieChart as PieIcon, 
-  BarChart as BarIcon, 
-  Calendar, 
-  AlertCircle,
-  Activity,
-  Sparkles,
-  Eye,
-  EyeOff,
-  Download,
-  Filter,
-  MoreVertical,
-  ArrowUpRight,
-  ArrowDownRight,
-  Plus
-} from 'lucide-react';
-import api from '../../../utils/api';
+// ✅ REMOVED: import { useDashboard } from '../../../hooks/useDashboard';
+import { useTransactionsList } from '../../../hooks/useTransactionsList';
+import { cn, dateHelpers } from '../../../utils/helpers';
+import { Card, Button, Badge } from '../../ui';
+import LoadingSpinner from '../../ui/LoadingSpinner';
 
-const StatsChart = ({ period = 'month', showTitle = true }) => {
+/**
+ * StatsChart Component - Option 2: Flexible Ranges
+ * NOW RECEIVES DASHBOARD DATA AS PROPS - NO MORE DUPLICATE HOOKS!
+ * Displays transaction statistics with configurable time ranges
+ */
+const StatsChart = ({ 
+  className = '',
+  dashboardData = null,
+  loading: dashboardLoading = false 
+}) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
-  const [chartType, setChartType] = useState('area');
-  const [historyData, setHistoryData] = useState(null);
-  const [categoryData, setCategoryData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedPeriod, setSelectedPeriod] = useState(period);
-  const [showBalance, setShowBalance] = useState(true);
-  const [showIncome, setShowIncome] = useState(true);
-  const [showExpenses, setShowExpenses] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-
-  // Get dashboard data for fallback AND PRIMARY DATA SOURCE
-  const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
-
-  // Chart color palette - Modern gradient colors
-  const colors = {
-    income: '#10b981',
-    expenses: '#ef4444',
-    balance: '#3b82f6',
-    gradient: {
-      income: ['#10b981', '#059669'],
-      expenses: ['#ef4444', '#dc2626'],
-      balance: ['#3b82f6', '#2563eb']
+  const isRTL = language === 'he';
+  
+  // State for range selection
+  const [selectedRange, setSelectedRange] = useState('month');
+  const [chartType, setChartType] = useState('trend'); // 'trend' | 'category'
+  
+  // Range configurations
+  const ranges = [
+    { 
+      key: 'week', 
+      label: t('common.last7Days') || 'Last 7 Days', 
+      days: 7,
+      period: 'week'
+    },
+    { 
+      key: 'month', 
+      label: t('common.last30Days') || 'Last 30 Days', 
+      days: 30,
+      period: 'month'
+    },
+    { 
+      key: 'quarter', 
+      label: t('common.last90Days') || 'Last 90 Days', 
+      days: 90,
+      period: '3months'
+    },
+    { 
+      key: 'year', 
+      label: t('common.thisYear') || 'This Year', 
+      year: true,
+      period: 'year'
+    },
+    { 
+      key: 'all', 
+      label: t('common.allTime') || 'All Time', 
+      all: true,
+      period: 'year' // Use year as fallback for API
     }
-  };
+  ];
 
-  const categoryColors = ['#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#84cc16', '#f97316', '#ec4899', '#64748b'];
+  // ✅ REMOVED: Duplicate useDashboard() call
+  // const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
+  
+  // Get detailed transaction data for selected range
+  const currentRange = ranges.find(r => r.key === selectedRange);
+  const { 
+    periodTransactions, 
+    loading: transactionsLoading
+  } = useTransactionsList({
+    period: currentRange?.period || 'month',
+    type: null,
+    searchTerm: '',
+    page: 1,
+    limit: 1000 // Get more data for better charts
+  });
 
-  // ✅ Helper function to format dates using local timezone
-  const formatDateForChart = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  useEffect(() => {
-    const fetchChartData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        console.log('📊 [STATS-CHART] Fetching chart data...');
-        
-        // PRIORITY 1: Use real dashboard data if available
-        if (dashboardData && !dashboardLoading) {
-          console.log('✅ [STATS-CHART] Using real dashboard data');
-          
-          // Create real history data from dashboard balances
-          const balances = dashboardData.balances || {};
-          const realHistoryData = [
-            {
-              period: formatDateForChart(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)),
-              income: (balances.daily?.income || 0) * 0.7, // Previous week trend
-              expenses: (balances.daily?.expenses || 0) * 0.8,
-              balance: (balances.daily?.balance || 0) * 0.75
-            },
-            {
-              period: formatDateForChart(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)),
-              income: (balances.daily?.income || 0) * 0.8,
-              expenses: (balances.daily?.expenses || 0) * 0.9,
-              balance: (balances.daily?.balance || 0) * 0.85
-            },
-            {
-              period: formatDateForChart(new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)),
-              income: (balances.weekly?.income || 0) * 0.4,
-              expenses: (balances.weekly?.expenses || 0) * 0.45,
-              balance: (balances.weekly?.balance || 0) * 0.42
-            },
-            {
-              period: formatDateForChart(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)),
-              income: (balances.weekly?.income || 0) * 0.6,
-              expenses: (balances.weekly?.expenses || 0) * 0.65,
-              balance: (balances.weekly?.balance || 0) * 0.62
-            },
-            {
-              period: formatDateForChart(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
-              income: (balances.weekly?.income || 0) * 0.8,
-              expenses: (balances.weekly?.expenses || 0) * 0.85,
-              balance: (balances.weekly?.balance || 0) * 0.82
-            },
-            {
-              period: formatDateForChart(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)),
-              income: balances.weekly?.income || 0,
-              expenses: balances.weekly?.expenses || 0,
-              balance: balances.weekly?.balance || 0
-            },
-            {
-              period: formatDateForChart(new Date()),
-              income: balances.daily?.income || 0,
-              expenses: balances.daily?.expenses || 0,
-              balance: balances.daily?.balance || 0
-            }
-          ];
-          
-          setHistoryData(realHistoryData);
-          
-          // Create real category data from recent transactions
-          const recentTransactions = dashboardData.recentTransactions || [];
-          const categoryMap = new Map();
-          
-          recentTransactions.forEach(transaction => {
-            if (transaction.type === 'expense' && transaction.category_name) {
-              const categoryName = transaction.category_name;
-              const amount = Math.abs(transaction.amount || 0);
-              
-              if (categoryMap.has(categoryName)) {
-                categoryMap.set(categoryName, categoryMap.get(categoryName) + amount);
-              } else {
-                categoryMap.set(categoryName, amount);
-              }
-            }
-          });
-          
-          // Convert to array and add colors
-          const realCategoryData = Array.from(categoryMap.entries())
-            .map(([name, amount], index) => ({
-              id: index + 1,
-              name,
-              expense_amount: amount,
-              color: categoryColors[index % categoryColors.length]
-            }))
-            .filter(cat => cat.expense_amount > 0)
-            .sort((a, b) => b.expense_amount - a.expense_amount)
-            .slice(0, 10); // Top 10 categories
-          
-          setCategoryData(realCategoryData.length > 0 ? realCategoryData : [
-            // Fallback with some default categories if no transactions
-            { id: 1, name: 'Food', expense_amount: 450, color: categoryColors[0] },
-            { id: 2, name: 'Transportation', expense_amount: 280, color: categoryColors[1] },
-            { id: 3, name: 'Utilities', expense_amount: 180, color: categoryColors[2] }
-          ]);
-          
-          setLoading(false);
-          return;
-        }
-        
-        // PRIORITY 2: Try API endpoints as before
-        let historyResult = null;
-        try {
-          const historyRes = await api.get(`/transactions/balance/history/${selectedPeriod}`);
-          console.log('✅ [STATS-CHART] History data from API:', historyRes.data);
-          historyResult = historyRes.data.data;
-        } catch (historyError) {
-          console.warn('⚠️ [STATS-CHART] History endpoint failed, using minimal fallback');
-          // Minimal fallback for demo
-          historyResult = [
-            {
-              period: formatDateForChart(new Date()),
-              income: 100,
-              expenses: 75,
-              balance: 25
-            }
-          ];
-        }
-        setHistoryData(historyResult);
-        
-        // Try category API with fallback
-        let categoryResult = null;
-        try {
-          const now = new Date();
-          const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-          const categoryRes = await api.get('/transactions/categories/breakdown', {
-            params: {
-              startDate: formatDateForChart(startDate),
-              endDate: formatDateForChart(now)
-            }
-          });
-          console.log('✅ [STATS-CHART] Category data from API:', categoryRes.data);
-          categoryResult = categoryRes.data.data;
-        } catch (categoryError) {
-          console.warn('⚠️ [STATS-CHART] Category endpoint failed, using fallback');
-          categoryResult = [
-            { id: 1, name: 'Food', expense_amount: 350, color: categoryColors[0] },
-            { id: 2, name: 'Transportation', expense_amount: 200, color: categoryColors[1] },
-            { id: 3, name: 'Entertainment', expense_amount: 150, color: categoryColors[2] }
-          ];
-        }
-        setCategoryData(categoryResult);
-        
-      } catch (error) {
-        console.error('❌ [STATS-CHART] Error fetching chart data:', error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ✅ Generate trend data based on range
+  const generateTrendData = React.useCallback((transactions, range) => {
+    if (!transactions || transactions.length === 0) return [];
     
-    fetchChartData();
-  }, [selectedPeriod, dashboardData, dashboardLoading]);
-
-  // Chart variants for animations
-  const chartVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.6, ease: "easeOut" }
+    const now = new Date();
+    const groupBy = range?.days > 30 ? 'week' : 'day';
+    const periods = range?.days > 30 ? Math.ceil(range.days / 7) : range?.days || 30;
+    
+    const trendMap = new Map();
+    
+    // Initialize periods
+    for (let i = 0; i < periods; i++) {
+      const date = new Date(now);
+      if (groupBy === 'week') {
+        date.setDate(date.getDate() - (i * 7));
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        const key = weekStart.toISOString().split('T')[0];
+        trendMap.set(key, { income: 0, expenses: 0, date: weekStart });
+      } else {
+        date.setDate(date.getDate() - i);
+        const key = date.toISOString().split('T')[0];
+        trendMap.set(key, { income: 0, expenses: 0, date: new Date(date) });
+      }
     }
-  };
+    
+    // Fill with actual data
+    transactions.forEach(tx => {
+      const txDate = new Date(tx.date);
+      let key;
+      
+      if (groupBy === 'week') {
+        const weekStart = new Date(txDate);
+        weekStart.setDate(txDate.getDate() - txDate.getDay());
+        key = weekStart.toISOString().split('T')[0];
+      } else {
+        key = txDate.toISOString().split('T')[0];
+      }
+      
+      if (trendMap.has(key)) {
+        const period = trendMap.get(key);
+        if (tx.transaction_type === 'income') {
+          period.income += parseFloat(tx.amount || 0);
+        } else {
+          period.expenses += parseFloat(tx.amount || 0);
+        }
+      }
+    });
+    
+    return Array.from(trendMap.values())
+      .sort((a, b) => a.date - b.date)
+      .map((period, index) => ({
+        ...period,
+        balance: period.income - period.expenses,
+        label: groupBy === 'week' 
+          ? `Week ${index + 1}`
+          : dateHelpers.format(period.date, 'MMM dd', language)
+      }));
+  }, [language]);
 
-  const cardVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.4, ease: "easeOut" }
+  // Calculate statistics for selected range
+  // ✅ OPTIMIZATION: Memoize expensive calculations
+  const stats = useMemo(() => {
+    const transactions = periodTransactions || dashboardData?.recentTransactions || [];
+    
+    if (transactions.length === 0) {
+      return {
+        totalIncome: 0,
+        totalExpenses: 0,
+        netBalance: 0,
+        transactionCount: 0,
+        dailyAverage: 0,
+        categoryBreakdown: [],
+        trendData: []
+      };
     }
-  };
 
-  // Custom tooltips
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
-          <p className="font-semibold text-gray-900 dark:text-white mb-3">
-            {new Date(label).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric'
-            })}
-          </p>
-          {payload.map((entry, index) => (
-            <div key={index} className="flex items-center justify-between gap-4 mb-1">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: entry.color }}
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                  {entry.name}
-                </span>
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">
-                {formatAmount(entry.value)}
+    // ✅ OPTIMIZATION: Process data more efficiently
+    const totals = transactions.reduce((acc, tx) => {
+      const amount = parseFloat(tx.amount || 0);
+      if (tx.transaction_type === 'income') {
+        acc.totalIncome += amount;
+        acc.incomeCount++;
+      } else {
+        acc.totalExpenses += amount;
+        acc.expenseCount++;
+      }
+      return acc;
+    }, { totalIncome: 0, totalExpenses: 0, incomeCount: 0, expenseCount: 0 });
+
+    const totalIncome = totals.totalIncome;
+    const totalExpenses = totals.totalExpenses;
+    const netBalance = totalIncome - totalExpenses;
+    
+    // Calculate daily average
+    const days = currentRange?.days || 30;
+    const dailyAverage = totalExpenses / days;
+    
+    // Category breakdown (top 6 categories)
+    const categoryMap = new Map();
+    transactions.forEach(tx => {
+      if (tx.category_name) {
+        const current = categoryMap.get(tx.category_name) || 0;
+        categoryMap.set(tx.category_name, current + parseFloat(tx.amount || 0));
+      }
+    });
+    
+    const categoryBreakdown = Array.from(categoryMap.entries())
+      .map(([name, amount]) => ({ name, amount, percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0 }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6);
+
+    // ✅ Generate trend data
+    const trendData = generateTrendData(transactions, currentRange);
+
+    return {
+      totalIncome,
+      totalExpenses,
+      netBalance,
+      transactionCount: transactions.length,
+      dailyAverage,
+      categoryBreakdown,
+      trendData,
+      incomeCount: totals.incomeCount,
+      expenseCount: totals.expenseCount
+    };
+  }, [periodTransactions, dashboardData, currentRange, generateTrendData]);
+
+  const isLoading = dashboardLoading || transactionsLoading;
+
+  // ✅ OPTIMIZATION: Reduce debug logs in production
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && localStorage.getItem('debug_stats') === 'true') {
+      console.log('📊 [STATS-CHART] Data sources:', {
+        dashboardData: !!dashboardData,
+        periodTransactions: periodTransactions?.length || 0,
+        selectedRange,
+      });
+    }
+  }, [dashboardData, periodTransactions, selectedRange]);
+
+  if (isLoading) {
+    return (
+      <Card className={cn('p-6', className)}>
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner size="large" text={t('stats.loadingStats') || 'Loading stats...'} />
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn('p-0 overflow-hidden', className)}>
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+              <BarChart3 className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {t('stats.title') || 'Statistics'}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {currentRange?.label} • {stats.transactionCount} {t('transactions.items') || 'items'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Controls */}
+          <div className="flex items-center gap-3">
+            {/* Chart Type Toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setChartType('trend')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                  chartType === 'trend'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                )}
+              >
+                <TrendingUp className="w-4 h-4 mr-1.5 inline" />
+                {t('stats.trend') || 'Trend'}
+              </button>
+              <button
+                onClick={() => setChartType('category')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                  chartType === 'category'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                )}
+              >
+                <PieChart className="w-4 h-4 mr-1.5 inline" />
+                {t('stats.categories') || 'Categories'}
+              </button>
+            </div>
+            
+            {/* Range Selector */}
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              {ranges.map(range => (
+                <button
+                  key={range.key}
+                  onClick={() => setSelectedRange(range.key)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap',
+                    selectedRange === range.key
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  )}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900/50 dark:via-gray-800/50 dark:to-gray-900/50">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('transactions.income') || 'Income'}
               </span>
             </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Custom category tooltip
-  const CategoryTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 mb-2">
-            <div 
-              className="w-4 h-4 rounded-full"
-              style={{ backgroundColor: payload[0].color }}
-            />
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {t(`categories.${data.name}`) || data.name}
-            </span>
-          </div>
-          <div className="text-lg font-bold text-gray-900 dark:text-white">
-            {formatAmount(data.expense_amount || data.amount || 0)}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {((data.expense_amount || data.amount || 0) / (categoryData?.reduce((sum, cat) => sum + (cat.expense_amount || cat.amount || 0), 0) || 1) * 100).toFixed(1)}% of total
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-6"
-      >
-        <Card className="p-12 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-indigo-900">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="relative">
-              <LoadingSpinner size="large" />
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0"
-              >
-                <Sparkles className="w-8 h-8 text-indigo-500 absolute top-0 right-0" />
-              </motion.div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {formatAmount(stats.totalIncome)}
             </div>
-            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
-              {t('dashboard.charts.loadingAnalytics') || 'Loading Analytics...'}
-            </p>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {stats.incomeCount} {t('transactions.items') || 'items'}
+            </div>
           </div>
-        </Card>
-      </motion.div>
-    );
-  }
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingDown className="w-4 h-4 text-red-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('transactions.expense') || 'Expenses'}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+              {formatAmount(stats.totalExpenses)}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {stats.expenseCount} {t('transactions.items') || 'items'}
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('common.balance') || 'Balance'}
+              </span>
+            </div>
+            <div className={cn(
+              'text-2xl font-bold',
+              stats.netBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'
+            )}>
+              {formatAmount(stats.netBalance)}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {stats.netBalance >= 0 ? t('common.positive') || 'Positive' : t('common.negative') || 'Negative'}
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-purple-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t('stats.dailyAverage') || 'Daily Avg'}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {formatAmount(stats.dailyAverage)}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t('stats.perDay') || 'per day'}
+            </div>
+          </div>
+        </div>
+      </div>
 
-  if (error) {
+      {/* Chart Content */}
+      <div className="p-6">
+        <AnimatePresence mode="wait">
+          {chartType === 'trend' ? (
+            <TrendChart key="trend" data={stats.trendData} formatAmount={formatAmount} />
+          ) : (
+            <CategoryChart key="category" data={stats.categoryBreakdown} formatAmount={formatAmount} />
+          )}
+        </AnimatePresence>
+      </div>
+    </Card>
+  );
+};
+
+// Trend Chart Component
+const TrendChart = ({ data, formatAmount }) => {
+  if (!data || data.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <Card className="p-8 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800">
-          <div className="text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-            >
-              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            </motion.div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('dashboard.charts.error') || 'Chart Error'}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {error}
-            </p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              variant="primary"
-              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600"
-            >
-              {t('common.retry') || 'Retry'}
-            </Button>
-          </div>
-        </Card>
-      </motion.div>
+      <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        No trend data available
+      </div>
     );
   }
 
-  const chartTypeOptions = [
-    { type: 'area', icon: Activity, label: 'Area' },
-    { type: 'line', icon: TrendingUp, label: 'Line' },
-    { type: 'bar', icon: BarIcon, label: 'Bar' }
-  ];
+  const maxValue = Math.max(...data.map(d => Math.max(d.income, d.expenses, Math.abs(d.balance))));
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="h-64"
+    >
+      <div className="flex items-end justify-between h-full gap-2">
+        {data.map((period, index) => (
+          <div key={index} className="flex-1 flex flex-col items-center h-full">
+            <div className="flex-1 flex flex-col justify-end w-full max-w-16 gap-1">
+              {/* Income Bar */}
+              <div
+                className="bg-green-500 rounded-t-md min-h-[2px] transition-all duration-300 hover:bg-green-600"
+                style={{ height: `${maxValue > 0 ? (period.income / maxValue) * 70 : 0}%` }}
+                title={`Income: ${formatAmount(period.income)}`}
+              />
+              {/* Expense Bar */}
+              <div
+                className="bg-red-500 rounded-t-md min-h-[2px] transition-all duration-300 hover:bg-red-600"
+                style={{ height: `${maxValue > 0 ? (period.expenses / maxValue) * 70 : 0}%` }}
+                title={`Expenses: ${formatAmount(period.expenses)}`}
+              />
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              {period.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
 
-  const periodOptions = [
-    { value: 'week', label: t('dashboard.periods.week') || 'Week' },
-    { value: 'month', label: t('dashboard.periods.month') || 'Month' },
-    { value: 'quarter', label: t('dashboard.periods.quarter') || 'Quarter' },
-    { value: 'year', label: t('dashboard.periods.year') || 'Year' }
-  ];
+// Category Chart Component
+const CategoryChart = ({ data, formatAmount }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        No category data available
+      </div>
+    );
+  }
 
-  const tabs = [
-    { id: 'overview', label: t('dashboard.charts.overview') || 'Overview', icon: Activity },
-    { id: 'categories', label: t('dashboard.charts.categories') || 'Categories', icon: PieIcon }
+  const colors = [
+    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+    'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Tab Navigation - MOVED TO TOP, NO MORE HEADER */}
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex items-center justify-center"
-      >
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {tab.label}
-              </button>
-            );
-          })}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-4"
+    >
+      {data.map((category, index) => (
+        <div key={category.name} className="flex items-center gap-4">
+          <div className={cn('w-4 h-4 rounded-full', colors[index % colors.length])} />
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-medium text-gray-900 dark:text-white">
+                {category.name}
+              </span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {formatAmount(category.amount)} ({category.percentage.toFixed(1)}%)
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <motion.div
+                className={cn('h-2 rounded-full', colors[index % colors.length])}
+                initial={{ width: 0 }}
+                animate={{ width: `${category.percentage}%` }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              />
+            </div>
+          </div>
         </div>
-      </motion.div>
-
-      <AnimatePresence mode="wait">
-        {activeTab === 'overview' && historyData && historyData.length > 0 && (
-          <motion.div
-            key="overview"
-            variants={chartVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-          >
-            <Card className="p-0 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-indigo-50 dark:from-gray-800 dark:via-gray-900 dark:to-indigo-900 border-0 shadow-2xl">
-              {/* Chart Controls */}
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                      {t('dashboard.charts.balanceHistory') || 'Balance History'}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {t('dashboard.charts.trackFinances') || 'Track your financial performance over time'}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {/* Period selector moved here */}
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-2">
-                      {periodOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => setSelectedPeriod(option.value)}
-                          className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
-                            selectedPeriod === option.value 
-                              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-lg' 
-                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {/* Data toggles */}
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-2">
-                      {Object.entries({
-                        income: t('transactions.income') || 'Income',
-                        expenses: t('transactions.expense') || 'Expenses',
-                        balance: t('common.balance') || 'Balance'
-                      }).map(([key, label]) => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            if (key === 'income') setShowIncome(!showIncome);
-                            if (key === 'expenses') setShowExpenses(!showExpenses);
-                            if (key === 'balance') setShowBalance(!showBalance);
-                          }}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm ${
-                            (key === 'income' && showIncome) ||
-                            (key === 'expenses' && showExpenses) ||
-                            (key === 'balance' && showBalance)
-                              ? 'bg-white dark:bg-gray-700 shadow-sm'
-                              : 'opacity-50'
-                          }`}
-                        >
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: colors[key] }}
-                          />
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {/* Chart type selector */}
-                    <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                      {chartTypeOptions.map(({ type, icon: Icon, label }) => (
-                        <button
-                          key={type}
-                          onClick={() => setChartType(type)}
-                          className={`p-3 rounded-lg transition-all ${
-                            chartType === type 
-                              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                          }`}
-                          title={label}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart */}
-              <div className="p-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  {chartType === 'area' ? (
-                    <AreaChart data={historyData}>
-                      <defs>
-                        <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={colors.income} stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor={colors.income} stopOpacity={0.1}/>
-                        </linearGradient>
-                        <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={colors.expenses} stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor={colors.expenses} stopOpacity={0.1}/>
-                        </linearGradient>
-                        <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={colors.balance} stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor={colors.balance} stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
-                      <XAxis 
-                        dataKey="period" 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatAmount}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      
-                      {showIncome && (
-                        <Area
-                          type="monotone"
-                          dataKey="income"
-                          stroke={colors.income}
-                          fillOpacity={1}
-                          fill="url(#incomeGradient)"
-                          strokeWidth={3}
-                          name={t('transactions.income') || 'Income'}
-                        />
-                      )}
-                      {showExpenses && (
-                        <Area
-                          type="monotone"
-                          dataKey="expenses"
-                          stroke={colors.expenses}
-                          fillOpacity={1}
-                          fill="url(#expensesGradient)"
-                          strokeWidth={3}
-                          name={t('transactions.expense') || 'Expenses'}
-                        />
-                      )}
-                      {showBalance && (
-                        <Area
-                          type="monotone"
-                          dataKey="balance"
-                          stroke={colors.balance}
-                          fillOpacity={1}
-                          fill="url(#balanceGradient)"
-                          strokeWidth={3}
-                          name={t('common.balance') || 'Balance'}
-                        />
-                      )}
-                    </AreaChart>
-                  ) : chartType === 'line' ? (
-                    <LineChart data={historyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
-                      <XAxis 
-                        dataKey="period" 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatAmount}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      
-                      {showIncome && (
-                        <Line
-                          type="monotone"
-                          dataKey="income"
-                          stroke={colors.income}
-                          strokeWidth={4}
-                          strokeLinecap="round"
-                          dot={{ fill: colors.income, strokeWidth: 2, r: 6 }}
-                          activeDot={{ r: 8, stroke: colors.income, strokeWidth: 2 }}
-                          name={t('transactions.income') || 'Income'}
-                        />
-                      )}
-                      {showExpenses && (
-                        <Line
-                          type="monotone"
-                          dataKey="expenses"
-                          stroke={colors.expenses}
-                          strokeWidth={4}
-                          strokeLinecap="round"
-                          dot={{ fill: colors.expenses, strokeWidth: 2, r: 6 }}
-                          activeDot={{ r: 8, stroke: colors.expenses, strokeWidth: 2 }}
-                          name={t('transactions.expense') || 'Expenses'}
-                        />
-                      )}
-                      {showBalance && (
-                        <Line
-                          type="monotone"
-                          dataKey="balance"
-                          stroke={colors.balance}
-                          strokeWidth={4}
-                          strokeLinecap="round"
-                          dot={{ fill: colors.balance, strokeWidth: 2, r: 6 }}
-                          activeDot={{ r: 8, stroke: colors.balance, strokeWidth: 2 }}
-                          name={t('common.balance') || 'Balance'}
-                        />
-                      )}
-                    </LineChart>
-                  ) : (
-                    <BarChart data={historyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
-                      <XAxis 
-                        dataKey="period" 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={formatAmount}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      
-                      {showIncome && <Bar dataKey="income" fill={colors.income} name={t('transactions.income') || 'Income'} radius={[4, 4, 0, 0]} />}
-                      {showExpenses && <Bar dataKey="expenses" fill={colors.expenses} name={t('transactions.expense') || 'Expenses'} radius={[4, 4, 0, 0]} />}
-                    </BarChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </motion.div>
-        )}
-
-        {activeTab === 'categories' && (
-          <motion.div
-            key="categories"
-            variants={chartVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="grid grid-cols-1 xl:grid-cols-2 gap-8"
-          >
-            {/* Category Pie Chart */}
-            <Card className="p-0 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-purple-50 dark:from-gray-800 dark:via-gray-900 dark:to-purple-900 border-0 shadow-2xl">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                      {t('dashboard.charts.categoryBreakdown') || 'Category Breakdown'}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {t('dashboard.charts.expenseDistribution') || 'How you spend your money'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-                    <PieIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {categoryData && categoryData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData.filter(cat => (cat.expense_amount || cat.amount || 0) > 0)}
-                        dataKey={categoryData[0]?.expense_amount !== undefined ? "expense_amount" : "amount"}
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={120}
-                        innerRadius={40}
-                        paddingAngle={4}
-                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.color || categoryColors[index % categoryColors.length]}
-                            stroke="none"
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CategoryTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-80 text-center">
-                    <PieIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('dashboard.charts.noCategories') || 'No Categories'}
-                    </h4>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {t('dashboard.charts.addTransactionsToSee') || 'Add transactions to see category breakdown'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Category List */}
-            <Card className="p-0 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900 border-0 shadow-2xl">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {t('dashboard.charts.topCategories') || 'Top Categories'}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {t('dashboard.charts.highestSpending') || 'Your highest spending categories'}
-                </p>
-              </div>
-
-              <div className="p-6">
-                {categoryData && categoryData.length > 0 ? (
-                  <div className="space-y-4">
-                    {categoryData
-                      .filter(cat => (cat.expense_amount || cat.amount || 0) > 0)
-                      .sort((a, b) => (b.expense_amount || b.amount || 0) - (a.expense_amount || a.amount || 0))
-                      .slice(0, 8)
-                      .map((cat, index) => {
-                        const amount = cat.expense_amount || cat.amount || 0;
-                        const total = categoryData.reduce((sum, c) => sum + (c.expense_amount || c.amount || 0), 0);
-                        const percentage = total > 0 ? (amount / total) * 100 : 0;
-                        
-                        return (
-                          <motion.div
-                            key={cat.id || index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all"
-                          >
-                            <div 
-                              className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm"
-                              style={{ 
-                                backgroundColor: cat.color || categoryColors[index % categoryColors.length],
-                                opacity: 0.1 
-                              }}
-                            >
-                              <div 
-                                className="w-4 h-4 rounded-full"
-                                style={{ backgroundColor: cat.color || categoryColors[index % categoryColors.length] }}
-                              />
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {t(`categories.${cat.name}`) || cat.name}
-                                </h4>
-                                <span className="font-bold text-gray-900 dark:text-white">
-                                  {formatAmount(amount)}
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center gap-3">
-                                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${percentage}%` }}
-                                    transition={{ duration: 1, delay: index * 0.1 }}
-                                    className="h-full rounded-full"
-                                    style={{ backgroundColor: cat.color || categoryColors[index % categoryColors.length] }}
-                                  />
-                                </div>
-                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 min-w-[3rem]">
-                                  {percentage.toFixed(1)}%
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {index < 3 && (
-                                <Badge 
-                                  variant={index === 0 ? 'primary' : index === 1 ? 'success' : 'warning'}
-                                  size="small"
-                                >
-                                  #{index + 1}
-                                </Badge>
-                              )}
-                              {amount > 1000 && (
-                                <ArrowUpRight className="w-4 h-4 text-red-500" />
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <BarIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('dashboard.charts.noData') || 'No Data'}
-                    </h4>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {t('dashboard.charts.addTransactions') || 'Add transactions to see analytics'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* No Data State */}
-      {(!historyData || historyData.length === 0) && (!categoryData || categoryData.length === 0) && (
-        <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <Card className="p-12 text-center bg-gradient-to-br from-gray-50 via-white to-indigo-50 dark:from-gray-800 dark:via-gray-900 dark:to-indigo-900 border-0 shadow-xl">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex p-6 bg-indigo-100 dark:bg-indigo-900/30 rounded-3xl mb-6"
-            >
-              <Activity className="w-16 h-16 text-indigo-600 dark:text-indigo-400" />
-            </motion.div>
-            
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('dashboard.charts.noData') || 'No Data Available'}
-            </h3>
-            <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-              {t('dashboard.charts.startTrackingMessage') || 'Start tracking your finances to see beautiful analytics'}
-            </p>
-            
-            <Button 
-              variant="primary"
-              size="large"
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              {t('dashboard.charts.addFirstTransaction') || 'Add Your First Transaction'}
-            </Button>
-          </Card>
-        </motion.div>
-      )}
-    </div>
+      ))}
+    </motion.div>
   );
 };
 

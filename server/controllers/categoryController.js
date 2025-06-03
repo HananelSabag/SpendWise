@@ -56,6 +56,8 @@ const categoryController = {
       type
     });
     
+    console.log(`[CATEGORY-DEBUG] Category created:`, category);
+    
     res.status(201).json({
       success: true,
       data: category,

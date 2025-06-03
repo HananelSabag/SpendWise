@@ -93,10 +93,16 @@ const BalancePanel = ({
   
   // בדיקה אם התאריך הנוכחי מסונכרן
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const selectedDay = getDateForServer(selectedDate);
-    setDateWarning(selectedDay !== today);
-  }, [selectedDate, getDateForServer]);
+    // Get today in local timezone format (matching server expectations)
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    // Get selected date in same format
+    const selected = selectedDate || new Date();
+    const selectedStr = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, '0')}-${String(selected.getDate()).padStart(2, '0')}`;
+    
+    setDateWarning(selectedStr !== todayStr);
+  }, [selectedDate]);
 
   // ניקוי להתראה אחרי זמן קצר
   useEffect(() => {
@@ -268,7 +274,12 @@ const BalancePanel = ({
                     }`}
                   >
                     <Calendar className="w-4 h-4 mr-2 inline" />
-                    {formatDate(selectedDate, 'MMM dd, yyyy')}
+                    {/* ✅ FIX: Ensure consistent local date formatting */}
+                    {(() => {
+                      const date = selectedDate || new Date();
+                      const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                      return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', options);
+                    })()}
                   </motion.button>
                   
                   <AnimatePresence>

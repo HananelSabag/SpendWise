@@ -20,6 +20,7 @@ import { TransactionProvider } from './context/TransactionContext';
 // Lazy-load pages
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
+const PasswordReset = lazy(() => import('./pages/auth/PasswordReset')); // ✅ Unified component
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Transactions = lazy(() => import('./pages/Transactions'));
@@ -77,6 +78,12 @@ const AppContent = () => {
             } />
             <Route path="/register" element={
               !isAuthenticated ? <Register /> : <Navigate to="/" replace />
+            } />
+            <Route path="/forgot-password" element={
+              !isAuthenticated ? <PasswordReset /> : <Navigate to="/" replace />
+            } />
+            <Route path="/reset-password" element={
+              !isAuthenticated ? <PasswordReset /> : <Navigate to="/" replace />
             } />
             
             {/* Protected Routes */}

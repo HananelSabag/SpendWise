@@ -60,7 +60,14 @@ const RecentTransactions = ({
               {transaction.description || t('transactions.noDescription')}
             </p>
             <p className="text-xs text-gray-500">
-              {formatDate(new Date(transaction.date), 'PP')}
+              {/* ✅ FIX: Use local timezone date formatting */}
+              {(() => {
+                const date = new Date(transaction.date + 'T12:00:00'); // Add noon to prevent timezone shifts
+                return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                });
+              })()}
             </p>
           </div>
         </div>

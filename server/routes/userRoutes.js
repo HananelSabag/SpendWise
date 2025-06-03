@@ -32,6 +32,54 @@ router.post('/refresh-token',
 );
 
 /**
+ * @route   POST /api/v1/users/forgot-password
+ * @desc    Request password reset token
+ */
+router.post('/forgot-password', 
+  userController.forgotPassword
+);
+
+/**
+ * @route   POST /api/v1/users/reset-password
+ * @desc    Reset password with token
+ */
+router.post('/reset-password', 
+  userController.resetPassword
+);
+
+/**
+ * @route   POST /api/v1/users/test-email
+ * @desc    Test email service (Development only) - MOVED TO PUBLIC ROUTES
+ */
+if (process.env.NODE_ENV === 'development') {
+  router.post('/test-email', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          error: {
+            code: 'MISSING_EMAIL',
+            message: 'Email is required for testing'
+          }
+        });
+      }
+      
+      const emailService = require('../services/emailService');
+      await emailService.sendTestEmail(email);
+      
+      res.json({
+        success: true,
+        message: 'Test email sent successfully!',
+        data: { email }
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+}
+
+/**
  * Protected routes
  */
 router.use(auth);

@@ -422,7 +422,13 @@ const RecurringModal = ({
                                     transaction={{
                                       ...transaction,
                                       transaction_type: transaction.type,
-                                      recurring_interval: transaction.interval_type
+                                      recurring_interval: transaction.interval_type,
+                                      // ✅ FIX: Ensure date fields use proper format for TransactionCard
+                                      date: transaction.date || (() => {
+                                        const today = new Date();
+                                        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                      })(),
+                                      next_recurrence_date: transaction.next_occurrence
                                     }}
                                     onEdit={() => {
                                       onEdit?.(transaction);

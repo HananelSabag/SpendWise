@@ -1,32 +1,33 @@
 // components/features/dashboard/ActionsPanel.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  X,
-  ArrowUpRight,
-  ArrowDownRight,
-  Repeat,
-  Clock,
+import { 
+  ArrowDownRight, 
+  ArrowUpRight, 
   Calendar,
-  ChevronDown,
-  DollarSign,
-  Tag,
-  FileText,
   Check,
+  Clock,
+  Repeat,
+  Tag,
+  DollarSign,
+  FileText,
   TrendingUp,
   Home,
   ShoppingCart,
   Car,
   Zap,
-  Tv
+  Tv,
+  X,
+  Plus,
+  ChevronDown
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
 import { useDate } from '../../../context/DateContext';
-import { Card, Button, Input, Select, Alert, Badge } from '../../ui';
-import CalendarWidget from '../../common/CalendarWidget';
-import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 import { useCategories } from '../../../hooks/useApi';
+import { Card, Button, Badge, Modal } from '../../ui';
+import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
+import CalendarWidget from '../../common/CalendarWidget';
 import { dateHelpers } from '../../../utils/helpers';
 
 const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null }) => {
@@ -55,7 +56,11 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     recurring_interval: 'monthly',
     recurring_end_date: null,
     day_of_week: 0, // Default to Sunday
-    date: dateHelpers.toISODate(selectedDate), // ✅ FIX: Use dateHelpers.toISODate instead of getDateForServer
+    // ✅ FIX: Use local timezone date formatting consistent with server
+    date: (() => {
+      const date = selectedDate || new Date();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    })(),
   });
 
   // Enhanced transaction types with better design
@@ -155,10 +160,19 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
       setLoading(true);
       setError('');
       
-      await createTransaction(activeType.type, {
+      // ✅ FIX: Explicitly construct submission data to ensure day_of_week is included
+      const submitData = {
         ...formData,
-        amount: parseFloat(formData.amount)
-      });
+        amount: parseFloat(formData.amount),
+        // ✅ CRITICAL FIX: Ensure day_of_week is included for weekly recurring
+        day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
+          ? formData.day_of_week 
+          : null
+      };
+
+      console.log('🔍 [ACTIONS-DEBUG] Submitting data:', submitData);
+      
+      await createTransaction(activeType.type, submitData);
       
       setSuccess(true);
       setTimeout(() => {
@@ -248,13 +262,8 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   const getCategoriesForType = (type) => {
     // ✅ FIX: Show all categories for both types, let user choose
     return allCategories.filter(cat => {
-      // Show default categories for all types
-      if (cat.is_default) return true;
-      
-      // Show user categories that match the transaction type
-      if (!cat.is_default && cat.type === type) return true;
-      
-      return false;
+      // Show all categories regardless of type for better UX
+      return true;
     }).map(cat => ({
       id: cat.id,
       name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
@@ -296,8 +305,18 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   };
 
   const getBgForCategory = (name) => {
-    const color = getColorForCategory(name);
-    return `bg-${color}-100 dark:bg-${color}-900`;
+    const bgMap = {
+      'General': 'bg-slate-100 dark:bg-slate-800',
+      'Salary': 'bg-emerald-100 dark:bg-emerald-800',
+      'Freelance': 'bg-blue-100 dark:bg-blue-800',
+      'Investments': 'bg-purple-100 dark:bg-purple-800',
+      'Rent': 'bg-red-100 dark:bg-red-800',
+      'Groceries': 'bg-orange-100 dark:bg-orange-800',
+      'Transportation': 'bg-yellow-100 dark:bg-yellow-800',
+      'Utilities': 'bg-indigo-100 dark:bg-indigo-800',
+      'Entertainment': 'bg-pink-100 dark:bg-pink-800'
+    };
+    return bgMap[name] || 'bg-slate-100 dark:bg-slate-800';
   };
 
   // Get categories for current transaction type
@@ -306,16 +325,12 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   // Set default category when type changes
   useEffect(() => {
     if (activeType && allCategories.length > 0) {
-      console.log('🔍 [ACTIONS-DEBUG] All categories:', allCategories);
-      console.log('🔍 [ACTIONS-DEBUG] Current categories for type:', activeType.type, currentCategories);
-      
-      // Default to General category (ID 8) or first available
-      const generalCategory = allCategories.find(cat => cat.name === 'General' && cat.is_default);
-      const defaultCategory = generalCategory || currentCategories[0];
-      
+      const defaultCategory = allCategories.find(cat => cat.is_default && cat.name === 'General');
       if (defaultCategory) {
-        console.log('🔍 [ACTIONS-DEBUG] Setting default category:', defaultCategory);
-        setFormData(prev => ({ ...prev, category_id: defaultCategory.id }));
+        setFormData(prev => ({
+          ...prev,
+          category_id: defaultCategory.id
+        }));
       }
     }
   }, [activeType, allCategories]);
@@ -630,9 +645,11 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                           <CalendarWidget
                             selectedDate={new Date(formData.date)}
                             onDateSelect={(date) => {
+                              // ✅ FIX: Use local timezone formatting to match server expectations
+                              const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                               setFormData(prev => ({ 
                                 ...prev, 
-                                date: dateHelpers.toISODate(date) // ✅ FIX: Use dateHelpers.toISODate instead of getDateForServer
+                                date: localDateStr
                               }));
                               setShowCalendar(false);
                             }}
@@ -684,7 +701,17 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                           <input
                             type="date"
                             value={formData.recurring_end_date || ''}
-                            onChange={(e) => setFormData(prev => ({ ...prev, recurring_end_date: e.target.value }))}
+                            onChange={(e) => {
+                              // ✅ FIX: Ensure date input uses local timezone
+                              const inputDate = e.target.value;
+                              if (inputDate) {
+                                const date = new Date(inputDate + 'T12:00:00'); // Add noon to prevent timezone issues
+                                const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                                setFormData(prev => ({ ...prev, recurring_end_date: localDateStr }));
+                              } else {
+                                setFormData(prev => ({ ...prev, recurring_end_date: null }));
+                              }
+                            }}
                             min={formData.date}
                             className="w-full py-2 px-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
                           />
