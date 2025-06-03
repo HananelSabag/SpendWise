@@ -66,12 +66,12 @@ const PasswordReset = () => {
     setError('');
     
     if (!formData.email) {
-      setError('Email is required');
+      setError(t('validation.emailRequired'));
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError(t('validation.emailInvalid'));
       return;
     }
 
@@ -88,7 +88,7 @@ const PasswordReset = () => {
         setStep('email-sent');
       }
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to send reset email');
+      setError(err.response?.data?.error?.message || t('errors.generic'));
     }
   };
 
@@ -98,17 +98,17 @@ const PasswordReset = () => {
     setError('');
 
     if (!formData.newPassword || !formData.confirmPassword) {
-      setError('Please fill in all fields');
+      setError(t('validation.required'));
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('validation.passwordsDontMatch'));
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('validation.passwordTooShort'));
       return;
     }
 
@@ -122,26 +122,26 @@ const PasswordReset = () => {
       setTimeout(() => {
         navigate('/login', { 
           state: { 
-            message: 'Password reset successfully. Please login with your new password.' 
+            message: t('auth.passwordResetSuccess')
           }
         });
       }, 3000);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to reset password');
+      setError(err.response?.data?.error?.message || t('errors.generic'));
     }
   };
 
   // Test email function (development only)
   const handleTestEmail = async () => {
     if (!formData.email) {
-      setError('Please enter an email address first');
+      setError(t('validation.emailRequired'));
       return;
     }
 
     try {
       await testEmailMutation.mutateAsync(formData.email);
     } catch (err) {
-      setError('Failed to send test email');
+      setError(t('errors.generic'));
     }
   };
 
@@ -161,7 +161,7 @@ const PasswordReset = () => {
   };
 
   const strength = getPasswordStrength();
-  const strengthText = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+  const strengthText = ['', t('auth.weak'), t('auth.fair'), t('auth.good'), t('auth.strong'), t('auth.veryStrong')];
   const strengthColor = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-green-600'];
 
   return (
@@ -189,10 +189,10 @@ const PasswordReset = () => {
                   exit={{ opacity: 0, y: -10 }}
                 >
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Forgot Password?
+                    {t('auth.forgotPasswordTitle')}
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Enter your email to receive a reset link
+                    {t('auth.forgotPasswordDesc')}
                   </p>
                 </motion.div>
               )}
@@ -205,10 +205,10 @@ const PasswordReset = () => {
                   exit={{ opacity: 0, y: -10 }}
                 >
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Reset Password
+                    {t('auth.resetPasswordTitle')}
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Enter your new password
+                    {t('auth.resetPasswordDesc')}
                   </p>
                 </motion.div>
               )}
@@ -221,12 +221,12 @@ const PasswordReset = () => {
                   exit={{ opacity: 0, y: -10 }}
                 >
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Check Your Email
+                    {t('auth.checkYourEmail')}
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400">
                     {step === 'email-sent-dev' ? 
-                      'Email sent! Also check console for dev link.' : 
-                      'We\'ve sent a reset link to your email'
+                      t('auth.resetEmailSentDev') : 
+                      t('auth.resetEmailSent')
                     }
                   </p>
                 </motion.div>
@@ -246,11 +246,11 @@ const PasswordReset = () => {
                 className="space-y-6"
               >
                 <Input
-                  label="Email Address"
+                  label={t('auth.email')}
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter your email address"
+                  placeholder={t('auth.emailPlaceholder')}
                   icon={Mail}
                   error={error}
                   required
@@ -265,7 +265,7 @@ const PasswordReset = () => {
                   disabled={!formData.email}
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Send Reset Link
+                  {t('auth.sendResetLink')}
                 </Button>
 
                 {/* Development Test Email Button */}
@@ -279,7 +279,7 @@ const PasswordReset = () => {
                     onClick={handleTestEmail}
                   >
                     <TestTube className="w-4 h-4 mr-2" />
-                    Send Test Email (Dev)
+                    {t('auth.sendTestEmail')}
                   </Button>
                 )}
               </motion.form>
@@ -299,20 +299,19 @@ const PasswordReset = () => {
                 </div>
                 
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Reset Link Sent! 📧
+                  {t('auth.resetLinkSent')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   {step === 'email-sent-dev' ? 
-                    'Email sent to your inbox! Check your email and also the browser console for a direct development link.' :
-                    'Check your email for a link to reset your password. If it doesn\'t appear within a few minutes, check your spam folder.'
+                    t('auth.emailSentDevDesc') :
+                    t('auth.emailSentDesc')
                   }
                 </p>
 
                 {step === 'email-sent-dev' && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
-                      <strong>Development Mode:</strong> Email sent via Gmail SMTP! 
-                      Check console for additional testing link.
+                      <strong>{t('auth.developmentMode')}:</strong> {t('auth.emailSentDevDesc')}
                     </p>
                   </div>
                 )}
@@ -322,7 +321,7 @@ const PasswordReset = () => {
                   fullWidth
                   onClick={() => setStep('forgot')}
                 >
-                  Send Another Email
+                  {t('auth.sendAnotherEmail')}
                 </Button>
               </motion.div>
             )}
@@ -340,11 +339,11 @@ const PasswordReset = () => {
                 {/* New Password */}
                 <div>
                   <Input
-                    label="New Password"
+                    label={t('auth.newPassword')}
                     type={showPassword ? 'text' : 'password'}
                     value={formData.newPassword}
                     onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                    placeholder="Enter new password"
+                    placeholder={t('auth.passwordPlaceholder')}
                     icon={Lock}
                     required
                     endAdornment={
@@ -372,7 +371,7 @@ const PasswordReset = () => {
                         ))}
                       </div>
                       <p className={`text-xs ${strength <= 2 ? 'text-red-500' : 'text-green-500'}`}>
-                        {strengthText[strength]}
+                        {t('auth.passwordStrength')}: {strengthText[strength]}
                       </p>
                     </div>
                   )}
@@ -380,13 +379,13 @@ const PasswordReset = () => {
 
                 {/* Confirm Password */}
                 <Input
-                  label="Confirm Password"
+                  label={t('auth.confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  placeholder="Confirm new password"
+                  placeholder={t('auth.confirmPasswordPlaceholder')}
                   icon={Lock}
-                  error={formData.confirmPassword && formData.newPassword !== formData.confirmPassword ? 'Passwords do not match' : ''}
+                  error={formData.confirmPassword && formData.newPassword !== formData.confirmPassword ? t('validation.passwordsDontMatch') : ''}
                   required
                   endAdornment={
                     <button
@@ -413,7 +412,7 @@ const PasswordReset = () => {
                   loading={resetPasswordMutation.isPending}
                   disabled={!formData.newPassword || !formData.confirmPassword}
                 >
-                  Reset Password
+                  {t('auth.resetPassword')}
                 </Button>
               </motion.form>
             )}
@@ -431,10 +430,10 @@ const PasswordReset = () => {
                 </div>
                 
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Password Reset Successfully! 🎉
+                  {t('auth.passwordResetSuccess')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Redirecting to login...
+                  {t('auth.redirectingToLogin')}
                 </p>
               </motion.div>
             )}
@@ -448,7 +447,7 @@ const PasswordReset = () => {
                 className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
               >
                 <ArrowLeft className={cn('w-4 h-4', isRTL ? 'ml-1' : 'mr-1')} />
-                Back to Login
+                {t('auth.backToLogin')}
               </Link>
             </div>
           )}
