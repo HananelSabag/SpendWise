@@ -74,9 +74,16 @@ export const DateProvider = ({ children }) => {
     console.log('[DateContext] Date changed to:', normalizedDate);
   }, [normalizeDate]);
 
-  // ✅ Add date for server formatting
+  // ✅ FIXED: Format date for server using local timezone methods
   const getDateForServer = useCallback((date = selectedDate) => {
-    return normalizeDate(date).toISOString().split('T')[0];
+    const normalizedDate = normalizeDate(date);
+    
+    // Use local timezone methods instead of UTC to prevent date shifts
+    const year = normalizedDate.getFullYear();
+    const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(normalizedDate.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   }, [selectedDate, normalizeDate]);
 
   // Get relative date string

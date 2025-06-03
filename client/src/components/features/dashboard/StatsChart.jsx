@@ -77,6 +77,14 @@ const StatsChart = ({ period = 'month', showTitle = true }) => {
 
   const categoryColors = ['#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#84cc16', '#f97316', '#ec4899', '#64748b'];
 
+  // ✅ Helper function to format dates using local timezone
+  const formatDateForChart = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     const fetchChartData = async () => {
       setLoading(true);
@@ -93,43 +101,43 @@ const StatsChart = ({ period = 'month', showTitle = true }) => {
           const balances = dashboardData.balances || {};
           const realHistoryData = [
             {
-              period: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)),
               income: (balances.daily?.income || 0) * 0.7, // Previous week trend
               expenses: (balances.daily?.expenses || 0) * 0.8,
               balance: (balances.daily?.balance || 0) * 0.75
             },
             {
-              period: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)),
               income: (balances.daily?.income || 0) * 0.8,
               expenses: (balances.daily?.expenses || 0) * 0.9,
               balance: (balances.daily?.balance || 0) * 0.85
             },
             {
-              period: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)),
               income: (balances.weekly?.income || 0) * 0.4,
               expenses: (balances.weekly?.expenses || 0) * 0.45,
               balance: (balances.weekly?.balance || 0) * 0.42
             },
             {
-              period: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)),
               income: (balances.weekly?.income || 0) * 0.6,
               expenses: (balances.weekly?.expenses || 0) * 0.65,
               balance: (balances.weekly?.balance || 0) * 0.62
             },
             {
-              period: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
               income: (balances.weekly?.income || 0) * 0.8,
               expenses: (balances.weekly?.expenses || 0) * 0.85,
               balance: (balances.weekly?.balance || 0) * 0.82
             },
             {
-              period: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              period: formatDateForChart(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)),
               income: balances.weekly?.income || 0,
               expenses: balances.weekly?.expenses || 0,
               balance: balances.weekly?.balance || 0
             },
             {
-              period: new Date().toISOString().split('T')[0],
+              period: formatDateForChart(new Date()),
               income: balances.daily?.income || 0,
               expenses: balances.daily?.expenses || 0,
               balance: balances.daily?.balance || 0
@@ -189,7 +197,7 @@ const StatsChart = ({ period = 'month', showTitle = true }) => {
           // Minimal fallback for demo
           historyResult = [
             {
-              period: new Date().toISOString().split('T')[0],
+              period: formatDateForChart(new Date()),
               income: 100,
               expenses: 75,
               balance: 25
@@ -205,8 +213,8 @@ const StatsChart = ({ period = 'month', showTitle = true }) => {
           const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
           const categoryRes = await api.get('/transactions/categories/breakdown', {
             params: {
-              startDate: startDate.toISOString().split('T')[0],
-              endDate: now.toISOString().split('T')[0]
+              startDate: formatDateForChart(startDate),
+              endDate: formatDateForChart(now)
             }
           });
           console.log('✅ [STATS-CHART] Category data from API:', categoryRes.data);

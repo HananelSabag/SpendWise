@@ -62,10 +62,11 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         });
         console.warn(`🔍 [DASHBOARD-HOOK] All active hooks:`, Array.from(activeHooks));
         
-        // ✅ הוסף breakpoint אוטומטי לדיבאג
-        if (debugMode) {
-          debugger; // זה יעצור את הביצוע כדי לחקור
-        }
+        // ✅ REMOVED: Automatic debugger breakpoint that was stopping execution
+        // Instead, provide detailed logging for manual debugging
+        console.error(`🚨 [DASHBOARD-HOOK] PERFORMANCE WARNING: Multiple dashboard hooks detected!`);
+        console.error(`💡 [DASHBOARD-HOOK] To manually debug, open DevTools and inspect the stack traces above`);
+        console.error(`🔧 [DASHBOARD-HOOK] To enable debug mode, run: localStorage.setItem('debug_dashboard', 'true')`);
       }
     }
     

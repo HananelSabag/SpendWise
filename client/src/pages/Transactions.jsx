@@ -817,4 +817,5 @@ const Transactions = () => {
   );
 };
 
+// ✅ ENSURE: Component is properly exported as default
 export default Transactions;

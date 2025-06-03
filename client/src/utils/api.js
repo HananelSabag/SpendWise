@@ -132,15 +132,19 @@ api.interceptors.response.use(
   }
 );
 
-// Helper function to format dates consistently for API calls
+// Helper function to format dates consistently for API calls - FIXED TIMEZONE ISSUE
 const formatDateForAPI = (date) => {
   if (!date) return undefined;
   
   // Make sure we have a Date object
   const dateObj = date instanceof Date ? date : new Date(date);
   
-  // Always send YYYY-MM-DD format to the server
-  return dateObj.toISOString().split('T')[0];
+  // ✅ FIX: Use local timezone methods instead of UTC to prevent date shifts
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 // Helper function for handling image URLs
@@ -392,6 +396,14 @@ export const transactionAPI = {
   
   // Convenience method for dashboard refresh
   refreshDashboard: () => transactionAPI.forceRefreshDashboard(),
+  
+  // Manual generation endpoint - NEW
+  generateRecurring: async () => {
+    console.log('🔄 [API] Manually triggering recurring transaction generation');
+    const response = await api.post('/transactions/generate-recurring');
+    console.log('✅ [API] Manual generation completed');
+    return response;
+  },
 };
 
 // Utility function to handle API errors

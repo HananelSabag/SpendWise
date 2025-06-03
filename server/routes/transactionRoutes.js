@@ -7,7 +7,8 @@ const transactionController = require('../controllers/transactionController');
 const {
   createTransactionLimiter,
   getSummaryLimiter,
-  getTransactionsLimiter
+  getTransactionsLimiter,
+  generateRecurringLimiter // Add missing import
 } = require('../middleware/rateLimiter');
 
 // Apply auth to all routes
@@ -142,6 +143,15 @@ router.delete('/templates/:id',
 router.post('/templates/:id/skip',
   createTransactionLimiter,
   transactionController.skipDates
+);
+
+/**
+ * Manual Generation Route - NEW
+ */
+// Manual trigger for recurring generation
+router.post('/generate-recurring',
+  generateRecurringLimiter,
+  transactionController.generateRecurring
 );
 
 module.exports = router;

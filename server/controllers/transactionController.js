@@ -705,20 +705,11 @@ const transactionController = {
     // instead of creating a new Date object that could change the day
     let formattedDate;
     
+    // ✅ FIXED: Use TimeManager for consistent date formatting instead of UTC methods
     if (date) {
-      // If the date is already in YYYY-MM-DD format, use it directly
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        formattedDate = date;
-      } else {
-        // Otherwise parse it but be careful with timezone
-        const dateObj = new Date(date);
-        // Use UTC methods to avoid timezone issues
-        formattedDate = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
-      }
+      formattedDate = TimeManager.formatForDB(date);
     } else {
-      // If no date provided, use current date in local timezone of server
-      const now = new Date();
-      formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      formattedDate = TimeManager.formatForDB(new Date());
     }
     
     console.log(`[DEBUG] Using formatted date for expense: ${formattedDate}`);
@@ -769,20 +760,11 @@ const transactionController = {
     // instead of creating a new Date object that could change the day
     let formattedDate;
     
+    // ✅ FIXED: Use TimeManager for consistent date formatting instead of UTC methods
     if (date) {
-      // If the date is already in YYYY-MM-DD format, use it directly
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        formattedDate = date;
-      } else {
-        // Otherwise parse it but be careful with timezone
-        const dateObj = new Date(date);
-        // Use UTC methods to avoid timezone issues
-        formattedDate = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
-      }
+      formattedDate = TimeManager.formatForDB(date);
     } else {
-      // If no date provided, use current date in local timezone of server
-      const now = new Date();
-      formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      formattedDate = TimeManager.formatForDB(new Date());
     }
     
     console.log(`[DEBUG] Using formatted date for income: ${formattedDate}`);
@@ -816,7 +798,34 @@ const transactionController = {
     } finally {
       client.release();
     }
-  })
+  }),
+
+  /**
+   * Manually generate recurring transactions - MANUAL TRIGGER
+   * @route POST /api/v1/transactions/generate-recurring
+   */
+  generateRecurring: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    
+    try {
+      // Call the SQL function that handles all the logic
+      const result = await db.query('SELECT generate_recurring_transactions()');
+      
+      console.log(`[DEBUG] Manual recurring generation triggered by user ${userId}`);
+      
+      res.json({
+        success: true,
+        message: 'Recurring transactions generated successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('[ERROR] Manual recurring generation failed:', error);
+      throw { 
+        ...errorCodes.SQL_ERROR, 
+        details: 'Failed to generate recurring transactions' 
+      };
+    }
+  }),
 };
 
 module.exports = transactionController;

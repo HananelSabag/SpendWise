@@ -27,6 +27,7 @@ import { Card, Button, Input, Select, Alert, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
 import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 import { useCategories } from '../../../hooks/useApi';
+import { dateHelpers } from '../../../utils/helpers';
 
 const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null }) => {
   const { t, language } = useLanguage();
@@ -53,7 +54,8 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     is_recurring: initialActionType?.isRecurring || false,
     recurring_interval: 'monthly',
     recurring_end_date: null,
-    date: selectedDate.toISOString().split('T')[0],
+    day_of_week: 0, // Default to Sunday
+    date: dateHelpers.toISODate(selectedDate), // ✅ FIX: Use dateHelpers.toISODate instead of getDateForServer
   });
 
   // Enhanced transaction types with better design
@@ -630,7 +632,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                             onDateSelect={(date) => {
                               setFormData(prev => ({ 
                                 ...prev, 
-                                date: date.toISOString().split('T')[0] 
+                                date: dateHelpers.toISODate(date) // ✅ FIX: Use dateHelpers.toISODate instead of getDateForServer
                               }));
                               setShowCalendar(false);
                             }}
@@ -688,6 +690,31 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                           />
                         </div>
                       </div>
+
+                      {/* Day of Week Selection for Weekly Recurring */}
+                      {formData.is_recurring && formData.recurring_interval === 'weekly' && (
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('actions.dayOfWeek')}
+                          </label>
+                          <select
+                            value={formData.day_of_week || 0}
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              day_of_week: parseInt(e.target.value) 
+                            }))}
+                            className="w-full py-2 px-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          >
+                            <option value={0}>{t('days.sunday')}</option>
+                            <option value={1}>{t('days.monday')}</option>
+                            <option value={2}>{t('days.tuesday')}</option>
+                            <option value={3}>{t('days.wednesday')}</option>
+                            <option value={4}>{t('days.thursday')}</option>
+                            <option value={5}>{t('days.friday')}</option>
+                            <option value={6}>{t('days.saturday')}</option>
+                          </select>
+                        </div>
+                      )}
                     </Card>
                   </motion.div>
                 )}

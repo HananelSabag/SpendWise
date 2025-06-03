@@ -23,7 +23,8 @@ class TimeManager {
   }
 
   /**
-   * Format date for database (YYYY-MM-DD)
+   * Format date for database (YYYY-MM-DD) - TIMEZONE SAFE
+   * Uses local timezone to prevent date shifts
    * @param {Date|string} date - Date to format
    * @returns {string} Formatted date
    */
@@ -36,8 +37,22 @@ class TimeManager {
     // Handle date objects or other date string formats
     const d = new Date(date);
     
-    // Use direct string creation instead of toISOString to avoid timezone issues
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // ✅ CONFIRMED: Use local timezone methods to prevent timezone shifts
+    // This ensures consistency between client, server, and database
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Client-side equivalent of formatForDB for consistency
+   * @param {Date|string} date - Date to format  
+   * @returns {string} Formatted date
+   */
+  formatForClient(date) {
+    return this.formatForDB(date);
   }
 
   /**

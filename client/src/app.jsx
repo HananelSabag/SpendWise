@@ -15,14 +15,14 @@ import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { TransactionProvider } from './context/TransactionContext'; // הוספת ייבוא של TransactionProvider
+import { TransactionProvider } from './context/TransactionContext';
 
-// Lazy-load only the pages that actually exist
+// Lazy-load pages
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
 const Transactions = lazy(() => import('./pages/Transactions'));
-const Profile = lazy(() => import('./pages/Profile')); // ✅ הוספת ייבוא של עמוד הפרופיל
 
 // Simple 404 component
 const NotFoundPage = () => (
@@ -69,38 +69,34 @@ const AppContent = () => {
       {isAuthenticated && <Header />}
       
       <main className="flex-grow">
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={
-            !isAuthenticated ? <Login /> : <Navigate to="/" replace />
-          } />
-          <Route path="/register" element={
-            !isAuthenticated ? <Register /> : <Navigate to="/" replace />
-          } />
-          
-          {/* Protected Routes */}
-          <Route path="/" element={
-            isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
-          } />
-          
-          {/* הוספת ניתוב לעמוד העסקאות */}
-          <Route path="/transactions" element={
-            isAuthenticated ? <Transactions /> : <Navigate to="/login" replace />
-          } />
-          
-          {/* ✅ הוספת ניתוב לעמוד הפרופיל */}
-          <Route path="/profile" element={
-            isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
-          } />
-          
-          {/* Catch-all 404 Route */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={
+              !isAuthenticated ? <Login /> : <Navigate to="/" replace />
+            } />
+            <Route path="/register" element={
+              !isAuthenticated ? <Register /> : <Navigate to="/" replace />
+            } />
+            
+            {/* Protected Routes */}
+            <Route path="/" element={
+              isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+            } />
+            <Route path="/transactions" element={
+              isAuthenticated ? <Transactions /> : <Navigate to="/login" replace />
+            } />
+            <Route path="/profile" element={
+              isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
+            } />
+            
+            {/* Catch-all 404 Route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </main>
       
       {isAuthenticated && <Footer />}
-      
-      {/* Fixed Components */}
       {isAuthenticated && <AccessibilityMenu />}
       
       {/* Portal container for modals */}
@@ -109,7 +105,7 @@ const AppContent = () => {
   );
 };
 
-// Main App component with providers - בדיקה שאין כפילות
+// Main App component with providers
 function App() {
   // Force light mode on document body directly
   useEffect(() => {
@@ -120,7 +116,6 @@ function App() {
     // Also clear dark mode setting from localStorage
     localStorage.removeItem('a11y_darkMode');
     
-    // ✅ הוסף דיבאג לבדוק כמה פעמים App נטען
     console.log('🚀 App component mounted at:', new Date().toISOString());
   }, []);
 
@@ -136,7 +131,6 @@ function App() {
           <AccessibilityProvider initialDarkMode={false}>
             <LanguageProvider>
               <DateProvider>
-                {/* ✅ ודא שTransactionProvider רק פעם אחת */}
                 <TransactionProvider>
                   <CurrencyProvider>
                     <Suspense fallback={

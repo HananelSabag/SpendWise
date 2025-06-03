@@ -30,6 +30,7 @@ const TransactionCard = ({
   transaction,
   onEdit,
   onDelete,
+  onEditSingle,
   showActions = true,
   variant = 'default',
   className = ''
@@ -41,6 +42,13 @@ const TransactionCard = ({
   
   const isRecurring = transaction.is_recurring || transaction.template_id;
   const isExpense = transaction.transaction_type === 'expense';
+
+  // Handle single occurrence editing
+  const handleEditSingleOccurrence = (transaction) => {
+    if (onEditSingle) {
+      onEditSingle(transaction);
+    }
+  };
 
   // Format frequency
   const formatFrequency = (interval) => {
@@ -236,6 +244,20 @@ const TransactionCard = ({
             'flex items-center gap-1',
             !isRecurring && 'ml-auto'
           )}>
+            {/* Single Occurrence Edit Button for recurring transactions */}
+            {transaction.template_id && (
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => handleEditSingleOccurrence(transaction)}
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl p-2.5"
+                title={t('transactions.editThisOnly')}
+              >
+                <Edit2 className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editSingle')}</span>
+              </Button>
+            )}
+            
             <Button
               variant="ghost"
               size="small"

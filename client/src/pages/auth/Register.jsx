@@ -12,23 +12,25 @@ import {
   Shield,
   Zap,
   TrendingUp,
-  Languages
+  Languages,
+  Eye,
+  EyeOff,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { userSchemas, validate } from "../../utils/validationSchemas";
 import { cn } from '../../utils/helpers';
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
-import AccessibilityStatement from '../../components/common/AccessibilityStatement';
 import Footer from '../../components/layout/Footer';
 
 const PasswordStrengthIndicator = ({ password }) => {
   const { t, language } = useLanguage();
-  const isRTL = language === 'he';
   
   const getStrength = () => {
     if (!password) return 0;
@@ -85,7 +87,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1); // Start at step 1
   const [showAccessibility, setShowAccessibility] = useState(false);
 
   // Password requirements
@@ -100,7 +102,7 @@ const Register = () => {
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Clear error
+    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -109,7 +111,7 @@ const Register = () => {
   // Handle step navigation
   const nextStep = () => {
     if (currentStep === 1) {
-      // Validate step 1
+      // Validate step 1 fields
       const stepErrors = {};
       
       if (!formData.username) {
@@ -131,6 +133,12 @@ const Register = () => {
     }
     
     setCurrentStep(2);
+  };
+
+  // Go back to step 1
+  const prevStep = () => {
+    setCurrentStep(1);
+    setErrors({});
   };
 
   // Handle form submission
@@ -157,7 +165,7 @@ const Register = () => {
       
       if (result.success) {
         // Navigate to login with success message
-        navigate('/auth/login', { 
+        navigate('/login', { 
           state: { 
             message: t('register.success.message') 
           } 
@@ -233,207 +241,10 @@ const Register = () => {
                   {t('auth.registerSubtitle')}
                 </p>
               </div>
-
-              {/* Register Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Username Field */}
-                <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('auth.username')}
-                  </label>
-                  <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    required
-                    value={formData.username}
-                    onChange={handleChange}
-                    placeholder={t('auth.usernamePlaceholder')}
-                    className={`appearance-none relative block w-full px-3 py-3 border ${
-                      errors.username ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  />
-                  {errors.username && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username}</p>
-                  )}
-                </div>
-
-                {/* Email Field */}
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('auth.email')}
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder={t('auth.emailPlaceholder')}
-                    className={`appearance-none relative block w-full px-3 py-3 border ${
-                      errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
-                  )}
-                </div>
-
-                {/* Password Field */}
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('auth.password')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      required
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder={t('auth.passwordPlaceholder')}
-                      className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
-                        errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                      } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
-                      dir={isRTL ? 'rtl' : 'ltr'}
-                    />
-                    <button
-                      type="button"
-                      className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
-                  )}
-                </div>
-
-                {/* Confirm Password Field */}
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('auth.confirmPassword')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      required
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder={t('auth.confirmPasswordPlaceholder')}
-                      className={`appearance-none relative block w-full px-3 py-3 ${isRTL ? 'pl-10 pr-3' : 'pr-10 pl-3'} border ${
-                        errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                      } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 transition-colors`}
-                      dir={isRTL ? 'rtl' : 'ltr'}
-                    />
-                    <button
-                      type="button"
-                      className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
-                  )}
-                </div>
-
-                {/* Terms and Conditions */}
-                <div>
-                  <label className="flex items-start cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={agreedToTerms}
-                      onChange={(e) => setAgreedToTerms(e.target.checked)}
-                      className="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <span className={cn(
-                      'text-sm text-gray-600 dark:text-gray-400',
-                      isRTL ? 'mr-2' : 'ml-2'
-                    )}>
-                      {t('auth.agreeToTerms')}
-                    </span>
-                  </label>
-                  {errors.terms && (
-                    <p className="mt-1 text-sm text-red-500">{errors.terms}</p>
-                  )}
-                </div>
-
-                {/* Error Alert */}
-                <AnimatePresence>
-                  {(errors.general || authError) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      <Alert 
-                        type="error" 
-                        dismissible 
-                        onDismiss={() => setErrors({})}
-                      >
-                        {errors.general || authError}
-                      </Alert>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  fullWidth
-                  loading={isRegistering}
-                  className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-                >
-                  {isRegistering ? (
-                    <LoadingSpinner size="small" />
-                  ) : (
-                    <>
-                      <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <UserPlus className="h-5 w-5 text-primary-500 group-hover:text-primary-400" />
-                      </span>
-                      {t('auth.signUp')}
-                    </>
-                  )}
-                </Button>
-
-                {/* Sign In Link */}
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('auth.alreadyHaveAccount')}{' '}
-                    <Link
-                      to="/auth/login"
-                      className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
-                    >
-                      {t('auth.signInNow')}
-                    </Link>
-                  </p>
-                </div>
-              </form>
             </motion.div>
 
             {/* Progress Steps */}
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center mb-8">
               <div className="flex items-center space-x-4">
                 <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
@@ -512,12 +323,15 @@ const Register = () => {
                       size="large"
                       fullWidth
                       onClick={nextStep}
+                      className="py-3 px-6 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
                     >
-                      {t('common.continue')}
-                      <ArrowRight className={cn(
-                        'w-5 h-5',
-                        isRTL ? 'mr-2 rotate-180' : 'ml-2'
-                      )} />
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{t('common.continue')}</span>
+                        <ArrowRight className={cn(
+                          'w-5 h-5',
+                          isRTL ? 'rotate-180' : ''
+                        )} />
+                      </div>
                     </Button>
                   </motion.div>
                 )}
@@ -622,7 +436,7 @@ const Register = () => {
                         type="button"
                         variant="outline"
                         size="large"
-                        onClick={() => setCurrentStep(1)}
+                        onClick={prevStep}
                       >
                         {t('common.back')}
                       </Button>
@@ -634,7 +448,14 @@ const Register = () => {
                         loading={isRegistering}
                         disabled={!agreedToTerms}
                       >
-                        {t('auth.createAccount')}
+                        {isRegistering ? (
+                          <LoadingSpinner size="small" />
+                        ) : (
+                          <>
+                            <UserPlus className="w-5 h-5 mr-2" />
+                            {t('auth.createAccount')}
+                          </>
+                        )}
                       </Button>
                     </div>
                   </motion.div>
@@ -645,7 +466,7 @@ const Register = () => {
               <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                 {t('auth.alreadyHaveAccount')}{' '}
                 <Link 
-                  to="/auth/login" 
+                  to="/login" 
                   className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
                 >
                   {t('auth.signInNow')}

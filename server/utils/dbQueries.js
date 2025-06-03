@@ -6,6 +6,7 @@
  */
 
 const db = require('../config/db');
+const TimeManager = require('./TimeManager');
 
 class DBQueries {
   /**
@@ -19,25 +20,18 @@ class DBQueries {
     const client = await db.pool.connect();
 
     try {
-      // Normalize the date string to ensure correct format (YYYY-MM-DD)
+      // ✅ FIXED: Use TimeManager for consistent date formatting
       let dateStr;
       
-      // Handle different date input formats
+      // Handle different date input formats using TimeManager
       if (targetDate instanceof Date) {
-        dateStr = targetDate.toISOString().split('T')[0];
+        dateStr = TimeManager.formatForDB(targetDate);
       } else if (typeof targetDate === 'string') {
-        // Validate the date string format
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (dateRegex.test(targetDate)) {
-          dateStr = targetDate;
-        } else {
-          // Try to parse the date string
-          const parsedDate = new Date(targetDate);
-          dateStr = parsedDate.toISOString().split('T')[0];
-        }
+        // Parse string and format consistently
+        const parsedDate = new Date(targetDate);
+        dateStr = TimeManager.formatForDB(parsedDate);
       } else {
-        // Default to today if input is invalid
-        dateStr = new Date().toISOString().split('T')[0];
+        dateStr = TimeManager.formatForDB(new Date());
       }
       
       console.log('[DEBUG] getDashboardData called for userId:', userId, 'date:', dateStr);

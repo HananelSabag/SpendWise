@@ -28,6 +28,8 @@ import { Modal, Input, Badge, Button, Card } from '../../ui';
 import TransactionCard from './TransactionCard';
 import SkipDatesModal from './SkipDatesModal';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import api from '../../../utils/api';
 
 /**
  * RecurringModal Component
@@ -40,10 +42,13 @@ const RecurringModal = ({
   transactions = [],
   onEdit,
   onDelete,
+  onSuccess,
+  refetch,
   loading = false
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  const queryClient = useQueryClient();
   const isRTL = language === 'he';
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +56,7 @@ const RecurringModal = ({
   const [expandedGroups, setExpandedGroups] = useState({});
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showSkipDates, setShowSkipDates] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -155,15 +161,33 @@ const RecurringModal = ({
   // Add pause/resume handler
   const handleToggleActive = async (template) => {
     try {
-      await api.put(`/transactions/templates/${template.id}`, {
+      await api.put(`/api/v1/transactions/templates/${template.id}`, {
         is_active: !template.is_active
       });
       
       toast.success(template.is_active ? t('transactions.paused') : t('transactions.resumed'));
-      // Refresh data
+      // Refresh the data
+      if (onSuccess) onSuccess();
+      if (refetch) refetch();
       queryClient.invalidateQueries(['recurring']);
     } catch (error) {
       toast.error(t('common.error'));
+    }
+  };
+
+  // Manual generation handler
+  const handleGenerateNow = async () => {
+    try {
+      setGenerating(true);
+      await api.post('/transactions/generate-recurring');
+      toast.success(t('transactions.recurring.generated'));
+      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['transactions']);
+      queryClient.invalidateQueries(['recurring']);
+    } catch (error) {
+      toast.error(t('transactions.recurring.generateError'));
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -175,7 +199,7 @@ const RecurringModal = ({
       className="max-h-[90vh] overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
-        {/* Header */}
+        {/* Enhanced Header with Generate Now Button */}
         <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 mb-6">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
@@ -192,12 +216,27 @@ const RecurringModal = ({
               </div>
             </div>
             
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Generate Now Button */}
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleGenerateNow}
+                loading={generating}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40"
+                title={t('transactions.recurring.generateNow')}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
+                {t('transactions.recurring.generateNow')}
+              </Button>
+              
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
