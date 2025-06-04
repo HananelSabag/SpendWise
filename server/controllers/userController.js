@@ -54,7 +54,10 @@ const userController = {
   login: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     
+    console.log(`🔑 [LOGIN-CONTROLLER] Login attempt for email: ${email}`);
+    
     if (!email || !password) {
+      console.log(`❌ [LOGIN-CONTROLLER] Missing credentials - email: ${!!email}, password: ${!!password}`);
       return res.status(400).json({
         error: {
           code: 'MISSING_REQUIRED',
@@ -63,35 +66,51 @@ const userController = {
       });
     }
 
-    // Verify credentials
-    const user = await User.verifyPassword(email, password);
-    if (!user) {
-      return res.status(401).json({
+    try {
+      // Verify credentials
+      console.log(`🔍 [LOGIN-CONTROLLER] Verifying password for: ${email}`);
+      const user = await User.verifyPassword(email, password);
+      
+      if (!user) {
+        console.log(`❌ [LOGIN-CONTROLLER] Authentication failed for: ${email}`);
+        return res.status(401).json({
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'Invalid email or password'
+          }
+        });
+      }
+
+      console.log(`✅ [LOGIN-CONTROLLER] Authentication successful for: ${email}, userId: ${user.id}`);
+
+      // Generate tokens
+      const { accessToken, refreshToken } = generateTokens(user);
+      console.log(`🎫 [LOGIN-CONTROLLER] Tokens generated for userId: ${user.id}`);
+
+      logger.info('User logged in:', { userId: user.id });
+
+      // Make sure we return here to prevent any further execution
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            username: user.username
+          },
+          accessToken,
+          refreshToken
+        }
+      });
+    } catch (error) {
+      console.error(`💥 [LOGIN-CONTROLLER] Login error for ${email}:`, error);
+      return res.status(500).json({
         error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email or password'
+          code: 'INTERNAL_ERROR',
+          message: 'Login failed due to server error'
         }
       });
     }
-
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user);
-
-    logger.info('User logged in:', { userId: user.id });
-
-    // Make sure we return here to prevent any further execution
-    return res.json({
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username
-        },
-        accessToken,
-        refreshToken
-      }
-    });
   }),
 
   /**
@@ -212,7 +231,7 @@ const userController = {
             message: 'Email service not configured - Development Mode',
             data: { 
               token: resetInfo.token,
-              resetUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetInfo.token}`,
+              resetUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetInfo.token}`,
               note: 'Email service not available. Use the URL above to reset password.'
             }
           });

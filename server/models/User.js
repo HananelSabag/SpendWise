@@ -78,21 +78,43 @@ class User {
    * @returns {Promise<Object|null>} User object if verified
    */
   static async verifyPassword(email, password) {
-    const user = await this.findByEmail(email);
-    if (!user) return null;
+    console.log(`🔍 [USER-MODEL] Starting password verification for: ${email}`);
     
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return null;
+    try {
+      const user = await this.findByEmail(email);
+      
+      if (!user) {
+        console.log(`❌ [USER-MODEL] User not found: ${email}`);
+        return null;
+      }
+      
+      console.log(`✅ [USER-MODEL] User found: ${email}, id: ${user.id}`);
+      console.log(`🔐 [USER-MODEL] Stored password hash exists: ${!!user.password_hash}`);
+      console.log(`🔐 [USER-MODEL] Password hash preview: ${user.password_hash?.substring(0, 10)}...`);
+      
+      const valid = await bcrypt.compare(password, user.password_hash);
+      console.log(`🔐 [USER-MODEL] Password comparison result: ${valid}`);
+      
+      if (!valid) {
+        console.log(`❌ [USER-MODEL] Password verification failed for: ${email}`);
+        return null;
+      }
 
-    // Update last login
-    await db.query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1',
-      [user.id]
-    );
+      console.log(`✅ [USER-MODEL] Password verification successful for: ${email}`);
 
-    // Return user without password
-    const { password_hash, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+      // Update last login
+      await db.query(
+        'UPDATE users SET last_login = NOW() WHERE id = $1',
+        [user.id]
+      );
+
+      // Return user without password
+      const { password_hash, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (error) {
+      console.error(`💥 [USER-MODEL] Error in verifyPassword for ${email}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -301,6 +323,39 @@ class User {
     } finally {
       client.release();
     }
+  }
+
+  /**
+   * Debug method to check user data
+   * @param {string} email - User's email
+   * @returns {Promise<Object|null>} Raw user data for debugging
+   */
+  static async debugFindByEmail(email) {
+    console.log(`🐛 [DEBUG] Checking database for email: ${email}`);
+    
+    const query = `
+      SELECT id, email, username, password_hash, created_at
+      FROM users 
+      WHERE email = $1;
+    `;
+    
+    const result = await db.query(query, [email]);
+    const user = result.rows[0];
+    
+    if (user) {
+      console.log(`🐛 [DEBUG] Found user:`, {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        password_hash_length: user.password_hash?.length,
+        password_hash_prefix: user.password_hash?.substring(0, 10),
+        created_at: user.created_at
+      });
+    } else {
+      console.log(`🐛 [DEBUG] No user found for: ${email}`);
+    }
+    
+    return user;
   }
 }
 

@@ -83,6 +83,9 @@ class EmailService {
     try {
       const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
       
+      // ✅ ADD: Debug logging to verify URL
+      logger.info('📧 Reset URL being sent:', { resetUrl, clientUrl: process.env.CLIENT_URL });
+      
       const mailOptions = {
         from: `"SpendWise" <${process.env.FROM_EMAIL}>`,
         to: email,
@@ -122,7 +125,22 @@ class EmailService {
           .title { color: white; margin: 0; font-size: 28px; font-weight: bold; }
           .content { padding: 40px 20px; }
           .message { color: #4a5568; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-          .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .button-container { text-align: center; margin: 30px 0; }
+          .button { 
+            display: inline-block !important; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; 
+            color: white !important; 
+            padding: 16px 32px !important; 
+            text-decoration: none !important; 
+            border-radius: 8px !important; 
+            font-weight: bold !important; 
+            font-size: 16px !important;
+            border: none !important;
+            cursor: pointer !important;
+            -webkit-text-size-adjust: none !important;
+            mso-hide: all !important;
+          }
+          .button:hover { background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important; }
           .url { color: #667eea; word-break: break-all; font-size: 14px; }
           .footer { border-top: 1px solid #e2e8f0; padding: 20px; text-align: center; color: #718096; font-size: 12px; }
           .warning { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 15px; border-radius: 8px; margin: 20px 0; }
@@ -148,13 +166,13 @@ class EmailService {
               Click the button below to reset your password:
             </p>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" class="button">Reset Your Password</a>
+            <div class="button-container">
+              <a href="${resetUrl}" class="button" target="_blank" rel="noopener noreferrer">Reset Your Password</a>
             </div>
             
             <p class="message">
-              Or copy and paste this link in your browser:<br>
-              <a href="${resetUrl}" class="url">${resetUrl}</a>
+              <strong>If the button doesn't work, copy and paste this link in your browser:</strong><br>
+              <a href="${resetUrl}" class="url" target="_blank" rel="noopener noreferrer">${resetUrl}</a>
             </p>
             
             <div class="warning">

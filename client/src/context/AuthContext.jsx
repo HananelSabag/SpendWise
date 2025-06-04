@@ -94,6 +94,9 @@ export const AuthProvider = ({ children }) => {
       if (data.success) {
         queryClient.invalidateQueries(['profile']);
         
+        // ✅ FIX: Dispatch auth state change event
+        window.dispatchEvent(new Event('authStateChanged'));
+        
         // Check if user needs onboarding
         if (data.user?.needsOnboarding) {
           console.log(`🚀 [LOGIN-SUCCESS] User needs onboarding, navigating to /onboarding`);
@@ -131,6 +134,10 @@ export const AuthProvider = ({ children }) => {
     mutationFn: () => auth.logout(),
     onSuccess: () => {
       queryClient.clear();
+      
+      // ✅ FIX: Dispatch auth state change event
+      window.dispatchEvent(new Event('authStateChanged'));
+      
       navigate('/login', { replace: true });
     }
   });

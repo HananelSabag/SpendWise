@@ -77,6 +77,42 @@ if (process.env.NODE_ENV === 'development') {
       next(err);
     }
   });
+
+  // Add debug route to check user data
+  router.post('/debug-user', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          error: {
+            code: 'MISSING_EMAIL',
+            message: 'Email is required for debugging'
+          }
+        });
+      }
+      
+      const User = require('../models/User');
+      const userData = await User.debugFindByEmail(email);
+      
+      res.json({
+        success: true,
+        data: { 
+          found: !!userData,
+          user: userData ? {
+            id: userData.id,
+            email: userData.email,
+            username: userData.username,
+            hasPassword: !!userData.password_hash,
+            passwordLength: userData.password_hash?.length,
+            created_at: userData.created_at
+          } : null
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 }
 
 /**

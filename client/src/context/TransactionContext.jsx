@@ -1,11 +1,11 @@
 // src/context/TransactionContext.jsx
 // Simplified version using React Query hooks
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // Make sure this is imported
-import axios from 'axios'; // Add axios import
-import api, { transactionAPI } from '../utils/api'; // Make sure API utilities are imported
-import { useAuth } from './AuthContext';
-import { useDashboard } from '../hooks/useDashboard';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import api, { transactionAPI } from '../utils/api';
+import { useNavigate } from 'react-router-dom';
+import { useDate } from './DateContext'; // ✅ FIX: Add missing import
 import { 
   useCreateTransaction, 
   useUpdateTransaction, 
@@ -30,33 +30,70 @@ export const useTransactions = () => {
  * Much simpler and more efficient than the old version
  */
 export const TransactionProvider = ({ children }) => {
+  // ✅ FIX: Remove useAuth dependency to prevent circular dependency
+  // const { user } = useAuth(); // REMOVED - causing circular dependency
+  
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { selectedDate } = useDate();
   
-  const providerId = useRef(`tx-provider-${Math.random().toString(36).substr(2, 9)}`).current;
-  
-  useEffect(() => {
-    // ✅ לוג רק במקרים מיוחדים
-    const debugMode = localStorage.getItem('debug_transactions') === 'true';
-    const isFirstProvider = !window._primaryTransactionProvider;
-    
-    if (user?.email && isFirstProvider) {
-      // לוג רק אם זה ה-provider הראשון
-      console.log(`💰 [TRANSACTION-PROVIDER] [${providerId}] Ready - User: ${user.email}`);
-      window._primaryTransactionProvider = providerId;
-    } else if (debugMode && user?.email) {
-      // לוג נוסף רק אם debug מפורש
-      console.log(`💰 [TRANSACTION-PROVIDER] [${providerId}] Secondary provider for: ${user.email}`);
+  // Generate a unique provider instance ID for debugging
+  const [providerId] = useState(() => {
+    const id = Math.random().toString(36).substr(2, 9);
+    return `tx-provider-${id}`;
+  });
+
+  // ✅ UPDATED: Get user info directly from localStorage or token instead of useAuth
+  const [userEmail, setUserEmail] = useState(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.email || 'Unknown';
+      } catch {
+        return 'Token-Invalid';
+      }
     }
-    
-    return () => {
-      if (window._primaryTransactionProvider === providerId) {
-        window._primaryTransactionProvider = null;
+    return 'Not-Authenticated';
+  });
+
+  // ✅ UPDATE: Listen for auth changes via localStorage instead of useAuth
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserEmail(payload.email || 'Unknown');
+        } catch {
+          setUserEmail('Token-Invalid');
+        }
+      } else {
+        setUserEmail('Not-Authenticated');
       }
     };
-  }, [providerId, user?.email]);
+
+    // Listen for storage changes
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom auth events
+    window.addEventListener('authStateChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChanged', handleStorageChange);
+    };
+  }, []);
+
+  // ✅ FIXED: Log only once when provider mounts
+  useEffect(() => {
+    console.log(`💰 [TRANSACTION-PROVIDER] [${providerId}] Ready - User: ${userEmail}`);
+  }, [providerId, userEmail]);
   
-  // ✅ רק recurring & templates - ללא לוגים
+  // ✅ FIX: Get authenticated status from localStorage
+  const isAuthenticated = Boolean(localStorage.getItem('accessToken'));
+  
+  // React Query hooks
   const recurringQuery = useRecurringTransactions();
   const templatesQuery = useTemplates();
   
@@ -65,7 +102,46 @@ export const TransactionProvider = ({ children }) => {
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
   
-  // Loading states - רק recurring & templates
+  // ✅ FIX: Calculate recurring daily impact
+  const recurringDailyImpact = React.useMemo(() => {
+    if (!recurringQuery.data) return { income: 0, expense: 0 };
+    
+    const impact = { income: 0, expense: 0 };
+    
+    recurringQuery.data.forEach(transaction => {
+      const amount = parseFloat(transaction.amount) || 0;
+      const frequency = transaction.frequency || 'monthly';
+      
+      // Convert to daily amount
+      let dailyAmount = amount;
+      switch (frequency) {
+        case 'daily':
+          dailyAmount = amount;
+          break;
+        case 'weekly':
+          dailyAmount = amount / 7;
+          break;
+        case 'monthly':
+          dailyAmount = amount / 30;
+          break;
+        case 'yearly':
+          dailyAmount = amount / 365;
+          break;
+        default:
+          dailyAmount = amount / 30;
+      }
+      
+      if (transaction.type === 'income') {
+        impact.income += dailyAmount;
+      } else {
+        impact.expense += dailyAmount;
+      }
+    });
+    
+    return impact;
+  }, [recurringQuery.data]);
+  
+  // Loading states
   const loading = recurringQuery.isLoading;
   const loadingStates = {
     recurring: recurringQuery.isLoading,
@@ -75,22 +151,22 @@ export const TransactionProvider = ({ children }) => {
     delete: deleteMutation.isLoading
   };
   
-  // Error handling - רק recurring error
+  // Error handling
   const error = recurringQuery.error;
   
   // Transaction operations (simplified)
   const createTransaction = async (type, data) => {
-    if (!user) return null;
+    if (!isAuthenticated) return null;
     return createMutation.mutateAsync({ type, data });
   };
   
   const updateTransaction = async (type, id, data, updateFuture = false) => {
-    if (!user) return null;
+    if (!isAuthenticated) return null;
     return updateMutation.mutateAsync({ type, id, data: { ...data, updateFuture } });
   };
   
   const deleteTransaction = async (type, id, deleteFuture = false) => {
-    if (!user) return false;
+    if (!isAuthenticated) return false;
     return deleteMutation.mutateAsync({ type, id, deleteFuture });
   };
   
@@ -110,7 +186,7 @@ export const TransactionProvider = ({ children }) => {
       
       const response = await api.post(`/transactions/${type}`, payload);
       
-      // Trigger refresh - ללא לוגים מיותרים
+      // Trigger refresh
       window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
       window.dispatchEvent(new CustomEvent('transaction-added'));
       
@@ -121,38 +197,15 @@ export const TransactionProvider = ({ children }) => {
     }
   };
   
-  // Refresh data - רק recurring & templates
+  // Refresh data
   const refreshData = () => {
     recurringQuery.refetch();
     templatesQuery.refetch();
   };
   
-  // Calculate the daily impact of all recurring transactions
-  const recurringDailyImpact = React.useMemo(() => {
-    const rawRecurring = recurringQuery.data?.data;
-    const recurring = Array.isArray(rawRecurring) ? rawRecurring : [];
-
-    return recurring.reduce((acc, item) => {
-      const dailyAmount =
-        item.daily_amount ||
-        (item.interval_type === 'monthly'
-          ? item.amount / 30
-          : item.interval_type === 'weekly'
-          ? item.amount / 7
-          : item.amount);
-
-      if (item.type === 'income') {
-        acc.income += dailyAmount;
-      } else {
-        acc.expense += dailyAmount;
-      }
-      acc.total = acc.income - acc.expense;
-      return acc;
-    }, { total: 0, income: 0, expense: 0 });
-  }, [recurringQuery.data]);
-  
+  // ✅ FIX: Complete the value object
   const value = {
-    // Data - רק recurring & templates
+    // Data
     recurringTransactions: recurringQuery.data || [],
     templates: templatesQuery.data || [],
     recurringDailyImpact,
