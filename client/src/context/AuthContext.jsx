@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { auth, tokenManager } from '../utils/auth';
 import { authAPI } from '../utils/api';
 import toast from 'react-hot-toast';
+import api from '../utils/api'; // NEW: Import for direct API calls
 
 const AuthContext = createContext(null);
 
@@ -72,22 +73,37 @@ export const AuthProvider = ({ children }) => {
     }
   });
   
-  // Login mutation
+  // Login mutation - UPDATED: Now handles email verification errors
   const loginMutation = useMutation({
-    mutationFn: (credentials) => {
+    mutationFn: async (credentials) => {
       console.log(`🔑 [LOGIN] 🔥 ATTEMPTING LOGIN 🔥 for user:`, credentials.email);
       const startTime = Date.now();
       
-      return auth.login(credentials).then(result => {
+      try {
+        const response = await api.post('/users/login', credentials);
         const endTime = Date.now();
         console.log(`✅ [LOGIN] Login completed in ${endTime - startTime}ms`);
-        console.log(`✅ [LOGIN] Login result:`, result);
-        return result;
-      }).catch(error => {
+        
+        // Handle successful login
+        if (response.data.data?.accessToken) {
+          tokenManager.setTokens(response.data.data.accessToken, response.data.data.refreshToken);
+          return { success: true, user: response.data.data.user };
+        }
+        
+        return { success: false, error: 'No token received' };
+      } catch (error) {
         const endTime = Date.now();
         console.error(`❌ [LOGIN] Login failed after ${endTime - startTime}ms:`, error);
+        
+        // NEW: Check for email verification error
+        if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+          console.log(`📧 [LOGIN] Email verification required for:`, credentials.email);
+          // Let the component handle this specific error
+          throw error;
+        }
+        
         throw error;
-      });
+      }
     },
     onSuccess: (data) => {
       console.log(`🎉 [LOGIN-SUCCESS] Login successful, invalidating profile query`);
@@ -111,21 +127,47 @@ export const AuthProvider = ({ children }) => {
     },
     onError: (error) => {
       console.error(`❌ [LOGIN-ERROR] Login mutation error:`, error);
-      toast.error(error.message || 'Login failed');
+      // NEW: Don't show toast here for email verification - let the component handle it
+      if (error.response?.data?.error?.code !== 'EMAIL_NOT_VERIFIED') {
+        toast.error(error.message || 'Login failed');
+      }
     }
   });
   
-  // Register mutation
+  // Register mutation - UPDATED: Now handles email verification flow like password reset
   const registerMutation = useMutation({
-    mutationFn: (userData) => auth.register(userData),
-    onSuccess: (data) => {
-      if (data.success) {
-        toast.success('Registration successful! Please log in.');
-        navigate('/login');
+    mutationFn: async (userData) => {
+      console.log(`📝 [REGISTER] Attempting registration for:`, userData.email);
+      
+      try {
+        const response = await authAPI.register(userData);
+        console.log(`✅ [REGISTER] Registration response:`, response.data);
+        
+        return response.data; // Return the full response for email verification handling
+      } catch (error) {
+        console.error(`❌ [REGISTER] Registration failed:`, error);
+        
+        // Handle existing unverified user case
+        if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+          console.log(`📧 [REGISTER] Email already exists but unverified:`, userData.email);
+          // Return special response for existing unverified user
+          return {
+            requiresVerification: true,
+            email: userData.email,
+            isExistingUser: true,
+            message: error.response.data.error.message
+          };
+        }
+        
+        throw error;
       }
     },
+    // Don't handle success/error here - let components handle the email verification flow
+    onSuccess: (data) => {
+      console.log(`📧 [REGISTER-SUCCESS] Registration completed:`, data);
+    },
     onError: (error) => {
-      toast.error(error.message || 'Registration failed');
+      console.error(`❌ [REGISTER-ERROR] Registration mutation error:`, error);
     }
   });
   
@@ -222,6 +264,65 @@ export const AuthProvider = ({ children }) => {
     return () => clearTimeout(timeout);
   }, [user, refetchProfile]);
   
+  // NEW: Email verification mutations
+  const verifyEmailMutation = useMutation({
+    mutationFn: async (token) => {
+      console.log(`📧 [VERIFY-EMAIL] Attempting to verify email with token:`, token);
+      
+      try {
+        const response = await authAPI.verifyEmail(token);
+        console.log(`✅ [VERIFY-EMAIL] Email verification successful:`, response.data);
+        
+        // Auto-login user after successful verification
+        if (response.data.data?.accessToken) {
+          tokenManager.setTokens(response.data.data.accessToken, response.data.data.refreshToken);
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error(`❌ [VERIFY-EMAIL] Email verification failed:`, error);
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      console.log(`🎉 [VERIFY-EMAIL-SUCCESS] Email verified, user logged in`);
+      queryClient.invalidateQueries(['profile']);
+      window.dispatchEvent(new Event('authStateChanged'));
+      
+      toast.success('Email verified successfully! Welcome to SpendWise!');
+      navigate('/');
+    },
+    onError: (error) => {
+      console.error(`❌ [VERIFY-EMAIL-ERROR]:`, error);
+      const message = error.response?.data?.error?.message || 'Email verification failed';
+      toast.error(message);
+    }
+  });
+
+  const resendVerificationMutation = useMutation({
+    mutationFn: async (email) => {
+      console.log(`📧 [RESEND-VERIFICATION] Attempting to resend verification email to:`, email);
+      
+      try {
+        const response = await authAPI.resendVerificationEmail(email);
+        console.log(`✅ [RESEND-VERIFICATION] Verification email sent:`, response.data);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ [RESEND-VERIFICATION] Failed to resend:`, error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      console.log(`📧 [RESEND-VERIFICATION-SUCCESS] Verification email sent`);
+      toast.success('Verification email sent! Please check your inbox.');
+    },
+    onError: (error) => {
+      console.error(`❌ [RESEND-VERIFICATION-ERROR]:`, error);
+      const message = error.response?.data?.error?.message || 'Failed to send verification email';
+      toast.error(message);
+    }
+  });
+  
   // Public methods
   const login = useCallback(async (credentials) => {
     return loginMutation.mutateAsync(credentials);
@@ -238,6 +339,15 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = useCallback(async (data) => {
     return updateProfileMutation.mutateAsync(data);
   }, [updateProfileMutation]);
+  
+  // NEW: Public methods for email verification
+  const verifyEmail = useCallback(async (token) => {
+    return verifyEmailMutation.mutateAsync(token);
+  }, [verifyEmailMutation]);
+
+  const resendVerification = useCallback(async (email) => {
+    return resendVerificationMutation.mutateAsync(email);
+  }, [resendVerificationMutation]);
   
   const value = {
     // User data
@@ -256,13 +366,21 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
-    refreshProfile: refetchProfile, // Added to public API
+    refreshProfile: refetchProfile,
+    
+    // NEW: Email verification methods
+    verifyEmail,
+    resendVerification,
     
     // Loading states for mutations
     isLoggingIn: loginMutation.isLoading,
     isRegistering: registerMutation.isLoading,
     isLoggingOut: logoutMutation.isLoading,
-    isUpdatingProfile: updateProfileMutation.isLoading
+    isUpdatingProfile: updateProfileMutation.isLoading,
+    
+    // NEW: Email verification loading states
+    isVerifyingEmail: verifyEmailMutation.isLoading,
+    isResendingVerification: resendVerificationMutation.isLoading
   };
   
   return (

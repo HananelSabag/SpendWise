@@ -1,6 +1,6 @@
 /**
- * Scheduler Service - Updated for recurring templates
- * Handles periodic generation of recurring transactions
+ * Scheduler Service - Updated for recurring templates and token cleanup
+ * Handles periodic generation of recurring transactions and cleanup tasks
  * @module utils/scheduler
  */
 
@@ -13,7 +13,7 @@ const scheduler = {
    * Initialize scheduled tasks
    */
   init() {
-    logger.info('Initializing scheduler for recurring transactions');
+    logger.info('Initializing scheduler for recurring transactions and cleanup tasks');
     
     // Generate recurring transactions:
     // - On server start
@@ -33,6 +33,12 @@ const scheduler = {
     cron.schedule('0 0 * * 0', () => {
       logger.info('Running weekly backup recurring transactions generation');
       this.generateRecurringTransactions();
+    });
+    
+    // NEW: Daily token cleanup at 3:00 AM
+    cron.schedule('0 3 * * *', () => {
+      logger.info('Running daily token cleanup');
+      this.cleanupExpiredTokens();
     });
     
     logger.info('Scheduler initialized successfully');
@@ -81,6 +87,40 @@ const scheduler = {
         stack: error.stack
       });
       throw error;
+    } finally {
+      client.release();
+    }
+  },
+  
+  /**
+   * NEW: Clean up expired tokens (password reset and email verification)
+   */
+  async cleanupExpiredTokens() {
+    const client = await db.pool.connect();
+    
+    try {
+      logger.info('Starting token cleanup...');
+      
+      // Call the cleanup function we created in the database
+      const result = await client.query('SELECT cleanup_expired_tokens()');
+      
+      // Get cleanup statistics
+      const stats = await client.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM password_reset_tokens WHERE expires_at < NOW() OR used = true) as expired_password_tokens,
+          (SELECT COUNT(*) FROM email_verification_tokens WHERE expires_at < NOW() OR used = true) as expired_verification_tokens
+      `);
+      
+      logger.info('Token cleanup completed successfully', {
+        expiredPasswordTokens: stats.rows[0].expired_password_tokens,
+        expiredVerificationTokens: stats.rows[0].expired_verification_tokens
+      });
+      
+    } catch (error) {
+      logger.error('Failed to cleanup expired tokens:', {
+        error: error.message,
+        code: error.code
+      });
     } finally {
       client.release();
     }

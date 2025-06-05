@@ -1,16 +1,17 @@
 -- SpendWise Clean Schema
--- Optimized for simple recurring transactions
+-- Optimized for simple recurring transactions with email verification
 
 -- Drop existing schema (for clean start)
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 
--- Users table
+-- Users table (UPDATED: Added email_verified column)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     username VARCHAR(100) NOT NULL,
+    email_verified BOOLEAN DEFAULT false, -- NEW: Email verification status
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     preferences JSONB DEFAULT '{}',
     last_login TIMESTAMP
@@ -103,5 +104,19 @@ CREATE TABLE password_reset_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- NEW: Email verification tokens table
+CREATE TABLE email_verification_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Index for password reset tokens
 CREATE INDEX idx_password_reset_tokens ON password_reset_tokens(token, used, expires_at);
+
+-- NEW: Index for email verification tokens
+CREATE INDEX idx_email_verification_tokens ON email_verification_tokens(token, used, expires_at);
+CREATE INDEX idx_users_email_verified ON users(email_verified);

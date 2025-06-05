@@ -176,20 +176,25 @@ export const useProfile = () => {
   return useQuery({
     queryKey: ['profile'],
     queryFn: () => authAPI.getProfile(),
-    // ✅ ADD: Auth guards
+    // Auth guards
     enabled: !!isAuthenticated,
-    refetchOnWindowFocus: false, // ✅ DISABLED: Profile rarely changes
+    refetchOnWindowFocus: false, // Profile rarely changes
     refetchOnMount: !!isAuthenticated,
-    staleTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour - profile is stable
+    staleTime: 60 * 60 * 1000, // 1 hour - profile is stable
   });
 };
 
 export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: (data) => authAPI.updateProfile(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success('Profile updated successfully');
       queryClient.invalidateQueries(['profile']);
+      
+      // NEW: If email was changed, might need re-verification
+      if (response.data?.requiresVerification) {
+        toast.info('Please check your email to verify your new email address');
+      }
     },
     onError: (error) => {
       const message = error.response?.data?.error?.message || 'Failed to update profile';
@@ -209,7 +214,42 @@ export const useUpdatePreferences = () => {
 };
 
 /**
- * Password Reset Hooks - Enhanced for email service
+ * NEW: Email Verification Hooks
+ */
+export const useVerifyEmail = (token) => {
+  return useQuery({
+    queryKey: ['verify-email', token],
+    queryFn: () => authAPI.verifyEmail(token),
+    enabled: !!token,
+    retry: false, // Don't retry failed verifications
+    staleTime: Infinity, // Verification result doesn't change
+    refetchOnWindowFocus: false, // Prevent accidental re-verification
+  });
+};
+
+export const useResendVerificationEmail = () => {
+  return useMutation({
+    mutationFn: (email) => authAPI.resendVerificationEmail(email),
+    onSuccess: () => {
+      toast.success('Verification email sent! Please check your inbox.');
+    },
+    onError: (error) => {
+      console.error('📧 [RESEND-VERIFICATION] Error:', error);
+      const errorData = error.response?.data?.error;
+      
+      // Handle rate limiting
+      if (errorData?.code === 'VERIFICATION_LIMIT') {
+        toast.error('Too many verification attempts. Please wait before trying again.');
+      } else {
+        const message = errorData?.message || 'Failed to send verification email';
+        toast.error(message);
+      }
+    }
+  });
+};
+
+/**
+ * Password Reset Hooks
  */
 export const useForgotPassword = () => {
   return useMutation({
@@ -365,6 +405,32 @@ export const useTestEmail = () => {
     },
     onError: (error) => {
       const message = error.response?.data?.error?.message || 'Failed to send test email';
+      toast.error(message);
+    }
+  });
+};
+
+// Register hook with email verification support
+export const useRegister = () => {
+  return useMutation({
+    mutationFn: (userData) => authAPI.register(userData),
+    onSuccess: (data) => {
+      console.log('📝 [REGISTER-HOOK] Registration successful:', data);
+      
+      // Handle email verification requirement
+      if (data.requiresVerification) {
+        if (data.isExistingUser) {
+          toast.info('Account exists but email not verified. Please check your email or resend verification.');
+        } else {
+          toast.success('Registration successful! Please check your email to verify your account.');
+        }
+      } else {
+        toast.success('Registration successful!');
+      }
+    },
+    onError: (error) => {
+      console.error('📝 [REGISTER-HOOK] Registration failed:', error);
+      const message = error.response?.data?.error?.message || 'Registration failed';
       toast.error(message);
     }
   });

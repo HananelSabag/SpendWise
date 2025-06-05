@@ -4,10 +4,11 @@ const { auth } = require('../middleware/auth');
 const userController = require('../controllers/userController');
 const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
+const { emailVerificationLimiter } = require('../middleware/rateLimiter'); // NEW: Import rate limiter
 
 /**
  * @route   POST /api/v1/users/register
- * @desc    Register a new user
+ * @desc    Register a new user - UPDATED: Now with email verification
  */
 router.post('/register', 
   validate.user, 
@@ -15,11 +16,31 @@ router.post('/register',
 );
 
 /**
+ * NEW: Email verification endpoint
+ * @route   GET /api/v1/users/verify-email/:token
+ * @desc    Verify email with token
+ */
+router.get('/verify-email/:token', 
+  userController.verifyEmail
+);
+
+/**
+ * NEW: Resend verification email
+ * @route   POST /api/v1/users/resend-verification
+ * @desc    Resend email verification link
+ */
+router.post('/resend-verification', 
+  emailVerificationLimiter, // NEW: Add rate limiting (3 requests per 5 minutes)
+  validate.resendVerification, // NEW: Add validation
+  userController.resendVerificationEmail
+);
+
+/**
  * @route   POST /api/v1/users/login
- * @desc    User login
+ * @desc    User login - UPDATED: Now checks email verification
  */
 router.post('/login', 
-  validate.user,  // Keep only essential middleware
+  validate.user,
   userController.login
 );
 
@@ -292,6 +313,35 @@ router.post('/profile/picture',
  */
 router.post('/logout', 
   userController.logout
+);
+
+/**
+ * NEW: Email service health check (Development/Admin)
+ * @route   GET /api/v1/users/email-health
+ * @desc    Check email service status
+ */
+router.get('/email-health', 
+  auth, // Require authentication
+  async (req, res, next) => {
+    try {
+      const emailService = require('../services/emailService');
+      
+      // Simple health check without actually sending emails
+      const isConfigured = emailService.isConfigured();
+      
+      res.json({
+        success: true,
+        data: {
+          emailService: {
+            configured: isConfigured,
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 module.exports = router;

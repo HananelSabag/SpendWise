@@ -15,7 +15,9 @@ import {
   Languages,
   Eye,
   EyeOff,
-  UserPlus
+  UserPlus,
+  AlertCircle, // NEW: For verification notice
+  CheckCircle // NEW: For success modal
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -28,6 +30,7 @@ import { cn } from '../../utils/helpers';
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import Footer from '../../components/layout/Footer';
+import api from '../../utils/api'; // NEW: For direct API calls
 
 const PasswordStrengthIndicator = ({ password }) => {
   const { t, language } = useLanguage();
@@ -70,6 +73,55 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
+// NEW: Email verification success modal component
+const EmailVerificationModal = ({ email, onClose }) => {
+  const { t } = useLanguage();
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full"
+      >
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
+            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+          </div>
+          
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('auth.registrationSuccess')}
+          </h3>
+          
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {t('auth.verificationEmailSent')} <strong>{email}</strong>
+          </p>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              {t('auth.checkEmailInstructions')}
+            </p>
+          </div>
+          
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={onClose}
+          >
+            {t('auth.goToLogin')}
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const { register, isRegistering, error: authError } = useAuth();
@@ -89,6 +141,10 @@ const Register = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // Start at step 1
   const [showAccessibility, setShowAccessibility] = useState(false);
+  
+  // NEW: Email verification state
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   // Password requirements
   const passwordRequirements = [
@@ -141,7 +197,7 @@ const Register = () => {
     setErrors({});
   };
 
-  // Handle form submission
+  // Handle form submission - UPDATED: Now handles email verification
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -160,28 +216,52 @@ const Register = () => {
     }
 
     try {
-      // Attempt registration
-      const result = await register(formData);
+      // NEW: Make direct API call for registration with email verification
+      const response = await api.post('/users/register', {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
       
-      if (result.success) {
-        // Navigate to login with success message
-        navigate('/login', { 
-          state: { 
-            message: t('register.success.message') 
-          } 
-        });
+      if (response.data.requiresVerification) {
+        // NEW: Show verification modal
+        setRegisteredEmail(formData.email);
+        setShowVerificationModal(true);
       } else {
-        // Handle registration error
-        setErrors({ 
-          general: result.error?.message || t('register.errors.registrationFailed') 
-        });
+        // This shouldn't happen with email verification enabled
+        navigate('/login');
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setErrors({ 
-        general: t('errors.generic') 
-      });
+      
+      // NEW: Handle specific email verification error cases
+      const errorData = err.response?.data?.error;
+      
+      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        setErrors({ 
+          general: t('auth.emailNotVerifiedError')
+        });
+      } else if (errorData?.message?.includes('already exists')) {
+        setErrors({ 
+          email: t('auth.emailAlreadyRegistered')
+        });
+      } else {
+        setErrors({ 
+          general: errorData?.message || t('errors.generic')
+        });
+      }
     }
+  };
+
+  // NEW: Handle verification modal close
+  const handleVerificationModalClose = () => {
+    setShowVerificationModal(false);
+    navigate('/login', { 
+      state: { 
+        message: t('auth.verificationEmailSentMessage'),
+        email: registeredEmail 
+      } 
+    });
   };
 
   // Benefits list
@@ -317,6 +397,16 @@ const Register = () => {
                       required
                     />
 
+                    {/* NEW: Email verification notice */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                          {t('auth.emailVerificationNotice')}
+                        </p>
+                      </div>
+                    </div>
+
                     <Button
                       type="button"
                       variant="primary"
@@ -344,17 +434,26 @@ const Register = () => {
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-6"
                   >
-                    {/* Password */}
+                    {/* Password - UPDATED: Added show/hide functionality */}
                     <div>
                       <Input
                         label={t('auth.password')}
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => handleChange('password', e.target.value)}
                         placeholder={t('auth.passwordPlaceholder')}
                         icon={Lock}
                         error={errors.password}
                         required
+                        suffix={
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        }
                       />
                       <PasswordStrengthIndicator password={formData.password} />
                       
@@ -378,16 +477,25 @@ const Register = () => {
                       </div>
                     </div>
 
-                    {/* Confirm Password */}
+                    {/* Confirm Password - UPDATED: Added show/hide functionality */}
                     <Input
                       label={t('auth.confirmPassword')}
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => handleChange('confirmPassword', e.target.value)}
                       placeholder={t('auth.confirmPasswordPlaceholder')}
                       icon={Lock}
                       error={errors.confirmPassword}
                       required
+                      suffix={
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      }
                     />
 
                     {/* Terms */}
@@ -559,6 +667,16 @@ const Register = () => {
           </div>
         </div>
       </div>
+
+      {/* NEW: Email Verification Modal */}
+      <AnimatePresence>
+        {showVerificationModal && (
+          <EmailVerificationModal 
+            email={registeredEmail}
+            onClose={handleVerificationModalClose}
+          />
+        )}
+      </AnimatePresence>
 
       <Footer />
     </>

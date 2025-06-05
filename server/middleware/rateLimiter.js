@@ -89,11 +89,25 @@ const generateRecurringLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// NEW: Email verification limiter (prevent spam)
+const emailVerificationLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 3, // 3 requests per 5 minutes
+  message: {
+    error: {
+      code: 'VERIFICATION_LIMIT',
+      message: 'Too many verification attempts, please try again later',
+      retryAfter: 300
+    }
+  }
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
   createTransactionLimiter,
   getSummaryLimiter,
   getTransactionsLimiter,
-  generateRecurringLimiter // Add new limiter
+  generateRecurringLimiter,
+  emailVerificationLimiter // NEW: Add email verification limiter
 };

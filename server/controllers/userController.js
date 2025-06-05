@@ -1,5 +1,5 @@
 /**
- * User Controller - Updated for new error handling
+ * User Controller - Updated for new error handling and email verification
  * Handles all user-related HTTP requests
  * @module controllers/userController
  */
@@ -10,10 +10,16 @@ const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const emailService = require('../services/emailService');
+const crypto = require('crypto'); // NEW: For verification tokens
+
+// NEW: Helper function to generate verification token
+const generateVerificationToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
 
 const userController = {
   /**
-   * Register a new user
+   * Register a new user - UPDATED: Now includes email verification
    * @route POST /api/users/register
    */
   register: asyncHandler(async (req, res) => {
@@ -31,24 +37,56 @@ const userController = {
       };
     }
 
-    // Create user
+    // NEW: Check if user exists but unverified
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      if (!existingUser.email_verified) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Email already registered but not verified. Please check your email or request a new verification link.',
+            requiresVerification: true,
+            email: existingUser.email
+          }
+        });
+      }
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'User already exists' };
+    }
+
+    // Create user (email_verified defaults to false)
     const newUser = await User.create(email, username, password);
     
-    logger.info('New user registered:', { userId: newUser.id, email });
+    // NEW: Generate and save verification token
+    const verificationToken = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await User.saveVerificationToken(newUser.id, verificationToken, expiresAt);
+
+    // NEW: Send verification email
+    try {
+      await emailService.sendVerificationEmail(email, username, verificationToken);
+      logger.info('📧 Verification email sent:', { email, userId: newUser.id });
+    } catch (emailError) {
+      logger.error('📧 Failed to send verification email:', emailError);
+      // Continue with registration even if email fails
+    }
+    
+    logger.info('New user registered (unverified):', { userId: newUser.id, email });
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'Registration successful! Please check your email to verify your account.',
       data: {
         id: newUser.id,
         email: newUser.email,
-        username: newUser.username
+        username: newUser.username,
+        requiresVerification: true
       }
     });
   }),
 
   /**
-   * Login user
+   * Login user - UPDATED: Now checks email verification
    * @route POST /api/users/login
    */
   login: asyncHandler(async (req, res) => {
@@ -81,6 +119,19 @@ const userController = {
         });
       }
 
+      // NEW: Check if email is verified
+      if (!user.email_verified) {
+        console.log(`❌ [LOGIN-CONTROLLER] Email not verified for: ${email}`);
+        return res.status(403).json({
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Please verify your email before logging in. Check your inbox or request a new verification email.',
+            requiresVerification: true,
+            email: user.email
+          }
+        });
+      }
+
       console.log(`✅ [LOGIN-CONTROLLER] Authentication successful for: ${email}, userId: ${user.id}`);
 
       // Generate tokens
@@ -89,14 +140,14 @@ const userController = {
 
       logger.info('User logged in:', { userId: user.id });
 
-      // Make sure we return here to prevent any further execution
       return res.json({
         success: true,
         data: {
           user: {
             id: user.id,
             email: user.email,
-            username: user.username
+            username: user.username,
+            email_verified: user.email_verified
           },
           accessToken,
           refreshToken
@@ -304,7 +355,121 @@ const userController = {
       success: true,
       message: 'Logged out successfully'
     });
-  })
+  }),
+
+  /**
+   * NEW: Verify email with token
+   * @route GET /api/users/verify-email/:token
+   */
+  verifyEmail: asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    if (!token) {
+      throw { ...errorCodes.MISSING_REQUIRED, details: 'Verification token is required' };
+    }
+
+    // Find and validate token
+    const verificationData = await User.findVerificationToken(token);
+
+    if (!verificationData) {
+      throw { ...errorCodes.NOT_FOUND, message: 'Invalid or expired verification token' };
+    }
+
+    if (new Date(verificationData.expires_at) < new Date()) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Verification token has expired' };
+    }
+
+    if (verificationData.used) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Verification token has already been used' };
+    }
+
+    // Mark user as verified and token as used
+    await User.verifyEmail(verificationData.user_id);
+    await User.markVerificationTokenAsUsed(token);
+
+    // Get user details for response
+    const user = await User.findById(verificationData.user_id);
+
+    // Generate auth tokens for immediate login
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    logger.info('Email verified successfully:', { userId: verificationData.user_id });
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully! You can now log in.',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          email_verified: true
+        },
+        accessToken,
+        refreshToken
+      }
+    });
+  }),
+
+  /**
+   * NEW: Resend verification email
+   * @route POST /api/users/resend-verification
+   */
+  resendVerificationEmail: asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+      throw { ...errorCodes.MISSING_REQUIRED, details: 'Email is required' };
+    }
+
+    // Find user by email
+    const user = await User.findByEmail(email);
+
+    if (!user) {
+      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+    }
+
+    // Check if already verified
+    if (user.email_verified) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Email is already verified' };
+    }
+
+    // Check for recent verification tokens (prevent spam)
+    const recentToken = await User.getRecentVerificationToken(user.id);
+    if (recentToken) {
+      const timeSinceLastToken = Date.now() - new Date(recentToken.created_at).getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (timeSinceLastToken < fiveMinutes) {
+        const waitTime = Math.ceil((fiveMinutes - timeSinceLastToken) / 1000 / 60);
+        throw { 
+          ...errorCodes.VALIDATION_ERROR, 
+          details: `Please wait ${waitTime} more minutes before requesting another verification email` 
+        };
+      }
+    }
+
+    // Generate new verification token
+    const verificationToken = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Save new token
+    await User.saveVerificationToken(user.id, verificationToken, expiresAt);
+
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(user.email, user.username, verificationToken);
+      logger.info('📧 Verification email resent:', { email });
+      
+      res.json({
+        success: true,
+        message: 'Verification email sent successfully'
+      });
+    } catch (emailError) {
+      logger.error('📧 Failed to send verification email:', emailError);
+      throw { ...errorCodes.INTERNAL_ERROR, message: 'Failed to send verification email' };
+    }
+  }),
 };
 
 module.exports = userController;

@@ -23,7 +23,6 @@ import {
 
 // Features
 import BalancePanel from '../components/features/dashboard/BalancePanel';
-import QuickActionsBar from '../components/features/dashboard/QuickActionsBar'; 
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
 import ActionsPanel from '../components/features/dashboard/ActionsPanel';
 import StatsChart from '../components/features/dashboard/StatsChart';
@@ -45,6 +44,7 @@ const Dashboard = () => {
   } = useDashboard();
   
   const [loading, setLoading] = useState(true);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
   // ✅ REPLACE RANDOM STATS WITH REAL DATA
   const dashboardStats = React.useMemo(() => {
@@ -115,6 +115,17 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // ✅ NEW: Welcome banner auto-hide animation - FASTER NOW
+  useEffect(() => {
+    if (!loading && !isDashboardLoading) {
+      const timer = setTimeout(() => {
+        setShowWelcomeBanner(false);
+      }, 2000); // ✅ CHANGED: Show for 2 seconds instead of 3.5 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isDashboardLoading]);
+
   // Function to get a time-appropriate greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -132,14 +143,14 @@ const Dashboard = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
+        staggerChildren: 0.15,
+        delayChildren: showWelcomeBanner ? 0.8 : 0.2
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
       y: 0,
@@ -151,15 +162,49 @@ const Dashboard = () => {
     }
   };
 
+  // ✅ NEW: Enhanced welcome banner variants
   const welcomeVariants = {
-    initial: { opacity: 0, scale: 0.9 },
+    initial: { 
+      opacity: 0, 
+      scale: 0.95,
+      height: 0
+    },
     animate: { 
       opacity: 1, 
       scale: 1,
+      height: "auto",
       transition: {
         type: "spring",
         stiffness: 200,
-        damping: 20
+        damping: 20,
+        height: {
+          duration: 0.6,
+          ease: "easeOut"
+        }
+      }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.95,
+      height: 0,
+      marginBottom: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeInOut"
+      }
+    }
+  };
+
+  // ✅ NEW: Compact welcome banner variants (when minimized)
+  const compactWelcomeVariants = {
+    initial: { opacity: 0, y: -20 },
+    animate: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 25
       }
     }
   };
@@ -202,99 +247,185 @@ const Dashboard = () => {
             className="space-y-6"
             dir={isRTL ? 'rtl' : 'ltr'}
           >
-            {/* Welcome Banner - Always visible now */}
-            <motion.div
-              variants={welcomeVariants}
-              initial="initial"
-              animate="animate"
-              className="relative overflow-hidden"
-            >
-              <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-6 sm:p-8 shadow-lg">
-                {/* Enhanced Animated Background Pattern */}
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
-                  <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
-                  <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
-                  <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
-                </div>
-                
-                <div className="relative z-10">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
-                        {getGreeting()}
-                        <motion.div
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                        >
-                          <Sparkles className="w-6 h-6" />
-                        </motion.div>
-                      </h1>
-                      <p className="text-white/90 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {/* ✅ FIX: Use local timezone date formatting */}
-                        {(() => {
-                          const date = selectedDate || new Date();
-                          const formatOptions = language === 'he' 
-                            ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-                            : { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                          return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
-                        })()}
-                      </p>
+            {/* ✅ NEW: Animated Welcome Banner - Shows then transforms */}
+            <AnimatePresence mode="wait">
+              {showWelcomeBanner ? (
+                // Full Welcome Banner
+                <motion.div
+                  key="full-welcome"
+                  variants={welcomeVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="relative overflow-hidden mb-6"
+                >
+                  <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-6 sm:p-8 shadow-xl">
+                    {/* Enhanced Animated Background Pattern */}
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
+                      <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
+                      <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
+                      <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
                     </div>
                     
-                    {/* Quick Stats */}
-                    <div className="flex flex-wrap gap-3">
-                      <Badge 
-                        variant="default" 
-                        className="bg-white/20 text-white border-white/30 px-4 py-2"
-                      >
-                        <Activity className="w-4 h-4 mr-2" />
-                        {t('common.active')}
-                      </Badge>
-                      
-                      {/* Add more badges for visual richness */}
-                      <Badge 
-                        variant="default" 
-                        className="bg-primary-700/50 text-white border-white/30 px-4 py-2"
-                      >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {/* ✅ FIX: Use local timezone for month display */}
-                        {(() => {
-                          const today = new Date();
-                          return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'short' });
-                        })()}
-                      </Badge>
+                    <div className="relative z-10">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                          {/* ✅ NEW: Add Profile Photo */}
+                          <div className="relative">
+                            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
+                              {user?.preferences?.profilePicture ? (
+                                <img 
+                                  src={user.preferences.profilePicture} 
+                                  alt={user.username}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-2xl font-bold text-white">
+                                  {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                          </div>
+                          
+                          <div>
+                            <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
+                              {getGreeting()}
+                              <motion.div
+                                animate={{ rotate: [0, 10, -10, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                              >
+                                <Sparkles className="w-6 h-6" />
+                              </motion.div>
+                            </h1>
+                            <p className="text-white/90 flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              {/* ✅ FIX: Use local timezone date formatting */}
+                              {(() => {
+                                const date = selectedDate || new Date();
+                                const formatOptions = language === 'he' 
+                                  ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+                                  : { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                                return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-3">
+                          <Badge 
+                            variant="default" 
+                            className="bg-white/20 text-white border-white/30 px-4 py-2"
+                          >
+                            <Activity className="w-4 h-4 mr-2" />
+                            {t('common.active')}
+                          </Badge>
+                          
+                          <Badge 
+                            variant="default" 
+                            className="bg-primary-700/50 text-white border-white/30 px-4 py-2"
+                          >
+                            <Calendar className="w-4 h-4 mr-2" />
+                            {(() => {
+                              const today = new Date();
+                              return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'short' });
+                            })()}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
+                  </Card>
+                </motion.div>
+              ) : (
+                // ✅ NEW: Compact Welcome Header - WITH PROFILE PHOTO AND SAME GREETING
+                <motion.div
+                  key="compact-welcome"
+                  variants={compactWelcomeVariants}
+                  initial="initial"
+                  animate="animate"
+                  className="mb-6"
+                >
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-500/10 to-primary-600/10 dark:from-primary-600/20 dark:to-primary-700/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                    <div className="flex items-center gap-3">
+                      {/* ✅ NEW: Profile Photo in Compact Version */}
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center overflow-hidden">
+                          {user?.preferences?.profilePicture ? (
+                            <img 
+                              src={user.preferences.profilePicture} 
+                              alt={user.username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-lg font-bold text-white">
+                              {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                      </div>
+                      
+                      <div>
+                        {/* ✅ NEW: Keep the Same Greeting */}
+                        <h2 className="font-semibold text-gray-900 dark:text-white">
+                          {getGreeting()}
+                        </h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {(() => {
+                            const today = new Date();
+                            return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { 
+                              weekday: 'long', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            });
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Badge 
+                      variant="default" 
+                      className="bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 px-3 py-1"
+                    >
+                      <Activity className="w-3 h-3 mr-1" />
+                      {t('common.active')}
+                    </Badge>
                   </div>
-                </div>
-              </Card>
-            </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Main Grid Layout - REDESIGNED FOR BETTER UX */}
+            {/* ✅ MAIN CONTENT - Now starts higher and gets more focus */}
             <div className="space-y-6">
-              {/* Top Section: Balance Panel - Full Width */}
-              <motion.div variants={itemVariants}>
-                <BalancePanel 
-                  balanceData={dashboardData?.balances}
-                  recurringInfo={dashboardData?.recurringInfo}
-                />
+              {/* ✅ HERO: Balance Panel - Now the main star! */}
+              <motion.div 
+                variants={itemVariants}
+                className="relative"
+              >
+                {/* Add subtle spotlight effect when welcome banner disappears */}
+                {!showWelcomeBanner && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 1.05 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="absolute -inset-4 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-2xl blur-xl"
+                  />
+                )}
+                <div className="relative">
+                  <BalancePanel 
+                    balanceData={dashboardData?.balances}
+                    recurringInfo={dashboardData?.recurringInfo}
+                  />
+                </div>
               </motion.div>
 
-              {/* Middle Section: Actions + Quick Actions */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Left: Main Actions Panel - Prominent Position */}
-                <motion.div variants={itemVariants} className="xl:col-span-2">
-                  <ActionsCard />
-                </motion.div>
+              {/* Actions Panel - Now more prominent */}
+              <motion.div variants={itemVariants}>
+                <ActionsCard />
+              </motion.div>
 
-                {/* Right: Enhanced Quick Actions */}
-                <motion.div variants={itemVariants} className="xl:col-span-1">
-                  <QuickActionsBar />
-                </motion.div>
-              </div>
-
-              {/* NEW: Charts Section */}
+              {/* Charts Section */}
               <motion.div variants={itemVariants}>
                 <StatsChart 
                   dashboardData={dashboardData}
@@ -303,7 +434,7 @@ const Dashboard = () => {
                 />
               </motion.div>
 
-              {/* Bottom Section: Recent Transactions - Full Width */}
+              {/* Recent Transactions */}
               <motion.div variants={itemVariants}>
                 <RecentTransactions 
                   transactions={dashboardData?.recentTransactions}
@@ -337,12 +468,12 @@ const Dashboard = () => {
               </motion.div>
             </div>
 
-            {/* Bottom Stats Cards - NOW WITH REAL DATA */}
+            {/* Bottom Stats Cards - Real Data */}
             <motion.div 
               variants={itemVariants}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8"
             >
-              {/* Daily Average Card - REAL DATA */}
+              {/* Daily Average Card */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -370,7 +501,7 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* Monthly Goal Card - REAL SAVINGS PERCENTAGE */}
+              {/* Monthly Goal Card */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-gray-800 dark:to-gray-900 border-green-100 dark:border-green-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -398,7 +529,7 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* Recurring Count Card - REAL COUNT */}
+              {/* Recurring Count Card */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-gray-800 dark:to-gray-900 border-purple-100 dark:border-purple-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -426,7 +557,7 @@ const Dashboard = () => {
                 </div>
               </Card>
 
-              {/* This Month Saved Card - REAL BALANCE */}
+              {/* Monthly Balance Card */}
               <Card className="p-4 hover:shadow-lg transition-shadow bg-gradient-to-br from-emerald-50 to-white dark:from-gray-800 dark:to-gray-900 border-emerald-100 dark:border-emerald-900/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -467,20 +598,18 @@ const Dashboard = () => {
   );
 };
 
-// Add ActionsCard component above the main Dashboard component
+// ✅ Actions Card - Now more prominent and better positioned
 const ActionsCard = () => {
   const { t, language } = useLanguage();
   const [showActionsPanel, setShowActionsPanel] = useState(false);
-  const [selectedActionType, setSelectedActionType] = useState(null); // NEW: Track which action was selected
+  const [selectedActionType, setSelectedActionType] = useState(null);
   const isRTL = language === 'he';
 
-  // Handle direct action selection - opens form immediately
   const handleDirectAction = (actionType) => {
     setSelectedActionType(actionType);
     setShowActionsPanel(true);
   };
 
-  // Handle full panel open - shows type selection
   const handleFullPanel = () => {
     setSelectedActionType(null);
     setShowActionsPanel(true);
@@ -584,7 +713,7 @@ const ActionsCard = () => {
             </Badge>
           </div>
 
-          {/* Action Cards - NOW OPEN SPECIFIC FORMS */}
+          {/* Action Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {actionTypes.map((action, index) => (
               <motion.button
@@ -607,7 +736,6 @@ const ActionsCard = () => {
                   {action.subtitle}
                 </p>
                 
-                {/* Direct action indicator */}
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
                 </div>
@@ -615,7 +743,7 @@ const ActionsCard = () => {
             ))}
           </div>
 
-          {/* Feature highlights - UPDATED FOR 4 CARDS */}
+          {/* Feature highlights */}
           <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -637,7 +765,7 @@ const ActionsCard = () => {
         </div>
       </Card>
 
-      {/* Actions Panel Modal - PASSES SELECTED ACTION TYPE */}
+      {/* Actions Panel Modal */}
       <AnimatePresence>
         {showActionsPanel && (
           <Modal
@@ -655,7 +783,7 @@ const ActionsCard = () => {
                 setShowActionsPanel(false);
                 setSelectedActionType(null);
               }}
-              initialActionType={selectedActionType} // NEW: Pass the selected action
+              initialActionType={selectedActionType}
             />
           </Modal>
         )}

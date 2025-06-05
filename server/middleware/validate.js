@@ -47,6 +47,33 @@ const validate = {
   },
 
   /**
+   * Validate email for resend verification
+   */
+  resendVerification: (req, res, next) => {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_EMAIL',
+          message: 'Email is required'
+        }
+      });
+    }
+
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_EMAIL',
+          message: 'Invalid email format'
+        }
+      });
+    }
+
+    next();
+  },
+
+  /**
    * Validate transaction creation/update
    */
   transaction: (req, res, next) => {

@@ -178,6 +178,37 @@ const translations = {
     currentPassword: 'Current Password',
     newPassword: 'New Password',
 
+    emailVerificationNotice: 'We will send you a verification email to confirm your account.',
+    registrationSuccess: 'Registration Successful!',
+    verificationEmailSent: 'We\'ve sent a verification email to',
+    checkEmailInstructions: 'Please check your inbox and click the verification link to activate your account.',
+    goToLogin: 'Go to Login',
+    emailNotVerifiedError: 'This email is already registered but not verified. Please check your email or request a new verification link.',
+    emailAlreadyRegistered: 'This email is already registered',
+    verificationEmailSentMessage: 'Verification email sent! Please check your inbox.',
+    emailNotVerifiedLogin: 'Your email is not verified. Please check your inbox or request a new verification email.',
+    resendVerificationLink: 'Resend verification email',
+    resendVerificationEmail: 'Resend Verification Email',
+    resendVerificationDescription: 'We\'ll send a new verification email to',
+    resendEmail: 'Resend Email',
+    verificationEmailResent: 'Verification email sent successfully!',
+    verifyingEmail: 'Verifying Your Email',
+    pleaseWait: 'Please wait while we verify your email address...',
+    emailVerified: 'Email Verified!',
+    emailVerifiedSuccess: 'Your email has been successfully verified. Welcome to SpendWise!',
+    tokenExpired: 'Verification Link Expired',
+    tokenExpiredMessage: 'This verification link has expired. Please request a new one from the login page.',
+    alreadyVerified: 'Already Verified',
+    alreadyVerifiedMessage: 'This email has already been verified. You can proceed to login.',
+    verificationFailed: 'Verification Failed',
+    verificationFailedMessage: 'We couldn\'t verify your email. Please try again or contact support.',
+    redirectingToDashboard: 'Redirecting you to your dashboard...',
+    goToDashboard: 'Go to Dashboard',
+    backToLogin: 'Back to Login',
+    proceedToLogin: 'Proceed to Login',
+    needHelp: 'Need help?',
+    contactSupport: 'Contact Support',
+
     // Actions
     signIn: 'Sign In',
     signUp: 'Sign Up',
@@ -260,10 +291,7 @@ const translations = {
       fast: 'Lightning Fast',
       fastDesc: 'Real-time updates and tracking',
       smart: 'Smart Analytics',
-      smartDesc: 'Intelligent insights for better decisions',
-      feature1: 'Track expenses effortlessly',
-      feature2: 'Set and achieve financial goals',
-      feature3: 'Get personalized insights'
+      smartDesc: 'Intelligent insights for better decisions'
     }
   },
 
@@ -362,7 +390,7 @@ const translations = {
     searchPlaceholder: 'Search transactions...',
     smartActions: 'Smart Actions',
     total: 'Total Transactions for the period',
-    
+
     // Display & Filtering
     showing: 'Showing',
     of: 'of',
@@ -377,7 +405,7 @@ const translations = {
     noMatchingTransactions: 'No matching transactions',
     tryDifferentSearch: 'Try a different search term or filter',
     loadingTransactions: 'Loading your transactions...',
-    
+
     // Actions
     addTransaction: 'Add Transaction',
     addNew: 'Add New',
@@ -388,7 +416,7 @@ const translations = {
     editSingle: 'Edit This',
     editThisOnly: 'Edit this occurrence only',
     manage: 'Manage',
-    
+
     // Form fields
     selectDate: 'Select Date',
     selectCategory: 'Select category',
@@ -398,7 +426,7 @@ const translations = {
     updateFutureDesc: 'This will update all future occurrences of this recurring transaction',
     convertToRecurring: 'Create recurring template',
     convertToRecurringDesc: 'This will create both a one-time transaction and a recurring template for future use.',
-    
+
     // Recurring
     recurring: 'Recurring',
     recurringTransactions: 'Recurring Transactions',
@@ -420,7 +448,7 @@ const translations = {
       description: 'Recurring transactions are automatically generated based on their frequency. You can modify or stop them at any time.'
     },
     convertedToRecurring: 'Successfully converted to recurring transaction',
-    
+
     // Recurring Actions
     pause: 'Pause',
     resume: 'Resume',
@@ -430,7 +458,7 @@ const translations = {
     generateNow: 'Generate Now',
     generated: 'Recurring transactions generated',
     generateError: 'Failed to generate recurring transactions',
-    
+
     // Skip Dates
     skipDates: {
       title: 'Skip Dates',
@@ -444,7 +472,7 @@ const translations = {
       error: 'Failed to save skip dates',
       save: 'Save Skip Dates'
     },
-    
+
     // Delete options
     deleteOptions: {
       single: {
@@ -471,7 +499,7 @@ const translations = {
       yesDeleteForever: 'Yes, Delete Forever',
       confirmDeletion: 'Confirm Deletion'
     },
-    
+
     // Frequencies
     frequency: 'Frequency',
     frequencies: {
@@ -482,7 +510,7 @@ const translations = {
       oneTime: 'One-time',
       null: 'One-time'
     },
-    
+
     // Filters
     filters: {
       title: 'Filters',
@@ -504,7 +532,7 @@ const translations = {
       clearAll: 'Clear All Filters',
       activeFilters: 'Active Filters'
     },
-    
+
     // Errors & Messages
     fetchError: 'Failed to load transactions',
     deleteError: 'Failed to delete transaction',
@@ -518,7 +546,7 @@ const translations = {
     monthlyTotal: 'monthly total',
     active: 'active'
   },
-  
+
   // Transaction Card
   transactionCard: {
     editButton: 'Edit transaction',
@@ -550,15 +578,15 @@ const translations = {
     directEntry: 'Direct entry',
     fullCustomization: 'Full customization',
     transactionAdded: 'Your transaction has been added successfully!',
-    
+
     // Quick actions
     quickExpense: 'Quick Expense',
     quickExpenseDesc: 'Add ₪100 expense instantly',
-    quickIncome: 'Quick Income', 
+    quickIncome: 'Quick Income',
     quickIncomeDesc: 'Add ₪1000 income instantly',
     quickRecurring: 'Quick Recurring',
     quickRecurringDesc: 'Add monthly recurring expense',
-    
+
     // Transaction types
     oneTimeExpense: 'One-time Expense',
     oneTimeExpenseDesc: 'Add a single expense transaction',
@@ -571,13 +599,13 @@ const translations = {
     recurringIncome: 'Recurring Income',
     recurringIncomeDesc: 'Set up a repeating income',
     quickAdd: 'Quick Add',
-    
+
     // Default descriptions
     defaultExpense: 'Quick expense',
     defaultIncome: 'Quick income',
     defaultRecurringExpense: 'Monthly recurring expense',
     defaultRecurringIncome: 'Monthly recurring income',
-    
+
     // Form labels
     fillDetails: 'Fill in transaction details',
     amount: 'Amount',
@@ -591,7 +619,7 @@ const translations = {
     recurringOptions: 'Recurring Options',
     recurring: 'Recurring',
     dayOfWeek: 'Day of Week',
-    
+
     // Examples
     example: 'Example',
     examples: 'Examples',
@@ -601,7 +629,7 @@ const translations = {
       salary: 'Monthly salary',
       rent: 'Monthly rent'
     },
-    
+
     // Actions
     add: 'Add Transaction',
     addIncome: 'Add Income',
@@ -610,7 +638,7 @@ const translations = {
     added: 'Added!',
     create: 'Create',
     update: 'Update',
-    
+
     // Frequencies
     frequencies: {
       daily: 'Daily',
@@ -619,7 +647,7 @@ const translations = {
       yearly: 'Yearly',
       oneTime: 'One-time'
     },
-    
+
     // Errors
     errors: {
       addingTransaction: 'Error adding transaction',
@@ -630,7 +658,7 @@ const translations = {
       formErrors: 'Please correct the errors in the form',
       general: 'An error occurred. Please try again.'
     },
-    
+
     // New keys
     new: 'New'
   },
@@ -671,21 +699,21 @@ const translations = {
     saveFailed: 'Failed to save category',
     deleteFailed: 'Failed to delete category',
     required: 'Required',
-    
+
     // Filter options
     filter: {
       all: 'All',
       income: 'Income',
       expense: 'Expense'
     },
-    
+
     // Statistics
     stats: {
       total: 'Total Categories',
       personal: 'Personal Categories',
       default: 'Default'
     },
-    
+
     // Default category names
     General: 'General',
     Salary: 'Salary',
@@ -798,7 +826,7 @@ const translations = {
     preferenceRemoved: 'Preference removed successfully',
     saveCustomPreferences: 'Save Custom Preferences',
     customPreferencesSaved: 'Custom preferences saved successfully',
-    
+
     // Advanced preferences
     advancedPreferences: 'Advanced Preferences',
     preferencesEditor: 'Preferences Editor',
@@ -809,7 +837,7 @@ const translations = {
     commonPreferences: 'Common Preferences',
     notificationPreferences: 'Notification Preferences',
     privacyPreferences: 'Privacy Preferences',
-    
+
     // Notification types
     notifications: {
       email: 'Email Notifications',
@@ -818,7 +846,7 @@ const translations = {
       recurring: 'Recurring Transaction Alerts',
       reminders: 'Payment Reminders'
     },
-    
+
     // Privacy options
     privacy: {
       showProfile: 'Show Public Profile',
@@ -840,7 +868,7 @@ const translations = {
       json: '{"key": "value"}',
       string: 'My value'
     },
-    
+
     // Error messages
     errors: {
       usernameRequired: 'Username is required',
@@ -855,7 +883,7 @@ const translations = {
       uploadFailed: 'Failed to upload image'
     }
   },
-  
+
   // Statistics
   stats: {
     title: 'Statistics',
@@ -1040,6 +1068,16 @@ const translations = {
     unknown: 'An unknown error occurred.'
   },
 
+  // NEW: Not Found page translations
+  notFound: {
+    title: 'Page Not Found',
+    message: 'The page you\'re looking for doesn\'t exist.',
+    suggestion: 'It might have been moved, deleted, or you entered the wrong URL.',
+    goHome: 'Go to Dashboard',
+    needHelp: 'Need Help?',
+    helpMessage: 'Contact our support team if you continue having issues.'
+  },
+
   // === HEBREW TRANSLATIONS ===
   he: {
     // Common/Shared
@@ -1201,6 +1239,39 @@ const translations = {
       usernamePlaceholder: 'בחרו שם משתמש',
       currentPassword: 'סיסמה נוכחית',
       newPassword: 'סיסמה חדשה',
+      accountInfo: 'פרטי חשבון',
+      security: 'אבטחה',
+      emailVerificationNotice: 'נשלח אליך אימייל לאימות על מנת לאשר את החשבון שלך.',
+      registrationSuccess: 'ההרשמה הושלמה בהצלחה!',
+      verificationEmailSent: 'שלחנו אימייל אימות אל',
+      checkEmailInstructions: 'אנא בדוק את תיבת הדואר ולחץ על קישור האימות להפעלת החשבון.',
+      goToLogin: 'לעמוד ההתחברות',
+      emailNotVerifiedError: 'כתובת האימייל הזו כבר רשומה אך לא אומתה. אנא בדוק את תיבת הדואר או בקש קישור אימות חדש.',
+      emailAlreadyRegistered: 'כתובת האימייל הזו כבר רשומה',
+      verificationEmailSentMessage: 'אימייל אימות נשלח! אנא בדוק את תיבת הדואר.',
+      emailNotVerifiedLogin: 'האימייל שלך לא אומת. בדוק את תיבת הדואר או בקש אימייל אימות חדש.',
+      resendVerificationLink: 'שלח שוב אימייל אימות',
+      resendVerificationEmail: 'שלח שוב אימייל אימות',
+      resendVerificationDescription: 'נשלח אליך שוב אימייל אימות לכתובת',
+      resendEmail: 'שלח אימייל מחדש',
+      verificationEmailResent: 'אימייל אימות נשלח בהצלחה!',
+      verifyingEmail: 'מאמת את האימייל שלך',
+      pleaseWait: 'אנא המתן בזמן שאנו מאמתים את כתובת הדואר האלקטרוני...',
+      emailVerified: 'האימייל אומת בהצלחה!',
+      emailVerifiedSuccess: 'כתובת האימייל שלך אומתה בהצלחה. ברוך הבא ל- SpendWise!',
+      tokenExpired: 'קישור האימות פג תוקף',
+      tokenExpiredMessage: 'קישור האימות הזה פג תוקף. אנא בקש קישור חדש מעמוד ההתחברות.',
+      alreadyVerified: 'כבר אומת',
+      alreadyVerifiedMessage: 'האימייל הזה כבר אומת. ניתן להמשיך להתחברות.',
+      verificationFailed: 'האימות נכשל',
+      verificationFailedMessage: 'לא הצלחנו לאמת את כתובת האימייל. אנא נסה שוב או פנה לתמיכה.',
+      redirectingToDashboard: 'מעביר אותך ללוח הבקרה...',
+      goToDashboard: 'מעבר ללוח הבקרה',
+      backToLogin: 'חזרה להתחברות',
+      proceedToLogin: 'המשך להתחברות',
+      needHelp: 'צריך עזרה?',
+      contactSupport: 'פנה לתמיכה',
+
 
       // Actions
       signIn: 'התחברות',
@@ -1284,10 +1355,7 @@ const translations = {
         fast: 'מהיר במיוחד',
         fastDesc: 'עדכונים ומעקב בזמן אמת',
         smart: 'ניתוח חכם',
-        smartDesc: 'תובנות חכמות להחלטות טובות יותר',
-        feature1: 'עקבו אחר ההוצאות בקלות',
-        feature2: 'הגדירו והשיגו יעדים פיננסיים',
-        feature3: 'קבלו תובנות מותאמות אישית'
+        smartDesc: 'תובנות חכמות להחלטות טובות יותר'
       }
     },
 
@@ -1386,7 +1454,7 @@ const translations = {
       searchPlaceholder: 'חפש עסקאות...',
       smartActions: 'פעולות חכמות',
       total: 'סך העסקאות לתקופה',
-      
+
       // Display & Filtering
       showing: 'מציג',
       of: 'מתוך',
@@ -1401,7 +1469,7 @@ const translations = {
       noMatchingTransactions: 'אין עסקאות תואמות',
       tryDifferentSearch: 'נסה מונח חיפוש או סינון אחר',
       loadingTransactions: 'טוען את העסקאות שלך...',
-      
+
       // Actions
       addTransaction: 'הוסף עסקה',
       addNew: 'הוסף חדש',
@@ -1412,7 +1480,7 @@ const translations = {
       editSingle: 'ערוך רק זו',
       editThisOnly: 'ערוך רק את המופע הזה',
       manage: 'נהל',
-      
+
       // Form fields
       selectDate: 'בחר תאריך',
       selectCategory: 'בחר קטגוריה',
@@ -1422,7 +1490,7 @@ const translations = {
       updateFutureDesc: 'זה יעדכן את כל המופעים העתידיים של עסקה קבועה זו',
       convertToRecurring: 'צור תבנית חוזרת',
       convertToRecurringDesc: 'זה ייצור גם עסקה חד פעמית וגם תבנית חוזרת לשימוש עתידי.',
-      
+
       // Recurring
       recurring: 'קבוע',
       recurringTransactions: 'עסקאות קבועות',
@@ -1444,7 +1512,7 @@ const translations = {
         description: 'עסקאות קבועות נוצרות אוטומטית לפי התדירות שלהן. ניתן לשנות או לעצור אותן בכל עת.'
       },
       convertedToRecurring: 'הומרה בהצלחה לעסקה קבועה',
-      
+
       // Recurring Actions
       pause: 'השהה',
       resume: 'חדש',
@@ -1454,7 +1522,7 @@ const translations = {
       generateNow: 'צור עכשיו',
       generated: 'עסקאות קבועות נוצרו',
       generateError: 'נכשל ביצירת עסקאות קבועות',
-      
+
       // Skip Dates
       skipDates: {
         title: 'דלג על תאריכים',
@@ -1468,7 +1536,7 @@ const translations = {
         error: 'נכשל בשמירת תאריכי דילוג',
         save: 'שמור תאריכי דילוג'
       },
-      
+
       // Delete options
       deleteOptions: {
         single: {
@@ -1495,7 +1563,7 @@ const translations = {
         yesDeleteForever: 'כן, מחק לצמיתות',
         confirmDeletion: 'אשר מחיקה'
       },
-      
+
       // Frequencies
       frequency: 'תדירות',
       frequencies: {
@@ -1506,7 +1574,7 @@ const translations = {
         oneTime: 'חד פעמי',
         null: 'חד פעמי'
       },
-      
+
       // Filters
       filters: {
         title: 'סינונים',
@@ -1528,7 +1596,7 @@ const translations = {
         clearAll: 'נקה את כל הסינונים',
         activeFilters: 'סינונים פעילים'
       },
-      
+
       // Errors & Messages
       fetchError: 'נכשל בטעינת עסקאות',
       deleteError: 'נכשל במחיקת עסקה',
@@ -1542,7 +1610,7 @@ const translations = {
       monthlyTotal: 'סך חודשי',
       active: 'פעיל'
     },
-    
+
     // Transaction Card
     transactionCard: {
       editButton: 'ערוך עסקה',
@@ -1574,7 +1642,7 @@ const translations = {
       directEntry: 'הזנה ישירה',
       fullCustomization: 'התאמה אישית מלאה',
       transactionAdded: 'העסקה שלך נוספה בהצלחה!',
-      
+
       // Quick actions
       quickExpense: 'הוצאה מהירה',
       quickExpenseDesc: 'הוסף הוצאה של ₪100 מיידית',
@@ -1583,7 +1651,7 @@ const translations = {
       quickRecurring: 'קבוע מהיר',
       quickRecurringDesc: 'הוסף הוצאה חוזרת חודשית',
       quickAdd: 'הוסף עסקה מהירה',
-      
+
       // Transaction types
       oneTimeExpense: 'הוצאה חד פעמית',
       oneTimeExpenseDesc: 'הוסף עסקת הוצאה בודדת',
@@ -1595,13 +1663,13 @@ const translations = {
       oneTimeIncomeDesc: 'הוסף עסקת הכנסה בודדת',
       recurringIncome: 'הכנסה חוזרת',
       recurringIncomeDesc: 'הגדר הכנסה חוזרת',
-      
+
       // Default descriptions
       defaultExpense: 'הוצאה מהירה',
       defaultIncome: 'הכנסה מהירה',
       defaultRecurringExpense: 'הוצאה חוזרת חודשית',
       defaultRecurringIncome: 'הכנסה חוזרת חודשית',
-      
+
       // Form labels
       fillDetails: 'מלא פרטי עסקה',
       amount: 'סכום',
@@ -1615,7 +1683,7 @@ const translations = {
       recurringOptions: 'אפשרויות חזרה',
       recurring: 'חוזר',
       dayOfWeek: 'יום בשבוע',
-      
+
       // Examples
       example: 'דוגמה',
       examples: 'דוגמאות',
@@ -1625,7 +1693,7 @@ const translations = {
         salary: 'משכורת חודשית',
         rent: 'שכר דירה חודשי'
       },
-      
+
       // Actions
       add: 'הוסף עסקה',
       addIncome: 'הוסף הכנסה',
@@ -1634,7 +1702,7 @@ const translations = {
       added: 'נוסף!',
       create: 'צור',
       update: 'עדכן',
-      
+
       // Frequencies
       frequencies: {
         daily: 'יומי',
@@ -1643,7 +1711,7 @@ const translations = {
         yearly: 'שנתי',
         oneTime: 'חד פעמי'
       },
-      
+
       // Errors
       errors: {
         addingTransaction: 'שגיאה בהוספת עסקה',
@@ -1654,7 +1722,7 @@ const translations = {
         formErrors: 'אנא תקנו את השגיאות בטופס',
         general: 'אירעה שגיאה. אנא נסה שוב.'
       },
-      
+
       // New keys
       new: 'חדש'
     },
@@ -1695,21 +1763,21 @@ const translations = {
       saveFailed: 'שמירת הקטגוריה נכשלה',
       deleteFailed: 'מחיקת הקטגוריה נכשלה',
       required: 'חובה',
-      
+
       // Filter options
       filter: {
         all: 'הכל',
         income: 'הכנסות',
         expense: 'הוצאות'
       },
-      
+
       // Statistics
       stats: {
         total: 'סה״כ קטגוריות',
         personal: 'קטגוריות אישיות',
         default: 'ברירת מחדל'
       },
-      
+
       // Default category names
       General: 'כללי',
       Salary: 'משכורת',
@@ -1727,7 +1795,7 @@ const translations = {
       Travel: 'נסיעות',
       Other: 'אחר'
     },
-    
+
     // Profile
     profile: {
       title: 'פרופיל',
@@ -1822,7 +1890,7 @@ const translations = {
       preferenceRemoved: 'ההעדפה הוסרה בהצלחה',
       saveCustomPreferences: 'שמור העדפות מותאמות אישית',
       customPreferencesSaved: 'ההעדפות המותאמות אישית נשמרו בהצלחה',
-      
+
       // Advanced preferences
       advancedPreferences: 'העדפות מתקדמות',
       preferencesEditor: 'עורך העדפות',
@@ -1833,7 +1901,7 @@ const translations = {
       commonPreferences: 'העדפות נפוצות',
       notificationPreferences: 'העדפות התראות',
       privacyPreferences: 'העדפות פרטיות',
-      
+
       // Notification types
       notifications: {
         email: 'התראות דוא״ל',
@@ -1842,7 +1910,7 @@ const translations = {
         recurring: 'התראות עסקאות חוזרות',
         reminders: 'תזכורות תשלום'
       },
-      
+
       // Privacy options
       privacy: {
         showProfile: 'הצג פרופיל ציבורי',
@@ -1854,7 +1922,7 @@ const translations = {
       typeString: 'טקסט',
       typeNumber: 'מספר',
       typeBoolean: 'אמת/שקר',
-      typeJson: 'אובייקט JSON',
+           typeJson: 'אובייקט JSON',
 
       // Placeholders
       placeholders: {
@@ -1879,7 +1947,7 @@ const translations = {
         uploadFailed: 'העלאת התמונה נכשלה'
       }
     },
-    
+
     // Statistics
     stats: {
       title: 'סטטיסטיקות',
@@ -2062,6 +2130,16 @@ const translations = {
       server: 'שגיאת שרת. אנא נסו שוב מאוחר יותר.',
       timeout: 'פג זמן הבקשה. אנא נסו שוב.',
       unknown: 'אירעה שגיאה לא ידועה.'
+    },
+
+    // NEW: Not Found page translations in Hebrew
+    notFound: {
+      title: 'הדף לא נמצא',
+      message: 'הדף שאתה מחפש לא קיים.',
+      suggestion: 'ייתכן שהוא הועבר, נמחק, או שהזנת כתובת שגויה.',
+      goHome: 'חזרה לדשבורד',
+      needHelp: 'צריך עזרה?',
+      helpMessage: 'צור קשר עם צוות התמיכה אם אתה ממשיך להיתקל בבעיות.'
     }
   }
 };

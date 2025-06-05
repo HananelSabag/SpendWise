@@ -1,5 +1,5 @@
 /**
- * User Model - Updated for new DB structure
+ * User Model - Updated for new DB structure and email verification
  * Handles all user-related database operations
  * @module models/User
  */
@@ -7,10 +7,11 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const errorCodes = require('../utils/errorCodes');
+const logger = require('../utils/logger');
 
 class User {
   /**
-   * Create a new user
+   * Create a new user - UPDATED: Now supports email_verified flag
    * @param {string} email - User's email
    * @param {string} username - User's username
    * @param {string} password - Plain text password
@@ -21,9 +22,9 @@ class User {
       const hashedPassword = await bcrypt.hash(password, 10);
       
       const query = `
-        INSERT INTO users (email, username, password_hash)
-        VALUES ($1, $2, $3)
-        RETURNING id, email, username, created_at, preferences;
+        INSERT INTO users (email, username, password_hash, email_verified)
+        VALUES ($1, $2, $3, false)
+        RETURNING id, email, username, created_at, preferences, email_verified;
       `;
       
       const result = await db.query(query, [email, username, hashedPassword]);
@@ -40,13 +41,13 @@ class User {
   }
 
   /**
-   * Find user by email
+   * Find user by email - UPDATED: Now includes email_verified
    * @param {string} email - User's email
    * @returns {Promise<Object|null>} User object or null
    */
   static async findByEmail(email) {
     const query = `
-      SELECT id, email, username, password_hash, preferences, last_login
+      SELECT id, email, username, password_hash, preferences, last_login, email_verified
       FROM users 
       WHERE email = $1;
     `;
@@ -56,13 +57,13 @@ class User {
   }
 
   /**
-   * Find user by ID
+   * Find user by ID - UPDATED: Now includes email_verified
    * @param {number} id - User's ID
    * @returns {Promise<Object|null>} User object (without password)
    */
   static async findById(id) {
     const query = `
-      SELECT id, email, username, preferences, created_at, last_login
+      SELECT id, email, username, preferences, created_at, last_login, email_verified
       FROM users 
       WHERE id = $1;
     `;
@@ -357,6 +358,114 @@ class User {
     
     return user;
   }
-}
+
+  /**
+   * NEW: Save email verification token
+   * @param {number} userId - User's ID
+   * @param {string} token - Verification token
+   * @param {Date} expiresAt - Token expiration date
+   * @returns {Promise<number>} Token ID
+   */
+  static async saveVerificationToken(userId, token, expiresAt) {
+    try {
+      const query = `
+        INSERT INTO email_verification_tokens (user_id, token, expires_at)
+        VALUES ($1, $2, $3)
+        RETURNING id
+      `;
+      
+      const result = await db.query(query, [userId, token, expiresAt]);
+      return result.rows[0].id;
+    } catch (error) {
+      logger.error('Error saving verification token:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * NEW: Find valid email verification token
+   * @param {string} token - Verification token
+   * @returns {Promise<Object|null>} Token data or null
+   */
+  static async findVerificationToken(token) {
+    try {
+      const query = `
+        SELECT * FROM email_verification_tokens 
+        WHERE token = $1 
+        AND used = false 
+        AND expires_at > NOW()
+      `;
+      
+      const result = await db.query(query, [token]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error finding verification token:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * NEW: Mark email as verified
+   * @param {number} userId - User's ID
+   * @returns {Promise<void>}
+   */
+  static async verifyEmail(userId) {
+    try {
+      const query = `
+        UPDATE users 
+        SET email_verified = true 
+        WHERE id = $1
+      `;
+      
+      await db.query(query, [userId]);
+    } catch (error) {
+      logger.error('Error verifying email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * NEW: Mark verification token as used
+   * @param {string} token - Verification token
+   * @returns {Promise<void>}
+   */
+  static async markVerificationTokenAsUsed(token) {
+    try {
+      const query = `
+        UPDATE email_verification_tokens 
+        SET used = true 
+        WHERE token = $1
+      `;
+      
+      await db.query(query, [token]);
+    } catch (error) {
+      logger.error('Error marking verification token as used:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * NEW: Get recent verification token for rate limiting
+   * @param {number} userId - User's ID
+   * @returns {Promise<Object|null>} Recent token or null
+   */
+  static async getRecentVerificationToken(userId) {
+    try {
+      const query = `
+        SELECT * FROM email_verification_tokens 
+        WHERE user_id = $1 
+        AND created_at > NOW() - INTERVAL '5 minutes'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      
+      const result = await db.query(query, [userId]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error getting recent verification token:', error);
+      throw error;
+    }
+  }
+};
 
 module.exports = User;

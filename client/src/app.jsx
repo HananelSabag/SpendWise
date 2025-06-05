@@ -20,20 +20,11 @@ import { TransactionProvider } from './context/TransactionContext';
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const PasswordReset = lazy(() => import('./pages/auth/PasswordReset')); // ✅ Unified component
+const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail')); // NEW: Email verification page
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Transactions = lazy(() => import('./pages/Transactions'));
-
-// Simple 404 component
-const NotFoundPage = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-    <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-4">404</h1>
-    <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">הדף שחיפשת לא נמצא</p>
-    <a href="/" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-      חזרה לדף הבית
-    </a>
-  </div>
-);
+const NotFound = lazy(() => import('./pages/NotFound')); // NEW: Proper NotFound component
 
 // Separate AppContent component that uses the auth context
 const AppContent = () => {
@@ -85,6 +76,11 @@ const AppContent = () => {
               !isAuthenticated ? <PasswordReset /> : <Navigate to="/" replace />
             } />
             
+            {/* NEW: Email verification route */}
+            <Route path="/verify-email/:token" element={
+              !isAuthenticated ? <VerifyEmail /> : <Navigate to="/" replace />
+            } />
+            
             {/* Protected Routes */}
             <Route path="/" element={
               isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
@@ -96,8 +92,8 @@ const AppContent = () => {
               isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
             } />
             
-            {/* Catch-all 404 Route */}
-            <Route path="*" element={<NotFoundPage />} />
+            {/* Catch-all 404 Route - UPDATED: Now uses proper NotFound component */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>

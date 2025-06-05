@@ -164,8 +164,35 @@ const getFullImageUrl = (imagePath) => {
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post('/users/login', credentials),
-  register: (userData) => api.post('/users/register', userData),
+  register: async (userData) => {
+    try {
+      const response = await api.post('/users/register', userData);
+      console.log('📝 [API] Registration response:', response.data);
+      
+      // Handle email verification requirement similar to password reset
+      if (response.data.data?.requiresVerification) {
+        console.log('📧 [API] Registration successful, email verification required');
+        return {
+          ...response,
+          data: {
+            ...response.data,
+            requiresVerification: true,
+            email: userData.email
+          }
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('📝 [API] Registration failed:', error);
+      throw error;
+    }
+  },
   logout: () => api.post('/users/logout'),
+  
+  // NEW: Email verification endpoints
+  verifyEmail: (token) => api.get(`/users/verify-email/${token}`),
+  resendVerificationEmail: (email) => api.post('/users/resend-verification', { email }),
   
   // Password reset functionality - Enhanced
   forgotPassword: (email) => api.post('/users/forgot-password', { email }),
@@ -449,6 +476,9 @@ export const handleAPIError = (error) => {
 export const queryKeys = {
   // Auth
   profile: ['profile'],
+  
+  // NEW: Email verification
+  verifyEmail: (token) => ['verify-email', token],
   
   // Transactions
   dashboard: (date) => ['dashboard', formatDateForAPI(date)],
