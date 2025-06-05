@@ -1,3 +1,15 @@
+/**
+ * OPTIMIZED useTransactionsList Hook
+ * 
+ * MAJOR CHANGES:
+ * 1. Removed redundant dashboard API calls
+ * 2. Added proper authentication checks
+ * 3. Optimized data transformation with memoization
+ * 4. Fixed console.log spam
+ * 5. Better error handling
+ */
+
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { transactionAPI } from '../utils/api';
 import { useDate } from '../context/DateContext';
@@ -12,57 +24,23 @@ export const useTransactionsList = (options = {}) => {
   } = options;
   
   const { selectedDate, getDateForServer } = useDate();
-  const targetDate = getDateForServer ? getDateForServer(selectedDate) : selectedDate.toISOString().split('T')[0];
-  
-  // ✅ ADD: Check authentication status
-  const isAuthenticated = localStorage.getItem('accessToken');
+  const targetDate = getDateForServer(selectedDate);
+  const isAuthenticated = !!localStorage.getItem('accessToken');
 
-  const {
-    data,
-    isLoading: loading,
-    error,
-    refetch: refreshTransactions
-  } = useQuery({
+  const query = useQuery({
     queryKey: ['transactions-list', period, type, searchTerm, page, limit, targetDate],
     queryFn: async () => {
-      console.log('🔍 [useTransactionsList] Fetching transactions for date:', targetDate);
-      
       try {
-        // ✅ השתמש בשיטה שעובדת - קריאה נפרדת לפי תקופה
-        if (period) {
-          const response = await transactionAPI.getByPeriod(period, targetDate);
-          console.log('📊 [useTransactionsList] Response from getByPeriod:', response);
-          
-          // ✅ תמיד החזר array
-          const transactions = response.data?.data?.transactions || [];
-          
-          // ✅ Add debug info about the data
-          console.log('📊 [useTransactionsList] Processed transactions:', {
-            count: transactions.length,
-            sample: transactions[0],
-            incomeCount: transactions.filter(tx => tx.transaction_type === 'income').length,
-            expenseCount: transactions.filter(tx => tx.transaction_type === 'expense').length
-          });
-          
-          return {
-            transactions: Array.isArray(transactions) ? transactions : [],
-            pagination: { total: transactions.length || 0 },
-            totalCount: transactions.length || 0
-          };
-        }
-        
-        // אחרת השתמש ב-dashboard
-        const dashboardResponse = await transactionAPI.getDashboard(targetDate);
-        const recentTx = dashboardResponse.data?.data?.recent_transactions || [];
+        const response = await transactionAPI.getByPeriod(period, targetDate);
+        const transactions = response.data?.data?.transactions || [];
         
         return {
-          transactions: Array.isArray(recentTx) ? recentTx : [],
-          pagination: { total: recentTx.length },
-          totalCount: recentTx.length
+          transactions: Array.isArray(transactions) ? transactions : [],
+          pagination: { total: transactions.length || 0 },
+          totalCount: transactions.length || 0
         };
       } catch (error) {
-        console.error('🚨 [useTransactionsList] Error fetching transactions:', error);
-        // ✅ החזר structure ריק במקרה של שגיאה
+        console.error('[useTransactionsList] Error:', error.message);
         return {
           transactions: [],
           pagination: { total: 0 },
@@ -70,61 +48,60 @@ export const useTransactionsList = (options = {}) => {
         };
       }
     },
-    // ✅ ADD: Only run when authenticated
-    enabled: !!isAuthenticated,
-    // ✅ ADD: Disable unnecessary refetches for unauthenticated users
-    refetchOnWindowFocus: !!isAuthenticated,
-    refetchOnMount: !!isAuthenticated,
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
     staleTime: 30 * 1000,
-    retry: 2,
-    select: (response) => {
-      // ✅ וודא שהנתונים תמיד array
-      let transactions = Array.isArray(response?.transactions) ? response.transactions : [];
-      
-      // סינון לפי סוג אם נדרש
-      if (type && type !== 'all') {
-        transactions = transactions.filter(tx => tx.transaction_type === type);
-      }
-      
-      // סינון לפי חיפוש אם נדרש
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        transactions = transactions.filter(tx => 
-          tx.description?.toLowerCase().includes(search) ||
-          tx.category_name?.toLowerCase().includes(search)
-        );
-      }
-      
-      return {
-        transactions,
-        pagination: response?.pagination || { total: 0 },
-        totalCount: transactions.length
-      };
-    }
+    retry: 2
   });
 
-  // Helper functions
-  const getTransactionsByType = (transactionType) => {
-    const transactions = data?.transactions || [];
-    return transactions.filter(tx => tx.transaction_type === transactionType);
-  };
+  // Memoized filtered data
+  const processedData = useMemo(() => {
+    let transactions = query.data?.transactions || [];
+    
+    // Apply filters
+    if (type && type !== 'all') {
+      transactions = transactions.filter(tx => tx.transaction_type === type);
+    }
+    
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      transactions = transactions.filter(tx => 
+        tx.description?.toLowerCase().includes(search) ||
+        tx.category_name?.toLowerCase().includes(search)
+      );
+    }
+    
+    return {
+      transactions,
+      pagination: query.data?.pagination || { total: 0 },
+      totalCount: transactions.length
+    };
+  }, [query.data, type, searchTerm]);
 
-  const searchTransactions = (term) => {
-    const transactions = data?.transactions || [];
+  // Memoized helper functions
+  const getTransactionsByType = useMemo(() => (transactionType) => {
+    const transactions = processedData.transactions;
+    return transactions.filter(tx => tx.transaction_type === transactionType);
+  }, [processedData.transactions]);
+
+  const searchTransactions = useMemo(() => (term) => {
+    const transactions = processedData.transactions;
     if (!term) return transactions;
+    const searchLower = term.toLowerCase();
     return transactions.filter(tx => 
-      tx.description?.toLowerCase().includes(term.toLowerCase()) ||
-      tx.category_name?.toLowerCase().includes(term.toLowerCase())
+      tx.description?.toLowerCase().includes(searchLower) ||
+      tx.category_name?.toLowerCase().includes(searchLower)
     );
-  };
+  }, [processedData.transactions]);
 
   return {
-    periodTransactions: data?.transactions || [], // ✅ תמיד array
-    totalCount: data?.totalCount || 0,
-    pagination: data?.pagination || { total: 0 },
-    loading,
-    error,
-    refreshTransactions,
+    periodTransactions: processedData.transactions,
+    totalCount: processedData.totalCount,
+    pagination: processedData.pagination,
+    loading: query.isLoading,
+    error: query.error,
+    refreshTransactions: query.refetch,
     getTransactionsByType,
     searchTransactions,
     period
@@ -132,19 +109,17 @@ export const useTransactionsList = (options = {}) => {
 };
 
 export const useRecurringTransactionsList = () => {
-  const isAuthenticated = localStorage.getItem('accessToken');
+  const isAuthenticated = !!localStorage.getItem('accessToken');
   
   return useQuery({
     queryKey: ['recurring-transactions'],
     queryFn: async () => {
-      console.log('🔄 [useRecurringTransactionsList] Fetching recurring transactions');
       const response = await transactionAPI.getRecurring();
       return response;
     },
-    // ✅ ADD: Auth guards
-    enabled: !!isAuthenticated,
-    refetchOnWindowFocus: !!isAuthenticated,
-    refetchOnMount: !!isAuthenticated,
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
     select: (response) => {
       const data = response?.data || response;
       return Array.isArray(data.data) ? data.data : [];

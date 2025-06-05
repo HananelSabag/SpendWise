@@ -8,9 +8,9 @@ import { cn } from '../../utils/helpers';
 const sizes = {
   small: "max-w-md",
   medium: "max-w-lg", 
-  large: "max-w-2xl",
-  xl: "max-w-4xl",
-  xxl: "max-w-6xl w-[90vw] h-[90vh]",
+  large: "max-w-3xl",
+  xl: "max-w-5xl",
+  xxl: "max-w-7xl w-[95vw] h-[95vh]",
   full: "max-w-full mx-4"
 };
 
@@ -81,7 +81,7 @@ const Modal = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 backdrop-blur-sm" // ✅ FIX: Ensure modal has proper z-index
           initial="hidden"
           animate="visible"
           exit="hidden"
@@ -101,6 +101,7 @@ const Modal = ({
             exit="exit"
             onClick={(e) => e.stopPropagation()}
             data-testid="modal-content"
+            style={{ zIndex: 51 }} // ✅ FIX: Ensure modal content is above backdrop but allows calendar to be above it
           >
             {/* כותרת רק אם לא מוסתרת */}
             {!hideHeader && title && (

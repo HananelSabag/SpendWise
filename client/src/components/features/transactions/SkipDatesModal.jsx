@@ -19,7 +19,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { Modal, Button, Alert, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
 import { dateHelpers } from '../../../utils/helpers';
-import api from '../../../utils/api';
+import { transactionAPI } from '../../../utils/api';
 import toast from 'react-hot-toast';
 
 const SkipDatesModal = ({ isOpen, onClose, template, onSuccess }) => {
@@ -44,22 +44,22 @@ const SkipDatesModal = ({ isOpen, onClose, template, onSuccess }) => {
 
   const handleSave = async () => {
     if (selectedDates.length === 0) {
-      toast.error(t('transactions.skipDates.selectAtLeast'));
+      toast.error(t('transactions.skipDates.selectAtLeast') || 'Please select at least one date');
       return;
     }
     
     setSaving(true);
     
     try {
-      await api.post(`/transactions/templates/${template.id}/skip`, {
-        dates: selectedDates
-      });
+      // Use the correct API method
+      await transactionAPI.skipTemplateDates(template.id, selectedDates);
       
-      toast.success(t('transactions.skipDates.success'));
+      toast.success(t('transactions.skipDates.success') || 'Dates skipped successfully');
       onSuccess?.();
       onClose();
     } catch (error) {
-      toast.error(t('transactions.skipDates.error'));
+      console.error('Skip dates error:', error);
+      toast.error(t('transactions.skipDates.error') || 'Failed to skip dates');
     } finally {
       setSaving(false);
     }

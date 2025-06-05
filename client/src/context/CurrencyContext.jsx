@@ -13,11 +13,12 @@ export const currencies = {
 };
 
 export const CurrencyProvider = ({ children }) => {
-  // Get initial currency from localStorage or default to ILS
+  // ✅ FIX: Initialize currency from localStorage
   const [currency, setCurrency] = useState(() => {
-    return localStorage.getItem('preferredCurrency') || 'ILS';
+    const savedCurrency = localStorage.getItem('preferredCurrency');
+    return savedCurrency || 'ILS'; // Default to ILS
   });
-  
+
   // Use React Query for exchange rates
   const { data: exchangeRates, isLoading, error, refetch } = useQuery({
     queryKey: ['exchangeRates', currency],
@@ -33,12 +34,19 @@ export const CurrencyProvider = ({ children }) => {
     }
   });
   
-  // Save currency preference
-  const updateCurrency = useCallback((newCurrency) => {
+  // ✅ FIX: Enhanced setCurrency that persists to localStorage
+  const changeCurrency = (newCurrency) => {
+    if (!['ILS', 'USD', 'EUR'].includes(newCurrency)) {
+      console.warn('Invalid currency code:', newCurrency);
+      return;
+    }
+    
+    console.log(`💱 [CURRENCY] Changing currency: ${currency} → ${newCurrency}`);
+    
     setCurrency(newCurrency);
     localStorage.setItem('preferredCurrency', newCurrency);
-  }, []);
-  
+  };
+
   // Convert amount between currencies
   const convertAmount = useCallback((amount, fromCurrency, toCurrency = currency) => {
     if (!amount || fromCurrency === toCurrency) return amount;
@@ -72,13 +80,13 @@ export const CurrencyProvider = ({ children }) => {
     return formatCurrencyUtil(convertedAmount, currency);
   }, [currency, convertAmount]);
   
-  // Toggle between currencies
+  // Toggle currency
   const toggleCurrency = useCallback(() => {
     const availableCurrencies = Object.keys(currencies);
     const currentIndex = availableCurrencies.indexOf(currency);
     const nextIndex = (currentIndex + 1) % availableCurrencies.length;
-    updateCurrency(availableCurrencies[nextIndex]);
-  }, [currency, updateCurrency]);
+    changeCurrency(availableCurrencies[nextIndex]);
+  }, [currency, changeCurrency]);
   
   // Get rate between two currencies
   const getRate = useCallback((from, to) => {
@@ -101,7 +109,7 @@ export const CurrencyProvider = ({ children }) => {
   const value = {
     // Current currency
     currency,
-    setCurrency: updateCurrency,
+    setCurrency: changeCurrency,
     toggleCurrency,
     
     // Currency data

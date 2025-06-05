@@ -19,7 +19,19 @@ import {
   Tv,
   X,
   Plus,
-  ChevronDown
+  ChevronDown,
+  // ✅ ADD: Missing icon imports
+  Coffee,
+  Utensils,
+  ShoppingBag,
+  Heart,
+  Book,
+  Plane,
+  Dumbbell,
+  Phone,
+  Fuel,
+  Pill,
+  Crown
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useTransactions } from '../../../context/TransactionContext';
@@ -49,6 +61,9 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   const [success, setSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(initialActionType ? 1 : 0); // 0: type selection, 1: form
   
+  // ✅ ADD: Category tab state
+  const [categoryTab, setCategoryTab] = useState('general');
+  
   const dateButtonRef = useRef(null);
 
   // Form data with smart defaults
@@ -66,6 +81,112 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     })(),
   });
+
+  // Helper functions for category display - Enhanced with more icons
+  const getIconForCategory = (name) => {
+    const iconMap = {
+      'General': Tag,
+      'Salary': DollarSign,
+      'Freelance': FileText,
+      'Investments': TrendingUp,
+      'Rent': Home,
+      'Groceries': ShoppingCart,
+      'Transportation': Car,
+      'Utilities': Zap,
+      'Entertainment': Tv,
+      // ✅ FIX: Use available lucide-react icons
+      'Coffee': Coffee,
+      'Food': Utensils,
+      'Shopping': ShoppingBag,
+      'Health': Heart,
+      'Education': Book,
+      'Travel': Plane,
+      'Fitness': Dumbbell,
+      'Bills': Phone,
+      'Gas': Fuel,
+      'Medical': Pill
+    };
+    return iconMap[name] || Tag;
+  };
+
+  // ✅ ENHANCED: Better color mapping for all categories
+  const getColorForCategory = (name) => {
+    const colorMap = {
+      'General': 'slate',
+      'Salary': 'emerald',
+      'Freelance': 'blue',
+      'Investments': 'purple',
+      'Rent': 'red',
+      'Groceries': 'orange',
+      'Transportation': 'yellow',
+      'Utilities': 'indigo',
+      'Entertainment': 'pink',
+      // User category colors
+      'Coffee': 'amber',
+      'Food': 'orange',
+      'Shopping': 'cyan',
+      'Health': 'rose',
+      'Education': 'violet',
+      'Travel': 'sky',
+      'Fitness': 'lime',
+      'Bills': 'slate',
+      'Gas': 'yellow',
+      'Medical': 'red'
+    };
+    return colorMap[name] || 'gray';
+  };
+
+  const getBgForCategory = (name) => {
+    const bgMap = {
+      'General': 'bg-slate-100 dark:bg-slate-800',
+      'Salary': 'bg-emerald-100 dark:bg-emerald-800',
+      'Freelance': 'bg-blue-100 dark:bg-blue-800',
+      'Investments': 'bg-purple-100 dark:bg-purple-800',
+      'Rent': 'bg-red-100 dark:bg-red-800',
+      'Groceries': 'bg-orange-100 dark:bg-orange-800',
+      'Transportation': 'bg-yellow-100 dark:bg-yellow-800',
+      'Utilities': 'bg-indigo-100 dark:bg-indigo-800',
+      'Entertainment': 'bg-pink-100 dark:bg-pink-800',
+      // User category backgrounds
+      'Coffee': 'bg-amber-100 dark:bg-amber-800',
+      'Food': 'bg-orange-100 dark:bg-orange-800',
+      'Shopping': 'bg-cyan-100 dark:bg-cyan-800',
+      'Health': 'bg-rose-100 dark:bg-rose-800',
+      'Education': 'bg-violet-100 dark:bg-violet-800',
+      'Travel': 'bg-sky-100 dark:bg-sky-800',
+      'Fitness': 'bg-lime-100 dark:bg-lime-800',
+      'Bills': 'bg-slate-100 dark:bg-slate-800',
+      'Gas': 'bg-yellow-100 dark:bg-yellow-800',
+      'Medical': 'bg-red-100 dark:bg-red-800'
+    };
+    return bgMap[name] || 'bg-gray-100 dark:bg-gray-800';
+  };
+
+  // ✅ NOW getCategoriesForType can safely use the helper functions
+  // ✅ ENHANCED: Better category organization with tabs
+  const getCategoriesForType = (type) => {
+    const categories = allCategories
+      .filter(cat => cat.is_active !== false)
+      .map(cat => ({
+        id: cat.id,
+        name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
+        icon: getIconForCategory(cat.name),
+        color: getColorForCategory(cat.name),
+        bg: getBgForCategory(cat.name),
+        isDefault: cat.is_default,
+        type: cat.type || 'expense'
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      general: categories.filter(cat => cat.isDefault),
+      customized: categories.filter(cat => !cat.isDefault)
+    };
+  };
+
+  // Get categorized categories
+  const categorizedCategories = getCategoriesForType(activeType?.type || 'expense');
+  const currentTabCategories = categorizedCategories[categoryTab] || [];
 
   // Enhanced transaction types with better design
   const transactionTypes = [
@@ -262,64 +383,6 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     }
   };
 
-  // Replace hardcoded categories with API data
-  const getCategoriesForType = (type) => {
-    // ✅ FIX: Show all categories for both types, let user choose
-    return allCategories.filter(cat => cat.is_active !== false).map(cat => ({
-      id: cat.id,
-      name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
-      icon: getIconForCategory(cat.name),
-      color: getColorForCategory(cat.name),
-      bg: getBgForCategory(cat.name)
-    }));
-  };
-
-  // Helper functions for category display
-  const getIconForCategory = (name) => {
-    const iconMap = {
-      'General': Tag,
-      'Salary': DollarSign,
-      'Freelance': FileText,
-      'Investments': TrendingUp,
-      'Rent': Home,
-      'Groceries': ShoppingCart,
-      'Transportation': Car,
-      'Utilities': Zap,
-      'Entertainment': Tv
-    };
-    return iconMap[name] || Tag;
-  };
-
-  const getColorForCategory = (name) => {
-    const colorMap = {
-      'General': 'slate',
-      'Salary': 'emerald',
-      'Freelance': 'blue',
-      'Investments': 'purple',
-      'Rent': 'red',
-      'Groceries': 'orange',
-      'Transportation': 'yellow',
-      'Utilities': 'indigo',
-      'Entertainment': 'pink'
-    };
-    return colorMap[name] || 'slate';
-  };
-
-  const getBgForCategory = (name) => {
-    const bgMap = {
-      'General': 'bg-slate-100 dark:bg-slate-800',
-      'Salary': 'bg-emerald-100 dark:bg-emerald-800',
-      'Freelance': 'bg-blue-100 dark:bg-blue-800',
-      'Investments': 'bg-purple-100 dark:bg-purple-800',
-      'Rent': 'bg-red-100 dark:bg-red-800',
-      'Groceries': 'bg-orange-100 dark:bg-orange-800',
-      'Transportation': 'bg-yellow-100 dark:bg-yellow-800',
-      'Utilities': 'bg-indigo-100 dark:bg-indigo-800',
-      'Entertainment': 'bg-pink-100 dark:bg-pink-800'
-    };
-    return bgMap[name] || 'bg-slate-100 dark:bg-slate-800';
-  };
-
   // Get categories for current transaction type
   const currentCategories = getCategoriesForType(activeType?.type || 'expense');
 
@@ -336,12 +399,26 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     }
   }, [activeType, allCategories]);
   
+  // ✅ ADD: Click outside handler for calendar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dateButtonRef.current && !dateButtonRef.current.contains(event.target) && showCalendar) {
+        setShowCalendar(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendar]);
+  
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="h-full flex flex-col"
+      className="h-full flex flex-col" // ✅ REMOVE: Any overflow-hidden classes
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* PREMIUM HEADER - Fixed, never scrolls */}
@@ -447,7 +524,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
       </div>
 
       {/* MAIN CONTENT - Scrollable when needed */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto"> {/* ✅ KEEP: Only vertical scroll, not hidden */}
         <div className="p-4 sm:p-6 space-y-6">
           <AnimatePresence mode="wait">
             {/* STEP 0: TYPE SELECTION - Premium Cards */}
@@ -572,46 +649,167 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                 {/* Category & Date Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {/* Category Selection - Compact & Smart */}
-                  <Card className="p-3 md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <Card className="p-4 md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
                       {t('actions.category')}
                     </label>
                     
                     {categoriesLoading ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
-                      </div>
-                    ) : currentCategories.length === 0 ? (
-                      <div className="text-center py-4">
-                        <Tag className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">{t('categories.noCategoriesFound')}</p>
+                      <div className="flex justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {currentCategories.slice(0, 8).map((cat) => {
-                          const IconComponent = cat.icon;
-                          return (
-                            <motion.button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                              className={`p-2 rounded-lg border-2 transition-all flex flex-col items-center gap-1 text-center min-h-[55px] ${
-                                formData.category_id === cat.id
-                                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
-                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-800'
-                              }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              title={cat.name}
-                            >
-                              <IconComponent className={`w-4 h-4 ${formData.category_id === cat.id ? 'text-indigo-600' : 'text-gray-500'}`} />
-                              <span className={`text-xs font-medium leading-tight truncate w-full ${formData.category_id === cat.id ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400'}`}>
-                                {cat.name.length > 8 ? cat.name.substring(0, 6) + '...' : cat.name}
-                              </span>
-                            </motion.button>
-                          );
-                        })}
-                      </div>
+                      <>
+                        {/* ✅ NEW: Category Tabs */}
+                        <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                          <button
+                            type="button"
+                            onClick={() => setCategoryTab('general')}
+                            className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all ${
+                              categoryTab === 'general'
+                                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                : 'text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <Crown className="w-4 h-4" />
+                              <span>{t('categories.defaultCategories')} ({categorizedCategories.general.length})</span>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCategoryTab('customized')}
+                            className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all ${
+                              categoryTab === 'customized'
+                                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                : 'text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <Tag className="w-4 h-4" />
+                              <span>{t('categories.userCategoriesDesc')} ({categorizedCategories.customized.length})</span>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* ✅ ENHANCED: Category Grid - Smaller, More Compact */}
+                        {currentTabCategories.length === 0 ? (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                              {categoryTab === 'general' ? (
+                                <Crown className="w-8 h-8 text-gray-400" />
+                              ) : (
+                                <Plus className="w-8 h-8 text-gray-400" />
+                              )}
+                            </div>
+                            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                              {categoryTab === 'general' ? 'No General Categories' : 'No Customized Categories'}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-4">
+                              {categoryTab === 'general' 
+                                ? 'Default categories will appear here' 
+                                : 'Create your own categories in Settings'
+                              }
+                            </p>
+                            {categoryTab === 'customized' && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="small"
+                                onClick={() => {
+                                  console.log('Navigate to category management');
+                                }}
+                                className="text-sm"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Category
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 max-h-40 overflow-y-auto">
+                            {currentTabCategories.map((cat) => {
+                              const IconComponent = cat.icon;
+                              const isSelected = formData.category_id === cat.id;
+                              
+                              return (
+                                <motion.button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
+                                  className={`group p-2 rounded-lg border transition-all flex flex-col items-center gap-1 text-center min-h-[60px] relative ${
+                                    isSelected
+                                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md scale-105'
+                                      : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-sm'
+                                  }`}
+                                  whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  title={cat.name}
+                                >
+                                  {/* ✅ Smaller icon container */}
+                                  <div className={`p-1.5 rounded-lg transition-colors ${
+                                    isSelected 
+                                      ? 'bg-indigo-100 dark:bg-indigo-800' 
+                                      : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
+                                  }`}>
+                                    <IconComponent className={`w-4 h-4 transition-colors ${
+                                      isSelected 
+                                        ? 'text-indigo-600 dark:text-indigo-400' 
+                                        : 'text-gray-500 group-hover:text-indigo-500'
+                                    }`} />
+                                  </div>
+                                  
+                                  {/* ✅ Smaller text */}
+                                  <span className={`text-xs font-medium leading-tight text-center w-full transition-colors truncate ${
+                                    isSelected 
+                                      ? 'text-indigo-700 dark:text-indigo-300' 
+                                      : 'text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                                  }`}>
+                                    {cat.name}
+                                  </span>
+                                  
+                                  {/* ✅ Smaller selection indicator */}
+                                  {isSelected && (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center border border-white dark:border-gray-800 shadow-sm"
+                                    >
+                                      <Check className="w-2 h-2 text-white" />
+                                    </motion.div>
+                                  )}
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* ✅ Smaller footer */}
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Crown className="w-3 h-3" />
+                              {categorizedCategories.general.length} General
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              {categorizedCategories.customized.length} Customized
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="small"
+                            onClick={() => {
+                              console.log('Navigate to category management');
+                            }}
+                            className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 px-2 py-1"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Manage
+                          </Button>
+                        </div>
+                      </>
                     )}
                   </Card>
 
@@ -641,22 +839,21 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                         <ChevronDown className={`w-3 h-3 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
                       </Button>
                       
+                      {/* ✅ FIX: Calendar with proper triggerRef */}
                       {showCalendar && (
-                        <div className="absolute top-full mt-2 z-50 right-0">
-                          <CalendarWidget
-                            selectedDate={new Date(formData.date)}
-                            onDateSelect={(date) => {
-                              // ✅ FIX: Use local timezone formatting to match server expectations
-                              const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                date: localDateStr
-                              }));
-                              setShowCalendar(false);
-                            }}
-                            onClose={() => setShowCalendar(false)}
-                          />
-                        </div>
+                        <CalendarWidget
+                          triggerRef={dateButtonRef}
+                          selectedDate={new Date(formData.date)}
+                          onDateSelect={(date) => {
+                            const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              date: localDateStr
+                            }));
+                            setShowCalendar(false);
+                          }}
+                          onClose={() => setShowCalendar(false)}
+                        />
                       )}
                     </div>
                   </Card>

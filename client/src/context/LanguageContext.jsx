@@ -1,7 +1,7 @@
 // client/src/context/LanguageContext.jsx
 // Enhanced language context with complete organized translations
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { refreshDashboard } from '../hooks/useDashboard';
 
 const LanguageContext = createContext();
@@ -40,6 +40,7 @@ const translations = {
     none: 'None',
     yes: 'Yes',
     no: 'No',
+    available: 'Available',
     ok: 'OK',
     error: 'Error',
     success: 'Success',
@@ -203,6 +204,7 @@ const translations = {
     verificationFailed: 'Verification Failed',
     verificationFailedMessage: 'We couldn\'t verify your email. Please try again or contact support.',
     redirectingToDashboard: 'Redirecting you to your dashboard...',
+    redirectingToSkipDates: 'Redirecting to skip dates management...',
     goToDashboard: 'Go to Dashboard',
     backToLogin: 'Back to Login',
     proceedToLogin: 'Proceed to Login',
@@ -390,6 +392,9 @@ const translations = {
     searchPlaceholder: 'Search transactions...',
     smartActions: 'Smart Actions',
     total: 'Total Transactions for the period',
+    editTemplate: 'Edit Template',
+    editAll: 'Edit All Future',
+    editOnce: 'Edit This Occurrence',
 
     // Display & Filtering
     showing: 'Showing',
@@ -410,7 +415,18 @@ const translations = {
     addTransaction: 'Add Transaction',
     addNew: 'Add New',
     editTransaction: 'Edit Transaction',
-    editTitle: 'Edit transaction details',
+    editSingleOccurrence: 'Edit Single Occurrence',
+    editRecurringTemplate: 'Edit Recurring Template',
+    editSingleNote: 'Changes will only affect this occurrence',
+    editRecurringNote: 'Changes will affect the recurring template',
+    editDetails: 'Modify transaction details',
+    singleEdit: 'Single Edit',
+    editing: 'Editing',
+    editingSingleOccurrence: 'Editing Single Occurrence',
+    singleEditNote: 'This will create a new transaction and won\'t affect the recurring template.',
+    updateSuccess: 'Transaction Updated',
+    transactionUpdated: 'Your transaction has been successfully updated',
+    saveOnce: 'Save Once',
     deleteConfirm: 'Delete Transaction',
     deleteConfirmDesc: 'Are you sure you want to delete this transaction?',
     editSingle: 'Edit This',
@@ -433,8 +449,10 @@ const translations = {
     recurringManagement: 'Recurring Management',
     recurringManager: {
       title: 'Recurring Transactions Manager',
-      subtitle: 'Manage your automated transactions'
+      subtitle: 'Manage your automated transactions',
+      generateNow: 'Generate Now'
     },
+
     recurringSection: {
       title: 'Recurring Transactions',
       management: 'Manage your recurring income and expenses',
@@ -472,6 +490,38 @@ const translations = {
       error: 'Failed to save skip dates',
       save: 'Save Skip Dates'
     },
+    delete: {
+      singleOccurrence: 'Delete this occurrence only',
+      skipDates: 'Skip specific dates',
+      skipDescription: 'Choose specific dates to skip for this recurring transaction while keeping the pattern active.',
+      stopRecurring: 'Stop recurring from this date',
+      deleteAll: 'Delete entire recurring series',
+      allDescription: 'Permanently delete this recurring transaction and all its past and future occurrences.',
+      permanent: 'Permanent',
+      irreversible: 'Irreversible',
+      manageDates: 'Manage dates',
+      recurringInfo: 'This is a recurring transaction. Choose how to delete it.',
+      cannotUndo: 'This action cannot be undone',
+      confirmSingle: 'This will permanently delete this {{type}}.',
+      skipRedirect: 'Skip dates management screen will open',
+      nextOccurrence: 'Next occurrence on {{date}}',
+      allWarning: 'This will delete all occurrences of this recurring transaction',
+      redirectingToSkip: 'Redirecting to skip dates management',
+      skipModalInfo: 'You will be able to choose specific dates to skip.',
+      finalConfirmation: 'Final Confirmation Required',
+      confirmAll: 'This will permanently delete the entire recurring transaction and its occurrences.',
+      confirmFuture: 'This will stop the recurring {{type}} from this date onwards.',
+      summaryChanges: 'Summary of changes:',
+      summarySkip: 'Will skip selected dates',
+      summaryDelete: 'Delete {{description}} ({{amount}})',
+      summaryDeleteAll: 'Delete all recurring transaction occurrences',
+      summaryCancelFuture: 'Cancel all future occurrences',
+      goToSkipDates: 'Go to skip dates management',
+      deleteOnce: 'Delete once',
+      openSkipModal: 'Open skip dates screen',
+      confirmDelete: 'Confirm deletion'
+    },
+
 
     // Delete options
     deleteOptions: {
@@ -656,7 +706,8 @@ const translations = {
       descriptionRequired: 'Description is required',
       categoryRequired: 'Please select a category',
       formErrors: 'Please correct the errors in the form',
-      general: 'An error occurred. Please try again.'
+      general: 'An error occurred. Please try again.',
+      updatingTransaction: 'Failed to update transaction',
     },
 
     // New keys
@@ -1088,6 +1139,7 @@ const translations = {
       refresh: 'רענן',
       delete: 'מחק',
       edit: 'ערוך',
+      available: 'זמין',
       close: 'סגור',
       back: 'חזור',
       next: 'הבא',
@@ -1297,6 +1349,7 @@ const translations = {
       emailSentDesc: 'בדוק את הדוא״ל שלך לקישור לאיפוס הסיסמה. אם הוא לא מופיע תוך מספר דקות, בדוק את תיקיית הספאם.',
       passwordResetSuccess: 'הסיסמה אופסה בהצלחה!',
       redirectingToLogin: 'מפנה לעמוד ההתחברות...',
+      redirectingToSkipDates: 'מפנה למנהל תאריכים...',
       sendAnotherEmail: 'שלח דוא״ל נוסף',
       developmentMode: 'מצב פיתוח',
       emailSentDevDesc: 'דוא״ל נשלח דרך Gmail SMTP! בדוק את הקונסול לקישור בדיקה נוסף.',
@@ -1454,6 +1507,11 @@ const translations = {
       searchPlaceholder: 'חפש עסקאות...',
       smartActions: 'פעולות חכמות',
       total: 'סך העסקאות לתקופה',
+      editTemplate: 'ערוך תבנית חוזרת',
+      editAll: 'ערוך את כל המופעים',
+      editOnce: 'ערוך מופע יחיד',
+
+
 
       // Display & Filtering
       showing: 'מציג',
@@ -1474,7 +1532,18 @@ const translations = {
       addTransaction: 'הוסף עסקה',
       addNew: 'הוסף חדש',
       editTransaction: 'ערוך עסקה',
-      editTitle: 'ערוך פרטי עסקה',
+      editSingleOccurrence: 'ערוך מופע יחיד',
+      editRecurringTemplate: 'ערוך תבנית חוזרת',
+      editSingleNote: 'השינויים ישפיעו רק על המופע הזה',
+      editRecurringNote: 'השינויים ישפיעו על התבנית החוזרת',
+      editDetails: 'שנה פרטי עסקה',
+      singleEdit: 'עריכה יחידה',
+      editing: 'עורך',
+      editingSingleOccurrence: 'עורך מופע יחיד',
+      singleEditNote: 'זה ייצור עסקה חדשה ולא ישפיע על התבנית החוזרת.',
+      updateSuccess: 'העסקה עודכנה',
+      transactionUpdated: 'העסקה שלך עודכנה בהצלחה',
+      saveOnce: 'שמור פעם אחת',
       deleteConfirm: 'מחק עסקה',
       deleteConfirmDesc: 'האם אתה בטוח שברצונך למחוק עסקה זו?',
       editSingle: 'ערוך רק זו',
@@ -1497,7 +1566,8 @@ const translations = {
       recurringManagement: 'ניהול הוראות קבע',
       recurringManager: {
         title: 'מנהל עסקאות קבועות',
-        subtitle: 'נהל את העסקאות האוטומטיות שלך'
+        subtitle: 'נהל את העסקאות האוטומטיות שלך',
+        generateNow: 'צור עסקאות קבועות עכשיו'
       },
       recurringSection: {
         title: 'עסקאות קבועות',
@@ -1535,6 +1605,38 @@ const translations = {
         success: 'תאריכי דילוג נשמרו בהצלחה',
         error: 'נכשל בשמירת תאריכי דילוג',
         save: 'שמור תאריכי דילוג'
+      },
+
+      delete: {
+        singleOccurrence: 'מחק מופע יחיד',
+        skipDates: 'דלג על תאריכים',
+        skipDescription: 'בחר תאריכים ספציפיים לדילוג עבור עסקה חוזרת זו תוך שמירה על הדפוס פעיל.',
+        stopRecurring: 'עצור חזרה מתאריך זה',
+        deleteAll: 'מחק את כל הסדרה החוזרת',
+        allDescription: 'מחק לצמיתות את העסקה החוזרת הזו ואת כל המופעים הקודמים והעתידיים שלה.',
+        permanent: 'קבוע',
+        irreversible: 'בלתי הפיך',
+        manageDates: 'נהל תאריכים',
+        recurringInfo: 'זוהי עסקה חוזרת. בחר איך למחוק אותה.',
+        cannotUndo: 'לא ניתן לבטל פעולה זו',
+        confirmSingle: 'זה ימחק לצמיתות את ה{{type}} הזה/הזו.',
+        skipRedirect: 'ייפתח מסך ניהול תאריכי דילוג',
+        nextOccurrence: 'המופע הבא בתאריך {{date}}',
+        allWarning: 'זה ימחק את כל המופעים של העסקה החוזרת הזו',
+        redirectingToSkip: 'מעביר למסך ניהול דילוגים',
+        skipModalInfo: 'תוכל לבחור תאריכים ספציפיים לדילוג.',
+        finalConfirmation: 'אישור סופי נדרש',
+        confirmAll: 'זה ימחק לצמיתות את כל העסקה החוזרת והמופעים שלה.',
+        confirmFuture: 'זה יעצור את ה{{type}} החוזר/ת מהתאריך הזה ואילך.',
+        summaryChanges: 'סיכום השינויים:',
+        summarySkip: 'יידלג על תאריכים נבחרים',
+        summaryDelete: 'מחק {{description}} ({{amount}})',
+        summaryDeleteAll: 'מחק את כל המופעים של העסקה החוזרת',
+        summaryCancelFuture: 'בטל את כל המופעים העתידיים',
+        goToSkipDates: 'עבור לניהול דילוגים',
+        deleteOnce: 'מחק פעם אחת',
+        openSkipModal: 'פתח מסך דילוגים',
+        confirmDelete: 'אשר מחיקה'
       },
 
       // Delete options
@@ -1720,7 +1822,8 @@ const translations = {
         descriptionRequired: 'תיאור נדרש',
         categoryRequired: 'אנא בחר קטגוריה',
         formErrors: 'אנא תקנו את השגיאות בטופס',
-        general: 'אירעה שגיאה. אנא נסה שוב.'
+        general: 'אירעה שגיאה. אנא נסה שוב.',
+        updatingTransaction: 'נכשל בעדכון העסקה',
       },
 
       // New keys
@@ -1922,11 +2025,11 @@ const translations = {
       typeString: 'טקסט',
       typeNumber: 'מספר',
       typeBoolean: 'אמת/שקר',
-           typeJson: 'אובייקט JSON',
+      typeJson: 'אובייקט JSON',
 
       // Placeholders
       placeholders: {
-        customKey: 'myCustomScaetting',
+        customKey: 'myCustomSetting',
         boolean: 'true/false',
         number: '123',
         json: '{"key": "value"}',
@@ -2145,16 +2248,93 @@ const translations = {
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en');
+  // ✅ FIX: Initialize language from localStorage first, then fallback to browser/default
+  const [language, setLanguage] = useState(() => {
+    // Check localStorage first
+    const savedLanguage = localStorage.getItem('preferredLanguage');
+    if (savedLanguage && ['en', 'he'].includes(savedLanguage)) {
+      return savedLanguage;
+    }
 
-  const toggleLanguage = () => {
-    setLanguage(prev => prev === 'he' ? 'en' : 'he');
+    // Check browser language as fallback
+    const browserLang = navigator.language || navigator.userLanguage;
+    if (browserLang.startsWith('he')) {
+      return 'he';
+    }
+
+    return 'en'; // Default fallback
+  });
+
+  // ✅ ADD: Track session-only language changes
+  const [sessionLanguage, setSessionLanguage] = useState(null);
+
+  // ✅ FIX: Get effective language (session override or saved preference)
+  const effectiveLanguage = sessionLanguage || language;
+
+  // ✅ FIX: Permanent language change (for profile settings)
+  const changeLanguagePermanent = (newLanguage) => {
+    if (!['en', 'he'].includes(newLanguage)) {
+      console.warn('Invalid language code:', newLanguage);
+      return;
+    }
+
+    console.log(`🌐 [LANGUAGE] Permanent change: ${language} → ${newLanguage}`);
+
+    setLanguage(newLanguage);
+    setSessionLanguage(null); // Clear session override
+    localStorage.setItem('preferredLanguage', newLanguage);
   };
 
-  // Get translation function
+  // ✅ ADD: Session-only language change (for header toggle)
+  const changeLanguageSession = (newLanguage) => {
+    if (!['en', 'he'].includes(newLanguage)) {
+      console.warn('Invalid language code:', newLanguage);
+      return;
+    }
+
+    console.log(`🌐 [LANGUAGE] Session change: ${effectiveLanguage} → ${newLanguage}`);
+
+    setSessionLanguage(newLanguage);
+    // Note: Don't save to localStorage for session changes
+  };
+
+  // ✅ FIX: Enhanced toggleLanguage for session-only changes
+  const toggleLanguage = () => {
+    const newLanguage = effectiveLanguage === 'he' ? 'en' : 'he';
+    changeLanguageSession(newLanguage);
+  };
+
+  // ✅ ADD: Reset to saved preference (called on logout)
+  const resetToSavedLanguage = () => {
+    console.log(`🌐 [LANGUAGE] Resetting to saved preference: ${language}`);
+    setSessionLanguage(null);
+  };
+
+  // ✅ ADD: Effect to sync language changes across tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'preferredLanguage' && e.newValue && e.newValue !== language) {
+        console.log(`🌐 [LANGUAGE] Storage sync: ${language} → ${e.newValue}`);
+        setLanguage(e.newValue);
+        setSessionLanguage(null); // Clear session override when preference changes
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [language]);
+
+  // ✅ ADD: Debug log for language changes
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🌐 [LANGUAGE] Effective language: ${effectiveLanguage}, Saved: ${language}, Session: ${sessionLanguage || 'none'}`);
+    }
+  }, [effectiveLanguage, language, sessionLanguage]);
+
+  // ✅ FIX: Use effectiveLanguage for translations
   const t = (key, params = {}) => {
     const keys = key.split('.');
-    let translation = language === 'he' ? translations.he : translations;
+    let translation = effectiveLanguage === 'he' ? translations.he : translations;
 
     for (const k of keys) {
       if (!translation) break;
@@ -2165,11 +2345,9 @@ export const LanguageProvider = ({ children }) => {
       console.warn(`Translation not found for key: ${key}`);
       return key;
     }
-
-    // Handle parameter substitution
     if (typeof translation === 'string' && params) {
       return translation.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        return params[key] !== undefined ? params[key] : match;
+        return params[key] || match;
       });
     }
 
@@ -2177,7 +2355,7 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const formatDate = (date, lang = null) => {
-    const locale = lang || language;
+    const locale = lang || effectiveLanguage;
     return new Date(date).toLocaleDateString(
       locale === 'he' ? 'he-IL' : 'en-US',
       {
@@ -2189,26 +2367,27 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(
-      language === 'he' ? 'he-IL' : 'en-US',
-      {
-        style: 'currency',
-        currency: 'ILS',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }
-    ).format(amount);
+    // Format currency based on effective language
+    const locale = effectiveLanguage === 'he' ? 'he-IL' : 'en-US';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'ILS'
+    }).format(amount);
   };
 
   return (
     <LanguageContext.Provider value={{
-      language,
-      setLanguage,
-      toggleLanguage,
+      language: effectiveLanguage, // ✅ Use effective language
+      savedLanguage: language, // ✅ Expose saved preference
+      sessionLanguage, // ✅ Expose session override
+      setLanguage: changeLanguagePermanent, // ✅ For profile settings
+      setLanguageSession: changeLanguageSession, // ✅ For header toggle
+      toggleLanguage, // ✅ Session-only toggle
+      resetToSavedLanguage, // ✅ Reset on logout
       t,
       formatDate,
       formatCurrency,
-      isRTL: language === 'he'
+      isRTL: effectiveLanguage === 'he'
     }}>
       {children}
     </LanguageContext.Provider>

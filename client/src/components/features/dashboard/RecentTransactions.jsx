@@ -60,13 +60,24 @@ const RecentTransactions = ({
               {transaction.description || t('transactions.noDescription')}
             </p>
             <p className="text-xs text-gray-500">
-              {/* ✅ FIX: Use local timezone date formatting */}
+              {/* ✅ IMPROVED: Better date formatting with error handling */}
               {(() => {
-                const date = new Date(transaction.date + 'T12:00:00'); // Add noon to prevent timezone shifts
-                return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                  month: 'short',
-                  day: 'numeric'
-                });
+                try {
+                  const date = new Date(transaction.date);
+                  // Validate date
+                  if (isNaN(date.getTime())) {
+                    return 'Invalid date';
+                  }
+                  
+                  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    timeZone: 'UTC' // Prevent timezone shifts
+                  });
+                } catch (error) {
+                  console.warn('Date formatting error:', error);
+                  return transaction.date || 'No date';
+                }
               })()}
             </p>
           </div>

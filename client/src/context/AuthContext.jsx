@@ -6,6 +6,7 @@ import { auth, tokenManager } from '../utils/auth';
 import { authAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 import api from '../utils/api'; // NEW: Import for direct API calls
+import { useLanguage } from './LanguageContext';
 
 const AuthContext = createContext(null);
 

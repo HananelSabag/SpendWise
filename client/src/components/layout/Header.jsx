@@ -27,12 +27,23 @@ const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const { user, logout } = useAuth();
-  const { t, language, toggleLanguage } = useLanguage();
+  const { t, language, toggleLanguage } = useLanguage(); // ✅ Use toggleLanguage (session-only)
   const { darkMode, setDarkMode } = useAccessibility();
   const location = useLocation();
   const { pathname } = location;
   const isRTL = language === 'he';
   
+  // ✅ FIX: Simple session-only language toggle
+  const handleLanguageToggle = () => {
+    toggleLanguage(); // This only changes session language, doesn't persist
+    
+    // Show user feedback
+    const newLanguage = language === 'en' ? 'he' : 'en';
+    const message = newLanguage === 'he' ? 'השפה שונתה לעברית (מושב זה בלבד)' : 'Language changed to English (this session only)';
+    
+    console.log(`✅ [HEADER] ${message}`);
+  };
+
   // Check if the path is active
   const isActivePath = (path) => {
     if (path === '/') {
@@ -143,9 +154,10 @@ const Header = () => {
               
               {/* Language Toggle */}
               <button
-                onClick={toggleLanguage}
+                onClick={handleLanguageToggle} // ✅ Use session-only handler
                 className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 hidden sm:block ml-2"
                 aria-label={t('common.toggleLanguage')}
+                title="Session language toggle (resets on logout)" // ✅ Add helpful tooltip
               >
                 <span className="text-sm font-medium">
                   {language === 'en' ? 'עב' : 'EN'}
@@ -304,12 +316,13 @@ const Header = () => {
               <motion.div variants={itemVariants}>
                 <button
                   onClick={() => {
-                    toggleLanguage();
+                    handleLanguageToggle(); // ✅ Use session-only handler
                     setIsOpen(false);
                   }}
                   className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  title="Session language toggle (resets on logout)" // ✅ Add helpful tooltip
                 >
-                  {language === 'en' ? 'עברית' : 'English'}
+                  {language === 'en' ? 'עברית (מושב זה)' : 'English (session)'}
                 </button>
               </motion.div>
               

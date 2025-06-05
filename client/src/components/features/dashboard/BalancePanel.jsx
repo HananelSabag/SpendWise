@@ -182,12 +182,26 @@ const BalancePanel = ({
     return numbers.formatAmount(value || 0);
   };
   
+  // ✅ ADD: Click outside handler for calendar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target) && showCalendar) {
+        setShowCalendar(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendar]);
+
   return (
     <motion.div
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="relative overflow-hidden"
+      className="relative" // ✅ REMOVE: overflow-hidden that clips calendar
       data-component="BalancePanel"
     >
       {/* Animated Background Gradient */}
@@ -264,6 +278,7 @@ const BalancePanel = ({
                 
                 <div className="relative">
                   <motion.button
+                    ref={calendarRef}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCalendar(!showCalendar)}
@@ -274,7 +289,6 @@ const BalancePanel = ({
                     }`}
                   >
                     <Calendar className="w-4 h-4 mr-2 inline" />
-                    {/* ✅ FIX: Ensure consistent local date formatting */}
                     {(() => {
                       const date = selectedDate || new Date();
                       const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -282,25 +296,18 @@ const BalancePanel = ({
                     })()}
                   </motion.button>
                   
-                  <AnimatePresence>
-                    {showCalendar && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                        className="absolute top-full mt-3 right-0 z-50 shadow-2xl"
-                      >
-                        <CalendarWidget
-                          selectedDate={selectedDate}
-                          onDateSelect={(date) => {
-                            updateSelectedDate(new Date(date));
-                            setShowCalendar(false);
-                          }}
-                          onClose={() => setShowCalendar(false)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* ✅ FIX: Remove AnimatePresence wrapper that can interfere */}
+                  {showCalendar && (
+                    <CalendarWidget
+                      triggerRef={calendarRef}
+                      selectedDate={selectedDate}
+                      onDateSelect={(date) => {
+                        updateSelectedDate(new Date(date));
+                        setShowCalendar(false);
+                      }}
+                      onClose={() => setShowCalendar(false)}
+                    />
+                  )}
                 </div>
                 
                 <motion.button

@@ -27,6 +27,7 @@ import { cn, dateHelpers } from '../../../utils/helpers';
 import { Modal, Input, Badge, Button, Card } from '../../ui';
 import TransactionCard from './TransactionCard';
 import SkipDatesModal from './SkipDatesModal';
+import DeleteTransaction from './DeleteTransaction';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../../utils/api';
@@ -57,6 +58,8 @@ const RecurringModal = ({
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showSkipDates, setShowSkipDates] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -191,6 +194,29 @@ const RecurringModal = ({
     }
   };
 
+  // Enhanced delete handler
+  const handleDeleteClick = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async (transaction, deleteFuture = false, deleteAll = false) => {
+    try {
+      await onDelete?.(transaction, deleteFuture, deleteAll);
+      setShowDeleteModal(false);
+      setSelectedTransaction(null);
+      refetch?.();
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+  };
+
+  const handleOpenSkipDates = (transaction) => {
+    setShowDeleteModal(false);
+    setSelectedTransaction(transaction);
+    setShowSkipDates(true);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -199,123 +225,47 @@ const RecurringModal = ({
       className="max-h-[90vh] overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
-        {/* Enhanced Header with Generate Now Button */}
-        <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 mb-6">
-          <div className="flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <RefreshCw className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                  {t('transactions.recurringTransactions')}
-                </h2>
-                <p className="text-white/80 text-sm">
-                  {t('transactions.recurringSection.management')}
-                </p>
+        {/* Enhanced Header Section */}
+        <div className="flex items-center justify-between gap-4 mb-6 p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl">
+              <div className="relative">
+                <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
               </div>
             </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {t('transactions.recurringManager.title')}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                {t('transactions.recurringManager.subtitle')}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Generate Now Button */}
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handleGenerateNow}
+              loading={generating}
+              className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
+              title={t('transactions.recurringManager.generateNow')}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
+              {t('transactions.recurringManager.generateNow')}
+            </Button>
             
-            <div className="flex items-center gap-3">
-              {/* Generate Now Button */}
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={handleGenerateNow}
-                loading={generating}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40"
-                title={t('transactions.recurring.generateNow')}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
-                {t('transactions.recurring.generateNow')}
-              </Button>
-              
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </button>
           </div>
         </div>
-
-        {/* Update the modal header section */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl">
-            <div className="relative">
-              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {t('transactions.recurringManager.title')}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {t('transactions.recurringManager.subtitle')}
-            </p>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-3 gap-4 mb-6"
-        >
-          <motion.div variants={itemVariants}>
-            <Card className="p-4 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('transactions.income')}
-                  </p>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                    {formatAmount(totals.income)}
-                  </p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-500 opacity-20" />
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <Card className="p-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('transactions.expense')}
-                  </p>
-                  <p className="text-xl font-bold text-red-600 dark:text-red-400">
-                    {formatAmount(totals.expense)}
-                  </p>
-                </div>
-                <TrendingDown className="w-8 h-8 text-red-500 opacity-20" />
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <Card className="p-4 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('common.balance')}
-                  </p>
-                  <p className={cn(
-                    'text-xl font-bold',
-                    totals.net >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'
-                  )}>
-                    {formatAmount(totals.net)}
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-blue-500 opacity-20" />
-              </div>
-            </Card>
-          </motion.div>
-        </motion.div>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -417,7 +367,7 @@ const RecurringModal = ({
                           >
                             <div className="p-4 space-y-3">
                               {items.map((transaction) => (
-                                <div key={transaction.id} className="relative">
+                                <div key={transaction.id} className="relative group">
                                   <TransactionCard
                                     transaction={{
                                       ...transaction,
@@ -435,14 +385,15 @@ const RecurringModal = ({
                                       onClose();
                                     }}
                                     onDelete={() => {
-                                      onDelete?.(transaction);
+                                      handleDeleteClick(transaction);
                                     }}
                                     variant="compact"
+                                    showActions={false} // ✅ Hide default actions since we're adding custom ones
                                   />
                                   
-                                  {/* Enhanced Action Buttons */}
-                                  <div className="absolute top-2 right-2 flex items-center gap-1">
-                                    {/* Skip Dates Button - GAP #3 */}
+                                  {/* ✅ IMPROVED: Better positioned action buttons that don't overlap */}
+                                  <div className="absolute top-1/2 -translate-y-1/2 right-4 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-1 flex items-center gap-1">
+                                    {/* Skip Dates Button - More prominent */}
                                     <Button
                                       variant="ghost"
                                       size="small"
@@ -450,18 +401,22 @@ const RecurringModal = ({
                                         setSelectedTemplate(transaction);
                                         setShowSkipDates(true);
                                       }}
-                                      className="text-blue-600 hover:text-blue-700"
+                                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg p-2"
                                       title={t('transactions.skipDates')}
                                     >
                                       <CalendarIcon className="w-4 h-4" />
                                     </Button>
                                     
-                                    {/* Pause/Resume Button - GAP #3 */}
+                                    {/* Pause/Resume Button with better visual indication */}
                                     <Button
                                       variant="ghost"
                                       size="small"
                                       onClick={() => handleToggleActive(transaction)}
-                                      className={transaction.is_active ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}
+                                      className={`p-2 rounded-lg ${
+                                        transaction.is_active 
+                                          ? 'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20' 
+                                          : 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                      }`}
                                       title={transaction.is_active ? t('transactions.pause') : t('transactions.resume')}
                                     >
                                       {transaction.is_active ? (
@@ -479,7 +434,7 @@ const RecurringModal = ({
                                         onEdit?.(transaction);
                                         onClose();
                                       }}
-                                      className="text-gray-600 hover:text-gray-700"
+                                      className="text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg p-2"
                                       title={t('common.edit')}
                                     >
                                       <Edit2 className="w-4 h-4" />
@@ -489,13 +444,23 @@ const RecurringModal = ({
                                     <Button
                                       variant="ghost"
                                       size="small"
-                                      onClick={() => onDelete?.(transaction)}
-                                      className="text-red-600 hover:text-red-700"
+                                      onClick={() => handleDeleteClick(transaction)}
+                                      className="text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg p-2"
                                       title={t('common.delete')}
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </div>
+
+                                  {/* ✅ ADD: Status indicators for better UX */}
+                                  {!transaction.is_active && (
+                                    <div className="absolute top-2 left-2">
+                                      <Badge variant="warning" size="small" className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700">
+                                        <Pause className="w-3 h-3 mr-1" />
+                                        {t('transactions.paused')}
+                                      </Badge>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -522,7 +487,19 @@ const RecurringModal = ({
         </div>
       </div>
       
-      {/* Skip Dates Modal - GAP #3 */}
+      {/* Enhanced Delete Modal */}
+      <DeleteTransaction
+        transaction={selectedTransaction}
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedTransaction(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        onOpenSkipDates={handleOpenSkipDates}
+      />
+
+      {/* Skip Dates Modal - Enhanced */}
       {showSkipDates && (
         <SkipDatesModal
           isOpen={showSkipDates}
@@ -530,9 +507,10 @@ const RecurringModal = ({
             setShowSkipDates(false);
             setSelectedTemplate(null);
           }}
-          template={selectedTemplate}
+          template={selectedTemplate || selectedTransaction}
           onSuccess={() => {
             queryClient.invalidateQueries(['recurring']);
+            refetch?.();
           }}
         />
       )}

@@ -1,76 +1,85 @@
 // src/config/queryClient.js
 import { QueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
 
-// Create query client with optimized defaults
+// ✅ FIX: Create base configuration first to avoid circular reference
+const baseQueryConfig = {
+  staleTime: 5 * 60 * 1000, // 5 minutes default
+  gcTime: 15 * 60 * 1000, // 15 minutes garbage collection
+  refetchOnWindowFocus: false,
+  refetchOnMount: false, // ✅ CRITICAL: Prevent unnecessary refetches on navigation
+  refetchOnReconnect: true,
+  retry: (failureCount, error) => {
+    // Don't retry on authentication errors
+    if (error?.response?.status && [401, 403, 404].includes(error.response.status)) {
+      return false;
+    }
+    return failureCount < 2;
+  },
+};
+
+// ✅ ADD: Development-only handlers
+const developmentHandlers = process.env.NODE_ENV === 'development' ? {
+  onError: (error) => {
+    console.error('🔥 [QUERY-ERROR]', error);
+  },
+  onSuccess: (data, query) => {
+    if (localStorage.getItem('debug_queries') === 'true') {
+      console.log('✅ [QUERY-SUCCESS]', query.queryKey, 'Data length:', 
+        Array.isArray(data) ? data.length : typeof data === 'object' ? Object.keys(data).length : 'scalar'
+      );
+    }
+  }
+} : {};
+
+// ✅ OPTIMIZED: Query client configuration for better navigation performance
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Data considered fresh for 5 minutes
-      staleTime: 5 * 60 * 1000,
-      // Keep in cache for 10 minutes
-      cacheTime: 10 * 60 * 1000,
-      // Refetch on window focus
-      refetchOnWindowFocus: true,
-      // Retry failed requests once
-      retry: 1,
-      // Retry delay
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Global error handler
-      onError: (error) => {
-        const message = error.response?.data?.error?.message || 'An error occurred';
-        console.error('Query error:', error);
-        // Don't show toast for 401 errors (handled by interceptor)
-        if (error.response?.status !== 401) {
-          toast.error(message);
-        }
-      }
+      ...baseQueryConfig,
+      ...developmentHandlers
     },
     mutations: {
-      // Retry mutations once
       retry: 1,
-      // Global error handler
-      onError: (error) => {
-        const message = error.response?.data?.error?.message || 'Operation failed';
-        console.error('Mutation error:', error);
-        toast.error(message);
-      },
-      // Global success handler
-      onSuccess: () => {
-        // Can be overridden per mutation
-      }
-    }
-  }
+    },
+  },
 });
 
-// Invalidation helpers
-export const invalidateQueries = {
-  // Invalidate all transaction related queries
-  transactions: () => {
-    queryClient.invalidateQueries(['transactions']);
-    queryClient.invalidateQueries(['dashboard']);
-    queryClient.invalidateQueries(['recurring']);
-    queryClient.invalidateQueries(['templates']);
+// ✅ ENHANCED: Much longer cache times for better hit rates
+export const queryConfigs = {
+  dashboard: {
+    staleTime: 30 * 60 * 1000, // 30 minutes instead of 20
+    gcTime: 60 * 60 * 1000, // 1 hour instead of 45 minutes
   },
-  
-  // Invalidate dashboard data
-  dashboard: (date) => {
-    if (date) {
-      queryClient.invalidateQueries(['dashboard', date]);
-    } else {
-      queryClient.invalidateQueries(['dashboard']);
-    }
+  categories: {
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours instead of 12
+    gcTime: 48 * 60 * 60 * 1000, // 48 hours instead of 24
   },
-  
-  // Invalidate user data
-  profile: () => {
-    queryClient.invalidateQueries(['profile']);
+  profile: {
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours instead of 6
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
   },
-  
-  // Invalidate all data
-  all: () => {
-    queryClient.invalidateQueries();
+  recurring: {
+    staleTime: 60 * 60 * 1000, // 1 hour instead of 45 minutes
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours instead of 3
+  },
+  periodTransactions: {
+    staleTime: 30 * 60 * 1000, // 30 minutes instead of 15
+    gcTime: 60 * 60 * 1000, // 1 hour instead of 30 minutes
+  },
+  transactions: {
+    staleTime: 20 * 60 * 1000, // 20 minutes instead of 10
+    gcTime: 40 * 60 * 1000, // 40 minutes instead of 20
+  },
+  // ✅ ADD: New configurations for better caching
+  templates: {
+    staleTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 8 * 60 * 60 * 1000, // 8 hours
+  },
+  exchangeRates: {
+    staleTime: 4 * 60 * 60 * 1000, // 4 hours - currency rates change infrequently
+    gcTime: 12 * 60 * 60 * 1000, // 12 hours
   }
 };
 
+// ✅ FIX: Export queryClient as both named and default
 export default queryClient;

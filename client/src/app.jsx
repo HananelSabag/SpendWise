@@ -109,14 +109,38 @@ const AppContent = () => {
 
 // Main App component with providers
 function App() {
-  // Force light mode on document body directly
+  // ✅ FIX: Enhanced initialization with preference restoration
   useEffect(() => {
+    // Force light mode on document body directly
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark-mode');
     document.body.classList.add('light-mode');
     
     // Also clear dark mode setting from localStorage
     localStorage.removeItem('a11y_darkMode');
+    
+    // ✅ ADD: Restore user preferences on app load
+    const initializePreferences = () => {
+      try {
+        // Language preference is handled by LanguageProvider
+        const savedLanguage = localStorage.getItem('preferredLanguage');
+        const savedCurrency = localStorage.getItem('preferredCurrency');
+        
+        console.log('🚀 [APP] Initializing with preferences:', {
+          language: savedLanguage || 'browser-default',
+          currency: savedCurrency || 'ILS',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Currency will be restored by CurrencyProvider
+        // Language will be restored by LanguageProvider
+        
+      } catch (error) {
+        console.warn('⚠️ [APP] Error restoring preferences:', error);
+      }
+    };
+    
+    initializePreferences();
     
     console.log('🚀 App component mounted at:', new Date().toISOString());
   }, []);

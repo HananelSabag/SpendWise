@@ -28,7 +28,7 @@ import toast from 'react-hot-toast';
  */
 const ProfileSettings = ({ user }) => {
   const { updateProfile, isUpdatingProfile } = useAuth();
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, setLanguage } = useLanguage(); // ✅ Use setLanguage (permanent)
   const { currency, setCurrency } = useCurrency();
   const { darkMode, setDarkMode } = useAccessibility();
   const isRTL = language === 'he';
@@ -48,22 +48,44 @@ const ProfileSettings = ({ user }) => {
 
   // Handle language change
   const handleLanguageChange = (lang) => {
-    setLanguage(lang);
-    localStorage.setItem('preferredLanguage', lang);
-    toast.success(t('profile.languageChanged'));
+    if (!['en', 'he'].includes(lang)) {
+      console.warn('Invalid language code:', lang);
+      return;
+    }
+    
+    console.log(`🌐 [PROFILE] Permanent language change: ${language} → ${lang}`);
+    
+    setLanguage(lang); // This automatically persists to localStorage permanently
+    
+    // Show success message
+    const successMsg = safeT('profile.languageChanged', 'Language preference saved');
+    toast.success(successMsg);
   };
 
   // Handle currency change
   const handleCurrencyChange = (curr) => {
+    if (!['ILS', 'USD', 'EUR'].includes(curr)) {
+      console.warn('Invalid currency code:', curr);
+      return;
+    }
+    
+    console.log(`💱 [PROFILE] Currency change: ${currency} → ${curr}`);
+    
     setCurrency(curr);
     localStorage.setItem('preferredCurrency', curr);
-    toast.success(t('profile.currencyChanged'));
+    
+    const successMsg = safeT('profile.currencyChanged', 'Currency changed successfully');
+    toast.success(successMsg);
   };
 
   // Handle theme change
   const handleThemeChange = (isDark) => {
+    console.log(`🎨 [PROFILE] Theme change: ${darkMode} → ${isDark}`);
+    
     setDarkMode(isDark);
-    toast.success(t('profile.themeChanged'));
+    
+    const successMsg = safeT('profile.themeChanged', 'Theme changed successfully');
+    toast.success(successMsg);
   };
 
   // Validate password

@@ -31,6 +31,7 @@ const DeleteTransaction = ({
   isOpen,
   onClose,
   onConfirm,
+  onOpenSkipDates,
   loading = false
 }) => {
   const { t, language } = useLanguage();
@@ -44,47 +45,74 @@ const DeleteTransaction = ({
 
   if (!transaction) return null;
 
-  const isRecurring = transaction.is_recurring;
+  const isRecurring = transaction.is_recurring || transaction.template_id;
   const transactionType = transaction.transaction_type;
 
-  // Delete options for recurring transactions
+  // Enhanced delete options for recurring transactions
   const deleteOptions = [
     {
       id: 'single',
-      title: 'Delete this occurrence only',
-      // ✅ FIX: Use local timezone date formatting
-      description: `Remove just this specific ${transactionType} on ${(() => {
+      title: t('transactions.delete.singleOccurrence') || 'Delete this occurrence only',
+      description: (() => {
         const date = new Date(transaction.date + 'T12:00:00');
-        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+        const formattedDate = date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
         });
-      })()}. The recurring pattern will continue for future dates.`,
+        return `Remove just this specific ${transactionType} on ${formattedDate}. The recurring pattern will continue for future dates.`;
+      })(),
       icon: Calendar,
       color: 'blue',
-      recommended: true
+      recommended: true,
+      apiAction: 'single'
+    },
+    {
+      id: 'skip',
+      title: t('transactions.delete.skipDates') || 'Skip specific dates',
+      description: t('transactions.delete.skipDescription') || 'Choose specific dates to skip for this recurring transaction while keeping the pattern active.',
+      icon: Clock,
+      color: 'purple',
+      special: true,
+      apiAction: 'skip'
     },
     {
       id: 'future',
-      title: 'Stop this recurring transaction',
-      // ✅ FIX: Use local timezone date formatting
-      description: `Cancel this ${transactionType} from ${(() => {
+      title: t('transactions.delete.stopRecurring') || 'Stop recurring from this date',
+      description: (() => {
         const date = new Date(transaction.date + 'T12:00:00');
-        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+        const formattedDate = date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
         });
-      })()} onwards. All future occurrences will be removed.`,
+        return `Cancel this ${transactionType} from ${formattedDate} onwards. All future occurrences will be removed.`;
+      })(),
       icon: Repeat,
+      color: 'orange',
+      warning: true,
+      apiAction: 'future'
+    },
+    {
+      id: 'all',
+      title: t('transactions.delete.deleteAll') || 'Delete entire recurring series',
+      description: t('transactions.delete.allDescription') || 'Permanently delete this recurring transaction and all its past and future occurrences.',
+      icon: Trash2,
       color: 'red',
-      warning: true
+      danger: true,
+      apiAction: 'all'
     }
   ];
 
   // Handle confirmation
   const handleConfirm = async () => {
+    // ✅ FIX: Handle skip dates option immediately without confirmation step
+    if (deleteOption === 'skip') {
+      handleClose();
+      onOpenSkipDates?.(transaction);
+      return;
+    }
+
     if (!confirmed) {
       setConfirmed(true);
       return;
@@ -92,8 +120,17 @@ const DeleteTransaction = ({
 
     try {
       setIsDeleting(true);
-      const deleteFuture = deleteOption === 'future';
-      await onConfirm?.(transaction, deleteFuture);
+      
+      // Map delete options to API parameters
+      const deleteParams = {
+        single: { deleteFuture: false, deleteAll: false },
+        future: { deleteFuture: true, deleteAll: false },
+        all: { deleteFuture: true, deleteAll: true }
+      };
+
+      const params = deleteParams[deleteOption] || deleteParams.single;
+      await onConfirm?.(transaction, params.deleteFuture, params.deleteAll);
+      
     } catch (error) {
       console.error('Delete failed:', error);
     } finally {
@@ -177,8 +214,8 @@ const DeleteTransaction = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      size="medium"
-      className="max-w-2xl"
+      size="large"
+      className="max-w-3xl"
       hideHeader={true}
       preventBackdropClose={isDeleting}
     >
@@ -186,7 +223,7 @@ const DeleteTransaction = ({
         variants={modalVariants}
         initial="hidden"
         animate="visible"
-        className="relative"
+        className="relative" // ✅ REMOVE: Any overflow-hidden classes
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header */}
@@ -279,7 +316,7 @@ const DeleteTransaction = ({
             </div>
           </div>
 
-          {/* Delete Options or Confirmation */}
+          {/* Enhanced Delete Options */}
           <AnimatePresence mode="wait">
             {!confirmed ? (
               <motion.div
@@ -295,7 +332,7 @@ const DeleteTransaction = ({
                     <div className="flex items-start gap-2">
                       <Info className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        This is a recurring {transactionType}. Please choose how you'd like to delete it:
+                        {t('transactions.delete.recurringInfo')}
                       </p>
                     </div>
 
@@ -322,25 +359,37 @@ const DeleteTransaction = ({
                             className="sr-only"
                           />
                           
-                          <div className={`p-4 rounded-xl border-2 transition-all ${
+                          <div className={`p-5 rounded-xl border-2 transition-all ${
                             isSelected
-                              ? option.warning
+                              ? option.danger
                                 ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                : option.warning
+                                ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                                : option.special
+                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
                                 : 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                               : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                           }`}>
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded-lg ${
                                 isSelected
-                                  ? option.warning
+                                  ? option.danger
                                     ? 'bg-red-100 dark:bg-red-900/30'
+                                    : option.warning
+                                    ? 'bg-orange-100 dark:bg-orange-900/30'
+                                    : option.special
+                                    ? 'bg-purple-100 dark:bg-purple-900/30'
                                     : 'bg-primary-100 dark:bg-primary-900/30'
                                   : 'bg-gray-100 dark:bg-gray-800'
                               }`}>
                                 <IconComponent className={`w-5 h-5 ${
                                   isSelected
-                                    ? option.warning
+                                    ? option.danger
                                       ? 'text-red-600 dark:text-red-400'
+                                      : option.warning
+                                      ? 'text-orange-600 dark:text-orange-400'
+                                      : option.special
+                                      ? 'text-purple-600 dark:text-purple-400'
                                       : 'text-primary-600 dark:text-primary-400'
                                     : 'text-gray-500 dark:text-gray-400'
                                 }`} />
@@ -350,8 +399,12 @@ const DeleteTransaction = ({
                                 <div className="flex items-center gap-2">
                                   <h4 className={`font-semibold ${
                                     isSelected
-                                      ? option.warning
+                                      ? option.danger
                                         ? 'text-red-700 dark:text-red-300'
+                                        : option.warning
+                                        ? 'text-orange-700 dark:text-orange-300'
+                                        : option.special
+                                        ? 'text-purple-700 dark:text-purple-300'
                                         : 'text-primary-700 dark:text-primary-300'
                                       : 'text-gray-700 dark:text-gray-300'
                                   }`}>
@@ -360,13 +413,25 @@ const DeleteTransaction = ({
                                   
                                   {option.recommended && (
                                     <Badge variant="success" className="text-xs">
-                                      Recommended
+                                      {t('common.recommended')}
                                     </Badge>
                                   )}
                                   
                                   {option.warning && (
                                     <Badge variant="warning" className="text-xs">
-                                      ⚠️ Permanent
+                                      ⚠️ {t('transactions.delete.permanent')}
+                                    </Badge>
+                                  )}
+
+                                  {option.danger && (
+                                    <Badge variant="danger" className="text-xs">
+                                      🚫 {t('transactions.delete.irreversible')}
+                                    </Badge>
+                                  )}
+
+                                  {option.special && (
+                                    <Badge variant="purple" className="text-xs">
+                                      ✨ {t('transactions.delete.manageDates')}
                                     </Badge>
                                   )}
                                 </div>
@@ -375,20 +440,39 @@ const DeleteTransaction = ({
                                   {option.description}
                                 </p>
 
+                                {/* Special information for different options */}
+                                {option.id === 'skip' && (
+                                  <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                    <p className="text-sm text-purple-700 dark:text-purple-300 flex items-center gap-2 font-medium">
+                                      <ArrowRight className="w-4 h-4" />
+                                      {t('transactions.delete.skipRedirect') || 'Opens date picker to select specific dates to skip'}
+                                    </p>
+                                  </div>
+                                )}
+
                                 {option.id === 'future' && transaction.next_recurrence_date && (
                                   <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                                     <p className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
-                                      This will also cancel the next occurrence on{' '}
-                                      {/* ✅ FIX: Use local timezone date formatting */}
-                                      {(() => {
-                                        const date = new Date(transaction.next_recurrence_date + 'T12:00:00');
-                                        return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric'
-                                        });
-                                      })()}
+                                      {t('transactions.delete.nextOccurrence', {
+                                        date: (() => {
+                                          const date = new Date(transaction.next_recurrence_date + 'T12:00:00');
+                                          return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                          });
+                                        })()
+                                      })}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {option.id === 'all' && (
+                                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                                    <p className="text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      {t('transactions.delete.allWarning')}
                                     </p>
                                   </div>
                                 )}
@@ -403,15 +487,16 @@ const DeleteTransaction = ({
                   <Alert type="warning">
                     <AlertTriangle className="w-5 h-5" />
                     <div>
-                      <p className="font-medium">This action cannot be undone</p>
+                      <p className="font-medium">{t('transactions.delete.cannotUndo')}</p>
                       <p className="text-sm mt-1">
-                        Are you sure you want to permanently delete this {transactionType}?
+                        {t('transactions.delete.confirmSingle', { type: transactionType })}
                       </p>
                     </div>
                   </Alert>
                 )}
               </motion.div>
             ) : (
+              // ✅ FIX: Remove skip option from confirmation step since it redirects immediately
               <motion.div
                 key="confirmation"
                 variants={stepVariants}
@@ -423,29 +508,39 @@ const DeleteTransaction = ({
                 <Alert type="error">
                   <AlertCircle className="w-5 h-5" />
                   <div>
-                    <p className="font-medium">Final Confirmation Required</p>
+                    <p className="font-medium">{t('transactions.delete.finalConfirmation')}</p>
                     <p className="text-sm mt-1">
-                      {deleteOption === 'future' && isRecurring
-                        ? `This will permanently stop the recurring ${transactionType} and remove all future occurrences.`
-                        : `This will permanently delete this ${transactionType}.`
-                      }
-                    </p>
+                      {deleteOption === 'all'
+                        ? t('transactions.delete.confirmAll')
+                        : deleteOption === 'future'
+                        ? t('transactions.delete.confirmFuture', { type: transactionType })
+                        : t('transactions.delete.confirmSingle', { type: transactionType })
+                    }</p>
                   </div>
                 </Alert>
 
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Summary of changes:
+                    {t('transactions.delete.summaryChanges')}
                   </h4>
                   <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     <li className="flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                      Delete {transaction.description} ({formatAmount(transaction.amount)})
+                      {deleteOption === 'skip' 
+                        ? t('transactions.delete.summarySkip')
+                        : t('transactions.delete.summaryDelete', {
+                            description: transaction.description,
+                            amount: formatAmount(transaction.amount)
+                          })
+                      }
                     </li>
-                    {deleteOption === 'future' && isRecurring && (
+                    {(deleteOption === 'future' || deleteOption === 'all') && isRecurring && (
                       <li className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                        Cancel all future occurrences
+                        {deleteOption === 'all' 
+                          ? t('transactions.delete.summaryDeleteAll')
+                          : t('transactions.delete.summaryCancelFuture')
+                        }
                       </li>
                     )}
                   </ul>
@@ -454,29 +549,44 @@ const DeleteTransaction = ({
             )}
           </AnimatePresence>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Enhanced Action Buttons */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
             {!confirmed ? (
               <>
                 <Button
                   variant="outline"
                   onClick={handleClose}
                   disabled={isDeleting}
+                  size="large"
                 >
                   {t('common.cancel')}
                 </Button>
                 
                 <Button
-                  variant="danger"
+                  variant={deleteOption === 'skip' ? 'primary' : 'danger'}
                   onClick={handleConfirm}
                   disabled={isDeleting}
-                  className="min-w-[120px]"
+                  className="min-w-[140px]"
+                  size="large"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {isRecurring 
-                    ? (deleteOption === 'future' ? 'Stop Recurring' : 'Delete Once')
-                    : t('common.delete')
-                  }
+                  {deleteOption === 'skip' ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2" />
+                      {t('transactions.delete.openSkipDates') || 'Skip Dates'}
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteOption === 'all' 
+                        ? t('transactions.delete.deleteAll')
+                        : deleteOption === 'future'
+                        ? t('transactions.delete.stopRecurring')
+                        : isRecurring 
+                          ? t('transactions.delete.deleteOnce')
+                          : t('common.delete')
+                      }
+                    </>
+                  )}
                 </Button>
               </>
             ) : (
@@ -486,11 +596,11 @@ const DeleteTransaction = ({
                   onClick={() => setConfirmed(false)}
                   disabled={isDeleting}
                 >
-                  Go Back
+                  {t('common.goBack')}
                 </Button>
                 
                 <Button
-                  variant="danger"
+                  variant={deleteOption === 'skip' ? 'primary' : 'danger'}
                   onClick={handleConfirm}
                   loading={isDeleting}
                   disabled={isDeleting}
@@ -499,12 +609,20 @@ const DeleteTransaction = ({
                   {isDeleting ? (
                     <div className="flex items-center gap-2">
                       <Loader className="w-4 h-4 animate-spin" />
-                      Deleting...
+                      {deleteOption === 'skip' 
+                        ? t('common.redirecting')
+                        : t('common.deleting')
+                      }
+                    </div>
+                  ) : deleteOption === 'skip' ? (
+                    <div className="flex items-center gap-2">
+                      <ArrowRight className="w-4 h-4" />
+                      {t('transactions.delete.openSkipModal')}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Trash2 className="w-4 h-4" />
-                      Yes, Delete Forever
+                      {t('transactions.delete.confirmDelete')}
                     </div>
                   )}
                 </Button>

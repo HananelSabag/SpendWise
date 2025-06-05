@@ -19,7 +19,9 @@ import {
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
-import { Badge, Button } from '../../ui';
+import { Badge, Button, Modal } from '../../ui';
+import EditTransactionPanel from './EditTransactionPanel';
+import DeleteTransaction from './DeleteTransaction';
 
 /**
  * TransactionCard Component
@@ -31,6 +33,8 @@ const TransactionCard = ({
   onEdit,
   onDelete,
   onEditSingle,
+  onOpenRecurringManager,
+  onOpenSkipDates,
   showActions = true,
   variant = 'default',
   className = ''
@@ -38,16 +42,51 @@ const TransactionCard = ({
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const [expanded, setExpanded] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSingle, setEditingSingle] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isRTL = language === 'he';
   
   const isRecurring = transaction.is_recurring || transaction.template_id;
   const isExpense = transaction.transaction_type === 'expense';
 
+  // Handle edit button click
+  const handleEditClick = () => {
+    setEditingSingle(false);
+    setShowEditModal(true);
+  };
+
   // Handle single occurrence editing
-  const handleEditSingleOccurrence = (transaction) => {
-    if (onEditSingle) {
-      onEditSingle(transaction);
+  const handleEditSingleOccurrence = () => {
+    setEditingSingle(true);
+    setShowEditModal(true);
+  };
+
+  // Handle edit success
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setEditingSingle(false);
+    // Refresh data if needed
+    onEdit?.(transaction);
+  };
+
+  // Handle delete with enhanced options
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async (transaction, deleteFuture = false, deleteAll = false) => {
+    try {
+      await onDelete?.(transaction, deleteFuture, deleteAll);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error('Delete failed:', error);
     }
+  };
+
+  const handleOpenSkipDates = (transaction) => {
+    setShowDeleteModal(false);
+    onOpenSkipDates?.(transaction);
   };
 
   // Format frequency
@@ -244,34 +283,51 @@ const TransactionCard = ({
             'flex items-center gap-1',
             !isRecurring && 'ml-auto'
           )}>
-            {/* Single Occurrence Edit Button for recurring transactions */}
-            {transaction.template_id && (
+            {/* Recurring Management Button */}
+            {isRecurring && onOpenRecurringManager && (
               <Button
                 variant="ghost"
                 size="small"
-                onClick={() => handleEditSingleOccurrence(transaction)}
+                onClick={() => onOpenRecurringManager(transaction)}
+                className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl px-3 py-2"
+                title={t('transactions.manageRecurring')}
+              >
+                <Repeat className="w-4 h-4 mr-1" />
+                <span className="text-xs font-medium">{t('transactions.manage')}</span>
+              </Button>
+            )}
+            
+            {/* Single Occurrence Edit Button for recurring transactions */}
+            {isRecurring && (
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleEditSingleOccurrence}
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl p-2.5"
                 title={t('transactions.editThisOnly')}
               >
                 <Edit2 className="w-4 h-4" />
-                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editSingle')}</span>
+                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editOnce')}</span>
               </Button>
             )}
             
             <Button
               variant="ghost"
               size="small"
-              onClick={() => onEdit?.(transaction)}
+              onClick={handleEditClick}
               className="text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl p-2.5"
-              title={t('common.edit')}
+              title={isRecurring ? t('transactions.editTemplate') : t('common.edit')}
             >
               <Edit2 className="w-4 h-4" />
+              {isRecurring && (
+                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editAll')}</span>
+              )}
             </Button>
             
             <Button
               variant="ghost"
               size="small"
-              onClick={() => onDelete?.(transaction)}
+              onClick={handleDeleteClick}
               className="text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl p-2.5"
               title={t('common.delete')}
             >
@@ -371,6 +427,30 @@ const TransactionCard = ({
           </div>
         </div>
       </motion.div>
+
+      {/* Edit Transaction Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        size="large"
+        hideHeader={true}
+      >
+        <EditTransactionPanel
+          transaction={transaction}
+          editingSingle={editingSingle}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={handleEditSuccess}
+        />
+      </Modal>
+
+      {/* Enhanced Delete Modal */}
+      <DeleteTransaction
+        transaction={transaction}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        onOpenSkipDates={handleOpenSkipDates}
+      />
     </motion.div>
   );
 };

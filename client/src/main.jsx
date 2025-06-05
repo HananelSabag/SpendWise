@@ -79,3 +79,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </PersistQueryClientProvider>
   </ErrorBoundary>
 );
+
+// ✅ ADD: Setup global utilities for development
+if (import.meta.env.MODE === 'development') {
+  // Make queryClient available globally for debugging
+  window.queryClient = queryClient;
+  
+  // Make helper functions available globally
+  import('./utils/helpers').then(({ numbers }) => {
+    window.numbers = numbers;
+    
+    // Auto-start cache monitoring if enabled
+    if (localStorage.getItem('debug_cache') === 'true') {
+      console.log('🔧 [DEV] Cache monitoring enabled');
+      numbers.startCacheMonitoring();
+    }
+  });
+}
