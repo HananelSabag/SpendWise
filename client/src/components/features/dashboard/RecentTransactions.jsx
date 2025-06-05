@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ArrowRight, Package, Eye } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useDate } from '../../../context/DateContext'; // ✅ הוסף import חסר
-import { useCurrency } from '../../../context/CurrencyContext'; // ✅ הוסף import חסר
+import { useDate } from '../../../context/DateContext';
+import { useCurrency } from '../../../context/CurrencyContext';
 import { Card } from '../../../components/ui';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
@@ -20,16 +20,23 @@ const RecentTransactions = ({
   const { t, language } = useLanguage();
   
   const isRTL = language === 'he';
-  
-  // Debug info
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📋 [RECENT-TX] Component mounted, receiving data via props`);
-    }
-  }, []);
 
-  // Use props instead of hook
-  const recentTransactions = transactions.slice(0, limit);
+  // ✅ FIX: Filter out future transactions and only show past/current transactions
+  const today = new Date();
+  today.setHours(23, 59, 59, 999); // End of today
+  
+  const filteredTransactions = transactions
+    .filter(transaction => {
+      try {
+        const transactionDate = new Date(transaction.date);
+        // Only show transactions up to today (no future transactions)
+        return transactionDate <= today && !isNaN(transactionDate.getTime());
+      } catch (error) {
+        console.warn('Invalid transaction date:', transaction.date);
+        return false;
+      }
+    })
+    .slice(0, limit);
 
   const { formatDate } = useDate();
   const { formatAmount } = useCurrency();
@@ -48,12 +55,27 @@ const RecentTransactions = ({
 
   // Transaction item - simplified compact version
   const TransactionItem = ({ transaction }) => {
-    const isIncome = transaction.transaction_type === 'income';
-    const isExpense = transaction.transaction_type === 'expense';
+    // ✅ FIX: Better transaction type detection with fallbacks
+    let transactionType = transaction.transaction_type;
+    
+    // Fallback detection if transaction_type is undefined
+    if (!transactionType) {
+      // Try to determine from amount (positive = income, negative = expense)
+      transactionType = transaction.amount >= 0 ? 'income' : 'expense';
+      
+      // Or try alternative field names
+      if (transaction.type) {
+        transactionType = transaction.type;
+      }
+    }
+    
+    const isIncome = transactionType === 'income';
+    const isExpense = transactionType === 'expense';
     
     return (
       <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
         <div className="flex items-center gap-3">
+          {/* ✅ FIX: Correct color based on detected transaction type */}
           <div className={`w-2 h-2 rounded-full ${isIncome ? 'bg-green-500' : 'bg-red-500'}`}></div>
           <div>
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
@@ -82,8 +104,9 @@ const RecentTransactions = ({
             </p>
           </div>
         </div>
+        {/* ✅ FIX: Correct amount display with proper signs and absolute values */}
         <div className={`text-sm font-medium ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {isIncome ? '+' : '-'}{formatAmount(transaction.amount)}
+          {isIncome ? '+' : '-'}{formatAmount(Math.abs(transaction.amount))}
         </div>
       </div>
     );
@@ -119,13 +142,13 @@ const RecentTransactions = ({
       
       {/* Content */}
       <div className="max-h-[280px] overflow-y-auto scrollbar-thin">
-        {recentTransactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           renderEmptyState()
         ) : (
           <div className="space-y-1">
-            {recentTransactions.map(transaction => (
+            {filteredTransactions.map(transaction => (
               <TransactionItem 
-                key={`${transaction.id}-${transaction.transaction_type}`}
+                key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`}
                 transaction={transaction}
               />
             ))}

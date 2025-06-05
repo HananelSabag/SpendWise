@@ -154,6 +154,8 @@ const Dashboard = () => {
   // ✅ FIX: Reduce initial loading time
   const [loading, setLoading] = useState(true);
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+  // ✅ ADD: Missing state for ActionsPanel
+  const [showActionsPanel, setShowActionsPanel] = useState(false);
   
   const isRTL = language === 'he';
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
@@ -340,26 +342,22 @@ const Dashboard = () => {
                 )}
                 <div className="relative">
                   <MemoizedBalancePanel 
-                    key="balance-panel-main" // ✅ ADD: Stable key to prevent re-mounting
+                    key="balance-panel-main"
                     balanceData={dashboardData?.balances}
                     recurringInfo={dashboardData?.recurringInfo}
                   />
                 </div>
               </motion.div>
 
-              {/* Actions Panel - Enhanced with QuickActionsBar */}
-              <motion.div variants={itemVariants} className="space-y-4">
-                {/* Quick Actions Bar - Primary Action Interface */}
+              {/* Quick Actions Bar - Only keep this */}
+              <motion.div variants={itemVariants}>
                 <QuickActionsBar />
-                
-                {/* Advanced Actions Panel - Secondary Options */}
-                <MemoizedActionsCard key="actions-panel-main" /> {/* ✅ ADD: Stable key */}
               </motion.div>
 
               {/* Stats Chart - Pass data as props */}
               <motion.div variants={itemVariants}>
                 <MemoizedStatsChart 
-                  key="stats-chart-main" // ✅ ADD: Stable key
+                  key="stats-chart-main"
                   dashboardData={dashboardData}
                   loading={isDashboardLoading}
                   className="lg:col-span-2" 
@@ -369,7 +367,7 @@ const Dashboard = () => {
               {/* Recent Transactions - Pass data as props */}
               <motion.div variants={itemVariants}>
                 <MemoizedRecentTransactions 
-                  key="recent-transactions-main" // ✅ ADD: Stable key to prevent re-mounting
+                  key="recent-transactions-main"
                   transactions={dashboardData?.recentTransactions}
                   loading={isDashboardLoading}
                 />
@@ -386,6 +384,68 @@ const Dashboard = () => {
               <StatsCards stats={dashboardStats} t={t} />
             </motion.div>
           </motion.div>
+
+          {/* Floating Plus Button - Always Left Corner */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 1, duration: 0.3 }}
+            className="fixed left-6 bottom-6 z-50"
+          >
+            <motion.button
+              onClick={() => setShowActionsPanel(true)}
+              className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-3xl group"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              title={t('actions.quickAdd')}
+            >
+              {/* Animated Background */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+              
+              {/* Plus Icon */}
+              <motion.div
+                className="relative z-10"
+                animate={{ rotate: [0, 0, 180, 180, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Plus className="w-8 h-8" />
+              </motion.div>
+              
+              {/* Ripple Effect */}
+              <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-75"></div>
+              
+              {/* Glow Effect */}
+              <div className="absolute -inset-2 bg-primary-500/20 rounded-full blur-lg group-hover:bg-primary-400/30 transition-all duration-300"></div>
+            </motion.button>
+            
+            {/* Tooltip - Always position to the right */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileHover={{ opacity: 1, x: 0 }}
+              className="absolute left-20 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200"
+            >
+              {t('actions.quickAdd')}
+              <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-transparent border-r-4 border-r-gray-900"></div>
+            </motion.div>
+          </motion.div>
+
+          {/* Actions Panel Modal */}
+          <AnimatePresence>
+            {showActionsPanel && (
+              <Modal
+                isOpen={showActionsPanel}
+                onClose={() => setShowActionsPanel(false)}
+                size="large"
+                className="max-w-4xl"
+                hideHeader={true}
+              >
+                <ActionsPanel 
+                  onClose={() => setShowActionsPanel(false)}
+                  context="dashboard"
+                />
+              </Modal>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </TransactionProvider>
@@ -432,7 +492,7 @@ const WelcomeBanner = React.memo(({ user, greeting, selectedDate, language, vari
             
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2">
-                {greeting}
+                <span dir="ltr">SpendWise</span> - {greeting}
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
@@ -500,7 +560,9 @@ const CompactWelcome = React.memo(({ user, greeting, language, variants }) => (
         </div>
         
         <div>
-          <h2 className="font-semibold text-gray-900 dark:text-white">{greeting}</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">
+            <span dir="ltr" className="text-primary-600 dark:text-primary-400">SpendWise</span> - {greeting}
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {(() => {
               const today = new Date();

@@ -16,7 +16,10 @@ import {
   Activity,
   X,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Settings,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useTransactionsList, useRecurringTransactionsList } from '../hooks/useTransactionsList';
@@ -66,8 +69,10 @@ const Transactions = () => {
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [filters, setFilters] = useState({
+    type: 'all', // Move type filter to filters object
     categories: [],
-    dateRange: null,
+    startDate: null,
+    endDate: null,
     minAmount: null,
     maxAmount: null,
     recurring: 'all'
@@ -105,6 +110,17 @@ const Transactions = () => {
   // ✅ Computed values - always calculated
   const isRTL = language === 'he';
 
+  // ✅ Add missing activeFilterCount calculation
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.type !== 'all') count++;
+    if (filters.categories?.length > 0) count++;
+    if (filters.startDate || filters.endDate) count++;
+    if (filters.minAmount !== null || filters.maxAmount !== null) count++;
+    if (filters.recurring !== 'all') count++;
+    return count;
+  }, [filters]);
+
   // ✅ Memoized values - always calculated in same order
   const filteredTransactions = useMemo(() => {
     if (!periodTransactions || !Array.isArray(periodTransactions)) {
@@ -114,9 +130,9 @@ const Transactions = () => {
 
     let filtered = [...periodTransactions];
 
-    // View filter
-    if (view !== 'all') {
-      filtered = filtered.filter(tx => tx.transaction_type === view);
+    // Type filter
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(tx => tx.transaction_type === filters.type);
     }
 
     // Search filter
@@ -128,13 +144,37 @@ const Transactions = () => {
       );
     }
 
-    // Apply other filters
+    // Category filter
     if (filters.categories.length > 0) {
       filtered = filtered.filter(tx => 
         filters.categories.includes(tx.category_id)
       );
     }
 
+    // Date range filter
+    if (filters.startDate || filters.endDate) {
+      filtered = filtered.filter(tx => {
+        const txDate = new Date(tx.date);
+        const startDate = filters.startDate ? new Date(filters.startDate) : null;
+        const endDate = filters.endDate ? new Date(filters.endDate) : null;
+        
+        if (startDate && txDate < startDate) return false;
+        if (endDate && txDate > endDate) return false;
+        return true;
+      });
+    }
+
+    // Amount range filter
+    if (filters.minAmount !== null || filters.maxAmount !== null) {
+      filtered = filtered.filter(tx => {
+        const amount = Math.abs(parseFloat(tx.amount));
+        if (filters.minAmount !== null && amount < filters.minAmount) return false;
+        if (filters.maxAmount !== null && amount > filters.maxAmount) return false;
+        return true;
+      });
+    }
+
+    // Recurring filter
     if (filters.recurring !== 'all') {
       if (filters.recurring === 'recurring') {
         filtered = filtered.filter(tx => tx.template_id !== null);
@@ -144,7 +184,7 @@ const Transactions = () => {
     }
 
     return filtered;
-  }, [periodTransactions, view, searchTerm, filters]);
+  }, [periodTransactions, searchTerm, filters]);
 
   const balanceData = useMemo(() => {
     if (!dashboardData?.balances) {
@@ -168,6 +208,30 @@ const Transactions = () => {
       count: dashboardData?.recentTransactions?.length || 0
     };
   }, [balanceData, dashboardData]);
+
+  // ✅ Add missing handler functions
+  const handleTypeChange = useCallback((type) => {
+    setFilters(prev => ({
+      ...prev,
+      type: type
+    }));
+  }, []);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+  }, []);
+
+  const handleFilterReset = useCallback(() => {
+    setFilters({
+      type: 'all',
+      categories: [],
+      startDate: null,
+      endDate: null,
+      minAmount: null,
+      maxAmount: null,
+      recurring: 'all'
+    });
+  }, []);
 
   // ✅ Callback hooks - always called in same order
   const handleTransactionSuccess = useCallback(() => {
@@ -398,69 +462,6 @@ const Transactions = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Stats Grid - Improved layout */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-green-500/20 rounded-lg">
-                      <TrendingUp className="w-3 h-3 lg:w-4 lg:h-4 text-green-300" />
-                    </div>
-                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.income')}</span>
-                  </div>
-                  <div className="text-lg lg:text-xl font-bold text-green-300 mb-1">
-                    {formatAmount(totals.income)}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    {getTransactionsByType('income').length} {t('transactions.items')}
-                  </div>
-                </div>
-                
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-red-500/20 rounded-lg">
-                      <TrendingDown className="w-3 h-3 lg:w-4 lg:h-4 text-red-300" />
-                    </div>
-                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.expense')}</span>
-                  </div>
-                  <div className="text-lg lg:text-xl font-bold text-red-300 mb-1">
-                    {formatAmount(totals.expenses)}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    {getTransactionsByType('expense').length} {t('transactions.items')}
-                  </div>
-                </div>
-
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-blue-500/20 rounded-lg">
-                      <Activity className="w-3 h-3 lg:w-4 lg:h-4 text-blue-300" />
-                    </div>
-                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('common.balance')}</span>
-                  </div>
-                  <div className={`text-lg lg:text-xl font-bold mb-1 ${totals.balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                    {formatAmount(totals.balance)}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    {totals.balance >= 0 ? t('common.positive') : t('common.negative')}
-                  </div>
-                </div>
-
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-white/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 bg-purple-500/20 rounded-lg">
-                      <Clock className="w-3 h-3 lg:w-4 lg:h-4 text-purple-300" />
-                    </div>
-                    <span className="text-white/80 text-xs lg:text-sm font-medium">{t('transactions.total')}</span>
-                  </div>
-                  <div className="text-lg lg:text-xl font-bold text-purple-300 mb-1">
-                    {periodTransactions?.length || 0}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    {periods.find(p => p.key === selectedPeriod)?.label}
-                  </div>
-                </div>
-              </div>
             </div>
           </Card>
         </motion.div>
@@ -490,7 +491,7 @@ const Transactions = () => {
                 )}
               </div>
 
-              {/* Filter Controls - Improved layout */}
+              {/* Enhanced Filter Controls */}
               <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
                 {/* Type Filter Pills */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -505,54 +506,59 @@ const Transactions = () => {
                     ].map(({ key, icon: Icon, label }) => (
                       <Button
                         key={key}
-                        variant={view === key ? 'primary' : 'outline'}
+                        variant={filters.type === key ? 'primary' : 'outline'}
                         size="small"
-                        onClick={() => setView(key)}
+                        onClick={() => handleTypeChange(key)}
                         className="rounded-full px-3 py-2 flex items-center gap-2 transition-all hover:scale-105 text-sm"
                       >
                         <Icon className="w-4 h-4" />
                         <span className="hidden sm:inline">{label}</span>
                         <Badge variant="default" size="small" className="ml-1 bg-white/20">
-                          {key === 'all' ? periodTransactions?.length || 0 : getTransactionsByType(key).length}
+                          {key === 'all' ? periodTransactions?.length || 0 : 
+                           periodTransactions?.filter(tx => tx.transaction_type === key).length || 0}
                         </Badge>
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-3">
+                {/* Advanced Filters Toggle */}
+                <div className="flex items-center gap-2 ml-auto">
                   <Button
-                    variant="outline"
-                    onClick={() => setShowRecurring(true)}
-                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-4 py-3 font-semibold whitespace-nowrap backdrop-blur-sm"
+                    variant={showFilters ? 'primary' : 'outline'}
+                    size="small"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="rounded-full px-4 py-2 flex items-center gap-2 transition-all hover:scale-105"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <Clock className="w-5 h-5" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                      </div>
-                      <span className="hidden sm:inline">{t('transactions.recurringManagement')}</span>
-                      <span className="sm:hidden">{t('transactions.manage')}</span>
-                      <Badge variant="default" size="small" className="bg-white/20 text-white border-white/30">
-                        {recurringTransactions.length}
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t('transactions.filters.advanced')}</span>
+                    <span className="sm:hidden">{t('transactions.filters.title')}</span>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="default" size="small" className="bg-white/20">
+                        {activeFilterCount}
                       </Badge>
-                    </div>
+                    )}
+                    {showFilters ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
                   </Button>
                   
                   <Button
-                    variant="default"
-                    onClick={() => setShowActionsPanel(true)}
-                    className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-6 py-3 font-semibold whitespace-nowrap"
+                    variant="ghost"
+                    size="small"
+                    onClick={refreshTransactions}
+                    className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title={t('common.refresh')}
                   >
-                    <Plus className="w-5 h-5 mr-2" />
-                    {t('transactions.smartActions')}
+                    <RefreshCw className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
-              {/* Active Filters Summary - Better organized */}
-              {(searchTerm || view !== 'all' || filters.categories.length > 0 || selectedPeriod !== 'month') && (
+              {/* Active Filters Summary - Enhanced */}
+              {(searchTerm || activeFilterCount > 0 || selectedPeriod !== 'month') && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -578,9 +584,33 @@ const Transactions = () => {
                       </Badge>
                     )}
                     
-                    {view !== 'all' && (
+                    {filters.type !== 'all' && (
                       <Badge variant="primary" size="small">
-                        📊 {t(`transactions.${view}`)}
+                        📊 {t(`transactions.${filters.type}`)}
+                      </Badge>
+                    )}
+
+                    {filters.categories.length > 0 && (
+                      <Badge variant="outline" size="small" className="bg-purple-50 text-purple-700 border-purple-200">
+                        🏷️ {filters.categories.length} {t('categories.selected')}
+                      </Badge>
+                    )}
+
+                    {(filters.startDate || filters.endDate) && (
+                      <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
+                        📅 {t('transactions.filters.dateRange')}
+                      </Badge>
+                    )}
+
+                    {(filters.minAmount !== null || filters.maxAmount !== null) && (
+                      <Badge variant="outline" size="small" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        💰 {t('transactions.filters.amountRange')}
+                      </Badge>
+                    )}
+
+                    {filters.recurring !== 'all' && (
+                      <Badge variant="outline" size="small" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                        🔄 {t(`transactions.filters.${filters.recurring}`)}
                       </Badge>
                     )}
 
@@ -593,15 +623,8 @@ const Transactions = () => {
                       size="small"
                       onClick={() => {
                         setSearchTerm('');
-                        setView('all');
                         setSelectedPeriod('month');
-                        setFilters({
-                          categories: [],
-                          dateRange: null,
-                          minAmount: null,
-                          maxAmount: null,
-                          recurring: 'all'
-                        });
+                        handleFilterReset();
                       }}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-2 py-1 text-xs"
                     >
@@ -615,26 +638,65 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
-        {/* Advanced Filters Panel */}
+        {/* Advanced Filters Panel - Enhanced Integration */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, height: 0, y: -20 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
+              variants={itemVariants}
             >
-              <TransactionFilters
-                filters={filters}
-                onChange={setFilters}
-                onReset={() => setFilters({
-                  categories: [],
-                  dateRange: null,
-                  minAmount: null,
-                  maxAmount: null,
-                  recurring: 'all'
-                })}
-              />
+              <Card className="border-2 border-primary-200 dark:border-primary-800 shadow-lg bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/20 dark:to-gray-800">
+                <div className="p-4 border-b border-primary-200 dark:border-primary-700 bg-primary-100 dark:bg-primary-900/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                      <h3 className="font-semibold text-primary-900 dark:text-primary-100">
+                        {t('transactions.filters.advanced')}
+                      </h3>
+                      {activeFilterCount > 0 && (
+                        <Badge variant="primary" size="small">
+                          {activeFilterCount} {t('common.active')}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {activeFilterCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={handleFilterReset}
+                          className="text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          {t('common.reset')}
+                        </Button>
+                      )}
+                      
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={() => setShowFilters(false)}
+                        className="text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-0">
+                  <TransactionFilters
+                    filters={filters}
+                    onChange={handleFilterChange}
+                    onReset={handleFilterReset}
+                    className="border-0 shadow-none bg-transparent"
+                  />
+                </div>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
@@ -643,12 +705,20 @@ const Transactions = () => {
         {filteredTransactions.length > 0 && (
           <motion.div variants={itemVariants}>
             <Card className="p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t('transactions.showing')} <span className="font-bold text-indigo-600">{filteredTransactions.length}</span> {t('transactions.of')} {periodTransactions?.length || 0} {t('transactions.items')}
                   </span>
+                  
+                  {activeFilterCount > 0 && (
+                    <Badge variant="primary" size="small" className="flex items-center gap-1">
+                      <Filter className="w-3 h-3" />
+                      {activeFilterCount} {t('transactions.filters.applied')}
+                    </Badge>
+                  )}
                 </div>
+                
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -661,6 +731,16 @@ const Transactions = () => {
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {filteredTransactions.filter(tx => tx.transaction_type === 'expense').length} {t('transactions.expense')}
                     </span>
+                  </div>
+                  
+                  {/* Quick Stats */}
+                  <div className="hidden lg:flex items-center gap-4 pl-4 border-l border-gray-200 dark:border-gray-700">
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t('transactions.totalAmount')}:</span>
+                      <span className="font-semibold ml-1 text-gray-900 dark:text-white">
+                        ₪{filteredTransactions.reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

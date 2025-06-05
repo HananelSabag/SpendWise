@@ -29,7 +29,8 @@ const TransactionFilters = ({
   filters = {},
   onChange,
   onReset,
-  className = ''
+  className = '',
+  hideHeader = false // Add prop to hide header when integrated
 }) => {
   const { t, language } = useLanguage();
   const isRTL = language === 'he';
@@ -129,73 +130,41 @@ const TransactionFilters = ({
 
   return (
     <div className={cn('bg-white dark:bg-gray-800 rounded-xl shadow-sm', className)}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-primary-500" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              {t('transactions.filters.title')}
-            </h3>
+      {/* Header - Conditionally render */}
+      {!hideHeader && (
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-primary-500" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {t('transactions.filters.title')}
+              </h3>
+              {activeCount > 0 && (
+                <Badge variant="primary" size="small">
+                  {activeCount}
+                </Badge>
+              )}
+            </div>
+            
             {activeCount > 0 && (
-              <Badge variant="primary" size="small">
-                {activeCount}
-              </Badge>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={onReset}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="w-4 h-4 mr-1" />
+                {t('common.reset')}
+              </Button>
             )}
           </div>
-          
-          {activeCount > 0 && (
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={onReset}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <X className="w-4 h-4 mr-1" />
-              {t('common.reset')}
-            </Button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Filter Sections */}
       <div>
-        {/* Transaction Type */}
-        <FilterSection
-          title={t('transactions.filters.type')}
-          icon={DollarSign}
-          section="type"
-        >
-          <div className="flex gap-2 mt-3">
-            {['all', 'income', 'expense'].map(type => (
-              <button
-                key={type}
-                onClick={() => handleFilterChange('type', type)}
-                className={cn(
-                  'flex-1 px-3 py-2 rounded-lg font-medium transition-all',
-                  filters.type === type || (!filters.type && type === 'all')
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
-                )}
-              >
-                {type === 'all' && t('common.all')}
-                {type === 'income' && (
-                  <>
-                    <TrendingUp className="w-4 h-4 inline mr-1" />
-                    {t('home.balance.income')}
-                  </>
-                )}
-                {type === 'expense' && (
-                  <>
-                    <TrendingDown className="w-4 h-4 inline mr-1" />
-                    {t('home.balance.expenses')}
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-        </FilterSection>
-
+        {/* Remove Transaction Type section since it's handled in the main UI */}
+        
         {/* Categories */}
         <FilterSection
           title={t('categories.title')}

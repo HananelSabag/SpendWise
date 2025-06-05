@@ -555,7 +555,7 @@ const EditTransactionPanel = ({
                         )}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 max-h-40 overflow-y-auto">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {currentTabCategories.map((cat) => {
                           const IconComponent = cat.icon;
                           const isSelected = formData.category_id === cat.id;
@@ -565,30 +565,30 @@ const EditTransactionPanel = ({
                               key={cat.id}
                               type="button"
                               onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                              className={`group p-2 rounded-lg border transition-all flex flex-col items-center gap-1 text-center min-h-[60px] relative ${
+                              className={`group p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 text-center min-h-[100px] relative ${
                                 isSelected
-                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-105'
-                                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-sm'
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-lg scale-105'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'
                               }`}
                               whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               title={cat.name}
                             >
-                              {/* ✅ Smaller icon container */}
-                              <div className={`p-1.5 rounded-lg transition-colors ${
+                              {/* ✅ Larger icon container */}
+                              <div className={`p-3 rounded-xl transition-colors ${
                                 isSelected 
                                   ? 'bg-blue-100 dark:bg-blue-800' 
                                   : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20'
                               }`}>
-                                <IconComponent className={`w-4 h-4 transition-colors ${
+                                <IconComponent className={`w-6 h-6 transition-colors ${
                                   isSelected 
                                     ? 'text-blue-600 dark:text-blue-400' 
                                     : 'text-gray-500 group-hover:text-blue-500'
                                 }`} />
                               </div>
                               
-                              {/* ✅ Smaller text */}
-                              <span className={`text-xs font-medium leading-tight text-center w-full transition-colors truncate ${
+                              {/* ✅ Readable text size */}
+                              <span className={`text-sm font-medium leading-tight text-center w-full transition-colors ${
                                 isSelected 
                                   ? 'text-blue-700 dark:text-blue-300' 
                                   : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
@@ -596,14 +596,14 @@ const EditTransactionPanel = ({
                                 {cat.name}
                               </span>
                               
-                              {/* ✅ Smaller selection indicator */}
+                              {/* ✅ Proportional selection indicator */}
                               {isSelected && (
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border border-white dark:border-gray-800 shadow-sm"
+                                  className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
                                 >
-                                  <Check className="w-2 h-2 text-white" />
+                                  <Check className="w-3 h-3 text-white" />
                                 </motion.div>
                               )}
                             </motion.button>
