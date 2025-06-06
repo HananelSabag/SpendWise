@@ -15,6 +15,7 @@ CREATE TABLE users (
     theme_preference VARCHAR(20) DEFAULT 'light',
     currency_preference VARCHAR(10) DEFAULT 'USD',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     preferences JSONB DEFAULT '{}',
     last_login TIMESTAMP
 );

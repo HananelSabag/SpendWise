@@ -1,12 +1,12 @@
 /**
- * Category Model
+ * Category Model - Production Ready
  * Handles all category-related database operations
  * @module models/Category
- * ADDRESSES GAP #4: Category management CRUD operations
  */
 
 const db = require('../config/db');
 const errorCodes = require('../utils/errorCodes');
+const logger = require('../utils/logger');
 
 class Category {
   /**
@@ -16,8 +16,6 @@ class Category {
    */
   static async getAll(userId = null) {
     try {
-      // ✅ FIXED: Based on actual schema - all categories are shared
-      // Only default categories exist in the current schema
       const query = `
         SELECT DISTINCT
           id, name, description, icon, type, is_default, created_at
@@ -25,19 +23,43 @@ class Category {
         ORDER BY is_default DESC, type, name;
       `;
       
-      const result = await db.query(query);
+      const result = await db.query(query, [], 'get_all_categories');
       
-      console.log(`[CATEGORY-DEBUG] Retrieved ${result.rows.length} categories`);
+      logger.debug('Categories retrieved', { 
+        count: result.rows.length,
+        userId 
+      });
       
       return result.rows;
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      logger.error('Error fetching categories', { userId, error: error.message });
       throw error;
     }
   }
 
   /**
-   * Create a new category - DISABLED until schema supports user categories
+   * Get single category by ID
+   * @param {number} id - Category ID
+   * @returns {Promise<Object|null>} Category or null
+   */
+  static async getById(id) {
+    try {
+      const query = `
+        SELECT id, name, description, icon, type, is_default, created_at
+        FROM categories
+        WHERE id = $1;
+      `;
+      
+      const result = await db.query(query, [id], 'get_category_by_id');
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error('Error fetching category by ID', { categoryId: id, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new category
    * @param {Object} data - Category data
    * @returns {Promise<Object>} Created category
    */
@@ -45,7 +67,6 @@ class Category {
     const { name, description, icon, type } = data;
     
     try {
-      // ✅ FIXED: Create category without user_id (shared categories)
       const query = `
         INSERT INTO categories (name, description, icon, type, is_default)
         VALUES ($1, $2, $3, $4, false)
@@ -53,9 +74,13 @@ class Category {
       `;
       
       const values = [name, description, icon, type];
-      const result = await db.query(query, values);
+      const result = await db.query(query, values, 'create_category');
       
-      console.log(`[CATEGORY-DEBUG] Created category:`, result.rows[0]);
+      logger.info('Category created', { 
+        categoryId: result.rows[0].id,
+        name: result.rows[0].name,
+        type: result.rows[0].type
+      });
       
       return result.rows[0];
     } catch (error) {
@@ -65,6 +90,8 @@ class Category {
           details: 'Category name already exists'
         };
       }
+      
+      logger.error('Error creating category', { data, error: error.message });
       throw error;
     }
   }
@@ -81,12 +108,16 @@ class Category {
     try {
       // Check if it's a default category
       const checkQuery = 'SELECT is_default FROM categories WHERE id = $1';
-      const checkResult = await db.query(checkQuery, [id]);
+      const checkResult = await db.query(checkQuery, [id], 'check_category_default');
       
-      if (checkResult.rows[0]?.is_default) {
+      if (!checkResult.rows[0]) {
+        throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+      }
+      
+      if (checkResult.rows[0].is_default) {
         throw {
-          ...errorCodes.FORBIDDEN,
-          message: 'Cannot modify default categories'
+          ...errorCodes.VALIDATION_ERROR,
+          details: 'Cannot modify default categories'
         };
       }
       
@@ -102,14 +133,20 @@ class Category {
       `;
       
       const values = [name, description, icon, type, id];
-      const result = await db.query(query, values);
+      const result = await db.query(query, values, 'update_category');
       
       if (result.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+        throw { ...errorCodes.NOT_FOUND, message: 'Category not found or cannot be updated' };
       }
+      
+      logger.info('Category updated', { 
+        categoryId: id,
+        updates: Object.keys(data).filter(key => data[key] !== undefined)
+      });
       
       return result.rows[0];
     } catch (error) {
+      logger.error('Error updating category', { categoryId: id, data, error: error.message });
       throw error;
     }
   }
@@ -147,12 +184,12 @@ class Category {
       
       if (category.is_default) {
         throw {
-          ...errorCodes.FORBIDDEN,
-          message: 'Cannot delete default categories'
+          ...errorCodes.VALIDATION_ERROR,
+          details: 'Cannot delete default categories'
         };
       }
       
-      if (category.expense_count > 0 || category.income_count > 0) {
+      if (parseInt(category.expense_count) > 0 || parseInt(category.income_count) > 0) {
         throw {
           ...errorCodes.VALIDATION_ERROR,
           details: 'Category is in use. Update transactions first.'
@@ -163,12 +200,108 @@ class Category {
       await client.query('DELETE FROM categories WHERE id = $1', [id]);
       
       await client.query('COMMIT');
+      
+      logger.info('Category deleted', { categoryId: id });
+      
       return true;
     } catch (error) {
       await client.query('ROLLBACK');
+      logger.error('Error deleting category', { categoryId: id, error: error.message });
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Get category usage statistics
+   * @param {number} categoryId - Category ID
+   * @param {number} userId - User ID
+   * @returns {Promise<Object>} Usage statistics
+   */
+  static async getUsageStats(categoryId, userId) {
+    try {
+      const query = `
+        SELECT 
+          c.name,
+          c.type,
+          COUNT(DISTINCT e.id) as expense_transactions,
+          COUNT(DISTINCT i.id) as income_transactions,
+          COALESCE(SUM(CASE WHEN e.deleted_at IS NULL THEN e.amount END), 0) as total_expenses,
+          COALESCE(SUM(CASE WHEN i.deleted_at IS NULL THEN i.amount END), 0) as total_income,
+          MIN(COALESCE(e.date, i.date)) as first_transaction,
+          MAX(COALESCE(e.date, i.date)) as last_transaction
+        FROM categories c
+        LEFT JOIN expenses e ON c.id = e.category_id AND e.user_id = $2
+        LEFT JOIN income i ON c.id = i.category_id AND i.user_id = $2
+        WHERE c.id = $1
+        GROUP BY c.id, c.name, c.type;
+      `;
+      
+      const result = await db.query(query, [categoryId, userId], 'get_category_usage_stats');
+      
+      if (result.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error getting category usage stats', { 
+        categoryId, 
+        userId, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get categories with transaction counts
+   * @param {number} userId - User ID
+   * @param {Date} startDate - Start date filter
+   * @param {Date} endDate - End date filter
+   * @returns {Promise<Array>} Categories with counts
+   */
+  static async getWithTransactionCounts(userId, startDate = null, endDate = null) {
+    try {
+      let dateFilter = '';
+      const params = [userId];
+      
+      if (startDate && endDate) {
+        dateFilter = 'AND (e.date BETWEEN $2 AND $3 OR i.date BETWEEN $2 AND $3)';
+        params.push(startDate, endDate);
+      }
+      
+      const query = `
+        SELECT 
+          c.id,
+          c.name,
+          c.description,
+          c.icon,
+          c.type,
+          c.is_default,
+          COUNT(DISTINCT CASE WHEN e.deleted_at IS NULL THEN e.id END) as expense_count,
+          COUNT(DISTINCT CASE WHEN i.deleted_at IS NULL THEN i.id END) as income_count,
+          COALESCE(SUM(CASE WHEN e.deleted_at IS NULL THEN e.amount END), 0) as total_expenses,
+          COALESCE(SUM(CASE WHEN i.deleted_at IS NULL THEN i.amount END), 0) as total_income
+        FROM categories c
+        LEFT JOIN expenses e ON c.id = e.category_id AND e.user_id = $1 ${dateFilter}
+        LEFT JOIN income i ON c.id = i.category_id AND i.user_id = $1 ${dateFilter}
+        GROUP BY c.id, c.name, c.description, c.icon, c.type, c.is_default
+        ORDER BY c.is_default DESC, c.type, c.name;
+      `;
+      
+      const result = await db.query(query, params, 'get_categories_with_counts');
+      
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting categories with transaction counts', { 
+        userId, 
+        startDate, 
+        endDate, 
+        error: error.message 
+      });
+      throw error;
     }
   }
 }

@@ -1,4 +1,9 @@
- // routes/transactionRoutes.js - COMPLETE VERSION WITH ALL ENDPOINTS
+/**
+ * Transaction Routes - Production Ready
+ * Complete transaction management endpoints with rate limiting and validation
+ * @module routes/transactionRoutes
+ */
+
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
@@ -8,150 +13,201 @@ const {
   createTransactionLimiter,
   getSummaryLimiter,
   getTransactionsLimiter,
-  generateRecurringLimiter // Add missing import
+  generateRecurringLimiter
 } = require('../middleware/rateLimiter');
 
-// Apply auth to all routes
+// Apply authentication to all routes
 router.use(auth);
 
 /**
  * Dashboard & Summary Routes
+ * High-level data aggregation endpoints
  */
-// Get complete dashboard data (NEW - replaces 3 calls)
+
+// Get complete dashboard data (optimized single request)
 router.get('/dashboard',
   getSummaryLimiter,
   transactionController.getDashboardData
 );
 
-// Get statistics
+// Get user statistics
 router.get('/stats',
   getSummaryLimiter,
   transactionController.getStats
 );
 
-// Get category breakdown
+// Get category breakdown for date range
 router.get('/categories/breakdown',
   getTransactionsLimiter,
+  validate.dateRange,
   transactionController.getCategoryBreakdown
 );
 
+// Get summary data
+router.get('/summary',
+  getSummaryLimiter,
+  transactionController.getSummary
+);
+
 /**
- * Legacy Support Routes (for current client)
+ * Balance & History Routes
+ * Financial balance and historical data
  */
+
+// Get balance details for specific date
+router.get('/balance/details',
+  getSummaryLimiter,
+  transactionController.getBalanceDetails
+);
+
+// Get balance history by period
+router.get('/balance/history/:period',
+  getSummaryLimiter,
+  validate.periodParam,
+  transactionController.getBalanceHistory
+);
+
+/**
+ * Transaction Query Routes
+ * Data retrieval with filtering and search
+ */
+
+// Get transactions with comprehensive filters
+router.get('/',
+  getTransactionsLimiter,
+  validate.transactionFilters,
+  transactionController.getTransactions
+);
+
+// Search transactions by text
+router.get('/search',
+  getTransactionsLimiter,
+  validate.searchQuery,
+  transactionController.search
+);
+
 // Get recent transactions
 router.get('/recent',
   getTransactionsLimiter,
   transactionController.getRecent
 );
 
-// Get transactions by period
+// Get transactions by time period
 router.get('/period/:period',
   getTransactionsLimiter,
+  validate.periodParam,
   transactionController.getByPeriod
 );
 
-// Get recurring transactions
+/**
+ * Recurring Transaction Routes
+ * Recurring templates and generated transactions
+ */
+
+// Get recurring transactions with next occurrence info
 router.get('/recurring',
   getTransactionsLimiter,
   transactionController.getRecurring
 );
 
-// Get balance details
-router.get('/balance/details',
-  getSummaryLimiter,
-  transactionController.getBalanceDetails
-);
-
-// Get summary
-router.get('/summary',
-  getSummaryLimiter,
-  transactionController.getSummary
-);
-
-// Get balance history
-router.get('/balance/history/:period',
-  getSummaryLimiter,
-  transactionController.getBalanceHistory
-);
-
-/**
- * Transaction CRUD Routes
- */
-// Get transactions with filters
-router.get('/',
-  getTransactionsLimiter,
-  transactionController.getTransactions
-);
-
-// Search transactions
-router.get('/search',
-  getTransactionsLimiter,
-  transactionController.search
-);
-
-// Create transaction
-router.post('/:type',
-  createTransactionLimiter,
-  validate.transaction,
-  validate.recurring,
-  transactionController.create
-);
-
-// Update transaction
-router.put('/:type/:id',
-  createTransactionLimiter,
-  validate.transaction,
-  transactionController.update
-);
-
-// Delete transaction
-router.delete('/:type/:id',
-  createTransactionLimiter,
-  transactionController.delete
-);
-
-// Skip single transaction occurrence (LEGACY)
-router.post('/:type/:id/skip',
-  createTransactionLimiter,
-  transactionController.skipTransactionOccurrence
-);
-
-/**
- * Recurring Template Routes
- */
-// Get all templates
+// Get all recurring templates
 router.get('/templates',
   getTransactionsLimiter,
   transactionController.getTemplates
 );
 
-// Update template
+// Update recurring template
 router.put('/templates/:id',
   createTransactionLimiter,
+  validate.templateId,
   validate.transaction,
   validate.recurring,
   transactionController.updateTemplate
 );
 
-// Delete template
+// Delete/deactivate recurring template
 router.delete('/templates/:id',
   createTransactionLimiter,
+  validate.templateId,
   transactionController.deleteTemplate
 );
 
-// Skip dates for template
+// Skip dates for recurring template
 router.post('/templates/:id/skip',
   createTransactionLimiter,
+  validate.templateId,
+  validate.skipDates,
   transactionController.skipDates
 );
 
-/**
- * Manual Generation Route - NEW
- */
-// Manual trigger for recurring generation
+// Manual trigger for recurring transaction generation
 router.post('/generate-recurring',
   generateRecurringLimiter,
   transactionController.generateRecurring
+);
+
+/**
+ * Transaction CRUD Routes
+ * Create, update, delete individual transactions
+ */
+
+// Create new transaction (one-time or recurring)
+router.post('/:type',
+  createTransactionLimiter,
+  validate.transactionType,
+  validate.transaction,
+  validate.recurring,
+  transactionController.create
+);
+
+// Update existing transaction
+router.put('/:type/:id',
+  createTransactionLimiter,
+  validate.transactionType,
+  validate.transactionId,
+  validate.transaction,
+  transactionController.update
+);
+
+// Delete transaction (soft delete)
+router.delete('/:type/:id',
+  createTransactionLimiter,
+  validate.transactionType,
+  validate.transactionId,
+  transactionController.delete
+);
+
+/**
+ * Legacy Support Routes
+ * Maintain compatibility with existing client implementations
+ */
+
+// Skip single transaction occurrence (legacy endpoint)
+router.post('/:type/:id/skip',
+  createTransactionLimiter,
+  validate.transactionType,
+  validate.transactionId,
+  validate.skipDate,
+  transactionController.skipTransactionOccurrence
+);
+
+/**
+ * Direct Transaction Creation Routes
+ * Simplified endpoints for specific transaction types
+ */
+
+// Add expense directly
+router.post('/expense',
+  createTransactionLimiter,
+  validate.transaction,
+  transactionController.addExpense
+);
+
+// Add income directly
+router.post('/income',
+  createTransactionLimiter,
+  validate.transaction,
+  transactionController.addIncome
 );
 
 module.exports = router;

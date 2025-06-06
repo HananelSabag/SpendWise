@@ -1,3 +1,8 @@
+/**
+ * SpendWise Server - Production Ready
+ * Main server entry point
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -17,14 +22,38 @@ dotenv.config();
 const app = express();
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(compression());
 
 // CORS configuration
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? (process.env.ALLOWED_ORIGINS?.split(',') || [])
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000'
-    : true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID']
@@ -34,12 +63,12 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files from uploads directory
+// Serve static files from uploads directory with security headers
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
-    // Allow CORS for uploaded files
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
   }
 }));
 
@@ -49,13 +78,12 @@ app.use(requestId);
 // API rate limiter
 app.use('/api', apiLimiter);
 
-// Request logging
+// Request logging (production-safe)
 app.use((req, res, next) => {
   req.log.info('Request received', {
     method: req.method,
     url: req.url,
-    ip: req.ip,
-    userAgent: req.headers['user-agent']
+    ip: req.ip
   });
   next();
 });
@@ -67,13 +95,11 @@ app.get('/health', async (req, res) => {
     res.json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
       environment: process.env.NODE_ENV
     });
   } catch (error) {
     res.status(503).json({ 
       status: 'unhealthy', 
-      error: 'Database connection failed',
       timestamp: new Date().toISOString()
     });
   }
@@ -83,9 +109,8 @@ app.get('/health', async (req, res) => {
 const API_VERSION = '/api/v1';
 app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
 app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
-
-// CRITICAL UPDATE: Add category routes - FIXES GAP #4
 app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
+app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
 
 // 404 handler
 app.use((req, res, next) => {
@@ -104,17 +129,21 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 /**
- * Start the server only when the database is ready
+ * Start the server with database connection check
  */
 const startServer = async () => {
   try {
+    // Test database connection
     await db.pool.query('SELECT NOW()');
     logger.info('Database connection successful');
 
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      
       // Initialize background jobs
-      scheduler.init();
+      if (process.env.ENABLE_SCHEDULER !== 'false') {
+        scheduler.init();
+      }
     });
 
     // Graceful shutdown
@@ -132,8 +161,20 @@ const startServer = async () => {
       process.exit(0);
     };
 
+    // Handle shutdown signals
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught errors
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught Exception:', error);
+      gracefulShutdown('UNCAUGHT_EXCEPTION');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      gracefulShutdown('UNHANDLED_REJECTION');
+    });
 
   } catch (err) {
     logger.error('Failed to start server:', err);

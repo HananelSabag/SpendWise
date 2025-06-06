@@ -1,5 +1,5 @@
 /**
- * User Model - Updated for new DB structure and email verification
+ * User Model - Production Ready
  * Handles all user-related database operations
  * @module models/User
  */
@@ -11,7 +11,7 @@ const logger = require('../utils/logger');
 
 class User {
   /**
-   * Create a new user - UPDATED: Now supports email_verified flag
+   * Create a new user
    * @param {string} email - User's email
    * @param {string} username - User's username
    * @param {string} password - Plain text password
@@ -22,9 +22,20 @@ class User {
       const hashedPassword = await bcrypt.hash(password, 10);
       
       const query = `
-        INSERT INTO users (email, username, password_hash, email_verified)
-        VALUES ($1, $2, $3, false)
-        RETURNING id, email, username, created_at, preferences, email_verified;
+        INSERT INTO users (
+          email, 
+          username, 
+          password_hash, 
+          email_verified,
+          language_preference,
+          theme_preference,
+          currency_preference
+        )
+        VALUES ($1, $2, $3, false, 'en', 'light', 'USD')
+        RETURNING 
+          id, email, username, created_at, 
+          language_preference, theme_preference, currency_preference,
+          preferences, email_verified;
       `;
       
       const result = await db.query(query, [email, username, hashedPassword]);
@@ -41,13 +52,16 @@ class User {
   }
 
   /**
-   * Find user by email - UPDATED: Now includes email_verified
+   * Find user by email
    * @param {string} email - User's email
    * @returns {Promise<Object|null>} User object or null
    */
   static async findByEmail(email) {
     const query = `
-      SELECT id, email, username, password_hash, preferences, last_login, email_verified
+      SELECT 
+        id, email, username, password_hash, 
+        language_preference, theme_preference, currency_preference,
+        preferences, last_login, email_verified
       FROM users 
       WHERE email = $1;
     `;
@@ -57,13 +71,16 @@ class User {
   }
 
   /**
-   * Find user by ID - UPDATED: Now includes email_verified
+   * Find user by ID
    * @param {number} id - User's ID
    * @returns {Promise<Object|null>} User object (without password)
    */
   static async findById(id) {
     const query = `
-      SELECT id, email, username, preferences, created_at, last_login, email_verified
+      SELECT 
+        id, email, username, 
+        language_preference, theme_preference, currency_preference,
+        preferences, created_at, last_login, email_verified
       FROM users 
       WHERE id = $1;
     `;
@@ -79,29 +96,18 @@ class User {
    * @returns {Promise<Object|null>} User object if verified
    */
   static async verifyPassword(email, password) {
-    console.log(`🔍 [USER-MODEL] Starting password verification for: ${email}`);
-    
     try {
       const user = await this.findByEmail(email);
       
       if (!user) {
-        console.log(`❌ [USER-MODEL] User not found: ${email}`);
         return null;
       }
-      
-      console.log(`✅ [USER-MODEL] User found: ${email}, id: ${user.id}`);
-      console.log(`🔐 [USER-MODEL] Stored password hash exists: ${!!user.password_hash}`);
-      console.log(`🔐 [USER-MODEL] Password hash preview: ${user.password_hash?.substring(0, 10)}...`);
       
       const valid = await bcrypt.compare(password, user.password_hash);
-      console.log(`🔐 [USER-MODEL] Password comparison result: ${valid}`);
       
       if (!valid) {
-        console.log(`❌ [USER-MODEL] Password verification failed for: ${email}`);
         return null;
       }
-
-      console.log(`✅ [USER-MODEL] Password verification successful for: ${email}`);
 
       // Update last login
       await db.query(
@@ -113,7 +119,7 @@ class User {
       const { password_hash, ...userWithoutPassword } = user;
       return userWithoutPassword;
     } catch (error) {
-      console.error(`💥 [USER-MODEL] Error in verifyPassword for ${email}:`, error);
+      logger.error('Password verification error:', { email, error: error.message });
       throw error;
     }
   }
@@ -128,10 +134,15 @@ class User {
     const client = await db.pool.connect();
     
     try {
+      await client.query('BEGIN');
+      
       const { 
         username, 
         currentPassword, 
-        newPassword 
+        newPassword,
+        language_preference,
+        theme_preference,
+        currency_preference
       } = data;
 
       const updates = [];
@@ -142,6 +153,25 @@ class User {
       if (username) {
         updates.push(`username = $${paramCount}`);
         values.push(username);
+        paramCount++;
+      }
+
+      // Handle preference updates
+      if (language_preference) {
+        updates.push(`language_preference = $${paramCount}`);
+        values.push(language_preference);
+        paramCount++;
+      }
+
+      if (theme_preference) {
+        updates.push(`theme_preference = $${paramCount}`);
+        values.push(theme_preference);
+        paramCount++;
+      }
+
+      if (currency_preference) {
+        updates.push(`currency_preference = $${paramCount}`);
+        values.push(currency_preference);
         paramCount++;
       }
 
@@ -181,30 +211,31 @@ class User {
         };
       }
 
-      // ✅ ביצוע העדכון
+      // Execute update
       const query = `
         UPDATE users 
         SET ${updates.join(', ')}, updated_at = NOW()
         WHERE id = $${paramCount}
-        RETURNING id, username, email, preferences, created_at, updated_at
+        RETURNING 
+          id, username, email, 
+          language_preference, theme_preference, currency_preference,
+          preferences, created_at, updated_at
       `;
       
       values.push(userId);
       
       const result = await client.query(query, values);
       
+      await client.query('COMMIT');
+      
       if (!result.rows[0]) {
         throw { ...errorCodes.NOT_FOUND };
       }
 
-      return {
-        success: true,
-        data: {
-          user: result.rows[0]
-        }
-      };
+      return result.rows[0];
       
     } catch (error) {
+      await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
@@ -212,14 +243,14 @@ class User {
   }
 
   /**
-   * Update user preferences - FIXED to properly merge preferences
+   * Update user preferences (legacy JSONB support)
    * @param {number} userId - User's ID
-   * @param {Object} preferences - New preferences to merge
+   * @param {Object} preferences - Preferences to merge
    * @returns {Promise<Object>} Updated preferences
    */
   static async updatePreferences(userId, preferences) {
     try {
-      // First, get the existing user data to merge preferences
+      // Get existing preferences
       const existingQuery = 'SELECT preferences FROM users WHERE id = $1';
       const existingResult = await db.query(existingQuery, [userId]);
       
@@ -227,13 +258,10 @@ class User {
         throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
       }
       
-      // Get existing preferences or empty object
       const existingPreferences = existingResult.rows[0].preferences || {};
-      
-      // Merge new preferences with existing ones (new ones override)
       const mergedPreferences = { ...existingPreferences, ...preferences };
       
-      // Update with merged preferences
+      // Update preferences
       const updateQuery = `
         UPDATE users 
         SET preferences = $1, updated_at = NOW()
@@ -244,7 +272,7 @@ class User {
       const result = await db.query(updateQuery, [JSON.stringify(mergedPreferences), userId]);
       return result.rows[0]?.preferences || {};
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Error updating preferences:', { userId, error: error.message });
       throw error;
     }
   }
@@ -327,40 +355,7 @@ class User {
   }
 
   /**
-   * Debug method to check user data
-   * @param {string} email - User's email
-   * @returns {Promise<Object|null>} Raw user data for debugging
-   */
-  static async debugFindByEmail(email) {
-    console.log(`🐛 [DEBUG] Checking database for email: ${email}`);
-    
-    const query = `
-      SELECT id, email, username, password_hash, created_at
-      FROM users 
-      WHERE email = $1;
-    `;
-    
-    const result = await db.query(query, [email]);
-    const user = result.rows[0];
-    
-    if (user) {
-      console.log(`🐛 [DEBUG] Found user:`, {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        password_hash_length: user.password_hash?.length,
-        password_hash_prefix: user.password_hash?.substring(0, 10),
-        created_at: user.created_at
-      });
-    } else {
-      console.log(`🐛 [DEBUG] No user found for: ${email}`);
-    }
-    
-    return user;
-  }
-
-  /**
-   * NEW: Save email verification token
+   * Save email verification token
    * @param {number} userId - User's ID
    * @param {string} token - Verification token
    * @param {Date} expiresAt - Token expiration date
@@ -377,13 +372,13 @@ class User {
       const result = await db.query(query, [userId, token, expiresAt]);
       return result.rows[0].id;
     } catch (error) {
-      logger.error('Error saving verification token:', error);
+      logger.error('Error saving verification token:', { userId, error: error.message });
       throw error;
     }
   }
 
   /**
-   * NEW: Find valid email verification token
+   * Find valid email verification token
    * @param {string} token - Verification token
    * @returns {Promise<Object|null>} Token data or null
    */
@@ -399,13 +394,13 @@ class User {
       const result = await db.query(query, [token]);
       return result.rows[0];
     } catch (error) {
-      logger.error('Error finding verification token:', error);
+      logger.error('Error finding verification token:', { error: error.message });
       throw error;
     }
   }
 
   /**
-   * NEW: Mark email as verified
+   * Mark email as verified
    * @param {number} userId - User's ID
    * @returns {Promise<void>}
    */
@@ -419,13 +414,13 @@ class User {
       
       await db.query(query, [userId]);
     } catch (error) {
-      logger.error('Error verifying email:', error);
+      logger.error('Error verifying email:', { userId, error: error.message });
       throw error;
     }
   }
 
   /**
-   * NEW: Mark verification token as used
+   * Mark verification token as used
    * @param {string} token - Verification token
    * @returns {Promise<void>}
    */
@@ -439,13 +434,13 @@ class User {
       
       await db.query(query, [token]);
     } catch (error) {
-      logger.error('Error marking verification token as used:', error);
+      logger.error('Error marking verification token as used:', { error: error.message });
       throw error;
     }
   }
 
   /**
-   * NEW: Get recent verification token for rate limiting
+   * Get recent verification token for rate limiting
    * @param {number} userId - User's ID
    * @returns {Promise<Object|null>} Recent token or null
    */
@@ -462,10 +457,71 @@ class User {
       const result = await db.query(query, [userId]);
       return result.rows[0];
     } catch (error) {
-      logger.error('Error getting recent verification token:', error);
+      logger.error('Error getting recent verification token:', { userId, error: error.message });
       throw error;
     }
   }
-};
+
+  /**
+   * Get user data for export
+   * @param {number} userId - User's ID
+   * @returns {Promise<Object>} User data including transactions
+   */
+  static async getExportData(userId) {
+    const client = await db.pool.connect();
+    
+    try {
+      // Get user info
+      const userQuery = `
+        SELECT 
+          email, username, created_at,
+          language_preference, theme_preference, currency_preference
+        FROM users 
+        WHERE id = $1
+      `;
+      const userResult = await client.query(userQuery, [userId]);
+      
+      if (userResult.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+      }
+
+      // Get all transactions
+      const transactionsQuery = `
+        SELECT 
+          'expense' as type,
+          amount, description, date,
+          c.name as category,
+          e.created_at
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = $1 AND e.deleted_at IS NULL
+        
+        UNION ALL
+        
+        SELECT 
+          'income' as type,
+          amount, description, date,
+          c.name as category,
+          i.created_at
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE i.user_id = $1 AND i.deleted_at IS NULL
+        
+        ORDER BY date DESC, created_at DESC
+      `;
+      const transactionsResult = await client.query(transactionsQuery, [userId]);
+
+      return {
+        user: userResult.rows[0],
+        transactions: transactionsResult.rows
+      };
+    } catch (error) {
+      logger.error('Error getting export data:', { userId, error: error.message });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+}
 
 module.exports = User;

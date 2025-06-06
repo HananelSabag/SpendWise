@@ -1,12 +1,13 @@
 /**
- * Category Controller
+ * Category Controller - Production Ready
  * Handles all category-related HTTP requests
  * @module controllers/categoryController
- * ADDRESSES GAP #4: Category management endpoints
  */
 
 const Category = require('../models/Category');
+const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const categoryController = {
   /**
@@ -15,11 +16,49 @@ const categoryController = {
    */
   getAll: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const categories = await Category.getAll(userId);
+    const { type } = req.query;
+    
+    let categories = await Category.getAll(userId);
+    
+    // Filter by type if specified
+    if (type && ['income', 'expense'].includes(type)) {
+      categories = categories.filter(cat => cat.type === type || cat.type === null);
+    }
+    
+    logger.info('Categories retrieved', { 
+      userId, 
+      count: categories.length,
+      type: type || 'all'
+    });
     
     res.json({
       success: true,
       data: categories,
+      timestamp: new Date().toISOString()
+    });
+  }),
+
+  /**
+   * Get single category
+   * @route GET /api/v1/categories/:id
+   */
+  getById: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    if (!id || isNaN(parseInt(id))) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
+    }
+    
+    const category = await Category.getById(parseInt(id));
+    
+    if (!category) {
+      throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+    }
+    
+    res.json({
+      success: true,
+      data: category,
       timestamp: new Date().toISOString()
     });
   }),
@@ -30,33 +69,34 @@ const categoryController = {
    */
   create: asyncHandler(async (req, res) => {
     const { name, description, icon, type } = req.body;
+    const userId = req.user.id;
     
-    if (!name || !type) {
-      return res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Name and type are required'
-        }
-      });
+    // Validation
+    if (!name?.trim()) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Category name is required' };
     }
     
-    if (!['income', 'expense'].includes(type)) {
-      return res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Type must be income or expense'
-        }
-      });
+    if (!type || !['income', 'expense'].includes(type)) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Type must be income or expense' };
+    }
+    
+    if (name.length > 100) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Category name must be less than 100 characters' };
     }
     
     const category = await Category.create({
-      name,
-      description,
-      icon: icon || 'tag',
+      name: name.trim(),
+      description: description?.trim() || null,
+      icon: icon?.trim() || 'tag',
       type
     });
     
-    console.log(`[CATEGORY-DEBUG] Category created:`, category);
+    logger.info('Category created', { 
+      userId, 
+      categoryId: category.id, 
+      name: category.name,
+      type: category.type
+    });
     
     res.status(201).json({
       success: true,
@@ -72,12 +112,41 @@ const categoryController = {
   update: asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name, description, icon, type } = req.body;
+    const userId = req.user.id;
     
-    const category = await Category.update(parseInt(id), {
-      name,
-      description,
-      icon,
-      type
+    if (!id || isNaN(parseInt(id))) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
+    }
+    
+    // Validation
+    if (name && (!name.trim() || name.length > 100)) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category name' };
+    }
+    
+    if (type && !['income', 'expense'].includes(type)) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Type must be income or expense' };
+    }
+    
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description?.trim() || null;
+    if (icon) updateData.icon = icon.trim();
+    if (type) updateData.type = type;
+    
+    if (Object.keys(updateData).length === 0) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'No valid updates provided' };
+    }
+    
+    const category = await Category.update(parseInt(id), updateData);
+    
+    if (!category) {
+      throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+    }
+    
+    logger.info('Category updated', { 
+      userId, 
+      categoryId: category.id, 
+      updates: Object.keys(updateData)
     });
     
     res.json({
@@ -93,12 +162,81 @@ const categoryController = {
    */
   delete: asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
     
-    await Category.delete(parseInt(id));
+    if (!id || isNaN(parseInt(id))) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
+    }
+    
+    const categoryId = parseInt(id);
+    
+    // Check if category exists and is not default
+    const category = await Category.getById(categoryId);
+    
+    if (!category) {
+      throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
+    }
+    
+    if (category.is_default) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: 'Cannot delete default categories' 
+      };
+    }
+    
+    await Category.delete(categoryId);
+    
+    logger.info('Category deleted', { 
+      userId, 
+      categoryId, 
+      categoryName: category.name
+    });
     
     res.json({
       success: true,
       message: 'Category deleted successfully'
+    });
+  }),
+
+  /**
+   * Get category usage statistics
+   * @route GET /api/v1/categories/:id/stats
+   */
+  getStats: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    if (!id || isNaN(parseInt(id))) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
+    }
+    
+    const stats = await Category.getUsageStats(parseInt(id), userId);
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  }),
+
+  /**
+   * Get categories with transaction counts
+   * @route GET /api/v1/categories/with-counts
+   */
+  getWithCounts: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { startDate, endDate } = req.query;
+    
+    const categories = await Category.getWithTransactionCounts(
+      userId, 
+      startDate ? new Date(startDate) : null,
+      endDate ? new Date(endDate) : null
+    );
+    
+    res.json({
+      success: true,
+      data: categories,
+      timestamp: new Date().toISOString()
     });
   })
 };

@@ -1,6 +1,6 @@
 /**
- * Transaction Controller - Extended Version with Legacy Support
- * Includes all endpoints expected by current client
+ * Transaction Controller - Production Ready
+ * Handles all transaction-related HTTP requests
  * @module controllers/transactionController
  */
 
@@ -10,30 +10,26 @@ const DBQueries = require('../utils/dbQueries');
 const TimeManager = require('../utils/TimeManager');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
+const db = require('../config/db');
 
 const transactionController = {
   /**
-   * Get dashboard data - ONE REQUEST instead of 3!
+   * Get dashboard data - optimized single request
    * @route GET /api/v1/transactions/dashboard
    */
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    // קבל תאריך מה-query אם קיים
-    let targetDate = req.query?.date ? new Date(req.query.date) : new Date();
-    console.log('[DEBUG] getDashboardData called for userId:', userId, 'date:', req.query?.date);
+    const targetDate = req.query?.date ? new Date(req.query.date) : new Date();
 
     const result = await DBQueries.getDashboardData(userId, targetDate);
 
-    console.log('[DEBUG] getDashboardData result from DB:', JSON.stringify(result, null, 2));
-
-    // Ensure numeric values
     const ensureNumeric = (value) => {
       const num = parseFloat(value);
       return isNaN(num) ? 0 : num;
     };
 
     const processBalance = (balance) => {
-      // If balance is already an object with the correct properties
       if (balance && typeof balance === 'object' && 'income' in balance) {
         return {
           income: ensureNumeric(balance.income),
@@ -42,8 +38,7 @@ const transactionController = {
         };
       }
       
-      // Fallback if for some reason we still have string or another format
-      console.warn('[WARNING] Unexpected balance format:', balance);
+      logger.warn('Unexpected balance format', { balance, userId });
       return {
         income: 0,
         expenses: 0,
@@ -63,8 +58,6 @@ const transactionController = {
       metadata: result.metadata || {}
     };
 
-    console.log('[DEBUG] getDashboardData responseData:', JSON.stringify(responseData, null, 2));
-
     res.json({
       success: true,
       data: responseData
@@ -72,7 +65,7 @@ const transactionController = {
   }),
 
   /**
-   * Get recent transactions - LEGACY SUPPORT
+   * Get recent transactions
    * @route GET /api/v1/transactions/recent
    */
   getRecent: asyncHandler(async (req, res) => {
@@ -81,7 +74,6 @@ const transactionController = {
     
     const targetDate = date ? new Date(date) : new Date();
     
-    // Use the optimized query to get recent transactions
     const result = await Transaction.getTransactions(userId, {
       endDate: TimeManager.formatForDB(targetDate),
       limit: parseInt(limit),
@@ -97,7 +89,7 @@ const transactionController = {
   }),
 
   /**
-   * Get transactions by period - LEGACY SUPPORT
+   * Get transactions by period
    * @route GET /api/v1/transactions/period/:period
    */
   getByPeriod: asyncHandler(async (req, res) => {
@@ -114,10 +106,8 @@ const transactionController = {
     try {
       const dateRanges = TimeManager.getDateRanges(targetDate);
       
-      // ✅ תיקון: הוסף טיפול מיוחד ב-'3months'
       let range;
       if (period === '3months') {
-        // חישוב מיוחד ל-90 ימים אחורה
         const endDate = new Date(targetDate);
         const startDate = new Date(targetDate);
         startDate.setDate(startDate.getDate() - 90);
@@ -148,10 +138,9 @@ const transactionController = {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error in getByPeriod:', error);
+      logger.error('Error in getByPeriod', { userId, period, error: error.message });
       
-      // Handle specific SQL errors
-      if (error.code === '42702') { // PostgreSQL ambiguous column error
+      if (error.code === '42702') {
         throw { 
           ...errorCodes.SQL_AMBIGUOUS_COLUMN, 
           details: 'Database query needs column disambiguation' 
@@ -166,22 +155,19 @@ const transactionController = {
   }),
 
   /**
-   * Get recurring transactions - LEGACY SUPPORT
+   * Get recurring transactions
    * @route GET /api/v1/transactions/recurring
    */
   getRecurring: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const { type } = req.query;
     
-    // Get templates
     let templates = await RecurringTemplate.getByUser(userId);
     
-    // Filter by type if specified
     if (type && ['expense', 'income'].includes(type)) {
       templates = templates.filter(t => t.type === type);
     }
     
-    // Get recent occurrences for each template
     const recurringWithOccurrences = await Promise.all(
       templates.map(async (template) => {
         const occurrences = await Transaction.getTransactions(userId, {
@@ -211,7 +197,7 @@ const transactionController = {
   }),
 
   /**
-   * Get balance details - LEGACY SUPPORT
+   * Get balance details
    * @route GET /api/v1/transactions/balance/details
    */
   getBalanceDetails: asyncHandler(async (req, res) => {
@@ -221,7 +207,6 @@ const transactionController = {
     const targetDate = date ? new Date(date) : new Date();
     const dashboardData = await Transaction.getDashboardData(userId, targetDate);
     
-    // Extract balance information
     const balanceDetails = {
       daily: dashboardData.daily_balance,
       weekly: dashboardData.weekly_balance,
@@ -239,13 +224,12 @@ const transactionController = {
   }),
 
   /**
-   * Get summary - LEGACY SUPPORT
+   * Get summary
    * @route GET /api/v1/transactions/summary
    */
   getSummary: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     
-    // Get user statistics and current month data
     const [stats, monthlyData] = await Promise.all([
       Transaction.getStats(userId),
       DBQueries.getMonthlyStats(userId, 1)
@@ -275,7 +259,7 @@ const transactionController = {
   }),
 
   /**
-   * Get balance history - LEGACY SUPPORT
+   * Get balance history
    * @route GET /api/v1/transactions/balance/history/:period
    */
   getBalanceHistory: asyncHandler(async (req, res) => {
@@ -287,7 +271,6 @@ const transactionController = {
       throw { ...errorCodes.INVALID_INPUT, details: 'Invalid period. Use month or year' };
     }
     
-    // For now, we only have monthly stats implementation
     if (period === 'month') {
       const history = await DBQueries.getMonthlyStats(userId, parseInt(limit));
       
@@ -302,10 +285,8 @@ const transactionController = {
         timestamp: new Date().toISOString()
       });
     } else {
-      // For yearly, aggregate monthly data
       const monthlyData = await DBQueries.getMonthlyStats(userId, parseInt(limit) * 12);
       
-      // Group by year
       const yearlyData = monthlyData.reduce((acc, month) => {
         const year = new Date(month.month).getFullYear();
         if (!acc[year]) {
@@ -336,7 +317,7 @@ const transactionController = {
   }),
 
   /**
-   * Skip single transaction occurrence - LEGACY SUPPORT
+   * Skip single transaction occurrence
    * @route POST /api/v1/transactions/:type/:id/skip
    */
   skipTransactionOccurrence: asyncHandler(async (req, res) => {
@@ -352,7 +333,6 @@ const transactionController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Skip date is required' };
     }
     
-    // Get the transaction to find its template
     const transactions = await Transaction.getTransactions(userId, {
       type,
       limit: 1
@@ -368,7 +348,6 @@ const transactionController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Cannot skip non-recurring transaction' };
     }
     
-    // Add skip date to template
     await RecurringTemplate.skipDates(
       transaction.template_id, 
       userId, 
@@ -381,8 +360,6 @@ const transactionController = {
       timestamp: new Date().toISOString()
     });
   }),
-
-  // ============ EXISTING METHODS (NO CHANGES) ============
 
   /**
    * Get transactions with filters
@@ -691,28 +668,14 @@ const transactionController = {
   }),
 
   /**
-   * Add new expense - LEGACY SUPPORT
+   * Add new expense
    * @route POST /api/v1/transactions/expense
    */
   addExpense: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const { amount, description, date, category_id = 8, notes } = req.body;
     
-    // Debug log the received date from client
-    console.log(`[DEBUG] Received expense with date: ${date}`);
-    
-    // IMPORTANT: Preserve the exact date string from the client 
-    // instead of creating a new Date object that could change the day
-    let formattedDate;
-    
-    // ✅ FIXED: Use TimeManager for consistent date formatting instead of UTC methods
-    if (date) {
-      formattedDate = TimeManager.formatForDB(date);
-    } else {
-      formattedDate = TimeManager.formatForDB(new Date());
-    }
-    
-    console.log(`[DEBUG] Using formatted date for expense: ${formattedDate}`);
+    const formattedDate = date ? TimeManager.formatForDB(date) : TimeManager.formatForDB(new Date());
     
     const client = await db.pool.connect();
     
@@ -727,6 +690,8 @@ const transactionController = {
       
       await client.query('COMMIT');
       
+      logger.info('Expense created', { userId, amount, date: formattedDate });
+      
       res.status(201).json({
         success: true,
         data: result.rows[0]
@@ -734,8 +699,7 @@ const transactionController = {
     } catch (error) {
       await client.query('ROLLBACK');
       
-      // Handle specific SQL errors
-      if (error.code === '23505') { // Unique violation
+      if (error.code === '23505') {
         throw { ...errorCodes.UNIQUE_VIOLATION, details: 'Expense with the same details already exists' };
       }
       
@@ -746,28 +710,14 @@ const transactionController = {
   }),
 
   /**
-   * Add new income - LEGACY SUPPORT
+   * Add new income
    * @route POST /api/v1/transactions/income
    */
   addIncome: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const { amount, description, date, category_id = 8, notes } = req.body;
     
-    // Debug log the received date from client
-    console.log(`[DEBUG] Received income with date: ${date}`);
-    
-    // IMPORTANT: Preserve the exact date string from the client
-    // instead of creating a new Date object that could change the day
-    let formattedDate;
-    
-    // ✅ FIXED: Use TimeManager for consistent date formatting instead of UTC methods
-    if (date) {
-      formattedDate = TimeManager.formatForDB(date);
-    } else {
-      formattedDate = TimeManager.formatForDB(new Date());
-    }
-    
-    console.log(`[DEBUG] Using formatted date for income: ${formattedDate}`);
+    const formattedDate = date ? TimeManager.formatForDB(date) : TimeManager.formatForDB(new Date());
     
     const client = await db.pool.connect();
     
@@ -782,6 +732,8 @@ const transactionController = {
       
       await client.query('COMMIT');
       
+      logger.info('Income created', { userId, amount, date: formattedDate });
+      
       res.status(201).json({
         success: true,
         data: result.rows[0]
@@ -789,8 +741,7 @@ const transactionController = {
     } catch (error) {
       await client.query('ROLLBACK');
       
-      // Handle specific SQL errors
-      if (error.code === '23505') { // Unique violation
+      if (error.code === '23505') {
         throw { ...errorCodes.UNIQUE_VIOLATION, details: 'Income with the same details already exists' };
       }
       
@@ -801,17 +752,16 @@ const transactionController = {
   }),
 
   /**
-   * Manually generate recurring transactions - MANUAL TRIGGER
+   * Generate recurring transactions manually
    * @route POST /api/v1/transactions/generate-recurring
    */
   generateRecurring: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     
     try {
-      // Call the SQL function that handles all the logic
-      const result = await db.query('SELECT generate_recurring_transactions()');
+      await db.query('SELECT generate_recurring_transactions()');
       
-      console.log(`[DEBUG] Manual recurring generation triggered by user ${userId}`);
+      logger.info('Manual recurring generation triggered', { userId });
       
       res.json({
         success: true,
@@ -819,13 +769,13 @@ const transactionController = {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('[ERROR] Manual recurring generation failed:', error);
+      logger.error('Manual recurring generation failed', { userId, error: error.message });
       throw { 
         ...errorCodes.SQL_ERROR, 
         details: 'Failed to generate recurring transactions' 
       };
     }
-  }),
+  })
 };
 
 module.exports = transactionController;
