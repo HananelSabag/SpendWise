@@ -1,0 +1,562 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local env files - CRITICAL: Don't commit secrets!
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Vite build outputs
+dist/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Temporary folders
+tmp/
+temp/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary files
+.tmp/
+
+# PWA files
+sw.*
+
+# API keys and secrets
+secrets.*
+config/secrets.*
+
+# Test output
+test-results/
+coverage/
+
+# Sentry
+.sentryclirc
+
+# Local development files
+.local
+*.local.*
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.AppleDouble
+.LSOverride
+Icon
+
+# Network Trash Folder
+.Trashes
+._*
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Security and sensitive files
+*.pem
+*.key
+*.cert
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+*.keystore
+private.*
+secret.*
+secrets.*
+.secrets
+
+# Docker
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore.local
+
+# Kubernetes
+*.kubeconfig
+k8s-local/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Cloud provider configs
+.aws/
+.gcp/
+.azure/
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build artifacts
+build/
+out/
+dist/
+.next/
+.nuxt/
+.output/
+.vercel/
+.netlify/
+
+# Runtime files
+.pid
+.seed
+.pid.lock
+.tsbuildinfo
+
+# Optional cache directories
+.cache/
+.temp/
+.tmp/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local storage files
+localStorage/
+sessionStorage/
+
+# Generated files
+generated/
+auto-generated/
+.generated/
+
+# API documentation
+docs/api/generated/
+
+# Screenshot and video files
+screenshots/
+videos/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+*.mov
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.jpeg
+!public/**/*.gif
+!src/assets/**/*.png
+!src/assets/**/*.jpg
+!src/assets/**/*.jpeg
+!src/assets/**/*.gif
+
+# Benchmark results
+benchmark/
+benchmarks/
+*.benchmark
+
+# Profiling files
+*.prof
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+
+# Debug files
+debug/
+*.debug
+
+# Performance monitoring
+.clinic/
+flamegraph.html
+
+# Analytics and tracking
+analytics/
+.analytics/
+
+# A/B testing
+experiments/
+.experiments/
+
+# Feature flags
+.launchdarkly/
+.split/
+
+# Error tracking
+.sentry/
+.bugsnag/
+
+# User data (development)
+user-data/
+uploads/
+avatars/
+profile-pictures/
+
+# API mocks
+mocks/
+__mocks__/
+.mocks/
+
+# Integration test data
+test-data/
+fixtures/
+.fixtures/
+
+# Load testing
+artillery/
+k6/
+jmeter/
+
+# Security scanning
+.snyk
+security-report.*
+vulnerability-report.*
+
+# Dependency scanning
+dependency-check-report.*
+.dependency-check/
+
+# License checking
+license-report.*
+.fossa/
+
+# Code quality
+.sonarqube/
+sonar-report.*
+quality-gate.*
+
+# Performance budgets
+.bundlesize/
+bundle-analyzer.*
+
+# Browser testing
+.webdriver/
+selenium/
+playwright-report/
+test-results/
+
+# Mobile development
+ios/
+android/
+.expo/
+*.ipa
+*.apk
+*.aab
+
+# Desktop development
+.electron/
+dist-electron/
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.snap
+*.appx
+
+# Documentation
+.docusaurus/
+docs/build/
+storybook-static/
+
+# Backup and archive files
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.rar
+*.7z
+*.backup
+*.bak
+
+# Temporary files from editors
+*.tmp
+*.temp
+*~
+.#*
+#*#
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Version control
+.git/
+.gitignore.local
+.gitattributes.local
+
+# CI/CD
+.github/
+.gitlab-ci.yml.local
+.travis.yml.local
+.circleci/config.yml.local
+azure-pipelines.yml.local
+.jenkins/
+.drone.yml.local
+
+# Monitoring and observability
+.datadog/
+.newrelic/
+.honeycomb/
+.jaeger/
+
+# Content management
+.contentful/
+.strapi/
+.sanity/
+
+# E-commerce
+.shopify/
+.magento/
+.woocommerce/
+
+# Payment processing
+.stripe/
+.paypal/
+.square/
+
+# Email services
+.sendgrid/
+.mailgun/
+.ses/
+
+# SMS services
+.twilio/
+.nexmo/
+
+# Push notifications
+.firebase/
+.pusher/
+.onesignal/
+
+# Social media
+.facebook/
+.twitter/
+.linkedin/
+.instagram/
+
+# Maps and location
+.mapbox/
+.google-maps/
+
+# File storage
+.s3/
+.gcs/
+.azure-storage/
+
+# CDN
+.cloudflare/
+.fastly/
+.cloudfront/
+
+# Development tools
+.storybook/
+.chromatic/
+.percy/
+.applitools/
+
+# Design tools
+.figma/
+.sketch/
+.invision/
+.zeplin/
+
+# Project management
+.notion/
+.airtable/
+.asana/
+.jira/
+
+# Communication
+.slack/
+.discord/
+.teams/
+
+# Documentation
+.gitbook/
+.mkdocs/
+.sphinx/
+
+# Legal
+.terms/
+.privacy/
+.gdpr/
+
+# Compliance
+.sox/
+.hipaa/
+.pci/
+
+# Audit
+.audit/
+audit-*.json
+security-audit.*
+
+# Penetration testing
+.pentest/
+.burp/
+.zap/
+
+# Incident response
+.incident/
+.postmortem/
+
+# Disaster recovery
+.backup/
+.restore/
+.failover/
+
+# Business continuity
+.bcp/
+.dr/
+
+# Risk management
+.risk/
+.threat-model/
+
+# Governance
+.governance/
+.policy/
+.procedure/

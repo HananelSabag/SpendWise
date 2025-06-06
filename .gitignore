@@ -139,3 +139,11 @@ client/build/
 # Cache directories
 client/.vite/
 client/node_modules/.vite/
+
+# Environment files
+**/.env
+**/.env.local
+**/.env.production
+**/.env.development
+server/.env.production
+client/.env.production

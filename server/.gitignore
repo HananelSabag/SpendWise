@@ -3,6 +3,7 @@
 .env.local
 .env.production
 .env.development
+.env.*.local
 
 # Database files
 *.db

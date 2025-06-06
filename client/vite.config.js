@@ -57,16 +57,7 @@ export default defineConfig(({ command, mode }) => {
     server: {
       host: true,
       port: 5173,
-      // Only add proxy in development mode
-      ...(mode === 'development' && env.VITE_API_URL?.includes('localhost') && {
-        proxy: {
-          '/api': {
-            target: env.VITE_API_URL || 'http://localhost:5000',
-            changeOrigin: true,
-            secure: false,
-          },
-        },
-      }),
+      // Removed proxy since we're connecting to live server
     },
     
     // Build optimizations - Enhanced for production
