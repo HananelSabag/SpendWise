@@ -1,31 +1,43 @@
 /**
- * Database Configuration - Production Ready
- * PostgreSQL connection pool with enhanced error handling and monitoring
- * @module config/db
+ * Database Configuration - Supabase Only
+ * Direct IP connection that bypasses network restrictions
  */
 
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const dotenv = require('dotenv');
+const { parse } = require('pg-connection-string');
 
 dotenv.config();
 
-// Validate required environment variables
-const requiredEnvVars = ['DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'DB_NAME'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+// Parse Supabase DATABASE_URL
+const getDatabaseConfig = () => {
+  if (!process.env.DATABASE_URL) {
+    logger.error('DATABASE_URL environment variable is required');
+    process.exit(1);
+  }
 
-if (missingVars.length > 0) {
-  logger.error('Missing required database environment variables', { missingVars });
-  process.exit(1);
-}
+  const parsed = parse(process.env.DATABASE_URL);
+  logger.info('Using Supabase database configuration (Direct IP)');
+  
+  return {
+    user: parsed.user,
+    password: parsed.password,
+    host: parsed.host,
+    port: parsed.port,
+    database: parsed.database,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    connectionType: 'supabase'
+  };
+};
 
-// Database configuration with production optimizations
+const baseConfig = getDatabaseConfig();
+
+// Database configuration optimized for Supabase
 const dbConfig = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT, 10),
-  database: process.env.DB_NAME,
+  ...baseConfig,
   
   // Connection pool configuration
   max: parseInt(process.env.DB_MAX_CONNECTIONS, 10) || 20,
@@ -35,16 +47,11 @@ const dbConfig = {
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT, 10) || 30000,
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT, 10) || 30000,
   
-  // SSL configuration for production
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-  } : false,
-  
   // Statement timeout
   statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT, 10) || 30000,
   
   // Application name for monitoring
-  application_name: `spendwise-${process.env.NODE_ENV || 'development'}`
+  application_name: `spendwise-${process.env.NODE_ENV || 'development'}-supabase`
 };
 
 // Create connection pool
@@ -118,36 +125,36 @@ const query = async (text, params, name = 'unnamed') => {
       error: error.message,
       code: error.code,
       detail: error.detail,
-      hint: error.hint,
-      poolStats: {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-      }
+      hint: error.hint
     });
     
     throw error;
   }
 };
 
-// Test initial connection
+// Simplified connection test for working Supabase connection
 const testConnection = async () => {
   try {
+    logger.info('🔄 Testing Supabase connection...');
+    
     const result = await pool.query('SELECT NOW() as connected_at, version() as pg_version');
-    logger.info('Database connection established', {
+    
+    logger.info('✅ Supabase connection successful!', {
       connectedAt: result.rows[0].connected_at,
       pgVersion: result.rows[0].pg_version.split(' ')[0],
       host: dbConfig.host,
+      port: dbConfig.port,
       database: dbConfig.database,
       ssl: !!dbConfig.ssl
     });
+    
     return true;
   } catch (error) {
-    logger.error('Database connection failed', {
+    logger.error('❌ Supabase connection failed', {
       error: error.message,
       code: error.code,
       host: dbConfig.host,
-      database: dbConfig.database
+      port: dbConfig.port
     });
     throw error;
   }
@@ -192,7 +199,7 @@ const healthCheck = async () => {
 
 // Initialize connection test
 testConnection().catch(() => {
-  logger.error('Failed to establish initial database connection');
+  logger.error('Failed to establish Supabase database connection');
   process.exit(1);
 });
 
@@ -202,13 +209,11 @@ module.exports = {
   healthCheck,
   gracefulShutdown,
   testConnection,
-  // Export sanitized config (without sensitive data) for monitoring
   config: {
     host: dbConfig.host,
     port: dbConfig.port,
     database: dbConfig.database,
-    max: dbConfig.max,
-    min: dbConfig.min,
+    connectionType: 'supabase',
     ssl: !!dbConfig.ssl
   }
 };

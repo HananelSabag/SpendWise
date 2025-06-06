@@ -1,4 +1,3 @@
-
 1. יש לנו משתמש אחד - Test User
 2. 8 קטגוריות ברירת מחדל
 3. הכנסות:
@@ -100,5 +99,28 @@ npm run dev
 הפרויקט יהיה זמין ב:
 - לקוח: http://localhost:5173
 - שרת: http://localhost:5000
+
+# SpendWise Backend API
+
+## Deployment Instructions
+
+### Environment Variables for Render:
+Copy these to Render's Environment Variables section:
+
+```
+DATABASE_URL=postgresql://postgres.obsycususrdabscpuhmt:0507432177Hs!@13.48.169.15:6543/postgres
+NODE_ENV=production
+PORT=10000
+DB_MAX_CONNECTIONS=10
+DB_MIN_CONNECTIONS=1
+ALLOWED_ORIGINS=https://your-frontend-url.onrender.com
+JWT_SECRET=spendwise_secret_key_2024_production
+CLIENT_URL=https://your-frontend-url.onrender.com
+```
+
+### Build Commands for Render:
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Root Directory: `server`
 ```
 

@@ -24,11 +24,39 @@ ADD COLUMN IF NOT EXISTS language_preference VARCHAR(10) DEFAULT 'en',
 ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'light',
 ADD COLUMN IF NOT EXISTS currency_preference VARCHAR(10) DEFAULT 'USD';
 
--- Add constraints for valid values
-ALTER TABLE users 
-ADD CONSTRAINT IF NOT EXISTS check_language_preference CHECK (language_preference IN ('en', 'he', 'es', 'fr', 'de', 'ar')),
-ADD CONSTRAINT IF NOT EXISTS check_theme_preference CHECK (theme_preference IN ('light', 'dark', 'auto')),
-ADD CONSTRAINT IF NOT EXISTS check_currency_preference CHECK (currency_preference IN ('USD', 'EUR', 'ILS', 'GBP', 'JPY', 'CNY'));
+-- Add constraints for valid values (with error handling for existing constraints)
+DO $$
+BEGIN
+    -- Check and add language_preference constraint
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_language_preference' 
+        AND conrelid = 'users'::regclass
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT check_language_preference 
+        CHECK (language_preference IN ('en', 'he', 'es', 'fr', 'de', 'ar'));
+    END IF;
+    
+    -- Check and add theme_preference constraint
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_theme_preference' 
+        AND conrelid = 'users'::regclass
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT check_theme_preference 
+        CHECK (theme_preference IN ('light', 'dark', 'auto'));
+    END IF;
+    
+    -- Check and add currency_preference constraint
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_currency_preference' 
+        AND conrelid = 'users'::regclass
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT check_currency_preference 
+        CHECK (currency_preference IN ('USD', 'EUR', 'ILS', 'GBP', 'JPY', 'CNY'));
+    END IF;
+END $$;
 
 -- Migrate existing preferences from JSONB to new columns
 UPDATE users 

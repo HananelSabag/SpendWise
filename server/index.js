@@ -167,19 +167,16 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 /**
- * Start the server with database connection check
+ * Start the server with Supabase database connection
  */
 const startServer = async () => {
   try {
-    // Test database connection
-    const dbHealth = await db.healthCheck();
-    if (dbHealth.status !== 'healthy') {
-      throw new Error('Database connection unhealthy');
-    }
-    logger.info('Database connection successful');
+    // Test Supabase database connection
+    await db.testConnection();
+    logger.info('✅ Supabase database connection successful');
 
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      logger.info(`🚀 Server running on port ${PORT} with Supabase database`);
       
       // Initialize background jobs
       if (process.env.ENABLE_SCHEDULER !== 'false') {
@@ -196,8 +193,8 @@ const startServer = async () => {
       });
       
       // Close database connections
-      await db.gracefulShutdown(); // Use dedicated shutdown method
-      logger.info('Database connections closed');
+      await db.gracefulShutdown();
+      logger.info('Supabase database connections closed');
       
       process.exit(0);
     };
@@ -214,14 +211,14 @@ const startServer = async () => {
 
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      // Don't exit on unhandled rejection in production
       if (process.env.NODE_ENV !== 'production') {
         gracefulShutdown('UNHANDLED_REJECTION');
       }
     });
 
   } catch (err) {
-    logger.error('Failed to start server:', err);
+    logger.error('❌ Failed to start server with Supabase:', err);
+    logger.error('💡 Check your DATABASE_URL and network connection');
     process.exit(1);
   }
 };

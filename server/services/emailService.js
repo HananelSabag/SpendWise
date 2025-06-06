@@ -23,7 +23,7 @@ class EmailService {
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
       }
 
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
         secure: process.env.SMTP_SECURE === 'true',
@@ -32,18 +32,16 @@ class EmailService {
           pass: process.env.SMTP_PASS
         },
         tls: {
-          rejectUnauthorized: process.env.NODE_ENV === 'production'
+          rejectUnauthorized: false
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
         socketTimeout: 5000,
       });
 
-      // Test connection only in development
-      if (process.env.NODE_ENV === 'development') {
-        await this.transporter.verify();
-        logger.info('Email service initialized successfully');
-      }
+      // Always verify connection in production
+      await this.transporter.verify();
+      logger.info('Email service initialized successfully');
     } catch (error) {
       logger.error('Email service initialization failed:', {
         message: error.message,
