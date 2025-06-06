@@ -1,21 +1,29 @@
--- SpendWise Clean Schema
--- Optimized for simple recurring transactions with email verification
+-- SpendWise Production Schema
+-- Optimized for recurring transactions with email verification and user preferences
 
--- Drop existing schema (for clean start)
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 
--- Users table (UPDATED: Added email_verified column)
+-- Users table with email verification and preferences
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     username VARCHAR(100) NOT NULL,
-    email_verified BOOLEAN DEFAULT false, -- NEW: Email verification status
+    email_verified BOOLEAN DEFAULT false,
+    language_preference VARCHAR(10) DEFAULT 'en',
+    theme_preference VARCHAR(20) DEFAULT 'light',
+    currency_preference VARCHAR(10) DEFAULT 'USD',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     preferences JSONB DEFAULT '{}',
     last_login TIMESTAMP
 );
+
+-- Add constraints for valid preference values
+ALTER TABLE users 
+ADD CONSTRAINT check_language_preference CHECK (language_preference IN ('en', 'he', 'es', 'fr', 'de', 'ar')),
+ADD CONSTRAINT check_theme_preference CHECK (theme_preference IN ('light', 'dark', 'auto')),
+ADD CONSTRAINT check_currency_preference CHECK (currency_preference IN ('USD', 'EUR', 'ILS', 'GBP', 'JPY', 'CNY'));
 
 -- Categories table
 CREATE TABLE categories (
@@ -28,7 +36,7 @@ CREATE TABLE categories (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Recurring templates table (NEW!)
+-- Recurring templates table
 CREATE TABLE recurring_templates (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -36,23 +44,18 @@ CREATE TABLE recurring_templates (
     amount DECIMAL(10,2) NOT NULL,
     description TEXT,
     category_id INTEGER REFERENCES categories(id),
-    
-    -- Recurring settings
     interval_type VARCHAR(20) CHECK (interval_type IN ('daily', 'weekly', 'monthly')),
     day_of_month INTEGER CHECK (day_of_month BETWEEN 1 AND 31),
     day_of_week INTEGER CHECK (day_of_week BETWEEN 0 AND 6),
-    
-    -- Period
     start_date DATE NOT NULL,
     end_date DATE,
-    
-    -- Status
+    skip_dates DATE[] DEFAULT '{}',
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expenses table (simplified)
+-- Expenses table
 CREATE TABLE expenses (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -60,17 +63,13 @@ CREATE TABLE expenses (
     description TEXT,
     date DATE NOT NULL,
     category_id INTEGER REFERENCES categories(id),
-    
-    -- Link to recurring template
     template_id INTEGER REFERENCES recurring_templates(id) ON DELETE SET NULL,
-    
-    -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
--- Income table (same structure)
+-- Income table
 CREATE TABLE income (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -78,21 +77,11 @@ CREATE TABLE income (
     description TEXT,
     date DATE NOT NULL,
     category_id INTEGER REFERENCES categories(id),
-    
-    -- Link to recurring template
     template_id INTEGER REFERENCES recurring_templates(id) ON DELETE SET NULL,
-    
-    -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
-
--- Indexes for performance
-CREATE INDEX idx_expenses_user_date ON expenses(user_id, date) WHERE deleted_at IS NULL;
-CREATE INDEX idx_income_user_date ON income(user_id, date) WHERE deleted_at IS NULL;
-CREATE INDEX idx_expenses_template ON expenses(template_id) WHERE template_id IS NOT NULL;
-CREATE INDEX idx_income_template ON income(template_id) WHERE template_id IS NOT NULL;
 
 -- Password reset tokens table
 CREATE TABLE password_reset_tokens (
@@ -104,7 +93,7 @@ CREATE TABLE password_reset_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- NEW: Email verification tokens table
+-- Email verification tokens table
 CREATE TABLE email_verification_tokens (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -114,9 +103,14 @@ CREATE TABLE email_verification_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index for password reset tokens
+-- Performance indexes
+CREATE INDEX idx_expenses_user_date ON expenses(user_id, date) WHERE deleted_at IS NULL;
+CREATE INDEX idx_income_user_date ON income(user_id, date) WHERE deleted_at IS NULL;
+CREATE INDEX idx_expenses_template ON expenses(template_id) WHERE template_id IS NOT NULL;
+CREATE INDEX idx_income_template ON income(template_id) WHERE template_id IS NOT NULL;
 CREATE INDEX idx_password_reset_tokens ON password_reset_tokens(token, used, expires_at);
-
--- NEW: Index for email verification tokens
 CREATE INDEX idx_email_verification_tokens ON email_verification_tokens(token, used, expires_at);
+CREATE INDEX idx_email_verification_user ON email_verification_tokens(user_id) WHERE used = false;
 CREATE INDEX idx_users_email_verified ON users(email_verified);
+CREATE INDEX idx_users_language ON users(language_preference);
+CREATE INDEX idx_users_theme ON users(theme_preference);

@@ -1,6 +1,6 @@
 -- Final optimizations and utilities
 
--- 1. Auto-update timestamps
+-- Auto-update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -18,10 +18,7 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER update_templates_timestamp BEFORE UPDATE ON recurring_templates
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 2. Skip dates functionality (לדלג על תאריכים ספציפיים)
-ALTER TABLE recurring_templates ADD COLUMN skip_dates DATE[] DEFAULT '{}';
-
--- 3. Summary statistics function
+-- Summary statistics function
 CREATE OR REPLACE FUNCTION get_user_stats(p_user_id INTEGER)
 RETURNS TABLE(
     total_income DECIMAL(10,2),
@@ -64,7 +61,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Monthly summary view
+-- Monthly summary view
 CREATE OR REPLACE VIEW monthly_summary AS
 SELECT 
     user_id,
@@ -76,8 +73,7 @@ SELECT
 FROM daily_balances
 GROUP BY user_id, DATE_TRUNC('month', date);
 
--- 5. Smart search function
--- 5. Smart search function (FIXED)
+-- Smart search function
 CREATE OR REPLACE FUNCTION search_transactions(
     p_user_id INTEGER,
     p_search_term TEXT,
@@ -89,7 +85,7 @@ RETURNS TABLE(
     amount DECIMAL(10,2),
     description TEXT,
     date DATE,
-    category_name VARCHAR(100)  -- שיניתי מ-TEXT ל-VARCHAR(100)
+    category_name VARCHAR(100)
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -132,12 +128,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
--- 6. Performance indexes
+-- Performance indexes
 CREATE INDEX idx_expenses_search ON expenses USING gin(to_tsvector('simple', description));
 CREATE INDEX idx_income_search ON income USING gin(to_tsvector('simple', description));
 CREATE INDEX idx_daily_balances ON expenses(user_id, date, deleted_at);
 CREATE INDEX idx_daily_balances_income ON income(user_id, date, deleted_at);
+
+-- Token cleanup function
+CREATE OR REPLACE FUNCTION cleanup_expired_tokens()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM password_reset_tokens 
+    WHERE expires_at < NOW() OR used = true;
+    
+    DELETE FROM email_verification_tokens 
+    WHERE expires_at < NOW() OR used = true;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Test everything works
 DO $$
