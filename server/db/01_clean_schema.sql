@@ -65,6 +65,7 @@ CREATE TABLE expenses (
     date DATE NOT NULL,
     category_id INTEGER REFERENCES categories(id),
     template_id INTEGER REFERENCES recurring_templates(id) ON DELETE SET NULL,
+    notes TEXT, -- Added missing notes column
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
@@ -79,6 +80,7 @@ CREATE TABLE income (
     date DATE NOT NULL,
     category_id INTEGER REFERENCES categories(id),
     template_id INTEGER REFERENCES recurring_templates(id) ON DELETE SET NULL,
+    notes TEXT, -- Added missing notes column
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
@@ -115,3 +117,4 @@ CREATE INDEX idx_email_verification_user ON email_verification_tokens(user_id) W
 CREATE INDEX idx_users_email_verified ON users(email_verified);
 CREATE INDEX idx_users_language ON users(language_preference);
 CREATE INDEX idx_users_theme ON users(theme_preference);
+CREATE INDEX idx_recurring_templates_user_active ON recurring_templates(user_id, is_active); -- Added composite index for better performance

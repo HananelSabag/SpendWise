@@ -34,18 +34,7 @@ class DBQueries {
         dateStr = TimeManager.formatForDB(new Date());
       }
       
-      console.log('[DEBUG] getDashboardData called for userId:', userId, 'date:', dateStr);
-      console.log('[DEBUG][getDashboardData] userId:', userId, 'targetDate:', dateStr);
-
-      // הוסף לוגיקה לדיבוג טובה יותר של תאריכים
-      const checkDates = await client.query(`
-        SELECT date FROM expenses 
-        WHERE user_id = $1 
-        ORDER BY date DESC 
-        LIMIT 5
-      `, [userId]);
-      
-      console.log('[DEBUG] Most recent transaction dates:', checkDates.rows.map(r => r.date));
+      // Debug logging removed for production
       
       const result = await client.query(`
       WITH date_params AS (
@@ -132,8 +121,8 @@ class DBQueries {
         bd.weekly as weekly_balance,
         bd.monthly as monthly_balance,
         bd.yearly as yearly_balance,
-(SELECT row_to_json(r) FROM recurring_summary r) as recurring_info,
-(SELECT row_to_json(u) FROM user_stats u) as statistics,
+        (SELECT row_to_json(r) FROM recurring_summary r) as recurring_info,
+        (SELECT row_to_json(u) FROM user_stats u) as statistics,
         (SELECT json_agg(c.*) FROM user_categories c) as categories,
         json_build_object(
           'calculated_at', NOW(),
@@ -174,26 +163,6 @@ class DBQueries {
       dashboardData.weekly_balance = processBalanceData(dashboardData.weekly_balance);
       dashboardData.monthly_balance = processBalanceData(dashboardData.monthly_balance);
       dashboardData.yearly_balance = processBalanceData(dashboardData.yearly_balance);
-      
-      console.log('[DEBUG] Processed balance data:', {
-        daily: dashboardData.daily_balance,
-        weekly: dashboardData.weekly_balance,
-        monthly: dashboardData.monthly_balance,
-        yearly: dashboardData.yearly_balance
-      });
-
-      // הוסף השאילתה להצגת עסקאות באותו היום לצורכי דיבוג
-      const todayTransactions = await client.query(`
-        SELECT * FROM expenses 
-        WHERE user_id = $1 AND date = $2
-        ORDER BY created_at DESC
-      `, [userId, dateStr]);
-      
-      console.log(`[DEBUG] Transactions on ${dateStr}:`, 
-        todayTransactions.rows.length > 0 
-          ? todayTransactions.rows.map(t => `ID: ${t.id}, Amount: ${t.amount}, Date: ${t.date}`)
-          : 'No transactions found'
-      );
       
       return dashboardData;
     } catch (error) {

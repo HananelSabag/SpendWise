@@ -205,7 +205,7 @@ const transactionController = {
     const { date } = req.query;
     
     const targetDate = date ? new Date(date) : new Date();
-    const dashboardData = await Transaction.getDashboardData(userId, targetDate);
+    const dashboardData = await DBQueries.getDashboardData(userId, targetDate); // Fixed: use DBQueries
     
     const balanceDetails = {
       daily: dashboardData.daily_balance,

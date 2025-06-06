@@ -1,44 +1,54 @@
 /**
- * OPTIMIZED API Module
- * 
- * MAJOR CHANGES:
- * 1. Removed excessive console.logs - now controlled by debug flag
- * 2. Improved error handling and retry logic
- * 3. Added request deduplication
- * 4. Optimized date formatting
- * 5. Better token refresh handling
- * 6. Added request cancellation support
+ * PRODUCTION-READY API Module
+ * Complete coverage of all server endpoints with environment configuration
  */
 
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// Environment configuration
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
-const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true' || localStorage.getItem('debug_api') === 'true';
+// Environment configuration with fallbacks - NO HARDCODED URLS
+const config = {
+  API_URL: import.meta.env.VITE_API_URL,
+  API_VERSION: import.meta.env.VITE_API_VERSION || 'v1',
+  CLIENT_URL: import.meta.env.VITE_CLIENT_URL,
+  DEBUG_MODE: import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.DEV,
+  REQUEST_TIMEOUT: parseInt(import.meta.env.VITE_REQUEST_TIMEOUT) || 15000,
+  RETRY_ATTEMPTS: parseInt(import.meta.env.VITE_RETRY_ATTEMPTS) || 3,
+  MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 5242880,
+  ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT || 'development'
+};
 
-// Request deduplication map
+// Validate required environment variables
+if (!config.API_URL) {
+  throw new Error('VITE_API_URL is required but not defined in environment variables');
+}
+
+if (!config.CLIENT_URL) {
+  throw new Error('VITE_CLIENT_URL is required but not defined in environment variables');
+}
+
+// Request deduplication and cancellation
 const pendingRequests = new Map();
+const requestCancellationTokens = new Map();
 
-// Create axios instance
+// Create axios instance with environment config
 const api = axios.create({
-  baseURL: `${API_URL}/api/${API_VERSION}`,
-  timeout: 15000,
+  baseURL: `${config.API_URL}/api/${config.API_VERSION}`,
+  timeout: config.REQUEST_TIMEOUT,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Debug logger - only logs when needed
+// Debug logger
 const log = (message, data = null) => {
-  if (DEBUG_MODE) {
+  if (config.DEBUG_MODE) {
     console.log(`[API] ${message}`, data);
   }
 };
 
-// Request interceptor with deduplication
+// Enhanced request interceptor
 api.interceptors.request.use(
   (config) => {
     const requestId = crypto.randomUUID();
@@ -51,46 +61,41 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // ✅ IMPROVED: Request deduplication for both GET and period requests
+    // Request deduplication for GET requests
     if (config.method === 'get') {
       const requestKey = `${config.method}-${config.url}-${JSON.stringify(config.params)}`;
       
       if (pendingRequests.has(requestKey)) {
-        const controller = pendingRequests.get(requestKey);
-        config.signal = controller.signal;
+        const existingController = pendingRequests.get(requestKey);
+        config.signal = existingController.signal;
         return config;
       }
       
       const controller = new AbortController();
       config.signal = controller.signal;
       pendingRequests.set(requestKey, controller);
-      
       config.metadata.requestKey = requestKey;
       
-      // ✅ FIX: Auto-cleanup after request completes
+      // Auto-cleanup
       setTimeout(() => {
         if (pendingRequests.has(requestKey)) {
           pendingRequests.delete(requestKey);
         }
-      }, 1000);
+      }, 2000);
     }
     
-    // Only log non-dashboard requests in production
-    if (DEBUG_MODE || (!config.url?.includes('/dashboard') && !config.url?.includes('/recurring'))) {
-      log(`${config.method?.toUpperCase()} ${config.url}`);
-    }
-    
+    log(`${config.method?.toUpperCase()} ${config.url}`, config.params);
     return config;
   },
   (error) => {
-    if (DEBUG_MODE) {
+    if (config.DEBUG_MODE) {
       console.error(`[API-REQUEST-ERROR]`, error);
     }
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
+// Enhanced response interceptor
 api.interceptors.response.use(
   (response) => {
     const duration = Date.now() - response.config.metadata.startTime;
@@ -100,9 +105,10 @@ api.interceptors.response.use(
       pendingRequests.delete(response.config.metadata.requestKey);
     }
     
-    if (DEBUG_MODE || response.config.url?.includes('/dashboard')) {
-      log(`✓ ${response.config.url} (${duration}ms)`);
-    }
+    log(`✓ ${response.config.url} (${duration}ms)`, { 
+      status: response.status,
+      data: response.data
+    });
     
     return response;
   },
@@ -116,17 +122,18 @@ api.interceptors.response.use(
     
     // Handle cancelled requests
     if (axios.isCancel(error)) {
+      log('Request cancelled', originalRequest?.url);
       return Promise.reject(error);
     }
     
-    // Handle 401 - Token expired
+    // Handle 401 - Token refresh - NO HARDCODED URL
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await axios.post(`${API_URL}/api/${API_VERSION}/users/refresh-token`, {
+          const response = await axios.post(`${config.API_URL}/api/${config.API_VERSION}/users/refresh-token`, {
             refreshToken
           });
           
@@ -139,34 +146,42 @@ api.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        // Use CLIENT_URL for redirect in production
+        if (config.ENVIRONMENT === 'production') {
+          window.location.href = `${config.CLIENT_URL}/login`;
+        } else {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
 
-    // Handle other errors with better UX
+    // Enhanced error handling
     const message = error.response?.data?.error?.message || error.message;
     const code = error.response?.data?.error?.code;
+    const status = error.response?.status;
     
-    if (error.response?.status === 429) {
+    // User-friendly error messages
+    if (status === 429) {
       toast.error('Too many requests. Please slow down.');
-    } else if (error.response?.status === 500) {
+    } else if (status === 500) {
       toast.error('Server error. Please try again later.');
+    } else if (status === 503) {
+      toast.error('Service temporarily unavailable.');
     } else if (code !== 'VALIDATION_ERROR' && message && !error.config?.silent) {
       toast.error(message);
     }
 
+    log(`❌ ${originalRequest?.url}`, { status, message, code });
     return Promise.reject(error);
   }
 );
 
-// Optimized date formatting
+// Utility functions
 const formatDateForAPI = (date) => {
   if (!date) return undefined;
   
   const dateObj = date instanceof Date ? date : new Date(date);
-  
-  // Use local timezone to prevent shifts
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, '0');
   const day = String(dateObj.getDate()).padStart(2, '0');
@@ -174,113 +189,28 @@ const formatDateForAPI = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Transaction API with better caching
-export const transactionAPI = {
-  getDashboard: (date) => {
-    const formattedDate = formatDateForAPI(date);
-    return api.get('/transactions/dashboard', { 
-      params: { date: formattedDate }
-    });
-  },
-  
-  getByPeriod: (period, date) => {
-    const formattedDate = formatDateForAPI(date);
-    return api.get(`/transactions/period/${period}`, {
-      params: { date: formattedDate }
-    });
-  },
-  
-  // ✅ FIX: Remove duplicate getAll method
-  getAll: (filters) => {
-    return api.get('/transactions', { 
-      params: filters
-    });
-  },
-  
-  search: (searchTerm) => {
-    return api.get('/transactions/search', {
-      params: { q: searchTerm }
-    });
-  },
-  
-  // ✅ ADD: Missing templates methods
-  getTemplates: () => api.get('/transactions/templates'),
-  updateTemplate: (id, data) => api.put(`/transactions/templates/${id}`, data),
-  deleteTemplate: (id, options = {}) => {
-    const { deleteFuture = false, deleteAll = false } = options;
-    return api.delete(`/transactions/templates/${id}`, { 
-      params: { deleteFuture, deleteAll } 
-    });
-  },
-  
-  // Enhanced delete methods - remove duplicate
-  delete: (type, id, options = {}) => {
-    const { deleteFuture = false, deleteAll = false } = options;
-    return api.delete(`/transactions/${type}/${id}`, { 
-      params: { deleteFuture, deleteAll } 
-    });
-  },
-  
-  // Skip occurrence method
-  skipOccurrence: (type, id, skipDate) => 
-    api.post(`/transactions/${type}/${id}/skip`, { skipDate }),
-  
-  // Bulk skip dates for templates
-  skipTemplateDates: (templateId, dates) =>
-    api.post(`/transactions/templates/${templateId}/skip`, { dates }),
-  
-  // ✅ ADD: Missing stats method
-  getStats: (months = 12) => api.get(`/transactions/stats?months=${months}`),
-  
-  getRecurring: (type = null) => {
-    const endpoint = type ? `/transactions/recurring?type=${type}` : '/transactions/recurring';
-    return api.get(endpoint);
-  },
-  
-  create: (type, data) => api.post(`/transactions/${type}`, data),
-  update: (type, id, data) => api.put(`/transactions/${type}/${id}`, data),
-  delete: (type, id, deleteFuture = false) => 
-    api.delete(`/transactions/${type}/${id}`, { params: { deleteFuture } }),
-  
-  getCategories: () => api.get('/categories'),
-  createCategory: (data) => api.post('/categories', data),
-  updateCategory: (id, data) => api.put(`/categories/${id}`, data),
-  deleteCategory: (id) => api.delete(`/categories/${id}`),
-  
-  generateRecurring: () => api.post('/transactions/generate-recurring')
-};
-
-// Query keys for React Query
-export const queryKeys = {
-  profile: ['profile'],
-  dashboard: (date) => ['dashboard', formatDateForAPI(date)],
-  transactions: (filters) => ['transactions', filters],
-  recurring: (type) => ['recurring', type],
-  categories: ['categories'],
-  // ✅ ADD: Missing query keys
-  templates: ['templates'],
-  stats: (months) => ['stats', months],
-  period: (period, date) => ['period', period, formatDateForAPI(date)]
-};
-
-// Cleanup function for component unmount
-export const cancelPendingRequests = () => {
-  pendingRequests.forEach((controller) => controller.abort());
-  pendingRequests.clear();
-};
-
-// ✅ ADD: Missing auth methods
+// Authentication API - Complete coverage
 export const authAPI = {
+  // User authentication
   login: (credentials) => api.post('/users/login', credentials),
   register: (userData) => api.post('/users/register', userData),
   logout: () => api.post('/users/logout'),
+  refreshToken: (refreshToken) => api.post('/users/refresh-token', { refreshToken }),
+  
+  // Email verification
   verifyEmail: (token) => api.get(`/users/verify-email/${token}`),
   resendVerificationEmail: (email) => api.post('/users/resend-verification', { email }),
+  
+  // Password management
   forgotPassword: (email) => api.post('/users/forgot-password', { email }),
   resetPassword: (token, newPassword) => api.post('/users/reset-password', { token, newPassword }),
+  
+  // Profile management
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   updatePreferences: (preferences) => api.put('/users/preferences', { preferences }),
+  
+  // Profile picture
   uploadProfilePicture: (file) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -288,8 +218,161 @@ export const authAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  // ✅ ADD: Missing test email method
+  
+  // Utility
   testEmail: (email) => api.post('/users/test-email', { email })
 };
 
+// Transaction API - Complete coverage from controllers
+export const transactionAPI = {
+  // Dashboard and summary
+  getDashboard: (date) => {
+    const formattedDate = formatDateForAPI(date);
+    return api.get('/transactions/dashboard', { 
+      params: { date: formattedDate }
+    });
+  },
+  
+  getRecent: (limit = 5, date) => {
+    const formattedDate = formatDateForAPI(date);
+    return api.get('/transactions/recent', {
+      params: { limit, date: formattedDate }
+    });
+  },
+  
+  getSummary: () => api.get('/transactions/summary'),
+  getStats: (months = 12) => api.get('/transactions/stats', { params: { months } }),
+  
+  // Period-based queries
+  getByPeriod: (period, date) => {
+    const formattedDate = formatDateForAPI(date);
+    return api.get(`/transactions/period/${period}`, {
+      params: { date: formattedDate }
+    });
+  },
+  
+  // Balance information
+  getBalanceDetails: (date) => {
+    const formattedDate = formatDateForAPI(date);
+    return api.get('/transactions/balance/details', {
+      params: { date: formattedDate }
+    });
+  },
+  
+  getBalanceHistory: (period, limit = 12) => 
+    api.get(`/transactions/balance/history/${period}`, { params: { limit } }),
+  
+  // Transaction CRUD
+  getAll: (filters) => api.get('/transactions', { params: filters }),
+  create: (type, data) => api.post(`/transactions/${type}`, data),
+  update: (type, id, data) => api.put(`/transactions/${type}/${id}`, data),
+  delete: (type, id, deleteFuture = false) => 
+    api.delete(`/transactions/${type}/${id}`, { params: { deleteFuture } }),
+  
+  // Direct expense/income creation
+  addExpense: (data) => api.post('/transactions/expense', data),
+  addIncome: (data) => api.post('/transactions/income', data),
+  
+  // Recurring transactions
+  getRecurring: (type = null) => {
+    const params = type ? { type } : {};
+    return api.get('/transactions/recurring', { params });
+  },
+  
+  generateRecurring: () => api.post('/transactions/generate-recurring'),
+  
+  // Skip functionality
+  skipTransactionOccurrence: (type, id, skipDate) => 
+    api.post(`/transactions/${type}/${id}/skip`, { skipDate }),
+  
+  // Template management
+  getTemplates: () => api.get('/transactions/templates'),
+  updateTemplate: (id, data) => api.put(`/transactions/templates/${id}`, data),
+  deleteTemplate: (id, deleteFuture = false) => 
+    api.delete(`/transactions/templates/${id}`, { params: { deleteFuture } }),
+  skipDates: (templateId, dates) =>
+    api.post(`/transactions/templates/${templateId}/skip`, { dates }),
+  
+  // Search and filtering
+  search: (searchTerm, limit = 50) => api.get('/transactions/search', {
+    params: { q: searchTerm, limit }
+  }),
+  
+  getCategoryBreakdown: (startDate, endDate) => 
+    api.get('/transactions/categories/breakdown', {
+      params: { 
+        startDate: formatDateForAPI(startDate), 
+        endDate: formatDateForAPI(endDate) 
+      }
+    })
+};
+
+// Category API - Complete coverage
+export const categoryAPI = {
+  getAll: (type) => api.get('/categories', { params: { type } }),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (data) => api.post('/categories', data),
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  delete: (id) => api.delete(`/categories/${id}`),
+  getStats: (id) => api.get(`/categories/${id}/stats`),
+  getWithCounts: (startDate, endDate) => 
+    api.get('/categories/with-counts', {
+      params: { 
+        startDate: formatDateForAPI(startDate), 
+        endDate: formatDateForAPI(endDate) 
+      }
+    })
+};
+
+// Export API - Complete coverage
+export const exportAPI = {
+  getOptions: () => api.get('/export/options'),
+  exportAsCSV: () => api.get('/export/csv', { responseType: 'blob' }),
+  exportAsJSON: () => api.get('/export/json'),
+  exportAsPDF: () => api.get('/export/pdf', { responseType: 'blob' })
+};
+
+// Query keys for React Query
+export const queryKeys = {
+  // Auth
+  profile: ['profile'],
+  
+  // Dashboard
+  dashboard: (date) => ['dashboard', formatDateForAPI(date)],
+  
+  // Transactions
+  transactions: (filters) => ['transactions', filters],
+  transactionsPeriod: (period, date) => ['transactions', 'period', period, formatDateForAPI(date)],
+  transactionsRecent: (limit, date) => ['transactions', 'recent', limit, formatDateForAPI(date)],
+  transactionsRecurring: (type) => ['transactions', 'recurring', type],
+  transactionsStats: (months) => ['transactions', 'stats', months],
+  transactionsSummary: ['transactions', 'summary'],
+  transactionsSearch: (term) => ['transactions', 'search', term],
+  
+  // Balance
+  balanceDetails: (date) => ['balance', 'details', formatDateForAPI(date)],
+  balanceHistory: (period, limit) => ['balance', 'history', period, limit],
+  
+  // Templates
+  templates: ['templates'],
+  
+  // Categories
+  categories: (type) => ['categories', type],
+  categoriesWithCounts: (startDate, endDate) => ['categories', 'counts', formatDateForAPI(startDate), formatDateForAPI(endDate)],
+  categoryStats: (id) => ['categories', 'stats', id],
+  categoryBreakdown: (startDate, endDate) => ['transactions', 'breakdown', formatDateForAPI(startDate), formatDateForAPI(endDate)],
+  
+  // Export
+  exportOptions: ['export', 'options']
+};
+
+// Cleanup and utility functions
+export const cancelPendingRequests = () => {
+  pendingRequests.forEach((controller) => controller.abort());
+  pendingRequests.clear();
+};
+
+export const getApiConfig = () => config;
+
+// Default export
 export default api;

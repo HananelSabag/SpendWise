@@ -177,19 +177,26 @@ router.post('/profile/picture',
         });
       }
 
-      // Update user preferences with file path
-      const User = require('../models/User');
-      const filePath = `/uploads/profiles/${req.file.filename}`;
+      // Create full URL for the uploaded file
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
+        : 'http://localhost:5000';
       
+      const relativePath = `/uploads/profiles/${req.file.filename}`;
+      const fullUrl = `${baseUrl}${relativePath}`;
+
+      // Update user preferences with full URL
+      const User = require('../models/User');
       await User.updatePreferences(req.user.id, {
-        profilePicture: filePath
+        profilePicture: fullUrl
       });
 
       res.json({
         success: true,
         data: {
           filename: req.file.filename,
-          path: filePath,
+          path: relativePath,
+          url: fullUrl,
           size: req.file.size
         },
         timestamp: new Date().toISOString()

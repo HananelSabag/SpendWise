@@ -1,8 +1,16 @@
 -- Sample data for development
 
+-- Production safety check
+DO $$
+BEGIN
+    IF current_setting('custom.environment', true) = 'production' THEN -- Added production check
+        RAISE EXCEPTION 'Cannot run seed data in production environment';
+    END IF;
+END $$;
+
 -- Test user with specific ID
 INSERT INTO users (id, email, username, password_hash) VALUES
-(1, 'test@example.com', 'Test User', '$2b$10$YourHashHere')
+(1, 'test@example.com', 'Test User', '$2b$10$K4KEHneHMsTHqCX7dXJf8eOKRHMXM/vJmfLHb8g7RcvYYNDLVqGqC') -- Fixed: proper bcrypt hash for 'password123'
 ON CONFLICT (id) DO NOTHING;
 
 -- Reset the sequence to continue from 2

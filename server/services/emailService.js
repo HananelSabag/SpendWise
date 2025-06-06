@@ -23,7 +23,7 @@ class EmailService {
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
       }
 
-      this.transporter = nodemailer.createTransport({
+      this.transporter = nodemailer.createTransporter({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
         secure: process.env.SMTP_SECURE === 'true',
@@ -47,7 +47,8 @@ class EmailService {
     } catch (error) {
       logger.error('Email service initialization failed:', {
         message: error.message,
-        code: error.code
+        code: error.code,
+        smtp_host: process.env.SMTP_HOST // Log host only, not credentials
       });
       this.transporter = null;
     }

@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const db = require('../config/db');
+const crypto = require('crypto'); // Added for secure filename generation
 
 // Create upload directories if they don't exist
 const createUploadDirs = async () => {
@@ -37,13 +38,16 @@ const storage = multer.diskStorage({
     cb(null, folder);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
+    const uniqueSuffix = crypto.randomBytes(16).toString('hex'); // More secure than timestamp + random
+    const ext = path.extname(file.originalname).toLowerCase(); // Normalize extension
+    
+    // Sanitize filename to prevent path traversal
+    const safeFieldname = file.fieldname.replace(/[^a-zA-Z0-9]/g, '');
     
     if (file.fieldname === 'profilePicture') {
       cb(null, `profile-${req.user.id}-${uniqueSuffix}${ext}`);
     } else {
-      cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+      cb(null, `${safeFieldname}-${uniqueSuffix}${ext}`);
     }
   }
 });
@@ -55,7 +59,13 @@ const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
     if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
+      // Additional check for file extension
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file extension'), false);
+      }
     } else {
       cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed for profile pictures'), false);
     }
@@ -64,7 +74,12 @@ const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
     
     if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (['.jpg', '.jpeg', '.png', '.pdf'].includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file extension'), false);
+      }
     } else {
       cb(new Error('Invalid file type. Only images and PDFs are allowed for receipts'), false);
     }
@@ -78,7 +93,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max
+    fileSize: parseInt(process.env.UPLOAD_SIZE_LIMIT) || 5 * 1024 * 1024, // Use env variable
     files: 1 // Only 1 file at a time
   }
 });
@@ -96,29 +111,38 @@ const deleteOldProfilePicture = async (req, res, next) => {
       const preferences = user.rows[0]?.preferences || {};
       
       if (preferences.profilePicture) {
-        // Convert relative path to absolute path
         let oldPath;
-        if (preferences.profilePicture.startsWith('/uploads/')) {
-          // Remove leading slash and create absolute path
-          oldPath = path.join(__dirname, '..', preferences.profilePicture.substring(1));
-        } else {
-          oldPath = path.join(__dirname, '..', preferences.profilePicture);
+        
+        // Handle both full URLs and relative paths
+        if (preferences.profilePicture.includes('/uploads/')) {
+          // Extract just the filename from URL or path
+          const urlParts = preferences.profilePicture.split('/uploads/');
+          if (urlParts.length > 1) {
+            const relativePath = urlParts[1];
+            oldPath = path.join(__dirname, '..', 'uploads', relativePath);
+          }
         }
         
-        // Check if file exists before trying to delete
-        try {
-          await fs.access(oldPath);
-          await fs.unlink(oldPath);
-          console.log(`✅ [UPLOAD] Deleted old profile picture: ${oldPath}`);
-        } catch (deleteError) {
-          // Log the specific error and set a warning flag
-          console.error(`❌ [UPLOAD] Failed to delete old profile picture: ${oldPath}`, deleteError);
-          req.profilePictureDeletionWarning = `Could not delete previous profile picture: ${deleteError.message}`;
+        if (oldPath) {
+          // Verify the path is within uploads directory (security check)
+          const uploadsDir = path.join(__dirname, '..', 'uploads');
+          const normalizedOldPath = path.normalize(oldPath);
+          
+          if (normalizedOldPath.startsWith(uploadsDir)) {
+            try {
+              await fs.access(normalizedOldPath);
+              await fs.unlink(normalizedOldPath);
+              console.log(`✅ [UPLOAD] Deleted old profile picture`);
+            } catch (deleteError) {
+              console.log(`ℹ️ [UPLOAD] Previous profile picture not found or already deleted`);
+            }
+          } else {
+            console.error('❌ [UPLOAD] Invalid file path detected');
+          }
         }
       }
     } catch (error) {
-      console.error('❌ [UPLOAD] Error in deleteOldProfilePicture middleware:', error);
-      // Don't fail the request, but log the error properly
+      console.error('❌ [UPLOAD] Error in deleteOldProfilePicture middleware:', error.message);
     }
   }
   next();

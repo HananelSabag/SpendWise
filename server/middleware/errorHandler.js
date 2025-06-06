@@ -105,7 +105,8 @@ const formatError = (err, isDevelopment = false) => {
   return {
     error: {
       code: 'INTERNAL_ERROR',
-      message: isDevelopment ? (err.message || 'An unexpected error occurred') : 'An unexpected error occurred',
+      message: 'An unexpected error occurred', // Generic message in production
+      details: isDevelopment ? err.message : undefined, // Only show details in dev
       timestamp: new Date().toISOString()
     }
   };
@@ -123,11 +124,19 @@ const errorHandler = (err, req, res, next) => {
   const isDevelopment = process.env.NODE_ENV !== 'production';
 
   // Log error with appropriate detail level
-  logger.logError(err, req, {
-    body: isDevelopment ? req.body : undefined,
-    query: isDevelopment ? req.query : undefined,
-    params: isDevelopment ? req.params : undefined
-  });
+  const logData = {
+    url: req.url,
+    method: req.method
+  };
+  
+  // Only include sensitive data in development
+  if (isDevelopment) {
+    logData.body = req.body;
+    logData.query = req.query;
+    logData.params = req.params;
+  }
+  
+  logger.logError(err, req, logData);
 
   // Determine status code
   let status = err.status || err.statusCode || 500;
@@ -149,6 +158,8 @@ const errorHandler = (err, req, res, next) => {
     status = 400;
   } else if (err.name === 'UnauthorizedError') {
     status = 401;
+  } else if (err.message && err.message.includes('CORS')) { // CORS errors
+    status = 403;
   }
 
   // Send response
@@ -169,12 +180,15 @@ const asyncHandler = (fn) => (req, res, next) => {
  * Not found handler
  */
 const notFound = (req, res) => {
-  logger.info('404 Not Found', {
-    method: req.method,
-    url: req.url,
-    ip: req.ip,
-    userAgent: req.get('user-agent')
-  });
+  // Minimal logging in production
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('404 Not Found', {
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    });
+  }
 
   res.status(404).json({
     error: {

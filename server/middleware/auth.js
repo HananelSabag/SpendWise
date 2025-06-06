@@ -33,13 +33,18 @@ const generateTokens = (user) => {
       }
     );
 
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    if (process.env.NODE_ENV === 'production' && !process.env.JWT_REFRESH_SECRET) { // Enforce separate refresh secret in production
+      throw new Error('JWT_REFRESH_SECRET must be set in production');
+    }
+
     const refreshToken = jwt.sign(
       { 
         id: user.id,
         type: 'refresh',
         iat: Math.floor(Date.now() / 1000)
       },
-      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      refreshSecret,
       { 
         expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d',
         issuer: 'spendwise-server',
@@ -68,7 +73,8 @@ const generateTokens = (user) => {
 const verifyToken = (token, secret) => {
   return jwt.verify(token, secret, {
     issuer: 'spendwise-server',
-    audience: 'spendwise-client'
+    audience: 'spendwise-client',
+    maxAge: '30d' // Added max age validation
   });
 };
 

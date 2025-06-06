@@ -21,6 +21,9 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
+// Trust proxy for Railway deployment
+app.set('trust proxy', 1); // Trust first proxy
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -28,7 +31,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "http://localhost:5000", "http://localhost:3000", "http://localhost:5173"], // Add localhost origins
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -37,17 +40,23 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Add this line
 }));
 
 app.use(compression());
 
 // CORS configuration
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? (process.env.ALLOWED_ORIGINS?.split(',') || [])
+  ? (process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || []) 
   : ['http://localhost:3000', 'http://localhost:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc) in development only
+    if (!origin && process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -56,19 +65,44 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  maxAge: 86400,
+  exposedHeaders: ['Content-Disposition'] // Add for file downloads
 }));
 
 // Body parser with size limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Add CORS headers specifically for static files before serving them
+app.use('/uploads', (req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Allow requests from allowed origins or no origin (direct access)
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin'); // Add this
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 // Serve static files from uploads directory with security headers
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    // Remove X-Frame-Options for images to prevent blocking
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Reduce cache time for development
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // Add this
   }
 }));
 
@@ -79,23 +113,27 @@ app.use(requestId);
 app.use('/api', apiLimiter);
 
 // Request logging (production-safe)
-app.use((req, res, next) => {
-  req.log.info('Request received', {
-    method: req.method,
-    url: req.url,
-    ip: req.ip
+if (process.env.NODE_ENV !== 'production') { // Reduce logging in production
+  app.use((req, res, next) => {
+    req.log.info('Request received', {
+      method: req.method,
+      url: req.url,
+      ip: req.ip
+    });
+    next();
   });
-  next();
-});
+}
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    await db.pool.query('SELECT 1');
+    const dbHealth = await db.healthCheck(); // Use dedicated health check
     res.json({ 
-      status: 'healthy', 
+      status: 'healthy',
+      database: dbHealth.status,
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
+      version: process.env.npm_package_version || '1.0.0' // Include version
     });
   } catch (error) {
     res.status(503).json({ 
@@ -134,7 +172,10 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     // Test database connection
-    await db.pool.query('SELECT NOW()');
+    const dbHealth = await db.healthCheck();
+    if (dbHealth.status !== 'healthy') {
+      throw new Error('Database connection unhealthy');
+    }
     logger.info('Database connection successful');
 
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -155,7 +196,7 @@ const startServer = async () => {
       });
       
       // Close database connections
-      await db.pool.end();
+      await db.gracefulShutdown(); // Use dedicated shutdown method
       logger.info('Database connections closed');
       
       process.exit(0);
@@ -173,7 +214,10 @@ const startServer = async () => {
 
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      gracefulShutdown('UNHANDLED_REJECTION');
+      // Don't exit on unhandled rejection in production
+      if (process.env.NODE_ENV !== 'production') {
+        gracefulShutdown('UNHANDLED_REJECTION');
+      }
     });
 
   } catch (err) {

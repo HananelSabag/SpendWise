@@ -172,6 +172,20 @@ const getProfile = asyncHandler(async (req, res) => {
     throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
   }
 
+  // Ensure profile picture URL is complete
+  if (user.preferences && user.preferences.profilePicture) {
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
+      : 'http://localhost:5000';
+    
+    // If it's a relative path, make it absolute
+    if (user.preferences.profilePicture.startsWith('/uploads/')) {
+      user.preferences.profilePicture = `${baseUrl}${user.preferences.profilePicture}`;
+    } else if (user.preferences.profilePicture.startsWith('uploads/')) {
+      user.preferences.profilePicture = `${baseUrl}/${user.preferences.profilePicture}`;
+    }
+  }
+
   res.json({
     success: true,
     data: user
@@ -306,18 +320,30 @@ const forgotPassword = asyncHandler(async (req, res) => {
   try {
     const resetInfo = await User.createPasswordResetToken(email);
     
-    if (process.env.NODE_ENV === 'development') {
+    // Always send same response in production
+    if (process.env.NODE_ENV === 'production') {
+      const emailSent = await emailService.sendPasswordReset(email, resetInfo.token);
+      
+      if (!emailSent) {
+        logger.error('Failed to send password reset email in production', { email });
+      }
+      
+      logger.info('Password reset requested', { email, emailSent });
+      
+      // Always return same response to prevent email enumeration
+      return res.json({
+        success: true,
+        message: 'If the email exists in our system, a reset link has been sent.'
+      });
+    } else {
+      // Development mode - more helpful response
       const emailSent = await emailService.sendPasswordReset(email, resetInfo.token);
       
       if (emailSent) {
         logger.info('Password reset email sent', { email });
         return res.json({
           success: true,
-          message: 'Password reset email sent successfully! Check your inbox.',
-          data: {
-            resetUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetInfo.token}`,
-            note: 'Email sent! Direct link provided for development testing.'
-          }
+          message: 'Password reset email sent successfully! Check your inbox.'
         });
       } else {
         logger.warn('Email service unavailable, using development fallback', { email });
@@ -331,22 +357,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
           }
         });
       }
-    } else {
-      const emailSent = await emailService.sendPasswordReset(email, resetInfo.token);
-      
-      if (!emailSent) {
-        logger.error('Failed to send password reset email in production', { email });
-      }
-      
-      logger.info('Password reset requested', { email, emailSent });
-      return res.json({
-        success: true,
-        message: 'If the email exists in our system, a reset link has been sent.'
-      });
     }
   } catch (error) {
     logger.error('Forgot password error', { email, error: error.message });
     
+    // Always return same response in production
     res.json({
       success: true,
       message: 'If the email exists in our system, a reset link has been sent.'

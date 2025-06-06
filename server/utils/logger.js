@@ -6,6 +6,7 @@
 
 const winston = require('winston');
 require('winston-daily-rotate-file');
+const path = require('path'); // Added for log directory
 
 // Define log format
 const logFormat = winston.format.combine(
@@ -37,20 +38,27 @@ const consoleFormat = winston.format.combine(
 // Filter sensitive data from logs
 function filterSensitiveData(obj) {
   const sensitiveKeys = ['password', 'password_hash', 'token', 'refreshToken', 'accessToken', 
-                         'authorization', 'cookie', 'credit_card', 'ssn', 'api_key'];
+                         'authorization', 'cookie', 'credit_card', 'ssn', 'api_key', 'email']; // Added email for privacy
   
   const filtered = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
     if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
       filtered[key] = '[REDACTED]';
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (typeof value === 'object' && value !== null && !(value instanceof Error)) { // Don't filter Error objects
       filtered[key] = filterSensitiveData(value);
     } else {
       filtered[key] = value;
     }
   }
   return filtered;
+}
+
+// Ensure logs directory exists
+const fs = require('fs');
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
 }
 
 // Create the logger
@@ -75,7 +83,8 @@ const logger = winston.createLogger({
       filename: 'logs/combined-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       maxFiles: '14d',
-      zippedArchive: true
+      zippedArchive: true,
+      level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' // Less verbose in production
     })
   ],
   // Handle exceptions and rejections
@@ -93,6 +102,12 @@ if (process.env.NODE_ENV !== 'production') {
     format: consoleFormat,
     handleExceptions: true,
     handleRejections: true
+  }));
+} else {
+  // Minimal console logging in production
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+    level: 'error' // Only errors to console in production
   }));
 }
 
@@ -113,7 +128,7 @@ logger.child = (metadata) => {
 
 // Utility methods for structured logging
 logger.logRequest = (req, additionalData = {}) => {
-  logger.info('HTTP Request', {
+  const logData = {
     method: req.method,
     url: req.url,
     ip: req.ip,
@@ -121,11 +136,18 @@ logger.logRequest = (req, additionalData = {}) => {
     requestId: req.id,
     userId: req.user?.id,
     ...additionalData
-  });
+  };
+  
+  // Less verbose in production
+  if (process.env.NODE_ENV === 'production') {
+    delete logData.userAgent;
+  }
+  
+  logger.info('HTTP Request', logData);
 };
 
 logger.logResponse = (req, res, additionalData = {}) => {
-  logger.info('HTTP Response', {
+  const logData = {
     method: req.method,
     url: req.url,
     statusCode: res.statusCode,
@@ -133,7 +155,14 @@ logger.logResponse = (req, res, additionalData = {}) => {
     userId: req.user?.id,
     responseTime: Date.now() - req.startTime,
     ...additionalData
-  });
+  };
+  
+  // Only log non-200 responses in production
+  if (process.env.NODE_ENV === 'production' && res.statusCode >= 200 && res.statusCode < 300) {
+    return;
+  }
+  
+  logger.info('HTTP Response', logData);
 };
 
 logger.logError = (error, req = null, additionalData = {}) => {

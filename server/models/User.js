@@ -119,7 +119,7 @@ class User {
       const { password_hash, ...userWithoutPassword } = user;
       return userWithoutPassword;
     } catch (error) {
-      logger.error('Password verification error:', { email, error: error.message });
+      logger.error('Password verification error:', { error: error.message }); // Don't log email
       throw error;
     }
   }

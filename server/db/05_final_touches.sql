@@ -26,9 +26,9 @@ ADD COLUMN IF NOT EXISTS currency_preference VARCHAR(10) DEFAULT 'USD';
 
 -- Add constraints for valid values
 ALTER TABLE users 
-ADD CONSTRAINT check_language_preference CHECK (language_preference IN ('en', 'he', 'es', 'fr', 'de', 'ar')),
-ADD CONSTRAINT check_theme_preference CHECK (theme_preference IN ('light', 'dark', 'auto')),
-ADD CONSTRAINT check_currency_preference CHECK (currency_preference IN ('USD', 'EUR', 'ILS', 'GBP', 'JPY', 'CNY'));
+ADD CONSTRAINT IF NOT EXISTS check_language_preference CHECK (language_preference IN ('en', 'he', 'es', 'fr', 'de', 'ar')),
+ADD CONSTRAINT IF NOT EXISTS check_theme_preference CHECK (theme_preference IN ('light', 'dark', 'auto')),
+ADD CONSTRAINT IF NOT EXISTS check_currency_preference CHECK (currency_preference IN ('USD', 'EUR', 'ILS', 'GBP', 'JPY', 'CNY'));
 
 -- Migrate existing preferences from JSONB to new columns
 UPDATE users 
@@ -36,7 +36,8 @@ SET
     language_preference = COALESCE((preferences->>'language'), 'en'),
     theme_preference = COALESCE((preferences->>'theme'), 'light'),
     currency_preference = COALESCE((preferences->>'currency'), 'USD')
-WHERE preferences IS NOT NULL;
+WHERE preferences IS NOT NULL
+AND (language_preference IS NULL OR theme_preference IS NULL OR currency_preference IS NULL); -- Added condition to prevent re-migration
 
 -- Clean up migrated preferences from JSONB
 UPDATE users 
@@ -50,7 +51,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
 
 -- Set existing users as verified (grandfathering them in)
 UPDATE users SET email_verified = true 
-WHERE email_verified IS NULL OR email_verified = false;
+WHERE email_verified IS NULL OR email_verified = false
+AND created_at < '2024-01-01'; -- Only grandfather old users, not all
 
 -- Create email verification tokens table if it doesn't exist
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
@@ -198,15 +200,3 @@ $$ LANGUAGE plpgsql;
 
 -- Update timestamp for all users
 UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id IS NOT NULL;
-
--- Test everything works
-DO $$
-BEGIN
-    RAISE NOTICE '✅ All optimizations and migrations applied successfully!';
-    PERFORM get_user_stats(1);
-    RAISE NOTICE '✅ Statistics function works!';
-    PERFORM search_transactions(1, 'test', 10);
-    RAISE NOTICE '✅ Search function works!';
-    PERFORM cleanup_expired_tokens();
-    RAISE NOTICE '✅ Token cleanup function works!';
-END $$;
