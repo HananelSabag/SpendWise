@@ -106,7 +106,6 @@ router.get('/profile',
  * @access  Private
  */
 router.put('/profile', 
-  validate.userRegistration,
   userController.updateProfile
 );
 

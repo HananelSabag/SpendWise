@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
+import { useTransactions } from '../../../hooks/useTransactions';
 import { dateHelpers } from '../../../utils/helpers';
 import { Button, Modal, Alert, Badge } from '../../ui';
 
@@ -30,18 +31,17 @@ const DeleteTransaction = ({
   transaction,
   isOpen,
   onClose,
-  onConfirm,
   onOpenSkipDates,
   loading = false
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  const { deleteTransaction, isDeleting } = useTransactions();
   const isRTL = language === 'he';
   
   // State
   const [deleteOption, setDeleteOption] = useState('single');
   const [confirmed, setConfirmed] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!transaction) return null;
 
@@ -119,22 +119,31 @@ const DeleteTransaction = ({
     }
 
     try {
-      setIsDeleting(true);
+      // ✅ FIX: Use hook's deleteTransaction function directly
+      const transactionType = transaction.transaction_type || transaction.type;
       
       // Map delete options to API parameters
-      const deleteParams = {
-        single: { deleteFuture: false, deleteAll: false },
-        future: { deleteFuture: true, deleteAll: false },
-        all: { deleteFuture: true, deleteAll: true }
-      };
+      let deleteFuture = false;
+      
+      switch (deleteOption) {
+        case 'future':
+          deleteFuture = true;
+          break;
+        case 'all':
+          deleteFuture = true;
+          break;
+        default:
+          deleteFuture = false;
+      }
 
-      const params = deleteParams[deleteOption] || deleteParams.single;
-      await onConfirm?.(transaction, params.deleteFuture, params.deleteAll);
+      await deleteTransaction(transactionType, transaction.id, deleteFuture);
+      
+      // ✅ ADD: Close modal on success
+      handleClose();
       
     } catch (error) {
       console.error('Delete failed:', error);
-    } finally {
-      setIsDeleting(false);
+      // Error handling is done by the hook via toast
     }
   };
 
@@ -142,7 +151,6 @@ const DeleteTransaction = ({
   const handleClose = () => {
     setDeleteOption('single');
     setConfirmed(false);
-    setIsDeleting(false);
     onClose?.();
   };
 
@@ -223,7 +231,7 @@ const DeleteTransaction = ({
         variants={modalVariants}
         initial="hidden"
         animate="visible"
-        className="relative" // ✅ REMOVE: Any overflow-hidden classes
+        className="relative"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header */}

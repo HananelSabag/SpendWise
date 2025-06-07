@@ -1,4 +1,17 @@
-// pages/Transactions.jsx
+/**
+ * Transactions Page - Complete Transaction Management
+ * 
+ * Features:
+ * - Smart filtering and search with real-time results
+ * - Period-based transaction views with optimized queries
+ * - Advanced filters for comprehensive data analysis
+ * - CRUD operations with optimistic updates
+ * - Recurring transaction management
+ * - Mobile-responsive design with floating actions
+ * - Multi-language support with RTL layout
+ * - Performance optimized with memoization and debouncing
+ */
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -7,11 +20,7 @@ import {
   Plus,
   Search,
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
   Clock,
-  Download,
-  Eye,
   Sparkles,
   Activity,
   X,
@@ -21,55 +30,89 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { useDashboard } from '../hooks/useDashboard';
-import { useTransactionsList, useRecurringTransactionsList } from '../hooks/useTransactionsList';
-import { useTransactions } from '../context/TransactionContext';
+
+// Hooks for data management
+import { useTransactions, useRecurringTransactions, useTransactionSearch } from '../hooks/useTransactions';
 import { useDate } from '../context/DateContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useLanguage } from '../context/LanguageContext';
 
-// Layout
+// Layout components
 import PageContainer from '../components/layout/PageContainer';
 
-// Features
+// Feature components - All use hooks directly for optimal performance
 import TransactionList from '../components/features/transactions/TransactionList';
-import ActionsPanel from '../components/features/dashboard/ActionsPanel';
+import ActionsPanel from '../components/features/transactions/AddTransactions';
 import TransactionFilters from '../components/features/transactions/TransactionFilters';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import RecurringModal from '../components/features/transactions/RecurringModal';
-import CalendarWidget from '../components/common/CalendarWidget';
 
-// UI
-import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../components/ui';
+// UI components
+import { Card, Button, Badge, Modal, LoadingSpinner } from '../components/ui';
 
 /**
- * Transactions Page Component
- * Main page for managing all transactions with filtering, searching, and CRUD operations
+ * Animation configurations for smooth user experience
  */
-const Transactions = () => {
-  // ✅ ALL HOOKS MUST BE CALLED IN THE EXACT SAME ORDER EVERY TIME
-  // Context hooks first - always called
-  const { t, language } = useLanguage();
-  const { selectedDate, formatDate, setSelectedDate } = useDate();
-  const { formatAmount } = useCurrency();
-  const { 
-    createTransaction,
-    updateTransaction,
-    deleteTransaction
-  } = useTransactions();
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 
-  // ✅ State hooks - always called in same order
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15
+    }
+  }
+};
+
+/**
+ * Period configuration for transaction filtering
+ */
+const PERIOD_OPTIONS = [
+  { key: 'week', labelKey: 'common.last7Days' },
+  { key: 'month', labelKey: 'common.thisMonth' },
+  { key: '3months', labelKey: 'common.last90Days' },
+  { key: 'year', labelKey: 'common.thisYear' }
+];
+
+/**
+ * Transaction type filter configuration
+ */
+const TYPE_FILTERS = [
+  { key: 'all', icon: Activity, labelKey: 'transactions.all' },
+  { key: 'income', icon: ArrowUpRight, labelKey: 'transactions.income' },
+  { key: 'expense', icon: ArrowDownRight, labelKey: 'transactions.expense' }
+];
+
+const Transactions = () => {
+  // Context hooks for global state
+  const { t, language } = useLanguage();
+  const { selectedDate, setSelectedDate } = useDate();
+  const { formatAmount } = useCurrency();
+
+  // Local state management
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [view, setView] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showActionsPanel, setShowActionsPanel] = useState(false); // Changed from showForm
+  const [showActionsPanel, setShowActionsPanel] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  
+  // Advanced filter state
   const [filters, setFilters] = useState({
-    type: 'all', // Move type filter to filters object
+    type: null,
     categories: [],
     startDate: null,
     endDate: null,
@@ -78,165 +121,130 @@ const Transactions = () => {
     recurring: 'all'
   });
 
-  // ✅ Data hooks - always called in same order
-  const { 
-    data: dashboardData, 
-    isLoading: dashboardLoading, 
-    error: dashboardError 
-  } = useDashboard();
-
+  // Main data hooks - optimized with proper caching
   const {
-    periodTransactions,
-    loading,
+    transactions,
+    pagination,
+    summary,
+    isLoading,
+    isRefetching,
+    isCreating,
+    isUpdating,
+    isDeleting,
     error,
-    refreshTransactions,
-    getTransactionsByType,
-    searchTransactions,
-    totalCount,
-    period: currentPeriod
-  } = useTransactionsList({
-    period: selectedPeriod, // ✅ Added missing comma here
+    createTransaction,
+    updateTransaction,
+    deleteTransaction,
+    updateFilters,
+    setSearchTerm: setHookSearchTerm,
+    clearFilters: clearHookFilters,
+    refresh
+  } = useTransactions({
+    period: selectedPeriod,
     type: view !== 'all' ? view : null,
     searchTerm,
-    page: 1,
+    ...filters,
     limit: 100
   });
 
   const {
-    data: recurringTransactions = [],
-    isLoading: recurringLoading
-  } = useRecurringTransactionsList();
+    recurringTransactions,
+    isLoading: recurringLoading,
+    error: recurringError,
+    refresh: refreshRecurring
+  } = useRecurringTransactions();
 
-  // ✅ Computed values - always calculated
+  const {
+    results: searchResults,
+    isSearching
+  } = useTransactionSearch(searchTerm, { limit: 50 });
+
+  // Computed values for UI
   const isRTL = language === 'he';
+  const periods = PERIOD_OPTIONS.map(period => ({
+    ...period,
+    label: t(period.labelKey),
+    icon: Calendar
+  }));
 
-  // ✅ Add missing activeFilterCount calculation
+  // Memoized calculations for performance
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.type !== 'all') count++;
+    if (filters.type && filters.type !== 'all') count++;
     if (filters.categories?.length > 0) count++;
     if (filters.startDate || filters.endDate) count++;
     if (filters.minAmount !== null || filters.maxAmount !== null) count++;
     if (filters.recurring !== 'all') count++;
+    if (searchTerm) count++;
+    if (selectedPeriod !== 'month') count++;
     return count;
-  }, [filters]);
-
-  // ✅ Memoized values - always calculated in same order
-  const filteredTransactions = useMemo(() => {
-    if (!periodTransactions || !Array.isArray(periodTransactions)) {
-      console.warn('[Transactions] periodTransactions is not an array:', periodTransactions);
-      return [];
-    }
-
-    let filtered = [...periodTransactions];
-
-    // Type filter
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(tx => tx.transaction_type === filters.type);
-    }
-
-    // Search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(tx => 
-        tx.description?.toLowerCase().includes(search) ||
-        tx.category_name?.toLowerCase().includes(search)
-      );
-    }
-
-    // Category filter
-    if (filters.categories.length > 0) {
-      filtered = filtered.filter(tx => 
-        filters.categories.includes(tx.category_id)
-      );
-    }
-
-    // Date range filter
-    if (filters.startDate || filters.endDate) {
-      filtered = filtered.filter(tx => {
-        const txDate = new Date(tx.date);
-        const startDate = filters.startDate ? new Date(filters.startDate) : null;
-        const endDate = filters.endDate ? new Date(filters.endDate) : null;
-        
-        if (startDate && txDate < startDate) return false;
-        if (endDate && txDate > endDate) return false;
-        return true;
-      });
-    }
-
-    // Amount range filter
-    if (filters.minAmount !== null || filters.maxAmount !== null) {
-      filtered = filtered.filter(tx => {
-        const amount = Math.abs(parseFloat(tx.amount));
-        if (filters.minAmount !== null && amount < filters.minAmount) return false;
-        if (filters.maxAmount !== null && amount > filters.maxAmount) return false;
-        return true;
-      });
-    }
-
-    // Recurring filter
-    if (filters.recurring !== 'all') {
-      if (filters.recurring === 'recurring') {
-        filtered = filtered.filter(tx => tx.template_id !== null);
-      } else if (filters.recurring === 'oneTime') {
-        filtered = filtered.filter(tx => tx.template_id === null);
-      }
-    }
-
-    return filtered;
-  }, [periodTransactions, searchTerm, filters]);
+  }, [filters, searchTerm, selectedPeriod]);
 
   const balanceData = useMemo(() => {
-    if (!dashboardData?.balances) {
+    if (!summary) {
       return {
-        daily: { income: 0, expenses: 0, balance: 0 },
-        weekly: { income: 0, expenses: 0, balance: 0 },
-        monthly: { income: 0, expenses: 0, balance: 0 },
-        yearly: { income: 0, expenses: 0, balance: 0 }
+        income: 0,
+        expenses: 0,
+        balance: 0,
+        count: transactions?.length || 0
       };
     }
-    return dashboardData.balances;
-  }, [dashboardData]);
 
-  const totals = useMemo(() => {
-    const currentPeriodData = balanceData.monthly;
-    
     return {
-      income: currentPeriodData.income || 0,
-      expenses: currentPeriodData.expenses || 0,
-      balance: currentPeriodData.balance || 0,
-      count: dashboardData?.recentTransactions?.length || 0
+      income: summary.totalIncome || 0,
+      expenses: summary.totalExpenses || 0,
+      balance: (summary.totalIncome || 0) - (summary.totalExpenses || 0),
+      count: transactions?.length || 0
     };
-  }, [balanceData, dashboardData]);
+  }, [summary, transactions]);
 
-  // ✅ Add missing handler functions
-  const handleTypeChange = useCallback((type) => {
+  // Sync effects for filter coordination
+  useEffect(() => {
     setFilters(prev => ({
       ...prev,
-      type: type
+      type: view !== 'all' ? view : null
+    }));
+  }, [view]);
+
+  useEffect(() => {
+    setHookSearchTerm(searchTerm);
+  }, [searchTerm, setHookSearchTerm]);
+
+  // Event handlers with performance optimization
+  const handleTypeChange = useCallback((type) => {
+    setView(type);
+    setFilters(prev => ({
+      ...prev,
+      type: type !== 'all' ? type : null
     }));
   }, []);
 
   const handleFilterChange = useCallback((newFilters) => {
     setFilters(newFilters);
-  }, []);
+    updateFilters(newFilters);
+  }, [updateFilters]);
 
   const handleFilterReset = useCallback(() => {
-    setFilters({
-      type: 'all',
+    const resetFilters = {
+      type: null,
       categories: [],
       startDate: null,
       endDate: null,
       minAmount: null,
       maxAmount: null,
       recurring: 'all'
-    });
-  }, []);
+    };
+    setFilters(resetFilters);
+    setView('all');
+    setSearchTerm('');
+    setSelectedPeriod('month');
+    clearHookFilters();
+  }, [clearHookFilters]);
 
-  // ✅ Callback hooks - always called in same order
   const handleTransactionSuccess = useCallback(() => {
-    refreshTransactions();
-  }, [refreshTransactions]);
+    refresh();
+    refreshRecurring();
+  }, [refresh, refreshRecurring]);
 
   const handleEdit = useCallback((transaction) => {
     setSelectedTransaction(transaction);
@@ -249,7 +257,7 @@ const Transactions = () => {
 
   const handleFormClose = useCallback(() => {
     setSelectedTransaction(null);
-    setShowActionsPanel(false); // Updated
+    setShowActionsPanel(false);
   }, []);
 
   const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false) => {
@@ -258,57 +266,22 @@ const Transactions = () => {
       setTransactionToDelete(null);
       await handleTransactionSuccess();
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error('Delete operation failed:', error);
     }
   }, [deleteTransaction, handleTransactionSuccess]);
 
   const handleDateChange = useCallback((newDate) => {
-    console.log('[Transactions] 📅 Date changed to:', newDate);
     setSelectedDate(newDate);
-    setShowCalendar(false);
   }, [setSelectedDate]);
 
-  // ✅ Effect hooks - always called in same order
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Transactions] 🔍 Data Debug:', {
-        selectedDate: selectedDate,
-        periodTransactions: periodTransactions,
-        isArray: Array.isArray(periodTransactions),
-        length: periodTransactions?.length,
-        loading,
-        error,
-        totals
-      });
-    }
-  }, [periodTransactions, loading, error, totals, selectedDate]);
+  const handleClearAllFilters = useCallback(() => {
+    setSearchTerm('');
+    setSelectedPeriod('month');
+    handleFilterReset();
+  }, [handleFilterReset]);
 
-  // ✅ Add debug info to identify what's displayed by default
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.group('🔍 [TRANSACTIONS-DEBUG] Default Display Analysis');
-      console.log('📅 Selected Period:', selectedPeriod);
-      console.log('👁️ Current View:', view);
-      console.log('📊 Transactions Count:', periodTransactions?.length || 0);
-      console.log('🎯 Transaction Types:', {
-        income: periodTransactions?.filter(tx => tx.transaction_type === 'income').length || 0,
-        expense: periodTransactions?.filter(tx => tx.transaction_type === 'expense').length || 0
-      });
-      console.log('📋 Sample Transactions:', periodTransactions?.slice(0, 3));
-      console.groupEnd();
-    }
-  }, [selectedPeriod, view, periodTransactions]);
-
-  // Use selectedPeriod instead of period
-  const periods = [
-    { key: 'week', label: t('common.last7Days'), icon: Calendar },
-    { key: 'month', label: t('common.thisMonth'), icon: Calendar },
-    { key: '3months', label: t('common.last90Days'), icon: Calendar },
-    { key: 'year', label: t('common.thisYear'), icon: Calendar }
-  ];
-
-  // ✅ Early returns AFTER all hooks are called
-  if (loading || recurringLoading || dashboardLoading) {
+  // Loading and error states
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="large" text={t('common.loading')} />
@@ -316,12 +289,12 @@ const Transactions = () => {
     );
   }
 
-  if (error || dashboardError) {
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">{t('transactions.fetchError')}</p>
-          <Button onClick={refreshTransactions} variant="outline">
+          <Button onClick={refresh} variant="outline">
             {t('common.retry')}
           </Button>
         </div>
@@ -329,29 +302,8 @@ const Transactions = () => {
     );
   }
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15
-      }
-    }
-  };
+  // Safe access to recurring transactions with fallback
+  const safeRecurringTransactions = Array.isArray(recurringTransactions) ? recurringTransactions : [];
 
   return (
     <PageContainer>
@@ -362,10 +314,10 @@ const Transactions = () => {
         className="space-y-6"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* ENHANCED HEADER with better organization */}
+        {/* Header with enhanced design and balance display */}
         <motion.div variants={itemVariants}>
           <Card className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white border-0 shadow-2xl relative overflow-hidden">
-            {/* Enhanced Background Pattern */}
+            {/* Background decoration */}
             <div className="absolute inset-0">
               <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
               <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
@@ -374,9 +326,8 @@ const Transactions = () => {
             </div>
             
             <div className="relative z-10 p-6 lg:p-8">
-              {/* Top Section - Title and Action Button */}
+              {/* Title and action buttons */}
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
-                {/* Title Section */}
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
                     <Activity className="w-8 h-8" />
@@ -404,7 +355,6 @@ const Transactions = () => {
                   </div>
                 </div>
 
-                {/* Action Button */}
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
@@ -414,12 +364,14 @@ const Transactions = () => {
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         <Clock className="w-5 h-5" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                        {safeRecurringTransactions.length > 0 && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                        )}
                       </div>
                       <span className="hidden sm:inline">{t('transactions.recurringManagement')}</span>
                       <span className="sm:hidden">{t('transactions.manage')}</span>
                       <Badge variant="default" size="small" className="bg-white/20 text-white border-white/30">
-                        {recurringTransactions.length}
+                        {safeRecurringTransactions.length}
                       </Badge>
                     </div>
                   </Button>
@@ -435,13 +387,13 @@ const Transactions = () => {
                 </div>
               </div>
 
-              {/* Period Selector - Better positioned */}
+              {/* Period selector and stats */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2 text-white/70 text-sm">
-                  <span>{t('transactions.showing')} {filteredTransactions.length} {t('transactions.items')}</span>
-                  {periodTransactions?.length !== filteredTransactions.length && (
+                  <span>{t('transactions.showing')} {transactions?.length || 0} {t('transactions.items')}</span>
+                  {pagination?.total && pagination.total > (transactions?.length || 0) && (
                     <span className="text-amber-200">
-                      ({t('transactions.filtered')} {periodTransactions?.length})
+                      ({t('transactions.of')} {pagination.total} {t('transactions.total')})
                     </span>
                   )}
                 </div>
@@ -462,15 +414,68 @@ const Transactions = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Balance summary cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mt-6">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <ArrowUpRight className="w-5 h-5 text-green-300" />
+                    </div>
+                    <div>
+                      <p className="text-white/80 text-sm">{t('transactions.income')}</p>
+                      <p className="text-xl font-bold">{formatAmount(balanceData.income)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-500/20 rounded-lg">
+                      <ArrowDownRight className="w-5 h-5 text-red-300" />
+                    </div>
+                    <div>
+                      <p className="text-white/80 text-sm">{t('transactions.expense')}</p>
+                      <p className="text-xl font-bold">{formatAmount(balanceData.expenses)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      balanceData.balance >= 0 
+                        ? 'bg-emerald-500/20' 
+                        : 'bg-orange-500/20'
+                    }`}>
+                      <Activity className={`w-5 h-5 ${
+                        balanceData.balance >= 0 
+                          ? 'text-emerald-300' 
+                          : 'text-orange-300'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="text-white/80 text-sm">{t('transactions.balance')}</p>
+                      <p className={`text-xl font-bold ${
+                        balanceData.balance >= 0 
+                          ? 'text-emerald-300' 
+                          : 'text-orange-300'
+                      }`}>
+                        {formatAmount(Math.abs(balanceData.balance))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* ENHANCED CONTROL PANEL */}
+        {/* Search and filter controls */}
         <motion.div variants={itemVariants}>
           <Card className="p-4 lg:p-6 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900 border-0 shadow-lg">
             <div className="space-y-4 lg:space-y-6">
-              {/* Search Bar */}
+              {/* Search bar */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-gray-400" />
@@ -485,44 +490,38 @@ const Transactions = () => {
                 {searchTerm && (
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
                     <Badge variant="primary" size="small">
-                      {filteredTransactions.length}
+                      {transactions.length}
                     </Badge>
                   </div>
                 )}
               </div>
 
-              {/* Enhanced Filter Controls */}
+              {/* Filter controls */}
               <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
-                {/* Type Filter Pills */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {t('transactions.filters.type')}:
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {[
-                      { key: 'all', icon: Activity, label: t('transactions.all') },
-                      { key: 'income', icon: ArrowUpRight, label: t('transactions.income') },
-                      { key: 'expense', icon: ArrowDownRight, label: t('transactions.expense') }
-                    ].map(({ key, icon: Icon, label }) => (
+                    {TYPE_FILTERS.map(({ key, icon: Icon, labelKey }) => (
                       <Button
                         key={key}
-                        variant={filters.type === key ? 'primary' : 'outline'}
+                        variant={view === key ? 'primary' : 'outline'}
                         size="small"
                         onClick={() => handleTypeChange(key)}
                         className="rounded-full px-3 py-2 flex items-center gap-2 transition-all hover:scale-105 text-sm"
                       >
                         <Icon className="w-4 h-4" />
-                        <span className="hidden sm:inline">{label}</span>
+                        <span className="hidden sm:inline">{t(labelKey)}</span>
                         <Badge variant="default" size="small" className="ml-1 bg-white/20">
-                          {key === 'all' ? periodTransactions?.length || 0 : 
-                           periodTransactions?.filter(tx => tx.transaction_type === key).length || 0}
+                          {key === 'all' ? transactions?.length || 0 : 
+                           transactions?.filter(tx => tx.transaction_type === key).length || 0}
                         </Badge>
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                {/* Advanced Filters Toggle */}
                 <div className="flex items-center gap-2 ml-auto">
                   <Button
                     variant={showFilters ? 'primary' : 'outline'}
@@ -538,17 +537,13 @@ const Transactions = () => {
                         {activeFilterCount}
                       </Badge>
                     )}
-                    {showFilters ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
+                    {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </Button>
                   
                   <Button
                     variant="ghost"
                     size="small"
-                    onClick={refreshTransactions}
+                    onClick={refresh}
                     className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                     title={t('common.refresh')}
                   >
@@ -557,7 +552,7 @@ const Transactions = () => {
                 </div>
               </div>
 
-              {/* Active Filters Summary - Enhanced */}
+              {/* Active filters summary */}
               {(searchTerm || activeFilterCount > 0 || selectedPeriod !== 'month') && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
@@ -571,7 +566,6 @@ const Transactions = () => {
                   </span>
                   
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Period Badge */}
                     {selectedPeriod !== 'month' && (
                       <Badge variant="outline" size="small" className="bg-indigo-50 text-indigo-700 border-indigo-200">
                         📅 {periods.find(p => p.key === selectedPeriod)?.label}
@@ -615,17 +609,13 @@ const Transactions = () => {
                     )}
 
                     <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
-                      ✅ {filteredTransactions.length} {t('transactions.results')}
+                      ✅ {transactions.length} {t('transactions.results')}
                     </Badge>
                     
                     <Button
                       variant="ghost"
                       size="small"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setSelectedPeriod('month');
-                        handleFilterReset();
-                      }}
+                      onClick={handleClearAllFilters}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-2 py-1 text-xs"
                     >
                       <X className="w-3 h-3 mr-1" />
@@ -638,7 +628,7 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
-        {/* Advanced Filters Panel - Enhanced Integration */}
+        {/* Advanced filters panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -701,14 +691,14 @@ const Transactions = () => {
           )}
         </AnimatePresence>
 
-        {/* ENHANCED RESULTS SUMMARY */}
-        {filteredTransactions.length > 0 && (
+        {/* Results summary */}
+        {transactions && transactions.length > 0 && (
           <motion.div variants={itemVariants}>
             <Card className="p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('transactions.showing')} <span className="font-bold text-indigo-600">{filteredTransactions.length}</span> {t('transactions.of')} {periodTransactions?.length || 0} {t('transactions.items')}
+                    {t('transactions.showing')} <span className="font-bold text-indigo-600">{transactions.length}</span> {t('transactions.items')}
                   </span>
                   
                   {activeFilterCount > 0 && (
@@ -723,22 +713,21 @@ const Transactions = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {filteredTransactions.filter(tx => tx.transaction_type === 'income').length} {t('transactions.income')}
+                      {transactions.filter(tx => tx.transaction_type === 'income').length} {t('transactions.income')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {filteredTransactions.filter(tx => tx.transaction_type === 'expense').length} {t('transactions.expense')}
+                      {transactions.filter(tx => tx.transaction_type === 'expense').length} {t('transactions.expense')}
                     </span>
                   </div>
                   
-                  {/* Quick Stats */}
                   <div className="hidden lg:flex items-center gap-4 pl-4 border-l border-gray-200 dark:border-gray-700">
                     <div className="text-sm">
                       <span className="text-gray-500 dark:text-gray-400">{t('transactions.totalAmount')}:</span>
                       <span className="font-semibold ml-1 text-gray-900 dark:text-white">
-                        ₪{filteredTransactions.reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0).toLocaleString()}
+                        {formatAmount(transactions.reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0))}
                       </span>
                     </div>
                   </div>
@@ -748,12 +737,10 @@ const Transactions = () => {
           </motion.div>
         )}
 
-        {/* ENHANCED TRANSACTION LIST */}
+        {/* Transaction list */}
         <motion.div variants={itemVariants}>
           <Card className="p-0 overflow-hidden shadow-xl border-0">
             <TransactionList
-              transactions={filteredTransactions}
-              loading={loading}
               onEdit={handleEdit}
               onDelete={handleDelete}
               emptyMessage={
@@ -767,10 +754,9 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
-        {/* FLOATING ACTION BUTTON - Mobile Friendly */}
+        {/* Mobile floating action menu */}
         <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40 lg:hidden`}>
           <div className="flex flex-col items-end space-y-3">
-            {/* Floating Menu */}
             <AnimatePresence>
               {showFloatingMenu && (
                 <motion.div
@@ -812,7 +798,7 @@ const Transactions = () => {
                       size="small" 
                       className="justify-start"
                       onClick={() => {
-                        refreshTransactions();
+                        refresh();
                         setShowFloatingMenu(false);
                       }}
                     >
@@ -824,7 +810,6 @@ const Transactions = () => {
               )}
             </AnimatePresence>
             
-            {/* Main Floating Button */}
             <Button
               variant="primary"
               className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
@@ -841,7 +826,7 @@ const Transactions = () => {
           </div>
         </div>
 
-        {/* ACTIONS PANEL MODAL - no changes */}
+        {/* Modals */}
         <AnimatePresence>
           {showActionsPanel && (
             <Modal
@@ -858,27 +843,25 @@ const Transactions = () => {
                   type: selectedTransaction.transaction_type,
                   isRecurring: !!selectedTransaction.template_id
                 } : null}
+                onSuccess={handleTransactionSuccess}
               />
             </Modal>
           )}
         </AnimatePresence>
 
-        {/* Delete Confirmation Modal */}
         <DeleteTransaction
           transaction={transactionToDelete}
           isOpen={!!transactionToDelete}
           onClose={() => setTransactionToDelete(null)}
           onConfirm={handleDeleteConfirm}
-          loading={false}
+          loading={isDeleting}
         />
 
-        {/* Recurring Transactions Modal */}
         <AnimatePresence>
           {showRecurring && (
             <RecurringModal
               isOpen={showRecurring}
               onClose={() => setShowRecurring(false)}
-              transactions={recurringTransactions}
               onEdit={(transaction) => {
                 setSelectedTransaction(transaction);
                 setShowRecurring(false);
@@ -888,7 +871,7 @@ const Transactions = () => {
                 setTransactionToDelete(transaction);
                 setShowRecurring(false);
               }}
-              loading={recurringLoading}
+              onSuccess={handleTransactionSuccess}
             />
           )}
         </AnimatePresence>
@@ -897,5 +880,4 @@ const Transactions = () => {
   );
 };
 
-// ✅ ENSURE: Component is properly exported as default
 export default Transactions;

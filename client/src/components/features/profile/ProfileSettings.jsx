@@ -1,5 +1,5 @@
 // components/features/profile/ProfileSettings.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Globe,
@@ -33,6 +33,12 @@ const ProfileSettings = ({ user }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   
+  // ✅ ADD: Password confirmation for preferences
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingPreferenceChange, setPendingPreferenceChange] = useState(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  
   // Password change state
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -41,46 +47,150 @@ const ProfileSettings = ({ user }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
 
-  // Handle theme change
-  const handleThemeChange = async (theme) => {
-    setDarkMode(theme === 'dark');
-    
-    // Update user preferences in database
+  const [loading, setLoading] = useState(false);
+
+  // ✅ NEW: Handle preference change with password confirmation
+  const requestPreferenceChange = (type, value) => {
+    setPendingPreferenceChange({ type, value });
+    setShowPasswordModal(true);
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  // ✅ NEW: Confirm preference change with password
+  const confirmPreferenceChange = async () => {
+    if (!confirmPassword.trim()) {
+      setPasswordError(t('validation.passwordRequired'));
+      return;
+    }
+
+    if (!pendingPreferenceChange) return;
+
     try {
-      await updatePreferences({ theme_preference: theme });
+      setLoading(true);
+      setPasswordError('');
+
+      const { type, value } = pendingPreferenceChange;
+
+      // Apply change locally first for immediate feedback
+      if (type === 'theme') {
+        setDarkMode(value === 'dark');
+      } else if (type === 'language') {
+        setLanguage(value);
+      } else if (type === 'currency') {
+        setCurrency(value);
+      }
+
+      // Send to server with password
+      await updateProfile({
+        email: user.email,
+        username: user.username,
+        password: confirmPassword, // User's actual password
+        [`${type}_preference`]: value
+      });
+
+      // Success
+      setShowPasswordModal(false);
+      setPendingPreferenceChange(null);
+      setConfirmPassword('');
+      
+      toast.success(t(`profile.${type}Changed`));
+    } catch (error) {
+      console.error(`Failed to update ${type} preference:`, error);
+      
+      // Revert local changes on error
+      if (type === 'theme') {
+        setDarkMode(darkMode);
+      } else if (type === 'language') {
+        setLanguage(language);
+      } else if (type === 'currency') {
+        setCurrency(currency);
+      }
+
+      // Show specific error
+      if (error.response?.data?.error?.message?.includes('incorrect') || 
+          error.response?.data?.error?.message?.includes('Password')) {
+        setPasswordError(t('profile.incorrectPassword'));
+      } else {
+        toast.error(t(`profile.${type}ChangeError`));
+        setShowPasswordModal(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ NEW: Cancel preference change
+  const cancelPreferenceChange = () => {
+    setShowPasswordModal(false);
+    setPendingPreferenceChange(null);
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  // Handle theme change - קוד פשוט בלי סיסמה
+  const handleThemeChange = async (newTheme) => {
+    try {
+      setLoading(true);
+      setDarkMode(newTheme === 'dark');
+      
+      // ✅ רק העדפת נושא, בלי סיסמה
+      await updateProfile({
+        theme_preference: newTheme
+      });
+      
+      console.log('Theme updated successfully:', newTheme);
       toast.success(t('profile.themeChanged'));
     } catch (error) {
       console.error('Failed to update theme preference:', error);
+      setDarkMode(darkMode);
+      toast.error(t('profile.themeChangeError'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle language change
-  const handleLanguageChange = async (lang) => {
-    if (!['en', 'he'].includes(lang)) return;
-    
-    setLanguage(lang);
-    
-    // Update user preferences in database
+  // Handle language change - קוד פשוט בלי סיסמה  
+  const handleLanguageChange = async (newLanguage) => {
     try {
-      await updatePreferences({ language_preference: lang });
+      setLoading(true);
+      setLanguage(newLanguage);
+      
+      // ✅ רק העדפת שפה, בלי סיסמה
+      await updateProfile({
+        language_preference: newLanguage
+      });
+      
+      console.log('Language updated successfully:', newLanguage);
       toast.success(t('profile.languageChanged'));
     } catch (error) {
       console.error('Failed to update language preference:', error);
+      setLanguage(language);
+      toast.error(t('profile.languageChangeError'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle currency change
-  const handleCurrencyChange = async (curr) => {
-    if (!['ILS', 'USD', 'EUR', 'GBP'].includes(curr)) return;
-    
-    setCurrency(curr);
-    
-    // Update user preferences in database
+  // Handle currency change - קוד פשוט בלי סיסמה
+  const handleCurrencyChange = async (newCurrency) => {
     try {
-      await updatePreferences({ currency_preference: curr });
+      setLoading(true);
+      setCurrency(newCurrency);
+      
+      // ✅ רק העדפת מטבע, בלי סיסמה
+      await updateProfile({
+        currency_preference: newCurrency
+      });
+      
+      console.log('Currency updated successfully:', newCurrency);
       toast.success(t('profile.currencyChanged'));
     } catch (error) {
       console.error('Failed to update currency preference:', error);
+      setCurrency(currency);
+      toast.error(t('profile.currencyChangeError'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -135,7 +245,7 @@ const ProfileSettings = ({ user }) => {
     { id: 'security', label: t('profile.security'), icon: Shield }
   ];
 
-  const isLoading = isUpdatingProfile || isUpdatingPreferences;
+  const isLoading = isUpdatingProfile || isUpdatingPreferences || loading;
 
   return (
     <div className="space-y-6">
@@ -369,6 +479,53 @@ const ProfileSettings = ({ user }) => {
             </Alert>
           </div>
         </Card>
+      )}
+
+      {/* ✅ ADD: Password Confirmation Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('profile.confirmPassword')}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('profile.confirmPasswordDesc')}
+            </p>
+            
+            <Input
+              type="password"
+              label={t('profile.currentPassword')}
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setPasswordError('');
+              }}
+              error={passwordError}
+              icon={Lock}
+              autoFocus
+            />
+            
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={cancelPreferenceChange}
+                disabled={loading}
+                className="flex-1"
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmPreferenceChange}
+                loading={loading}
+                disabled={loading || !confirmPassword.trim()}
+                className="flex-1"
+              >
+                {t('common.confirm')}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

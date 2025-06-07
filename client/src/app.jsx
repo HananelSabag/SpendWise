@@ -18,6 +18,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
+import { ThemeProvider } from './context/ThemeContext'; // ✅ ADD THIS IMPORT
 
 // Lazy-loaded pages
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -151,19 +152,21 @@ function App() {
     >
       <AuthProvider>
         <AccessibilityProvider initialDarkMode={false}>
-          <LanguageProvider>
-            <DateProvider>
-              <CurrencyProvider>
-                <Suspense fallback={
-                  <div className="h-screen w-screen flex items-center justify-center">
-                    <LoadingSpinner size="large" />
-                  </div>
-                }>
-                  <AppContent />
-                </Suspense>
-              </CurrencyProvider>
-            </DateProvider>
-          </LanguageProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <DateProvider>
+                <CurrencyProvider>
+                  <Suspense fallback={
+                    <div className="h-screen w-screen flex items-center justify-center">
+                      <LoadingSpinner size="large" />
+                    </div>
+                  }>
+                    <AppContent />
+                  </Suspense>
+                </CurrencyProvider>
+              </DateProvider>
+            </LanguageProvider>
+          </ThemeProvider>
         </AccessibilityProvider>
       </AuthProvider>
     </Router>

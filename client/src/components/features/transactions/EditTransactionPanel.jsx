@@ -37,11 +37,9 @@ import {
   Gamepad2, GraduationCap, Briefcase
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useTransactions } from '../../../context/TransactionContext';
-import { useCategories } from '../../../hooks/useApi';
-import { Card, Button, Badge } from '../../ui';
-import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
-import CalendarWidget from '../../common/CalendarWidget';
+// ✅ ADD: Import the necessary hooks
+import { useTransactions } from '../../../hooks/useTransactions';
+import { useCategories } from '../../../hooks/useCategory';
 
 const EditTransactionPanel = ({ 
   transaction, 
@@ -50,15 +48,16 @@ const EditTransactionPanel = ({
   onSuccess 
 }) => {
   const { t, language } = useLanguage();
-  const { updateTransaction, createTransaction } = useTransactions();
-  const { data: allCategories = [] } = useCategories();
+  // ✅ ADD: Get update function from hook
+  const { updateTransaction, isUpdating } = useTransactions();
+  const { categories: allCategories = [] } = useCategories();
   const isRTL = language === 'he';
   
   // ✅ ADD: Category tab state
   const [categoryTab, setCategoryTab] = useState('general');
   
   // States
-  const [loading, setLoading] = useState(false);
+  // ✅ REMOVE: Local loading state - use hook state instead
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -287,62 +286,34 @@ const EditTransactionPanel = ({
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const { success: isValid, errors: validationErrors } = validate(
-      transactionSchemas.create,
-      {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        date: new Date(formData.date),
-        category_id: formData.category_id,
-        is_recurring: formData.is_recurring,
-        recurring_interval: formData.recurring_interval,
-        recurring_end_date: formData.recurring_end_date ? new Date(formData.recurring_end_date) : null
-      }
-    );
-
-    if (!isValid) {
-      setError(Object.values(validationErrors)[0] || t('actions.errors.formErrors'));
-      return;
-    }
-
+    
     try {
-      setLoading(true);
       setError('');
+      
+      // ✅ FIX: Use hook's updateTransaction function directly
+      const transactionType = transaction.transaction_type || transaction.type;
       
       const submitData = {
         ...formData,
         amount: parseFloat(formData.amount),
-        day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
-          ? formData.day_of_week 
-          : null
+        // Include update future flag for recurring transactions
+        updateFuture: !isEditingSingleOccurrence && transaction.is_recurring
       };
 
-      console.log('🔍 [EDIT-DEBUG] Updating transaction:', {
-        id: transaction.id,
-        type: transaction.transaction_type,
-        editingSingle: isEditingSingleOccurrence,
-        data: submitData
-      });
-      
-      if (isEditingSingleOccurrence && transaction.template_id) {
-        // Create a new single transaction based on the template
-        await createTransaction(transaction.transaction_type, submitData);
-      } else {
-        // Update the existing transaction or template
-        await updateTransaction(transaction.transaction_type, transaction.id, submitData);
-      }
+      await updateTransaction(transactionType, transaction.id, submitData);
       
       setSuccess(true);
+      
+      // ✅ ADD: Close panel on success and call success callback
       setTimeout(() => {
         onSuccess?.();
         onClose?.();
-      }, 2000);
+      }, 1500);
       
-    } catch (err) {
-      setError(err.message || t('actions.errors.updatingTransaction'));
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Update failed:', error);
+      setError(error.message || t('transactions.updateFailed'));
+      // Error handling is done by the hook via toast
     }
   };
 
@@ -893,7 +864,7 @@ const EditTransactionPanel = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={loading}
+              disabled={isUpdating}
               size="small"
               className="px-4"
             >
@@ -902,8 +873,8 @@ const EditTransactionPanel = ({
             <Button
               type="submit"
               variant="primary"
-              loading={loading}
-              disabled={loading || !formData.amount || !formData.description}
+              loading={isUpdating}
+              disabled={isUpdating || !formData.amount || !formData.description}
               className={`flex-1 shadow-md hover:shadow-lg py-2.5 ${
                 isEditingSingleOccurrence 
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
@@ -911,7 +882,7 @@ const EditTransactionPanel = ({
               }`}
               onClick={handleSubmit}
             >
-              {loading ? (
+              {isUpdating ? (
                 <div className="flex items-center gap-2">
                   <motion.div
                     animate={{ rotate: 360 }}

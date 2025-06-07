@@ -199,6 +199,7 @@ const getProfile = asyncHandler(async (req, res) => {
 const updateProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { 
+    email,
     username, 
     currentPassword, 
     newPassword,
@@ -207,7 +208,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     currency_preference
   } = req.body;
 
-  // Validate password change if requested
+  // ✅ רק validation לשינוי סיסמה
   if (newPassword && !currentPassword) {
     throw { 
       ...errorCodes.VALIDATION_ERROR, 
@@ -222,7 +223,9 @@ const updateProfile = asyncHandler(async (req, res) => {
     };
   }
 
+  // ✅ לא דורש email/username להעדפות
   const updatedUser = await User.updateProfile(userId, {
+    email,
     username,
     currentPassword,
     newPassword,

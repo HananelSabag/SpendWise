@@ -8,33 +8,17 @@ import {
   Check,
   Clock,
   Repeat,
-  Tag,
   DollarSign,
   FileText,
-  TrendingUp,
-  Home,
-  ShoppingCart,
-  Car,
-  Zap,
-  Tv,
   X,
   Plus,
   ChevronDown,
-  // ✅ ADD: Missing icon imports
-  Coffee,
-  Utensils,
-  ShoppingBag,
-  Heart,
-  Book,
-  Plane,
-  Dumbbell,
-  Phone,
-  Fuel,
-  Pill,
-  Crown
+  Crown,
+  Zap
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-// ✅ NEW: Updated imports - Use new hooks instead of old context
+// ✅ UPDATED: Use centralized icon system
+import { getIconComponent, getGradientForCategory } from '../../../config/categoryIcons';
 import { useTransactions } from '../../../hooks/useTransactions';
 import { useCategories } from '../../../hooks/useCategory';
 import { useDate } from '../../../context/DateContext';
@@ -45,13 +29,9 @@ import { dateHelpers } from '../../../utils/helpers';
 
 const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = null }) => {
   const { t, language } = useLanguage();
-  // ✅ NEW: Use new hooks with proper destructuring
   const { createTransaction, isCreating } = useTransactions();
   const { categories: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const { selectedDate } = useDate();
-  
-  // ✅ CORRECT: This component doesn't need dashboard data
-  // It only creates transactions, so no useDashboard() call needed
   
   const isRTL = language === 'he';
   
@@ -63,7 +43,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
   const [success, setSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(initialActionType ? 1 : 0);
   
-  // ✅ ADD: Category tab state
   const [categoryTab, setCategoryTab] = useState('general');
   
   const dateButtonRef = useRef(null);
@@ -83,97 +62,15 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
     })(),
   });
 
-  // Helper functions for category display - Enhanced with more icons
-  const getIconForCategory = (name) => {
-    const iconMap = {
-      'General': Tag,
-      'Salary': DollarSign,
-      'Freelance': FileText,
-      'Investments': TrendingUp,
-      'Rent': Home,
-      'Groceries': ShoppingCart,
-      'Transportation': Car,
-      'Utilities': Zap,
-      'Entertainment': Tv,
-      // ✅ FIX: Use available lucide-react icons
-      'Coffee': Coffee,
-      'Food': Utensils,
-      'Shopping': ShoppingBag,
-      'Health': Heart,
-      'Education': Book,
-      'Travel': Plane,
-      'Fitness': Dumbbell,
-      'Bills': Phone,
-      'Gas': Fuel,
-      'Medical': Pill
-    };
-    return iconMap[name] || Tag;
-  };
-
-  // ✅ ENHANCED: Better color mapping for all categories
-  const getColorForCategory = (name) => {
-    const colorMap = {
-      'General': 'slate',
-      'Salary': 'emerald',
-      'Freelance': 'blue',
-      'Investments': 'purple',
-      'Rent': 'red',
-      'Groceries': 'orange',
-      'Transportation': 'yellow',
-      'Utilities': 'indigo',
-      'Entertainment': 'pink',
-      // User category colors
-      'Coffee': 'amber',
-      'Food': 'orange',
-      'Shopping': 'cyan',
-      'Health': 'rose',
-      'Education': 'violet',
-      'Travel': 'sky',
-      'Fitness': 'lime',
-      'Bills': 'slate',
-      'Gas': 'yellow',
-      'Medical': 'red'
-    };
-    return colorMap[name] || 'gray';
-  };
-
-  const getBgForCategory = (name) => {
-    const bgMap = {
-      'General': 'bg-slate-100 dark:bg-slate-800',
-      'Salary': 'bg-emerald-100 dark:bg-emerald-800',
-      'Freelance': 'bg-blue-100 dark:bg-blue-800',
-      'Investments': 'bg-purple-100 dark:bg-purple-800',
-      'Rent': 'bg-red-100 dark:bg-red-800',
-      'Groceries': 'bg-orange-100 dark:bg-orange-800',
-      'Transportation': 'bg-yellow-100 dark:bg-yellow-800',
-      'Utilities': 'bg-indigo-100 dark:bg-indigo-800',
-      'Entertainment': 'bg-pink-100 dark:bg-pink-800',
-      // User category backgrounds
-      'Coffee': 'bg-amber-100 dark:bg-amber-800',
-      'Food': 'bg-orange-100 dark:bg-orange-800',
-      'Shopping': 'bg-cyan-100 dark:bg-cyan-800',
-      'Health': 'bg-rose-100 dark:bg-rose-800',
-      'Education': 'bg-violet-100 dark:bg-violet-800',
-      'Travel': 'bg-sky-100 dark:bg-sky-800',
-      'Fitness': 'bg-lime-100 dark:bg-lime-800',
-      'Bills': 'bg-slate-100 dark:bg-slate-800',
-      'Gas': 'bg-yellow-100 dark:bg-yellow-800',
-      'Medical': 'bg-red-100 dark:bg-red-800'
-    };
-    return bgMap[name] || 'bg-gray-100 dark:bg-gray-800';
-  };
-
-  // ✅ NOW getCategoriesForType can safely use the helper functions
-  // ✅ ENHANCED: Better category organization with tabs
+  // ✅ UPDATED: Process categories using centralized icon system
   const getCategoriesForType = (type) => {
     const categories = allCategories
       .filter(cat => cat.is_active !== false)
       .map(cat => ({
         id: cat.id,
         name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
-        icon: getIconForCategory(cat.name),
-        color: getColorForCategory(cat.name),
-        bg: getBgForCategory(cat.name),
+        // ✅ Use centralized icon component
+        iconComponent: getIconComponent(cat.icon || 'tag'),
         isDefault: cat.is_default,
         type: cat.type || 'expense'
       }))
@@ -283,7 +180,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
     }
 
     try {
-      // ✅ NEW: Use isCreating from hook instead of local loading state
       setError('');
       
       const submitData = {
@@ -662,7 +558,7 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                       </div>
                     ) : (
                       <>
-                        {/* ✅ NEW: Category Tabs */}
+                        {/* Category Tabs */}
                         <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                           <button
                             type="button"
@@ -688,13 +584,13 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                             }`}
                           >
                             <div className="flex items-center justify-center gap-2">
-                              <Tag className="w-4 h-4" />
+                              {React.createElement(getIconComponent('tag'), { className: 'w-4 h-4' })}
                               <span>{t('categories.userCategoriesDesc')} ({categorizedCategories.customized.length})</span>
                             </div>
                           </button>
                         </div>
 
-                        {/* ✅ ENHANCED: Category Grid - Smaller, More Compact */}
+                        {/* ✅ UPDATED: Category Grid - Uses centralized icon system */}
                         {currentTabCategories.length === 0 ? (
                           <div className="text-center py-8">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -731,7 +627,8 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                         ) : (
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                             {currentTabCategories.map((cat) => {
-                              const IconComponent = cat.icon;
+                              // ✅ UPDATED: Use centralized icon component
+                              const IconComponent = cat.iconComponent;
                               const isSelected = formData.category_id === cat.id;
                               
                               return (
@@ -748,7 +645,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                                   whileTap={{ scale: 0.98 }}
                                   title={cat.name}
                                 >
-                                  {/* ✅ Larger icon container */}
                                   <div className={`p-3 rounded-xl transition-colors ${
                                     isSelected 
                                       ? 'bg-indigo-100 dark:bg-indigo-800' 
@@ -761,7 +657,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                                     }`} />
                                   </div>
                                   
-                                  {/* ✅ Readable text size */}
                                   <span className={`text-sm font-medium leading-tight text-center w-full transition-colors ${
                                     isSelected 
                                       ? 'text-indigo-700 dark:text-indigo-300' 
@@ -770,7 +665,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                                     {cat.name}
                                   </span>
                                   
-                                  {/* ✅ Proportional selection indicator */}
                                   {isSelected && (
                                     <motion.div
                                       initial={{ scale: 0 }}
@@ -786,7 +680,7 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                           </div>
                         )}
 
-                        {/* ✅ Smaller footer */}
+                        {/* Smaller footer */}
                         <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-3 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
@@ -794,7 +688,7 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                               {categorizedCategories.general.length} General
                             </span>
                             <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
+                              {React.createElement(getIconComponent('tag'), { className: 'w-3 h-3' })}
                               {categorizedCategories.customized.length} Customized
                             </span>
                           </div>
@@ -841,7 +735,6 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                         <ChevronDown className={`w-3 h-3 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
                       </Button>
                       
-                      {/* ✅ FIX: Calendar with proper triggerRef */}
                       {showCalendar && (
                         <CalendarWidget
                           triggerRef={dateButtonRef}
@@ -902,10 +795,9 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
                             type="date"
                             value={formData.recurring_end_date || ''}
                             onChange={(e) => {
-                              // ✅ FIX: Ensure date input uses local timezone
                               const inputDate = e.target.value;
                               if (inputDate) {
-                                const date = new Date(inputDate + 'T12:00:00'); // Add noon to prevent timezone issues
+                                const date = new Date(inputDate + 'T12:00:00');
                                 const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                                 setFormData(prev => ({ ...prev, recurring_end_date: localDateStr }));
                               } else {
@@ -1054,5 +946,4 @@ const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = n
   );
 };
 
-// ✅ NEW: Export with new name
 export default AddTransactions;

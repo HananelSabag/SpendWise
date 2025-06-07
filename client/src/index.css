@@ -242,6 +242,22 @@
   .alert-error {
     @apply bg-error-light/10 border-error text-error-dark dark:text-error-light;
   }
+
+  /* Add mobile touch improvements */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Mobile scrolling improvements */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Mobile-friendly focus states */
+  .mobile-focus:focus {
+    @apply ring-2 ring-primary-500 ring-offset-2 outline-none;
+  }
 }
 
 /* Utility classes */
@@ -491,4 +507,12 @@
 
 .high-contrast.dark *:focus {
   outline: 3px solid #fff !important;
+}
+
+/* Mobile viewport fixes */
+@media screen and (max-width: 768px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
 }

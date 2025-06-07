@@ -215,9 +215,13 @@ export const useAuth = () => {
     }
   );
   
-  // Update preferences mutation
+  // Update preferences mutation - fix data structure
   const updatePreferencesMutation = useApiMutation(
-    (preferences) => authAPI.updatePreferences(preferences),
+    (data) => {
+      // ✅ FIX: Send data in correct format expected by server
+      console.log('Sending preferences data:', data);
+      return authAPI.updatePreferences(data.preferences);
+    },
     {
       mutationKey: mutationKeys.updatePreferences,
       invalidateKeys: [queryKeys.profile],
@@ -413,6 +417,7 @@ export const useAuth = () => {
   }, [updateProfileMutation]);
   
   const updatePreferences = useCallback(async (preferences) => {
+    // ✅ FIX: Wrap preferences correctly for server
     return updatePreferencesMutation.mutateAsync({ preferences });
   }, [updatePreferencesMutation]);
   

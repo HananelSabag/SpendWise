@@ -262,7 +262,7 @@ export const useTransactionSearch = (searchTerm, options = {}) => {
     () => transactionAPI.search(searchTerm, limit),
     {
       config: 'dynamic',
-      enabled: isAuthenticated && searchTerm && searchTerm.length >= 2,
+      enabled: Boolean(isAuthenticated && searchTerm && searchTerm.length >= 2),
       staleTime: 5 * 60 * 1000
     }
   );
@@ -285,7 +285,7 @@ export const useRecurringTransactions = (type = null) => {
     () => transactionAPI.getRecurring(type),
     {
       config: 'user',
-      enabled: isAuthenticated,
+      enabled: Boolean(isAuthenticated),
       staleTime: 10 * 60 * 1000, // 10 minutes
       cacheTime: 30 * 60 * 1000 // 30 minutes
     }
@@ -305,16 +305,51 @@ export const useRecurringTransactions = (type = null) => {
   );
   
   const processedData = useMemo(() => {
-    if (!recurringQuery.data?.data) return [];
+    // Enhanced data validation with multiple fallback paths
+    let recurringData = null;
     
-    return recurringQuery.data.data.map(template => ({
-      ...template,
-      monthlyImpact: calculateMonthlyImpact(template),
-      isActive: template.is_active && (!template.end_date || new Date(template.end_date) > new Date())
-    }));
+    if (recurringQuery.data) {
+      // Try different possible data structures from API
+      if (Array.isArray(recurringQuery.data)) {
+        recurringData = recurringQuery.data;
+      } else if (recurringQuery.data.data && Array.isArray(recurringQuery.data.data)) {
+        recurringData = recurringQuery.data.data;
+      } else if (recurringQuery.data.templates && Array.isArray(recurringQuery.data.templates)) {
+        recurringData = recurringQuery.data.templates;
+      } else if (recurringQuery.data.recurring && Array.isArray(recurringQuery.data.recurring)) {
+        recurringData = recurringQuery.data.recurring;
+      } else {
+        console.warn('[RECURRING] Unexpected data structure:', recurringQuery.data);
+        recurringData = [];
+      }
+    }
+    
+    if (!Array.isArray(recurringData)) {
+      console.warn('[RECURRING] Recurring data is not an array:', typeof recurringData, recurringData);
+      return [];
+    }
+    
+    return recurringData.map(template => {
+      // Validate template structure
+      if (!template || typeof template !== 'object') {
+        console.warn('[RECURRING] Invalid template:', template);
+        return null;
+      }
+      
+      return {
+        ...template,
+        monthlyImpact: calculateMonthlyImpact(template),
+        isActive: template.is_active && (!template.end_date || new Date(template.end_date) > new Date())
+      };
+    }).filter(Boolean); // Remove null entries
   }, [recurringQuery.data]);
   
   const calculateMonthlyImpact = (template) => {
+    // Enhanced validation for template data
+    if (!template || typeof template.amount === 'undefined') {
+      return 0;
+    }
+    
     const amount = parseFloat(template.amount) || 0;
     
     switch (template.interval_type) {
@@ -324,6 +359,8 @@ export const useRecurringTransactions = (type = null) => {
         return amount * 4.35; // Average weeks per month
       case 'monthly':
         return amount;
+      case 'yearly':
+        return amount / 12;
       default:
         return amount;
     }

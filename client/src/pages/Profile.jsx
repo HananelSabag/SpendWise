@@ -31,8 +31,6 @@ import { cn, dateHelpers } from '../utils/helpers';
 
 // Layout
 import PageContainer from '../components/layout/PageContainer';
-import Header from '../components/layout/Header';
-import Footer from '../components/layout/Footer';
 
 // Features
 import ProfileInfo from '../components/features/profile/ProfileInfo';
@@ -209,335 +207,325 @@ const Profile = () => {
 
   if (dashboardLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
+      <PageContainer>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner size="large" text={t('common.loading')} />
         </div>
-        <Footer />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <Header />
-      
-      <main className="flex-1">
-        <PageContainer>
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-6"
-            dir={isRTL ? 'rtl' : 'ltr'}
+    <PageContainer className="bg-gray-50 dark:bg-gray-900">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-6"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t('nav.profile')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {t('profile.subtitle')}
+            </p>
+          </div>
+          
+          {/* Export button */}
+          <Button
+            variant="outline"
+            onClick={() => setShowExportModal(true)}
+            icon={Download}
+            disabled={isExporting}
           >
-            {/* Header */}
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {t('nav.profile')}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {t('profile.subtitle')}
-                </p>
-              </div>
-              
-              {/* Export button */}
-              <Button
-                variant="outline"
-                onClick={() => setShowExportModal(true)}
-                icon={Download}
-                disabled={isExporting}
-              >
-                {isExporting ? t('common.exporting') : t('profile.exportData')}
-              </Button>
-            </motion.div>
+            {isExporting ? t('common.exporting') : t('profile.exportData')}
+          </Button>
+        </motion.div>
 
-            {/* User Card */}
-            <motion.div variants={itemVariants}>
-              <Card className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-purple-500/10"></div>
+        {/* User Card */}
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-purple-500/10"></div>
+            
+            <div className="relative p-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                <Avatar
+                  size="xl"
+                  name={user?.username}
+                  src={user?.preferences?.profilePicture}
+                  className="ring-4 ring-white dark:ring-gray-800 shadow-xl"
+                />
                 
-                <div className="relative p-6">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                    <Avatar
-                      size="xl"
-                      name={user?.username}
-                      src={user?.preferences?.profilePicture}
-                      className="ring-4 ring-white dark:ring-gray-800 shadow-xl"
-                    />
-                    
-                    <div className="flex-1 text-center sm:text-left">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {user?.username}
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {user?.email}
-                      </p>
-                      
-                      <div className="flex flex-wrap gap-3 mt-4 justify-center sm:justify-start">
-                        <Badge variant="success">
-                          <Award className="w-3 h-3 mr-1" />
-                          {t('profile.verified')}
-                        </Badge>
-                        
-                        {memberDuration && (
-                          <Badge variant="primary">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {memberDuration}
-                          </Badge>
-                        )}
-                        
-                        <Badge variant="secondary">
-                          <Activity className="w-3 h-3 mr-1" />
-                          {t('profile.active')}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <button
-                      onClick={handleLogout}
-                      className="p-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title={t('auth.logout')}
-                    >
-                      <LogOut className="w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    {stats.map((stat, index) => (
-                      <div key={index} className="text-center">
-                        <div className={cn(
-                          'w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-2',
-                          stat.bgColor
-                        )}>
-                          <stat.icon className={cn('w-6 h-6', stat.color)} />
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {stat.label}
-                        </p>
-                        <p className={cn('text-lg font-bold mt-1', stat.color)}>
-                          {stat.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* Main Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Sidebar */}
-              <motion.div variants={itemVariants} className="lg:col-span-1">
-                <Card className="p-4">
-                  <nav className="space-y-1">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
-                          activeTab === tab.id
-                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        )}
-                      >
-                        <tab.icon className={cn('w-5 h-5', tab.color)} />
-                        <span className="font-medium">{tab.label}</span>
-                        <ChevronRight className={cn(
-                          'w-4 h-4 ml-auto',
-                          isRTL && 'rotate-180'
-                        )} />
-                      </button>
-                    ))}
-                  </nav>
-                </Card>
-              </motion.div>
-
-              {/* Content Area */}
-              <motion.div variants={itemVariants} className="lg:col-span-3">
-                <AnimatePresence mode="wait">
-                  {activeTab === 'info' && (
-                    <motion.div
-                      key="info"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                    >
-                      <ProfileInfo user={user} />
-                    </motion.div>
-                  )}
-                  
-                  {activeTab === 'settings' && (
-                    <motion.div
-                      key="settings"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                    >
-                      <ProfileSettings user={user} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Export Modal */}
-          <Modal
-            isOpen={showExportModal}
-            onClose={() => setShowExportModal(false)}
-            title={t('profile.exportData')}
-            size="small"
-          >
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('export.selectFormat')}
-              </p>
-              
-              <div className="space-y-2">
-                {/* CSV Export */}
-                <button
-                  onClick={() => handleExport('csv')}
-                  disabled={isExporting || !isFormatAvailable('csv')}
-                  className={cn(
-                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    exportProgress.format === 'CSV' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  )}
-                >
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">CSV</p>
-                    <p className="text-xs text-gray-500">{t('export.csvDescription')}</p>
-                  </div>
-                  {exportProgress.format === 'CSV' && (
-                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary-500 transition-all duration-300"
-                        style={{ width: `${exportProgress.progress}%` }}
-                      />
-                    </div>
-                  )}
-                </button>
-                
-                {/* JSON Export */}
-                <button
-                  onClick={() => handleExport('json')}
-                  disabled={isExporting || !isFormatAvailable('json')}
-                  className={cn(
-                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    exportProgress.format === 'JSON' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  )}
-                >
-                  <FileJson className="w-5 h-5 text-blue-600" />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">JSON</p>
-                    <p className="text-xs text-gray-500">{t('export.jsonDescription')}</p>
-                  </div>
-                  {exportProgress.format === 'JSON' && (
-                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary-500 transition-all duration-300"
-                        style={{ width: `${exportProgress.progress}%` }}
-                      />
-                    </div>
-                  )}
-                </button>
-                
-                {/* PDF Export */}
-                <button
-                  onClick={() => handleExport('pdf')}
-                  disabled={isExporting || !isFormatAvailable('pdf')}
-                  className={cn(
-                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    exportProgress.format === 'PDF' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  )}
-                >
-                  <FilePlus className="w-5 h-5 text-red-600" />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">PDF</p>
-                    <p className="text-xs text-gray-500">
-                      {isFormatAvailable('pdf') ? t('export.pdfDescription') : t('common.comingSoon')}
-                    </p>
-                  </div>
-                  {exportProgress.format === 'PDF' && (
-                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary-500 transition-all duration-300"
-                        style={{ width: `${exportProgress.progress}%` }}
-                      />
-                    </div>
-                  )}
-                </button>
-              </div>
-              
-              {exportOptions.privacyNote && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                  {exportOptions.privacyNote}
-                </p>
-              )}
-            </div>
-          </Modal>
-
-          {/* Logout Confirmation Modal */}
-          <AnimatePresence>
-            {showLogoutConfirm && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-                onClick={() => setShowLogoutConfirm(false)}
-              >
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {t('profile.logoutConfirm')}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    {t('profile.logoutConfirmDesc')}
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {user?.username}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {user?.email}
                   </p>
                   
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      fullWidth
-                      onClick={() => setShowLogoutConfirm(false)}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      fullWidth
-                      onClick={confirmLogout}
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t('auth.logout')}
-                    </Button>
+                  <div className="flex flex-wrap gap-3 mt-4 justify-center sm:justify-start">
+                    <Badge variant="success">
+                      <Award className="w-3 h-3 mr-1" />
+                      {t('profile.verified')}
+                    </Badge>
+                    
+                    {memberDuration && (
+                      <Badge variant="primary">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {memberDuration}
+                      </Badge>
+                    )}
+                    
+                    <Badge variant="secondary">
+                      <Activity className="w-3 h-3 mr-1" />
+                      {t('profile.active')}
+                    </Badge>
                   </div>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="p-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title={t('auth.logout')}
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                {stats.map((stat, index) => (
+                  <div key={index} className="text-center">
+                    <div className={cn(
+                      'w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-2',
+                      stat.bgColor
+                    )}>
+                      <stat.icon className={cn('w-6 h-6', stat.color)} />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {stat.label}
+                    </p>
+                    <p className={cn('text-lg font-bold mt-1', stat.color)}>
+                      {stat.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <motion.div variants={itemVariants} className="lg:col-span-1">
+            <Card className="p-4">
+              <nav className="space-y-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
+                      activeTab === tab.id
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    )}
+                  >
+                    <tab.icon className={cn('w-5 h-5', tab.color)} />
+                    <span className="font-medium">{tab.label}</span>
+                    <ChevronRight className={cn(
+                      'w-4 h-4 ml-auto',
+                      isRTL && 'rotate-180'
+                    )} />
+                  </button>
+                ))}
+              </nav>
+            </Card>
+          </motion.div>
+
+          {/* Content Area */}
+          <motion.div variants={itemVariants} className="lg:col-span-3">
+            <AnimatePresence mode="wait">
+              {activeTab === 'info' && (
+                <motion.div
+                  key="info"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <ProfileInfo user={user} />
                 </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </PageContainer>
-      </main>
-      
-      <Footer />
-    </div>
+              )}
+              
+              {activeTab === 'settings' && (
+                <motion.div
+                  key="settings"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <ProfileSettings user={user} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Export Modal */}
+      <Modal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title={t('profile.exportData')}
+        size="small"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('export.selectFormat')}
+          </p>
+          
+          <div className="space-y-2">
+            {/* CSV Export */}
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={isExporting || !isFormatAvailable('csv')}
+              className={cn(
+                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                exportProgress.format === 'CSV' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              )}
+            >
+              <FileText className="w-5 h-5 text-green-600" />
+              <div className="flex-1 text-left">
+                <p className="font-medium">CSV</p>
+                <p className="text-xs text-gray-500">{t('export.csvDescription')}</p>
+              </div>
+              {exportProgress.format === 'CSV' && (
+                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary-500 transition-all duration-300"
+                    style={{ width: `${exportProgress.progress}%` }}
+                  />
+                </div>
+              )}
+            </button>
+            
+            {/* JSON Export */}
+            <button
+              onClick={() => handleExport('json')}
+              disabled={isExporting || !isFormatAvailable('json')}
+              className={cn(
+                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                exportProgress.format === 'JSON' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              )}
+            >
+              <FileJson className="w-5 h-5 text-blue-600" />
+              <div className="flex-1 text-left">
+                <p className="font-medium">JSON</p>
+                <p className="text-xs text-gray-500">{t('export.jsonDescription')}</p>
+              </div>
+              {exportProgress.format === 'JSON' && (
+                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary-500 transition-all duration-300"
+                    style={{ width: `${exportProgress.progress}%` }}
+                  />
+                </div>
+              )}
+            </button>
+            
+            {/* PDF Export */}
+            <button
+              onClick={() => handleExport('pdf')}
+              disabled={isExporting || !isFormatAvailable('pdf')}
+              className={cn(
+                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                exportProgress.format === 'PDF' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              )}
+            >
+              <FilePlus className="w-5 h-5 text-red-600" />
+              <div className="flex-1 text-left">
+                <p className="font-medium">PDF</p>
+                <p className="text-xs text-gray-500">
+                  {isFormatAvailable('pdf') ? t('export.pdfDescription') : t('common.comingSoon')}
+                </p>
+              </div>
+              {exportProgress.format === 'PDF' && (
+                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary-500 transition-all duration-300"
+                    style={{ width: `${exportProgress.progress}%` }}
+                  />
+                </div>
+              )}
+            </button>
+          </div>
+          
+          {exportOptions.privacyNote && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+              {exportOptions.privacyNote}
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowLogoutConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {t('profile.logoutConfirm')}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                {t('profile.logoutConfirmDesc')}
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => setShowLogoutConfirm(false)}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={confirmLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  {t('auth.logout')}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PageContainer>
   );
 };
 

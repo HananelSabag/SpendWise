@@ -1,5 +1,5 @@
 // components/features/transactions/TransactionCard.jsx
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Edit2,
@@ -16,6 +16,9 @@ import {
   Tag,
   Repeat
 } from 'lucide-react';
+
+// ✅ HOOKS: Use transaction hooks directly for CRUD operations
+import { useTransactions } from '../../../hooks/useTransactions';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
@@ -24,14 +27,13 @@ import EditTransactionPanel from './EditTransactionPanel';
 import DeleteTransaction from './DeleteTransaction';
 
 /**
- * TransactionCard Component
- * Modern card design for displaying transaction details
- * Supports both regular and recurring transactions with expandable details
+ * TransactionCard Component - Now fully hook-based
+ * No longer receives onEdit/onDelete as props - uses hooks directly
  */
 const TransactionCard = ({
   transaction,
-  onEdit,
-  onDelete,
+  onEditCallback, // Optional callback for parent notification
+  onDeleteCallback, // Optional callback for parent notification
   onEditSingle,
   onOpenRecurringManager,
   onOpenSkipDates,
@@ -41,61 +43,110 @@ const TransactionCard = ({
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  
+  // ✅ TRANSACTION OPERATIONS: Get CRUD operations directly from hook
+  const {
+    updateTransaction,
+    deleteTransaction,
+    isUpdating,
+    isDeleting,
+    refresh
+  } = useTransactions();
+
   const [expanded, setExpanded] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSingle, setEditingSingle] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const isRTL = language === 'he';
   
+  const isRTL = language === 'he';
   const isRecurring = transaction.is_recurring || transaction.template_id;
   const isExpense = transaction.transaction_type === 'expense';
 
-  // Handle edit button click
-  const handleEditClick = () => {
+  // Enhanced edit handler with hook integration
+  const handleEditClick = useCallback(() => {
     setEditingSingle(false);
     setShowEditModal(true);
-  };
+    
+    // Notify parent if callback provided
+    onEditCallback?.(transaction);
+  }, [transaction, onEditCallback]);
 
-  // Handle single occurrence editing
-  const handleEditSingleOccurrence = () => {
+  // Enhanced single occurrence editing
+  const handleEditSingleOccurrence = useCallback(() => {
     setEditingSingle(true);
     setShowEditModal(true);
-  };
+    
+    // Call specific single edit callback if provided
+    onEditSingle?.(transaction);
+  }, [transaction, onEditSingle]);
 
-  // Handle edit success
-  const handleEditSuccess = () => {
-    setShowEditModal(false);
-    setEditingSingle(false);
-    // Refresh data if needed
-    onEdit?.(transaction);
-  };
-
-  // Handle delete with enhanced options
-  const handleDeleteClick = () => {
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirm = async (transaction, deleteFuture = false, deleteAll = false) => {
+  // Enhanced edit success with hook integration
+  const handleEditSuccess = useCallback(async (updatedData) => {
     try {
-      await onDelete?.(transaction, deleteFuture, deleteAll);
+      // Update through hook
+      await updateTransaction(
+        transaction.transaction_type,
+        transaction.id,
+        updatedData,
+        !editingSingle // updateFuture = true if editing template
+      );
+      
+      setShowEditModal(false);
+      setEditingSingle(false);
+      
+      // Refresh data
+      await refresh();
+      
+      // Notify parent
+      onEditCallback?.(transaction);
+    } catch (error) {
+      console.error('Edit failed:', error);
+    }
+  }, [transaction, editingSingle, updateTransaction, refresh, onEditCallback]);
+
+  // Enhanced delete handler with hook integration
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteModal(true);
+    
+    // Notify parent if callback provided
+    onDeleteCallback?.(transaction);
+  }, [transaction, onDeleteCallback]);
+
+  // Enhanced delete confirmation with hook integration
+  const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false, deleteAll = false) => {
+    try {
+      // Delete through hook
+      await deleteTransaction(
+        transactionToDelete.transaction_type,
+        transactionToDelete.id,
+        deleteFuture
+      );
+      
       setShowDeleteModal(false);
+      
+      // Refresh data
+      await refresh();
+      
+      // Notify parent
+      onDeleteCallback?.(transactionToDelete);
     } catch (error) {
       console.error('Delete failed:', error);
     }
-  };
+  }, [deleteTransaction, refresh, onDeleteCallback]);
 
-  const handleOpenSkipDates = (transaction) => {
+  // Enhanced skip dates handler
+  const handleOpenSkipDates = useCallback((transaction) => {
     setShowDeleteModal(false);
     onOpenSkipDates?.(transaction);
-  };
+  }, [onOpenSkipDates]);
 
-  // Format frequency
-  const formatFrequency = (interval) => {
+  // Format frequency helper
+  const formatFrequency = useCallback((interval) => {
     if (!interval || interval === null || interval === undefined) {
       return t('actions.frequencies.oneTime') || 'One-time';
     }
     return t(`actions.frequencies.${interval}`) || interval;
-  };
+  }, [t]);
 
   // Animation variants
   const cardVariants = {
@@ -297,16 +348,21 @@ const TransactionCard = ({
               </Button>
             )}
             
-            {/* Single Occurrence Edit Button for recurring transactions */}
+            {/* Enhanced Edit Buttons with Loading States */}
             {isRecurring && (
               <Button
                 variant="ghost"
                 size="small"
                 onClick={handleEditSingleOccurrence}
+                disabled={isUpdating}
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl p-2.5"
                 title={t('transactions.editThisOnly')}
               >
-                <Edit2 className="w-4 h-4" />
+                {isUpdating && editingSingle ? (
+                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                ) : (
+                  <Edit2 className="w-4 h-4" />
+                )}
                 <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editOnce')}</span>
               </Button>
             )}
@@ -315,10 +371,15 @@ const TransactionCard = ({
               variant="ghost"
               size="small"
               onClick={handleEditClick}
+              disabled={isUpdating}
               className="text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl p-2.5"
               title={isRecurring ? t('transactions.editTemplate') : t('common.edit')}
             >
-              <Edit2 className="w-4 h-4" />
+              {isUpdating && !editingSingle ? (
+                <div className="w-4 h-4 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+              ) : (
+                <Edit2 className="w-4 h-4" />
+              )}
               {isRecurring && (
                 <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editAll')}</span>
               )}
@@ -328,10 +389,15 @@ const TransactionCard = ({
               variant="ghost"
               size="small"
               onClick={handleDeleteClick}
+              disabled={isDeleting}
               className="text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl p-2.5"
               title={t('common.delete')}
             >
-              <Trash2 className="w-4 h-4" />
+              {isDeleting ? (
+                <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
             </Button>
           </div>
         )}
@@ -428,7 +494,7 @@ const TransactionCard = ({
         </div>
       </motion.div>
 
-      {/* Edit Transaction Modal */}
+      {/* Enhanced Edit Transaction Modal */}
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -440,16 +506,18 @@ const TransactionCard = ({
           editingSingle={editingSingle}
           onClose={() => setShowEditModal(false)}
           onSuccess={handleEditSuccess}
+          isUpdating={isUpdating}
         />
       </Modal>
 
-      {/* Enhanced Delete Modal */}
+      {/* Enhanced Delete Modal with Hook Integration */}
       <DeleteTransaction
         transaction={transaction}
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
         onOpenSkipDates={handleOpenSkipDates}
+        loading={isDeleting}
       />
     </motion.div>
   );

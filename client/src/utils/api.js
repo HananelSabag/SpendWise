@@ -212,8 +212,17 @@ export const authAPI = {
   
   // Profile management
   getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data),
-  updatePreferences: (preferences) => api.put('/users/preferences', { preferences }),
+  updateProfile: (data) => {
+    // ✅ FIX: Log what we're sending to debug
+    console.log('API updateProfile sending:', data);
+    return api.put('/users/profile', data);
+  },
+  updatePreferences: (preferences) => {
+    // ✅ FIX: Send in correct format expected by server  
+    const payload = { preferences };
+    console.log('API updatePreferences sending:', payload);
+    return api.put('/users/preferences', payload);
+  },
   
   // Profile picture with progress tracking
   uploadProfilePicture: (file, onProgress) => {
@@ -225,6 +234,16 @@ export const authAPI = {
         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(percentCompleted);
       } : undefined
+    });
+  },
+  
+  // ✅ ADD: Preference-specific update that bypasses profile validation
+  updateUserPreference: (preference, value) => {
+    // Use the preferences endpoint but structure it correctly for database columns
+    return api.put('/users/preferences', {
+      preferences: {
+        [`${preference}_preference`]: value // Map to database column format
+      }
     });
   },
   

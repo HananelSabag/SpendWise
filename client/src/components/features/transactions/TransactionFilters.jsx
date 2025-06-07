@@ -1,5 +1,5 @@
 // components/features/transactions/TransactionFilters.jsx
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Filter,
@@ -14,56 +14,80 @@ import {
   TrendingDown,
   Search
 } from 'lucide-react';
+
+// ✅ HOOKS: Use category and transaction hooks directly
+import { useCategories } from '../../../hooks/useCategory';
+import { useTransactions } from '../../../hooks/useTransactions';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/helpers';
 import { Input, Button, Badge } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
-import { useCategories } from '../../../hooks/useApi';
 
 /**
- * TransactionFilters Component
- * Advanced filtering system for transactions
- * Supports multiple filter types with modern UI
+ * TransactionFilters Component - Now fully hook-based
+ * No longer receives filters/categories as props - uses hooks directly
  */
 const TransactionFilters = ({ 
-  filters = {},
-  onChange,
-  onReset,
+  onFilterChange, // Optional callback for parent notification
   className = '',
-  hideHeader = false // Add prop to hide header when integrated
+  hideHeader = false
 }) => {
   const { t, language } = useLanguage();
   const isRTL = language === 'he';
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  
+  // ✅ CATEGORY DATA: Get categories directly from hook
+  const { 
+    categories = [], 
+    isLoading: categoriesLoading,
+    error: categoriesError 
+  } = useCategories();
+  
+  // ✅ FILTER STATE: Get filters directly from transactions hook
+  const {
+    filters = {},
+    updateFilters,
+    clearFilters
+  } = useTransactions();
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
-    type: true,
-    categories: false,
+    categories: true,
     amount: false,
     date: false,
     recurring: false
   });
 
-  // Handle filter changes
-  const handleFilterChange = (key, value) => {
-    onChange?.({
+  // Handle filter changes with hook integration
+  const handleFilterChange = useCallback((key, value) => {
+    const newFilters = {
       ...filters,
       [key]: value
-    });
-  };
+    };
+    
+    // Update hook state
+    updateFilters(newFilters);
+    
+    // Notify parent if callback provided
+    onFilterChange?.(newFilters);
+  }, [filters, updateFilters, onFilterChange]);
+
+  // Handle filter reset
+  const handleReset = useCallback(() => {
+    clearFilters();
+    onFilterChange?.({});
+  }, [clearFilters, onFilterChange]);
 
   // Toggle section expansion
-  const toggleSection = (section) => {
+  const toggleSection = useCallback((section) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
-  };
+  }, []);
 
-  // Get active filter count
-  const getActiveFilterCount = () => {
+  // Get active filter count from hook state
+  const getActiveFilterCount = useCallback(() => {
     let count = 0;
     if (filters.type && filters.type !== 'all') count++;
     if (filters.categories?.length > 0) count++;
@@ -71,7 +95,7 @@ const TransactionFilters = ({
     if (filters.startDate || filters.endDate) count++;
     if (filters.recurring !== 'all') count++;
     return count;
-  };
+  }, [filters]);
 
   const activeCount = getActiveFilterCount();
 
@@ -150,7 +174,7 @@ const TransactionFilters = ({
               <Button
                 variant="ghost"
                 size="small"
-                onClick={onReset}
+                onClick={handleReset}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <X className="w-4 h-4 mr-1" />
@@ -163,9 +187,7 @@ const TransactionFilters = ({
 
       {/* Filter Sections */}
       <div>
-        {/* Remove Transaction Type section since it's handled in the main UI */}
-        
-        {/* Categories */}
+        {/* Categories - Enhanced with hook data */}
         <FilterSection
           title={t('categories.title')}
           icon={Tag}
@@ -174,6 +196,19 @@ const TransactionFilters = ({
           {categoriesLoading ? (
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+            </div>
+          ) : categoriesError ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-red-500 dark:text-red-400 mb-2">
+                {t('categories.loadError')}
+              </p>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => window.location.reload()}
+              >
+                {t('common.retry')}
+              </Button>
             </div>
           ) : categories.length === 0 ? (
             <div className="text-center py-4">
@@ -184,7 +219,6 @@ const TransactionFilters = ({
                 variant="ghost"
                 size="small"
                 onClick={() => {
-                  // Could navigate to categories page
                   window.location.href = '/categories';
                 }}
               >

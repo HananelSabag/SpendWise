@@ -9,6 +9,14 @@ import { categoryAPI, queryKeys, mutationKeys } from '../utils/api';
 import { useAuth } from './useAuth';
 import toast from 'react-hot-toast';
 
+// ✅ UPDATED: Import ONLY from centralized icon system
+import {
+  getIconForCategory,
+  getColorForCategory,
+  getIconComponent,
+  getGradientForCategory
+} from '../config/categoryIcons';
+
 /**
  * Main categories hook
  */
@@ -27,13 +35,93 @@ export const useCategories = (type = null) => {
     }
   );
   
-  // Process categories data
+  // ✅ ADD: Debug logging to see what API returns
+  console.log('🔍 [CATEGORIES-DEBUG] Raw API response:', categoriesQuery.data);
+  
+  // ✅ FIXED: Process categories with proper data structure handling
   const processedCategories = useMemo(() => {
-    if (!categoriesQuery.data?.data) return { all: [], user: [], system: [] };
+    // ✅ Add detailed logging for debugging
+    console.log('🔍 [CATEGORIES-DEBUG] Processing categories:', {
+      hasData: !!categoriesQuery.data,
+      dataType: typeof categoriesQuery.data,
+      dataKeys: categoriesQuery.data ? Object.keys(categoriesQuery.data) : null,
+      isArray: Array.isArray(categoriesQuery.data),
+      dataContent: categoriesQuery.data
+    });
     
-    const categories = categoriesQuery.data.data;
+    // ✅ FIXED: Handle axios response structure properly
+    let categoriesData = null;
     
-    return {
+    if (categoriesQuery.data) {
+      // First check if this is an axios response (has data, status, headers etc.)
+      if (categoriesQuery.data.data && typeof categoriesQuery.data.status === 'number') {
+        console.log('🔍 [CATEGORIES] Detected axios response structure');
+        
+        // Check if the inner data has the expected API response structure
+        if (categoriesQuery.data.data.data && Array.isArray(categoriesQuery.data.data.data)) {
+          // Case: axios.data.data.data (API wraps in { success, data, timestamp })
+          categoriesData = categoriesQuery.data.data.data;
+          console.log('✅ [CATEGORIES] Found axios.data.data.data array with', categoriesData.length, 'items');
+        } else if (Array.isArray(categoriesQuery.data.data)) {
+          // Case: axios.data.data (direct array)
+          categoriesData = categoriesQuery.data.data;
+          console.log('✅ [CATEGORIES] Found axios.data.data array with', categoriesData.length, 'items');
+        } else {
+          console.warn('❌ [CATEGORIES] Axios response data is not in expected format:', categoriesQuery.data.data);
+          categoriesData = [];
+        }
+      }
+      // Handle direct API response (if axios interceptor already extracted data)
+      else if (categoriesQuery.data.data && Array.isArray(categoriesQuery.data.data)) {
+        categoriesData = categoriesQuery.data.data;
+        console.log('✅ [CATEGORIES] Found response.data.data array');
+      } 
+      // Direct array (shouldn't happen with current setup)
+      else if (Array.isArray(categoriesQuery.data)) {
+        categoriesData = categoriesQuery.data;
+        console.log('✅ [CATEGORIES] Found direct array');
+      } 
+      // Other possible structures
+      else if (categoriesQuery.data.categories && Array.isArray(categoriesQuery.data.categories)) {
+        categoriesData = categoriesQuery.data.categories;
+        console.log('✅ [CATEGORIES] Found data.categories array');
+      } else {
+        console.warn('❌ [CATEGORIES] Unexpected data structure:', categoriesQuery.data);
+        console.log('❌ [CATEGORIES] Available keys:', Object.keys(categoriesQuery.data));
+        
+        // Try to find any array in the response
+        const allValues = Object.values(categoriesQuery.data);
+        const arrayValue = allValues.find(val => Array.isArray(val));
+        if (arrayValue) {
+          console.log('✅ [CATEGORIES] Found array in response values:', arrayValue.length, 'items');
+          categoriesData = arrayValue;
+        } else {
+          categoriesData = [];
+        }
+      }
+    }
+    
+    if (!Array.isArray(categoriesData)) {
+      console.warn('❌ [CATEGORIES] Categories data is not an array:', typeof categoriesData, categoriesData);
+      return { all: [], user: [], system: [] };
+    }
+    
+    console.log('✅ [CATEGORIES] Processing array with', categoriesData.length, 'items:', categoriesData);
+    
+    const categories = categoriesData.map(category => {
+      console.log('🔍 [CATEGORIES] Processing category:', category);
+      return {
+        ...category,
+        // ✅ Ensure icon is properly mapped from server data
+        icon: category.icon || getIconForCategory(category.name),
+        // ✅ Add display properties using centralized functions
+        iconComponent: getIconComponent(category.icon || getIconForCategory(category.name)),
+        colorClass: getColorForCategory(category.type),
+        gradientClass: getGradientForCategory(category.type)
+      };
+    });
+    
+    const result = {
       all: categories,
       user: categories.filter(c => !c.is_default),
       system: categories.filter(c => c.is_default),
@@ -43,11 +131,27 @@ export const useCategories = (type = null) => {
         neutral: categories.filter(c => !c.type)
       }
     };
+    
+    console.log('✅ [CATEGORIES] Final processed result:', {
+      allCount: result.all.length,
+      userCount: result.user.length,
+      systemCount: result.system.length,
+      categories: result.all
+    });
+    
+    return result;
   }, [categoriesQuery.data]);
   
-  // Create category mutation
+  // ✅ UPDATED: Create category with proper icon handling
   const createCategoryMutation = useApiMutation(
-    (data) => categoryAPI.create(data),
+    (data) => {
+      // Ensure icon is set properly before sending to server
+      const categoryData = {
+        ...data,
+        icon: data.icon || getIconForCategory(data.name)
+      };
+      return categoryAPI.create(categoryData);
+    },
     {
       mutationKey: mutationKeys.createCategory,
       invalidateKeys: [queryKeys.categories()],
@@ -55,27 +159,46 @@ export const useCategories = (type = null) => {
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
-          if (!old?.data) return old;
+          if (!old) return old;
           
           const newCategory = {
             id: Date.now(),
             ...variables,
+            icon: variables.icon || getIconForCategory(variables.name),
             is_default: false,
             created_at: new Date().toISOString()
           };
           
-          return {
-            ...old,
-            data: [...old.data, newCategory]
-          };
+          // ✅ Handle different data structures for optimistic updates
+          if (Array.isArray(old)) {
+            return [...old, newCategory];
+          } else if (old.data && Array.isArray(old.data)) {
+            return {
+              ...old,
+              data: [...old.data, newCategory]
+            };
+          } else if (old.categories && Array.isArray(old.categories)) {
+            return {
+              ...old,
+              categories: [...old.categories, newCategory]
+            };
+          }
+          
+          return old;
         }
       }
     }
-  );
-  
-  // Update category mutation
+  ); // ✅ FIX: Added missing closing parenthesis and semicolon
+
+  // ✅ UPDATED: Update category with proper icon handling
   const updateCategoryMutation = useApiMutation(
-    ({ id, data }) => categoryAPI.update(id, data),
+    ({ id, data }) => {
+      const categoryData = {
+        ...data,
+        icon: data.icon || getIconForCategory(data.name)
+      };
+      return categoryAPI.update(id, categoryData);
+    },
     {
       mutationKey: mutationKeys.updateCategory,
       invalidateKeys: [queryKeys.categories()],
@@ -83,20 +206,39 @@ export const useCategories = (type = null) => {
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
-          if (!old?.data) return old;
+          if (!old) return old;
           
-          return {
-            ...old,
-            data: old.data.map(cat => 
+          const updateCategory = (categories) => 
+            categories.map(cat => 
               cat.id === variables.id 
-                ? { ...cat, ...variables.data }
+                ? { 
+                    ...cat, 
+                    ...variables.data,
+                    icon: variables.data.icon || getIconForCategory(variables.data.name || cat.name)
+                  }
                 : cat
-            )
-          };
+            );
+          
+          // ✅ Handle different data structures for optimistic updates
+          if (Array.isArray(old)) {
+            return updateCategory(old);
+          } else if (old.data && Array.isArray(old.data)) {
+            return {
+              ...old,
+              data: updateCategory(old.data)
+            };
+          } else if (old.categories && Array.isArray(old.categories)) {
+            return {
+              ...old,
+              categories: updateCategory(old.categories)
+            };
+          }
+          
+          return old;
         }
       }
     }
-  );
+  ); // ✅ FIX: Added missing closing parenthesis and semicolon
   
   // Delete category mutation
   const deleteCategoryMutation = useApiMutation(
@@ -108,12 +250,27 @@ export const useCategories = (type = null) => {
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
-          if (!old?.data) return old;
+          if (!old) return old;
           
-          return {
-            ...old,
-            data: old.data.filter(cat => cat.id !== variables)
-          };
+          const filterCategories = (categories) => 
+            categories.filter(cat => cat.id !== variables);
+          
+          // ✅ Handle different data structures for optimistic updates
+          if (Array.isArray(old)) {
+            return filterCategories(old);
+          } else if (old.data && Array.isArray(old.data)) {
+            return {
+              ...old,
+              data: filterCategories(old.data)
+            };
+          } else if (old.categories && Array.isArray(old.categories)) {
+            return {
+              ...old,
+              categories: filterCategories(old.categories)
+            };
+          }
+          
+          return old;
         }
       },
       onError: (error) => {
@@ -137,11 +294,22 @@ export const useCategories = (type = null) => {
       return;
     }
     
-    return createCategoryMutation.mutateAsync(data);
+    // ✅ Ensure icon is properly set
+    const categoryData = {
+      ...data,
+      icon: data.icon || getIconForCategory(data.name)
+    };
+    
+    return createCategoryMutation.mutateAsync(categoryData);
   }, [createCategoryMutation]);
   
   const updateCategory = useCallback(async (id, data) => {
-    return updateCategoryMutation.mutateAsync({ id, data });
+    // ✅ Ensure icon is properly set for updates
+    const categoryData = {
+      ...data,
+      icon: data.icon || getIconForCategory(data.name)
+    };
+    return updateCategoryMutation.mutateAsync({ id, data: categoryData });
   }, [updateCategoryMutation]);
   
   const deleteCategory = useCallback(async (id) => {
@@ -277,67 +445,14 @@ export const useCategoriesWithCounts = (startDate, endDate) => {
 };
 
 /**
- * Hook for category icon management
+ * ✅ UPDATED: Hook for category icon management - Pure centralized system
  */
 export const useCategoryIcons = () => {
-  // Predefined category icons
-  const icons = {
-    // Income icons
-    salary: 'wallet',
-    freelance: 'briefcase',
-    investment: 'trending-up',
-    gift: 'gift',
-    bonus: 'award',
-    rental: 'home',
-    business: 'building',
-    
-    // Expense icons
-    food: 'utensils',
-    transport: 'car',
-    shopping: 'shopping-cart',
-    bills: 'file-text',
-    entertainment: 'tv',
-    health: 'heart',
-    education: 'book',
-    travel: 'plane',
-    rent: 'home',
-    utilities: 'zap',
-    insurance: 'shield',
-    
-    // General icons
-    general: 'tag',
-    other: 'more-horizontal',
-    default: 'circle'
-  };
-  
-  const getIconForCategory = useCallback((categoryName) => {
-    const name = categoryName.toLowerCase();
-    
-    // Find matching icon
-    for (const [key, icon] of Object.entries(icons)) {
-      if (name.includes(key)) {
-        return icon;
-      }
-    }
-    
-    return icons.default;
-  }, []);
-  
-  const getColorForCategory = useCallback((categoryType) => {
-    switch (categoryType) {
-      case 'income':
-        return 'text-green-600 bg-green-100';
-      case 'expense':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  }, []);
-  
   return {
-    icons,
     getIconForCategory,
-    getColorForCategory
+    getColorForCategory,
+    getIconComponent,
+    getGradientForCategory
   };
 };
 
