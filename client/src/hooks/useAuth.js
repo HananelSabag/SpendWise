@@ -3,7 +3,7 @@
  * Provides authentication functionality with database-driven preferences
  */
 
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApiQuery, useApiMutation } from './useApi';
 import { authAPI, queryKeys, mutationKeys } from '../utils/api';
@@ -20,13 +20,16 @@ export const useAuth = () => {
   // Check if user has valid token
   const hasToken = !!localStorage.getItem('accessToken');
   
+  // Only enable profile query after explicit authentication check
+  const [shouldFetchProfile, setShouldFetchProfile] = useState(false);
+  
   // Profile query - includes preferences
   const profileQuery = useApiQuery(
     queryKeys.profile,
     () => authAPI.getProfile(),
     {
       config: 'user',
-      enabled: hasToken,
+      enabled: hasToken && shouldFetchProfile, // Only when explicitly enabled
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 30 * 60 * 1000, // 30 minutes
       retry: (failureCount, error) => {
@@ -34,6 +37,7 @@ export const useAuth = () => {
           // Clear tokens on 401
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          setShouldFetchProfile(false);
           return false;
         }
         return failureCount < 2;
@@ -41,37 +45,77 @@ export const useAuth = () => {
     }
   );
   
-  // Process user data with preferences
+  // Initialize profile fetching on mount only if we have a valid token
+  useEffect(() => {
+    if (hasToken) {
+      // Small delay to avoid immediate fetch on page load
+      const timer = setTimeout(() => {
+        setShouldFetchProfile(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasToken]);
+
+  // Process user data with preferences - Handle multiple response structures
   const user = useMemo(() => {
-    if (!profileQuery.data?.data) return null;
+    // Handle multiple response structures from API
+    let profileData = null;
     
-    const userData = profileQuery.data.data;
+    if (profileQuery.data?.data?.data) {
+      // Case 1: response.data.data.data (triple nested)
+      profileData = profileQuery.data.data.data;
+    } else if (profileQuery.data?.data) {
+      // Case 2: response.data.data (double nested) 
+      profileData = profileQuery.data.data;
+    } else if (profileQuery.data) {
+      // Case 3: response.data (single nested)
+      profileData = profileQuery.data;
+    }
     
-    // Ensure preferences are properly structured
-    return {
-      ...userData,
+    if (!profileData) {
+      return null;
+    }
+    
+    // Validate required user data fields
+    if (!profileData.email || !profileData.username) {
+      console.error('Profile data missing required fields');
+      return null;
+    }
+    
+    // Prevent cached placeholder data
+    if (profileData.email === 'user@example.com') {
+      console.error('Detected cached placeholder data, clearing cache');
+      queryClient.removeQueries(queryKeys.profile);
+      return null;
+    }
+    
+    // Structure user preferences from database columns and JSONB
+    const processedUser = {
+      ...profileData,
       preferences: {
-        profilePicture: userData.preferences?.profilePicture || null,
-        language: userData.language_preference || 'en',
-        theme: userData.theme_preference || 'light',
-        currency: userData.currency_preference || 'USD',
-        notifications: userData.preferences?.notifications || {
+        profilePicture: profileData.preferences?.profilePicture || null,
+        language: profileData.language_preference || 'en',
+        theme: profileData.theme_preference || 'light',
+        currency: profileData.currency_preference || 'USD',
+        notifications: profileData.preferences?.notifications || {
           email: true,
           push: true,
           sms: false,
           recurring: true,
           reminders: true
         },
-        privacy: userData.preferences?.privacy || {
+        privacy: profileData.preferences?.privacy || {
           showProfile: true,
           showStats: false,
           allowAnalytics: true
         },
-        ...userData.preferences
+        ...profileData.preferences
       }
     };
-  }, [profileQuery.data]);
-  
+    
+    return processedUser;
+  }, [profileQuery.data, queryClient]);
+
   // Login mutation
   const loginMutation = useApiMutation(
     (credentials) => authAPI.login(credentials),
@@ -84,7 +128,8 @@ export const useAuth = () => {
         localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
         
-        // Invalidate profile to refetch with new auth
+        // Enable profile fetching and invalidate to refetch
+        setShouldFetchProfile(true);
         queryClient.invalidateQueries(queryKeys.profile);
         
         // Apply user preferences immediately

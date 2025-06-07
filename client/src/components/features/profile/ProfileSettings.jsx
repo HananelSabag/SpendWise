@@ -14,7 +14,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { useAccessibility } from '../../../context/AccessibilityContext';
@@ -22,19 +22,14 @@ import { cn } from '../../../utils/helpers';
 import { Card, Input, Button, Alert } from '../../ui';
 import toast from 'react-hot-toast';
 
-/**
- * ProfileSettings Component
- * User preferences and settings management
- */
 const ProfileSettings = ({ user }) => {
-  const { updateProfile, isUpdatingProfile } = useAuth();
-  const { t, language, setLanguage } = useLanguage(); // ✅ Use setLanguage (permanent)
+  const { updateProfile, updatePreferences, isUpdatingProfile, isUpdatingPreferences } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const { currency, setCurrency } = useCurrency();
   const { darkMode, setDarkMode } = useAccessibility();
   const isRTL = language === 'he';
   
   const [activeSection, setActiveSection] = useState('preferences');
-  const [savingSettings, setSavingSettings] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   
@@ -46,77 +41,69 @@ const ProfileSettings = ({ user }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
 
-  // Handle language change
-  const handleLanguageChange = (lang) => {
-    if (!['en', 'he'].includes(lang)) {
-      console.warn('Invalid language code:', lang);
-      return;
+  // Handle theme change
+  const handleThemeChange = async (theme) => {
+    setDarkMode(theme === 'dark');
+    
+    // Update user preferences in database
+    try {
+      await updatePreferences({ theme_preference: theme });
+      toast.success(t('profile.themeChanged'));
+    } catch (error) {
+      console.error('Failed to update theme preference:', error);
     }
+  };
+
+  // Handle language change
+  const handleLanguageChange = async (lang) => {
+    if (!['en', 'he'].includes(lang)) return;
     
-    console.log(`🌐 [PROFILE] Permanent language change: ${language} → ${lang}`);
+    setLanguage(lang);
     
-    setLanguage(lang); // This automatically persists to localStorage permanently
-    
-    // Show success message
-    const successMsg = safeT('profile.languageChanged', 'Language preference saved');
-    toast.success(successMsg);
+    // Update user preferences in database
+    try {
+      await updatePreferences({ language_preference: lang });
+      toast.success(t('profile.languageChanged'));
+    } catch (error) {
+      console.error('Failed to update language preference:', error);
+    }
   };
 
   // Handle currency change
-  const handleCurrencyChange = (curr) => {
-    if (!['ILS', 'USD', 'EUR'].includes(curr)) {
-      console.warn('Invalid currency code:', curr);
-      return;
-    }
-    
-    console.log(`💱 [PROFILE] Currency change: ${currency} → ${curr}`);
+  const handleCurrencyChange = async (curr) => {
+    if (!['ILS', 'USD', 'EUR', 'GBP'].includes(curr)) return;
     
     setCurrency(curr);
-    localStorage.setItem('preferredCurrency', curr);
     
-    const successMsg = safeT('profile.currencyChanged', 'Currency changed successfully');
-    toast.success(successMsg);
-  };
-
-  // Handle theme change
-  const handleThemeChange = (isDark) => {
-    console.log(`🎨 [PROFILE] Theme change: ${darkMode} → ${isDark}`);
-    
-    setDarkMode(isDark);
-    
-    const successMsg = safeT('profile.themeChanged', 'Theme changed successfully');
-    toast.success(successMsg);
-  };
-
-  // Validate password
-  const validatePassword = () => {
-    const errors = {};
-    
-    if (!passwordData.currentPassword) {
-      errors.currentPassword = typeof t('validation.required') === 'string' ? t('validation.required') : 'Required';
+    // Update user preferences in database
+    try {
+      await updatePreferences({ currency_preference: curr });
+      toast.success(t('profile.currencyChanged'));
+    } catch (error) {
+      console.error('Failed to update currency preference:', error);
     }
-    
-    if (!passwordData.newPassword) {
-      errors.newPassword = typeof t('validation.required') === 'string' ? t('validation.required') : 'Required';
-    } else if (passwordData.newPassword.length < 8) {
-      errors.newPassword = typeof t('validation.passwordTooShort') === 'string' ? t('validation.passwordTooShort') : 'Password too short';
-    } else if (!/\d/.test(passwordData.newPassword)) {
-      errors.newPassword = typeof t('validation.passwordNeedsNumber') === 'string' ? t('validation.passwordNeedsNumber') : 'Password needs number';
-    }
-    
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      errors.confirmPassword = typeof t('validation.passwordsDontMatch') === 'string' ? t('validation.passwordsDontMatch') : "Passwords don't match";
-    }
-    
-    setPasswordErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   // Handle password change
   const handlePasswordChange = async () => {
-    if (!validatePassword()) return;
+    const errors = {};
     
-    setSavingSettings(true);
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = t('validation.required');
+    }
+    if (!passwordData.newPassword) {
+      errors.newPassword = t('validation.required');
+    } else if (passwordData.newPassword.length < 8) {
+      errors.newPassword = t('validation.passwordTooShort');
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = t('validation.passwordsDontMatch');
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
     
     try {
       await updateProfile({
@@ -124,48 +111,31 @@ const ProfileSettings = ({ user }) => {
         newPassword: passwordData.newPassword
       });
       
+      // Clear form
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
+      setPasswordErrors({});
       
-      const successMsg = typeof t('profile.passwordChanged') === 'string' ? t('profile.passwordChanged') : 'Password changed successfully';
-      toast.success(successMsg);
+      toast.success(t('profile.passwordChanged'));
     } catch (error) {
       if (error.response?.data?.error?.message?.includes('incorrect')) {
-        const errorMsg = typeof t('profile.incorrectPassword') === 'string' ? t('profile.incorrectPassword') : 'Incorrect password';
-        setPasswordErrors({ currentPassword: errorMsg });
+        setPasswordErrors({ currentPassword: t('profile.incorrectPassword') });
       } else {
-        const errorMsg = typeof t('profile.passwordChangeError') === 'string' ? t('profile.passwordChangeError') : 'Password change failed';
-        toast.error(errorMsg);
+        toast.error(t('profile.passwordChangeError'));
       }
-    } finally {
-      setSavingSettings(false);
     }
   };
 
-  // Helper function to safely get translation
-  const safeT = (key, fallback) => {
-    try {
-      const translation = t(key);
-      // If translation is an object, return the fallback
-      if (typeof translation === 'object' && translation !== null) {
-        console.warn(`Translation key "${key}" returned an object, using fallback:`, translation);
-        return fallback;
-      }
-      return typeof translation === 'string' ? translation : fallback;
-    } catch (error) {
-      console.warn(`Translation error for key "${key}":`, error);
-      return fallback;
-    }
-  };
-
-  // Section tabs - Simplified to only implemented features
+  // Section tabs
   const sections = [
-    { id: 'preferences', label: safeT('profile.preferences', 'Preferences'), icon: Globe },
-    { id: 'security', label: safeT('profile.security', 'Security'), icon: Shield }
+    { id: 'preferences', label: t('profile.preferences'), icon: Globe },
+    { id: 'security', label: t('profile.security'), icon: Shield }
   ];
+
+  const isLoading = isUpdatingProfile || isUpdatingPreferences;
 
   return (
     <div className="space-y-6">
@@ -192,14 +162,14 @@ const ProfileSettings = ({ user }) => {
       {activeSection === 'preferences' && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            {safeT('profile.appPreferences', 'App Preferences')}
+            {t('profile.appPreferences')}
           </h3>
           
           <div className="space-y-6">
             {/* Language */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                {safeT('profile.language', 'Language')}
+                {t('profile.language')}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
@@ -209,11 +179,13 @@ const ProfileSettings = ({ user }) => {
                   <button
                     key={lang.code}
                     onClick={() => handleLanguageChange(lang.code)}
+                    disabled={isLoading}
                     className={cn(
                       'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
                       language === lang.code
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                      isLoading && 'opacity-50 cursor-not-allowed'
                     )}
                   >
                     <span className="text-2xl">{lang.flag}</span>
@@ -229,26 +201,29 @@ const ProfileSettings = ({ user }) => {
             {/* Currency */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                {safeT('profile.currency', 'Currency')}
+                {t('profile.currency')}
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { code: 'ILS', symbol: '₪', label: 'Shekel' },
                   { code: 'USD', symbol: '$', label: 'Dollar' },
-                  { code: 'EUR', symbol: '€', label: 'Euro' }
+                  { code: 'EUR', symbol: '€', label: 'Euro' },
+                  { code: 'GBP', symbol: '£', label: 'Pound' }
                 ].map(curr => (
                   <button
                     key={curr.code}
                     onClick={() => handleCurrencyChange(curr.code)}
+                    disabled={isLoading}
                     className={cn(
                       'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
                       currency === curr.code
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                      isLoading && 'opacity-50 cursor-not-allowed'
                     )}
                   >
-                    <DollarSign className="w-5 h-5" />
-                    <span className="font-medium">{curr.code}</span>
+                    <span className="text-xl font-bold">{curr.symbol}</span>
+                    <span className="font-medium">{curr.label}</span>
                     {currency === curr.code && (
                       <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                     )}
@@ -260,36 +235,40 @@ const ProfileSettings = ({ user }) => {
             {/* Theme */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                {safeT('profile.theme', 'Theme')}
+                {t('profile.theme')}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => handleThemeChange(false)}
+                  onClick={() => handleThemeChange('light')}
+                  disabled={isLoading}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
+                    'flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all',
                     !darkMode
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                    isLoading && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   <Sun className="w-5 h-5 text-yellow-500" />
-                  <span className="font-medium">{safeT('profile.lightTheme', 'Light')}</span>
+                  <span className="font-medium">{t('profile.lightTheme')}</span>
                   {!darkMode && (
                     <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                   )}
                 </button>
                 
                 <button
-                  onClick={() => handleThemeChange(true)}
+                  onClick={() => handleThemeChange('dark')}
+                  disabled={isLoading}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
+                    'flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all',
                     darkMode
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                    isLoading && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <Moon className="w-5 h-5 text-blue-500" />
-                  <span className="font-medium">{safeT('profile.darkTheme', 'Dark')}</span>
+                  <Moon className="w-5 h-5 text-indigo-500" />
+                  <span className="font-medium">{t('profile.darkTheme')}</span>
                   {darkMode && (
                     <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                   )}
@@ -297,17 +276,6 @@ const ProfileSettings = ({ user }) => {
               </div>
             </div>
           </div>
-
-          {/* Future Features Notice */}
-          <Alert variant="info" className="mt-6">
-            <Info className="w-5 h-5 mr-3 text-blue-500" />
-            <div>
-              <h4 className="font-medium">{safeT('profile.comingSoon', 'Coming Soon')}</h4>
-              <p className="text-sm">
-                Future features: Notification preferences, data export, custom categories, and more advanced settings.
-              </p>
-            </div>
-          </Alert>
         </Card>
       )}
 
@@ -315,44 +283,32 @@ const ProfileSettings = ({ user }) => {
       {activeSection === 'security' && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            {safeT('profile.securitySettings', 'Security Settings')}
+            {t('profile.securitySettings')}
           </h3>
           
           <div className="space-y-6">
             {/* Change Password */}
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-4">
-                {safeT('profile.changePassword', 'Change Password')}
+              <h4 className="text-base font-medium text-gray-900 dark:text-white mb-4">
+                {t('profile.changePassword')}
               </h4>
               
               <div className="space-y-4">
-                <div className="relative">
-                  <Input
-                    label={safeT('profile.currentPassword', 'Current Password')}
-                    type={showPassword ? 'text' : 'password'}
-                    value={passwordData.currentPassword}
-                    onChange={(e) => {
-                      setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }));
-                      setPasswordErrors(prev => ({ ...prev, currentPassword: null }));
-                    }}
-                    error={passwordErrors.currentPassword}
-                    icon={Lock}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className={cn(
-                      'absolute top-9 text-gray-400 hover:text-gray-600',
-                      isRTL ? 'left-3' : 'right-3'
-                    )}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+                <Input
+                  label={t('profile.currentPassword')}
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => {
+                    setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }));
+                    setPasswordErrors(prev => ({ ...prev, currentPassword: null }));
+                  }}
+                  error={passwordErrors.currentPassword}
+                  icon={Lock}
+                />
                 
                 <div className="relative">
                   <Input
-                    label={safeT('profile.newPassword', 'New Password')}
+                    label={t('profile.newPassword')}
                     type={showNewPassword ? 'text' : 'password'}
                     value={passwordData.newPassword}
                     onChange={(e) => {
@@ -366,7 +322,7 @@ const ProfileSettings = ({ user }) => {
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     className={cn(
-                      'absolute top-9 text-gray-400 hover:text-gray-600',
+                      "absolute top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
                       isRTL ? 'left-3' : 'right-3'
                     )}
                   >
@@ -375,7 +331,7 @@ const ProfileSettings = ({ user }) => {
                 </div>
                 
                 <Input
-                  label={safeT('profile.confirmPassword', 'Confirm Password')}
+                  label={t('profile.confirmPassword')}
                   type="password"
                   value={passwordData.confirmPassword}
                   onChange={(e) => {
@@ -389,11 +345,12 @@ const ProfileSettings = ({ user }) => {
                 <Button
                   variant="primary"
                   onClick={handlePasswordChange}
-                  loading={savingSettings || isUpdatingProfile}
+                  loading={isLoading}
+                  disabled={isLoading}
                   className="w-full sm:w-auto"
                 >
                   <Shield className="w-4 h-4 mr-2" />
-                  {safeT('profile.updatePassword', 'Update Password')}
+                  {t('profile.updatePassword')}
                 </Button>
               </div>
             </div>
@@ -403,9 +360,9 @@ const ProfileSettings = ({ user }) => {
               <div className="flex">
                 <Info className="w-5 h-5 mr-3 text-blue-500" />
                 <div>
-                  <h4 className="font-medium">{safeT('profile.additionalSecurity', 'Additional Security')}</h4>
+                  <h4 className="font-medium">{t('profile.additionalSecurity')}</h4>
                   <p className="text-sm">
-                    {safeT('profile.additionalSecurityDesc', 'Two-factor authentication, login sessions management, security logs, and account recovery options coming soon.')}
+                    {t('profile.additionalSecurityDesc')}
                   </p>
                 </div>
               </div>

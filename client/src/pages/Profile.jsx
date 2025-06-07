@@ -15,51 +15,63 @@ import {
   Calendar,
   Activity,
   Package,
-  Sparkles,
-  Clock
+  TrendingDown,
+  Clock,
+  Download,
+  FileText,
+  FileJson,
+  FilePlus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { useTransactionsList } from '../hooks/useTransactionsList';
 import { useDashboard } from '../hooks/useDashboard';
+import { useExport } from '../hooks/useExport';
 import { cn, dateHelpers } from '../utils/helpers';
 
 // Layout
 import PageContainer from '../components/layout/PageContainer';
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
 
 // Features
 import ProfileInfo from '../components/features/profile/ProfileInfo';
 import ProfileSettings from '../components/features/profile/ProfileSettings';
 
 // UI
-import { Card, Button, Badge, LoadingSpinner, Avatar } from '../components/ui';
+import { Card, Button, Badge, LoadingSpinner, Avatar, Modal } from '../components/ui';
 
-/**
- * Profile Page Component
- * Modern user profile with stats, settings and management
- */
 const Profile = () => {
   const { user, logout } = useAuth();
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const isRTL = language === 'he';
   
-  const [activeTab, setActiveTab] = useState('info'); // info, settings, security, billing
+  const [activeTab, setActiveTab] = useState('info');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   
   // Get dashboard data for stats
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
+  
+  // Export hook for data export functionality
+  const {
+    exportAsCSV,
+    exportAsJSON,
+    exportAsPDF,
+    isExporting,
+    exportProgress,
+    exportOptions,
+    isFormatAvailable
+  } = useExport();
   
   // Calculate member duration
   const getMemberDuration = () => {
     if (!user?.created_at) return null;
     
-    // ✅ FIX: Use local timezone date handling to prevent timezone shifts
-    const joinDate = new Date(user.created_at + 'T12:00:00'); // Add noon to prevent timezone issues
+    const joinDate = new Date(user.created_at + 'T12:00:00');
     const now = new Date();
     
-    // Calculate difference using local timezone methods
     const joinYear = joinDate.getFullYear();
     const joinMonth = joinDate.getMonth();
     const joinDay = joinDate.getDate();
@@ -68,50 +80,49 @@ const Profile = () => {
     const nowMonth = now.getMonth();
     const nowDay = now.getDate();
     
-    // Create normalized dates for accurate calculation
     const normalizedJoinDate = new Date(joinYear, joinMonth, joinDay);
     const normalizedNowDate = new Date(nowYear, nowMonth, nowDay);
     
     const diffInMs = normalizedNowDate - normalizedJoinDate;
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
-    if (diffInDays < 30) return { value: diffInDays, unit: 'days' };
-    if (diffInDays < 365) return { value: Math.floor(diffInDays / 30), unit: 'months' };
-    return { value: Math.floor(diffInDays / 365), unit: 'years' };
+    if (diffInDays < 30) {
+      return `${diffInDays} ${t('profile.stats.days')}`;
+    } else if (diffInDays < 365) {
+      const months = Math.floor(diffInDays / 30);
+      return `${months} ${t('profile.stats.months')}`;
+    } else {
+      const years = Math.floor(diffInDays / 365);
+      const remainingMonths = Math.floor((diffInDays % 365) / 30);
+      if (remainingMonths > 0) {
+        return `${years} ${t('profile.stats.years')}, ${remainingMonths} ${t('profile.stats.months')}`;
+      }
+      return `${years} ${t('profile.stats.years')}`;
+    }
   };
-
+  
   const memberDuration = getMemberDuration();
 
-  // Tab items
+  // Tabs configuration
   const tabs = [
-    { 
-      id: 'info', 
-      label: t('profile.tabs.general'), 
-      icon: User,
-      color: 'text-blue-600 dark:text-blue-400'
-    },
-    { 
-      id: 'settings', 
-      label: t('profile.tabs.preferences'), 
-      icon: Settings,
-      color: 'text-purple-600 dark:text-purple-400'
-    }
+    { id: 'info', label: t('profile.tabs.general'), icon: User, color: 'text-blue-600 dark:text-blue-400' },
+    { id: 'settings', label: t('profile.tabs.preferences'), icon: Settings, color: 'text-purple-600 dark:text-purple-400' }
   ];
 
-  // Get real statistics from dashboard data - ADDRESSES GAP #5
+  // Calculate stats from dashboard data
   const stats = useMemo(() => {
     if (!dashboardData) return [];
     
-    const monthlyBalance = dashboardData.balances?.monthly || {};
-    const yearlyBalance = dashboardData.balances?.yearly || {};
-    const recurringInfo = dashboardData.recurringInfo || {};
+    const balances = dashboardData.balances || {};
+    const monthlyBalance = balances.monthly || {};
     const statistics = dashboardData.statistics || {};
-    
+    const recurringInfo = dashboardData.recurringInfo || {};
+
     return [
       {
-        label: t('stats.currentBalance'),
+        label: t('profile.stats.thisMonth'),
         value: formatAmount(monthlyBalance.balance || 0),
-        icon: TrendingUp,
+        icon: monthlyBalance.balance >= 0 ? TrendingUp : TrendingDown,
         color: monthlyBalance.balance >= 0 
           ? 'text-green-600 dark:text-green-400' 
           : 'text-red-600 dark:text-red-400',
@@ -143,6 +154,26 @@ const Profile = () => {
       }
     ];
   }, [dashboardData, formatAmount, t]);
+
+  // Export handlers
+  const handleExport = async (format) => {
+    try {
+      switch (format) {
+        case 'csv':
+          await exportAsCSV();
+          break;
+        case 'json':
+          await exportAsJSON();
+          break;
+        case 'pdf':
+          await exportAsPDF();
+          break;
+      }
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
 
   // Animation variants
   const containerVariants = {
@@ -178,232 +209,335 @@ const Profile = () => {
 
   if (dashboardLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" text={t('common.loading')} />
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <LoadingSpinner size="large" text={t('common.loading')} />
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <PageContainer>
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-6"
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
-        {/* Header Section */}
-        <motion.div variants={itemVariants}>
-          <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 text-white p-8 border-0">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Avatar */}
-              <div className="relative group">
-                <Avatar
-                  size="xl"
-                  name={user?.username}
-                  src={user?.preferences?.profilePicture}
-                  className="ring-4 ring-white/30 group-hover:ring-white/50 transition-all"
-                />
-                <div className="absolute -bottom-2 -right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg">
-                  <Sparkles className="w-4 h-4 text-yellow-500" />
-                </div>
-              </div>
-
-              {/* User Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold mb-2">{user?.username}</h1>
-                <p className="text-white/80 mb-4">{user?.email}</p>
-                
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  <Badge variant="default" className="bg-white/20 text-white border-white/30">
-                    <Activity className="w-4 h-4 mr-1" />
-                    {/* ✅ FIX: Use local timezone formatting */}
-                    {t('profile.memberSince')} {(() => {
-                      if (!user?.created_at) return '';
-                      const date = new Date(user.created_at + 'T12:00:00');
-                      return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                        year: 'numeric',
-                        month: 'short'
-                      });
-                    })()}
-                  </Badge>
-                  
-                  {user?.isPremium && (
-                    <Badge variant="default" className="bg-yellow-400/20 text-yellow-100 border-yellow-400/30">
-                      <Award className="w-4 h-4 mr-1" />
-                      Premium
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Logout Button */}
-              <Button
-                variant="ghost"
-                className="bg-white/20 text-white hover:bg-white/30"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-5 h-5 mr-2" />
-                {t('auth.logout')}
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Compact Stats Bar */}
-        <motion.div variants={itemVariants}>
-          <Card className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {stats.map((stat, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                    <stat.icon className={cn('w-4 h-4', stat.color)} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                      {stat.label}
-                    </p>
-                    <p className={cn('text-sm font-semibold', stat.color)}>
-                      {stat.value}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Main Content - Now Primary Focus */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
-            <Card className="p-2">
-              <nav className="space-y-1">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
-                      'hover:bg-gray-100 dark:hover:bg-gray-800',
-                      activeTab === tab.id
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
-                        : 'text-gray-700 dark:text-gray-300'
-                    )}
-                  >
-                    <tab.icon className={cn('w-5 h-5', tab.color)} />
-                    <span className="font-medium">{tab.label}</span>
-                    <ChevronRight className={cn(
-                      'w-4 h-4 ml-auto',
-                      isRTL && 'rotate-180'
-                    )} />
-                  </button>
-                ))}
-              </nav>
-
-              {/* Detailed Stats in Sidebar */}
-              <div className="mt-6 p-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  {t('stats.quickOverview')}
-                </h3>
-                <div className="space-y-3">
-                  {stats.slice(0, 2).map((stat, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={cn('p-1.5 rounded', stat.bgColor)}>
-                          <stat.icon className={cn('w-3 h-3', stat.color)} />
-                        </div>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {stat.label}
-                        </span>
-                      </div>
-                      <span className={cn('text-xs font-semibold', stat.color)}>
-                        {stat.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Content Area - Now Takes Center Stage */}
-          <motion.div variants={itemVariants} className="lg:col-span-3">
-            <AnimatePresence mode="wait">
-              {activeTab === 'info' && (
-                <motion.div
-                  key="info"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <ProfileInfo user={user} />
-                </motion.div>
-              )}
-              
-              {activeTab === 'settings' && (
-                <motion.div
-                  key="settings"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <ProfileSettings user={user} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Logout Confirmation Modal */}
-      <AnimatePresence>
-        {showLogoutConfirm && (
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <Header />
+      
+      <main className="flex-1">
+        <PageContainer>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowLogoutConfirm(false)}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+            dir={isRTL ? 'rtl' : 'ltr'}
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {t('profile.logoutConfirm')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {t('profile.logoutConfirmDesc')}
+            {/* Header */}
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {t('nav.profile')}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {t('profile.subtitle')}
+                </p>
+              </div>
+              
+              {/* Export button */}
+              <Button
+                variant="outline"
+                onClick={() => setShowExportModal(true)}
+                icon={Download}
+                disabled={isExporting}
+              >
+                {isExporting ? t('common.exporting') : t('profile.exportData')}
+              </Button>
+            </motion.div>
+
+            {/* User Card */}
+            <motion.div variants={itemVariants}>
+              <Card className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-purple-500/10"></div>
+                
+                <div className="relative p-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    <Avatar
+                      size="xl"
+                      name={user?.username}
+                      src={user?.preferences?.profilePicture}
+                      className="ring-4 ring-white dark:ring-gray-800 shadow-xl"
+                    />
+                    
+                    <div className="flex-1 text-center sm:text-left">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {user?.username}
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {user?.email}
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-3 mt-4 justify-center sm:justify-start">
+                        <Badge variant="success">
+                          <Award className="w-3 h-3 mr-1" />
+                          {t('profile.verified')}
+                        </Badge>
+                        
+                        {memberDuration && (
+                          <Badge variant="primary">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {memberDuration}
+                          </Badge>
+                        )}
+                        
+                        <Badge variant="secondary">
+                          <Activity className="w-3 h-3 mr-1" />
+                          {t('profile.active')}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="p-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title={t('auth.logout')}
+                    >
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    {stats.map((stat, index) => (
+                      <div key={index} className="text-center">
+                        <div className={cn(
+                          'w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-2',
+                          stat.bgColor
+                        )}>
+                          <stat.icon className={cn('w-6 h-6', stat.color)} />
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {stat.label}
+                        </p>
+                        <p className={cn('text-lg font-bold mt-1', stat.color)}>
+                          {stat.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Sidebar */}
+              <motion.div variants={itemVariants} className="lg:col-span-1">
+                <Card className="p-4">
+                  <nav className="space-y-1">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
+                          activeTab === tab.id
+                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        )}
+                      >
+                        <tab.icon className={cn('w-5 h-5', tab.color)} />
+                        <span className="font-medium">{tab.label}</span>
+                        <ChevronRight className={cn(
+                          'w-4 h-4 ml-auto',
+                          isRTL && 'rotate-180'
+                        )} />
+                      </button>
+                    ))}
+                  </nav>
+                </Card>
+              </motion.div>
+
+              {/* Content Area */}
+              <motion.div variants={itemVariants} className="lg:col-span-3">
+                <AnimatePresence mode="wait">
+                  {activeTab === 'info' && (
+                    <motion.div
+                      key="info"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                    >
+                      <ProfileInfo user={user} />
+                    </motion.div>
+                  )}
+                  
+                  {activeTab === 'settings' && (
+                    <motion.div
+                      key="settings"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                    >
+                      <ProfileSettings user={user} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Export Modal */}
+          <Modal
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            title={t('profile.exportData')}
+            size="small"
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t('export.selectFormat')}
               </p>
               
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={() => setShowLogoutConfirm(false)}
+              <div className="space-y-2">
+                {/* CSV Export */}
+                <button
+                  onClick={() => handleExport('csv')}
+                  disabled={isExporting || !isFormatAvailable('csv')}
+                  className={cn(
+                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    exportProgress.format === 'CSV' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  )}
                 >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={confirmLogout}
+                  <FileText className="w-5 h-5 text-green-600" />
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">CSV</p>
+                    <p className="text-xs text-gray-500">{t('export.csvDescription')}</p>
+                  </div>
+                  {exportProgress.format === 'CSV' && (
+                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary-500 transition-all duration-300"
+                        style={{ width: `${exportProgress.progress}%` }}
+                      />
+                    </div>
+                  )}
+                </button>
+                
+                {/* JSON Export */}
+                <button
+                  onClick={() => handleExport('json')}
+                  disabled={isExporting || !isFormatAvailable('json')}
+                  className={cn(
+                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    exportProgress.format === 'JSON' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  )}
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  {t('auth.logout')}
-                </Button>
+                  <FileJson className="w-5 h-5 text-blue-600" />
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">JSON</p>
+                    <p className="text-xs text-gray-500">{t('export.jsonDescription')}</p>
+                  </div>
+                  {exportProgress.format === 'JSON' && (
+                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary-500 transition-all duration-300"
+                        style={{ width: `${exportProgress.progress}%` }}
+                      />
+                    </div>
+                  )}
+                </button>
+                
+                {/* PDF Export */}
+                <button
+                  onClick={() => handleExport('pdf')}
+                  disabled={isExporting || !isFormatAvailable('pdf')}
+                  className={cn(
+                    'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
+                    'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    exportProgress.format === 'PDF' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  )}
+                >
+                  <FilePlus className="w-5 h-5 text-red-600" />
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">PDF</p>
+                    <p className="text-xs text-gray-500">
+                      {isFormatAvailable('pdf') ? t('export.pdfDescription') : t('common.comingSoon')}
+                    </p>
+                  </div>
+                  {exportProgress.format === 'PDF' && (
+                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary-500 transition-all duration-300"
+                        style={{ width: `${exportProgress.progress}%` }}
+                      />
+                    </div>
+                  )}
+                </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </PageContainer>
+              
+              {exportOptions.privacyNote && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                  {exportOptions.privacyNote}
+                </p>
+              )}
+            </div>
+          </Modal>
+
+          {/* Logout Confirmation Modal */}
+          <AnimatePresence>
+            {showLogoutConfirm && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('profile.logoutConfirm')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    {t('profile.logoutConfirmDesc')}
+                  </p>
+                  
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      onClick={() => setShowLogoutConfirm(false)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      fullWidth
+                      onClick={confirmLogout}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {t('auth.logout')}
+                    </Button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </PageContainer>
+      </main>
+      
+      <Footer />
+    </div>
   );
 };
 

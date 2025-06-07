@@ -3,7 +3,7 @@
  * Central authentication state with preference management
  */
 
-import React, { createContext, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authAPI, queryKeys, mutationKeys } from '../utils/api';
@@ -26,11 +26,14 @@ export const AuthProvider = ({ children }) => {
   // Check if user has valid token
   const hasToken = !!localStorage.getItem('accessToken');
   
+  // Only enable profile query after explicit authentication check
+  const [shouldFetchProfile, setShouldFetchProfile] = useState(false);
+  
   // Profile query - includes preferences
   const profileQuery = useQuery({
     queryKey: queryKeys.profile,
     queryFn: () => authAPI.getProfile(),
-    enabled: hasToken,
+    enabled: hasToken && shouldFetchProfile, // Only when explicitly enabled
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
@@ -40,20 +43,58 @@ export const AuthProvider = ({ children }) => {
         // Clear tokens on 401
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        setShouldFetchProfile(false);
         return false;
       }
       return failureCount < 2;
     }
   });
   
+  // Initialize profile fetching on mount only if we have a valid token
+  useEffect(() => {
+    if (hasToken) {
+      // Small delay to avoid immediate fetch on page load
+      const timer = setTimeout(() => {
+        setShouldFetchProfile(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasToken]);
+
   // Process user data with preferences
   const user = useMemo(() => {
-    if (!profileQuery.data?.data) return null;
+    // Handle multiple response structures from API
+    let userData = null;
     
-    const userData = profileQuery.data.data;
+    if (profileQuery.data?.data?.data) {
+      // Case 1: response.data.data.data (triple nested)
+      userData = profileQuery.data.data.data;
+    } else if (profileQuery.data?.data) {
+      // Case 2: response.data.data (double nested)
+      userData = profileQuery.data.data;
+    } else if (profileQuery.data) {
+      // Case 3: response.data (single nested)
+      userData = profileQuery.data;
+    }
     
-    // Ensure preferences are properly structured
-    return {
+    if (!userData) {
+      return null;
+    }
+    
+    // Validate required user data fields
+    if (!userData.email || !userData.username) {
+      console.error('Profile data missing required fields');
+      return null;
+    }
+    
+    // Prevent cached placeholder data
+    if (userData.email === 'user@example.com') {
+      console.error('Detected cached placeholder data, clearing cache');
+      return null;
+    }
+    
+    // Structure user preferences from database columns and JSONB
+    const processedUser = {
       ...userData,
       preferences: {
         // Database columns
@@ -80,6 +121,8 @@ export const AuthProvider = ({ children }) => {
         ...userData.preferences
       }
     };
+    
+    return processedUser;
   }, [profileQuery.data]);
   
   // Apply user preferences to the app
@@ -122,7 +165,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('guestCurrency');
       localStorage.removeItem('guestLanguage');
       
-      // Invalidate profile to refetch with new auth
+      // Enable profile fetching and invalidate to refetch
+      setShouldFetchProfile(true);
       queryClient.invalidateQueries(queryKeys.profile);
       
       // Apply user preferences immediately

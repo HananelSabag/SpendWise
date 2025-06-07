@@ -13,16 +13,14 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useAuth } from '../../../context/AuthContext';
-import { useUploadProfilePicture } from '../../../hooks/useApi';
+import { useAuth } from '../../../hooks/useAuth';
 import { Card, Button, Input, Alert, Avatar } from '../../ui';
 import { dateHelpers } from '../../../utils/helpers';
 import toast from 'react-hot-toast';
 
 const ProfileInfo = ({ user }) => {
   const { t, language } = useLanguage();
-  const { updateProfile, isUpdatingProfile } = useAuth();
-  const uploadMutation = useUploadProfilePicture();
+  const { updateProfile, uploadProfilePicture, isUpdatingProfile, isUploadingPicture } = useAuth();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -86,18 +84,17 @@ const ProfileInfo = ({ user }) => {
     }
 
     try {
-      console.log(`🖼️ [PROFILE] Uploading image: ${file.name}`);
-      
-      await uploadMutation.mutateAsync(file);
+      await uploadProfilePicture(file);
+      toast.success(t('profile.photoUploaded'));
       
       // Clear file input
       const fileInput = document.getElementById('profile-picture-upload');
       if (fileInput) {
         fileInput.value = '';
       }
-      
     } catch (error) {
-      console.error(`❌ [PROFILE] Upload failed:`, error);
+      console.error('Upload failed:', error);
+      toast.error(t('profile.uploadError'));
     }
   };
 
@@ -142,11 +139,11 @@ const ProfileInfo = ({ user }) => {
         )}
       </div>
 
-      {/* Profile Picture Section - Fixed */}
+      {/* Profile Picture Section */}
       <div className="flex flex-col items-center mb-6">
         <div 
           className="relative group cursor-pointer"
-          onClick={() => document.getElementById('profile-picture-upload').click()}
+          onClick={() => !isUploadingPicture && document.getElementById('profile-picture-upload').click()}
         >
           <Avatar
             size="lg"
@@ -170,11 +167,11 @@ const ProfileInfo = ({ user }) => {
             accept="image/jpeg,image/jpg,image/png,image/webp"
             onChange={handleProfilePictureChange}
             className="hidden"
-            disabled={uploadMutation.isLoading}
+            disabled={isUploadingPicture}
           />
           
           {/* Loading overlay */}
-          {uploadMutation.isLoading && (
+          {isUploadingPicture && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
             </div>
@@ -211,7 +208,7 @@ const ProfileInfo = ({ user }) => {
 
           <Alert type="info">
             <AlertCircle className="w-4 h-4" />
-            <p className="text-sm">{t('profile.emailNotEditable')}</p>
+            <p className="text-sm">{t('profile.emailChangeNotice')}</p>
           </Alert>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -228,6 +225,7 @@ const ProfileInfo = ({ user }) => {
               type="submit"
               variant="primary"
               loading={isUpdatingProfile}
+              disabled={isUpdatingProfile}
             >
               <Save className="w-4 h-4 mr-2" />
               {t('common.save')}

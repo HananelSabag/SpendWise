@@ -29,7 +29,6 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import FloatingMenu from '../../components/common/FloatingMenu';
 import Footer from '../../components/layout/Footer';
 import { cn } from '../../utils/helpers';
 
@@ -258,7 +257,7 @@ const Login = () => {
   return (
     <>
       <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
-        <FloatingMenu buttons={menuButtons} />
+
         
         {/* Login Form Side */}
         <motion.div 
