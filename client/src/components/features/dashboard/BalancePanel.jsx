@@ -15,17 +15,14 @@ import {
   Clock as ClockIcon
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useCurrency } from '../../../context/CurrencyContext'; // ✅ הוסף import חסר
-import { useDate } from '../../../context/DateContext'; // ✅ הוסף import חסר
+import { useCurrency } from '../../../context/CurrencyContext';
+import { useDate } from '../../../context/DateContext';
+import { useDashboard } from '../../../hooks/useDashboard';
 import { Card, Badge, Button } from '../../ui';
 import CalendarWidget from '../../common/CalendarWidget';
 import { numbers } from '../../../utils/helpers';
 
-// ✅ שנה את הקומפוננט לקבל נתונים דרך props
-const BalancePanel = ({ 
-  balanceData = null, 
-  recurringInfo = null 
-}) => {
+const BalancePanel = () => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const { 
@@ -40,6 +37,13 @@ const BalancePanel = ({
     getDateForServer 
   } = useDate();
   
+  const { 
+    data: dashboardData, 
+    isLoading, 
+    error, 
+    refresh 
+  } = useDashboard();
+  
   const [period, setPeriod] = useState('daily');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -49,12 +53,25 @@ const BalancePanel = ({
   
   const isRTL = language === 'he';
 
-  // ✅ הוסף מידע דיבאג לקומפוננט
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🎨 [BALANCE-PANEL] Component mounted, receiving data via props`);
+      console.log(`🎨 [BALANCE-PANEL] Using useDashboard hook, loading: ${isLoading}`);
     }
-  }, []);
+  }, [isLoading]);
+
+  const balanceData = dashboardData?.balances || {
+    daily: { income: 0, expenses: 0, balance: 0 },
+    weekly: { income: 0, expenses: 0, balance: 0 },
+    monthly: { income: 0, expenses: 0, balance: 0 },
+    yearly: { income: 0, expenses: 0, balance: 0 }
+  };
+
+  const recurringInfo = dashboardData?.recurringInfo || {
+    income_count: 0,
+    expense_count: 0,
+    recurring_income: 0,
+    recurring_expense: 0
+  };
 
   // הגדרת מערך התקופות
   const periods = [
@@ -195,6 +212,44 @@ const BalancePanel = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showCalendar]);
+
+  // ✅ NEW: Handle loading state
+  if (isLoading) {
+    return (
+      <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
+        <div className="p-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // ✅ NEW: Handle error state
+  if (error) {
+    return (
+      <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
+        <div className="p-8 text-center">
+          <div className="text-red-600 dark:text-red-400 mb-4">
+            {t('dashboard.balance.error')}
+          </div>
+          <Button
+            onClick={refresh}
+            variant="outline"
+            size="small"
+          >
+            {t('common.retry')}
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <motion.div

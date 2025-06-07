@@ -1,3 +1,8 @@
+/**
+ * Password Reset Page
+ * Handles forgot password requests and password reset form
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,27 +15,36 @@ import {
   Eye, 
   EyeOff,
   Send,
-  Key,
-  TestTube
+  Key
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import { cn } from '../../utils/helpers';
-import { useForgotPassword, useResetPassword, useTestEmail } from '../../hooks/useApi';
 
+/**
+ * Password Reset Component
+ */
 const PasswordReset = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isRTL = language === 'he';
   
-  // Determine if we're in reset mode (have token) or forgot mode
+  const { 
+    forgotPassword, 
+    resetPassword, 
+    isSendingResetEmail, 
+    isResettingPassword 
+  } = useAuth();
+  
+  // Determine mode based on token presence
   const token = searchParams.get('token');
   const isResetMode = Boolean(token);
   
-  // Form states
+  // Component state
   const [step, setStep] = useState(isResetMode ? 'reset' : 'forgot');
   const [formData, setFormData] = useState({
     email: '',
@@ -42,12 +56,7 @@ const PasswordReset = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   
-  // API hooks
-  const forgotPasswordMutation = useForgotPassword();
-  const resetPasswordMutation = useResetPassword();
-  const testEmailMutation = useTestEmail();
-
-  // Check token validity on mount
+  // Validate token on mount
   useEffect(() => {
     if (isResetMode && !token) {
       setError('Invalid or missing reset token');
@@ -55,12 +64,17 @@ const PasswordReset = () => {
     }
   }, [token, isResetMode]);
 
+  /**
+   * Handle form input changes
+   */
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError('');
   };
 
-  // Handle forgot password (request reset)
+  /**
+   * Handle forgot password form submission
+   */
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -76,23 +90,16 @@ const PasswordReset = () => {
     }
 
     try {
-      const response = await forgotPasswordMutation.mutateAsync(formData.email);
-      
-      // Handle different response types
-      const data = response.data;
-      if (data.data?.resetUrl) {
-        // Development mode with email sent or fallback
-        setStep('email-sent-dev');
-      } else {
-        // Production mode or standard success
-        setStep('email-sent');
-      }
+      await forgotPassword(formData.email);
+      setStep('email-sent');
     } catch (err) {
       setError(err.response?.data?.error?.message || t('errors.generic'));
     }
   };
 
-  // Handle password reset
+  /**
+   * Handle password reset form submission
+   */
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -113,39 +120,16 @@ const PasswordReset = () => {
     }
 
     try {
-      await resetPasswordMutation.mutateAsync({
-        token,
-        newPassword: formData.newPassword
-      });
-      
+      await resetPassword(token, formData.newPassword);
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login', { 
-          state: { 
-            message: t('auth.passwordResetSuccess')
-          }
-        });
-      }, 3000);
     } catch (err) {
       setError(err.response?.data?.error?.message || t('errors.generic'));
     }
   };
 
-  // Test email function (development only)
-  const handleTestEmail = async () => {
-    if (!formData.email) {
-      setError(t('validation.emailRequired'));
-      return;
-    }
-
-    try {
-      await testEmailMutation.mutateAsync(formData.email);
-    } catch (err) {
-      setError(t('errors.generic'));
-    }
-  };
-
-  // Get password strength
+  /**
+   * Calculate password strength score
+   */
   const getPasswordStrength = () => {
     const { newPassword } = formData;
     if (!newPassword) return 0;
@@ -213,7 +197,7 @@ const PasswordReset = () => {
                 </motion.div>
               )}
               
-              {(step === 'email-sent' || step === 'email-sent-dev') && (
+              {step === 'email-sent' && (
                 <motion.div
                   key="email-sent-header"
                   initial={{ opacity: 0, y: 10 }}
@@ -224,10 +208,7 @@ const PasswordReset = () => {
                     {t('auth.checkYourEmail')}
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400">
-                    {step === 'email-sent-dev' ? 
-                      t('auth.resetEmailSentDev') : 
-                      t('auth.resetEmailSent')
-                    }
+                    {t('auth.resetEmailSent')}
                   </p>
                 </motion.div>
               )}
@@ -235,7 +216,7 @@ const PasswordReset = () => {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* Step 1: Forgot Password Form */}
+            {/* Forgot Password Form */}
             {step === 'forgot' && (
               <motion.form
                 key="forgot-form"
@@ -261,32 +242,17 @@ const PasswordReset = () => {
                   variant="primary"
                   size="large"
                   fullWidth
-                  loading={forgotPasswordMutation.isPending}
+                  loading={isSendingResetEmail}
                   disabled={!formData.email}
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {t('auth.sendResetLink')}
                 </Button>
-
-                {/* Development Test Email Button */}
-                {process.env.NODE_ENV === 'development' && formData.email && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="large"
-                    fullWidth
-                    loading={testEmailMutation.isPending}
-                    onClick={handleTestEmail}
-                  >
-                    <TestTube className="w-4 h-4 mr-2" />
-                    {t('auth.sendTestEmail')}
-                  </Button>
-                )}
               </motion.form>
             )}
 
-            {/* Step 2: Email Sent Confirmation */}
-            {(step === 'email-sent' || step === 'email-sent-dev') && (
+            {/* Email Sent Confirmation */}
+            {step === 'email-sent' && (
               <motion.div
                 key="email-sent"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -302,19 +268,8 @@ const PasswordReset = () => {
                   {t('auth.resetLinkSent')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  {step === 'email-sent-dev' ? 
-                    t('auth.emailSentDevDesc') :
-                    t('auth.emailSentDesc')
-                  }
+                  {t('auth.emailSentDesc')}
                 </p>
-
-                {step === 'email-sent-dev' && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      <strong>{t('auth.developmentMode')}:</strong> {t('auth.emailSentDevDesc')}
-                    </p>
-                  </div>
-                )}
                 
                 <Button
                   variant="outline"
@@ -326,7 +281,7 @@ const PasswordReset = () => {
               </motion.div>
             )}
 
-            {/* Step 3: Reset Password Form */}
+            {/* Reset Password Form */}
             {step === 'reset' && !success && (
               <motion.form
                 key="reset-form"
@@ -346,7 +301,7 @@ const PasswordReset = () => {
                     placeholder={t('auth.passwordPlaceholder')}
                     icon={Lock}
                     required
-                    endAdornment={
+                    suffix={
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -357,7 +312,7 @@ const PasswordReset = () => {
                     }
                   />
 
-                  {/* Password Strength */}
+                  {/* Password Strength Indicator */}
                   {formData.newPassword && (
                     <div className="mt-2">
                       <div className="flex gap-1 mb-1">
@@ -387,7 +342,7 @@ const PasswordReset = () => {
                   icon={Lock}
                   error={formData.confirmPassword && formData.newPassword !== formData.confirmPassword ? t('validation.passwordsDontMatch') : ''}
                   required
-                  endAdornment={
+                  suffix={
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -409,7 +364,7 @@ const PasswordReset = () => {
                   variant="primary"
                   size="large"
                   fullWidth
-                  loading={resetPasswordMutation.isPending}
+                  loading={isResettingPassword}
                   disabled={!formData.newPassword || !formData.confirmPassword}
                 >
                   {t('auth.resetPassword')}
@@ -417,7 +372,7 @@ const PasswordReset = () => {
               </motion.form>
             )}
 
-            {/* Step 4: Success State */}
+            {/* Success State */}
             {success && (
               <motion.div
                 key="success"

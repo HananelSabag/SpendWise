@@ -1,12 +1,13 @@
-// src/context/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+/**
+ * AuthContext - Enhanced with Database Preference Synchronization
+ * Central authentication state with preference management
+ */
+
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { auth, tokenManager } from '../utils/auth';
-import { authAPI } from '../utils/api';
+import { authAPI, queryKeys, mutationKeys } from '../utils/api';
 import toast from 'react-hot-toast';
-import api from '../utils/api'; // NEW: Import for direct API calls
-import { useLanguage } from './LanguageContext';
 
 const AuthContext = createContext(null);
 
@@ -21,310 +22,295 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [initialized, setInitialized] = useState(false);
   
-  // ✅ לוג רק פעם אחת בלבד
-  useEffect(() => {
-    if (!window._authProviderInitialized) {
-      console.log(`🔐 [AUTH-PROVIDER] Provider initialized, isAuthenticated: ${auth.isAuthenticated()}`);
-      window._authProviderInitialized = true;
+  // Check if user has valid token
+  const hasToken = !!localStorage.getItem('accessToken');
+  
+  // Profile query - includes preferences
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile,
+    queryFn: () => authAPI.getProfile(),
+    enabled: hasToken,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: (failureCount, error) => {
+      if (error?.response?.status === 401) {
+        // Clear tokens on 401
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        return false;
+      }
+      return failureCount < 2;
+    }
+  });
+  
+  // Process user data with preferences
+  const user = useMemo(() => {
+    if (!profileQuery.data?.data) return null;
+    
+    const userData = profileQuery.data.data;
+    
+    // Ensure preferences are properly structured
+    return {
+      ...userData,
+      preferences: {
+        // Database columns
+        language: userData.language_preference || 'en',
+        theme: userData.theme_preference || 'light',
+        currency: userData.currency_preference || 'USD',
+        
+        // JSONB preferences
+        profilePicture: userData.preferences?.profilePicture || null,
+        notifications: userData.preferences?.notifications || {
+          email: true,
+          push: true,
+          sms: false,
+          recurring: true,
+          reminders: true
+        },
+        privacy: userData.preferences?.privacy || {
+          showProfile: true,
+          showStats: false,
+          allowAnalytics: true
+        },
+        
+        // Spread any other JSONB preferences
+        ...userData.preferences
+      }
+    };
+  }, [profileQuery.data]);
+  
+  // Apply user preferences to the app
+  const applyUserPreferences = useCallback((userData) => {
+    if (!userData) return;
+    
+    // Emit events for context providers to handle
+    if (userData.theme_preference) {
+      window.dispatchEvent(new CustomEvent('theme-preference-changed', { 
+        detail: userData.theme_preference 
+      }));
+    }
+    
+    if (userData.language_preference) {
+      window.dispatchEvent(new CustomEvent('language-preference-changed', { 
+        detail: userData.language_preference 
+      }));
+    }
+    
+    if (userData.currency_preference) {
+      window.dispatchEvent(new CustomEvent('currency-preference-changed', { 
+        detail: userData.currency_preference 
+      }));
     }
   }, []);
   
-  // User profile query - Enhanced with better data handling
-  const { 
-    data: user, 
-    isLoading: loading, 
-    error,
-    refetch: refetchProfile 
-  } = useQuery({
-    queryKey: ['profile'],
-    queryFn: () => {
-      console.log(`🌐 [AUTH-API] Profile request starting`);
-      const startTime = Date.now();
-      
-      return authAPI.getProfile().then(res => {
-        const endTime = Date.now();
-        console.log(`✅ [AUTH-API] Profile completed in ${endTime - startTime}ms`);
-        
-        // Ensure profile picture URL is properly formatted
-        const userData = res.data.data;
-        if (userData.preferences?.profilePicture && !userData.preferences.profilePicture.startsWith('http')) {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          userData.preferences.profilePicture = `${apiUrl}${userData.preferences.profilePicture}`;
-        }
-        
-        return userData;
-      }).catch(error => {
-        const endTime = Date.now();
-        console.error(`❌ [AUTH-API] Profile failed after ${endTime - startTime}ms:`, error);
-        throw error;
-      });
-    },
-    enabled: !!auth.isAuthenticated(),
-    retry: 1,
-    staleTime: 5 * 60 * 1000, // Reduced to 5 minutes for faster image updates
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      if (error.response?.status === 401) {
-        console.log(`🔓 [AUTH-ERROR] 401 error - clearing tokens`);
-        tokenManager.clearTokens();
-      }
-    }
-  });
-  
-  // Login mutation - UPDATED: Now handles email verification errors
+  // Login mutation
   const loginMutation = useMutation({
-    mutationFn: async (credentials) => {
-      console.log(`🔑 [LOGIN] 🔥 ATTEMPTING LOGIN 🔥 for user:`, credentials.email);
-      const startTime = Date.now();
+    mutationFn: (credentials) => authAPI.login(credentials),
+    mutationKey: mutationKeys.login,
+    onSuccess: (response) => {
+      const { data } = response.data;
       
-      try {
-        const response = await api.post('/users/login', credentials);
-        const endTime = Date.now();
-        console.log(`✅ [LOGIN] Login completed in ${endTime - startTime}ms`);
-        
-        // Handle successful login
-        if (response.data.data?.accessToken) {
-          tokenManager.setTokens(response.data.data.accessToken, response.data.data.refreshToken);
-          return { success: true, user: response.data.data.user };
-        }
-        
-        return { success: false, error: 'No token received' };
-      } catch (error) {
-        const endTime = Date.now();
-        console.error(`❌ [LOGIN] Login failed after ${endTime - startTime}ms:`, error);
-        
-        // NEW: Check for email verification error
-        if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
-          console.log(`📧 [LOGIN] Email verification required for:`, credentials.email);
-          // Let the component handle this specific error
-          throw error;
-        }
-        
-        throw error;
+      // Store tokens
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      
+      // Clear guest preferences
+      localStorage.removeItem('guestTheme');
+      localStorage.removeItem('guestCurrency');
+      localStorage.removeItem('guestLanguage');
+      
+      // Invalidate profile to refetch with new auth
+      queryClient.invalidateQueries(queryKeys.profile);
+      
+      // Apply user preferences immediately
+      if (data.user) {
+        applyUserPreferences(data.user);
       }
-    },
-    onSuccess: (data) => {
-      console.log(`🎉 [LOGIN-SUCCESS] Login successful, invalidating profile query`);
-      if (data.success) {
-        queryClient.invalidateQueries(['profile']);
-        
-        // ✅ FIX: Dispatch auth state change event
-        window.dispatchEvent(new Event('authStateChanged'));
-        
-        // Check if user needs onboarding
-        if (data.user?.needsOnboarding) {
-          console.log(`🚀 [LOGIN-SUCCESS] User needs onboarding, navigating to /onboarding`);
-          navigate('/onboarding');
-        } else {
-          console.log(`🏠 [LOGIN-SUCCESS] User authenticated, navigating to /`);
-          navigate('/');
-        }
-        
-        toast.success('Welcome back!');
-      }
+      
+      toast.success('Welcome back!');
+      
+      // Navigate to dashboard
+      navigate('/');
     },
     onError: (error) => {
-      console.error(`❌ [LOGIN-ERROR] Login mutation error:`, error);
-      // NEW: Don't show toast here for email verification - let the component handle it
-      if (error.response?.data?.error?.code !== 'EMAIL_NOT_VERIFIED') {
-        toast.error(error.message || 'Login failed');
+      const errorData = error.response?.data?.error;
+      
+      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        // Don't show toast, let component handle it
+        return;
       }
+      
+      // Show other errors
+      const message = errorData?.message || 'Login failed';
+      toast.error(message);
     }
   });
   
-  // Register mutation - UPDATED: Now handles email verification flow like password reset
+  // Register mutation
   const registerMutation = useMutation({
-    mutationFn: async (userData) => {
-      console.log(`📝 [REGISTER] Attempting registration for:`, userData.email);
-      
-      try {
-        const response = await authAPI.register(userData);
-        console.log(`✅ [REGISTER] Registration response:`, response.data);
-        
-        return response.data; // Return the full response for email verification handling
-      } catch (error) {
-        console.error(`❌ [REGISTER] Registration failed:`, error);
-        
-        // Handle existing unverified user case
-        if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
-          console.log(`📧 [REGISTER] Email already exists but unverified:`, userData.email);
-          // Return special response for existing unverified user
-          return {
-            requiresVerification: true,
-            email: userData.email,
-            isExistingUser: true,
-            message: error.response.data.error.message
-          };
-        }
-        
-        throw error;
+    mutationFn: (userData) => authAPI.register(userData),
+    mutationKey: mutationKeys.register,
+    onSuccess: (response) => {
+      if (response.data?.requiresVerification) {
+        // Let component handle verification flow
+        return;
       }
-    },
-    // Don't handle success/error here - let components handle the email verification flow
-    onSuccess: (data) => {
-      console.log(`📧 [REGISTER-SUCCESS] Registration completed:`, data);
-    },
-    onError: (error) => {
-      console.error(`❌ [REGISTER-ERROR] Registration mutation error:`, error);
+      
+      toast.success('Registration successful! Please check your email.');
     }
   });
   
   // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: () => auth.logout(),
+    mutationFn: () => authAPI.logout(),
+    mutationKey: mutationKeys.logout,
     onSuccess: () => {
+      // Clear all auth data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      
+      // Clear all queries
       queryClient.clear();
       
-      // ✅ FIX: Dispatch auth state change event
-      window.dispatchEvent(new Event('authStateChanged'));
+      // Emit reset event for contexts
+      window.dispatchEvent(new Event('auth-logout'));
+      window.dispatchEvent(new Event('preferences-reset'));
       
-      navigate('/login', { replace: true });
+      toast.success('Logged out successfully');
+      
+      // Navigate to login
+      navigate('/login');
+    },
+    onError: () => {
+      // Even if logout API fails, clear local data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      queryClient.clear();
+      window.dispatchEvent(new Event('auth-logout'));
+      navigate('/login');
     }
   });
   
-  // Update profile mutation - Enhanced
+  // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: (data) => authAPI.updateProfile(data),
+    mutationKey: mutationKeys.updateProfile,
     onSuccess: (response) => {
-      // Properly merge updated data with existing user data
-      queryClient.setQueryData(['profile'], (oldData) => {
-        const updatedData = response.data.data;
-        
-        // Preserve profile picture URL formatting
-        if (updatedData.preferences?.profilePicture && !updatedData.preferences.profilePicture.startsWith('http')) {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          updatedData.preferences.profilePicture = `${apiUrl}${updatedData.preferences.profilePicture}`;
-        }
+      const updatedUser = response.data?.data;
+      
+      // Update cache
+      queryClient.setQueryData(queryKeys.profile, (old) => ({
+        ...old,
+        data: updatedUser
+      }));
+      
+      // Apply preferences if they changed
+      if (updatedUser) {
+        applyUserPreferences(updatedUser);
+      }
+      
+      toast.success('Profile updated successfully');
+    }
+  });
+  
+  // Update preferences mutation (JSONB)
+  const updatePreferencesMutation = useMutation({
+    mutationFn: (preferences) => authAPI.updatePreferences(preferences),
+    mutationKey: mutationKeys.updatePreferences,
+    onSuccess: (response, variables) => {
+      // Update cache optimistically
+      queryClient.setQueryData(queryKeys.profile, (old) => {
+        if (!old?.data) return old;
         
         return {
-          ...oldData,
-          ...updatedData,
-          preferences: {
-            ...oldData?.preferences,
-            ...updatedData.preferences
+          ...old,
+          data: {
+            ...old.data,
+            preferences: {
+              ...old.data.preferences,
+              ...variables.preferences
+            }
           }
         };
       });
       
-      toast.success('Profile updated successfully');
-    },
-    onError: (error) => {
-      const message = error.response?.data?.error?.message || 'Failed to update profile';
-      toast.error(message);
+      toast.success('Preferences updated successfully');
     }
   });
   
-  // Initialize auth state - ✅ לוג רק פעם אחת
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = tokenManager.getAccessToken();
-      
-      if (token && !tokenManager.isTokenExpired(token)) {
-        if (!window._authInitLogged) {
-          console.log(`✅ [AUTH-INIT] Valid token exists`);
-          window._authInitLogged = true;
-        }
-      } else {
-        tokenManager.clearTokens();
+  // Upload profile picture mutation
+  const uploadProfilePictureMutation = useMutation({
+    mutationFn: ({ file, onProgress }) => authAPI.uploadProfilePicture(file, onProgress),
+    mutationKey: mutationKeys.uploadProfilePicture,
+    onSuccess: (response) => {
+      // Update cache immediately with new picture URL
+      const pictureUrl = response.data?.data?.url;
+      if (pictureUrl) {
+        queryClient.setQueryData(queryKeys.profile, (old) => {
+          if (!old?.data) return old;
+          
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              preferences: {
+                ...old.data.preferences,
+                profilePicture: pictureUrl
+              }
+            }
+          };
+        });
       }
       
-      setInitialized(true);
-    };
-    
-    if (!initialized) {
-      initAuth();
+      toast.success('Profile picture uploaded successfully');
     }
-  }, [initialized]);
+  });
   
-  // Token refresh effect
-  useEffect(() => {
-    if (!user) return;
-    
-    const token = tokenManager.getAccessToken();
-    if (!token) return;
-    
-    // Calculate when to refresh (5 minutes before expiry)
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiryTime = payload.exp * 1000;
-    const refreshTime = expiryTime - Date.now() - (5 * 60 * 1000);
-    
-    if (refreshTime <= 0) {
-      // Token already expired or about to expire
-      refetchProfile();
-      return;
-    }
-    
-    // Schedule refresh
-    const timeout = setTimeout(() => {
-      refetchProfile();
-    }, refreshTime);
-    
-    return () => clearTimeout(timeout);
-  }, [user, refetchProfile]);
-  
-  // NEW: Email verification mutations
+  // Email verification mutations
   const verifyEmailMutation = useMutation({
-    mutationFn: async (token) => {
-      console.log(`📧 [VERIFY-EMAIL] Attempting to verify email with token:`, token);
+    mutationFn: (token) => authAPI.verifyEmail(token),
+    mutationKey: mutationKeys.verifyEmail,
+    onSuccess: (response) => {
+      const { data } = response.data;
       
-      try {
-        const response = await authAPI.verifyEmail(token);
-        console.log(`✅ [VERIFY-EMAIL] Email verification successful:`, response.data);
-        
-        // Auto-login user after successful verification
-        if (response.data.data?.accessToken) {
-          tokenManager.setTokens(response.data.data.accessToken, response.data.data.refreshToken);
-        }
-        
-        return response.data;
-      } catch (error) {
-        console.error(`❌ [VERIFY-EMAIL] Email verification failed:`, error);
-        throw error;
+      if (data?.accessToken) {
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        queryClient.invalidateQueries(queryKeys.profile);
       }
-    },
-    onSuccess: (data) => {
-      console.log(`🎉 [VERIFY-EMAIL-SUCCESS] Email verified, user logged in`);
-      queryClient.invalidateQueries(['profile']);
-      window.dispatchEvent(new Event('authStateChanged'));
       
-      toast.success('Email verified successfully! Welcome to SpendWise!');
+      toast.success('Email verified successfully!');
       navigate('/');
-    },
-    onError: (error) => {
-      console.error(`❌ [VERIFY-EMAIL-ERROR]:`, error);
-      const message = error.response?.data?.error?.message || 'Email verification failed';
-      toast.error(message);
-    }
-  });
-
-  const resendVerificationMutation = useMutation({
-    mutationFn: async (email) => {
-      console.log(`📧 [RESEND-VERIFICATION] Attempting to resend verification email to:`, email);
-      
-      try {
-        const response = await authAPI.resendVerificationEmail(email);
-        console.log(`✅ [RESEND-VERIFICATION] Verification email sent:`, response.data);
-        return response.data;
-      } catch (error) {
-        console.error(`❌ [RESEND-VERIFICATION] Failed to resend:`, error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      console.log(`📧 [RESEND-VERIFICATION-SUCCESS] Verification email sent`);
-      toast.success('Verification email sent! Please check your inbox.');
-    },
-    onError: (error) => {
-      console.error(`❌ [RESEND-VERIFICATION-ERROR]:`, error);
-      const message = error.response?.data?.error?.message || 'Failed to send verification email';
-      toast.error(message);
     }
   });
   
-  // Public methods
+  const resendVerificationMutation = useMutation({
+    mutationFn: (email) => authAPI.resendVerificationEmail(email),
+    mutationKey: mutationKeys.resendVerification,
+    onSuccess: () => {
+      toast.success('Verification email sent!');
+    }
+  });
+  
+  // Password reset mutations
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (email) => authAPI.forgotPassword(email),
+    mutationKey: mutationKeys.forgotPassword
+  });
+  
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ token, newPassword }) => authAPI.resetPassword(token, newPassword),
+    mutationKey: mutationKeys.resetPassword,
+    onSuccess: () => {
+      toast.success('Password reset successfully');
+      navigate('/login');
+    }
+  });
+  
+  // Helper functions
   const login = useCallback(async (credentials) => {
     return loginMutation.mutateAsync(credentials);
   }, [loginMutation]);
@@ -341,48 +327,117 @@ export const AuthProvider = ({ children }) => {
     return updateProfileMutation.mutateAsync(data);
   }, [updateProfileMutation]);
   
-  // NEW: Public methods for email verification
+  const updatePreferences = useCallback(async (preferences) => {
+    // Handle both formats: direct preferences or wrapped
+    const prefsToUpdate = preferences.preferences || preferences;
+    return updatePreferencesMutation.mutateAsync({ preferences: prefsToUpdate });
+  }, [updatePreferencesMutation]);
+  
+  const uploadProfilePicture = useCallback(async (file, onProgress) => {
+    return uploadProfilePictureMutation.mutateAsync({ file, onProgress });
+  }, [uploadProfilePictureMutation]);
+  
   const verifyEmail = useCallback(async (token) => {
     return verifyEmailMutation.mutateAsync(token);
   }, [verifyEmailMutation]);
-
-  const resendVerification = useCallback(async (email) => {
+  
+  const resendVerificationEmail = useCallback(async (email) => {
     return resendVerificationMutation.mutateAsync(email);
   }, [resendVerificationMutation]);
   
-  const value = {
+  const forgotPassword = useCallback(async (email) => {
+    return forgotPasswordMutation.mutateAsync(email);
+  }, [forgotPasswordMutation]);
+  
+  const resetPassword = useCallback(async (token, newPassword) => {
+    return resetPasswordMutation.mutateAsync({ token, newPassword });
+  }, [resetPasswordMutation]);
+  
+  // Refresh profile data
+  const refreshProfile = useCallback(() => {
+    return profileQuery.refetch();
+  }, [profileQuery]);
+  
+  // Apply preferences on user change
+  React.useEffect(() => {
+    if (user) {
+      applyUserPreferences(user);
+    }
+  }, [user, applyUserPreferences]);
+  
+  // Computed states
+  const isAuthenticated = !!user && hasToken;
+  const isLoading = profileQuery.isLoading;
+  const isInitialized = !hasToken || profileQuery.isFetched;
+  
+  const value = useMemo(() => ({
     // User data
     user,
-    isAuthenticated: !!user && auth.isAuthenticated(),
+    isAuthenticated,
+    preferences: user?.preferences || null,
     
     // Loading states
-    loading: loading || !initialized,
-    initialized,
-    
-    // Error state
-    error: error?.message || null,
+    isLoading,
+    isInitialized,
+    isLoggingIn: loginMutation.isLoading,
+    isRegistering: registerMutation.isLoading,
+    isLoggingOut: logoutMutation.isLoading,
+    isUpdatingProfile: updateProfileMutation.isLoading,
+    isUpdatingPreferences: updatePreferencesMutation.isLoading,
+    isUploadingPicture: uploadProfilePictureMutation.isLoading,
+    isVerifyingEmail: verifyEmailMutation.isLoading,
+    isResendingVerification: resendVerificationMutation.isLoading,
+    isSendingResetEmail: forgotPasswordMutation.isLoading,
+    isResettingPassword: resetPasswordMutation.isLoading,
     
     // Auth methods
     login,
     register,
     logout,
     updateProfile,
-    refreshProfile: refetchProfile,
-    
-    // NEW: Email verification methods
+    updatePreferences,
+    uploadProfilePicture,
     verifyEmail,
-    resendVerification,
+    resendVerificationEmail,
+    forgotPassword,
+    resetPassword,
     
-    // Loading states for mutations
-    isLoggingIn: loginMutation.isLoading,
-    isRegistering: registerMutation.isLoading,
-    isLoggingOut: logoutMutation.isLoading,
-    isUpdatingProfile: updateProfileMutation.isLoading,
+    // Utility
+    refreshProfile,
+    applyUserPreferences,
     
-    // NEW: Email verification loading states
-    isVerifyingEmail: verifyEmailMutation.isLoading,
-    isResendingVerification: resendVerificationMutation.isLoading
-  };
+    // Raw query for advanced usage
+    profileQuery
+  }), [
+    user,
+    isAuthenticated,
+    isLoading,
+    isInitialized,
+    loginMutation.isLoading,
+    registerMutation.isLoading,
+    logoutMutation.isLoading,
+    updateProfileMutation.isLoading,
+    updatePreferencesMutation.isLoading,
+    uploadProfilePictureMutation.isLoading,
+    verifyEmailMutation.isLoading,
+    resendVerificationMutation.isLoading,
+    forgotPasswordMutation.isLoading,
+    resetPasswordMutation.isLoading,
+    login,
+    register,
+    logout,
+    updateProfile,
+    updatePreferences,
+    uploadProfilePicture,
+    verifyEmail,
+    resendVerificationEmail,
+    forgotPassword,
+    resetPassword,
+    refreshProfile,
+    applyUserPreferences,
+    profileQuery,
+    hasToken
+  ]);
   
   return (
     <AuthContext.Provider value={value}>

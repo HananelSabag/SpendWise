@@ -1,4 +1,4 @@
-// components/features/dashboard/ActionsPanel.jsx
+// components/features/transactions/AddTransactions.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -34,23 +34,25 @@ import {
   Crown
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useTransactions } from '../../../context/TransactionContext';
+// ✅ NEW: Updated imports - Use new hooks instead of old context
+import { useTransactions } from '../../../hooks/useTransactions';
+import { useCategories } from '../../../hooks/useCategory';
 import { useDate } from '../../../context/DateContext';
-import { useCategories } from '../../../hooks/useApi';
 import { Card, Button, Badge, Modal } from '../../ui';
 import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
 import CalendarWidget from '../../common/CalendarWidget';
 import { dateHelpers } from '../../../utils/helpers';
 
-const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null }) => {
+const AddTransactions = ({ onClose, context = 'dashboard', initialActionType = null }) => {
   const { t, language } = useLanguage();
-  const { createTransaction } = useTransactions();
+  // ✅ NEW: Use new hooks with proper destructuring
+  const { createTransaction, isCreating } = useTransactions();
+  const { categories: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const { selectedDate } = useDate();
   
   // ✅ CORRECT: This component doesn't need dashboard data
   // It only creates transactions, so no useDashboard() call needed
   
-  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const isRTL = language === 'he';
   
   // States
@@ -59,7 +61,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [currentStep, setCurrentStep] = useState(initialActionType ? 1 : 0); // 0: type selection, 1: form
+  const [currentStep, setCurrentStep] = useState(initialActionType ? 1 : 0);
   
   // ✅ ADD: Category tab state
   const [categoryTab, setCategoryTab] = useState('general');
@@ -74,8 +76,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     is_recurring: initialActionType?.isRecurring || false,
     recurring_interval: 'monthly',
     recurring_end_date: null,
-    day_of_week: 0, // Default to Sunday
-    // ✅ FIX: Use local timezone date formatting consistent with server
+    day_of_week: 0,
     date: (() => {
       const date = selectedDate || new Date();
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -282,10 +283,9 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
     }
 
     try {
-      setLoading(true);
+      // ✅ NEW: Use isCreating from hook instead of local loading state
       setError('');
       
-      // ✅ FIX: Explicitly construct submission data to ensure day_of_week is included
       const submitData = {
         ...formData,
         amount: parseFloat(formData.amount),
@@ -295,19 +295,21 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
           : null
       };
 
-      console.log('🔍 [ACTIONS-DEBUG] Submitting data:', submitData);
+      console.log('🔍 [ADD-TRANSACTIONS-DEBUG] Submitting data:', submitData);
       
       await createTransaction(activeType.type, submitData);
       
       setSuccess(true);
-      setTimeout(() => {
-        onClose?.();
-      }, 2500);
+      
+      // ✅ NEW: Optional callback for parent component
+      if (onClose) {
+        setTimeout(() => {
+          onClose();
+        }, 2500);
+      }
       
     } catch (err) {
       setError(err.message || t('actions.errors.addingTransaction'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -418,7 +420,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="h-full flex flex-col" // ✅ REMOVE: Any overflow-hidden classes
+      className="h-full flex flex-col"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* PREMIUM HEADER - Fixed, never scrolls */}
@@ -524,7 +526,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
       </div>
 
       {/* MAIN CONTENT - Scrollable when needed */}
-      <div className="flex-1 overflow-y-auto"> {/* ✅ KEEP: Only vertical scroll, not hidden */}
+      <div className="flex-1 overflow-y-auto">
         <div className="p-4 sm:p-6 space-y-6">
           <AnimatePresence mode="wait">
             {/* STEP 0: TYPE SELECTION - Premium Cards */}
@@ -1005,7 +1007,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
         </div>
       </div>
 
-      {/* MINIMAL FOOTER - Streamlined */}
+      {/* FOOTER - Updated to use hook loading state */}
       {currentStep === 1 && activeType && !success && (
         <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
           <div className="flex gap-2">
@@ -1014,7 +1016,7 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
                 type="button"
                 variant="outline"
                 onClick={goBackToTypeSelection}
-                disabled={loading}
+                disabled={isCreating}
                 size="small"
                 className="px-4"
               >
@@ -1024,12 +1026,12 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
             <Button
               type="submit"
               variant="primary"
-              loading={loading}
-              disabled={loading || !formData.amount || !formData.description}
+              loading={isCreating}
+              disabled={isCreating || !formData.amount || !formData.description}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md hover:shadow-lg py-2.5"
               onClick={handleSubmit}
             >
-              {loading ? (
+              {isCreating ? (
                 <div className="flex items-center gap-2">
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -1052,4 +1054,5 @@ const ActionsPanel = ({ onClose, context = 'dashboard', initialActionType = null
   );
 };
 
-export default ActionsPanel;
+// ✅ NEW: Export with new name
+export default AddTransactions;

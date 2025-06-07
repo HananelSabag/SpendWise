@@ -18,7 +18,8 @@ import {
   ShoppingBag, Pizza, Wine, Phone, MapPin
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '../../../hooks/useApi';
+// ✅ UPDATED: Use dedicated category hooks instead of generic API hooks
+import { useCategories } from '../../../hooks/useCategory';
 import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../../ui';
 import { cn } from '../../../utils/helpers';
 import toast from 'react-hot-toast';
@@ -29,10 +30,20 @@ import toast from 'react-hot-toast';
  */
 const CategoryManager = () => {
   const { t, language } = useLanguage();
-  const { data: allCategories = [], isLoading, refetch } = useCategories();
-  const createMutation = useCreateCategory();
-  const updateMutation = useUpdateCategory();
-  const deleteMutation = useDeleteCategory();
+  // ✅ UPDATED: Use the new category hooks
+  const {
+    categories: allCategories = [],
+    isLoading,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    error,
+    refresh
+  } = useCategories();
+  
   const isRTL = language === 'he';
   
   const [showForm, setShowForm] = useState(false);
@@ -44,8 +55,6 @@ const CategoryManager = () => {
     type: 'expense'
   });
   const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIconCategory, setSelectedIconCategory] = useState('general');
@@ -165,7 +174,7 @@ const CategoryManager = () => {
     setErrors({});
   };
 
-  // Handle form submission
+  // ✅ UPDATED: Handle form submission with new hooks
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -176,21 +185,16 @@ const CategoryManager = () => {
       return;
     }
     
-    setSaving(true);
-    
     try {
       if (editingCategory) {
-        await updateMutation.mutateAsync({ 
-          id: editingCategory.id, 
-          data: formData 
-        });
+        await updateCategory(editingCategory.id, formData);
         toast.success(t('categories.updated'), {
           icon: '✨',
           duration: 3000
         });
       } else {
-        const result = await createMutation.mutateAsync(formData);
-        console.log('✅ [CATEGORY] Created:', result);
+        await createCategory(formData);
+        console.log('✅ [CATEGORY] Created with new hook');
         toast.success(t('categories.created'), {
           icon: '🎉',
           duration: 3000
@@ -200,15 +204,9 @@ const CategoryManager = () => {
       setShowForm(false);
       resetForm();
       
-      // ✅ FIX: Force immediate refetch
-      await refetch();
-      console.log('✅ [CATEGORY] Categories refetched after creation');
-      
     } catch (error) {
       console.error('Save failed:', error);
-      toast.error(t('categories.saveFailed'));
-    } finally {
-      setSaving(false);
+      // Error toast is handled by the hook
     }
   };
 
@@ -224,23 +222,19 @@ const CategoryManager = () => {
     setShowForm(true);
   };
 
-  // Handle delete
+  // ✅ UPDATED: Handle delete with new hooks
   const handleDelete = async (categoryId) => {
     if (!window.confirm(t('categories.deleteConfirm'))) return;
     
-    setDeleting(categoryId);
     try {
-      await deleteMutation.mutateAsync(categoryId);
+      await deleteCategory(categoryId);
       toast.success(t('categories.deleted'), {
         icon: '🗑️',
         duration: 3000
       });
-      refetch(); // Force refresh
     } catch (error) {
       console.error('Delete failed:', error);
-      toast.error(t('categories.deleteFailed'));
-    } finally {
-      setDeleting(null);
+      // Error toast is handled by the hook
     }
   };
 
@@ -344,7 +338,7 @@ const CategoryManager = () => {
                     index={index}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
-                    deleting={deleting === category.id}
+                    deleting={isDeleting}
                     isDefault={false}
                     getIconComponent={getIconComponent}
                     t={t}
@@ -567,15 +561,15 @@ const CategoryManager = () => {
                 setShowForm(false);
                 resetForm();
               }}
-              disabled={saving}
+              disabled={isCreating || isUpdating}
             >
               {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               variant="primary"
-              loading={saving}
-              disabled={saving || !formData.name.trim()}
+              loading={isCreating || isUpdating}
+              disabled={isCreating || isUpdating || !formData.name.trim()}
               className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
             >
               <Save className="w-4 h-4 mr-2" />
@@ -738,167 +732,6 @@ const CategoryCard = ({
         </div>
       </Card>
     </motion.div>
-  );
-};
-
-// 📝 PREMIUM FORM COMPONENT
-const CategoryForm = ({ 
-  formData, 
-  setFormData, 
-  errors, 
-  onSubmit, 
-  onCancel, 
-  saving, 
-  editingCategory, 
-  iconCategories, 
-  t, 
-  isRTL 
-}) => {
-  const [selectedIconCategory, setSelectedIconCategory] = useState('general');
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      {/* Basic Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label={t('categories.name')}
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          error={errors.name}
-          required
-          placeholder="למשל: קפה וארוחות"
-        />
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('categories.type')}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {['expense', 'income'].map(type => (
-              <Button
-                key={type}
-                type="button"
-                variant={formData.type === type ? "primary" : "outline"}
-                onClick={() => setFormData({ ...formData, type })}
-                className={cn(
-                  "justify-center",
-                  formData.type === type && "ring-2 ring-primary-500 ring-offset-2"
-                )}
-              >
-                {type === 'expense' ? (
-                  <>
-                    <TrendingDown className="w-4 h-4 mr-2" />
-                    {t('transactions.expense')}
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    {t('transactions.income')}
-                  </>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('categories.description')} 
-          <span className="text-gray-500 text-xs">({t('common.optional')})</span>
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder={t('categories.descriptionPlaceholder')}
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
-      </div>
-      
-      {/* Icon Selection */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          {t('categories.icon')}
-        </label>
-        
-        {/* Icon Category Tabs */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {Object.keys(iconCategories).map(categoryKey => (
-            <Button
-              key={categoryKey}
-              type="button"
-              variant={selectedIconCategory === categoryKey ? "primary" : "outline"}
-              size="small"
-              onClick={() => setSelectedIconCategory(categoryKey)}
-            >
-              {categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)}
-            </Button>
-          ))}
-        </div>
-        
-        {/* Icon Grid */}
-        <div className="grid grid-cols-6 md:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
-          {iconCategories[selectedIconCategory].map(({ name, icon: IconComponent, label }) => (
-            <motion.button
-              key={name}
-              type="button"
-              onClick={() => setFormData({ ...formData, icon: name })}
-              className={cn(
-                'p-3 rounded-xl border-2 transition-all group relative',
-                formData.icon === name
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-110'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:scale-105'
-              )}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title={label}
-            >
-              <IconComponent className={cn(
-                'w-6 h-6 mx-auto transition-colors',
-                formData.icon === name 
-                  ? 'text-primary-600 dark:text-primary-400' 
-                  : 'text-gray-500 group-hover:text-primary-500'
-              )} />
-              
-              {/* Selection indicator */}
-              {formData.icon === name && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center"
-                >
-                  <Star className="w-3 h-3 text-white" />
-                </motion.div>
-              )}
-            </motion.button>
-          ))}
-        </div>
-      </div>
-      
-      {/* Actions */}
-      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={saving}
-        >
-          {t('common.cancel')}
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          loading={saving}
-          disabled={saving || !formData.name.trim()}
-          className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {editingCategory ? t('common.save') : t('common.create')}
-        </Button>
-      </div>
-    </form>
   );
 };
 

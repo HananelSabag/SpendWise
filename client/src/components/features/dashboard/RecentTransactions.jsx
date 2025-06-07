@@ -4,6 +4,7 @@ import { Calendar, ArrowRight, Package, Eye } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useDate } from '../../../context/DateContext';
 import { useCurrency } from '../../../context/CurrencyContext';
+import { useDashboard } from '../../../hooks/useDashboard';
 import { Card } from '../../../components/ui';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
@@ -13,15 +14,23 @@ import LoadingSpinner from '../../../components/ui/LoadingSpinner';
  * Optimized for mobile and smaller screen spaces
  */
 const RecentTransactions = ({ 
-  transactions = [], 
-  loading = false, 
   limit = 5 
 }) => {
   const { t, language } = useLanguage();
   
+  // ✅ Use the dashboard hook to get recent transactions
+  const { 
+    data: dashboardData, 
+    isLoading, 
+    error 
+  } = useDashboard();
+  
   const isRTL = language === 'he';
 
-  // ✅ FIX: Filter out future transactions and only show past/current transactions
+  // ✅ Extract transactions from dashboard data
+  const transactions = dashboardData?.recentTransactions || [];
+
+  // ✅ Filter out future transactions and only show past/current transactions
   const today = new Date();
   today.setHours(23, 59, 59, 999); // End of today
   
@@ -41,78 +50,7 @@ const RecentTransactions = ({
   const { formatDate } = useDate();
   const { formatAmount } = useCurrency();
   
-  // Empty state content - simplified
-  const renderEmptyState = () => (
-    <div className="text-center py-4">
-      <div className="inline-flex items-center justify-center p-2 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
-        <Package className="w-5 h-5 text-gray-400" />
-      </div>
-      <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-        {t('dashboard.transactions.noTransactions')}
-      </p>
-    </div>
-  );
-
-  // Transaction item - simplified compact version
-  const TransactionItem = ({ transaction }) => {
-    // ✅ FIX: Better transaction type detection with fallbacks
-    let transactionType = transaction.transaction_type;
-    
-    // Fallback detection if transaction_type is undefined
-    if (!transactionType) {
-      // Try to determine from amount (positive = income, negative = expense)
-      transactionType = transaction.amount >= 0 ? 'income' : 'expense';
-      
-      // Or try alternative field names
-      if (transaction.type) {
-        transactionType = transaction.type;
-      }
-    }
-    
-    const isIncome = transactionType === 'income';
-    const isExpense = transactionType === 'expense';
-    
-    return (
-      <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-        <div className="flex items-center gap-3">
-          {/* ✅ FIX: Correct color based on detected transaction type */}
-          <div className={`w-2 h-2 rounded-full ${isIncome ? 'bg-green-500' : 'bg-red-500'}`}></div>
-          <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
-              {transaction.description || t('transactions.noDescription')}
-            </p>
-            <p className="text-xs text-gray-500">
-              {/* ✅ IMPROVED: Better date formatting with error handling */}
-              {(() => {
-                try {
-                  const date = new Date(transaction.date);
-                  // Validate date
-                  if (isNaN(date.getTime())) {
-                    return 'Invalid date';
-                  }
-                  
-                  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    timeZone: 'UTC' // Prevent timezone shifts
-                  });
-                } catch (error) {
-                  console.warn('Date formatting error:', error);
-                  return transaction.date || 'No date';
-                }
-              })()}
-            </p>
-          </div>
-        </div>
-        {/* ✅ FIX: Correct amount display with proper signs and absolute values */}
-        <div className={`text-sm font-medium ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {isIncome ? '+' : '-'}{formatAmount(Math.abs(transaction.amount))}
-        </div>
-      </div>
-    );
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="p-3 overflow-hidden" data-component="RecentTransactions">
         <div className="animate-pulse space-y-3">
@@ -120,6 +58,24 @@ const RecentTransactions = ({
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
           ))}
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="p-3 overflow-hidden" data-component="RecentTransactions">
+        <div className="text-center py-8">
+          <div className="text-red-600 dark:text-red-400 mb-4">
+            {t('dashboard.transactions.error')}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-sm text-primary-600 hover:text-primary-700"
+          >
+            {t('common.retry')}
+          </button>
         </div>
       </Card>
     );
@@ -143,14 +99,50 @@ const RecentTransactions = ({
       {/* Content */}
       <div className="max-h-[280px] overflow-y-auto scrollbar-thin">
         {filteredTransactions.length === 0 ? (
-          renderEmptyState()
+          <div className="text-center py-4">
+            <div className="inline-flex items-center justify-center p-2 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
+              <Package className="w-5 h-5 text-gray-400" />
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              {t('dashboard.transactions.noTransactions')}
+            </p>
+          </div>
         ) : (
           <div className="space-y-1">
             {filteredTransactions.map(transaction => (
-              <TransactionItem 
-                key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`}
-                transaction={transaction}
-              />
+              <div key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${transaction.transaction_type === 'income' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
+                      {transaction.description || t('transactions.noDescription')}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {(() => {
+                        try {
+                          const date = new Date(transaction.date);
+                          // Validate date
+                          if (isNaN(date.getTime())) {
+                            return 'Invalid date';
+                          }
+                          
+                          return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            timeZone: 'UTC' // Prevent timezone shifts
+                          });
+                        } catch (error) {
+                          console.warn('Date formatting error:', error);
+                          return transaction.date || 'No date';
+                        }
+                      })()}
+                    </p>
+                  </div>
+                </div>
+                <div className={`text-sm font-medium ${transaction.transaction_type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {transaction.transaction_type === 'income' ? '+' : '-'}{formatAmount(Math.abs(transaction.amount))}
+                </div>
+              </div>
             ))}
           </div>
         )}

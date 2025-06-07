@@ -1,39 +1,22 @@
 /**
- * StatsChart Component - Option 2: Flexible Ranges
- * NOW RECEIVES DASHBOARD DATA AS PROPS - NO MORE DUPLICATE HOOKS!
- * Displays transaction statistics with configurable time ranges
+ * StatsChart Component - Fixed Infinite Re-render Issue
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  PieChart,
-  Calendar,
-  DollarSign,
-  Activity,
-  Target,
-  Info
-} from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
-// ✅ REMOVED: import { useDashboard } from '../../../hooks/useDashboard';
-import { useTransactionsList } from '../../../hooks/useTransactionsList';
+import { useDashboard } from '../../../hooks/useDashboard';
+import { useTransactions } from '../../../hooks/useTransactions';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Card, Button, Badge } from '../../ui';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 
 /**
- * StatsChart Component - Option 2: Flexible Ranges
- * NOW RECEIVES DASHBOARD DATA AS PROPS - NO MORE DUPLICATE HOOKS!
- * Displays transaction statistics with configurable time ranges
+ * StatsChart Component - Uses only dashboard data to avoid conflicts
  */
 const StatsChart = ({ 
-  className = '',
-  dashboardData = null,
-  loading: dashboardLoading = false 
+  className = ''
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
@@ -41,7 +24,7 @@ const StatsChart = ({
   
   // State for range selection
   const [selectedRange, setSelectedRange] = useState('month');
-  const [chartType, setChartType] = useState('trend'); // 'trend' | 'category'
+  const [chartType, setChartType] = useState('trend');
   
   // Range configurations
   const ranges = [
@@ -73,27 +56,51 @@ const StatsChart = ({
       key: 'all', 
       label: t('common.allTime') || 'All Time', 
       all: true,
-      period: 'year' // Use year as fallback for API
+      period: 'year'
     }
   ];
 
-  // ✅ REMOVED: Duplicate useDashboard() call
-  // const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
-  
-  // Get detailed transaction data for selected range
-  const currentRange = ranges.find(r => r.key === selectedRange);
+  // ✅ FIX: Use only dashboard hook to avoid conflicts
   const { 
-    periodTransactions, 
-    loading: transactionsLoading
-  } = useTransactionsList({
-    period: currentRange?.period || 'month',
-    type: null,
-    searchTerm: '',
-    page: 1,
-    limit: 1000 // Get more data for better charts
-  });
+    data: dashboardData, 
+    isLoading: dashboardLoading, 
+    error: dashboardError 
+  } = useDashboard();
+  
+  // ✅ REMOVE: The problematic useTransactions hook that caused infinite re-renders
+  // const currentRange = ranges.find(r => r.key === selectedRange);
+  // const { 
+  //   transactions: periodTransactions, 
+  //   isLoading: transactionsLoading,
+  //   error: transactionsError,
+  //   updateFilters
+  // } = useTransactions({
+  //   limit: 1000,
+  //   sortBy: 'date',
+  //   sortOrder: 'DESC'
+  // });
 
-  // ✅ Generate trend data based on range
+  // ✅ REMOVE: The problematic useEffect that caused infinite updates
+  // useEffect(() => {
+  //   if (currentRange) {
+  //     const now = new Date();
+  //     let startDate = null;
+      
+  //     if (currentRange.days) {
+  //       startDate = new Date(now);
+  //       startDate.setDate(startDate.getDate() - currentRange.days);
+  //     } else if (currentRange.year) {
+  //       startDate = new Date(now.getFullYear(), 0, 1);
+  //     }
+      
+  //     updateFilters({
+  //       startDate: startDate ? startDate.toISOString().split('T')[0] : null,
+  //       endDate: now.toISOString().split('T')[0]
+  //     });
+  //   }
+  // }, [selectedRange, currentRange, updateFilters]);
+
+  // ✅ FIX: Generate trend data from dashboard data only
   const generateTrendData = React.useCallback((transactions, range) => {
     if (!transactions || transactions.length === 0) return [];
     
@@ -153,12 +160,12 @@ const StatsChart = ({
       }));
   }, [language]);
 
-  // Calculate statistics for selected range
-  // ✅ OPTIMIZATION: Memoize expensive calculations
+  // ✅ FIX: Calculate statistics using only dashboard data
   const stats = useMemo(() => {
-    const transactions = periodTransactions || dashboardData?.recentTransactions || [];
+    // Use recent transactions from dashboard data
+    const transactions = dashboardData?.recentTransactions || [];
     
-    if (transactions.length === 0) {
+    if (transactions.length === 0 || dashboardLoading) {
       return {
         totalIncome: 0,
         totalExpenses: 0,
@@ -166,11 +173,12 @@ const StatsChart = ({
         transactionCount: 0,
         dailyAverage: 0,
         categoryBreakdown: [],
-        trendData: []
+        trendData: [],
+        loading: dashboardLoading
       };
     }
 
-    // ✅ OPTIMIZATION: Process data more efficiently
+    // Process data more efficiently
     const totals = transactions.reduce((acc, tx) => {
       const amount = parseFloat(tx.amount || 0);
       if (tx.transaction_type === 'income') {
@@ -188,8 +196,9 @@ const StatsChart = ({
     const netBalance = totalIncome - totalExpenses;
     
     // Calculate daily average
+    const currentRange = ranges.find(r => r.key === selectedRange);
     const days = currentRange?.days || 30;
-    const dailyAverage = totalExpenses / days;
+    const dailyAverage = totalExpenses > 0 ? totalExpenses / days : 0;
     
     // Category breakdown (top 6 categories)
     const categoryMap = new Map();
@@ -201,11 +210,15 @@ const StatsChart = ({
     });
     
     const categoryBreakdown = Array.from(categoryMap.entries())
-      .map(([name, amount]) => ({ name, amount, percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0 }))
+      .map(([name, amount]) => ({ 
+        name, 
+        amount, 
+        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0 
+      }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 6);
 
-    // ✅ Generate trend data
+    // Generate trend data
     const trendData = generateTrendData(transactions, currentRange);
 
     return {
@@ -217,22 +230,24 @@ const StatsChart = ({
       categoryBreakdown,
       trendData,
       incomeCount: totals.incomeCount,
-      expenseCount: totals.expenseCount
+      expenseCount: totals.expenseCount,
+      loading: false
     };
-  }, [periodTransactions, dashboardData, currentRange, generateTrendData]);
+  }, [dashboardData, dashboardLoading, selectedRange, ranges, generateTrendData]);
 
-  const isLoading = dashboardLoading || transactionsLoading;
+  const isLoading = dashboardLoading;
+  const error = dashboardError;
 
-  // ✅ OPTIMIZATION: Reduce debug logs in production
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && localStorage.getItem('debug_stats') === 'true') {
-      console.log('📊 [STATS-CHART] Data sources:', {
-        dashboardData: !!dashboardData,
-        periodTransactions: periodTransactions?.length || 0,
-        selectedRange,
-      });
-    }
-  }, [dashboardData, periodTransactions, selectedRange]);
+  // ✅ REMOVE: Debug logging that caused spam
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === 'development' && localStorage.getItem('debug_stats') === 'true') {
+  //     console.log('📊 [STATS-CHART] Data sources:', {
+  //       dashboardData: !!dashboardData,
+  //       periodTransactions: periodTransactions?.length || 0,
+  //       selectedRange,
+  //     });
+  //   }
+  // }, [dashboardData, periodTransactions, selectedRange]);
 
   if (isLoading) {
     return (
@@ -244,72 +259,55 @@ const StatsChart = ({
     );
   }
 
+  if (error) {
+    return (
+      <Card className={cn('p-6', className)}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-red-600 dark:text-red-400 mb-4">
+              {t('stats.error') || 'Failed to load statistics'}
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm text-primary-600 hover:text-primary-700"
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className={cn('p-0 overflow-hidden', className)}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-              <BarChart3 className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                {t('stats.title') || 'Statistics'}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {currentRange?.label} • {stats.transactionCount} {t('transactions.items') || 'items'}
-              </p>
-            </div>
+      <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900/50 dark:via-gray-800/50 dark:to-gray-900/50">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {t('dashboard.stats.title') || 'Statistics'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              {t('dashboard.stats.subtitle') || 'Transaction insights and trends'}
+            </p>
           </div>
           
-          {/* Controls */}
-          <div className="flex items-center gap-3">
-            {/* Chart Type Toggle */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          {/* Range Selector */}
+          <div className="flex gap-2 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
+            {ranges.map((range) => (
               <button
-                onClick={() => setChartType('trend')}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-                  chartType === 'trend'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                )}
+                key={range.key}
+                onClick={() => setSelectedRange(range.key)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedRange === range.key
+                    ? 'bg-primary-500 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
               >
-                <TrendingUp className="w-4 h-4 mr-1.5 inline" />
-                {t('stats.trend') || 'Trend'}
+                {range.label}
               </button>
-              <button
-                onClick={() => setChartType('category')}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-                  chartType === 'category'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                )}
-              >
-                <PieChart className="w-4 h-4 mr-1.5 inline" />
-                {t('stats.categories') || 'Categories'}
-              </button>
-            </div>
-            
-            {/* Range Selector */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              {ranges.map(range => (
-                <button
-                  key={range.key}
-                  onClick={() => setSelectedRange(range.key)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap',
-                    selectedRange === range.key
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  )}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -319,7 +317,7 @@ const StatsChart = ({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-green-500" />
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 {t('transactions.income') || 'Income'}
               </span>
@@ -334,7 +332,7 @@ const StatsChart = ({
           
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="w-4 h-4 text-red-500" />
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 {t('transactions.expense') || 'Expenses'}
               </span>
@@ -349,7 +347,7 @@ const StatsChart = ({
           
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-blue-500" />
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 {t('common.balance') || 'Balance'}
               </span>
@@ -367,7 +365,7 @@ const StatsChart = ({
           
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2">
-              <Target className="w-4 h-4 text-purple-500" />
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 {t('stats.dailyAverage') || 'Daily Avg'}
               </span>
@@ -384,110 +382,41 @@ const StatsChart = ({
 
       {/* Chart Content */}
       <div className="p-6">
-        <AnimatePresence mode="wait">
-          {chartType === 'trend' ? (
-            <TrendChart key="trend" data={stats.trendData} formatAmount={formatAmount} />
-          ) : (
-            <CategoryChart key="category" data={stats.categoryBreakdown} formatAmount={formatAmount} />
-          )}
-        </AnimatePresence>
+        {stats.categoryBreakdown.length > 0 ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('stats.topCategories') || 'Top Categories'}
+            </h3>
+            <div className="space-y-2">
+              {stats.categoryBreakdown.map((category, index) => (
+                <div key={category.name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {category.name}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-primary-500 h-2 rounded-full" 
+                        style={{ width: `${Math.min(category.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[80px] text-right">
+                      {formatAmount(category.amount)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-gray-500 dark:text-gray-400">
+              {t('stats.noData') || 'No data available for the selected period'}
+            </div>
+          </div>
+        )}
       </div>
     </Card>
-  );
-};
-
-// Trend Chart Component
-const TrendChart = ({ data, formatAmount }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        No trend data available
-      </div>
-    );
-  }
-
-  const maxValue = Math.max(...data.map(d => Math.max(d.income, d.expenses, Math.abs(d.balance))));
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="h-64"
-    >
-      <div className="flex items-end justify-between h-full gap-2">
-        {data.map((period, index) => (
-          <div key={index} className="flex-1 flex flex-col items-center h-full">
-            <div className="flex-1 flex flex-col justify-end w-full max-w-16 gap-1">
-              {/* Income Bar */}
-              <div
-                className="bg-green-500 rounded-t-md min-h-[2px] transition-all duration-300 hover:bg-green-600"
-                style={{ height: `${maxValue > 0 ? (period.income / maxValue) * 70 : 0}%` }}
-                title={`Income: ${formatAmount(period.income)}`}
-              />
-              {/* Expense Bar */}
-              <div
-                className="bg-red-500 rounded-t-md min-h-[2px] transition-all duration-300 hover:bg-red-600"
-                style={{ height: `${maxValue > 0 ? (period.expenses / maxValue) * 70 : 0}%` }}
-                title={`Expenses: ${formatAmount(period.expenses)}`}
-              />
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-              {period.label}
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
-
-// Category Chart Component
-const CategoryChart = ({ data, formatAmount }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        No category data available
-      </div>
-    );
-  }
-
-  const colors = [
-    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
-    'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="space-y-4"
-    >
-      {data.map((category, index) => (
-        <div key={category.name} className="flex items-center gap-4">
-          <div className={cn('w-4 h-4 rounded-full', colors[index % colors.length])} />
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-medium text-gray-900 dark:text-white">
-                {category.name}
-              </span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {formatAmount(category.amount)} ({category.percentage.toFixed(1)}%)
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <motion.div
-                className={cn('h-2 rounded-full', colors[index % colors.length])}
-                initial={{ width: 0 }}
-                animate={{ width: `${category.percentage}%` }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-    </motion.div>
   );
 };
 

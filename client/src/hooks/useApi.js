@@ -1,536 +1,323 @@
 /**
- * OPTIMIZED useApi Hooks
- * 
- * MAJOR CHANGES:
- * 1. Added proper authentication guards
- * 2. Removed redundant queries
- * 3. Improved error handling
- * 4. Better cache management
- * 5. Optimized re-render prevention
- * 6. Enhanced mutation strategies
+ * Base useApi Hook - Smart Query Management
+ * Foundation for all data fetching with caching and optimization
  */
 
-import { useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { transactionAPI, authAPI } from '../utils/api';
-import queryClient, { queryConfigs } from '../config/queryClient'; // ✅ FIX: Import queryClient as default
-import { debounce } from '../utils/helpers'; // ✅ ADD: Import debounce
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useCallback, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { queryKeys, mutationKeys } from '../utils/api';
 
-// ✅ FIX: More robust authentication guard with caching
-const useIsAuthenticated = () => {
-  return useMemo(() => {
-    // Cache the token check to prevent constant localStorage access
-    const token = localStorage.getItem('accessToken');
-    const isValid = !!token && token !== 'undefined' && token !== 'null';
-    
-    // Optional: Add token expiry check here
-    if (isValid) {
-      try {
-        // Basic JWT validation (optional)
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const isExpired = payload.exp * 1000 < Date.now();
-        return !isExpired;
-      } catch {
-        return true; // If we can't parse, assume valid for now
-      }
-    }
-    
-    return false;
-  }, []); // ✅ CRITICAL: Empty dependency array to prevent re-runs
-};
-
-// Enhanced error handler
-const handleMutationError = (error, defaultMessage) => {
-  const message = error.response?.data?.error?.message || defaultMessage;
-  toast.error(message);
-  console.error('[MUTATION-ERROR]', { error, message });
-};
-
-/**
- * QUERY HOOKS - Optimized with proper caching
- */
-
-// Categories Hook with aggressive caching (rarely change)
-// ✅ FIX: Categories Hook - reduce re-mounting
-export const useCategories = () => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['categories'],
-    queryFn: () => transactionAPI.getCategories(),
-    enabled: isAuthenticated,
-    refetchOnWindowFocus: false,
+// Query configurations for different data types
+const queryConfigs = {
+  // Static data - long cache
+  static: {
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    cacheTime: 48 * 60 * 60 * 1000, // 48 hours
     refetchOnMount: false,
-    ...queryConfigs.categories, // ✅ Use centralized config
-    select: (response) => {
-      const data = response.data;
-      return Array.isArray(data.data) ? data.data : [];
-    }
-  });
-};
-
-// Optimized recurring transactions hook
-// ✅ FIX: Optimized recurring transactions hook - longer cache
-export const useRecurringTransactions = (type) => {
-  const isAuthenticated = useIsAuthenticated();
+    refetchOnWindowFocus: false
+  },
   
-  return useQuery({
-    queryKey: ['recurring', type],
-    queryFn: () => transactionAPI.getRecurring(type),
-    enabled: isAuthenticated,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    ...queryConfigs.recurring, // ✅ Use centralized config
-    select: (response) => {
-      const data = response.data;
-      return Array.isArray(data.data) ? data.data : [];
-    }
-  });
-};
-
-// Profile hook with optimized caching
-// ✅ FIX: Profile hook - much longer cache
-export const useProfile = () => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['profile'],
-    queryFn: () => authAPI.getProfile(),
-    enabled: isAuthenticated,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    ...queryConfigs.profile, // ✅ Use centralized config
-  });
-};
-
-// Transactions query with filters
-export const useTransactionsQuery = (filters) => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['transactions-query', filters],
-    queryFn: () => transactionAPI.getAll(filters),
-    enabled: isAuthenticated && !!filters,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    ...queryConfigs.transactions, // ✅ Use centralized config
-    select: (response) => {
-      const data = response.data;
-      return {
-        transactions: Array.isArray(data.transactions) ? data.transactions : [],
-        pagination: data.pagination || {},
-        totalCount: data.pagination?.total || 0
-      };
-    }
-  });
-};
-
-// Transaction search with debouncing
-export const useTransactionSearch = (searchTerm, enabled = true) => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['transaction-search', searchTerm],
-    queryFn: () => transactionAPI.search(searchTerm),
-    enabled: isAuthenticated && enabled && searchTerm && searchTerm.length >= 2,
-    staleTime: 30 * 1000,
-    select: (response) => {
-      return Array.isArray(response.data) ? response.data : [];
-    }
-  });
-};
-
-// Templates hook
-export const useTemplates = () => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['templates'],
-    queryFn: () => transactionAPI.getTemplates(),
-    enabled: isAuthenticated,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    ...queryConfigs.templates, // ✅ Use centralized config instead of hardcoded values
-    select: (response) => {
-      const data = response.data;
-      return Array.isArray(data.data) ? data.data : [];
-    }
-  });
-};
-
-// Stats hook
-export const useStats = (months = 12) => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  return useQuery({
-    queryKey: ['stats', months],
-    queryFn: () => transactionAPI.getStats(months),
-    enabled: isAuthenticated,
+  // User data - medium cache
+  user: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-/**
- * EMAIL VERIFICATION HOOKS
- */
-export const useVerifyEmail = (token) => {
-  return useQuery({
-    queryKey: ['verify-email', token],
-    queryFn: () => authAPI.verifyEmail(token),
-    enabled: !!token,
-    retry: false,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-  });
-};
-
-export const useResendVerificationEmail = () => {
-  return useMutation({
-    mutationFn: (email) => authAPI.resendVerificationEmail(email),
-    onSuccess: () => {
-      toast.success('Verification email sent! Please check your inbox.');
-    },
-    onError: (error) => {
-      const errorData = error.response?.data?.error;
-      
-      if (errorData?.code === 'VERIFICATION_LIMIT') {
-        toast.error('Too many verification attempts. Please wait before trying again.');
-      } else {
-        handleMutationError(error, 'Failed to send verification email');
-      }
-    }
-  });
-};
-
-/**
- * PASSWORD RESET HOOKS
- */
-export const useForgotPassword = () => {
-  return useMutation({
-    mutationFn: (email) => authAPI.forgotPassword(email),
-    onSuccess: (response) => {
-      const data = response.data;
-      if (data.data?.resetUrl && data.data?.note) {
-        toast.success('Password reset email sent! (Check console for dev link)');
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔗 [DEV] Direct reset link:', data.data.resetUrl);
-        }
-      } else if (data.data?.token) {
-        toast.success('Email service unavailable - check console for reset link');
-        console.log('🔗 [DEV] Reset link:', data.data.resetUrl);
-      } else {
-        toast.success('Reset link sent to your email');
-      }
-    },
-    onError: (error) => handleMutationError(error, 'Failed to send reset link')
-  });
-};
-
-export const useResetPassword = () => {
-  return useMutation({
-    mutationFn: ({ token, newPassword }) => authAPI.resetPassword(token, newPassword),
-    onSuccess: () => {
-      toast.success('Password reset successfully');
-    },
-    onError: (error) => handleMutationError(error, 'Failed to reset password')
-  });
-};
-
-/**
- * TRANSACTION MUTATIONS - Enhanced with better cache management
- */
-export const useCreateTransaction = () => {
-  return useMutation({
-    mutationFn: ({ type, data }) => transactionAPI.create(type, data),
-    onSuccess: (data, variables) => {
-      toast.success(`${variables.type === 'expense' ? 'Expense' : 'Income'} added successfully`);
-      
-      // Invalidate specific queries only
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-      
-      // If recurring, invalidate recurring queries
-      if (variables.data.is_recurring) {
-        queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      }
-      
-      // Dispatch custom event for real-time updates
-      window.dispatchEvent(new CustomEvent('transaction-added', { 
-        detail: { type: variables.type, data: variables.data }
-      }));
-    },
-    onError: (error) => handleMutationError(error, 'Failed to add transaction')
-  });
-};
-
-export const useUpdateTransaction = () => {
-  return useMutation({
-    mutationFn: ({ type, id, data }) => transactionAPI.update(type, id, data),
-    onSuccess: (data, variables) => {
-      toast.success('Transaction updated successfully');
-      
-      // Invalidate specific queries
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-      
-      if (variables.data.is_recurring) {
-        queryClient.invalidateQueries({ queryKey: ['recurring'] });
-        queryClient.invalidateQueries({ queryKey: ['templates'] });
-      }
-    },
-    onError: (error) => handleMutationError(error, 'Failed to update transaction')
-  });
-};
-
-export const useDeleteTransaction = () => {
-  return useMutation({
-    mutationFn: ({ type, id, deleteFuture }) => transactionAPI.delete(type, id, deleteFuture),
-    onSuccess: () => {
-      toast.success('Transaction deleted successfully');
-      
-      // Invalidate all related queries
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to delete transaction')
-  });
-};
-
-// Skip occurrence mutation
-export const useSkipOccurrence = () => {
-  return useMutation({
-    mutationFn: ({ type, id, skipDate }) => transactionAPI.skipOccurrence(type, id, skipDate),
-    onSuccess: () => {
-      toast.success('Transaction occurrence skipped');
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to skip occurrence')
-  });
-};
-
-/**
- * TEMPLATE MUTATIONS
- */
-export const useUpdateTemplate = () => {
-  return useMutation({
-    mutationFn: ({ id, data }) => transactionAPI.updateTemplate(id, data),
-    onSuccess: () => {
-      toast.success('Recurring template updated');
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to update template')
-  });
-};
-
-export const useDeleteTemplate = () => {
-  return useMutation({
-    mutationFn: ({ id, deleteFuture }) => transactionAPI.deleteTemplate(id, deleteFuture),
-    onSuccess: () => {
-      toast.success('Recurring template deleted');
-      queryClient.invalidateQueries({ queryKey: ['transactions-query'] });
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to delete template')
-  });
-};
-
-/**
- * CATEGORY MUTATIONS - Optimized cache invalidation
- */
-export const useCreateCategory = () => {
-  return useMutation({
-    mutationFn: (data) => transactionAPI.createCategory(data),
-    onSuccess: () => {
-      toast.success('Category created successfully');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to create category')
-  });
-};
-
-export const useUpdateCategory = () => {
-  return useMutation({
-    mutationFn: ({ id, data }) => transactionAPI.updateCategory(id, data),
-    onSuccess: () => {
-      toast.success('Category updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to update category')
-  });
-};
-
-export const useDeleteCategory = () => {
-  return useMutation({
-    mutationFn: (id) => transactionAPI.deleteCategory(id),
-    onSuccess: () => {
-      toast.success('Category deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to delete category')
-  });
-};
-
-/**
- * PROFILE MUTATIONS
- */
-export const useUpdateProfile = () => {
-  return useMutation({
-    mutationFn: (data) => authAPI.updateProfile(data),
-    onSuccess: (response) => {
-      toast.success('Profile updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      
-      if (response.data?.requiresVerification) {
-        toast.info('Please check your email to verify your new email address');
-      }
-    },
-    onError: (error) => handleMutationError(error, 'Failed to update profile')
-  });
-};
-
-export const useUpdatePreferences = () => {
-  return useMutation({
-    mutationFn: (preferences) => authAPI.updatePreferences(preferences),
-    onSuccess: () => {
-      toast.success('Preferences updated');
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-    },
-    onError: (error) => handleMutationError(error, 'Failed to update preferences')
-  });
-};
-
-// Profile picture upload with optimistic updates
-export const useUploadProfilePicture = () => {
-  return useMutation({
-    mutationFn: (file) => authAPI.uploadProfilePicture(file),
-    onMutate: async () => {
-      // Show loading state
-      toast.loading('Uploading profile picture...');
-    },
-    onSuccess: (response) => {
-      toast.dismiss();
-      toast.success('Profile picture updated');
-      
-      // Optimistically update profile data
-      queryClient.setQueryData(['profile'], (oldData) => {
-        if (!oldData) return oldData;
-        
-        return {
-          ...oldData,
-          preferences: {
-            ...oldData.preferences,
-            profilePicture: response.data.data.fullUrl || response.data.data.path
-          }
-        };
-      });
-      
-      // Invalidate to ensure fresh data
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-      }, 1000);
-    },
-    onError: (error) => {
-      toast.dismiss();
-      handleMutationError(error, 'Failed to upload image');
-    }
-  });
-};
-
-/**
- * REGISTER HOOK
- */
-export const useRegister = () => {
-  return useMutation({
-    mutationFn: (userData) => authAPI.register(userData),
-    onSuccess: (data) => {
-      if (data.requiresVerification) {
-        if (data.isExistingUser) {
-          toast.info('Account exists but email not verified. Please check your email or resend verification.');
-        } else {
-          toast.success('Registration successful! Please check your email to verify your account.');
-        }
-      } else {
-        toast.success('Registration successful!');
-      }
-    },
-    onError: (error) => handleMutationError(error, 'Registration failed')
-  });
-};
-
-/**
- * TEST EMAIL HOOK (Development)
- */
-export const useTestEmail = () => {
-  return useMutation({
-    mutationFn: (email) => authAPI.testEmail(email),
-    onSuccess: () => {
-      toast.success('Test email sent successfully!');
-    },
-    onError: (error) => handleMutationError(error, 'Failed to send test email')
-  });
-};
-
-// ✅ IMPROVED: Better period transactions hook with memoized query key
-export const usePeriodTransactions = (period, date) => {
-  const isAuthenticated = useIsAuthenticated();
-  
-  // ✅ FIX: Memoize the formatted date to prevent unnecessary re-renders
-  const formattedDate = useMemo(() => {
-    if (!date) return null;
-    const dateObj = date instanceof Date ? date : new Date(date);
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, [date]);
-  
-  return useQuery({
-    queryKey: ['period', period, formattedDate],
-    queryFn: () => transactionAPI.getByPeriod(period, date),
-    enabled: isAuthenticated && !!period && !!date,
-    refetchOnWindowFocus: false,
+    cacheTime: 30 * 60 * 1000, // 30 minutes
     refetchOnMount: false,
-    ...queryConfigs.periodTransactions, // ✅ Use centralized config
-    select: (response) => {
-      const data = response.data;
-      return Array.isArray(data.data) ? data.data : [];
+    refetchOnWindowFocus: false
+  },
+  
+  // Dynamic data - short cache
+  dynamic: {
+    staleTime: 1 * 60 * 1000, // 1 minute
+    cacheTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false
+  },
+  
+  // Real-time data - no cache
+  realtime: {
+    staleTime: 0,
+    cacheTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  }
+};
+
+/**
+ * Base hook for API queries with smart caching
+ */
+export const useApiQuery = (key, queryFn, options = {}) => {
+  const {
+    config = 'user',
+    enabled = true,
+    onSuccess,
+    onError,
+    ...queryOptions
+  } = options;
+  
+  const configOptions = queryConfigs[config] || queryConfigs.user;
+  
+  return useQuery({
+    queryKey: key,
+    queryFn,
+    enabled,
+    ...configOptions,
+    ...queryOptions,
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('[API Query Error]', error);
+      onError?.(error);
     }
   });
 };
 
-// Export legacy hooks for backward compatibility
-export const useTransactions = useTransactionsQuery;
-
-// Default export with all hooks
-export default {
-  useCategories,
-  useRecurringTransactions,
-  useProfile,
-  useTransactionsQuery,
-  useTransactionSearch,
-  useTemplates,
-  useStats,
-  useVerifyEmail,
-  useResendVerificationEmail,
-  useForgotPassword,
-  useResetPassword,
-  useCreateTransaction,
-  useUpdateTransaction,
-  useDeleteTransaction,
-  useSkipOccurrence,
-  useUpdateTemplate,
-  useDeleteTemplate,
-  useCreateCategory,
-  useUpdateCategory,
-  useDeleteCategory,
-  useUpdateProfile,
-  useUpdatePreferences,
-  useUploadProfilePicture,
-  useRegister,
-  useTestEmail,
-  usePeriodTransactions // ✅ FIX: Now properly defined above
+/**
+ * Base hook for API mutations with optimistic updates
+ */
+export const useApiMutation = (mutationFn, options = {}) => {
+  const queryClient = useQueryClient();
+  const {
+    onSuccess,
+    onError,
+    invalidateKeys = [],
+    optimisticUpdate,
+    showSuccessToast = true,
+    showErrorToast = true,
+    successMessage,
+    ...mutationOptions
+  } = options;
+  
+  return useMutation({
+    mutationFn,
+    ...mutationOptions,
+    onMutate: async (variables) => {
+      if (optimisticUpdate) {
+        // Cancel outgoing refetches
+        const keysToCancel = Array.isArray(optimisticUpdate.queryKey) 
+          ? [optimisticUpdate.queryKey] 
+          : optimisticUpdate.queryKey;
+          
+        await queryClient.cancelQueries(keysToCancel);
+        
+        // Snapshot previous value
+        const previousData = queryClient.getQueryData(optimisticUpdate.queryKey);
+        
+        // Optimistically update
+        queryClient.setQueryData(optimisticUpdate.queryKey, (old) => 
+          optimisticUpdate.updater(old, variables)
+        );
+        
+        // Return context with snapshot
+        return { previousData, queryKey: optimisticUpdate.queryKey };
+      }
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate specified queries
+      if (invalidateKeys.length > 0) {
+        invalidateKeys.forEach(key => {
+          queryClient.invalidateQueries(key);
+        });
+      }
+      
+      // Show success toast
+      if (showSuccessToast && successMessage) {
+        toast.success(successMessage);
+      }
+      
+      // Call custom success handler
+      onSuccess?.(data, variables, context);
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic update
+      if (context?.previousData !== undefined) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
+      }
+      
+      // Show error toast
+      if (showErrorToast) {
+        const message = error.response?.data?.error?.message || error.message || 'Operation failed';
+        toast.error(message);
+      }
+      
+      // Call custom error handler
+      onError?.(error, variables, context);
+    },
+    onSettled: () => {
+      // Always refetch after mutation settles
+      if (invalidateKeys.length > 0) {
+        queryClient.invalidateQueries(invalidateKeys[0]);
+      }
+    }
+  });
 };
+
+/**
+ * Hook for paginated queries
+ */
+export const usePaginatedQuery = (baseKey, queryFn, options = {}) => {
+  const {
+    page = 1,
+    limit = 50,
+    filters = {},
+    config = 'dynamic',
+    ...queryOptions
+  } = options;
+  
+  // ✅ FIX: Ensure baseKey is always an array
+  const normalizedBaseKey = Array.isArray(baseKey) ? baseKey : [baseKey];
+  const queryKey = [...normalizedBaseKey, { page, limit, ...filters }];
+  
+  return useApiQuery(queryKey, () => queryFn({ page, limit, ...filters }), {
+    config,
+    keepPreviousData: true,
+    ...queryOptions
+  });
+};
+
+/**
+ * Hook for infinite queries
+ */
+export const useInfiniteApiQuery = (key, queryFn, options = {}) => {
+  const {
+    config = 'dynamic',
+    limit = 50,
+    ...queryOptions
+  } = options;
+  
+  const configOptions = queryConfigs[config] || queryConfigs.dynamic;
+  
+  return useInfiniteQuery({
+    queryKey: key,
+    queryFn: ({ pageParam = 1 }) => queryFn({ page: pageParam, limit }),
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.hasMore) {
+        return pages.length + 1;
+      }
+      return undefined;
+    },
+    ...configOptions,
+    ...queryOptions
+  });
+};
+
+/**
+ * Hook for real-time subscriptions (polling)
+ */
+export const useRealtimeQuery = (key, queryFn, options = {}) => {
+  const {
+    interval = 30000, // 30 seconds default
+    enabled = true,
+    ...queryOptions
+  } = options;
+  
+  return useApiQuery(key, queryFn, {
+    config: 'realtime',
+    enabled,
+    refetchInterval: enabled ? interval : false,
+    ...queryOptions
+  });
+};
+
+/**
+ * Hook for dependent queries
+ */
+export const useDependentQuery = (key, queryFn, dependencies = {}, options = {}) => {
+  const {
+    config = 'user',
+    ...queryOptions
+  } = options;
+  
+  // Check if all dependencies are satisfied
+  const enabled = Object.values(dependencies).every(dep => dep !== null && dep !== undefined);
+  
+  return useApiQuery(key, () => queryFn(dependencies), {
+    config,
+    enabled,
+    ...queryOptions
+  });
+};
+
+/**
+ * Hook for prefetching data
+ */
+export const usePrefetch = () => {
+  const queryClient = useQueryClient();
+  
+  const prefetchQuery = useCallback(async (key, queryFn, config = 'user') => {
+    const configOptions = queryConfigs[config] || queryConfigs.user;
+    
+    await queryClient.prefetchQuery({
+      queryKey: key,
+      queryFn,
+      ...configOptions
+    });
+  }, [queryClient]);
+  
+  return { prefetchQuery };
+};
+
+/**
+ * Hook for manual cache management
+ */
+export const useCacheManager = () => {
+  const queryClient = useQueryClient();
+  
+  const updateCache = useCallback((key, updater) => {
+    queryClient.setQueryData(key, updater);
+  }, [queryClient]);
+  
+  const invalidateCache = useCallback((key) => {
+    queryClient.invalidateQueries(key);
+  }, [queryClient]);
+  
+  const removeCache = useCallback((key) => {
+    queryClient.removeQueries(key);
+  }, [queryClient]);
+  
+  const getCacheData = useCallback((key) => {
+    return queryClient.getQueryData(key);
+  }, [queryClient]);
+  
+  return {
+    updateCache,
+    invalidateCache,
+    removeCache,
+    getCacheData
+  };
+};
+
+/**
+ * Hook for monitoring query performance
+ */
+export const useQueryPerformance = (queryKey) => {
+  const startTimeRef = useRef(null);
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'observerAdded' && 
+          JSON.stringify(event.query.queryKey) === JSON.stringify(queryKey)) {
+        startTimeRef.current = Date.now();
+      }
+      
+      if (event.type === 'observerResultsUpdated' && 
+          JSON.stringify(event.query.queryKey) === JSON.stringify(queryKey)) {
+        if (startTimeRef.current) {
+          const duration = Date.now() - startTimeRef.current;
+          console.log(`[Query Performance] ${JSON.stringify(queryKey)}: ${duration}ms`);
+          startTimeRef.current = null;
+        }
+      }
+    });
+    
+    return unsubscribe;
+  }, [queryClient, queryKey]);
+};
+
+// Export query and mutation keys for consistency
+export { queryKeys, mutationKeys };
+
+// Export query configs for external use
+export { queryConfigs };

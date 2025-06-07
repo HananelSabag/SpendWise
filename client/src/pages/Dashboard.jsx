@@ -1,12 +1,12 @@
 /**
- * OPTIMIZED Dashboard Component
+ * FINAL OPTIMIZED Dashboard Component
  * 
- * MAJOR CHANGES:
- * 1. Single useDashboard call - data passed to children via props
- * 2. Removed redundant component re-renders with memo
- * 3. Improved performance with useMemo for calculations
- * 4. Fixed unnecessary loading states
- * 5. Better error boundaries and handling
+ * COMPLETED CONVERSION TO NEW HOOKS:
+ * ✅ All components now use hooks directly instead of props
+ * ✅ Single source of truth with proper cache invalidation
+ * ✅ Removed unnecessary prop drilling
+ * ✅ Optimized performance with memoization
+ * ✅ Proper error handling and loading states
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDate } from '../context/DateContext';
-import { TransactionProvider } from '../context/TransactionContext';
+// ✅ REMOVED: TransactionProvider - no longer needed with new hooks
 import { useDashboard } from '../hooks/useDashboard';
 import { 
   TrendingUp, 
@@ -30,12 +30,12 @@ import {
   MoreHorizontal,
   Check
 } from 'lucide-react';
-import { debounce, numbers } from '../utils/helpers'; // ✅ FIX: Ensure numbers is properly imported
+import { debounce, numbers } from '../utils/helpers';
 
-// Features
+// ✅ NEW: All components now use hooks directly - no props needed
 import BalancePanel from '../components/features/dashboard/BalancePanel';
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
-import ActionsPanel from '../components/features/dashboard/ActionsPanel';
+import AddTransactions from '../components/features/transactions/AddTransactions';
 import StatsChart from '../components/features/dashboard/StatsChart';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 
@@ -43,7 +43,7 @@ import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
 import { Link } from 'react-router-dom';
 
-// ✅ FIX: Add display name to memoized components to prevent re-mounting
+// ✅ NEW: Memoized components with hooks - no props needed
 const MemoizedBalancePanel = React.memo(BalancePanel);
 MemoizedBalancePanel.displayName = 'MemoizedBalancePanel';
 
@@ -52,6 +52,9 @@ MemoizedRecentTransactions.displayName = 'MemoizedRecentTransactions';
 
 const MemoizedStatsChart = React.memo(StatsChart);
 MemoizedStatsChart.displayName = 'MemoizedStatsChart';
+
+const MemoizedQuickActionsBar = React.memo(QuickActionsBar);
+MemoizedQuickActionsBar.displayName = 'MemoizedQuickActionsBar';
 
 // Animation variants
 const containerVariants = {
@@ -118,29 +121,30 @@ const Dashboard = () => {
   const { t, language } = useLanguage();
   const { selectedDate } = useDate();
   
-  // ✅ FIX: Add debugging control with localStorage persistence
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const debugQueries = isDevelopment && localStorage.getItem('debug_queries') === 'true';
-  
-  // ✅ FIX: Single dashboard hook with better error handling
+  // ✅ DASHBOARD HOOK: Single source of truth for dashboard data
   const { 
     data: dashboardData, 
     isLoading: isDashboardLoading, 
     error: dashboardError,
-    refetch: refreshDashboard,
+    refresh: refreshDashboard,
     isFetching
   } = useDashboard();
   
-  // ✅ FIX: Debounced debug logging to prevent spam
+  // ✅ DEBUG: Improved debugging with localStorage control
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const debugQueries = isDevelopment && localStorage.getItem('debug_queries') === 'true';
+  
+  // ✅ PERFORMANCE: Debounced debug logging
   const debouncedDebugLog = useMemo(
     () => debounce((data, loading) => {
       if (debugQueries) {
-        console.log('📊 [DASHBOARD] Data Change:', {
+        console.log('📊 [DASHBOARD] Hook-based Data Update:', {
           hasData: !!data,
           isLoading: loading,
           isFetching,
-          cacheTime: new Date().toISOString(),
-          dataKeys: data ? Object.keys(data) : []
+          timestamp: new Date().toISOString(),
+          components: ['BalancePanel', 'RecentTransactions', 'StatsChart', 'QuickActionsBar'],
+          dataFlow: 'All components use hooks directly - no props'
         });
       }
     }, 1000),
@@ -151,36 +155,33 @@ const Dashboard = () => {
     debouncedDebugLog(dashboardData, isDashboardLoading);
   }, [dashboardData, isDashboardLoading, debouncedDebugLog]);
   
-  // ✅ FIX: Reduce initial loading time
+  // State management
   const [loading, setLoading] = useState(true);
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
-  // ✅ ADD: Missing state for ActionsPanel
-  const [showActionsPanel, setShowActionsPanel] = useState(false);
+  const [showAddTransactions, setShowAddTransactions] = useState(false);
   
   const isRTL = language === 'he';
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   
-  // ✅ FIX: Faster initial loading
+  // ✅ PERFORMANCE: Faster initial loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 300); // Reduced from 500ms
-    
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
   
-  // ✅ FIX: More responsive banner timing
+  // ✅ PERFORMANCE: More responsive banner timing
   useEffect(() => {
     if (!loading && !isDashboardLoading && !isFetching) {
       const timer = setTimeout(() => {
         setShowWelcomeBanner(false);
-      }, 1500); // Reduced from 2000ms
-      
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [loading, isDashboardLoading, isFetching]);
   
-  // ✅ FIX: Enhanced memoization for greeting
+  // ✅ MEMOIZATION: Enhanced greeting calculation
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     const name = user?.username || '';
@@ -198,7 +199,7 @@ const Dashboard = () => {
     return greetings.night;
   }, [user?.username, t]);
   
-  // ✅ FIX: Optimize stats calculation with better memoization
+  // ✅ STATS: Optimized calculation using dashboard hook data
   const dashboardStats = useMemo(() => {
     if (!dashboardData || isDashboardLoading) {
       return {
@@ -214,7 +215,6 @@ const Dashboard = () => {
       };
     }
 
-    // ✅ IMPROVED: Better null checking and data processing
     try {
       const monthly = dashboardData.balances?.monthly || {};
       const daily = dashboardData.balances?.daily || {};
@@ -262,7 +262,7 @@ const Dashboard = () => {
     }
   }, [dashboardData, isDashboardLoading, isFetching]);
 
-  // Error handling with retry function
+  // Error handling
   const handleRetry = useCallback(() => {
     if (refreshDashboard) {
       refreshDashboard();
@@ -295,160 +295,145 @@ const Dashboard = () => {
   }
 
   return (
-    <TransactionProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-6"
-            dir={isRTL ? 'rtl' : 'ltr'}
-          >
-            {/* Welcome Banner */}
-            <AnimatePresence mode="wait">
-              {showWelcomeBanner ? (
-                <WelcomeBanner 
-                  key="full-welcome"
-                  user={user}
-                  greeting={greeting}
-                  selectedDate={selectedDate}
-                  language={language}
-                  isRTL={isRTL}
-                  variants={welcomeVariants}
-                />
-              ) : (
-                <CompactWelcome 
-                  key="compact-welcome"
-                  user={user}
-                  greeting={greeting}
-                  language={language}
-                  variants={compactWelcomeVariants}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Main Content */}
-            <div className="space-y-6">
-              {/* Balance Panel - Pass data as props */}
-              <motion.div variants={itemVariants} className="relative">
-                {!showWelcomeBanner && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 1.05 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="absolute -inset-4 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-2xl blur-xl"
-                  />
-                )}
-                <div className="relative">
-                  <MemoizedBalancePanel 
-                    key="balance-panel-main"
-                    balanceData={dashboardData?.balances}
-                    recurringInfo={dashboardData?.recurringInfo}
-                  />
-                </div>
-              </motion.div>
-
-              {/* Quick Actions Bar - Only keep this */}
-              <motion.div variants={itemVariants}>
-                <QuickActionsBar />
-              </motion.div>
-
-              {/* Stats Chart - Pass data as props */}
-              <motion.div variants={itemVariants}>
-                <MemoizedStatsChart 
-                  key="stats-chart-main"
-                  dashboardData={dashboardData}
-                  loading={isDashboardLoading}
-                  className="lg:col-span-2" 
-                />
-              </motion.div>
-
-              {/* Recent Transactions - Pass data as props */}
-              <motion.div variants={itemVariants}>
-                <MemoizedRecentTransactions 
-                  key="recent-transactions-main"
-                  transactions={dashboardData?.recentTransactions}
-                  loading={isDashboardLoading}
-                />
-              </motion.div>
-
-              {/* Enhanced Tips Section */}
-              <motion.div variants={itemVariants}>
-                <TipsSection t={t} />
-              </motion.div>
-            </div>
-
-            {/* Stats Cards - Pass calculated stats */}
-            <motion.div variants={itemVariants}>
-              <StatsCards stats={dashboardStats} t={t} />
-            </motion.div>
-          </motion.div>
-
-          {/* Floating Plus Button - Always Left Corner */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1, duration: 0.3 }}
-            className="fixed left-6 bottom-6 z-50"
-          >
-            <motion.button
-              onClick={() => setShowActionsPanel(true)}
-              className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-3xl group"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              title={t('actions.quickAdd')}
-            >
-              {/* Animated Background */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
-              
-              {/* Plus Icon */}
-              <motion.div
-                className="relative z-10"
-                animate={{ rotate: [0, 0, 180, 180, 0] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              >
-                <Plus className="w-8 h-8" />
-              </motion.div>
-              
-              {/* Ripple Effect */}
-              <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-75"></div>
-              
-              {/* Glow Effect */}
-              <div className="absolute -inset-2 bg-primary-500/20 rounded-full blur-lg group-hover:bg-primary-400/30 transition-all duration-300"></div>
-            </motion.button>
-            
-            {/* Tooltip - Always position to the right */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileHover={{ opacity: 1, x: 0 }}
-              className="absolute left-20 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200"
-            >
-              {t('actions.quickAdd')}
-              <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-transparent border-r-4 border-r-gray-900"></div>
-            </motion.div>
-          </motion.div>
-
-          {/* Actions Panel Modal */}
-          <AnimatePresence>
-            {showActionsPanel && (
-              <Modal
-                isOpen={showActionsPanel}
-                onClose={() => setShowActionsPanel(false)}
-                size="large"
-                className="max-w-4xl"
-                hideHeader={true}
-              >
-                <ActionsPanel 
-                  onClose={() => setShowActionsPanel(false)}
-                  context="dashboard"
-                />
-              </Modal>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          {/* Welcome Banner */}
+          <AnimatePresence mode="wait">
+            {showWelcomeBanner ? (
+              <WelcomeBanner 
+                key="full-welcome"
+                user={user}
+                greeting={greeting}
+                selectedDate={selectedDate}
+                language={language}
+                isRTL={isRTL}
+                variants={welcomeVariants}
+              />
+            ) : (
+              <CompactWelcome 
+                key="compact-welcome"
+                user={user}
+                greeting={greeting}
+                language={language}
+                variants={compactWelcomeVariants}
+              />
             )}
           </AnimatePresence>
-        </div>
+
+          {/* Main Content - ALL COMPONENTS NOW USE HOOKS DIRECTLY */}
+          <div className="space-y-6">
+            {/* ✅ BALANCE PANEL: Uses useDashboard hook directly */}
+            <motion.div variants={itemVariants} className="relative">
+              {!showWelcomeBanner && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 1.05 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="absolute -inset-4 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-2xl blur-xl"
+                />
+              )}
+              <div className="relative">
+                <MemoizedBalancePanel />
+              </div>
+            </motion.div>
+
+            {/* ✅ QUICK ACTIONS BAR: Uses useTransactions hook directly */}
+            <motion.div variants={itemVariants}>
+              <MemoizedQuickActionsBar />
+            </motion.div>
+
+            {/* ✅ STATS CHART: Uses useDashboard + useTransactions hooks directly */}
+            <motion.div variants={itemVariants}>
+              <MemoizedStatsChart className="lg:col-span-2" />
+            </motion.div>
+
+            {/* ✅ RECENT TRANSACTIONS: Uses useDashboard hook directly */}
+            <motion.div variants={itemVariants}>
+              <MemoizedRecentTransactions />
+            </motion.div>
+
+            {/* Enhanced Tips Section */}
+            <motion.div variants={itemVariants}>
+              <TipsSection t={t} />
+            </motion.div>
+          </div>
+
+          {/* Stats Cards - Uses calculated stats from dashboard hook */}
+          <motion.div variants={itemVariants}>
+            <StatsCards stats={dashboardStats} t={t} />
+          </motion.div>
+        </motion.div>
+
+        {/* ✅ FLOATING ACTION BUTTON: Opens AddTransactions (new component) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1, duration: 0.3 }}
+          className="fixed left-6 bottom-6 z-50"
+        >
+          <motion.button
+            onClick={() => setShowAddTransactions(true)}
+            className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-3xl group"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            title={t('actions.quickAdd')}
+          >
+            {/* Animated Background */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+            
+            {/* Plus Icon */}
+            <motion.div
+              className="relative z-10"
+              animate={{ rotate: [0, 0, 180, 180, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            >
+              <Plus className="w-8 h-8" />
+            </motion.div>
+            
+            {/* Ripple Effect */}
+            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-75"></div>
+            
+            {/* Glow Effect */}
+            <div className="absolute -inset-2 bg-primary-500/20 rounded-full blur-lg group-hover:bg-primary-400/30 transition-all duration-300"></div>
+          </motion.button>
+          
+          {/* Tooltip */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileHover={{ opacity: 1, x: 0 }}
+            className="absolute left-20 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200"
+          >
+            {t('actions.quickAdd')}
+            <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-transparent border-r-4 border-r-gray-900"></div>
+          </motion.div>
+        </motion.div>
+
+        {/* ✅ ADD TRANSACTIONS MODAL: Uses new AddTransactions component with hooks */}
+        <AnimatePresence>
+          {showAddTransactions && (
+            <Modal
+              isOpen={showAddTransactions}
+              onClose={() => setShowAddTransactions(false)}
+              size="large"
+              className="max-w-4xl"
+              hideHeader={true}
+            >
+              <AddTransactions 
+                onClose={() => setShowAddTransactions(false)}
+                context="dashboard"
+              />
+            </Modal>
+          )}
+        </AnimatePresence>
       </div>
-    </TransactionProvider>
+    </div>
   );
 };
 

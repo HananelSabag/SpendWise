@@ -11,11 +11,10 @@ import {
   LogOut,
   Moon,
   Sun,
-  Bell,
   ChevronDown,
   Tag
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth'; // ✅ Use hooks instead of context
 import { useLanguage } from '../../context/LanguageContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import { Avatar, Modal } from '../ui';
@@ -26,18 +25,19 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const { user, logout } = useAuth();
-  const { t, language, toggleLanguage } = useLanguage(); // ✅ Use toggleLanguage (session-only)
+  
+  // ✅ Use hooks directly instead of old context
+  const { user, logout, isAuthenticated, isLoggingOut } = useAuth();
+  const { t, language, toggleLanguage } = useLanguage();
   const { darkMode, setDarkMode } = useAccessibility();
+  
   const location = useLocation();
-  const { pathname } = location;
   const isRTL = language === 'he';
   
-  // ✅ FIX: Simple session-only language toggle
+  // ✅ Session-only language toggle
   const handleLanguageToggle = () => {
-    toggleLanguage(); // This only changes session language, doesn't persist
+    toggleLanguage();
     
-    // Show user feedback
     const newLanguage = language === 'en' ? 'he' : 'en';
     const message = newLanguage === 'he' ? 'השפה שונתה לעברית (מושב זה בלבד)' : 'Language changed to English (this session only)';
     
@@ -71,7 +71,7 @@ const Header = () => {
     open: { opacity: 1, x: 0 }
   };
 
-  // Updated navigation items - categories opens modal instead of page
+  // Updated navigation items
   const navigation = [
     { name: t('nav.dashboard'), href: '/', icon: Home },
     { name: t('nav.transactions'), href: '/transactions', icon: CreditCard },
@@ -84,14 +84,30 @@ const Header = () => {
     { name: t('nav.profile'), href: '/profile', icon: User }
   ];
 
-  // Handle navigation click
+  // Handle navigation click for modal items
   const handleNavClick = (item, e) => {
     if (item.onClick) {
       e.preventDefault();
       item.onClick();
-      setIsOpen(false); // Close mobile menu
+      setIsOpen(false);
     }
   };
+
+  // ✅ Handle logout with loading state
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowDropdown(false);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <>
@@ -154,10 +170,10 @@ const Header = () => {
               
               {/* Language Toggle */}
               <button
-                onClick={handleLanguageToggle} // ✅ Use session-only handler
+                onClick={handleLanguageToggle}
                 className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 hidden sm:block ml-2"
                 aria-label={t('common.toggleLanguage')}
-                title="Session language toggle (resets on logout)" // ✅ Add helpful tooltip
+                title="Session language toggle (resets on logout)"
               >
                 <span className="text-sm font-medium">
                   {language === 'en' ? 'עב' : 'EN'}
@@ -207,7 +223,7 @@ const Header = () => {
                     
                     {/* Profile Link */}
                     <Link
-                      to="/profile" // ✅ תיקון הניתוב לפרופיל
+                      to="/profile"
                       className={cn(
                         'flex items-center gap-3 px-4 py-2 rounded-lg transition-colors',
                         'hover:bg-gray-100 dark:hover:bg-gray-700',
@@ -219,16 +235,15 @@ const Header = () => {
                       {t('nav.profile')}
                     </Link>
                     
+                    {/* Logout Button with Loading State */}
                     <button
-                      onClick={() => {
-                        logout();
-                        setShowDropdown(false);
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       role="menuitem"
                     >
                       <LogOut className="h-4 w-4 mr-3 text-red-500 dark:text-red-400" />
-                      {t('auth.logout')}
+                      {isLoggingOut ? t('auth.loggingOut') : t('auth.logout')}
                     </button>
                   </div>
                 )}
@@ -316,11 +331,11 @@ const Header = () => {
               <motion.div variants={itemVariants}>
                 <button
                   onClick={() => {
-                    handleLanguageToggle(); // ✅ Use session-only handler
+                    handleLanguageToggle();
                     setIsOpen(false);
                   }}
                   className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                  title="Session language toggle (resets on logout)" // ✅ Add helpful tooltip
+                  title="Session language toggle (resets on logout)"
                 >
                   {language === 'en' ? 'עברית (מושב זה)' : 'English (session)'}
                 </button>
@@ -328,14 +343,12 @@ const Header = () => {
               
               <motion.div variants={itemVariants}>
                 <button
-                  onClick={() => {
-                    logout();
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-800"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-800 disabled:opacity-50"
                 >
                   <LogOut className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'} text-red-500 dark:text-red-400`} />
-                  {t('auth.logout')}
+                  {isLoggingOut ? t('auth.loggingOut') : t('auth.logout')}
                 </button>
               </motion.div>
             </div>
@@ -343,7 +356,7 @@ const Header = () => {
         </motion.div>
       </header>
 
-      {/* Category Manager Modal - WIZARD LEVEL! */}
+      {/* Category Manager Modal */}
       <Modal
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}

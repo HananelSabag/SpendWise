@@ -1,12 +1,12 @@
 /**
- * PRODUCTION-READY API Module
- * Complete coverage of all server endpoints with environment configuration
+ * PRODUCTION-READY API Module - Complete Server Coverage
+ * All endpoints with proper error handling, caching, and request optimization
  */
 
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// Environment configuration with fallbacks - NO HARDCODED URLS
+// Environment configuration
 const config = {
   API_URL: import.meta.env.VITE_API_URL,
   API_VERSION: import.meta.env.VITE_API_VERSION || 'v1',
@@ -23,15 +23,11 @@ if (!config.API_URL) {
   throw new Error('VITE_API_URL is required but not defined in environment variables');
 }
 
-if (!config.CLIENT_URL) {
-  throw new Error('VITE_CLIENT_URL is required but not defined in environment variables');
-}
-
 // Request deduplication and cancellation
 const pendingRequests = new Map();
-const requestCancellationTokens = new Map();
+const requestQueue = new Map();
 
-// Create axios instance with environment config
+// Create axios instance
 const api = axios.create({
   baseURL: `${config.API_URL}/api/${config.API_VERSION}`,
   timeout: config.REQUEST_TIMEOUT,
@@ -46,6 +42,20 @@ const log = (message, data = null) => {
   if (config.DEBUG_MODE) {
     console.log(`[API] ${message}`, data);
   }
+};
+
+// Request queue management
+const queueRequest = (key, requestFn) => {
+  if (requestQueue.has(key)) {
+    return requestQueue.get(key);
+  }
+  
+  const promise = requestFn().finally(() => {
+    requestQueue.delete(key);
+  });
+  
+  requestQueue.set(key, promise);
+  return promise;
 };
 
 // Enhanced request interceptor
@@ -95,7 +105,7 @@ api.interceptors.request.use(
   }
 );
 
-// Enhanced response interceptor
+// Enhanced response interceptor with token refresh
 api.interceptors.response.use(
   (response) => {
     const duration = Date.now() - response.config.metadata.startTime;
@@ -126,7 +136,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // Handle 401 - Token refresh - NO HARDCODED URL
+    // Handle 401 - Token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
@@ -146,12 +156,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        // Use CLIENT_URL for redirect in production
-        if (config.ENVIRONMENT === 'production') {
-          window.location.href = `${config.CLIENT_URL}/login`;
-        } else {
-          window.location.href = '/login';
-        }
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
@@ -210,12 +215,16 @@ export const authAPI = {
   updateProfile: (data) => api.put('/users/profile', data),
   updatePreferences: (preferences) => api.put('/users/preferences', { preferences }),
   
-  // Profile picture
-  uploadProfilePicture: (file) => {
+  // Profile picture with progress tracking
+  uploadProfilePicture: (file, onProgress) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
     return api.post('/users/profile/picture', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress ? (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percentCompleted);
+      } : undefined
     });
   },
   
@@ -223,14 +232,17 @@ export const authAPI = {
   testEmail: (email) => api.post('/users/test-email', { email })
 };
 
-// Transaction API - Complete coverage from controllers
+// Transaction API - Complete coverage with optimizations
 export const transactionAPI = {
-  // Dashboard and summary
+  // Dashboard and summary - with request deduplication
   getDashboard: (date) => {
     const formattedDate = formatDateForAPI(date);
-    return api.get('/transactions/dashboard', { 
-      params: { date: formattedDate }
-    });
+    const key = `dashboard-${formattedDate}`;
+    return queueRequest(key, () => 
+      api.get('/transactions/dashboard', { 
+        params: { date: formattedDate }
+      })
+    );
   },
   
   getRecent: (limit = 5, date) => {
@@ -309,7 +321,9 @@ export const transactionAPI = {
 
 // Category API - Complete coverage
 export const categoryAPI = {
-  getAll: (type) => api.get('/categories', { params: { type } }),
+  getAll: (type) => queueRequest(`categories-${type || 'all'}`, () => 
+    api.get('/categories', { params: { type } })
+  ),
   getById: (id) => api.get(`/categories/${id}`),
   create: (data) => api.post('/categories', data),
   update: (id, data) => api.put(`/categories/${id}`, data),
@@ -324,12 +338,54 @@ export const categoryAPI = {
     })
 };
 
-// Export API - Complete coverage
+// Export API - Complete coverage with download handling
 export const exportAPI = {
   getOptions: () => api.get('/export/options'),
-  exportAsCSV: () => api.get('/export/csv', { responseType: 'blob' }),
-  exportAsJSON: () => api.get('/export/json'),
-  exportAsPDF: () => api.get('/export/pdf', { responseType: 'blob' })
+  
+  exportAsCSV: async () => {
+    const response = await api.get('/export/csv', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `spendwise_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    return response;
+  },
+  
+  exportAsJSON: async () => {
+    const response = await api.get('/export/json');
+    const dataStr = JSON.stringify(response.data, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `spendwise_export_${new Date().toISOString().split('T')[0]}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    return response;
+  },
+  
+  exportAsPDF: async () => {
+    try {
+      const response = await api.get('/export/pdf', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `spendwise_export_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return response;
+    } catch (error) {
+      if (error.response?.status === 501) {
+        toast.error('PDF export coming soon! Please use CSV or JSON for now.');
+      }
+      throw error;
+    }
+  }
 };
 
 // Query keys for React Query
@@ -355,15 +411,52 @@ export const queryKeys = {
   
   // Templates
   templates: ['templates'],
+  template: (id) => ['templates', id],
   
   // Categories
   categories: (type) => ['categories', type],
+  category: (id) => ['categories', id],
   categoriesWithCounts: (startDate, endDate) => ['categories', 'counts', formatDateForAPI(startDate), formatDateForAPI(endDate)],
   categoryStats: (id) => ['categories', 'stats', id],
   categoryBreakdown: (startDate, endDate) => ['transactions', 'breakdown', formatDateForAPI(startDate), formatDateForAPI(endDate)],
   
+  // Exchange rates
+  exchangeRates: (currency) => ['exchange-rates', currency],
+  
   // Export
   exportOptions: ['export', 'options']
+};
+
+// Mutation keys for React Query
+export const mutationKeys = {
+  // Auth
+  login: ['auth', 'login'],
+  register: ['auth', 'register'],
+  logout: ['auth', 'logout'],
+  updateProfile: ['auth', 'updateProfile'],
+  updatePreferences: ['auth', 'updatePreferences'],
+  uploadProfilePicture: ['auth', 'uploadProfilePicture'],
+  forgotPassword: ['auth', 'forgotPassword'],
+  resetPassword: ['auth', 'resetPassword'],
+  verifyEmail: ['auth', 'verifyEmail'],
+  resendVerification: ['auth', 'resendVerification'],
+  
+  // Transactions
+  createTransaction: ['transactions', 'create'],
+  updateTransaction: ['transactions', 'update'],
+  deleteTransaction: ['transactions', 'delete'],
+  skipTransaction: ['transactions', 'skip'],
+  generateRecurring: ['transactions', 'generateRecurring'],
+  
+  // Templates
+  updateTemplate: ['templates', 'update'],
+  deleteTemplate: ['templates', 'delete'],
+  skipTemplateDates: ['templates', 'skipDates'],
+  
+  // Categories
+  createCategory: ['categories', 'create'],
+  updateCategory: ['categories', 'update'],
+  deleteCategory: ['categories', 'delete']
 };
 
 // Cleanup and utility functions
@@ -372,7 +465,20 @@ export const cancelPendingRequests = () => {
   pendingRequests.clear();
 };
 
+export const clearRequestQueue = () => {
+  requestQueue.clear();
+};
+
 export const getApiConfig = () => config;
+
+// Performance monitoring
+export const getApiStats = () => {
+  return {
+    pendingRequests: pendingRequests.size,
+    queuedRequests: requestQueue.size,
+    config
+  };
+};
 
 // Default export
 export default api;

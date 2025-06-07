@@ -1,4 +1,8 @@
-// pages/auth/Register.jsx
+/**
+ * User Registration Page
+ * Multi-step registration flow with email verification
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,8 +20,8 @@ import {
   Eye,
   EyeOff,
   UserPlus,
-  AlertCircle, // NEW: For verification notice
-  CheckCircle // NEW: For success modal
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -30,10 +34,12 @@ import { cn } from '../../utils/helpers';
 import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import Footer from '../../components/layout/Footer';
-import api from '../../utils/api'; // NEW: For direct API calls
 
+/**
+ * Password strength indicator component
+ */
 const PasswordStrengthIndicator = ({ password }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
   const getStrength = () => {
     if (!password) return 0;
@@ -73,7 +79,9 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
-// NEW: Email verification success modal component
+/**
+ * Email verification success modal
+ */
 const EmailVerificationModal = ({ email, onClose }) => {
   const { t } = useLanguage();
   
@@ -122,9 +130,12 @@ const EmailVerificationModal = ({ email, onClose }) => {
   );
 };
 
+/**
+ * User Registration Component
+ */
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isRegistering, error: authError } = useAuth();
+  const { register, isRegistering } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
   const isRTL = language === 'he';
 
@@ -139,14 +150,13 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // Start at step 1
-  const [showAccessibility, setShowAccessibility] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   
-  // NEW: Email verification state
+  // Email verification state
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
 
-  // Password requirements
+  // Password requirements validation
   const passwordRequirements = [
     { id: 'length', text: t('auth.passwordLength'), check: (p) => p.length >= 8 },
     { id: 'number', text: t('auth.passwordNumber'), check: (p) => /[0-9]/.test(p) },
@@ -154,20 +164,22 @@ const Register = () => {
     { id: 'lower', text: t('auth.passwordLower'), check: (p) => /[a-z]/.test(p) }
   ];
 
-  // Handle input change
+  /**
+   * Handle input changes and clear errors
+   */
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  // Handle step navigation
+  /**
+   * Navigate to next registration step
+   */
   const nextStep = () => {
     if (currentStep === 1) {
-      // Validate step 1 fields
       const stepErrors = {};
       
       if (!formData.username) {
@@ -191,13 +203,17 @@ const Register = () => {
     setCurrentStep(2);
   };
 
-  // Go back to step 1
+  /**
+   * Navigate to previous registration step
+   */
   const prevStep = () => {
     setCurrentStep(1);
     setErrors({});
   };
 
-  // Handle form submission - UPDATED: Now handles email verification
+  /**
+   * Handle registration form submission
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -216,25 +232,16 @@ const Register = () => {
     }
 
     try {
-      // NEW: Make direct API call for registration with email verification
-      const response = await api.post('/users/register', {
+      await register({
         username: formData.username,
         email: formData.email,
         password: formData.password
       });
       
-      if (response.data.requiresVerification) {
-        // NEW: Show verification modal
-        setRegisteredEmail(formData.email);
-        setShowVerificationModal(true);
-      } else {
-        // This shouldn't happen with email verification enabled
-        navigate('/login');
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
+      setRegisteredEmail(formData.email);
+      setShowVerificationModal(true);
       
-      // NEW: Handle specific email verification error cases
+    } catch (err) {
       const errorData = err.response?.data?.error;
       
       if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
@@ -253,7 +260,9 @@ const Register = () => {
     }
   };
 
-  // NEW: Handle verification modal close
+  /**
+   * Handle verification modal close
+   */
   const handleVerificationModalClose = () => {
     setShowVerificationModal(false);
     navigate('/login', { 
@@ -264,7 +273,7 @@ const Register = () => {
     });
   };
 
-  // Benefits list
+  // Application benefits for showcase
   const benefits = [
     { icon: Shield, text: t('auth.benefit1') },
     { icon: Zap, text: t('auth.benefit2') },
@@ -285,7 +294,7 @@ const Register = () => {
         <FloatingMenu buttons={menuButtons} />
         <AccessibilityMenu />
         
-        {/* Form Side */}
+        {/* Registration Form Side */}
         <motion.div 
           className={cn(
             'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
@@ -356,7 +365,7 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Form */}
+            {/* Registration Form */}
             <motion.form 
               onSubmit={handleSubmit}
               className="space-y-6"
@@ -365,6 +374,7 @@ const Register = () => {
               transition={{ delay: 0.3 }}
             >
               <AnimatePresence mode="wait">
+                {/* Step 1: Account Information */}
                 {currentStep === 1 && (
                   <motion.div
                     key="step1"
@@ -373,7 +383,6 @@ const Register = () => {
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-6"
                   >
-                    {/* Username */}
                     <Input
                       label={t('auth.username')}
                       type="text"
@@ -385,7 +394,6 @@ const Register = () => {
                       required
                     />
 
-                    {/* Email */}
                     <Input
                       label={t('auth.email')}
                       type="email"
@@ -397,7 +405,6 @@ const Register = () => {
                       required
                     />
 
-                    {/* NEW: Email verification notice */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                       <div className="flex items-start">
                         <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
@@ -426,6 +433,7 @@ const Register = () => {
                   </motion.div>
                 )}
 
+                {/* Step 2: Security Information */}
                 {currentStep === 2 && (
                   <motion.div
                     key="step2"
@@ -434,7 +442,6 @@ const Register = () => {
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-6"
                   >
-                    {/* Password - UPDATED: Added show/hide functionality */}
                     <div>
                       <Input
                         label={t('auth.password')}
@@ -477,7 +484,6 @@ const Register = () => {
                       </div>
                     </div>
 
-                    {/* Confirm Password - UPDATED: Added show/hide functionality */}
                     <Input
                       label={t('auth.confirmPassword')}
                       type={showConfirmPassword ? 'text' : 'password'}
@@ -498,7 +504,7 @@ const Register = () => {
                       }
                     />
 
-                    {/* Terms */}
+                    {/* Terms Agreement */}
                     <div>
                       <label className="flex items-start cursor-pointer">
                         <input
@@ -521,7 +527,7 @@ const Register = () => {
 
                     {/* Error Alert */}
                     <AnimatePresence>
-                      {(errors.general || authError) && (
+                      {errors.general && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -532,13 +538,13 @@ const Register = () => {
                             dismissible 
                             onDismiss={() => setErrors({})}
                           >
-                            {errors.general || authError}
+                            {errors.general}
                           </Alert>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    {/* Buttons */}
+                    {/* Action Buttons */}
                     <div className="flex gap-3">
                       <Button
                         type="button"
@@ -668,7 +674,7 @@ const Register = () => {
         </div>
       </div>
 
-      {/* NEW: Email Verification Modal */}
+      {/* Email Verification Modal */}
       <AnimatePresence>
         {showVerificationModal && (
           <EmailVerificationModal 

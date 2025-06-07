@@ -1,4 +1,8 @@
-// pages/auth/Login.jsx
+/**
+ * User Login Page
+ * Secure authentication with email verification support
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,13 +15,13 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  CheckCircle, // NEW: For success states
-  XCircle, // NEW: For error states
-  RefreshCw, // NEW: For resend button
-  LogIn, // FIXED: Correct import name
-  Shield, // NEW: For feature showcase
-  Zap, // NEW: For feature showcase
-  Sparkles // NEW: For feature showcase
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  LogIn,
+  Shield,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -26,37 +30,31 @@ import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import FloatingMenu from '../../components/common/FloatingMenu';
-import Footer from '../../components/layout/Footer'; // NEW: Import Footer
+import Footer from '../../components/layout/Footer';
 import { cn } from '../../utils/helpers';
-import api from '../../utils/api'; // NEW: For resend verification
-import toast from 'react-hot-toast'; // NEW: For notifications
 
-// NEW: Resend Verification Email Component
+/**
+ * Resend verification email modal
+ */
 const ResendVerificationModal = ({ email, onClose }) => {
   const { t } = useLanguage();
-  const [sending, setSending] = useState(false);
+  const { resendVerificationEmail, isResendingVerification } = useAuth();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
   const handleResend = async () => {
-    setSending(true);
     setError('');
 
     try {
-      const response = await api.post('/users/resend-verification', { email });
+      await resendVerificationEmail(email);
       setSent(true);
-      toast.success(t('auth.verificationEmailResent'));
       
-      // Close modal after 3 seconds
       setTimeout(() => {
         onClose();
       }, 3000);
     } catch (err) {
       const errorMessage = err.response?.data?.error?.message || t('errors.generic');
       setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setSending(false);
     }
   };
 
@@ -107,7 +105,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
                 variant="outline"
                 fullWidth
                 onClick={onClose}
-                disabled={sending}
+                disabled={isResendingVerification}
               >
                 {t('common.cancel')}
               </Button>
@@ -115,10 +113,10 @@ const ResendVerificationModal = ({ email, onClose }) => {
                 variant="primary"
                 fullWidth
                 onClick={handleResend}
-                loading={sending}
-                disabled={sending}
+                loading={isResendingVerification}
+                disabled={isResendingVerification}
               >
-                {sending ? (
+                {isResendingVerification ? (
                   <LoadingSpinner size="small" />
                 ) : (
                   <>
@@ -135,6 +133,9 @@ const ResendVerificationModal = ({ email, onClose }) => {
   );
 };
 
+/**
+ * User Login Component
+ */
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -150,21 +151,24 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  // NEW: Email verification state
+  // Email verification state
   const [showResendModal, setShowResendModal] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
-  // NEW: Show message from registration redirect
+  // Registration redirect message
   const message = location.state?.message;
   const emailFromRegistration = location.state?.email;
 
-  // NEW: Auto-populate email from registration
+  // Auto-populate email from registration
   useEffect(() => {
     if (emailFromRegistration) {
       setFormData(prev => ({ ...prev, email: emailFromRegistration }));
     }
   }, [emailFromRegistration]);
 
+  /**
+   * Handle form input changes
+   */
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -172,7 +176,9 @@ const Login = () => {
     }
   };
 
-  // Handle form submission - UPDATED: Better error handling for email verification
+  /**
+   * Handle login form submission
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -201,11 +207,7 @@ const Login = () => {
         navigate('/');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Check if it's an email verification error
       if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
-        console.log('📧 [LOGIN] Email verification required for:', formData.email);
         setUnverifiedEmail(formData.email);
         setErrors({
           general: t('auth.emailNotVerifiedLogin')
@@ -219,14 +221,14 @@ const Login = () => {
     }
   };
 
-  // NEW: Animated background shapes
+  // Animated background shapes
   const shapes = [
     { size: 400, duration: 25, delay: 0 },
     { size: 300, duration: 20, delay: 5 },
     { size: 200, duration: 30, delay: 10 }
   ];
 
-  // NEW: Features list for showcase
+  // Application features for showcase
   const features = [
     {
       icon: Shield,
@@ -258,7 +260,7 @@ const Login = () => {
       <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
         <FloatingMenu buttons={menuButtons} />
         
-        {/* Form Side - UPDATED: Now takes half width on large screens */}
+        {/* Login Form Side */}
         <motion.div 
           className={cn(
             'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
@@ -296,7 +298,7 @@ const Login = () => {
               </p>
             </div>
 
-            {/* NEW: Success message from registration */}
+            {/* Success message from registration */}
             <AnimatePresence>
               {message && (
                 <motion.div
@@ -320,7 +322,6 @@ const Login = () => {
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
             >
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Email Input - UPDATED: Auto-focus logic */}
                 <Input
                   label={t('auth.email')}
                   type="email"
@@ -333,7 +334,6 @@ const Login = () => {
                   autoFocus={!emailFromRegistration}
                 />
 
-                {/* Password Input - UPDATED: Auto-focus when email prefilled */}
                 <Input
                   label={t('auth.password')}
                   type={showPassword ? 'text' : 'password'}
@@ -381,7 +381,7 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Error Alert - UPDATED: Now includes resend verification option */}
+                {/* Error Alert */}
                 <AnimatePresence>
                   {errors.general && (
                     <motion.div
@@ -398,7 +398,6 @@ const Login = () => {
                           <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
                           <div>
                             <p>{errors.general}</p>
-                            {/* NEW: Show resend link for unverified emails */}
                             {unverifiedEmail && (
                               <button
                                 type="button"
@@ -549,7 +548,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* NEW: Resend Verification Modal */}
+      {/* Resend Verification Modal */}
       <AnimatePresence>
         {showResendModal && (
           <ResendVerificationModal

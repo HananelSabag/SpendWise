@@ -1,3 +1,8 @@
+/**
+ * Email Verification Page
+ * Handles email verification token processing and user feedback
+ */
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -5,16 +10,19 @@ import { CheckCircle, XCircle, AlertCircle, Home, LogIn } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext'; // ADD: Import useAuth
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/helpers';
 
+/**
+ * Email Verification Component
+ */
 const VerifyEmail = () => {
   const { token } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { verifyEmail, isVerifyingEmail } = useAuth(); // ADD: Use AuthContext
+  const { verifyEmail, isVerifyingEmail } = useAuth();
   
-  const [status, setStatus] = useState('verifying'); // verifying, success, error, expired
+  const [status, setStatus] = useState('verifying');
   const [errorMessage, setErrorMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
 
@@ -24,27 +32,24 @@ const VerifyEmail = () => {
     }
   }, [token]);
 
-  // UPDATED: Use AuthContext verifyEmail method
+  /**
+   * Process email verification token
+   */
   const handleVerifyEmail = async () => {
     try {
       setStatus('verifying');
-      console.log('📧 [VERIFY-EMAIL-PAGE] Starting verification with token:', token);
       
       const result = await verifyEmail(token);
-      console.log('📧 [VERIFY-EMAIL-PAGE] Verification result:', result);
       
-      // If we get here, verification was successful and user is logged in
       setStatus('success');
       setUserEmail(result.user?.email || 'your email');
       
-      // Navigate to dashboard after 2 seconds
+      // Navigate to dashboard after successful verification
       setTimeout(() => {
         navigate('/', { replace: true });
       }, 2000);
       
     } catch (error) {
-      console.error('📧 [VERIFY-EMAIL-PAGE] Verification failed:', error);
-      
       const errorData = error.response?.data?.error;
       const errorMsg = errorData?.message || error.message;
       
@@ -59,6 +64,9 @@ const VerifyEmail = () => {
     }
   };
 
+  /**
+   * Get status-specific content configuration
+   */
   const getStatusContent = () => {
     switch (status) {
       case 'verifying':
@@ -115,7 +123,7 @@ const VerifyEmail = () => {
         className="max-w-md w-full"
       >
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-          {/* Icon */}
+          {/* Status Icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -150,7 +158,7 @@ const VerifyEmail = () => {
             {content.description}
           </motion.p>
 
-          {/* Success message with countdown */}
+          {/* Success Message */}
           {status === 'success' && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -220,7 +228,7 @@ const VerifyEmail = () => {
             )}
           </motion.div>
 
-          {/* Additional Help Text */}
+          {/* Support Link */}
           {status !== 'verifying' && status !== 'success' && (
             <motion.p
               initial={{ opacity: 0 }}
