@@ -38,9 +38,29 @@ export const currency = {
  * Date formatting utilities
  */
 export const dateHelpers = {
-  format: (date, formatStr = 'PPP', locale = 'he') => {
-    const dateLocale = locale === 'he' ? he : enUS;
-    return format(new Date(date), formatStr, { locale: dateLocale });
+  // ✅ FIX: Enhanced format function with better error handling
+  format: (date, formatString = 'PP', locale = 'en') => {
+    if (!date) {
+      console.warn('dateHelpers.format: No date provided');
+      return '';
+    }
+
+    try {
+      // Convert to Date object if it's a string
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        console.warn('dateHelpers.format: Invalid date provided:', date);
+        return 'Invalid Date';
+      }
+
+      const formatLocale = locale === 'he' ? he : enUS;
+      return format(dateObj, formatString, { locale: formatLocale });
+    } catch (error) {
+      console.error('dateHelpers.format error:', error, 'Date:', date, 'Format:', formatString);
+      return 'Invalid Date';
+    }
   },
   
   formatRelative: (date, locale = 'he') => {

@@ -106,7 +106,9 @@ const Transactions = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showActionsPanel, setShowActionsPanel] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [showRecurringManager, setShowRecurringManager] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [selectedTransactionForRecurring, setSelectedTransactionForRecurring] = useState(null);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   
@@ -412,59 +414,6 @@ const Transactions = () => {
                       {periodOption.label}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              {/* Balance summary cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mt-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-500/20 rounded-lg">
-                      <ArrowUpRight className="w-5 h-5 text-green-300" />
-                    </div>
-                    <div>
-                      <p className="text-white/80 text-sm">{t('transactions.income')}</p>
-                      <p className="text-xl font-bold">{formatAmount(balanceData.income)}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-500/20 rounded-lg">
-                      <ArrowDownRight className="w-5 h-5 text-red-300" />
-                    </div>
-                    <div>
-                      <p className="text-white/80 text-sm">{t('transactions.expense')}</p>
-                      <p className="text-xl font-bold">{formatAmount(balanceData.expenses)}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      balanceData.balance >= 0 
-                        ? 'bg-emerald-500/20' 
-                        : 'bg-orange-500/20'
-                    }`}>
-                      <Activity className={`w-5 h-5 ${
-                        balanceData.balance >= 0 
-                          ? 'text-emerald-300' 
-                          : 'text-orange-300'
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="text-white/80 text-sm">{t('transactions.balance')}</p>
-                      <p className={`text-xl font-bold ${
-                        balanceData.balance >= 0 
-                          ? 'text-emerald-300' 
-                          : 'text-orange-300'
-                      }`}>
-                        {formatAmount(Math.abs(balanceData.balance))}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -872,6 +821,26 @@ const Transactions = () => {
                 setShowRecurring(false);
               }}
               onSuccess={handleTransactionSuccess}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ✅ UPDATED: Recurring Manager Modal with focused transaction */}
+        <AnimatePresence>
+          {showRecurringManager && (
+            <RecurringModal
+              isOpen={showRecurringManager}
+              onClose={() => setShowRecurringManager(false)}
+              focusedTransaction={selectedTransactionForRecurring}
+              onEdit={(template) => {
+                // When editing from recurring manager, close it and open edit modal
+                setShowRecurringManager(false);
+                handleEdit(template);
+              }}
+              onSuccess={() => {
+                // Refresh transactions when recurring operations succeed
+                refresh();
+              }}
             />
           )}
         </AnimatePresence>

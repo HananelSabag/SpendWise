@@ -14,26 +14,31 @@ import {
   ChevronUp,
   Info,
   Tag,
-  Repeat
+  Repeat,
+  Calendar as CalendarIcon,
+  Pause,
+  Play,
+  Settings,
+  AlertTriangle
 } from 'lucide-react';
 
-// ✅ HOOKS: Use transaction hooks directly for CRUD operations
-import { useTransactions } from '../../../hooks/useTransactions';
+import { useTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Badge, Button, Modal } from '../../ui';
 import EditTransactionPanel from './EditTransactionPanel';
 import DeleteTransaction from './DeleteTransaction';
+import toast from 'react-hot-toast';
 
 /**
- * TransactionCard Component - Now fully hook-based
- * No longer receives onEdit/onDelete as props - uses hooks directly
+ * TransactionCard Component - Handles both regular and recurring transactions
+ * Provides appropriate actions based on transaction type
  */
 const TransactionCard = ({
   transaction,
-  onEditCallback, // Optional callback for parent notification
-  onDeleteCallback, // Optional callback for parent notification
+  onEditCallback,
+  onDeleteCallback,
   onEditSingle,
   onOpenRecurringManager,
   onOpenSkipDates,
@@ -44,7 +49,7 @@ const TransactionCard = ({
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   
-  // ✅ TRANSACTION OPERATIONS: Get CRUD operations directly from hook
+  // Hook operations
   const {
     updateTransaction,
     deleteTransaction,
@@ -53,98 +58,175 @@ const TransactionCard = ({
     refresh
   } = useTransactions();
 
+  const {
+    updateTemplate,
+    skipDates,
+    isSkipping
+  } = useTransactionTemplates();
+
   const [expanded, setExpanded] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSingle, setEditingSingle] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   const isRTL = language === 'he';
-  const isRecurring = transaction.is_recurring || transaction.template_id;
-  const isExpense = transaction.transaction_type === 'expense';
+  
+  // ✅ FIX: Properly identify recurring transactions
+  const isRecurring = Boolean(transaction.template_id || transaction.is_recurring);
+  const isTemplate = Boolean(transaction.id && !transaction.template_id && transaction.interval_type);
+  const isExpense = transaction.transaction_type === 'expense' || transaction.type === 'expense';
 
-  // Enhanced edit handler with hook integration
+  // ✅ FIX: Enhanced edit handlers - different for regular vs recurring
   const handleEditClick = useCallback(() => {
-    setEditingSingle(false);
-    setShowEditModal(true);
-    
-    // Notify parent if callback provided
-    onEditCallback?.(transaction);
-  }, [transaction, onEditCallback]);
+    if (isTemplate) {
+      // This is a template, edit the template
+      onEditCallback?.(transaction);
+    } else if (isRecurring) {
+      // This is a recurring transaction instance, offer both options
+      setEditingSingle(false);
+      setShowEditModal(true);
+    } else {
+      // Regular transaction
+      setEditingSingle(false);
+      setShowEditModal(true);
+    }
+  }, [transaction, isTemplate, isRecurring, onEditCallback]);
 
-  // Enhanced single occurrence editing
   const handleEditSingleOccurrence = useCallback(() => {
+    if (!isRecurring) return;
+    
     setEditingSingle(true);
     setShowEditModal(true);
-    
-    // Call specific single edit callback if provided
     onEditSingle?.(transaction);
-  }, [transaction, onEditSingle]);
+  }, [transaction, isRecurring, onEditSingle]);
 
-  // Enhanced edit success with hook integration
+  // ✅ FIX: Proper edit success handling
   const handleEditSuccess = useCallback(async (updatedData) => {
     try {
-      // Update through hook
-      await updateTransaction(
-        transaction.transaction_type,
-        transaction.id,
-        updatedData,
-        !editingSingle // updateFuture = true if editing template
-      );
+      if (isTemplate) {
+        // Update template
+        await updateTemplate(transaction.id, updatedData);
+      } else {
+        // Update transaction (single or future)
+        await updateTransaction(
+          transaction.transaction_type || transaction.type,
+          transaction.id,
+          updatedData,
+          !editingSingle && isRecurring // updateFuture only for recurring template updates
+        );
+      }
       
       setShowEditModal(false);
       setEditingSingle(false);
-      
-      // Refresh data
       await refresh();
-      
-      // Notify parent
       onEditCallback?.(transaction);
     } catch (error) {
       console.error('Edit failed:', error);
     }
-  }, [transaction, editingSingle, updateTransaction, refresh, onEditCallback]);
+  }, [transaction, editingSingle, isTemplate, isRecurring, updateTransaction, updateTemplate, refresh, onEditCallback]);
 
-  // Enhanced delete handler with hook integration
+  // ✅ FIX: Enhanced delete handling
   const handleDeleteClick = useCallback(() => {
     setShowDeleteModal(true);
-    
-    // Notify parent if callback provided
     onDeleteCallback?.(transaction);
   }, [transaction, onDeleteCallback]);
 
-  // Enhanced delete confirmation with hook integration
   const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false, deleteAll = false) => {
     try {
-      // Delete through hook
-      await deleteTransaction(
-        transactionToDelete.transaction_type,
-        transactionToDelete.id,
-        deleteFuture
-      );
+      if (isTemplate) {
+        // Delete template (uses deleteTemplate from templates hook)
+        // This is handled in the DeleteTransaction modal
+      } else {
+        // Delete transaction
+        await deleteTransaction(
+          transactionToDelete.transaction_type || transactionToDelete.type,
+          transactionToDelete.id,
+          deleteFuture
+        );
+      }
       
       setShowDeleteModal(false);
-      
-      // Refresh data
       await refresh();
-      
-      // Notify parent
       onDeleteCallback?.(transactionToDelete);
     } catch (error) {
       console.error('Delete failed:', error);
     }
-  }, [deleteTransaction, refresh, onDeleteCallback]);
+  }, [isTemplate, deleteTransaction, refresh, onDeleteCallback]);
 
-  // Enhanced skip dates handler
-  const handleOpenSkipDates = useCallback((transaction) => {
-    setShowDeleteModal(false);
-    onOpenSkipDates?.(transaction);
-  }, [onOpenSkipDates]);
-
-  // Format frequency helper
-  const formatFrequency = useCallback((interval) => {
-    if (!interval || interval === null || interval === undefined) {
-      return t('actions.frequencies.oneTime') || 'One-time';
+  // ✅ FIX: Skip functionality - only for recurring transactions with template_id
+  const handleQuickSkip = useCallback(async () => {
+    if (!transaction.template_id && !isTemplate) {
+      toast.error(t('transactions.cannotSkipNonRecurring'));
+      return;
     }
+    
+    try {
+      const templateId = transaction.template_id || transaction.id;
+      const nextDate = getNextOccurrenceDate(transaction);
+      
+      if (!nextDate) {
+        toast.error(t('transactions.noNextOccurrence'));
+        return;
+      }
+      
+      await skipDates(templateId, [nextDate]);
+      toast.success(t('transactions.nextOccurrenceSkipped'));
+      refresh();
+    } catch (error) {
+      toast.error(t('common.error'));
+    }
+  }, [transaction, isTemplate, skipDates, refresh, t]);
+
+  // ✅ FIX: Toggle active - only for templates
+  const handleToggleActive = useCallback(async () => {
+    const templateId = transaction.template_id || (isTemplate ? transaction.id : null);
+    
+    if (!templateId) {
+      toast.error(t('transactions.cannotToggleNonTemplate'));
+      return;
+    }
+    
+    try {
+      await updateTemplate(templateId, {
+        is_active: !transaction.is_active
+      });
+      
+      toast.success(transaction.is_active ? t('transactions.paused') : t('transactions.resumed'));
+      refresh();
+    } catch (error) {
+      toast.error(t('common.error'));
+    }
+  }, [transaction, isTemplate, updateTemplate, refresh, t]);
+
+  // Helper to get next occurrence date
+  const getNextOccurrenceDate = (transaction) => {
+    if (transaction.next_recurrence_date || transaction.next_occurrence) {
+      return transaction.next_recurrence_date || transaction.next_occurrence;
+    }
+    
+    // Calculate next date based on interval
+    const today = new Date();
+    const nextDate = new Date(today);
+    
+    switch (transaction.interval_type || transaction.recurring_interval) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      default:
+        return null;
+    }
+    
+    return nextDate.toISOString().split('T')[0];
+  };
+
+  const formatFrequency = useCallback((interval) => {
+    if (!interval) return t('actions.frequencies.oneTime') || 'One-time';
     return t(`actions.frequencies.${interval}`) || interval;
   }, [t]);
 
@@ -154,40 +236,42 @@ const TransactionCard = ({
     animate: { 
       opacity: 1, 
       y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
+      transition: { type: "spring", stiffness: 300, damping: 30 }
     },
     hover: {
       scale: 1.01,
       y: -2,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 25
-      }
+      transition: { type: "spring", stiffness: 400, damping: 25 }
     }
   };
 
-  const expandVariants = {
-    hidden: { 
-      opacity: 0, 
-      height: 0,
-      transition: {
-        opacity: { duration: 0.2 },
-        height: { duration: 0.3, ease: "easeInOut" }
-      }
-    },
-    visible: { 
-      opacity: 1, 
-      height: "auto",
-      transition: {
-        height: { duration: 0.3, ease: "easeInOut" },
-        opacity: { duration: 0.2, delay: 0.1 }
-      }
-    }
+  // ✅ FIX: Add tooltip component for better UX
+  const Tooltip = ({ children, content, position = "top" }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    
+    return (
+      <div 
+        className="relative inline-block"
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+      >
+        {children}
+        {isVisible && (
+          <div className={cn(
+            "absolute z-50 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded shadow-lg whitespace-nowrap",
+            position === "top" && "-top-8 left-1/2 transform -translate-x-1/2",
+            position === "bottom" && "top-full left-1/2 transform -translate-x-1/2 mt-1"
+          )}>
+            {content}
+            <div className={cn(
+              "absolute w-0 h-0 border-l-4 border-r-4 border-transparent",
+              position === "top" && "top-full left-1/2 transform -translate-x-1/2 border-t-4 border-t-gray-900",
+              position === "bottom" && "bottom-full left-1/2 transform -translate-x-1/2 border-b-4 border-b-gray-900"
+            )}></div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -202,12 +286,12 @@ const TransactionCard = ({
         'backdrop-blur-sm',
         variant === 'compact' && 'p-4',
         variant === 'default' && 'p-5',
-        isRecurring && 'ring-1 ring-primary-500/20 bg-gradient-to-br from-white via-primary-50/30 to-white dark:from-gray-800 dark:via-primary-900/10 dark:to-gray-800',
+        (isRecurring || isTemplate) && 'ring-1 ring-primary-500/20 bg-gradient-to-br from-white via-primary-50/30 to-white dark:from-gray-800 dark:via-primary-900/10 dark:to-gray-800',
         className
       )}
     >
-      {/* Recurring Indicator */}
-      {isRecurring && (
+      {/* Recurring/Template Indicator */}
+      {(isRecurring || isTemplate) && (
         <div className="absolute top-0 right-0 w-3 h-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-bl-lg rounded-tr-2xl">
           <div className="absolute inset-0.5 bg-white dark:bg-gray-800 rounded-bl-sm rounded-tr-lg">
             <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-500 rounded-bl-sm rounded-tr-lg"></div>
@@ -215,16 +299,25 @@ const TransactionCard = ({
         </div>
       )}
 
+      {/* Status indicators */}
+      {isTemplate && !transaction.is_active && (
+        <div className="absolute top-2 left-2">
+          <Badge variant="warning" size="small">
+            <Pause className="w-3 h-3 mr-1" />
+            {t('transactions.paused')}
+          </Badge>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex items-start gap-4">
-        {/* Enhanced Icon with gradient background */}
+        {/* Icon */}
         <div className={cn(
           'relative p-3 rounded-2xl flex-shrink-0 shadow-sm',
           isExpense 
             ? 'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/30' 
             : 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30'
         )}>
-          {/* Subtle glow effect */}
           <div className={cn(
             'absolute inset-0 rounded-2xl blur-sm opacity-20',
             isExpense ? 'bg-red-200' : 'bg-green-200'
@@ -236,18 +329,16 @@ const TransactionCard = ({
           )}
         </div>
 
-        {/* Details Section */}
+        {/* Details */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              {/* Title with better typography */}
               <h3 className="font-semibold text-gray-900 dark:text-white truncate text-lg mb-2 leading-tight">
                 {transaction.description}
               </h3>
               
-              {/* Enhanced metadata with better spacing */}
               <div className="flex flex-wrap items-center gap-3">
-                {/* Date with improved styling */}
+                {/* Date */}
                 <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2.5 py-1 rounded-lg">
                   <Calendar className="w-3.5 h-3.5" />
                   <span className="font-medium">
@@ -255,48 +346,38 @@ const TransactionCard = ({
                   </span>
                 </div>
                 
-                {/* Category with enhanced design */}
+                {/* Category */}
                 {transaction.category_name && (
-                  <Badge 
-                    variant="secondary" 
-                    size="small"
-                    className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 px-2.5 py-1"
-                  >
+                  <Badge variant="secondary" size="small" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 px-2.5 py-1">
                     <Tag className="w-3 h-3 mr-1.5" />
                     {transaction.category_name}
                   </Badge>
                 )}
                 
-                {/* Enhanced Recurring Badge */}
-                {isRecurring && (
-                  <Badge 
-                    variant="primary" 
-                    size="small"
-                    className="bg-gradient-to-r from-primary-500 to-primary-600 text-white border-0 shadow-sm px-2.5 py-1"
-                  >
+                {/* Recurring/Template Badge */}
+                {(isRecurring || isTemplate) && (
+                  <Badge variant="primary" size="small" className="bg-gradient-to-r from-primary-500 to-primary-600 text-white border-0 shadow-sm px-2.5 py-1">
                     <Repeat className="w-3 h-3 mr-1.5" />
-                    {formatFrequency(transaction.recurring_interval)}
+                    {isTemplate ? t('transactions.template') : formatFrequency(transaction.recurring_interval || transaction.interval_type)}
                   </Badge>
                 )}
               </div>
             </div>
 
-            {/* Enhanced Amount Display */}
+            {/* Amount */}
             <div className="text-right">
               <div className={cn(
                 'text-2xl font-bold tracking-tight mb-1',
-                isExpense 
-                  ? 'text-red-600 dark:text-red-400' 
-                  : 'text-green-600 dark:text-green-400'
+                isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
               )}>
                 <span className="text-lg opacity-75">{isExpense ? '-' : '+'}</span>
                 {formatAmount(transaction.amount)}
               </div>
               
-              {/* Daily amount with improved styling */}
-              {isRecurring && transaction.daily_amount && (
+              {/* Template monthly impact */}
+              {isTemplate && (
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-0.5 rounded-md inline-block">
-                  {formatAmount(transaction.daily_amount)}/day
+                  {transaction.occurrence_count || 0} {t('transactions.occurrences')}
                 </div>
               )}
             </div>
@@ -304,85 +385,42 @@ const TransactionCard = ({
         </div>
       </div>
 
-      {/* Enhanced Actions Bar */}
+      {/* Actions Bar */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        {/* Expand Button for Recurring with better design */}
-        {isRecurring && (
+        {/* Expand Button */}
+        {(isRecurring || isTemplate) && (
           <Button
             variant="ghost"
             size="small"
             onClick={() => setExpanded(!expanded)}
-            className="text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl px-3 py-2"
+            className="text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl px-3 py-2 flex items-center gap-2"
           >
             {expanded ? (
               <>
-                <ChevronUp className="w-4 h-4 mr-2" />
-                {t('transactionCard.hideDetails')}
+                <ChevronUp className="w-4 h-4" />
+                <span className="text-sm font-medium">Hide Options</span>
               </>
             ) : (
               <>
-                <ChevronDown className="w-4 h-4 mr-2" />
-                {t('transactionCard.showDetails')}
+                <ChevronDown className="w-4 h-4" />
+                <span className="text-sm font-medium">Show Options</span>
               </>
             )}
           </Button>
         )}
         
-        {/* Enhanced Action Buttons */}
-        {showActions && (
-          <div className={cn(
-            'flex items-center gap-1',
-            !isRecurring && 'ml-auto'
-          )}>
-            {/* Recurring Management Button */}
-            {isRecurring && onOpenRecurringManager && (
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => onOpenRecurringManager(transaction)}
-                className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl px-3 py-2"
-                title={t('transactions.manageRecurring')}
-              >
-                <Repeat className="w-4 h-4 mr-1" />
-                <span className="text-xs font-medium">{t('transactions.manage')}</span>
-              </Button>
-            )}
-            
-            {/* Enhanced Edit Buttons with Loading States */}
-            {isRecurring && (
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={handleEditSingleOccurrence}
-                disabled={isUpdating}
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl p-2.5"
-                title={t('transactions.editThisOnly')}
-              >
-                {isUpdating && editingSingle ? (
-                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                ) : (
-                  <Edit2 className="w-4 h-4" />
-                )}
-                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editOnce')}</span>
-              </Button>
-            )}
-            
+        {/* ✅ SIMPLE ACTIONS: Just Edit and Delete for non-expanded view */}
+        {showActions && !expanded && (
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="small"
               onClick={handleEditClick}
               disabled={isUpdating}
-              className="text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl p-2.5"
-              title={isRecurring ? t('transactions.editTemplate') : t('common.edit')}
+              className="text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-4 py-2 rounded-lg flex items-center gap-2"
             >
-              {isUpdating && !editingSingle ? (
-                <div className="w-4 h-4 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-              ) : (
-                <Edit2 className="w-4 h-4" />
-              )}
-              {isRecurring && (
-                <span className="hidden sm:inline ml-1 text-xs">{t('transactions.editAll')}</span>
-              )}
+              <Edit2 className="w-4 h-4" />
+              <span className="font-medium">Edit</span>
             </Button>
             
             <Button
@@ -390,111 +428,305 @@ const TransactionCard = ({
               size="small"
               onClick={handleDeleteClick}
               disabled={isDeleting}
-              className="text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl p-2.5"
-              title={t('common.delete')}
+              className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 px-4 py-2 rounded-lg flex items-center gap-2"
             >
-              {isDeleting ? (
-                <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+              <Trash2 className="w-4 h-4" />
+              <span className="font-medium">Delete</span>
             </Button>
           </div>
         )}
       </div>
 
-      {/* Enhanced Expanded Details */}
-      <motion.div
-        variants={expandVariants}
-        initial="hidden"
-        animate={expanded ? "visible" : "hidden"}
-        className="overflow-hidden"
-      >
-        <div className="pt-4 space-y-4">
-          {/* Enhanced Details Panel */}
-          <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900/50 dark:via-gray-800/50 dark:to-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-3">
+      {/* ✅ ENHANCED: Expanded Actions - Clear Cards with Explanations */}
+      {expanded && showActions && (isRecurring || isTemplate) && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-6 space-y-4"
+        >
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-1">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 px-4 pt-3">
+              What would you like to do?
+            </h4>
             
-            {/* Next Occurrence with improved layout */}
-            {transaction.next_recurrence_date && (
-              <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2 font-medium">
-                  <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md">
-                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <div className="space-y-3 p-3">
+              
+              {/* ✅ ACTION CARD 1: Edit This Transaction */}
+              {!isTemplate && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                      <Edit2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Edit Only This Transaction
+                      </h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Change the amount, description, or category for this specific transaction only. Future recurring transactions will stay the same.
+                      </p>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={handleEditSingleOccurrence}
+                        disabled={isUpdating}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Edit This One Only
+                      </Button>
+                    </div>
                   </div>
-                  {t('transactionCard.nextOccurrence')}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {dateHelpers.format(transaction.next_recurrence_date, 'PPP', language)}
-                </span>
-              </div>
-            )}
-            
-            {/* Frequency Info */}
-            <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2 font-medium">
-                <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md">
-                  <RefreshCw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                 </div>
-                {t('transactionCard.frequency')}
-              </span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {formatFrequency(transaction.recurring_interval)}
-              </span>
-            </div>
-            
-            {/* End Date */}
-            {transaction.recurring_end_date && (
-              <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400 font-medium">
-                  {t('transactions.endsOn')}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {dateHelpers.format(transaction.recurring_end_date, 'PPP', language)}
-                </span>
-              </div>
-            )}
-            
-            {/* Daily Amount */}
-            {transaction.daily_amount && (
-              <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2 font-medium">
-                  <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded-md">
-                    <DollarSign className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+              )}
+              
+              {/* ✅ ACTION CARD 2: Edit All Future Transactions */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                    <RefreshCw className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   </div>
-                  {t('transactionCard.dailyEquivalent')}
-                </span>
-                <span className={cn(
-                  'font-semibold',
-                  isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-                )}>
-                  {formatAmount(transaction.daily_amount)}
-                </span>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      {isTemplate ? 'Edit Template Settings' : 'Edit All Future Transactions'}
+                    </h5>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      {isTemplate 
+                        ? 'Change the template settings. This will affect all future transactions created from this template.'
+                        : 'Change the amount, description, or category for this and all future recurring transactions.'
+                      }
+                    </p>
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={handleEditClick}
+                      disabled={isUpdating}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {isTemplate ? 'Edit Template' : 'Edit All Future'}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            )}
+              
+              {/* ✅ ACTION CARD 3: Skip Next Payment */}
+              {(!isTemplate || transaction.is_active) && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl">
+                      <CalendarIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Skip Next Payment
+                      </h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Skip the next scheduled transaction. The one after that will still happen as normal. Good for temporary skips like vacation months.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="small"
+                        onClick={handleQuickSkip}
+                        loading={isSkipping}
+                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                      >
+                        Skip Next Payment
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* ✅ ACTION CARD 4: Pause/Resume Template */}
+              {isTemplate && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-xl ${
+                      transaction.is_active 
+                        ? 'bg-orange-100 dark:bg-orange-900/30' 
+                        : 'bg-green-100 dark:bg-green-900/30'
+                    }`}>
+                      {transaction.is_active ? (
+                        <Pause className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                      ) : (
+                        <Play className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        {transaction.is_active ? 'Pause This Recurring Transaction' : 'Resume This Recurring Transaction'}
+                      </h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        {transaction.is_active 
+                          ? 'Stop creating new transactions from this template. You can resume it later. Existing transactions will not be affected.'
+                          : 'Start creating new transactions from this template again. Future payments will resume according to the schedule.'
+                        }
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="small"
+                        onClick={handleToggleActive}
+                        loading={isUpdating}
+                        className={transaction.is_active 
+                          ? 'border-orange-300 text-orange-700 hover:bg-orange-50' 
+                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                        }
+                      >
+                        {transaction.is_active ? 'Pause Recurring' : 'Resume Recurring'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* ✅ ACTION CARD 5: Advanced Options */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all duration-200">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl">
+                    <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      Advanced Recurring Options
+                    </h5>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Open the recurring manager to skip specific dates, view all occurrences, change frequency, or set end dates.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => {
+                        // ✅ FIX: Close current expanded view and open recurring manager
+                        setExpanded(false);
+                        onOpenRecurringManager?.(transaction);
+                      }}
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Open Advanced Options
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* ✅ ACTION CARD 6: Delete Options */}
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700 p-4">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                    <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                      Delete This Transaction
+                    </h5>
+                    <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                      Permanently remove this transaction. You'll be asked whether to delete just this one or all future recurring transactions.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      size="small"
+                      onClick={handleDeleteClick}
+                      disabled={isDeleting}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Transaction
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          {/* Enhanced Info Note */}
-          <div className="bg-gradient-to-br from-blue-50 via-blue-50 to-indigo-50 dark:from-blue-900/20 dark:via-blue-900/10 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                  {t('transactionCard.recurringInfo')}
-                </h4>
-                <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
-                  {t('transactions.recurringNote', { 
-                    type: t(`transactions.${transaction.transaction_type}`)
-                  })}
+        </motion.div>
+      )}
+
+      {/* ✅ SIMPLIFIED: Show transaction details only when expanded */}
+      {expanded && (isRecurring || isTemplate) && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700"
+        >
+          <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl p-4 space-y-4">
+            
+            {/* ✅ SIMPLIFIED: Just show key information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              {/* Next Payment Date */}
+              {(transaction.next_recurrence_date || transaction.next_occurrence) && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">
+                      Next Payment
+                    </h4>
+                  </div>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {dateHelpers.format(transaction.next_recurrence_date || transaction.next_occurrence, 'PPP', language)}
+                  </p>
+                </div>
+              )}
+              
+              {/* How Often */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <RefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100 text-sm">
+                    How Often
+                  </h4>
+                </div>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {formatFrequency(transaction.recurring_interval || transaction.interval_type)}
                 </p>
               </div>
             </div>
+            
+            {/* Template Status */}
+            {isTemplate && (
+              <div className={cn(
+                "rounded-lg p-4 border",
+                transaction.is_active 
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                  : "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700"
+              )}>
+                <div className="flex items-center gap-3">
+                  {transaction.is_active ? (
+                    <Play className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <Pause className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  )}
+                  <div>
+                    <h4 className={cn(
+                      "font-medium",
+                      transaction.is_active 
+                        ? "text-green-900 dark:text-green-100"
+                        : "text-orange-900 dark:text-orange-100"
+                    )}>
+                      {transaction.is_active 
+                        ? 'Recurring is Active'
+                        : 'Recurring is Paused'
+                      }
+                    </h4>
+                    <p className={cn(
+                      "text-sm",
+                      transaction.is_active 
+                        ? "text-green-700 dark:text-green-300"
+                        : "text-orange-700 dark:text-orange-300"
+                    )}>
+                      {transaction.is_active 
+                        ? 'New transactions are being created automatically'
+                        : 'No new transactions will be created until resumed'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
-      {/* Enhanced Edit Transaction Modal */}
+      {/* Edit Modal */}
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -510,14 +742,15 @@ const TransactionCard = ({
         />
       </Modal>
 
-      {/* Enhanced Delete Modal with Hook Integration */}
+      {/* Delete Modal */}
       <DeleteTransaction
         transaction={transaction}
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        onOpenSkipDates={handleOpenSkipDates}
+        onOpenSkipDates={onOpenSkipDates}
         loading={isDeleting}
+        isTemplate={isTemplate}
       />
     </motion.div>
   );

@@ -45,7 +45,7 @@ export const SUPPORTED_CURRENCIES = {
 };
 
 export const CurrencyProvider = ({ children }) => {
-  const { user, isAuthenticated, updatePreferences } = useAuth();
+  const { user, isAuthenticated, updateProfile } = useAuth();
   
   // Currency state - database driven for authenticated users
   const [currency, setCurrencyState] = useState(() => {
@@ -100,9 +100,9 @@ export const CurrencyProvider = ({ children }) => {
     setCurrencyState(newCurrency);
     
     if (isAuthenticated) {
-      // Update in database
+      // ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
       try {
-        await updatePreferences({ currency_preference: newCurrency });
+        await updateProfile({ currency_preference: newCurrency });
         toast.success(`Currency changed to ${SUPPORTED_CURRENCIES[newCurrency].name}`);
       } catch (error) {
         // Revert on error
@@ -114,7 +114,7 @@ export const CurrencyProvider = ({ children }) => {
       localStorage.setItem('guestCurrency', newCurrency);
       toast.success(`Currency changed to ${SUPPORTED_CURRENCIES[newCurrency].name}`);
     }
-  }, [isAuthenticated, updatePreferences, currency]);
+  }, [isAuthenticated, updateProfile, currency]); // ✅ וודא ש-updateProfile בdependencies
   
   // Convert amount between currencies with caching
   const convertAmount = useCallback((amount, fromCurrency, toCurrency = currency) => {

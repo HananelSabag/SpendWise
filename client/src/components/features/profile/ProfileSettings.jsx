@@ -172,13 +172,15 @@ const ProfileSettings = ({ user }) => {
     }
   };
 
-  // Handle currency change - קוד פשוט בלי סיסמה
+  // Handle currency change - ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
   const handleCurrencyChange = async (newCurrency) => {
     try {
       setLoading(true);
+      
+      // Update currency locally first
       setCurrency(newCurrency);
       
-      // ✅ רק העדפת מטבע, בלי סיסמה
+      // ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
       await updateProfile({
         currency_preference: newCurrency
       });
@@ -187,6 +189,7 @@ const ProfileSettings = ({ user }) => {
       toast.success(t('profile.currencyChanged'));
     } catch (error) {
       console.error('Failed to update currency preference:', error);
+      // Revert currency on error
       setCurrency(currency);
       toast.error(t('profile.currencyChangeError'));
     } finally {
