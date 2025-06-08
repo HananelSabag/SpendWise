@@ -1,192 +1,193 @@
-// components/features/transactions/RecurringModal.jsx
+/**
+ * RecurringModal Component - Enhanced UX & Better Organization
+ * 
+ * IMPROVEMENTS:
+ * - Cleaner template organization with intuitive grouping
+ * - Quick actions prominently displayed
+ * - Simplified skip dates workflow
+ * - Better visual hierarchy and information architecture
+ * - Integrated with centralized icon system
+ * - Mobile-optimized responsive design
+ */
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X,
-  RefreshCw,
-  Calendar,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Edit2,
-  Trash2,
-  Search,
-  Filter,
-  Info,
-  ChevronDown,
-  AlertCircle,
-  Package,
-  Pause,
-  Play,
-  Calendar as CalendarIcon,
-  Settings
+  X, RefreshCw, Calendar, Clock, Search, Filter, Info, 
+  AlertCircle, Package, Pause, Play, Edit2, Trash2,
+  ChevronDown, ChevronUp, Settings, CalendarX, Zap
 } from 'lucide-react';
+
+// ✅ NEW: Use centralized icon system
+import { getIconComponent, getColorForCategory, getGradientForCategory } from '../../../config/categoryIcons';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Modal, Input, Badge, Button, Card } from '../../ui';
-import TransactionCard from './TransactionCard';
 import DeleteTransaction from './DeleteTransaction';
 import toast from 'react-hot-toast';
 import { useRecurringTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
 
 /**
- * RecurringModal Component - Aligned with Server Capabilities
- * Shows templates and allows template-level operations only
+ * RecurringModal - Production-Ready Recurring Transaction Manager
+ * Provides comprehensive template management with intuitive UX
  */
 const RecurringModal = ({
   isOpen,
   onClose,
   onEdit,
   onSuccess,
-  focusedTransaction = null // ✅ ADD: Optional transaction to focus on
+  focusedTransaction = null
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const isRTL = language === 'he';
   
+  // State management
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedTemplates, setExpandedTemplates] = useState({});
+  const [showSkipModal, setShowSkipModal] = useState(null);
+  const [selectedSkipDates, setSelectedSkipDates] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  // ✅ ADD: Auto-expand and focus on specific transaction
+  // ✅ FIX: Use templates hook instead of recurring transactions
+  const {
+    templates: rawTemplates,
+    isLoading,
+    error,
+    updateTemplate,
+    deleteTemplate,
+    skipDates,
+    isUpdating,
+    isDeleting,
+    isSkipping,
+    refresh
+  } = useTransactionTemplates();
+
+  // ✅ FIX: Use recurring hook only for generation
+  const { 
+    generateRecurring, 
+    isGenerating 
+  } = useRecurringTransactions();
+
+  // ✅ SIMPLIFIED: Clean template processing without monthly calculations
+  const templates = useMemo(() => {
+    if (!Array.isArray(rawTemplates)) {
+      return [];
+    }
+    
+    return rawTemplates.map(template => ({
+      ...template,
+      displayName: template.description || template.title || t('transactions.untitledTemplate'),
+      categoryIcon: getIconComponent(template.category_icon || 'tag'),
+      isActive: template.is_active !== false,
+      nextPayment: getNextPaymentDate(template)
+    }));
+  }, [rawTemplates, t]);
+
+  // ✅ NEW: Auto-focus functionality
   useEffect(() => {
-    if (focusedTransaction && templates?.length > 0) {
-      // Find the template that matches the transaction
+    if (focusedTransaction && templates.length > 0) {
       const matchingTemplate = templates.find(template => 
         template.id === focusedTransaction.template_id || 
         (focusedTransaction.is_template && template.id === focusedTransaction.id)
       );
       
       if (matchingTemplate) {
-        // Auto-expand the group containing this template
-        const groupKey = matchingTemplate.interval_type;
-        if (groupKey) {
-          setExpandedGroups(prev => ({
-            ...prev,
-            [groupKey]: true
-          }));
-        }
+        // Auto-expand focused template
+        setExpandedTemplates(prev => ({
+          ...prev,
+          [matchingTemplate.id]: true
+        }));
         
-        // Clear any filters to ensure the template is visible
+        // Clear filters to ensure visibility
         setFilterType('all');
         setSearchTerm('');
         
-        // Scroll to the template after a short delay
+        // Scroll to template
         setTimeout(() => {
-          const templateElement = document.getElementById(`template-${matchingTemplate.id}`);
-          if (templateElement) {
-            templateElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center' 
-            });
-            // Add a subtle highlight effect
-            templateElement.classList.add('ring-2', 'ring-primary-500', 'ring-opacity-50');
-            setTimeout(() => {
-              templateElement.classList.remove('ring-2', 'ring-primary-500', 'ring-opacity-50');
-            }, 3000);
+          const element = document.getElementById(`template-${matchingTemplate.id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 500);
       }
     }
   }, [focusedTransaction, templates]);
 
-  // ✅ FIX: Use recurring transactions hook for templates
-  const { 
-    recurringTransactions: templates, 
-    isLoading, 
-    error, 
-    generateRecurring, 
-    isGenerating, 
-    refresh 
-  } = useRecurringTransactions();
-
-  // ✅ FIX: Use template operations
-  const {
-    updateTemplate,
-    deleteTemplate,
-    skipDates,
-    isUpdating,
-    isDeleting,
-    isSkipping
-  } = useTransactionTemplates();
-
   // Filter templates
   const filteredTemplates = useMemo(() => {
-    let filtered = [...(templates || [])];
+    let filtered = [...templates];
     
-    // Filter by type
     if (filterType !== 'all') {
       filtered = filtered.filter(template => template.type === filterType);
     }
     
-    // Filter by search
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(template => 
-        template.description?.toLowerCase().includes(search) ||
+        template.displayName.toLowerCase().includes(search) ||
         template.category_name?.toLowerCase().includes(search)
       );
     }
     
-    return filtered;
+    return filtered.sort((a, b) => {
+      // Sort by active status first, then by creation date
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
   }, [templates, filterType, searchTerm]);
 
-  // Group by frequency
-  const groupedTemplates = useMemo(() => {
-    const groups = {
-      daily: [],
-      weekly: [],
-      monthly: []
+  // ✅ SIMPLIFIED: Basic template counts only
+  const templateCounts = useMemo(() => {
+    const activeTemplates = filteredTemplates.filter(t => t.isActive);
+    
+    return { 
+      totalTemplates: filteredTemplates.length,
+      activeTemplates: activeTemplates.length,
+      pausedTemplates: filteredTemplates.length - activeTemplates.length
     };
-    
-    filteredTemplates.forEach(template => {
-      if (template.interval_type && groups[template.interval_type]) {
-        groups[template.interval_type].push(template);
-      }
-    });
-    
-    return groups;
   }, [filteredTemplates]);
 
-  // Calculate monthly impact
-  const calculateMonthlyImpact = (template) => {
-    const amount = parseFloat(template.amount) || 0;
+  // ✅ UTILITY: Get next payment date
+  function getNextPaymentDate(template) {
+    if (template.next_occurrence || template.next_recurrence_date) {
+      return template.next_occurrence || template.next_recurrence_date;
+    }
+    
+    // Calculate next date
+    const today = new Date();
+    const nextDate = new Date(today);
     
     switch (template.interval_type) {
       case 'daily':
-        return amount * 30.44; // Average days per month
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
       case 'weekly':
-        return amount * 4.35; // Average weeks per month
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
       case 'monthly':
-        return amount;
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
       default:
-        return amount;
+        return null;
     }
-  };
-
-  // Calculate totals
-  const totals = useMemo(() => {
-    const income = filteredTemplates
-      .filter(template => template.type === 'income')
-      .reduce((sum, template) => sum + calculateMonthlyImpact(template), 0);
     
-    const expense = filteredTemplates
-      .filter(template => template.type === 'expense')
-      .reduce((sum, template) => sum + calculateMonthlyImpact(template), 0);
-    
-    return { income, expense, net: income - expense };
-  }, [filteredTemplates]);
+    return nextDate.toISOString().split('T')[0];
+  }
 
-  // ✅ FIX: Template operations aligned with server
+  // ✅ HANDLERS: Template operations
   const handleToggleActive = async (template) => {
     try {
       await updateTemplate(template.id, {
-        is_active: !template.is_active
+        is_active: !template.isActive
       });
       
-      toast.success(template.is_active ? t('transactions.paused') : t('transactions.resumed'));
+      toast.success(template.isActive ? t('transactions.paused') : t('transactions.resumed'));
       refresh();
       onSuccess?.();
     } catch (error) {
@@ -194,11 +195,27 @@ const RecurringModal = ({
     }
   };
 
-  const handleSkipDates = async (templateId, dates) => {
+  const handleQuickSkip = async (template) => {
+    if (!template.nextPayment) {
+      toast.error(t('transactions.noNextPayment'));
+      return;
+    }
+    
+    try {
+      await skipDates(template.id, [template.nextPayment]);
+      toast.success(t('transactions.nextPaymentSkipped'));
+      refresh();
+      onSuccess?.();
+    } catch (error) {
+      toast.error(t('common.error'));
+    }
+  };
+
+  const handleBulkSkip = async (templateId, dates) => {
     try {
       await skipDates(templateId, dates);
       toast.success(t('transactions.skipDates.success'));
-      setShowSkipDates({});
+      setShowSkipModal(null);
       setSelectedSkipDates([]);
       refresh();
       onSuccess?.();
@@ -207,7 +224,7 @@ const RecurringModal = ({
     }
   };
 
-  const handleDeleteTemplate = async (template, deleteFuture = false) => {
+  const handleDelete = async (template, deleteFuture = false) => {
     try {
       await deleteTemplate(template.id, deleteFuture);
       setShowDeleteModal(false);
@@ -236,7 +253,7 @@ const RecurringModal = ({
     const dates = [];
     const startDate = new Date();
     
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 12; i++) {
       const date = new Date(startDate);
       
       switch (template.interval_type) {
@@ -259,10 +276,10 @@ const RecurringModal = ({
     return dates;
   };
 
-  const toggleGroup = (group) => {
-    setExpandedGroups(prev => ({
+  const toggleTemplateExpansion = (templateId) => {
+    setExpandedTemplates(prev => ({
       ...prev,
-      [group]: !prev[group]
+      [templateId]: !prev[templateId]
     }));
   };
 
@@ -274,19 +291,32 @@ const RecurringModal = ({
       className="max-h-[90vh] overflow-hidden flex flex-col"
     >
       <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-6 p-6 border-b border-gray-200 dark:border-gray-700">
+        
+        {/* ✅ ENHANCED: Header with better info hierarchy */}
+        <div className="flex items-center justify-between gap-4 mb-6 p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl">
-              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-lg">
+              <Clock className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {t('transactions.recurringManager.title')}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {t('transactions.recurringManager.subtitle')}
-              </p>
+              <div className="flex items-center gap-4 mt-1">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {t('transactions.recurringManager.subtitle')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="primary" size="small">
+                    {templateCounts.activeTemplates}/{templateCounts.totalTemplates} {t('transactions.active')}
+                  </Badge>
+                  {templateCounts.pausedTemplates > 0 && (
+                    <Badge variant="warning" size="small">
+                      {templateCounts.pausedTemplates} {t('transactions.paused')}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
           
@@ -296,7 +326,7 @@ const RecurringModal = ({
               size="small"
               onClick={handleGenerateRecurring}
               loading={isGenerating}
-              className="bg-gradient-to-r from-primary-500 to-primary-600"
+              className="bg-gradient-to-r from-primary-500 to-primary-600 shadow-lg hover:shadow-xl"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
               {t('transactions.generateNow')}
@@ -311,56 +341,16 @@ const RecurringModal = ({
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 px-6">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Income</p>
-                <p className="text-lg font-semibold text-green-600">{formatAmount(totals.income)}</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <TrendingDown className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Expenses</p>
-                <p className="text-lg font-semibold text-red-600">{formatAmount(totals.expense)}</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Net Impact</p>
-                <p className={`text-lg font-semibold ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatAmount(totals.net)}
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Filters */}
+        {/* ✅ IMPROVED: Search and Filter */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6 px-6">
-          <div className="flex-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder={t('common.search')}
+              placeholder={t('transactions.searchTemplates')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              icon={Search}
+              className="pl-10"
             />
           </div>
           
@@ -368,23 +358,53 @@ const RecurringModal = ({
             {['all', 'income', 'expense'].map(type => (
               <Button
                 key={type}
-                variant={filterType === type ? 'primary' : 'outline'}
+                variant={filterType === type ? "primary" : "outline"}
                 size="default"
                 onClick={() => setFilterType(type)}
+                className="whitespace-nowrap"
               >
-                {type === 'all' && t('transactions.all')}
-                {type === 'income' && t('transactions.income')}
-                {type === 'expense' && t('transactions.expense')}
+                {type === 'all' && (
+                  <>
+                    <Filter className="w-4 h-4 mr-2" />
+                    {t('transactions.all')}
+                  </>
+                )}
+                {type === 'income' && (
+                  <>
+                    {React.createElement(getIconComponent('trending-up'), { className: 'w-4 h-4 mr-2' })}
+                    {t('transactions.income')}
+                  </>
+                )}
+                {type === 'expense' && (
+                  <>
+                    {React.createElement(getIconComponent('trending-down'), { className: 'w-4 h-4 mr-2' })}
+                    {t('transactions.expense')}
+                  </>
+                )}
               </Button>
             ))}
           </div>
         </div>
 
-        {/* Template Groups */}
+        {/* ✅ MAIN: Template list */}
         <div className="flex-1 overflow-y-auto px-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {t('transactions.recurringManager.loadError')}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm mb-4">
+                {error.message || t('transactions.recurringManager.loadErrorDescription')}
+              </p>
+              <Button onClick={refresh} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                {t('common.retry')}
+              </Button>
             </div>
           ) : filteredTemplates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -400,309 +420,63 @@ const RecurringModal = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {Object.entries(groupedTemplates).map(([frequency, items]) => {
-                if (items.length === 0) return null;
-                
-                const isExpanded = expandedGroups[frequency] !== false;
-                
-                return (
-                  <Card key={frequency} className="overflow-hidden">
-                    {/* Group Header */}
-                    <button
-                      onClick={() => toggleGroup(frequency)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                          <Clock className="w-5 h-5 text-primary-600" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="font-semibold text-gray-900 dark:text-white">
-                            {t(`transactions.frequencies.${frequency}`)}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {items.length} {t('transactions.templates')}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <ChevronDown className={cn(
-                        'w-5 h-5 text-gray-400 transition-transform',
-                        isExpanded && 'rotate-180'
-                      )} />
-                    </button>
-                    
-                    {/* Group Items */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="border-t border-gray-200 dark:border-gray-700"
-                        >
-                          <div className="p-4 space-y-4">
-                            {items.map((template) => (
-                              <div 
-                                key={template.id} 
-                                id={`template-${template.id}`} // ✅ ADD: ID for scrolling
-                                className={cn(
-                                  "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300",
-                                  // ✅ ADD: Highlight if this is the focused transaction
-                                  focusedTransaction && (
-                                    template.id === focusedTransaction.template_id || 
-                                    (focusedTransaction.is_template && template.id === focusedTransaction.id)
-                                  ) && "ring-2 ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20"
-                                )}
-                              >
-                                {/* ✅ ADD: Focus indicator */}
-                                {focusedTransaction && (
-                                  template.id === focusedTransaction.template_id || 
-                                  (focusedTransaction.is_template && template.id === focusedTransaction.id)
-                                ) && (
-                                  <div className="mb-3 p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
-                                      <Info className="w-4 h-4" />
-                                      <span className="text-sm font-medium">
-                                        {t('transactions.recurringManager.focusedTemplate')}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Template Header */}
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                      'p-2 rounded-lg',
-                                      template.type === 'expense' 
-                                        ? 'bg-red-100 dark:bg-red-900/30' 
-                                        : 'bg-green-100 dark:bg-green-900/30'
-                                    )}>
-                                      {template.type === 'expense' ? (
-                                        <TrendingDown className="w-5 h-5 text-red-600" />
-                                      ) : (
-                                        <TrendingUp className="w-5 h-5 text-green-600" />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <h4 className="font-semibold text-gray-900 dark:text-white">
-                                        {template.description}
-                                      </h4>
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {template.category_name}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="text-right">
-                                    <div className={cn(
-                                      'text-xl font-bold',
-                                      template.type === 'expense' ? 'text-red-600' : 'text-green-600'
-                                    )}>
-                                      {formatAmount(template.amount)}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {formatAmount(calculateMonthlyImpact(template))}/month
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Template Status */}
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-2">
-                                    <Badge 
-                                      variant={template.is_active ? "success" : "warning"}
-                                      size="small"
-                                    >
-                                      {template.is_active ? (
-                                        <>
-                                          <Play className="w-3 h-3 mr-1" />
-                                          {t('transactions.active')}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Pause className="w-3 h-3 mr-1" />
-                                          {t('transactions.paused')}
-                                        </>
-                                      )}
-                                    </Badge>
-                                    
-                                    <Badge variant="secondary" size="small">
-                                      {template.occurrence_count || 0} {t('transactions.occurrences')}
-                                    </Badge>
-                                  </div>
-                                </div>
-
-                                {/* Template Actions */}
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-600">
-                                  <div className="flex flex-col gap-3 flex-1">
-                                    
-                                    {/* Action Group: Schedule Management */}
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                                      <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm">
-                                        {t('transactions.scheduleManagement')}
-                                      </h5>
-                                      <div className="flex flex-wrap gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="small"
-                                          onClick={() => setShowSkipDates(prev => ({
-                                            ...prev,
-                                            [template.id]: !prev[template.id]
-                                          }))}
-                                          className="text-blue-600 hover:bg-blue-100 flex items-center gap-2"
-                                        >
-                                          <CalendarIcon className="w-4 h-4" />
-                                          <span>{t('transactions.skipSpecificDates')}</span>
-                                        </Button>
-                                        
-                                        <Button
-                                          variant="ghost"
-                                          size="small"
-                                          onClick={() => handleToggleActive(template)}
-                                          loading={isUpdating}
-                                          className={template.is_active 
-                                            ? 'text-orange-600 hover:bg-orange-100' 
-                                            : 'text-green-600 hover:bg-green-100'
-                                          }
-                                        >
-                                          {template.is_active ? (
-                                            <>
-                                              <Pause className="w-4 h-4" />
-                                              <span>{t('transactions.pauseTemplate')}</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Play className="w-4 h-4" />
-                                              <span>{t('transactions.resumeTemplate')}</span>
-                                            </>
-                                          )}
-                                        </Button>
-                                      </div>
-                                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                                        {template.is_active 
-                                          ? t('transactions.scheduleActiveDescription')
-                                          : t('transactions.schedulePausedDescription')
-                                        }
-                                      </p>
-                                    </div>
-                                    
-                                    {/* Action Group: Template Management */}
-                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                                      <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">
-                                        {t('transactions.templateManagement')}
-                                      </h5>
-                                      <div className="flex flex-wrap gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="small"
-                                          onClick={() => {
-                                            onEdit?.(template);
-                                            onClose();
-                                          }}
-                                          className="text-primary-600 hover:bg-primary-100 flex items-center gap-2"
-                                        >
-                                          <Edit2 className="w-4 h-4" />
-                                          <span>{t('transactions.editTemplate')}</span>
-                                        </Button>
-                                        
-                                        <Button
-                                          variant="ghost"
-                                          size="small"
-                                          onClick={() => {
-                                            setSelectedTemplate(template);
-                                            setShowDeleteModal(true);
-                                          }}
-                                          className="text-red-600 hover:bg-red-100 flex items-center gap-2"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                          <span>{t('transactions.deleteTemplate')}</span>
-                                        </Button>
-                                      </div>
-                                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                                        {t('transactions.templateManagementDescription')}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Skip Dates Interface */}
-                                {showSkipDates[template.id] && (
-                                  <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4"
-                                  >
-                                    <h5 className="font-medium text-gray-900 dark:text-white mb-3">
-                                      {t('transactions.selectDatesToSkip')}
-                                    </h5>
-                                    
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                                      {getUpcomingDates(template).map(date => (
-                                        <button
-                                          key={date}
-                                          onClick={() => {
-                                            const newDates = selectedSkipDates.includes(date)
-                                              ? selectedSkipDates.filter(d => d !== date)
-                                              : [...selectedSkipDates, date];
-                                            setSelectedSkipDates(newDates);
-                                          }}
-                                          className={cn(
-                                            'text-left p-2 rounded-lg transition-colors border text-sm',
-                                            selectedSkipDates.includes(date)
-                                              ? 'bg-blue-100 border-blue-300 text-blue-700'
-                                              : 'bg-white border-gray-200 hover:bg-gray-50'
-                                          )}
-                                        >
-                                          {dateHelpers.format(date, 'MMM dd', language)}
-                                        </button>
-                                      ))}
-                                    </div>
-                                    
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="small"
-                                        onClick={() => {
-                                          setShowSkipDates(prev => ({
-                                            ...prev,
-                                            [template.id]: false
-                                          }));
-                                          setSelectedSkipDates([]);
-                                        }}
-                                        className="flex-1"
-                                      >
-                                        {t('common.cancel')}
-                                      </Button>
-                                      <Button
-                                        variant="primary"
-                                        size="small"
-                                        onClick={() => handleSkipDates(template.id, selectedSkipDates)}
-                                        disabled={selectedSkipDates.length === 0}
-                                        loading={isSkipping}
-                                        className="flex-1"
-                                      >
-                                        {t('transactions.skipSelected')} ({selectedSkipDates.length})
-                                      </Button>
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </Card>
-                );
-              })}
+            <div className="space-y-4">
+              <AnimatePresence>
+                {filteredTemplates.map((template, index) => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    index={index}
+                    isExpanded={expandedTemplates[template.id]}
+                    onToggleExpansion={() => toggleTemplateExpansion(template.id)}
+                    onEdit={() => {
+                      onEdit?.(template);
+                      onClose();
+                    }}
+                    onDelete={() => {
+                      setSelectedTemplate(template);
+                      setShowDeleteModal(true);
+                    }}
+                    onToggleActive={() => handleToggleActive(template)}
+                    onQuickSkip={() => handleQuickSkip(template)}
+                    onBulkSkip={(dates) => handleBulkSkip(template.id, dates)}
+                    onShowSkipModal={() => setShowSkipModal(template.id)}
+                    isHighlighted={focusedTransaction && (
+                      template.id === focusedTransaction.template_id || 
+                      (focusedTransaction.is_template && template.id === focusedTransaction.id)
+                    )}
+                    isUpdating={isUpdating}
+                    isSkipping={isSkipping}
+                    t={t}
+                    formatAmount={formatAmount}
+                    language={language}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
       </div>
       
+      {/* ✅ ENHANCED: Skip Dates Modal */}
+      <AnimatePresence>
+        {showSkipModal && (
+          <SkipDatesModal
+            template={filteredTemplates.find(t => t.id === showSkipModal)}
+            isOpen={!!showSkipModal}
+            onClose={() => {
+              setShowSkipModal(null);
+              setSelectedSkipDates([]);
+            }}
+            onConfirm={(dates) => handleBulkSkip(showSkipModal, dates)}
+            isSkipping={isSkipping}
+            getUpcomingDates={getUpcomingDates}
+            t={t}
+            language={language}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Delete Template Modal */}
       {selectedTemplate && (
         <DeleteTransaction
@@ -712,10 +486,319 @@ const RecurringModal = ({
             setShowDeleteModal(false);
             setSelectedTemplate(null);
           }}
-          onConfirm={handleDeleteTemplate}
+          onConfirm={handleDelete}
           isTemplate={true}
         />
       )}
+    </Modal>
+  );
+};
+
+// ✅ COMPONENT: Individual Template Card
+const TemplateCard = ({
+  template,
+  index,
+  isExpanded,
+  isHighlighted,
+  onToggleExpansion,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onQuickSkip,
+  onShowSkipModal,
+  isUpdating,
+  isSkipping,
+  t,
+  formatAmount,
+  language
+}) => {
+  const CategoryIcon = template.categoryIcon;
+  
+  return (
+    <motion.div
+      id={`template-${template.id}`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ delay: index * 0.05 }}
+      className={cn(
+        "bg-white dark:bg-gray-800 rounded-xl border transition-all duration-300",
+        isHighlighted 
+          ? "ring-2 ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border-primary-300"
+          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+      )}
+    >
+      {/* Template Header */}
+      <div className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            {/* Icon & Status */}
+            <div className="relative">
+              <div className={cn(
+                'p-3 rounded-xl shadow-sm',
+                getColorForCategory(template.type)
+              )}>
+                <CategoryIcon className="w-6 h-6" />
+              </div>
+              {!template.isActive && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                  <Pause className="w-2 h-2 text-white" />
+                </div>
+              )}
+            </div>
+            
+            {/* Template Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                  {template.displayName}
+                </h3>
+                {isHighlighted && (
+                  <Badge variant="primary" size="small">
+                    <Info className="w-3 h-3 mr-1" />
+                    {t('transactions.focused')}
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                <span className="flex items-center gap-1">
+                  {React.createElement(getIconComponent('tag'), { className: 'w-3 h-3' })}
+                  {template.category_name}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {t(`actions.frequencies.${template.interval_type}`)}
+                </span>
+                {template.nextPayment && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {dateHelpers.format(template.nextPayment, 'MMM dd', language)}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* ✅ SIMPLIFIED: Amount only */}
+            <div className="text-right">
+              <div className={cn(
+                'text-xl font-bold',
+                template.type === 'expense' ? 'text-red-600' : 'text-green-600'
+              )}>
+                {formatAmount(template.amount)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {t(`actions.frequencies.${template.interval_type}`)}
+              </div>
+            </div>
+          </div>
+          
+          {/* Expand Button */}
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={onToggleExpansion}
+            className="ml-4 text-gray-400 hover:text-gray-600"
+          >
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </Button>
+        </div>
+      </div>
+      
+      {/* Expanded Actions */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-t border-gray-100 dark:border-gray-700"
+          >
+            <div className="p-6 bg-gray-50 dark:bg-gray-800/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                
+                {/* Edit Template */}
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={onEdit}
+                  className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 justify-start"
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.editTemplate')}</div>
+                    <div className="text-xs opacity-75">{t('transactions.editTemplateDesc')}</div>
+                  </div>
+                </Button>
+
+                {/* Toggle Active/Pause */}
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={onToggleActive}
+                  loading={isUpdating}
+                  className={cn(
+                    "justify-start",
+                    template.isActive 
+                      ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                      : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                  )}
+                >
+                  {template.isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                  <div className="text-left">
+                    <div className="font-medium">
+                      {template.isActive ? t('transactions.pauseTemplate') : t('transactions.resumeTemplate')}
+                    </div>
+                    <div className="text-xs opacity-75">
+                      {template.isActive ? t('transactions.pauseDesc') : t('transactions.resumeDesc')}
+                    </div>
+                  </div>
+                </Button>
+
+                {/* Skip Next */}
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={onQuickSkip}
+                  loading={isSkipping}
+                  disabled={!template.isActive || !template.nextPayment}
+                  className="bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 justify-start"
+                >
+                  <CalendarX className="w-4 h-4 mr-2" />
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.skipNext')}</div>
+                    <div className="text-xs opacity-75">{t('transactions.skipNextDesc')}</div>
+                  </div>
+                </Button>
+
+                {/* Manage Dates */}
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={onShowSkipModal}
+                  className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 justify-start"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.manageDates')}</div>
+                    <div className="text-xs opacity-75">{t('transactions.manageDatesDesc')}</div>
+                  </div>
+                </Button>
+              </div>
+              
+              {/* Delete Button - Separate row */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={onDelete}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {t('transactions.deleteTemplate')}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// ✅ COMPONENT: Skip Dates Modal
+const SkipDatesModal = ({
+  template,
+  isOpen,
+  onClose,
+  onConfirm,
+  isSkipping,
+  getUpcomingDates,
+  t,
+  language
+}) => {
+  const [selectedDates, setSelectedDates] = useState([]);
+  
+  if (!template) return null;
+  
+  const upcomingDates = getUpcomingDates(template);
+  
+  const toggleDate = (date) => {
+    setSelectedDates(prev => 
+      prev.includes(date) 
+        ? prev.filter(d => d !== date)
+        : [...prev, date]
+    );
+  };
+  
+  const handleConfirm = () => {
+    onConfirm(selectedDates);
+    setSelectedDates([]);
+  };
+  
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('transactions.skipSpecificDates')}
+      size="large"
+    >
+      <div className="space-y-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+            {template.displayName}
+          </h4>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            {t('transactions.skipDatesExplanation')}
+          </p>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            {t('transactions.selectDatesToSkip')}
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {upcomingDates.map(date => (
+              <button
+                key={date}
+                onClick={() => toggleDate(date)}
+                className={cn(
+                  'text-left p-3 rounded-lg transition-all border-2',
+                  selectedDates.includes(date)
+                    ? 'border-primary-300 bg-primary-50 dark:bg-primary-900/30'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-200 bg-white dark:bg-gray-800'
+                )}
+              >
+                <div className="font-medium">
+                  {dateHelpers.format(date, 'MMM dd', language)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {dateHelpers.format(date, 'EEEE', language)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleConfirm}
+            disabled={selectedDates.length === 0}
+            loading={isSkipping}
+            className="flex-1"
+          >
+            {t('transactions.skipSelected')} ({selectedDates.length})
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 };

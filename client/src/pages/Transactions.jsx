@@ -10,6 +10,8 @@
  * - Mobile-responsive design with floating actions
  * - Multi-language support with RTL layout
  * - Performance optimized with memoization and debouncing
+ * 
+ * ✅ UPDATED: Compatible with redesigned component system
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -40,15 +42,16 @@ import { useLanguage } from '../context/LanguageContext';
 // Layout components
 import PageContainer from '../components/layout/PageContainer';
 
-// Feature components - All use hooks directly for optimal performance
+// ✅ UPDATED: Import redesigned components
 import TransactionList from '../components/features/transactions/TransactionList';
-import ActionsPanel from '../components/features/transactions/AddTransactions';
+import AddTransactions from '../components/features/transactions/AddTransactions';
 import TransactionFilters from '../components/features/transactions/TransactionFilters';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import RecurringModal from '../components/features/transactions/RecurringModal';
-
+import EditTransactionPanel from '../components/features/transactions/EditTransactionPanel';
 // UI components
 import { Card, Button, Badge, Modal, LoadingSpinner } from '../components/ui';
+
 
 /**
  * Animation configurations for smooth user experience
@@ -111,6 +114,9 @@ const Transactions = () => {
   const [selectedTransactionForRecurring, setSelectedTransactionForRecurring] = useState(null);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  // ✅ ADD: Missing editingSingle state
+  const [editingSingle, setEditingSingle] = useState(false);
   
   // Advanced filter state
   const [filters, setFilters] = useState({
@@ -165,7 +171,7 @@ const Transactions = () => {
   const isRTL = language === 'he';
   const periods = PERIOD_OPTIONS.map(period => ({
     ...period,
-    label: t(period.labelKey),
+    label: t(period.labelKey) || period.key,
     icon: Calendar
   }));
 
@@ -212,7 +218,7 @@ const Transactions = () => {
     setHookSearchTerm(searchTerm);
   }, [searchTerm, setHookSearchTerm]);
 
-  // Event handlers with performance optimization
+  // ✅ UPDATED: Event handlers compatible with new component system
   const handleTypeChange = useCallback((type) => {
     setView(type);
     setFilters(prev => ({
@@ -248,8 +254,34 @@ const Transactions = () => {
     refreshRecurring();
   }, [refresh, refreshRecurring]);
 
-  const handleEdit = useCallback((transaction) => {
+  // ✅ UPDATED: Handle edit with proper scope setting
+  const handleEdit = useCallback((transaction, single = false) => {
     setSelectedTransaction(transaction);
+    setEditingSingle(single);
+    setShowActionsPanel(false); // ✅ FIX: Don't use actions panel for editing
+    setShowEditModal(true); // ✅ FIX: Use dedicated edit modal
+  }, []);
+  
+  // ✅ NEW: Separate handlers for different edit types
+  const handleEditSingle = useCallback((transaction) => {
+    setSelectedTransaction(transaction);
+    setEditingSingle(true); // ✅ FORCE: Always true for single edits
+    setShowActionsPanel(false);
+    setShowEditModal(true);
+  }, []);
+
+  const handleEditTemplate = useCallback((transaction) => {
+    setSelectedTransaction(transaction);
+    setEditingSingle(false); // ✅ FORCE: Always false for template edits
+    setShowActionsPanel(false);
+    setShowEditModal(true);
+  }, []);
+  
+  // ✅ NEW: Handle add transaction separately  
+  const handleAddTransaction = useCallback(() => {
+    setSelectedTransaction(null);
+    setEditingSingle(false);
+    setShowEditModal(false);
     setShowActionsPanel(true);
   }, []);
 
@@ -259,7 +291,9 @@ const Transactions = () => {
 
   const handleFormClose = useCallback(() => {
     setSelectedTransaction(null);
+    setEditingSingle(false);
     setShowActionsPanel(false);
+    setShowEditModal(false); // ✅ FIX: Close edit modal too
   }, []);
 
   const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false) => {
@@ -282,11 +316,17 @@ const Transactions = () => {
     handleFilterReset();
   }, [handleFilterReset]);
 
+  // ✅ UPDATED: Handle recurring modal with focus
+  const handleOpenRecurringManager = useCallback((focusTransaction = null) => {
+    setSelectedTransactionForRecurring(focusTransaction);
+    setShowRecurringManager(true);
+  }, []);
+
   // Loading and error states
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" text={t('common.loading')} />
+        <LoadingSpinner size="large" text={t('common.loading') || 'Loading...'} />
       </div>
     );
   }
@@ -295,9 +335,9 @@ const Transactions = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">{t('transactions.fetchError')}</p>
+          <p className="text-red-500 mb-4">{t('transactions.fetchError') || 'Failed to load transactions'}</p>
           <Button onClick={refresh} variant="outline">
-            {t('common.retry')}
+            {t('common.retry') || 'Retry'}
           </Button>
         </div>
       </div>
@@ -336,7 +376,7 @@ const Transactions = () => {
                   </div>
                   <div>
                     <h1 className="text-2xl lg:text-3xl font-bold mb-1 flex items-center gap-2">
-                      {t('nav.transactions')}
+                      {t('transactions.title') || 'Transactions'}
                       <motion.div
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
@@ -351,7 +391,7 @@ const Transactions = () => {
                       </span>
                       <span className="text-white/70">•</span>
                       <span className="font-medium">
-                        {view === 'all' ? t('transactions.all') : t(`transactions.${view}`)}
+                        {view === 'all' ? (t('transactions.all') || 'All') : (t(`transactions.${view}`) || view)}
                       </span>
                     </div>
                   </div>
@@ -370,8 +410,8 @@ const Transactions = () => {
                           <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                         )}
                       </div>
-                      <span className="hidden sm:inline">{t('transactions.recurringManagement')}</span>
-                      <span className="sm:hidden">{t('transactions.manage')}</span>
+                      <span className="hidden sm:inline">{t('transactions.recurringManagement') || 'Recurring'}</span>
+                      <span className="sm:hidden">{t('transactions.manage') || 'Manage'}</span>
                       <Badge variant="default" size="small" className="bg-white/20 text-white border-white/30">
                         {safeRecurringTransactions.length}
                       </Badge>
@@ -380,11 +420,11 @@ const Transactions = () => {
                   
                   <Button
                     variant="default"
-                    onClick={() => setShowActionsPanel(true)}
+                    onClick={handleAddTransaction}
                     className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-6 py-3 font-semibold whitespace-nowrap"
                   >
                     <Plus className="w-5 h-5 mr-2" />
-                    {t('transactions.smartActions')}
+                    {t('actions.add') || 'Add Transaction'}
                   </Button>
                 </div>
               </div>
@@ -392,10 +432,10 @@ const Transactions = () => {
               {/* Period selector and stats */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2 text-white/70 text-sm">
-                  <span>{t('transactions.showing')} {transactions?.length || 0} {t('transactions.items')}</span>
+                  <span>{t('transactions.showing') || 'Showing'} {transactions?.length || 0} {t('transactions.items') || 'items'}</span>
                   {pagination?.total && pagination.total > (transactions?.length || 0) && (
                     <span className="text-amber-200">
-                      ({t('transactions.of')} {pagination.total} {t('transactions.total')})
+                      ({t('transactions.of') || 'of'} {pagination.total} {t('transactions.total') || 'total'})
                     </span>
                   )}
                 </div>
@@ -431,7 +471,7 @@ const Transactions = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder={t('transactions.searchPlaceholder')}
+                  placeholder={t('transactions.searchPlaceholder') || 'Search transactions...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-12 py-3 lg:py-4 text-base lg:text-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl lg:rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder-gray-400"
@@ -449,7 +489,7 @@ const Transactions = () => {
               <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {t('transactions.filters.type')}:
+                    {t('transactions.type') || 'Type'}:
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {TYPE_FILTERS.map(({ key, icon: Icon, labelKey }) => (
@@ -461,7 +501,7 @@ const Transactions = () => {
                         className="rounded-full px-3 py-2 flex items-center gap-2 transition-all hover:scale-105 text-sm"
                       >
                         <Icon className="w-4 h-4" />
-                        <span className="hidden sm:inline">{t(labelKey)}</span>
+                        <span className="hidden sm:inline">{t(labelKey) || key}</span>
                         <Badge variant="default" size="small" className="ml-1 bg-white/20">
                           {key === 'all' ? transactions?.length || 0 : 
                            transactions?.filter(tx => tx.transaction_type === key).length || 0}
@@ -479,8 +519,8 @@ const Transactions = () => {
                     className="rounded-full px-4 py-2 flex items-center gap-2 transition-all hover:scale-105"
                   >
                     <Filter className="w-4 h-4" />
-                    <span className="hidden sm:inline">{t('transactions.filters.advanced')}</span>
-                    <span className="sm:hidden">{t('transactions.filters.title')}</span>
+                    <span className="hidden sm:inline">{t('common.filters') || 'Filters'}</span>
+                    <span className="sm:hidden">{t('common.filters') || 'Filters'}</span>
                     {activeFilterCount > 0 && (
                       <Badge variant="default" size="small" className="bg-white/20">
                         {activeFilterCount}
@@ -494,7 +534,7 @@ const Transactions = () => {
                     size="small"
                     onClick={refresh}
                     className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title={t('common.refresh')}
+                    title={t('common.refresh') || 'Refresh'}
                   >
                     <RefreshCw className="w-4 h-4" />
                   </Button>
@@ -511,7 +551,7 @@ const Transactions = () => {
                 >
                   <span className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-2 lg:mb-0">
                     <Activity className="w-4 h-4" />
-                    {t('common.active')}:
+                    {t('common.active') || 'Active'}:
                   </span>
                   
                   <div className="flex flex-wrap items-center gap-2">
@@ -529,36 +569,36 @@ const Transactions = () => {
                     
                     {filters.type !== 'all' && (
                       <Badge variant="primary" size="small">
-                        📊 {t(`transactions.${filters.type}`)}
+                        📊 {t(`transactions.${filters.type}`) || filters.type}
                       </Badge>
                     )}
 
                     {filters.categories.length > 0 && (
                       <Badge variant="outline" size="small" className="bg-purple-50 text-purple-700 border-purple-200">
-                        🏷️ {filters.categories.length} {t('categories.selected')}
+                        🏷️ {filters.categories.length} {t('categories.selected') || 'selected'}
                       </Badge>
                     )}
 
                     {(filters.startDate || filters.endDate) && (
                       <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
-                        📅 {t('transactions.filters.dateRange')}
+                        📅 {t('common.dateRange') || 'Date Range'}
                       </Badge>
                     )}
 
                     {(filters.minAmount !== null || filters.maxAmount !== null) && (
                       <Badge variant="outline" size="small" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                        💰 {t('transactions.filters.amountRange')}
+                        💰 {t('common.amountRange') || 'Amount Range'}
                       </Badge>
                     )}
 
                     {filters.recurring !== 'all' && (
                       <Badge variant="outline" size="small" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-                        🔄 {t(`transactions.filters.${filters.recurring}`)}
+                        🔄 {t(`common.${filters.recurring}`) || filters.recurring}
                       </Badge>
                     )}
 
                     <Badge variant="outline" size="small" className="bg-green-50 text-green-700 border-green-200">
-                      ✅ {transactions.length} {t('transactions.results')}
+                      ✅ {transactions.length} {t('common.results') || 'results'}
                     </Badge>
                     
                     <Button
@@ -568,7 +608,7 @@ const Transactions = () => {
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full px-2 py-1 text-xs"
                     >
                       <X className="w-3 h-3 mr-1" />
-                      {t('transactions.filters.clearAll')}
+                      {t('common.clearAll') || 'Clear All'}
                     </Button>
                   </div>
                 </motion.div>
@@ -593,11 +633,11 @@ const Transactions = () => {
                     <div className="flex items-center gap-2">
                       <Settings className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                       <h3 className="font-semibold text-primary-900 dark:text-primary-100">
-                        {t('transactions.filters.advanced')}
+                        {t('common.advancedFilters') || 'Advanced Filters'}
                       </h3>
                       {activeFilterCount > 0 && (
                         <Badge variant="primary" size="small">
-                          {activeFilterCount} {t('common.active')}
+                          {activeFilterCount} {t('common.active') || 'active'}
                         </Badge>
                       )}
                     </div>
@@ -611,7 +651,7 @@ const Transactions = () => {
                           className="text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
                         >
                           <X className="w-4 h-4 mr-1" />
-                          {t('common.reset')}
+                          {t('common.reset') || 'Reset'}
                         </Button>
                       )}
                       
@@ -647,13 +687,13 @@ const Transactions = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('transactions.showing')} <span className="font-bold text-indigo-600">{transactions.length}</span> {t('transactions.items')}
+                    {t('transactions.showing') || 'Showing'} <span className="font-bold text-indigo-600">{transactions.length}</span> {t('transactions.items') || 'items'}
                   </span>
                   
                   {activeFilterCount > 0 && (
                     <Badge variant="primary" size="small" className="flex items-center gap-1">
                       <Filter className="w-3 h-3" />
-                      {activeFilterCount} {t('transactions.filters.applied')}
+                      {activeFilterCount} {t('common.applied') || 'applied'}
                     </Badge>
                   )}
                 </div>
@@ -662,19 +702,19 @@ const Transactions = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {transactions.filter(tx => tx.transaction_type === 'income').length} {t('transactions.income')}
+                      {transactions.filter(tx => tx.transaction_type === 'income').length} {t('transactions.income') || 'income'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {transactions.filter(tx => tx.transaction_type === 'expense').length} {t('transactions.expense')}
+                      {transactions.filter(tx => tx.transaction_type === 'expense').length} {t('transactions.expense') || 'expense'}
                     </span>
                   </div>
                   
                   <div className="hidden lg:flex items-center gap-4 pl-4 border-l border-gray-200 dark:border-gray-700">
                     <div className="text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t('transactions.totalAmount')}:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('transactions.totalAmount') || 'Total'}:</span>
                       <span className="font-semibold ml-1 text-gray-900 dark:text-white">
                         {formatAmount(transactions.reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0))}
                       </span>
@@ -686,17 +726,20 @@ const Transactions = () => {
           </motion.div>
         )}
 
-        {/* Transaction list */}
+        {/* ✅ UPDATED: Transaction list with new component integration */}
         <motion.div variants={itemVariants}>
           <Card className="p-0 overflow-hidden shadow-xl border-0">
             <TransactionList
               onEdit={handleEdit}
+              onEditSingle={handleEditSingle}
+              onEditTemplate={handleEditTemplate}
               onDelete={handleDelete}
+              onOpenRecurringManager={handleOpenRecurringManager}
               emptyMessage={
                 searchTerm 
-                  ? t('transactions.noSearchResults', { term: searchTerm })
+                  ? (t('transactions.noSearchResults') || `No results for "${searchTerm}"`)
                   : view !== 'all'
-                    ? t('transactions.noTransactionsOfType', { type: t(`transactions.${view}`) })
+                    ? (t('transactions.noTransactionsOfType') || `No ${view} transactions`)
                     : undefined
               }
             />
@@ -720,12 +763,12 @@ const Transactions = () => {
                       size="small" 
                       className="justify-start"
                       onClick={() => {
-                        setShowActionsPanel(true);
+                        handleAddTransaction();
                         setShowFloatingMenu(false);
                       }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      {t('transactions.addTransaction')}
+                      {t('actions.add') || 'Add Transaction'}
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -740,7 +783,7 @@ const Transactions = () => {
                         <Clock className="w-4 h-4" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
                       </div>
-                      {t('transactions.recurringManagement')}
+                      {t('transactions.recurringManagement') || 'Recurring'}
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -752,7 +795,7 @@ const Transactions = () => {
                       }}
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      {t('common.refresh')}
+                      {t('common.refresh') || 'Refresh'}
                     </Button>
                   </div>
                 </motion.div>
@@ -763,7 +806,7 @@ const Transactions = () => {
               variant="primary"
               className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
               onClick={() => setShowFloatingMenu(!showFloatingMenu)}
-              aria-label={t('actions.quickAdd')}
+              aria-label={t('actions.quickAdd') || 'Quick Add'}
             >
               <motion.div
                 animate={{ rotate: showFloatingMenu ? 45 : 0 }}
@@ -775,29 +818,40 @@ const Transactions = () => {
           </div>
         </div>
 
-        {/* Modals */}
-        <AnimatePresence>
-          {showActionsPanel && (
-            <Modal
-              isOpen={showActionsPanel}
-              onClose={handleFormClose}
-              size="large"
-              className="max-w-4xl"
-              hideHeader={true}
-            >
-              <ActionsPanel 
-                onClose={handleFormClose}
-                context="transactions"
-                initialActionType={selectedTransaction ? {
-                  type: selectedTransaction.transaction_type,
-                  isRecurring: !!selectedTransaction.template_id
-                } : null}
-                onSuccess={handleTransactionSuccess}
-              />
-            </Modal>
-          )}
-        </AnimatePresence>
+        {/* ✅ FIXED: Separate modals - no more overlapping */}
+        
+        {/* Add Transaction Modal - Only when adding */}
+        <Modal
+          isOpen={showActionsPanel && !selectedTransaction}
+          onClose={handleFormClose}
+          size="xxl"
+          className="max-w-6xl max-h-[95vh]"
+          hideHeader={true}
+        >
+          <AddTransactions 
+            onClose={handleFormClose}
+            context="transactions"
+            onSuccess={handleTransactionSuccess}
+          />
+        </Modal>
 
+        {/* ✅ FIXED: Edit Transaction Modal - Only when editing */}
+        <Modal
+          isOpen={showEditModal && !!selectedTransaction}
+          onClose={handleFormClose}
+          size="xxl"
+          className="max-w-6xl max-h-[95vh]"
+          hideHeader={true}
+        >
+          <EditTransactionPanel
+            transaction={selectedTransaction}
+            editingSingle={editingSingle}
+            onClose={handleFormClose}
+            onSuccess={handleTransactionSuccess}
+          />
+        </Modal>
+
+        {/* Delete Transaction Modal */}
         <DeleteTransaction
           transaction={transactionToDelete}
           isOpen={!!transactionToDelete}
@@ -806,44 +860,38 @@ const Transactions = () => {
           loading={isDeleting}
         />
 
-        <AnimatePresence>
-          {showRecurring && (
-            <RecurringModal
-              isOpen={showRecurring}
-              onClose={() => setShowRecurring(false)}
-              onEdit={(transaction) => {
-                setSelectedTransaction(transaction);
-                setShowRecurring(false);
-                setShowActionsPanel(true);
-              }}
-              onDelete={(transaction) => {
-                setTransactionToDelete(transaction);
-                setShowRecurring(false);
-              }}
-              onSuccess={handleTransactionSuccess}
-            />
-          )}
-        </AnimatePresence>
+        {/* Recurring Management Modal */}
+        <RecurringModal
+          isOpen={showRecurring}
+          onClose={() => setShowRecurring(false)}
+          onEdit={(transaction) => {
+            setSelectedTransaction(transaction);
+            setEditingSingle(false);
+            setShowRecurring(false);
+            setShowActionsPanel(true);
+          }}
+          onSuccess={handleTransactionSuccess}
+        />
 
         {/* ✅ UPDATED: Recurring Manager Modal with focused transaction */}
-        <AnimatePresence>
-          {showRecurringManager && (
-            <RecurringModal
-              isOpen={showRecurringManager}
-              onClose={() => setShowRecurringManager(false)}
-              focusedTransaction={selectedTransactionForRecurring}
-              onEdit={(template) => {
-                // When editing from recurring manager, close it and open edit modal
-                setShowRecurringManager(false);
-                handleEdit(template);
-              }}
-              onSuccess={() => {
-                // Refresh transactions when recurring operations succeed
-                refresh();
-              }}
-            />
-          )}
-        </AnimatePresence>
+        <RecurringModal
+          isOpen={showRecurringManager}
+          onClose={() => {
+            setShowRecurringManager(false);
+            setSelectedTransactionForRecurring(null);
+          }}
+          focusedTransaction={selectedTransactionForRecurring}
+          onEdit={(template) => {
+            // When editing from recurring manager, close it and open edit modal
+            setShowRecurringManager(false);
+            setSelectedTransactionForRecurring(null);
+            handleEdit(template);
+          }}
+          onSuccess={() => {
+            // Refresh transactions when recurring operations succeed
+            refresh();
+          }}
+        />
       </motion.div>
     </PageContainer>
   );

@@ -20,7 +20,7 @@ const Input = forwardRef(({
   onFocus,
   ...props
 }, ref) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isRTL = language === 'he';
   
   const [showPassword, setShowPassword] = useState(false);

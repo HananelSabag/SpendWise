@@ -463,65 +463,69 @@ class User {
   }
 
   /**
-   * Get user data for export
-   * @param {number} userId - User's ID
-   * @returns {Promise<Object>} User data including transactions
-   */
-  static async getExportData(userId) {
-    const client = await db.pool.connect();
+ * Get user data for export - FIXED VERSION
+ * @param {number} userId - User's ID
+ * @returns {Promise<Object>} User data including transactions
+ */
+static async getExportData(userId) {
+  const client = await db.pool.connect();
+  
+  try {
+    // Get user info
+    const userQuery = `
+      SELECT 
+        email, username, created_at,
+        language_preference, theme_preference, currency_preference
+      FROM users 
+      WHERE id = $1
+    `;
+    const userResult = await client.query(userQuery, [userId]);
     
-    try {
-      // Get user info
-      const userQuery = `
-        SELECT 
-          email, username, created_at,
-          language_preference, theme_preference, currency_preference
-        FROM users 
-        WHERE id = $1
-      `;
-      const userResult = await client.query(userQuery, [userId]);
-      
-      if (userResult.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
-      }
-
-      // Get all transactions
-      const transactionsQuery = `
-        SELECT 
-          'expense' as type,
-          amount, description, date,
-          c.name as category,
-          e.created_at
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        WHERE e.user_id = $1 AND e.deleted_at IS NULL
-        
-        UNION ALL
-        
-        SELECT 
-          'income' as type,
-          amount, description, date,
-          c.name as category,
-          i.created_at
-        FROM income i
-        LEFT JOIN categories c ON i.category_id = c.id
-        WHERE i.user_id = $1 AND i.deleted_at IS NULL
-        
-        ORDER BY date DESC, created_at DESC
-      `;
-      const transactionsResult = await client.query(transactionsQuery, [userId]);
-
-      return {
-        user: userResult.rows[0],
-        transactions: transactionsResult.rows
-      };
-    } catch (error) {
-      logger.error('Error getting export data:', { userId, error: error.message });
-      throw error;
-    } finally {
-      client.release();
+    if (userResult.rows.length === 0) {
+      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
     }
+
+    // Get all transactions - FIXED: Added table aliases to remove ambiguity
+    const transactionsQuery = `
+      SELECT 
+        'expense' as type,
+        e.amount, 
+        e.description, 
+        e.date,
+        COALESCE(c.name, 'Uncategorized') as category,
+        e.created_at
+      FROM expenses e
+      LEFT JOIN categories c ON e.category_id = c.id
+      WHERE e.user_id = $1 AND e.deleted_at IS NULL
+      
+      UNION ALL
+      
+      SELECT 
+        'income' as type,
+        i.amount, 
+        i.description, 
+        i.date,
+        COALESCE(c.name, 'Uncategorized') as category,
+        i.created_at
+      FROM income i
+      LEFT JOIN categories c ON i.category_id = c.id
+      WHERE i.user_id = $1 AND i.deleted_at IS NULL
+      
+      ORDER BY date DESC, created_at DESC
+    `;
+    const transactionsResult = await client.query(transactionsQuery, [userId]);
+
+    return {
+      user: userResult.rows[0],
+      transactions: transactionsResult.rows
+    };
+  } catch (error) {
+    logger.error('Error getting export data:', { userId, error: error.message });
+    throw error;
+  } finally {
+    client.release();
   }
+}
 }
 
 module.exports = User;

@@ -35,6 +35,7 @@ import PageContainer from '../components/layout/PageContainer';
 // Features
 import ProfileInfo from '../components/features/profile/ProfileInfo';
 import ProfileSettings from '../components/features/profile/ProfileSettings';
+import ExportModal from '../components/features/profile/ExportModal';
 
 // UI
 import { Card, Button, Badge, LoadingSpinner, Avatar, Modal } from '../components/ui';
@@ -53,15 +54,7 @@ const Profile = () => {
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboard();
   
   // Export hook for data export functionality
-  const {
-    exportAsCSV,
-    exportAsJSON,
-    exportAsPDF,
-    isExporting,
-    exportProgress,
-    exportOptions,
-    isFormatAvailable
-  } = useExport();
+  const { isExporting } = useExport();
   
   // Calculate member duration
   const getMemberDuration = () => {
@@ -152,26 +145,6 @@ const Profile = () => {
       }
     ];
   }, [dashboardData, formatAmount, t]);
-
-  // Export handlers
-  const handleExport = async (format) => {
-    try {
-      switch (format) {
-        case 'csv':
-          await exportAsCSV();
-          break;
-        case 'json':
-          await exportAsJSON();
-          break;
-        case 'pdf':
-          await exportAsPDF();
-          break;
-      }
-      setShowExportModal(false);
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
-  };
 
   // Animation variants
   const containerVariants = {
@@ -378,107 +351,11 @@ const Profile = () => {
         </div>
       </motion.div>
 
-      {/* Export Modal */}
-      <Modal
+      {/* Export Modal - Use dedicated component */}
+      <ExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
-        title={t('profile.exportData')}
-        size="small"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('export.selectFormat')}
-          </p>
-          
-          <div className="space-y-2">
-            {/* CSV Export */}
-            <button
-              onClick={() => handleExport('csv')}
-              disabled={isExporting || !isFormatAvailable('csv')}
-              className={cn(
-                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                exportProgress.format === 'CSV' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              )}
-            >
-              <FileText className="w-5 h-5 text-green-600" />
-              <div className="flex-1 text-left">
-                <p className="font-medium">CSV</p>
-                <p className="text-xs text-gray-500">{t('export.csvDescription')}</p>
-              </div>
-              {exportProgress.format === 'CSV' && (
-                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary-500 transition-all duration-300"
-                    style={{ width: `${exportProgress.progress}%` }}
-                  />
-                </div>
-              )}
-            </button>
-            
-            {/* JSON Export */}
-            <button
-              onClick={() => handleExport('json')}
-              disabled={isExporting || !isFormatAvailable('json')}
-              className={cn(
-                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                exportProgress.format === 'JSON' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              )}
-            >
-              <FileJson className="w-5 h-5 text-blue-600" />
-              <div className="flex-1 text-left">
-                <p className="font-medium">JSON</p>
-                <p className="text-xs text-gray-500">{t('export.jsonDescription')}</p>
-              </div>
-              {exportProgress.format === 'JSON' && (
-                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary-500 transition-all duration-300"
-                    style={{ width: `${exportProgress.progress}%` }}
-                  />
-                </div>
-              )}
-            </button>
-            
-            {/* PDF Export */}
-            <button
-              onClick={() => handleExport('pdf')}
-              disabled={isExporting || !isFormatAvailable('pdf')}
-              className={cn(
-                'w-full p-4 rounded-lg border-2 transition-all flex items-center gap-3',
-                'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                exportProgress.format === 'PDF' && 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              )}
-            >
-              <FilePlus className="w-5 h-5 text-red-600" />
-              <div className="flex-1 text-left">
-                <p className="font-medium">PDF</p>
-                <p className="text-xs text-gray-500">
-                  {isFormatAvailable('pdf') ? t('export.pdfDescription') : t('common.comingSoon')}
-                </p>
-              </div>
-              {exportProgress.format === 'PDF' && (
-                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary-500 transition-all duration-300"
-                    style={{ width: `${exportProgress.progress}%` }}
-                  />
-                </div>
-              )}
-            </button>
-          </div>
-          
-          {exportOptions.privacyNote && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-              {exportOptions.privacyNote}
-            </p>
-          )}
-        </div>
-      </Modal>
+      />
 
       {/* Logout Confirmation Modal */}
       <AnimatePresence>

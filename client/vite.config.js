@@ -53,14 +53,34 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     
-    // Server configuration - Environment aware
+    // ✅ FINAL MOBILE SERVER - Production Ready
     server: {
-      host: true,
+      host: '0.0.0.0', // מאפשר גישה מהרשת
       port: 5173,
-      // Removed proxy since we're connecting to live server
+      strictPort: true,
+      open: false, // לא לפתוח דפדפן אוטומטית
+      
+      // ✅ HMR למובייל
+      hmr: {
+        host: 'localhost',
+        port: 5174
+      },
+      
+      // ✅ Watch settings למובייל
+      watch: {
+        usePolling: true,
+        interval: 1000
+      }
     },
     
-    // Build optimizations - Enhanced for production
+    // ✅ Preview server למובייל
+    preview: {
+      host: '0.0.0.0',
+      port: 4173,
+      strictPort: true
+    },
+    
+    // ✅ Build אופטימלי לפרודקשן + מובייל
     build: {
       target: 'es2020',
       minify: 'terser',
@@ -82,11 +102,10 @@ export default defineConfig(({ command, mode }) => {
       },
       reportCompressedSize: false,
       chunkSizeWarningLimit: 1000,
-      // Source maps for production debugging
       sourcemap: mode === 'production' ? 'hidden' : true
     },
     
-    // Dependency optimization
+    // ✅ Dependency optimization
     optimizeDeps: {
       include: [
         'react',

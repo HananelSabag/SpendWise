@@ -217,7 +217,7 @@ const CategoryManager = () => {
         <div className="relative sm:hidden">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder={t('categories.searchPlaceholder')}
+            placeholder={t('categories.searchCategories')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-12"
@@ -282,7 +282,7 @@ const CategoryManager = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder={t('categories.searchPlaceholder')}
+              placeholder={t('categories.searchCategories')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -324,7 +324,7 @@ const CategoryManager = () => {
             className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 whitespace-nowrap"
           >
             <Plus className="w-4 h-4 mr-2" />
-            {t('categories.addNew')}
+            {t('categories.addCategory')}
           </Button>
         </div>
       </div>

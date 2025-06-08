@@ -304,22 +304,52 @@ export const useRecurringTransactions = (type = null) => {
     }
   );
   
+  const calculateMonthlyImpact = (template) => {
+    // Enhanced validation for template data
+    if (!template || typeof template.amount === 'undefined') {
+      return 0;
+    }
+    
+    const amount = parseFloat(template.amount) || 0;
+    
+    switch (template.interval_type) {
+      case 'daily':
+        return amount * 30.44; // Average days per month
+      case 'weekly':
+        return amount * 4.35; // Average weeks per month
+      case 'monthly':
+        return amount;
+      case 'yearly':
+        return amount / 12;
+      default:
+        return amount;
+    }
+  };
+  
   const processedData = useMemo(() => {
-    // Enhanced data validation with multiple fallback paths
+    // ✅ FIX: Handle Axios response object structure
     let recurringData = null;
     
     if (recurringQuery.data) {
-      // Try different possible data structures from API
-      if (Array.isArray(recurringQuery.data)) {
-        recurringData = recurringQuery.data;
-      } else if (recurringQuery.data.data && Array.isArray(recurringQuery.data.data)) {
-        recurringData = recurringQuery.data.data;
-      } else if (recurringQuery.data.templates && Array.isArray(recurringQuery.data.templates)) {
-        recurringData = recurringQuery.data.templates;
-      } else if (recurringQuery.data.recurring && Array.isArray(recurringQuery.data.recurring)) {
-        recurringData = recurringQuery.data.recurring;
+      // Handle Axios response object first
+      let rawData = recurringQuery.data;
+      
+      // If it's an Axios response object, extract the data property
+      if (rawData.data && rawData.status && rawData.headers) {
+        rawData = rawData.data;
+      }
+      
+      // Now try different possible data structures from API
+      if (Array.isArray(rawData)) {
+        recurringData = rawData;
+      } else if (rawData.data && Array.isArray(rawData.data)) {
+        recurringData = rawData.data;
+      } else if (rawData.templates && Array.isArray(rawData.templates)) {
+        recurringData = rawData.templates;
+      } else if (rawData.recurring && Array.isArray(rawData.recurring)) {
+        recurringData = rawData.recurring;
       } else {
-        console.warn('[RECURRING] Unexpected data structure:', recurringQuery.data);
+        console.warn('[RECURRING] Unexpected data structure after Axios handling:', rawData);
         recurringData = [];
       }
     }
@@ -343,28 +373,6 @@ export const useRecurringTransactions = (type = null) => {
       };
     }).filter(Boolean); // Remove null entries
   }, [recurringQuery.data]);
-  
-  const calculateMonthlyImpact = (template) => {
-    // Enhanced validation for template data
-    if (!template || typeof template.amount === 'undefined') {
-      return 0;
-    }
-    
-    const amount = parseFloat(template.amount) || 0;
-    
-    switch (template.interval_type) {
-      case 'daily':
-        return amount * 30.44; // Average days per month
-      case 'weekly':
-        return amount * 4.35; // Average weeks per month
-      case 'monthly':
-        return amount;
-      case 'yearly':
-        return amount / 12;
-      default:
-        return amount;
-    }
-  };
   
   return {
     recurringTransactions: processedData,

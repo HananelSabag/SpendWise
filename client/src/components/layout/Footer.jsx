@@ -47,7 +47,7 @@ const Footer = () => {
                 <span className="ml-3 text-xl font-bold text-gray-800 dark:text-white">SpendWise</span>
               </div>
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs">
-                {t('footer.description') || 'Smart personal finance management tool to help you track expenses and manage your budget efficiently.'}
+                {t('footer.description')}
               </p>
             </div>
 

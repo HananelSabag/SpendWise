@@ -846,7 +846,7 @@ const MemoizedActionsCard = React.memo(() => {
                   {action.title}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {action.subtitle}
+                  {t('dashboard.startTracking')}
                 </p>
                 
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">

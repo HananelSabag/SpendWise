@@ -46,11 +46,11 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.features')}</h3>
           <ul className="list-disc pl-5 space-y-1">
-            <li>{isRTL ? 'Screen reader compatibility' : 'Screen reader compatibility'}</li>
-            <li>{isRTL ? 'Adjustable color contrast' : 'Adjustable color contrast'}</li>
-            <li>{isRTL ? 'Text size adjustment' : 'Text size adjustment'}</li>
-            <li>{isRTL ? 'Keyboard navigation support' : 'Keyboard navigation support'}</li>
-            <li>{isRTL ? 'Hebrew and English language support' : 'Hebrew and English language support'}</li>
+            <li>{t('accessibility.statement.featuresList.screenReader')}</li>
+            <li>{t('accessibility.statement.featuresList.colorContrast')}</li>
+            <li>{t('accessibility.statement.featuresList.textSize')}</li>
+            <li>{t('accessibility.statement.featuresList.keyboardNav')}</li>
+            <li>{t('accessibility.statement.featuresList.multiLanguage')}</li>
           </ul>
           
           <h3 className="font-semibold text-lg mt-4">{t('accessibility.statement.level')}</h3>

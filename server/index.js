@@ -1,5 +1,5 @@
 /**
- * SpendWise Server - Production Ready
+ * SpendWise Server - Production Ready + Mobile Support
  * Main server entry point
  */
 
@@ -45,23 +45,58 @@ app.use(helmet({
 
 app.use(compression());
 
-// CORS configuration
+// ✅ ENHANCED CORS - Mobile + Network Support
+const isLocalNetworkIP = (origin) => {
+  if (!origin) return false;
+  
+  // חילוץ ה-IP מה-origin
+  const match = origin.match(/^https?:\/\/([^:]+)/);
+  if (!match) return false;
+  
+  const host = match[1];
+  
+  // בדיקת רשתות מקומיות
+  const localNetworkPatterns = [
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,  // 192.168.x.x
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,  // 10.x.x.x
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,  // 172.16-31.x.x
+    /^localhost$/,
+    /^127\.0\.0\.1$/
+  ];
+  
+  return localNetworkPatterns.some(pattern => pattern.test(host));
+};
+
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? (process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || []) 
   : ['http://localhost:3000', 'http://localhost:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc) in development only
-    if (!origin && process.env.NODE_ENV !== 'production') {
+    // ✅ אפשר בקשות ללא origin (mobile apps, Postman)
+    if (!origin) {
       return callback(null, true);
     }
     
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // ✅ בדוק origins מורשים
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    
+    // ✅ NEW: אפשר רשת מקומית בפיתוח
+    if (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) {
+      logger.info(`🌐 Allowing local network origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // ✅ NEW: אפשר כל localhost:5173 (כולל IP)
+    if (origin.includes(':5173') || origin.includes(':3000')) {
+      logger.info(`🌐 Allowing dev server origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    logger.warn(`🚫 CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -69,6 +104,23 @@ app.use(cors({
   maxAge: 86400,
   exposedHeaders: ['Content-Disposition'] // Add for file downloads
 }));
+
+// ✅ OPTIONS preflight handler
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  
+  if (!origin || allowedOrigins.includes(origin) || 
+      (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) ||
+      origin.includes(':5173') || origin.includes(':3000')) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
+    res.status(200).end();
+  } else {
+    res.status(403).end();
+  }
+});
 
 // Body parser with size limit
 app.use(express.json({ limit: '10mb' }));
@@ -79,7 +131,9 @@ app.use('/uploads', (req, res, next) => {
   const origin = req.headers.origin;
   
   // Allow requests from allowed origins or no origin (direct access)
-  if (!origin || allowedOrigins.includes(origin)) {
+  if (!origin || allowedOrigins.includes(origin) ||
+      (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) ||
+      (origin && (origin.includes(':5173') || origin.includes(':3000')))) {
     res.header('Access-Control-Allow-Origin', origin || '*');
   }
   
@@ -118,7 +172,8 @@ if (process.env.NODE_ENV !== 'production') { // Reduce logging in production
     req.log.info('Request received', {
       method: req.method,
       url: req.url,
-      ip: req.ip
+      ip: req.ip,
+      origin: req.headers.origin
     });
     next();
   });
@@ -177,6 +232,7 @@ const startServer = async () => {
 
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT} with Supabase database`);
+      logger.info(`🌐 CORS enabled for mobile development (local networks)`);
       
       // Initialize background jobs
       if (process.env.ENABLE_SCHEDULER !== 'false') {

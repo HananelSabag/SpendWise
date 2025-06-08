@@ -31,7 +31,6 @@ import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { userSchemas, validate } from "../../utils/validationSchemas";
 import { cn } from '../../utils/helpers';
-import FloatingMenu from '../../components/common/FloatingMenu';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import Footer from '../../components/layout/Footer';
 
@@ -291,7 +290,6 @@ const Register = () => {
   return (
     <>
       <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
-        <FloatingMenu buttons={menuButtons} />
         <AccessibilityMenu />
         
         {/* Registration Form Side */}
@@ -567,7 +565,7 @@ const Register = () => {
                         ) : (
                           <>
                             <UserPlus className="w-5 h-5 mr-2" />
-                            {t('auth.createAccount')}
+                            {t('auth.signUp')}
                           </>
                         )}
                       </Button>

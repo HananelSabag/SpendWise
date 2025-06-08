@@ -2,7 +2,6 @@
 // Enhanced language context with complete organized translations
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { refreshDashboard } from '../hooks/useDashboard';
 
 const LanguageContext = createContext();
 
@@ -20,6 +19,7 @@ const translations = {
 
   // Common/Shared
   common: {
+    comingSoon: "Coming soon",
     loading: 'Loading...',
     save: 'Save',
     cancel: 'Cancel',
@@ -348,10 +348,12 @@ const translations = {
       fast: 'Fast Entry',
       smart: 'Smart',
       placeholder: 'Enter amount',
+      amount: 'Amount', // ✅ ADD: Missing translation
       addExpense: 'Add Expense',
       addIncome: 'Add Income',
       defaultDescription: 'Quick transaction',
       added: 'Added!',
+      advanced: 'Advanced Actions', // ✅ ADD: Missing translation
       todayWarning: 'Transaction will be added to today, not the displayed date',
       switchToToday: 'Transaction added! Switch to today\'s view to see it?',
       hint: 'Use quick actions for fast transaction entry'
@@ -359,6 +361,7 @@ const translations = {
 
     stats: {
       title: 'Statistics',
+      subtitle: 'Transaction insights and trends', // ✅ ADD: Missing translation
       loadingStats: 'Loading statistics...',
       dailyAverage: 'Daily Average',
       monthlyGoal: 'Monthly Goal',
@@ -395,6 +398,53 @@ const translations = {
     editTemplate: 'Edit Template',
     editAll: 'Edit All Future',
     editOnce: 'Edit This Occurrence',
+    totalAmount: 'Total Amount',
+    // Add these to your translation files
+
+    templateActions: "Template Actions",
+    recurringActions: "Recurring Actions",
+    editActions: "Edit Actions",
+    skipNextTooltip: "Skip the next scheduled occurrence of this transaction",
+    pauseTooltip: "Pause this template - no new transactions will be created",
+    resumeTooltip: "Resume this template - transactions will be created again",
+    manageRecurringTooltip: "Open the recurring transactions manager",
+    editSingleTooltip: "Edit only this occurrence, leave template unchanged",
+    editTemplateTooltip: "Edit the template - affects all future transactions",
+    editAllTooltip: "Edit this and all future occurrences",
+    editTooltip: "Edit this transaction",
+    deleteTemplateTooltip: "Delete this template and optionally all related transactions",
+    deleteRecurringTooltip: "Delete this transaction or the entire recurring series",
+    deleteTooltip: "Delete this transaction",
+    nextOccurrenceNote: "When this transaction will happen next",
+    frequencyNote: "How often this transaction repeats",
+    templateActiveTitle: "Template is Active",
+    templateActiveDescription: "New transactions are being created automatically",
+    templatePausedTitle: "Template is Paused",
+    templatePausedDescription: "No new transactions will be created",
+    totalGenerated: "Total Generated",
+    recurringTransactionInfo: "About Recurring Transactions",
+    recurringDescription: "This transaction was created from a recurring template. You can:",
+    editOnceDescription: "Change only this transaction",
+    editAllDescription: "Change the template and all future transactions",
+    scheduleManagement: "Schedule Management",
+    templateManagement: "Template Management",
+    skipSpecificDates: "Skip Specific Dates",
+    pauseTemplate: "Pause Template",
+    resumeTemplate: "Resume Template",
+    scheduleActiveDescription: "Template is creating new transactions on schedule",
+    schedulePausedDescription: "Template is paused - no new transactions being created",
+    templateManagementDescription: "Edit or delete this entire template",
+    chooseDeleteOption: "Choose Delete Option",
+    searchTemplates: "Search Templates",
+    type: "Type",
+    upcomingTransactions: "Upcoming Transactions",
+    scheduledTransactions: "Scheduled Transactions",
+    automated: "Automated",
+    editThis: "Edit",
+    quickActions: "Quick Actions",
+    noRecurringTemplates: "No recurring templates found",
+
+
 
     // Display & Filtering
     showing: 'Showing',
@@ -580,7 +630,13 @@ const translations = {
       quickRanges: 'Quick Ranges',
       commonAmounts: 'Common Amounts',
       clearAll: 'Clear All Filters',
-      activeFilters: 'Active Filters'
+      activeFilters: 'Active Filters',
+      advancedFilters: "Advanced Filters",
+      customDateRange: "Custom date range",
+      from: "From",
+      to: "To",
+
+
     },
 
     // Errors & Messages
@@ -636,6 +692,7 @@ const translations = {
     quickIncomeDesc: 'Add ₪1000 income instantly',
     quickRecurring: 'Quick Recurring',
     quickRecurringDesc: 'Add monthly recurring expense',
+    quickAdd: 'Quick Add',
 
     // Transaction types
     oneTimeExpense: 'One-time Expense',
@@ -648,7 +705,6 @@ const translations = {
     oneTimeIncomeDesc: 'Add a single income transaction',
     recurringIncome: 'Recurring Income',
     recurringIncomeDesc: 'Set up a repeating income',
-    quickAdd: 'Quick Add',
 
     // Default descriptions
     defaultExpense: 'Quick expense',
@@ -750,6 +806,9 @@ const translations = {
     saveFailed: 'Failed to save category',
     deleteFailed: 'Failed to delete category',
     required: 'Required',
+    searchCategories: "Search categories",
+    addCategory: "Add category",
+
 
     // Filter options
     filter: {
@@ -806,6 +865,10 @@ const translations = {
     photoUploaded: 'Photo uploaded successfully',
     invalidImageType: 'Please select a valid image file (JPG, PNG, or GIF)',
     imageTooLarge: 'Image size must be less than 5MB',
+    active: "Active",
+    subtitle: "Manage your account details and preferences",
+
+
 
     save: 'Save Changes',
     cancel: 'Cancel',
@@ -888,6 +951,47 @@ const translations = {
     commonPreferences: 'Common Preferences',
     notificationPreferences: 'Notification Preferences',
     privacyPreferences: 'Privacy Preferences',
+    export: {
+      selectFormat: "Select format",
+      csvDescription: "CSV (spreadsheet, Excel, Google Sheets)",
+      jsonDescription: "JSON (for import to other apps)",
+
+      // Error messages
+      invalidFormat: 'Invalid export format selected',
+      formatUnavailable: '{format} export is not available',
+
+      // Progress messages
+      preparing: 'Preparing {format} export...',
+      processing: 'Processing your export...',
+      progressStatus: '{format} export: {progress}% complete',
+
+      // Modal content
+      title: 'Export Your Data',
+      subtitle: 'Choose your preferred format for downloading',
+      dataIncluded: "What's included in your export",
+      loadingOptions: 'Loading export options...',
+      selectFormat: 'Select export format:',
+      formatsAvailable: 'formats available',
+
+      // Format descriptions
+      csvDescription: 'Compatible with Excel, Google Sheets, and all spreadsheet applications',
+      csvUseCase: 'Perfect for data analysis, reporting, and further processing',
+      jsonDescription: 'Machine-readable format with complete data structure and metadata',
+      jsonUseCase: 'Ideal for developers, data scientists, and technical users',
+
+      // Metadata
+      estimatedSize: 'Size',
+      instant: 'Instant download',
+
+      // Security
+      security: 'Security & Privacy',
+      httpsEncrypted: 'HTTPS Encrypted',
+      notStored: 'Not Stored',
+      onDemand: 'On-Demand Only',
+
+      // User info
+      userInfo: 'Export for {username} • {currency} • {language}'
+    },
 
     // Notification types
     notifications: {
@@ -958,6 +1062,7 @@ const translations = {
     perDay: 'per day',
     trend: 'Trend',
     categories: 'Categories',
+    topCategories: 'Top Categories', // ✅ ADD: Missing translation
     noData: 'No data available',
     noTrendData: 'No trend data available',
     noCategoryData: 'No category data available',
@@ -1133,6 +1238,7 @@ const translations = {
   he: {
     // Common/Shared
     common: {
+      comingSoon: "בקרוב...",
       loading: 'טוען...',
       save: 'שמור',
       cancel: 'ביטול',
@@ -1463,10 +1569,12 @@ const translations = {
         fast: 'הזנה מהירה',
         smart: 'חכם',
         placeholder: 'הזן סכום',
+        amount: 'סכום', // ✅ ADD: Missing Hebrew translation
         addExpense: 'הוסף הוצאה',
         addIncome: 'הוסף הכנסה',
         defaultDescription: 'עסקה מהירה',
         added: 'נוסף!',
+        advanced: 'פעולות מתקדמות', // ✅ ADD: Missing Hebrew translation
         todayWarning: 'הפעולה תתווסף להיום, לא לתאריך המוצג',
         switchToToday: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?',
         hint: 'השתמש בפעולות מהירות להזנת עסקאות מהירה'
@@ -1474,6 +1582,7 @@ const translations = {
 
       stats: {
         title: 'סטטיסטיקות',
+        subtitle: 'תובנות ומגמות עסקאות', // ✅ ADD: Missing Hebrew translation
         loadingStats: 'טוען סטטיסטיקות...',
         dailyAverage: 'ממוצע יומי',
         monthlyGoal: 'יעד חודשי',
@@ -1510,7 +1619,48 @@ const translations = {
       editTemplate: 'ערוך תבנית חוזרת',
       editAll: 'ערוך את כל המופעים',
       editOnce: 'ערוך מופע יחיד',
-
+      totalAmount: 'סך הכל',
+      templateActions: "פעולות תבנית",
+      recurringActions: "פעולות הוראת קבע",
+      editActions: "פעולות עריכה",
+      skipNextTooltip: "דלג על המופע הבא המתוכנן של עסקה זו",
+      pauseTooltip: "השהה תבנית זו - לא ייווצרו עסקאות חדשות",
+      resumeTooltip: "חדש תבנית זו - עסקאות ייווצרו שוב",
+      manageRecurringTooltip: "פתח את מנהל העסקאות החוזרות",
+      editSingleTooltip: "ערוך רק את המופע הזה, השאר את התבנית ללא שינוי",
+      editTemplateTooltip: "ערוך את התבנית - משפיע על כל העסקאות העתידיות",
+      editAllTooltip: "ערוך את זה ואת כל המופעים העתידיים",
+      editTooltip: "ערוך עסקה זו",
+      deleteTemplateTooltip: "מחק תבנית זו ובאופן אופציונלי את כל העסקאות הקשורות",
+      deleteRecurringTooltip: "מחק עסקה זו או את כל הסדרה החוזרת",
+      deleteTooltip: "מחק עסקה זו",
+      nextOccurrenceNote: "מתי העסקה הזו תתרחש הפעם הבאה",
+      frequencyNote: "כמה פעמים העסקה הזו חוזרת על עצמה",
+      templateActiveTitle: "התבנית פעילה",
+      templateActiveDescription: "עסקאות חדשות נוצרות באופן אוטומטי",
+      templatePausedTitle: "התבנית מושהית",
+      templatePausedDescription: "לא ייווצרו עסקאות חדשות",
+      totalGenerated: "סה״כ שנוצר",
+      recurringTransactionInfo: "אודות עסקאות חוזרות",
+      recurringDescription: "עסקה זו נוצרה מתבנית חוזרת. אתה יכול:",
+      editOnceDescription: "לשנות רק את העסקה הזו",
+      editAllDescription: "לשנות את התבנית ואת כל העסקאות העתידיות",
+      scheduleManagement: "ניהול לוח זמנים",
+      templateManagement: "ניהול תבניות",
+      skipSpecificDates: "דלג על תאריכים ספציפיים",
+      pauseTemplate: "השהה תבנית",
+      resumeTemplate: "חדש תבנית",
+      scheduleActiveDescription: "התבנית יוצרת עסקאות חדשות לפי לוח הזמנים",
+      schedulePausedDescription: "התבנית מושהית - לא נוצרות עסקאות חדשות",
+      templateManagementDescription: "ערוך או מחק את כל התבנית הזו",
+      chooseDeleteOption: "בחר אפשרות מחיקה",
+      searchTemplates: "חפש תבניות",
+      type: "סוג",
+      upcomingTransactions: "עסקאות קרובות",
+      scheduledTransactions: "עסקאות מתוזמנות",
+      automated: "אוטומטי",
+      editThis: "ערוך",
+      quickActions: "פעולות מהירות",
 
 
       // Display & Filtering
@@ -1592,6 +1742,8 @@ const translations = {
       generateNow: 'צור עכשיו',
       generated: 'עסקאות קבועות נוצרו',
       generateError: 'נכשל ביצירת עסקאות קבועות',
+      noRecurringTemplates: "אין תבניות חוזרות",
+
 
       // Skip Dates
       skipDates: {
@@ -1696,7 +1848,12 @@ const translations = {
         quickRanges: 'טווחים מהירים',
         commonAmounts: 'סכומים נפוצים',
         clearAll: 'נקה את כל הסינונים',
-        activeFilters: 'סינונים פעילים'
+        activeFilters: 'סינונים פעילים',
+        advancedFilters: " סינונים מתקדמים",
+        customDateRange: "טווח תאריכים מותאם",
+        from: "מתאריך",
+        to: "עד תאריך",
+
       },
 
       // Errors & Messages
@@ -1866,6 +2023,9 @@ const translations = {
       saveFailed: 'שמירת הקטגוריה נכשלה',
       deleteFailed: 'מחיקת הקטגוריה נכשלה',
       required: 'חובה',
+      searchCategories: "חפש קטגוריות",
+      addCategory: "הוסף קטגוריה",
+
 
       // Filter options
       filter: {
@@ -1922,6 +2082,10 @@ const translations = {
       photoUploaded: 'התמונה הועלתה בהצלחה',
       invalidImageType: 'אנא בחר קובץ תמונה תקין (JPG, PNG או GIF)',
       imageTooLarge: 'גודל התמונה חייב להיות פחות מ-5MB',
+      active: "פעיל",
+      subtitle: "נהל את פרטי החשבון וההעדפות שלך",
+
+
 
       save: 'שמור שינויים',
       cancel: 'ביטול',
@@ -2035,6 +2199,47 @@ const translations = {
         json: '{"key": "value"}',
         string: 'הערך שלי'
       },
+      export: {
+        selectFormat: "בחר פורמט",
+        csvDescription: "קובץ CSV (אקסל/גוגל שיטס)",
+        jsonDescription: "קובץ JSON (לייבוא לאפליקציות אחרות)",
+
+        // Error messages
+        invalidFormat: 'פורמט יצוא לא תקין נבחר',
+        formatUnavailable: 'יצוא {format} אינו זמין',
+
+        // Progress messages
+        preparing: 'מכין יצוא {format}...',
+        processing: 'מעבד את הייצוא שלך...',
+        progressStatus: 'יצוא {format}: {progress}% הושלם',
+
+        // Modal content
+        title: 'יצא את הנתונים שלך',
+        subtitle: 'בחר את הפורמט המועדף עליך להורדה',
+        dataIncluded: 'מה כלול בייצוא שלך',
+        loadingOptions: 'טוען אפשרויות ייצוא...',
+        selectFormat: 'בחר פורמט ייצוא:',
+        formatsAvailable: 'פורמטים זמינים',
+
+        // Format descriptions  
+        csvDescription: 'תואם ל-Excel, Google Sheets ויישומי גיליונות אלקטרוניים',
+        csvUseCase: 'מושלם לניתוח נתונים, דיווחים ועיבוד נוסף',
+        jsonDescription: 'פורמט קריא למכונה עם מבנה נתונים מלא ומטא-דאטה',
+        jsonUseCase: 'אידיאלי למפתחים, מדעני נתונים ומשתמשים טכניים',
+
+        // Metadata
+        estimatedSize: 'גודל',
+        instant: 'הורדה מיידית',
+
+        // Security
+        security: 'אבטחה ופרטיות',
+        httpsEncrypted: 'מוצפן HTTPS',
+        notStored: 'לא נשמר',
+        onDemand: 'לפי דרישה בלבד',
+
+        // User info
+        userInfo: 'יצוא עבור {username} • {currency} • {language}'
+      },
 
       // Error messages
       errors: {
@@ -2074,6 +2279,7 @@ const translations = {
       perDay: 'ליום',
       trend: 'מגמה',
       categories: 'קטגוריות',
+      topCategories: 'קטגוריות מובילות', // ✅ ADD: Missing Hebrew translation
       noData: 'אין נתונים זמינים',
       noTrendData: 'אין נתוני מגמה זמינים',
       noCategoryData: 'אין נתוני קטגוריות זמינים',

@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "vite --host 0.0.0.0 --port 5173",
+    "dev:network": "vite --host --port 5173", 
+    "dev:open": "vite --host 0.0.0.0 --port 5173 --open",
     "build": "vite build",
     "preview": "vite preview",
+    "preview:mobile": "vite preview --host 0.0.0.0 --port 4173",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives",
     "format": "prettier --write \"src/**/*.{js,jsx,css}\""
   },

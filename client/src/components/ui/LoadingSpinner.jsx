@@ -1,6 +1,7 @@
 // components/ui/LoadingSpinner.jsx
 import React from 'react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const LoadingSpinner = ({
   size = 'default',
@@ -10,6 +11,8 @@ const LoadingSpinner = ({
   className = '',
   ...props
 }) => {
+  const { t } = useLanguage();
+
   const sizes = {
     small: 'w-4 h-4',
     default: 'w-8 h-8',
@@ -34,6 +37,9 @@ const LoadingSpinner = ({
       />
       {text && (
         <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{text}</p>
+      )}
+      {!text && (
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
       )}
     </div>
   );

@@ -61,7 +61,7 @@ const queueRequest = (key, requestFn) => {
 // Enhanced request interceptor
 api.interceptors.request.use(
   (config) => {
-    const requestId = crypto.randomUUID();
+    const requestId = Math.random().toString(36).substring(2) + Date.now().toString(36);
     config.headers['X-Request-ID'] = requestId;
     config.metadata = { requestId, startTime: Date.now() };
     
@@ -362,34 +362,70 @@ export const exportAPI = {
   getOptions: () => api.get('/export/options'),
   
   exportAsCSV: async () => {
-    const response = await api.get('/export/csv', { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `spendwise_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    return response;
+    try {
+      const response = await api.get('/export/csv', { 
+        responseType: 'blob',
+        timeout: 60000 // 60 seconds for large exports
+      });
+      
+      // ✅ FIX: Better filename generation and download handling
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `spendwise_export_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+      
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      return response;
+    } catch (error) {
+      console.error('CSV export error:', error);
+      throw error;
+    }
   },
   
   exportAsJSON: async () => {
-    const response = await api.get('/export/json');
-    const dataStr = JSON.stringify(response.data, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `spendwise_export_${new Date().toISOString().split('T')[0]}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    return response;
+    try {
+      const response = await api.get('/export/json', {
+        timeout: 60000 // 60 seconds for large exports
+      });
+      
+      // ✅ FIX: Handle JSON response properly
+      const dataStr = JSON.stringify(response.data, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const exportFileDefaultName = `spendwise_export_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      return response;
+    } catch (error) {
+      console.error('JSON export error:', error);
+      throw error;
+    }
   },
   
   exportAsPDF: async () => {
     try {
-      const response = await api.get('/export/pdf', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const response = await api.get('/export/pdf', { 
+        responseType: 'blob',
+        timeout: 120000 // 2 minutes for PDF generation
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `spendwise_export_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -397,10 +433,12 @@ export const exportAPI = {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      
       return response;
     } catch (error) {
       if (error.response?.status === 501) {
-        toast.error('PDF export coming soon! Please use CSV or JSON for now.');
+        // Don't throw, just show the message from server
+        console.log('PDF export not implemented yet');
       }
       throw error;
     }

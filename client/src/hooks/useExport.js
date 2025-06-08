@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { useApiQuery, useApiMutation } from './useApi';
 import { exportAPI, queryKeys } from '../utils/api';
-import { useAuth } from './useAuth';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 /**
@@ -20,27 +20,34 @@ export const useExport = () => {
     progress: 0
   });
   
-  // Export options query
+  // Export options query - Fixed to handle server response format
   const exportOptionsQuery = useApiQuery(
     queryKeys.exportOptions,
     () => exportAPI.getOptions(),
     {
       config: 'static',
       enabled: isAuthenticated,
-      staleTime: 60 * 60 * 1000 // 1 hour
+      staleTime: 60 * 60 * 1000, // 1 hour
+      onError: (error) => {
+        console.error('Failed to load export options:', error);
+      }
     }
   );
   
-  // Process export options
+  // ✅ FIX: Process export options correctly based on server response format
   const exportOptions = exportOptionsQuery.data?.data || {
-    availableFormats: [],
+    availableFormats: [
+      { format: 'csv', available: true },
+      { format: 'json', available: true },
+      { format: 'pdf', available: false }
+    ],
     dataIncluded: [],
     userInfo: {},
     limits: {},
-    privacyNote: ''
+    privacyNote: 'Your exported data is generated on-demand and not stored on our servers.'
   };
   
-  // Export as CSV
+  // ✅ FIX: Improved export functions with better error handling
   const exportCSVMutation = useApiMutation(
     async () => {
       setExportProgress({ isExporting: true, format: 'CSV', progress: 30 });
@@ -56,6 +63,18 @@ export const useExport = () => {
         return result;
       } catch (error) {
         setExportProgress({ isExporting: false, format: null, progress: 0 });
+        
+        // Better error handling
+        if (error.response?.status === 404) {
+          toast.error('No data available to export');
+        } else if (error.response?.status === 401) {
+          toast.error('Please login to export data');
+        } else if (error.response?.status === 429) {
+          toast.error('Too many export requests. Please wait a moment.');
+        } else {
+          toast.error('CSV export failed. Please try again.');
+        }
+        
         throw error;
       }
     },
@@ -63,17 +82,10 @@ export const useExport = () => {
       onSuccess: () => {
         toast.success('CSV export completed successfully!');
       },
-      onError: (error) => {
-        if (error.response?.status === 404) {
-          toast.error('No data available to export');
-        } else {
-          toast.error('CSV export failed');
-        }
-      }
+      showErrorToast: false // We handle errors manually above
     }
   );
   
-  // Export as JSON
   const exportJSONMutation = useApiMutation(
     async () => {
       setExportProgress({ isExporting: true, format: 'JSON', progress: 30 });
@@ -89,6 +101,17 @@ export const useExport = () => {
         return result;
       } catch (error) {
         setExportProgress({ isExporting: false, format: null, progress: 0 });
+        
+        if (error.response?.status === 404) {
+          toast.error('No data available to export');
+        } else if (error.response?.status === 401) {
+          toast.error('Please login to export data');
+        } else if (error.response?.status === 429) {
+          toast.error('Too many export requests. Please wait a moment.');
+        } else {
+          toast.error('JSON export failed. Please try again.');
+        }
+        
         throw error;
       }
     },
@@ -96,17 +119,10 @@ export const useExport = () => {
       onSuccess: () => {
         toast.success('JSON export completed successfully!');
       },
-      onError: (error) => {
-        if (error.response?.status === 404) {
-          toast.error('No data available to export');
-        } else {
-          toast.error('JSON export failed');
-        }
-      }
+      showErrorToast: false
     }
   );
   
-  // Export as PDF
   const exportPDFMutation = useApiMutation(
     async () => {
       setExportProgress({ isExporting: true, format: 'PDF', progress: 30 });
@@ -122,33 +138,36 @@ export const useExport = () => {
         return result;
       } catch (error) {
         setExportProgress({ isExporting: false, format: null, progress: 0 });
+        
+        if (error.response?.status === 501) {
+          toast.info('PDF export coming soon! Please use CSV or JSON for now.');
+        } else if (error.response?.status === 404) {
+          toast.error('No data available to export');
+        } else {
+          toast.error('PDF export failed. Please try again.');
+        }
+        
         throw error;
       }
     },
     {
-      onSuccess: () => {
-        toast.success('PDF export completed successfully!');
-      },
-      onError: (error) => {
-        if (error.response?.status === 501) {
-          // Already handled by exportAPI
-        } else if (error.response?.status === 404) {
-          toast.error('No data available to export');
-        } else {
-          toast.error('PDF export failed');
-        }
-      }
+      showErrorToast: false
     }
   );
   
-  // Export functions
+  // ✅ FIX: Enhanced export functions with validation
   const exportAsCSV = useCallback(async () => {
     if (!isAuthenticated) {
       toast.error('Please login to export data');
       return;
     }
     
-    return exportCSVMutation.mutateAsync();
+    try {
+      return await exportCSVMutation.mutateAsync();
+    } catch (error) {
+      console.error('CSV export error:', error);
+      throw error;
+    }
   }, [isAuthenticated, exportCSVMutation]);
   
   const exportAsJSON = useCallback(async () => {
@@ -157,7 +176,12 @@ export const useExport = () => {
       return;
     }
     
-    return exportJSONMutation.mutateAsync();
+    try {
+      return await exportJSONMutation.mutateAsync();
+    } catch (error) {
+      console.error('JSON export error:', error);
+      throw error;
+    }
   }, [isAuthenticated, exportJSONMutation]);
   
   const exportAsPDF = useCallback(async () => {
@@ -166,20 +190,27 @@ export const useExport = () => {
       return;
     }
     
-    // Check if PDF is available
-    const pdfOption = exportOptions.availableFormats?.find(f => f.format === 'pdf');
-    if (pdfOption && !pdfOption.available) {
+    // Check if PDF is available from server
+    const pdfFormat = exportOptions.availableFormats?.find(f => f.format === 'pdf');
+    if (pdfFormat && !pdfFormat.available) {
       toast.info('PDF export coming soon! Please use CSV or JSON for now.');
       return;
     }
     
-    return exportPDFMutation.mutateAsync();
+    try {
+      return await exportPDFMutation.mutateAsync();
+    } catch (error) {
+      console.error('PDF export error:', error);
+      throw error;
+    }
   }, [isAuthenticated, exportOptions.availableFormats, exportPDFMutation]);
   
-  // Check format availability
+  // ✅ FIX: Better format availability check
   const isFormatAvailable = useCallback((format) => {
-    const option = exportOptions.availableFormats?.find(f => f.format === format);
-    return option?.available || false;
+    if (!exportOptions.availableFormats) return format !== 'pdf'; // Default fallback
+    
+    const option = exportOptions.availableFormats.find(f => f.format === format);
+    return option ? option.available : false;
   }, [exportOptions.availableFormats]);
   
   // Get format info
@@ -205,7 +236,7 @@ export const useExport = () => {
     dataIncluded: exportOptions.dataIncluded || [],
     userInfo: exportOptions.userInfo || {},
     limits: exportOptions.limits || {},
-    privacyNote: exportOptions.privacyNote || '',
+    privacyNote: exportOptions.privacyNote || 'Your data is exported securely.',
     
     // Loading states
     isLoadingOptions: exportOptionsQuery.isLoading,
