@@ -219,9 +219,13 @@ export const AuthProvider = ({ children }) => {
       // Clear all queries
       queryClient.clear();
       
-      // Emit reset event for contexts
+      // ✅ ADD: Comprehensive session cleanup
       window.dispatchEvent(new Event('auth-logout'));
       window.dispatchEvent(new Event('preferences-reset'));
+      window.dispatchEvent(new CustomEvent('language-session-reset'));
+      window.dispatchEvent(new CustomEvent('theme-session-reset'));
+      
+      console.log('🔄 [AUTH] Complete session cleanup (language + theme + preferences)');
       
       toast.success('Logged out successfully');
       
@@ -233,7 +237,13 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       queryClient.clear();
+      
+      // ✅ ADD: Force cleanup on error too
       window.dispatchEvent(new Event('auth-logout'));
+      window.dispatchEvent(new Event('preferences-reset'));
+      window.dispatchEvent(new CustomEvent('language-session-reset'));
+      window.dispatchEvent(new CustomEvent('theme-session-reset'));
+      
       navigate('/login');
     }
   });

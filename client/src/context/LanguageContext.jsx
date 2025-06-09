@@ -526,6 +526,8 @@ const translations = {
     generateNow: 'Generate Now',
     generated: 'Recurring transactions generated',
     generateError: 'Failed to generate recurring transactions',
+    noRecurringTemplates: "No recurring templates found",
+
 
     // Skip Dates
     skipDates: {
@@ -951,47 +953,6 @@ const translations = {
     commonPreferences: 'Common Preferences',
     notificationPreferences: 'Notification Preferences',
     privacyPreferences: 'Privacy Preferences',
-    export: {
-      selectFormat: "Select format",
-      csvDescription: "CSV (spreadsheet, Excel, Google Sheets)",
-      jsonDescription: "JSON (for import to other apps)",
-
-      // Error messages
-      invalidFormat: 'Invalid export format selected',
-      formatUnavailable: '{format} export is not available',
-
-      // Progress messages
-      preparing: 'Preparing {format} export...',
-      processing: 'Processing your export...',
-      progressStatus: '{format} export: {progress}% complete',
-
-      // Modal content
-      title: 'Export Your Data',
-      subtitle: 'Choose your preferred format for downloading',
-      dataIncluded: "What's included in your export",
-      loadingOptions: 'Loading export options...',
-      selectFormat: 'Select export format:',
-      formatsAvailable: 'formats available',
-
-      // Format descriptions
-      csvDescription: 'Compatible with Excel, Google Sheets, and all spreadsheet applications',
-      csvUseCase: 'Perfect for data analysis, reporting, and further processing',
-      jsonDescription: 'Machine-readable format with complete data structure and metadata',
-      jsonUseCase: 'Ideal for developers, data scientists, and technical users',
-
-      // Metadata
-      estimatedSize: 'Size',
-      instant: 'Instant download',
-
-      // Security
-      security: 'Security & Privacy',
-      httpsEncrypted: 'HTTPS Encrypted',
-      notStored: 'Not Stored',
-      onDemand: 'On-Demand Only',
-
-      // User info
-      userInfo: 'Export for {username} • {currency} • {language}'
-    },
 
     // Notification types
     notifications: {
@@ -1022,6 +983,47 @@ const translations = {
       number: '123',
       json: '{"key": "value"}',
       string: 'My value'
+    },
+    export: {
+      selectFormat: "Select format",
+      csvDescription: "CSV (spreadsheet, Excel, Google Sheets)",
+      jsonDescription: "JSON (for import to other apps)",
+
+      // Error messages
+      invalidFormat: 'Invalid export format selected',
+      formatUnavailable: '{format} export is not available',
+
+      // Progress messages
+      preparing: 'Preparing {format} export...',
+      processing: 'Processing your export...',
+      progressStatus: '{format} export: {progress}% complete',
+
+      // Modal content
+      title: 'Export Your Data',
+      subtitle: 'Choose your preferred format for downloading',
+      dataIncluded: "What's included in your export",
+      loadingOptions: 'Loading export options...',
+      selectFormat: 'Select export format:',
+      formatsAvailable: 'formats available',
+
+      // Format descriptions  
+      csvDescription: 'Compatible with Excel, Google Sheets, and all spreadsheet applications',
+      csvUseCase: 'Perfect for data analysis, reporting, and further processing',
+      jsonDescription: 'Machine-readable format with complete data structure and metadata',
+      jsonUseCase: 'Ideal for developers, data scientists, and technical users',
+
+      // Metadata
+      estimatedSize: 'Size',
+      instant: 'Instant download',
+
+      // Security
+      security: 'Security & Privacy',
+      httpsEncrypted: 'HTTPS Encrypted',
+      notStored: 'Not Stored',
+      onDemand: 'On-Demand Only',
+
+      // User info
+      userInfo: 'Export for {username} • {currency} • {language}'
     },
 
     // Error messages
@@ -1424,6 +1426,7 @@ const translations = {
       verificationFailed: 'האימות נכשל',
       verificationFailedMessage: 'לא הצלחנו לאמת את כתובת האימייל. אנא נסה שוב או פנה לתמיכה.',
       redirectingToDashboard: 'מעביר אותך ללוח הבקרה...',
+      redirectingToSkipDates: 'מעביר למנהל תאריכים...',
       goToDashboard: 'מעבר ללוח הבקרה',
       backToLogin: 'חזרה להתחברות',
       proceedToLogin: 'המשך להתחברות',
@@ -1455,7 +1458,6 @@ const translations = {
       emailSentDesc: 'בדוק את הדוא״ל שלך לקישור לאיפוס הסיסמה. אם הוא לא מופיע תוך מספר דקות, בדוק את תיקיית הספאם.',
       passwordResetSuccess: 'הסיסמה אופסה בהצלחה!',
       redirectingToLogin: 'מפנה לעמוד ההתחברות...',
-      redirectingToSkipDates: 'מפנה למנהל תאריכים...',
       sendAnotherEmail: 'שלח דוא״ל נוסף',
       developmentMode: 'מצב פיתוח',
       emailSentDevDesc: 'דוא״ל נשלח דרך Gmail SMTP! בדוק את הקונסול לקישור בדיקה נוסף.',
@@ -2080,7 +2082,7 @@ const translations = {
       photoHelper: 'JPG, PNG או GIF. גודל מקסימלי 5MB',
       uploading: 'מעלה...',
       photoUploaded: 'התמונה הועלתה בהצלחה',
-      invalidImageType: 'אנא בחר קובץ תמונה תקין (JPG, PNG או GIF)',
+      invalidImageType: 'אנא בחר קובץ תמונה תקין (JPG, PNG, או GIF)',
       imageTooLarge: 'גודל התמונה חייב להיות פחות מ-5MB',
       active: "פעיל",
       subtitle: "נהל את פרטי החשבון וההעדפות שלך",
@@ -2294,7 +2296,7 @@ const translations = {
         invalidAmount: 'סכום לא תקין',
         invalidDate: 'תאריך לא תקין',
         passwordTooShort: 'הסיסמה חייבת להכיל לפחות 8 תווים',
-        passwordsDontMatch: 'הסיסמאות אינן תואמות',
+        passwordsDontMatch: 'הסיסאות אינן תואמות',
         descriptionRequired: 'תיאור נדרש',
         endDateRequired: 'תאריך סיום נדרש',
         categoryRequired: 'קטגוריה נדרשת',
@@ -2323,7 +2325,7 @@ const translations = {
       passwordNeedsUpper: 'הסיסמה חייבת להכיל לפחות אות גדולה אחת',
       passwordNeedsLower: 'הסיסמה חייבת להכיל לפחות אות קטנה אחת',
       passwordNeedsSpecial: 'הסיסמה חייבת להכיל לפחות תו מיוחד אחד',
-      passwordsDontMatch: 'הסיסמאות אינן תואמות',
+      passwordsDontMatch: 'הסיסאות אינן תואמות',
       agreeToTerms: 'עליך להסכים לתנאים',
       amountRequired: 'סכום נדרש',
       amountInvalid: 'הסכום חייב להיות מספר תקין',
@@ -2519,10 +2521,10 @@ export const LanguageProvider = ({ children }) => {
   // ✅ ADD: Effect to sync language changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'preferredLanguage' && e.newValue && e.newValue !== language) {
-        console.log(`🌐 [LANGUAGE] Storage sync: ${language} → ${e.newValue}`);
+      if (e.key === 'preferredLanguage' && e.newValue !== language) {
+        console.log(`🌐 [LANGUAGE] Storage change detected: ${language} → ${e.newValue}`);
         setLanguage(e.newValue);
-        setSessionLanguage(null); // Clear session override when preference changes
+        setSessionLanguage(null); // Clear session override when permanent preference changes
       }
     };
 
@@ -2533,9 +2535,37 @@ export const LanguageProvider = ({ children }) => {
   // ✅ ADD: Debug log for language changes
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🌐 [LANGUAGE] Effective language: ${effectiveLanguage}, Saved: ${language}, Session: ${sessionLanguage || 'none'}`);
+      console.log(`🌐 [LANGUAGE] State update:`, {
+        saved: language,
+        session: sessionLanguage,
+        effective: effectiveLanguage,
+        isSessionOverride: !!sessionLanguage
+      });
     }
   }, [effectiveLanguage, language, sessionLanguage]);
+
+  // ✅ ADD: Listen for session reset events (logout) - MISSING!
+  useEffect(() => {
+    const handleSessionReset = () => {
+      console.log(`🌐 [LANGUAGE] Session reset detected - clearing session language`);
+      resetToSavedLanguage();
+    };
+
+    const handleLanguageReset = () => {
+      console.log(`🌐 [LANGUAGE] Language session reset detected`);
+      resetToSavedLanguage();
+    };
+
+    window.addEventListener('auth-logout', handleSessionReset);
+    window.addEventListener('language-session-reset', handleLanguageReset);
+    window.addEventListener('theme-session-reset', handleSessionReset); // Also reset on theme events
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleSessionReset);
+      window.removeEventListener('language-session-reset', handleLanguageReset);
+      window.removeEventListener('theme-session-reset', handleSessionReset);
+    };
+  }, []);
 
   // ✅ FIX: Use effectiveLanguage for translations
   const t = (key, params = {}) => {
@@ -2543,17 +2573,22 @@ export const LanguageProvider = ({ children }) => {
     let translation = effectiveLanguage === 'he' ? translations.he : translations;
 
     for (const k of keys) {
-      if (!translation) break;
-      translation = translation[k];
+      if (translation && typeof translation === 'object') {
+        translation = translation[k];
+      } else {
+        translation = null;
+        break;
+      }
     }
 
     if (!translation) {
-      console.warn(`Translation not found for key: ${key}`);
+      console.warn(`Missing translation for key: ${key} in language: ${effectiveLanguage}`);
       return key;
     }
+
     if (typeof translation === 'string' && params) {
-      return translation.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        return params[key] || match;
+      return translation.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
+        return params[paramKey] || match;
       });
     }
 

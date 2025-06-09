@@ -1,8 +1,9 @@
-
-
 // client/src/app.jsx
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Suspense, lazy, useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'react-hot-toast';
 
 // Core components
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -195,6 +196,66 @@ const AppContent = () => {
 };
 
 /**
+ * ✅ FIX: Create QueryClient with proper configuration
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry on 401/403 errors
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: false,
+    },
+  },
+});
+
+/**
+ * ✅ ADD: App initialization component
+ */
+const AppInitializer = ({ children }) => {
+  useEffect(() => {
+    // ✅ ADD: Listen for session reset events
+    const handleSessionReset = () => {
+      console.log('🔄 [APP] Session reset detected, clearing contexts');
+      // Language context will handle its own reset
+      // Theme context will handle its own reset
+    };
+
+    const handleAuthLogout = () => {
+      console.log('🔄 [APP] Auth logout detected');
+      // Clear any app-level state if needed
+    };
+
+    // ✅ ADD: Listen for language session reset
+    const handleLanguageSessionReset = () => {
+      console.log('🔄 [APP] Language session reset');
+      // LanguageContext will handle this internally
+    };
+
+    window.addEventListener('auth-logout', handleAuthLogout);
+    window.addEventListener('preferences-reset', handleSessionReset);
+    window.addEventListener('language-session-reset', handleLanguageSessionReset);
+
+    return () => {
+      window.removeEventListener('auth-logout', handleAuthLogout);
+      window.removeEventListener('preferences-reset', handleSessionReset);
+      window.removeEventListener('language-session-reset', handleLanguageSessionReset);
+    };
+  }, []);
+
+  return children;
+};
+
+/**
  * Main Application Component
  */
 function App() {
@@ -227,32 +288,64 @@ function App() {
   }, []);
 
   return (
-    <Router 
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
-      <AuthProvider>
-        <AccessibilityProvider initialDarkMode={false}>
-          <ThemeProvider>
-            <LanguageProvider>
-              <DateProvider>
-                <CurrencyProvider>
-                  <Suspense fallback={
-                    <div className="h-screen w-screen flex items-center justify-center">
-                      <LoadingSpinner size="large" />
-                    </div>
-                  }>
-                    <AppContent />
-                  </Suspense>
-                </CurrencyProvider>
-              </DateProvider>
-            </LanguageProvider>
-          </ThemeProvider>
-        </AccessibilityProvider>
-      </AuthProvider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router 
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
+        <AuthProvider>
+          <AccessibilityProvider initialDarkMode={false}>
+            <ThemeProvider>
+              <LanguageProvider>
+                <DateProvider>
+                  <CurrencyProvider>
+                    <Suspense fallback={
+                      <div className="h-screen w-screen flex items-center justify-center">
+                        <LoadingSpinner size="large" />
+                      </div>
+                    }>
+                      <AppInitializer>
+                        <AppContent />
+                      </AppInitializer>
+                    </Suspense>
+                  </CurrencyProvider>
+                </DateProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </AccessibilityProvider>
+        </AuthProvider>
+      </Router>
+
+      {/* ✅ Development tools */}
+      {process.env.NODE_ENV === 'development' && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
+
+      {/* Global toast notifications */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            maxWidth: '500px',
+          },
+          success: {
+            style: {
+              background: '#10B981',
+              color: 'white',
+            },
+          },
+          error: {
+            style: {
+              background: '#EF4444',
+              color: 'white',
+            },
+          },
+        }}
+      />
+    </QueryClientProvider>
   );
 }
 

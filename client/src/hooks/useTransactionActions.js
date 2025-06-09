@@ -23,8 +23,7 @@ import toast from 'react-hot-toast';
 export const useTransactionActions = () => {
   const queryClient = useQueryClient();
   
-  // Base transaction operations from useTransactions hook
-  // Use consistent limit to match TransactionList default configuration
+  // ✅ PERFORMANCE: Use smaller limit for better responsiveness
   const {
     createTransaction: baseCreateTransaction,
     updateTransaction: baseUpdateTransaction,
@@ -32,7 +31,32 @@ export const useTransactionActions = () => {
     isCreating,
     isUpdating,
     isDeleting
-  } = useTransactions({ limit: 50 });
+  } = useTransactions({ limit: 25 }); // ✅ REDUCED: From 50 to 25
+
+  /**
+   * ✅ OPTIMIZED: Selective cache invalidation for better performance
+   */
+  const invalidateRelevantQueries = useCallback(async () => {
+    // Only invalidate active queries to avoid unnecessary refetches
+    const activeQueries = queryClient.getQueryCache().getAll()
+      .filter(query => query.getObserversCount() > 0);
+    
+    const relevantQueryKeys = ['dashboard', 'transactions', 'transactionsSummary'];
+    
+    for (const query of activeQueries) {
+      const queryKey = query.queryKey[0];
+      if (relevantQueryKeys.includes(queryKey)) {
+        await queryClient.invalidateQueries({ queryKey: [queryKey] });
+      }
+    }
+    
+    // Force refetch only for visible components
+    await queryClient.refetchQueries({ 
+      queryKey: ['transactions'], 
+      type: 'active',
+      exact: false
+    });
+  }, [queryClient]);
 
   /**
    * Create Transaction - Optimized for immediate component updates
@@ -49,27 +73,15 @@ export const useTransactionActions = () => {
       // Create the transaction first
       const result = await baseCreateTransaction(type, data);
       
-      // PERFORMANCE FIX: Immediate cache invalidation without setTimeout
-      // This ensures QuickActionsBar updates BalancePanel + RecentTransactions instantly
-      await queryClient.invalidateQueries({ 
-        queryKey: ['dashboard']
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactions'] 
-      });
-      
-      // Optional: Invalidate related queries that might be affected
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactionsSummary'] 
-      });
+      // ✅ PERFORMANCE: Selective invalidation instead of broad refresh
+      await invalidateRelevantQueries();
       
       return result;
     } catch (error) {
       // Let the base mutation handle error toasts and logging
       throw error;
     }
-  }, [baseCreateTransaction, queryClient]);
+  }, [baseCreateTransaction, invalidateRelevantQueries]);
 
   /**
    * Update Transaction - Immediate refresh for edit operations
@@ -85,25 +97,12 @@ export const useTransactionActions = () => {
   const updateTransaction = useCallback(async (type, id, data) => {
     try {
       const result = await baseUpdateTransaction(type, id, data);
-      
-      // Immediate refresh - same pattern as create
-      await queryClient.invalidateQueries({ 
-        queryKey: ['dashboard']
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactions'] 
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactionsSummary'] 
-      });
-      
+      await invalidateRelevantQueries();
       return result;
     } catch (error) {
       throw error;
     }
-  }, [baseUpdateTransaction, queryClient]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries]);
 
   /**
    * Delete Transaction - Clean removal with immediate UI updates
@@ -118,36 +117,19 @@ export const useTransactionActions = () => {
   const deleteTransaction = useCallback(async (id, deleteAll = false) => {
     try {
       const result = await baseDeleteTransaction(id, deleteAll);
+      await invalidateRelevantQueries();
       
-      // Immediate refresh for deletion
-      await queryClient.invalidateQueries({ 
-        queryKey: ['dashboard']
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactions'] 
-      });
-      
-      await queryClient.invalidateQueries({ 
-        queryKey: ['transactionsSummary'] 
-      });
-      
-      // For recurring deletions, also refresh recurring templates
+      // For recurring deletions, also refresh templates
       if (deleteAll) {
-        await queryClient.invalidateQueries({ 
-          queryKey: ['templates'] 
-        });
-        
-        await queryClient.invalidateQueries({ 
-          queryKey: ['transactionsRecurring'] 
-        });
+        await queryClient.invalidateQueries({ queryKey: ['templates'] });
+        await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
       }
       
       return result;
     } catch (error) {
       throw error;
     }
-  }, [baseDeleteTransaction, queryClient]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient]);
 
   /**
    * Bulk Operations - For future expansion

@@ -1,19 +1,25 @@
 /**
- * useAuth Hook - Enhanced Authentication Management
- * Provides authentication functionality with database-driven preferences
+ * useAuth Hook - Fixed to avoid localStorage conflicts with contexts
+ * Removed theme/language localStorage setting to prevent conflicts
  */
 
-import { useCallback, useMemo, useEffect, useState } from 'react';
+import { useCallback, useMemo, useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApiQuery, useApiMutation } from './useApi';
 import { authAPI, queryKeys, mutationKeys } from '../utils/api';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import AuthContext from '../context/AuthContext';
 
 /**
  * Enhanced authentication hook with preference management
  */
 export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
@@ -29,18 +35,45 @@ export const useAuth = () => {
     () => authAPI.getProfile(),
     {
       config: 'user',
-      enabled: hasToken && shouldFetchProfile, // Only when explicitly enabled
+      enabled: hasToken && shouldFetchProfile,
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 30 * 60 * 1000, // 30 minutes
       retry: (failureCount, error) => {
+        // ✅ IMPROVED: Better error handling - don't show toast for network errors
         if (error?.response?.status === 401) {
-          // Clear tokens on 401
+          console.log('🔑 [AUTH] Token invalid, clearing auth state');
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setShouldFetchProfile(false);
           return false;
         }
-        return failureCount < 2;
+        
+        // ✅ FIX: Don't retry on server errors that aren't auth-related
+        if (error?.response?.status >= 500) {
+          console.warn('🔑 [AUTH] Server error during profile fetch, will retry');
+          return failureCount < 1; // Reduced retries for server errors
+        }
+        
+        // Network errors - retry silently
+        if (!error?.response) {
+          console.warn('🔑 [AUTH] Network error during profile fetch, will retry');
+          return failureCount < 2;
+        }
+        
+        return false;
+      },
+      // ✅ FIX: Don't show error toast for profile queries
+      onError: (error) => {
+        if (error?.response?.status === 401) {
+          console.log('🔑 [AUTH] Authentication required - redirecting to login');
+          // Let the app handle redirect, don't show toast here
+        } else if (error?.response?.status >= 500) {
+          console.warn('🔑 [AUTH] Server error during profile fetch');
+          // Don't show toast for server errors
+        } else if (!error?.response) {
+          console.warn('🔑 [AUTH] Network error during profile fetch');
+          // Don't show toast for network errors
+        }
       }
     }
   );
@@ -48,7 +81,6 @@ export const useAuth = () => {
   // Initialize profile fetching on mount only if we have a valid token
   useEffect(() => {
     if (hasToken) {
-      // Small delay to avoid immediate fetch on page load
       const timer = setTimeout(() => {
         setShouldFetchProfile(true);
       }, 100);
@@ -56,19 +88,15 @@ export const useAuth = () => {
     }
   }, [hasToken]);
 
-  // Process user data with preferences - Handle multiple response structures
+  // Process user data with preferences
   const user = useMemo(() => {
-    // Handle multiple response structures from API
     let profileData = null;
     
     if (profileQuery.data?.data?.data) {
-      // Case 1: response.data.data.data (triple nested)
       profileData = profileQuery.data.data.data;
     } else if (profileQuery.data?.data) {
-      // Case 2: response.data.data (double nested) 
       profileData = profileQuery.data.data;
     } else if (profileQuery.data) {
-      // Case 3: response.data (single nested)
       profileData = profileQuery.data;
     }
     
@@ -76,20 +104,17 @@ export const useAuth = () => {
       return null;
     }
     
-    // Validate required user data fields
     if (!profileData.email || !profileData.username) {
       console.error('Profile data missing required fields');
       return null;
     }
     
-    // Prevent cached placeholder data
     if (profileData.email === 'user@example.com') {
       console.error('Detected cached placeholder data, clearing cache');
       queryClient.removeQueries(queryKeys.profile);
       return null;
     }
     
-    // Structure user preferences from database columns and JSONB
     const processedUser = {
       ...profileData,
       preferences: {
@@ -124,33 +149,28 @@ export const useAuth = () => {
       onSuccess: (response) => {
         const { data } = response.data;
         
-        // Store tokens
         localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
         
-        // Enable profile fetching and invalidate to refetch
         setShouldFetchProfile(true);
         queryClient.invalidateQueries(queryKeys.profile);
         
-        // Apply user preferences immediately
+        // ✅ FIX: Let contexts handle their own preference loading
+        // Removed direct localStorage setting and events
         if (data.user) {
-          applyUserPreferences(data.user);
+          console.log('🔑 [AUTH] Login successful, user preferences will be loaded by contexts');
         }
         
         toast.success('Welcome back!');
-        
-        // Navigate to dashboard
         navigate('/');
       },
       onError: (error) => {
         const errorData = error.response?.data?.error;
         
         if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-          // Don't show toast, let component handle it
           return;
         }
         
-        // Show other errors
         const message = errorData?.message || 'Login failed';
         toast.error(message);
       }
@@ -164,13 +184,12 @@ export const useAuth = () => {
       mutationKey: mutationKeys.register,
       onSuccess: (response) => {
         if (response.data?.requiresVerification) {
-          // Let component handle verification flow
           return;
         }
         
         toast.success('Registration successful! Please check your email.');
       },
-      showErrorToast: false // Handle errors in component
+      showErrorToast: false
     }
   );
   
@@ -180,19 +199,19 @@ export const useAuth = () => {
     {
       mutationKey: mutationKeys.logout,
       onSuccess: () => {
-        // Clear all auth data
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         
-        // Clear all queries
         queryClient.clear();
         
-        // Reset to default preferences
-        resetToDefaultPreferences();
+        // ✅ FIX: Trigger session reset for contexts (not preference reset)
+        window.dispatchEvent(new CustomEvent('auth-logout'));
+        window.dispatchEvent(new CustomEvent('language-session-reset'));
+        window.dispatchEvent(new CustomEvent('theme-session-reset'));
+        
+        console.log('🔄 [AUTH] Session reset triggered for contexts');
         
         toast.success('Logged out successfully');
-        
-        // Navigate to login
         navigate('/login');
       },
       showErrorToast: false
@@ -209,16 +228,17 @@ export const useAuth = () => {
       onSuccess: (response) => {
         const updatedUser = response.data?.data;
         if (updatedUser) {
-          applyUserPreferences(updatedUser);
+          // ✅ FIX: Let contexts handle their own updates
+          // Don't apply preferences here - contexts will pick up changes
+          console.log('🔄 [AUTH] Profile updated, contexts will sync automatically');
         }
       }
     }
   );
   
-  // Update preferences mutation - fix data structure
+  // Update preferences mutation  
   const updatePreferencesMutation = useApiMutation(
     (data) => {
-      // ✅ FIX: Send data in correct format expected by server
       console.log('Sending preferences data:', data);
       return authAPI.updatePreferences(data.preferences);
     },
@@ -244,10 +264,8 @@ export const useAuth = () => {
         }
       },
       onSuccess: (response) => {
-        const updatedPreferences = response.data?.data?.preferences;
-        if (updatedPreferences) {
-          applyPreferences(updatedPreferences);
-        }
+        // ✅ FIX: Let contexts handle preference updates
+        console.log('🔄 [AUTH] Preferences updated in database');
       }
     }
   );
@@ -260,7 +278,6 @@ export const useAuth = () => {
       invalidateKeys: [queryKeys.profile],
       successMessage: 'Profile picture uploaded successfully',
       onSuccess: (response) => {
-        // Update cache immediately with new picture URL
         const pictureUrl = response.data?.data?.url;
         if (pictureUrl) {
           queryClient.setQueryData(queryKeys.profile, (old) => {
@@ -331,73 +348,7 @@ export const useAuth = () => {
     }
   );
   
-  // Apply user preferences to the app
-  const applyUserPreferences = useCallback((userData) => {
-    // Apply theme
-    if (userData.theme_preference) {
-      document.documentElement.classList.toggle('dark', userData.theme_preference === 'dark');
-      localStorage.setItem('theme', userData.theme_preference);
-    }
-    
-    // Apply language
-    if (userData.language_preference) {
-      localStorage.setItem('language', userData.language_preference);
-      // Trigger language change event
-      window.dispatchEvent(new CustomEvent('language-changed', { 
-        detail: userData.language_preference 
-      }));
-    }
-    
-    // Apply currency
-    if (userData.currency_preference) {
-      localStorage.setItem('currency', userData.currency_preference);
-      // Trigger currency change event
-      window.dispatchEvent(new CustomEvent('currency-changed', { 
-        detail: userData.currency_preference 
-      }));
-    }
-  }, []);
-  
-  // Apply specific preferences
-  const applyPreferences = useCallback((preferences) => {
-    if (!preferences) return;
-    
-    // Apply any preference changes
-    Object.entries(preferences).forEach(([key, value]) => {
-      switch (key) {
-        case 'theme':
-          document.documentElement.classList.toggle('dark', value === 'dark');
-          localStorage.setItem('theme', value);
-          break;
-        case 'language':
-          localStorage.setItem('language', value);
-          window.dispatchEvent(new CustomEvent('language-changed', { detail: value }));
-          break;
-        case 'currency':
-          localStorage.setItem('currency', value);
-          window.dispatchEvent(new CustomEvent('currency-changed', { detail: value }));
-          break;
-      }
-    });
-  }, []);
-  
-  // Reset to default preferences
-  const resetToDefaultPreferences = useCallback(() => {
-    document.documentElement.classList.remove('dark');
-    localStorage.removeItem('theme');
-    localStorage.removeItem('language');
-    localStorage.removeItem('currency');
-    
-    // Trigger reset events
-    window.dispatchEvent(new CustomEvent('preferences-reset'));
-  }, []);
-  
-  // Apply user preferences on load
-  useEffect(() => {
-    if (user) {
-      applyUserPreferences(user);
-    }
-  }, [user, applyUserPreferences]);
+  // ✅ REMOVED: applyUserPreferences function that was causing conflicts
   
   // Helper functions
   const login = useCallback(async (credentials) => {
@@ -417,7 +368,6 @@ export const useAuth = () => {
   }, [updateProfileMutation]);
   
   const updatePreferences = useCallback(async (preferences) => {
-    // ✅ FIX: Wrap preferences correctly for server
     return updatePreferencesMutation.mutateAsync({ preferences });
   }, [updatePreferencesMutation]);
   
@@ -443,8 +393,8 @@ export const useAuth = () => {
   
   // Computed states
   const isAuthenticated = !!user && hasToken;
-  const isLoading = profileQuery.isLoading;
-  const isInitialized = !hasToken || profileQuery.isFetched;
+  const isLoading = profileQuery.isLoading && shouldFetchProfile;
+  const isInitialized = !hasToken || profileQuery.isFetched || profileQuery.isError;
   
   return {
     // User data
@@ -480,7 +430,6 @@ export const useAuth = () => {
     
     // Utility
     refreshProfile: profileQuery.refetch,
-    applyUserPreferences,
     
     // Raw query for advanced usage
     profileQuery

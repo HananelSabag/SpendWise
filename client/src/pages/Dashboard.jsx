@@ -1,11 +1,11 @@
 /**
- * Mobile-Optimized Dashboard
+ * PERFECT Dashboard - Compact Desktop Layout + Fixed Mobile
  * 
- * 📱 MOBILE-FIRST: Compact design for phones
- * 💻 DESKTOP: Full beauty preserved
- * ✅ SMART BREAKPOINTS: Different layouts per screen size
- * ✅ NO VERTICAL SCROLLING: Everything fits on screen
- * ✅ RESPONSIVE TYPOGRAPHY: Text scales properly
+ * 💻 DESKTOP: Inspired by compact version - better organization
+ * 📱 MOBILE: Fixed QuickActions bug + optimized UX
+ * ✅ SMART 3-COLUMN LAYOUT: Balance+Actions left, Transactions+Stats right
+ * ✅ COMPACT SIZING: No more grandiose spacing
+ * ✅ PERFECT PROPORTIONS: Everything fits naturally
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -41,7 +41,7 @@ import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
 import { Link } from 'react-router-dom';
 
-// 📱 MOBILE-OPTIMIZED: Memoized components
+// Memoized components for performance
 const MemoizedBalancePanel = React.memo(BalancePanel);
 MemoizedBalancePanel.displayName = 'MemoizedBalancePanel';
 
@@ -54,31 +54,32 @@ MemoizedStatsChart.displayName = 'MemoizedStatsChart';
 const MemoizedQuickActionsBar = React.memo(QuickActionsBar);
 MemoizedQuickActionsBar.displayName = 'MemoizedQuickActionsBar';
 
-// 📱 MOBILE-RESPONSIVE: Animation variants
+// COMPACT: Animation variants with faster timings
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.1
+      staggerChildren: 0.08, // Faster
+      delayChildren: 0.1 // Reduced delay
     }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 15 }, // Reduced movement
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      stiffness: 200,
-      damping: 20
+      stiffness: 200, // Snappier
+      damping: 25
     }
   }
 };
 
+// COMPACT: Smaller welcome banner variants
 const welcomeVariants = {
   initial: { opacity: 0, scale: 0.98, height: 0 },
   animate: { 
@@ -89,7 +90,7 @@ const welcomeVariants = {
       type: "spring",
       stiffness: 300,
       damping: 25,
-      height: { duration: 0.4, ease: "easeOut" }
+      height: { duration: 0.3, ease: "easeOut" }
     }
   },
   exit: {
@@ -97,12 +98,12 @@ const welcomeVariants = {
     scale: 0.98,
     height: 0,
     marginBottom: 0,
-    transition: { duration: 0.3, ease: "easeInOut" }
+    transition: { duration: 0.2, ease: "easeInOut" }
   }
 };
 
 const compactWelcomeVariants = {
-  initial: { opacity: 0, y: -10 },
+  initial: { opacity: 0, y: -8 },
   animate: { 
     opacity: 1, 
     y: 0,
@@ -133,12 +134,12 @@ const Dashboard = () => {
   const debouncedDebugLog = useMemo(
     () => debounce((data, loading) => {
       if (debugQueries) {
-        console.log('📱 [MOBILE-DASHBOARD] Responsive Layout:', {
+        console.log('🎯 [DASHBOARD] Compact Layout:', {
           hasData: !!data,
           isLoading: loading,
           isFetching,
           timestamp: new Date().toISOString(),
-          layout: 'Mobile-optimized with smart breakpoints'
+          layout: 'Compact 3-column desktop + optimized mobile'
         });
       }
     }, 1000),
@@ -155,22 +156,22 @@ const Dashboard = () => {
   const [showAddTransactions, setShowAddTransactions] = useState(false);
   
   const isRTL = language === 'he';
-  const dashboardId = useRef(`mobile-dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
+  const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   
-  // 📱 MOBILE-OPTIMIZED: Fast loading
+  // COMPACT: Faster initial loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 200);
+    }, 150); // Reduced from 300ms
     return () => clearTimeout(timer);
   }, []);
   
-  // 📱 MOBILE-OPTIMIZED: Banner timing
+  // COMPACT: Faster banner timing
   useEffect(() => {
     if (!loading && !isDashboardLoading && !isFetching) {
       const timer = setTimeout(() => {
         setShowWelcomeBanner(false);
-      }, 1000);
+      }, 800); // Reduced from 1500ms
       return () => clearTimeout(timer);
     }
   }, [loading, isDashboardLoading, isFetching]);
@@ -191,6 +192,69 @@ const Dashboard = () => {
     if (hour < 21) return greetings.evening;
     return greetings.night;
   }, [user?.username, t]);
+
+  // COMPACT: Dashboard stats calculation
+  const dashboardStats = useMemo(() => {
+    if (!dashboardData || isDashboardLoading) {
+      return {
+        dailyAverage: 0,
+        monthlyGoal: 0,
+        recurringActive: 0,
+        savedThisMonth: 0,
+        loading: isDashboardLoading || isFetching,
+        totalTransactions: 0,
+        weeklyTrend: 'neutral',
+        monthlyIncome: 0,
+        monthlyExpenses: 0
+      };
+    }
+
+    try {
+      const monthly = dashboardData.balances?.monthly || {};
+      const daily = dashboardData.balances?.daily || {};
+      const weekly = dashboardData.balances?.weekly || {};
+      const recurring = dashboardData.recurringInfo || {};
+      const recentTransactions = dashboardData.recentTransactions || [];
+      
+      const monthlyExpenses = Math.abs(parseFloat(monthly.expenses) || 0);
+      const monthlyIncome = Math.abs(parseFloat(monthly.income) || 0);
+      const dailyBalance = parseFloat(daily.balance) || 0;
+      const weeklyBalance = parseFloat(weekly.balance) || 0;
+      
+      const realDailyAverage = monthlyExpenses > 0 ? Math.round(monthlyExpenses / 30) : 0;
+      const totalMonthlyActivity = monthlyIncome + monthlyExpenses;
+      const savingsPercentage = totalMonthlyActivity > 0 
+        ? Math.round((monthlyIncome / totalMonthlyActivity) * 100)
+        : 0;
+      const recurringCount = (parseInt(recurring.income_count) || 0) + (parseInt(recurring.expense_count) || 0);
+      const actualSavings = Math.max(0, parseFloat(monthly.balance) || 0);
+      
+      return {
+        dailyAverage: realDailyAverage,
+        monthlyGoal: Math.min(100, savingsPercentage),
+        recurringActive: recurringCount,
+        savedThisMonth: actualSavings,
+        loading: false,
+        totalTransactions: recentTransactions.length,
+        weeklyTrend: weeklyBalance > dailyBalance ? 'up' : weeklyBalance < dailyBalance ? 'down' : 'neutral',
+        monthlyIncome,
+        monthlyExpenses
+      };
+    } catch (error) {
+      console.warn('Error calculating dashboard stats:', error);
+      return {
+        dailyAverage: 0,
+        monthlyGoal: 0,
+        recurringActive: 0,
+        savedThisMonth: 0,
+        loading: false,
+        totalTransactions: 0,
+        weeklyTrend: 'neutral',
+        monthlyIncome: 0,
+        monthlyExpenses: 0
+      };
+    }
+  }, [dashboardData, isDashboardLoading, isFetching]);
 
   const handleRetry = useCallback(() => {
     if (refreshDashboard) {
@@ -222,20 +286,20 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="MobileDashboard">
-      {/* 📱 MOBILE-FIRST: Responsive container */}
-      <div className="w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4 md:py-6 max-w-7xl">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
+      {/* COMPACT: Reduced container padding */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-2 sm:space-y-4 md:space-y-6"
+          className="space-y-3" // Reduced from space-y-6
           dir={isRTL ? 'rtl' : 'ltr'}
         >
-          {/* 📱 MOBILE-COMPACT: Welcome Section */}
+          {/* COMPACT: Welcome Banner */}
           <AnimatePresence mode="wait">
             {showWelcomeBanner ? (
-              <MobileWelcomeBanner 
+              <CompactWelcomeBanner 
                 key="full-welcome"
                 user={user}
                 greeting={greeting}
@@ -246,7 +310,7 @@ const Dashboard = () => {
                 t={t}
               />
             ) : (
-              <MobileMiniWelcome 
+              <MiniWelcome 
                 key="compact-welcome"
                 user={user}
                 greeting={greeting}
@@ -257,87 +321,109 @@ const Dashboard = () => {
             )}
           </AnimatePresence>
 
-          {/* 📱 MOBILE-SMART: Responsive layout with mobile stacking */}
-          <div className="space-y-2 sm:space-y-4 md:space-y-6">
-            
-            {/* 📱 MOBILE-BALANCE: Compact Balance Panel */}
+          {/* 📱 MOBILE: Stack everything vertically */}
+          <div className="lg:hidden space-y-3">
+            {/* Mobile Compact Balance */}
             <motion.div variants={itemVariants}>
-              <div className="sm:hidden">
-                {/* 📱 MOBILE: Ultra compact balance */}
-                <MobileCompactBalance dashboardData={dashboardData} t={t} />
-              </div>
-              <div className="hidden sm:block">
-                {/* 💻 DESKTOP: Full balance panel */}
-                <div className="min-h-[300px] lg:min-h-[400px]">
-                  <MemoizedBalancePanel />
-                </div>
+              <MobileCompactBalance dashboardData={dashboardData} t={t} />
+            </motion.div>
+
+            {/* Mobile Quick Actions - FIXED */}
+            <motion.div variants={itemVariants}>
+              <FixedMobileQuickActions setShowAddTransactions={setShowAddTransactions} t={t} />
+            </motion.div>
+
+            {/* Mobile Transactions */}
+            <motion.div variants={itemVariants}>
+              <div className="h-[300px]">
+                <MemoizedRecentTransactions limit={6} />
               </div>
             </motion.div>
 
-            {/* 📱 MOBILE-ACTIONS: Quick Actions Row */}
+            {/* Mobile Stats */}
             <motion.div variants={itemVariants}>
-              <div className="sm:hidden">
-                {/* 📱 MOBILE: Compact quick actions */}
-                <MobileQuickActions setShowAddTransactions={setShowAddTransactions} t={t} />
-              </div>
-              <div className="hidden sm:block">
-                {/* 💻 DESKTOP: Full quick actions */}
-                <div className="min-h-[250px] lg:min-h-[350px]">
-                  <MemoizedQuickActionsBar />
-                </div>
+              <div className="h-[250px]">
+                <MemoizedStatsChart />
               </div>
             </motion.div>
+          </div>
 
-            {/* 📱 MOBILE-CONTENT: Transactions & Stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4 md:gap-6">
+          {/* 💻 DESKTOP: COMPACT 2-Column Layout */}
+          <div className="hidden lg:block">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
               
-              {/* 📱 MOBILE-TRANSACTIONS: Compact transactions */}
-              <motion.div variants={itemVariants}>
-                <div className="min-h-[200px] sm:min-h-[400px] lg:min-h-[500px]">
-                  <MemoizedRecentTransactions limit={6} />
-                </div>
-              </motion.div>
+              {/* LEFT COLUMN: Balance & Actions */}
+              <div className="space-y-3">
+                
+                {/* Balance Panel - Compact size */}
+                <motion.div variants={itemVariants} className="relative">
+                  {!showWelcomeBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 1.02 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      className="absolute -inset-2 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-lg"
+                    />
+                  )}
+                  <div className="relative">
+                    <MemoizedBalancePanel />
+                  </div>
+                </motion.div>
 
-              {/* 📱 MOBILE-STATS: Compact stats */}
-              <motion.div variants={itemVariants}>
-                <div className="min-h-[200px] sm:min-h-[400px] lg:min-h-[500px]">
+                {/* Quick Actions - Compact */}
+                <motion.div variants={itemVariants}>
+                  <MemoizedQuickActionsBar />
+                </motion.div>
+              </div>
+
+              {/* RIGHT COLUMN: Transactions & Stats Chart */}
+              <div className="space-y-3">
+                
+                {/* Recent Transactions - Optimized height */}
+                <motion.div variants={itemVariants}>
+                  <MemoizedRecentTransactions />
+                </motion.div>
+
+                {/* Stats Chart */}
+                <motion.div variants={itemVariants}>
                   <MemoizedStatsChart />
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
 
-            {/* 📱 MOBILE-CTA: Compact call-to-action */}
-            <motion.div variants={itemVariants} className="hidden sm:block">
-              <MobileActionCallToAction t={t} setShowAddTransactions={setShowAddTransactions} />
+            {/* Enhanced Tips Section - Compact */}
+            <motion.div variants={itemVariants} className="mt-3">
+              <CompactTipsSection t={t} />
             </motion.div>
           </div>
         </motion.div>
 
-        {/* 📱 MOBILE-FAB: Responsive floating button */}
+        {/* COMPACT: Floating Action Button - Left positioned */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, duration: 0.4 }}
-          className="fixed right-3 bottom-3 sm:right-6 sm:bottom-6 z-50"
+          transition={{ delay: 0.8, duration: 0.3 }}
+          className="fixed left-4 bottom-4 z-50" // Left positioned like compact version
         >
           <motion.button
             onClick={() => setShowAddTransactions(true)}
-            className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 group"
+            className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             title={t('actions.quickAdd')}
           >
             <motion.div
+              className="relative z-10"
               animate={{ rotate: [0, 0, 90, 90, 0] }}
-              transition={{ duration: 4, repeat: Infinity, repeatDelay: 3 }}
+              transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
             >
-              <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+              <Plus className="w-6 h-6" />
             </motion.div>
-            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-0 group-hover:opacity-60"></div>
+            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
           </motion.button>
         </motion.div>
 
-        {/* 📱 MOBILE-MODAL: Responsive modal */}
+        {/* Modal */}
         <AnimatePresence>
           {showAddTransactions && (
             <Modal
@@ -349,7 +435,7 @@ const Dashboard = () => {
             >
               <AddTransactions 
                 onClose={() => setShowAddTransactions(false)}
-                context="mobile-dashboard"
+                context="dashboard"
               />
             </Modal>
           )}
@@ -359,7 +445,129 @@ const Dashboard = () => {
   );
 };
 
-// 📱 MOBILE-COMPACT: Beautiful colored boxes like desktop but compact
+// COMPACT: Compact Welcome Banner
+const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, language, variants, t }) => (
+  <motion.div
+    variants={variants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    className="relative overflow-hidden mb-3"
+  >
+    <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-4 shadow-lg"> {/* Reduced padding */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 -right-4 w-20 h-20 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse" />
+        <div className="absolute -bottom-4 -left-4 w-16 h-16 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-1000" />
+      </div>
+      
+      <div className="relative z-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
+                {user?.preferences?.profilePicture ? (
+                  <img 
+                    src={user.preferences.profilePicture} 
+                    alt={user.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-base lg:text-lg font-bold text-white">
+                    {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                )}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+            </div>
+            
+            <div>
+              <h1 className="text-base sm:text-lg lg:text-xl font-bold mb-1 flex items-center gap-2">
+                <span dir="ltr">SpendWise</span> - {greeting}
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                </motion.div>
+              </h1>
+              <p className="text-white/90 flex items-center gap-2 text-sm">
+                <Calendar className="w-3 h-3" />
+                {(() => {
+                  const date = selectedDate || new Date();
+                  const formatOptions = language === 'he' 
+                    ? { weekday: 'short', month: 'short', day: 'numeric' }
+                    : { weekday: 'short', month: 'short', day: 'numeric' };
+                  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
+                })()}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="default" className="bg-white/20 text-white border-white/30 px-3 py-1 text-xs">
+              <Activity className="w-3 h-3 mr-1" />
+              Active
+            </Badge>
+          </div>
+        </div>
+      </div>
+    </Card>
+  </motion.div>
+));
+
+// COMPACT: Mini Welcome
+const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
+  <motion.div
+    variants={variants}
+    initial="initial"
+    animate="animate"
+    className="mb-3"
+  >
+    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary-500/10 to-primary-600/10 dark:from-primary-600/20 dark:to-primary-700/20 rounded-lg border border-primary-200 dark:border-primary-800">
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
+            {user?.preferences?.profilePicture ? (
+              <img 
+                src={user.preferences.profilePicture} 
+                alt={user.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-bold text-white">
+                {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+              </span>
+            )}
+          </div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white dark:border-gray-800"></div>
+        </div>
+        
+        <div>
+          <h2 className="font-semibold text-gray-900 dark:text-white text-sm">
+            <span dir="ltr" className="text-primary-600 dark:text-primary-400">SpendWise</span> - {greeting}
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            {(() => {
+              const today = new Date();
+              return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+              });
+            })()}
+          </p>
+        </div>
+      </div>
+      
+      <Badge variant="default" className="bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 px-2 py-1 text-xs">
+        <Activity className="w-3 h-3 mr-1" />
+        Active
+      </Badge>
+    </div>
+  </motion.div>
+));
+
+// 📱 MOBILE: Compact balance (same as before)
 const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
   const { formatAmount } = useCurrency();
   
@@ -367,7 +575,6 @@ const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
   
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary-600" />
@@ -378,7 +585,6 @@ const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
         </Badge>
       </div>
       
-      {/* Colored boxes like desktop */}
       <div className="grid grid-cols-3 gap-2">
         {/* Income Box */}
         <motion.div
@@ -451,20 +657,19 @@ const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
   );
 });
 
-// 📱 MOBILE-ACTIONS: Complete quick actions with input field (FIXED)
-const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
+// 📱 FIXED: Mobile Quick Actions - הבאג תוקן!
+const FixedMobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
   const [activeType, setActiveType] = useState('expense');
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  const { formatAmount } = useCurrency();
+  const { formatAmount, currency } = useCurrency();
   const { selectedDate, getDateForServer } = useDate();
   
-  // ✅ FIX: Use same hook as original QuickActionsBar
+  // ✅ FIX: Use the same hook as desktop
   const { createTransaction, isCreating } = useTransactionActions();
   const inputRef = useRef(null);
   
-  // Quick amounts for mobile
   const quickAmounts = [10, 20, 50, 100, 200];
   
   const handleQuickAmount = useCallback((value) => {
@@ -474,12 +679,13 @@ const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
   }, []);
   
   const handleAmountChange = useCallback((e) => {
-    const value = e.target.value.replace(/[^\d.]/g, '');
+    // ✅ FIX: Better amount validation like desktop
+    const value = e.target.value.replace(/[^\d.-]/g, '');
     setAmount(value);
     setError('');
   }, []);
   
-  // ✅ FIX: Use same structure as original QuickActionsBar
+  // ✅ FIX: Same logic as desktop QuickActionsBar
   const handleSubmit = useCallback(async () => {
     const numericAmount = parseFloat(amount);
     
@@ -492,11 +698,11 @@ const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
     try {
       setError('');
       
-      // ✅ FIX: Use same method signature as original
+      // ✅ FIX: Use exact same parameters as desktop
       await createTransaction(activeType, {
         amount: numericAmount,
         description: t('dashboard.quickActions.defaultDescription') || `Quick ${activeType}`,
-        category_id: activeType === 'expense' ? 8 : 8, // Default category like original
+        category_id: 8, // Same default category as desktop
         date: getDateForServer(selectedDate),
         is_recurring: false
       });
@@ -508,6 +714,7 @@ const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
       setTimeout(() => setSuccess(false), 3000);
       
     } catch (err) {
+      console.error('Mobile QuickActions Error:', err);
       setError(err.message || t('actions.errors.addingTransaction') || 'שגיאה בהוספת העסקה');
     }
   }, [amount, activeType, selectedDate, createTransaction, t, getDateForServer]);
@@ -596,11 +803,11 @@ const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
               value={amount}
               onChange={handleAmountChange}
               onKeyPress={handleKeyPress}
-              placeholder={t('actions.enterAmount') || 'הזן סכום...'}
+              placeholder="0.00"
               className="w-full p-3 text-center text-lg font-medium border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
-              ₪
+              {currency?.symbol || '₪'}
             </div>
           </div>
           
@@ -684,175 +891,21 @@ const MobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
   );
 });
 
-// 📱 MOBILE-WELCOME: Compact welcome banner
-const MobileWelcomeBanner = React.memo(({ user, greeting, selectedDate, language, variants, t }) => (
-  <motion.div
-    variants={variants}
-    initial="initial"
-    animate="animate"
-    exit="exit"
-    className="relative overflow-hidden mb-2 sm:mb-4"
-  >
-    <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-3 sm:p-6 shadow-lg">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 -right-4 w-16 h-16 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl animate-pulse" />
-        <div className="absolute -bottom-4 -left-4 w-12 h-12 sm:w-24 sm:h-24 bg-white/10 rounded-full blur-2xl animate-pulse delay-1000" />
-      </div>
-      
-      <div className="relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-            <div className="relative flex-shrink-0">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center overflow-hidden ring-1 sm:ring-2 ring-white/30">
-                {user?.preferences?.profilePicture ? (
-                  <img 
-                    src={user.preferences.profilePicture} 
-                    alt={user.username}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm sm:text-xl font-bold text-white">
-                    {user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
-                )}
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2 h-2 sm:w-4 sm:h-4 bg-green-400 rounded-full border border-white animate-pulse"></div>
-            </div>
-            
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-xl md:text-2xl font-bold mb-0 sm:mb-1 flex items-center gap-1 sm:gap-2">
-                <span dir="ltr" className="hidden sm:inline">SpendWise</span>
-                <span dir="ltr" className="sm:hidden">SW</span>
-                <span className="hidden sm:inline">-</span>
-                <span className="truncate text-xs sm:text-base">{greeting}</span>
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                >
-                  <Sparkles className="w-3 h-3 sm:w-5 sm:h-5 flex-shrink-0" />
-                </motion.div>
-              </h1>
-              <p className="text-white/90 flex items-center gap-1 text-xs sm:text-sm">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                {(() => {
-                  const date = selectedDate || new Date();
-                  const formatOptions = language === 'he' 
-                    ? { weekday: 'short', month: 'short', day: 'numeric' }
-                    : { weekday: 'short', month: 'short', day: 'numeric' };
-                  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
-                })()}
-              </p>
-            </div>
-          </div>
-          
-          <Badge variant="default" className="bg-white/20 text-white border-white/30 px-2 py-1 text-xs flex-shrink-0">
-            <Activity className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">Active</span>
-            <span className="sm:hidden">ON</span>
-          </Badge>
-        </div>
-      </div>
-    </Card>
-  </motion.div>
-));
-
-// 📱 MOBILE-MINI: Mini welcome
-const MobileMiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
-  <motion.div
-    variants={variants}
-    initial="initial"
-    animate="animate"
-    className="mb-2 sm:mb-4"
-  >
-    <div className="flex items-center justify-between p-2 sm:p-4 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-lg border border-primary-200 dark:border-primary-800">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="relative flex-shrink-0">
-          <div className="w-6 h-6 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-md sm:rounded-lg flex items-center justify-center overflow-hidden">
-            {user?.preferences?.profilePicture ? (
-              <img 
-                src={user.preferences.profilePicture} 
-                alt={user.username}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-xs sm:text-sm font-bold text-white">
-                {user?.username?.charAt(0)?.toUpperCase() || 'U'}
-              </span>
-            )}
-          </div>
-          <div className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 sm:w-3 sm:h-3 bg-green-400 rounded-full border border-white dark:border-gray-800"></div>
-        </div>
-        
-        <div className="min-w-0 flex-1">
-          <h2 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-base truncate">
-            <span dir="ltr" className="text-primary-600 dark:text-primary-400 hidden sm:inline">SpendWise</span>
-            <span dir="ltr" className="text-primary-600 dark:text-primary-400 sm:hidden">SW</span>
-            <span className="hidden sm:inline"> - </span>
-            <span className="sm:hidden"> </span>
-            <span className="truncate">{greeting}</span>
-          </h2>
-          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-            {(() => {
-              const today = new Date();
-              return today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-              });
-            })()}
-          </p>
-        </div>
-      </div>
-      
-      <Badge variant="default" className="bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 px-2 py-1 text-xs flex-shrink-0">
-        <Activity className="w-3 h-3 mr-1" />
-        <span className="hidden sm:inline">Active</span>
-        <span className="sm:hidden">ON</span>
-      </Badge>
+// COMPACT: Tips Section
+const CompactTipsSection = React.memo(({ t }) => (
+  <Card className="bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 text-white p-4 border-0 shadow-lg relative overflow-hidden">
+    <div className="absolute inset-0">
+      <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl animate-pulse"></div>
+      <div className="absolute bottom-0 left-0 w-12 h-12 bg-white/10 rounded-full blur-lg animate-pulse delay-1000"></div>
     </div>
-  </motion.div>
-));
-
-// 📱 MOBILE-CTA: Call to action
-const MobileActionCallToAction = React.memo(({ t, setShowAddTransactions }) => (
-  <Card className="p-3 sm:p-6 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 shadow-lg">
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-      <div className="flex items-center gap-2 sm:gap-4 text-center sm:text-left">
-        <motion.div 
-          className="p-2 sm:p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg sm:rounded-xl flex-shrink-0"
-          whileHover={{ scale: 1.1, rotate: 10 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
-          <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-primary-600 dark:text-primary-400" />
-        </motion.div>
-        <div>
-          <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Ready to manage finances?
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            Track spending & manage budget
-          </p>
-        </div>
+    
+    <div className="relative z-10 flex items-center gap-3">
+      <div className="p-2 bg-white/20 rounded-lg">
+        <Sparkles className="w-4 h-4" />
       </div>
-      
-      <div className="flex gap-2 w-full sm:w-auto">
-        <Link to="/transactions" className="flex-1 sm:flex-none">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
-            <Button variant="outline" className="w-full sm:w-auto px-3 sm:px-6 text-xs sm:text-sm py-2">
-              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              View All
-            </Button>
-          </motion.div>
-        </Link>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
-          <Button 
-            onClick={() => setShowAddTransactions(true)}
-            className="w-full sm:w-auto px-3 sm:px-6 text-xs sm:text-sm py-2 bg-primary-500 hover:bg-primary-600"
-          >
-            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            Add
-          </Button>
-        </motion.div>
+      <div>
+        <h3 className="font-bold text-base mb-1">{t('dashboard.tips.title')}</h3>
+        <p className="text-white/90 text-sm">{t('dashboard.tips.content')}</p>
       </div>
     </div>
   </Card>

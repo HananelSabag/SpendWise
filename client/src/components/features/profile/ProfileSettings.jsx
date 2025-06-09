@@ -17,28 +17,25 @@ import {
 import { useAuth } from '../../../hooks/useAuth';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { useAccessibility } from '../../../context/AccessibilityContext';
 import { cn } from '../../../utils/helpers';
 import { Card, Input, Button, Alert } from '../../ui';
 import toast from 'react-hot-toast';
 
 const ProfileSettings = ({ user }) => {
-  const { updateProfile, updatePreferences, isUpdatingProfile, isUpdatingPreferences } = useAuth();
-  const { t, language, setLanguage } = useLanguage();
+  const { updateProfile, isUpdatingProfile } = useAuth();
+  
+  // ✅ FIX: Use proper context functions
+  const { t, language, setLanguage, savedLanguage, sessionLanguage } = useLanguage();
   const { currency, setCurrency } = useCurrency();
-  const { darkMode, setDarkMode } = useAccessibility();
+  const { theme, setTheme, isDark, savedTheme, sessionTheme } = useTheme();
   const isRTL = language === 'he';
   
   const [activeSection, setActiveSection] = useState('preferences');
-  const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  
-  // ✅ ADD: Password confirmation for preferences
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [pendingPreferenceChange, setPendingPreferenceChange] = useState(null);
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  
+  const [loading, setLoading] = useState(false);
+
   // Password change state
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -47,151 +44,93 @@ const ProfileSettings = ({ user }) => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
 
-  const [loading, setLoading] = useState(false);
-
-  // ✅ NEW: Handle preference change with password confirmation
-  const requestPreferenceChange = (type, value) => {
-    setPendingPreferenceChange({ type, value });
-    setShowPasswordModal(true);
-    setConfirmPassword('');
-    setPasswordError('');
-  };
-
-  // ✅ NEW: Confirm preference change with password
-  const confirmPreferenceChange = async () => {
-    if (!confirmPassword.trim()) {
-      setPasswordError(t('validation.passwordRequired'));
-      return;
-    }
-
-    if (!pendingPreferenceChange) return;
-
-    try {
-      setLoading(true);
-      setPasswordError('');
-
-      const { type, value } = pendingPreferenceChange;
-
-      // Apply change locally first for immediate feedback
-      if (type === 'theme') {
-        setDarkMode(value === 'dark');
-      } else if (type === 'language') {
-        setLanguage(value);
-      } else if (type === 'currency') {
-        setCurrency(value);
-      }
-
-      // Send to server with password
-      await updateProfile({
-        email: user.email,
-        username: user.username,
-        password: confirmPassword, // User's actual password
-        [`${type}_preference`]: value
-      });
-
-      // Success
-      setShowPasswordModal(false);
-      setPendingPreferenceChange(null);
-      setConfirmPassword('');
-      
-      toast.success(t(`profile.${type}Changed`));
-    } catch (error) {
-      console.error(`Failed to update ${type} preference:`, error);
-      
-      // Revert local changes on error
-      if (type === 'theme') {
-        setDarkMode(darkMode);
-      } else if (type === 'language') {
-        setLanguage(language);
-      } else if (type === 'currency') {
-        setCurrency(currency);
-      }
-
-      // Show specific error
-      if (error.response?.data?.error?.message?.includes('incorrect') || 
-          error.response?.data?.error?.message?.includes('Password')) {
-        setPasswordError(t('profile.incorrectPassword'));
-      } else {
-        toast.error(t(`profile.${type}ChangeError`));
-        setShowPasswordModal(false);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ NEW: Cancel preference change
-  const cancelPreferenceChange = () => {
-    setShowPasswordModal(false);
-    setPendingPreferenceChange(null);
-    setConfirmPassword('');
-    setPasswordError('');
-  };
-
-  // Handle theme change - קוד פשוט בלי סיסמה
+  // ✅ FIX: Enhanced theme change - permanent update
   const handleThemeChange = async (newTheme) => {
+    if (loading) return;
+    
     try {
       setLoading(true);
-      setDarkMode(newTheme === 'dark');
       
-      // ✅ רק העדפת נושא, בלי סיסמה
+      console.log(`🎨 [PROFILE] Permanent theme change: ${savedTheme} → ${newTheme}`);
+      
+      // 1. Update context permanently (this also updates localStorage)
+      setTheme(newTheme);
+      
+      // 2. Update in database
       await updateProfile({
         theme_preference: newTheme
       });
       
-      console.log('Theme updated successfully:', newTheme);
+      console.log('✅ [PROFILE] Theme updated successfully in database');
       toast.success(t('profile.themeChanged'));
+      
     } catch (error) {
-      console.error('Failed to update theme preference:', error);
-      setDarkMode(darkMode);
-      toast.error(t('profile.themeChangeError'));
+      console.error('❌ [PROFILE] Failed to update theme preference:', error);
+      
+      // Revert to saved theme on error
+      setTheme(savedTheme);
+      toast.error('Failed to update theme preference');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle language change - קוד פשוט בלי סיסמה  
+  // ✅ FIX: Enhanced language change - permanent update
   const handleLanguageChange = async (newLanguage) => {
+    if (loading) return;
+    
     try {
       setLoading(true);
+      
+      console.log(`🌐 [PROFILE] Permanent language change: ${savedLanguage} → ${newLanguage}`);
+      
+      // 1. Update context permanently (this also updates localStorage)
       setLanguage(newLanguage);
       
-      // ✅ רק העדפת שפה, בלי סיסמה
+      // 2. Update in database
       await updateProfile({
         language_preference: newLanguage
       });
       
-      console.log('Language updated successfully:', newLanguage);
+      console.log('✅ [PROFILE] Language updated successfully in database');
       toast.success(t('profile.languageChanged'));
+      
     } catch (error) {
-      console.error('Failed to update language preference:', error);
-      setLanguage(language);
-      toast.error(t('profile.languageChangeError'));
+      console.error('❌ [PROFILE] Failed to update language preference:', error);
+      
+      // Revert to saved language on error
+      setLanguage(savedLanguage);
+      toast.error('Failed to update language preference');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle currency change - ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
+  // ✅ FIX: Enhanced currency change - permanent update
   const handleCurrencyChange = async (newCurrency) => {
+    if (loading) return;
+    
     try {
       setLoading(true);
       
-      // Update currency locally first
+      console.log(`💰 [PROFILE] Permanent currency change: ${currency} → ${newCurrency}`);
+      
+      // 1. Update currency context
       setCurrency(newCurrency);
       
-      // ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
+      // 2. Update in database
       await updateProfile({
         currency_preference: newCurrency
       });
       
-      console.log('Currency updated successfully:', newCurrency);
+      console.log('✅ [PROFILE] Currency updated successfully in database');
       toast.success(t('profile.currencyChanged'));
+      
     } catch (error) {
-      console.error('Failed to update currency preference:', error);
-      // Revert currency on error
-      setCurrency(currency);
-      toast.error(t('profile.currencyChangeError'));
+      console.error('❌ [PROFILE] Failed to update currency preference:', error);
+      
+      // Revert currency on error (assuming there's a saved currency)
+      toast.error('Failed to update currency preference');
     } finally {
       setLoading(false);
     }
@@ -248,10 +187,39 @@ const ProfileSettings = ({ user }) => {
     { id: 'security', label: t('profile.security'), icon: Shield }
   ];
 
-  const isLoading = isUpdatingProfile || isUpdatingPreferences || loading;
+  const isLoading = isUpdatingProfile || loading;
+
+  // ✅ ADD: Show session override indicators
+  const hasSessionOverrides = sessionLanguage || sessionTheme;
 
   return (
     <div className="space-y-6">
+      {/* ✅ ADD: Session Override Warning */}
+      {hasSessionOverrides && (
+        <Alert variant="info" className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+          <Info className="w-4 h-4" />
+          <div>
+            <p className="font-medium">Session Overrides Active</p>
+            <p className="text-sm mt-1">
+              You have temporary {sessionTheme ? 'theme' : ''} {sessionTheme && sessionLanguage ? 'and' : ''} {sessionLanguage ? 'language' : ''} changes. 
+              These will reset when you logout. Changes here will be permanent.
+            </p>
+            <div className="flex gap-2 mt-2 text-xs">
+              {sessionTheme && (
+                <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                  Session Theme: {sessionTheme}
+                </span>
+              )}
+              {sessionLanguage && (
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                  Session Language: {sessionLanguage === 'he' ? 'עברית' : 'English'}
+                </span>
+              )}
+            </div>
+          </div>
+        </Alert>
+      )}
+
       {/* Section Tabs */}
       <div className="flex flex-wrap gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
         {sections.map(section => (
@@ -283,6 +251,11 @@ const ProfileSettings = ({ user }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 {t('profile.language')}
+                {sessionLanguage && (
+                  <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                    (Currently overridden in session)
+                  </span>
+                )}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
@@ -295,7 +268,8 @@ const ProfileSettings = ({ user }) => {
                     disabled={isLoading}
                     className={cn(
                       'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
-                      language === lang.code
+                      // ✅ FIX: Show saved language, not effective language
+                      savedLanguage === lang.code
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
                       isLoading && 'opacity-50 cursor-not-allowed'
@@ -303,7 +277,7 @@ const ProfileSettings = ({ user }) => {
                   >
                     <span className="text-2xl">{lang.flag}</span>
                     <span className="font-medium">{lang.label}</span>
-                    {language === lang.code && (
+                    {savedLanguage === lang.code && (
                       <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                     )}
                   </button>
@@ -349,6 +323,11 @@ const ProfileSettings = ({ user }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 {t('profile.theme')}
+                {sessionTheme && (
+                  <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                    (Currently overridden in session)
+                  </span>
+                )}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -356,7 +335,8 @@ const ProfileSettings = ({ user }) => {
                   disabled={isLoading}
                   className={cn(
                     'flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all',
-                    !darkMode
+                    // ✅ FIX: Show saved theme, not effective theme
+                    savedTheme === 'light'
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
                     isLoading && 'opacity-50 cursor-not-allowed'
@@ -364,7 +344,7 @@ const ProfileSettings = ({ user }) => {
                 >
                   <Sun className="w-5 h-5 text-yellow-500" />
                   <span className="font-medium">{t('profile.lightTheme')}</span>
-                  {!darkMode && (
+                  {savedTheme === 'light' && (
                     <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                   )}
                 </button>
@@ -374,7 +354,7 @@ const ProfileSettings = ({ user }) => {
                   disabled={isLoading}
                   className={cn(
                     'flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all',
-                    darkMode
+                    savedTheme === 'dark'
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
                     isLoading && 'opacity-50 cursor-not-allowed'
@@ -382,7 +362,7 @@ const ProfileSettings = ({ user }) => {
                 >
                   <Moon className="w-5 h-5 text-indigo-500" />
                   <span className="font-medium">{t('profile.darkTheme')}</span>
-                  {darkMode && (
+                  {savedTheme === 'dark' && (
                     <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                   )}
                 </button>
@@ -482,53 +462,6 @@ const ProfileSettings = ({ user }) => {
             </Alert>
           </div>
         </Card>
-      )}
-
-      {/* ✅ ADD: Password Confirmation Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('profile.confirmPassword')}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('profile.confirmPasswordDesc')}
-            </p>
-            
-            <Input
-              type="password"
-              label={t('profile.currentPassword')}
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setPasswordError('');
-              }}
-              error={passwordError}
-              icon={Lock}
-              autoFocus
-            />
-            
-            <div className="flex gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={cancelPreferenceChange}
-                disabled={loading}
-                className="flex-1"
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={confirmPreferenceChange}
-                loading={loading}
-                disabled={loading || !confirmPassword.trim()}
-                className="flex-1"
-              >
-                {t('common.confirm')}
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

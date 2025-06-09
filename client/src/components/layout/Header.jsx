@@ -1,23 +1,24 @@
 // components/layout/Header.jsx
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  Menu, 
-  X, 
-  Home, 
-  CreditCard, 
-  User, 
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Menu,
+  X,
+  Home,
+  CreditCard,
+  Tag,
+  User,
   LogOut,
-  Moon,
   Sun,
-  ChevronDown,
-  Tag
+  Moon,
+  Globe,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth'; // ✅ Use hooks instead of context
+import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAccessibility } from '../../context/AccessibilityContext';
-import { Avatar, Modal } from '../ui';
+import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/helpers';
 import CategoryManager from '../features/categories/CategoryManager';
 
@@ -26,22 +27,25 @@ const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   
-  // ✅ Use hooks directly instead of old context
-  const { user, logout, isAuthenticated, isLoggingOut } = useAuth();
-  const { t, language, toggleLanguage } = useLanguage();
-  const { darkMode, setDarkMode } = useAccessibility();
+  // ✅ IMPROVED: Better authentication state handling
+  const { user, logout, isAuthenticated, isLoggingOut, isLoading, isInitialized } = useAuth();
+  const { t, language, sessionLanguage, toggleLanguage } = useLanguage();
+  const { toggleTheme, isDark, sessionTheme } = useTheme();
+  const navigate = useNavigate();
   
   const location = useLocation();
   const isRTL = language === 'he';
   
-  // ✅ Session-only language toggle
+  // ✅ VERIFIED: Session-only theme toggle - no database updates
+  const handleThemeToggle = () => {
+    console.log('🎨 [HEADER] Session-only theme toggle triggered');
+    toggleTheme(); // This calls changeThemeSession() - session only!
+  };
+
+  // ✅ VERIFIED: Session-only language toggle - no database updates
   const handleLanguageToggle = () => {
-    toggleLanguage();
-    
-    const newLanguage = language === 'en' ? 'he' : 'en';
-    const message = newLanguage === 'he' ? 'השפה שונתה לעברית (מושב זה בלבד)' : 'Language changed to English (this session only)';
-    
-    console.log(`✅ [HEADER] ${message}`);
+    console.log('🌐 [HEADER] Session-only language toggle triggered');
+    toggleLanguage(); // This calls changeLanguageSession() - session only!
   };
 
   // Check if the path is active
@@ -90,291 +94,236 @@ const Header = () => {
       e.preventDefault();
       item.onClick();
       setIsOpen(false);
+    } else {
+      navigate(item.href);
+      setIsOpen(false);
     }
   };
 
-  // ✅ Handle logout with loading state
+  // Handle logout with loading state
   const handleLogout = async () => {
     try {
       await logout();
-      setShowDropdown(false);
-      setIsOpen(false);
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
 
-  // Don't render if not authenticated
+  // ✅ IMPROVED: Better authentication check - wait for initialization
+  if (!isInitialized || isLoading) {
+    return (
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                  SpendWise
+                </h1>
+              </div>
+            </div>
+            <div className="animate-pulse">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Don't render if not authenticated after initialization
   if (!isAuthenticated) {
     return null;
   }
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            {/* Logo and Navigation */}
-            <div className="flex">
-              {/* Logo */}
-              <div className="flex-shrink-0 flex items-center">
-                <Link to="/" className="flex items-center">
-                  <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">
-                    SpendWise
-                  </span>
-                </Link>
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                  SpendWise
+                </h1>
               </div>
-              
-              {/* Desktop Navigation */}
-              <nav className="hidden md:ml-6 md:flex md:space-x-4 rtl:space-x-reverse">
-                {navigation.map((item) => (
-                  item.href === '#' ? (
-                    <button
-                      key={item.name}
-                      onClick={(e) => handleNavClick(item, e)}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors`}
-                    >
-                      <item.icon className={`h-5 w-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                      {item.name}
-                    </button>
-                  ) : (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                        isActivePath(item.href)
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                      }`}
-                      aria-current={isActivePath(item.href) ? 'page' : undefined}
-                    >
-                      <item.icon className={`h-5 w-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                      {item.name}
-                    </Link>
-                  )
-                ))}
-              </nav>
             </div>
 
-            {/* Right side actions */}
-            <div className="flex items-center">
-              {/* Theme toggle */}
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex space-x-8" dir={isRTL ? 'rtl' : 'ltr'}>
+              {navigation.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={(e) => handleNavClick(item, e)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                    isActivePath(item.href)
+                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                  )}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.name}
+                </button>
+              ))}
+            </nav>
+
+            {/* Right side controls */}
+            <div className="flex items-center gap-2">
+              {/* ✅ Theme toggle - Session only with indicator */}
               <button
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={handleThemeToggle}
+                className={cn(
+                  "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
+                  sessionTheme && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
+                )}
                 aria-label={t('common.toggleTheme')}
+                title={sessionTheme ? `Session Override: ${sessionTheme}` : undefined}
               >
-                <Sun className="h-5 w-5 hidden dark:block" />
-                <Moon className="h-5 w-5 block dark:hidden" />
-              </button>
-              
-              {/* Language Toggle */}
-              <button
-                onClick={handleLanguageToggle}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 hidden sm:block ml-2"
-                aria-label={t('common.toggleLanguage')}
-                title="Session language toggle (resets on logout)"
-              >
-                <span className="text-sm font-medium">
-                  {language === 'en' ? 'עב' : 'EN'}
-                </span>
+                {isDark ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+                {/* Session override indicator */}
+                {sessionTheme && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
+                )}
               </button>
 
-              {/* User Dropdown */}
-              <div className="ml-3 relative">
-                <div>
-                  <button
-                    onClick={() => setShowDropdown(!showDropdown)}
-                    className="flex items-center max-w-xs rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    id="user-menu"
-                    aria-haspopup="true"
-                  >
-                    <span className="sr-only">{t('common.openUserMenu')}</span>
-                    <div className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                      <Avatar 
-                        size="sm" 
-                        name={user?.username || 'User'} 
-                        src={user?.preferences?.profilePicture} 
-                      />
-                      <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {user?.username || 'User'}
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    </div>
-                  </button>
-                </div>
-                
-                {/* User Dropdown Menu */}
-                {showDropdown && (
-                  <div
-                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none"
-                    role="menu"
-                    aria-orientation="vertical"
-                    aria-labelledby="user-menu"
-                  >
-                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {user?.username || 'User'}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {user?.email || 'user@example.com'}
-                      </p>
-                    </div>
-                    
-                    {/* Profile Link */}
-                    <Link
-                      to="/profile"
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-2 rounded-lg transition-colors',
-                        'hover:bg-gray-100 dark:hover:bg-gray-700',
-                        'text-gray-700 dark:text-gray-300'
-                      )}
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <User className="w-4 h-4" />
-                      {t('nav.profile')}
-                    </Link>
-                    
-                    {/* Logout Button with Loading State */}
-                    <button
-                      onClick={handleLogout}
-                      disabled={isLoggingOut}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      role="menuitem"
-                    >
-                      <LogOut className="h-4 w-4 mr-3 text-red-500 dark:text-red-400" />
-                      {isLoggingOut ? t('auth.loggingOut') : t('auth.logout')}
-                    </button>
-                  </div>
+              {/* ✅ Language toggle - Session only with indicator */}
+              <button
+                onClick={handleLanguageToggle}
+                className={cn(
+                  "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
+                  sessionLanguage && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
                 )}
-              </div>
-              
-              {/* Mobile menu button */}
-              <div className="flex md:hidden ml-3">
+                aria-label={t('common.toggleLanguage')}
+                title={sessionLanguage ? `Session Override: ${sessionLanguage === 'he' ? 'עברית' : 'English'}` : undefined}
+              >
+                <Globe className="w-5 h-5" />
+                {/* Session override indicator */}
+                {sessionLanguage && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
+                )}
+              </button>
+
+              {/* User dropdown */}
+              <div className="relative">
                 <button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
-                  aria-expanded={isOpen}
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label={t('common.openUserMenu')}
                 >
-                  <span className="sr-only">
-                    {isOpen ? t('common.closeMenu') : t('common.openMenu')}
-                  </span>
-                  {isOpen ? (
-                    <X className="block h-6 w-6" aria-hidden="true" />
-                  ) : (
-                    <Menu className="block h-6 w-6" aria-hidden="true" />
-                  )}
+                  <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <ChevronDown className="w-4 h-4" />
                 </button>
+
+                {/* Dropdown menu */}
+                <AnimatePresence>
+                  {showDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className={cn(
+                        "absolute top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
+                        isRTL ? 'left-0' : 'right-0'
+                      )}
+                    >
+                      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user?.username}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {user?.email}
+                        </p>
+                        {/* ✅ ADD: Session override indicators in dropdown */}
+                        {(sessionTheme || sessionLanguage) && (
+                          <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                            Session overrides active
+                          </div>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          navigate('/profile');
+                          setShowDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        {t('nav.profile')}
+                      </button>
+                      
+                      <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        {isLoggingOut ? t('common.loading') : t('nav.logout')}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
+
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label={isOpen ? t('common.closeMenu') : t('common.openMenu')}
+              >
+                {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <motion.div
-          className={`md:hidden ${isOpen ? 'block' : 'hidden'}`}
-          initial="closed"
-          animate={isOpen ? "open" : "closed"}
-          variants={menuVariants}
-        >
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200 dark:border-gray-700">
-            {navigation.map((item) => (
-              <motion.div key={item.name} variants={itemVariants}>
-                {item.href === '#' ? (
-                  <button
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial="closed"
+              animate="open"
+              exit="closed"
+              variants={menuVariants}
+              className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700"
+            >
+              <div className="px-4 py-4 space-y-2">
+                {navigation.map((item) => (
+                  <motion.button
+                    key={item.name}
+                    variants={itemVariants}
                     onClick={(e) => handleNavClick(item, e)}
-                    className={`flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800`}
-                  >
-                    <item.icon className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
-                    {item.name}
-                  </button>
-                ) : (
-                  <Link
-                    to={item.href}
-                    className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                       isActivePath(item.href)
-                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                    }`}
-                    aria-current={isActivePath(item.href) ? 'page' : undefined}
-                    onClick={() => setIsOpen(false)}
+                        ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                        : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                    )}
                   >
-                    <item.icon className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+                    <item.icon className="w-5 h-5" />
                     {item.name}
-                  </Link>
-                )}
-              </motion.div>
-            ))}
-          </div>
-          
-          {/* Mobile menu additional actions */}
-          <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center px-5">
-              <div className="flex-shrink-0">
-                <Avatar 
-                  size="sm" 
-                  name={user?.username || 'User'} 
-                  src={user?.preferences?.profilePicture} 
-                />
+                  </motion.button>
+                ))}
               </div>
-              <div className={`${isRTL ? 'mr-3' : 'ml-3'}`}>
-                <div className="text-base font-medium text-gray-800 dark:text-gray-200">
-                  {user?.username || 'User'}
-                </div>
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {user?.email || 'user@example.com'}
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-3 px-2 space-y-1">
-              <motion.div variants={itemVariants}>
-                <button
-                  onClick={() => {
-                    handleLanguageToggle();
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                  title="Session language toggle (resets on logout)"
-                >
-                  {language === 'en' ? 'עברית (מושב זה)' : 'English (session)'}
-                </button>
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <button
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-800 disabled:opacity-50"
-                >
-                  <LogOut className={`h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'} text-red-500 dark:text-red-400`} />
-                  {isLoggingOut ? t('auth.loggingOut') : t('auth.logout')}
-                </button>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
-
-      {/* Category Manager Modal */}
-      <Modal
-        isOpen={showCategoryManager}
-        onClose={() => setShowCategoryManager(false)}
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-              <Tag className="w-6 h-6 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold">
-              🧙‍♂️ {t('categories.manageCategories')}
-            </span>
-          </div>
-        }
-        size="large"
-        className="max-w-6xl"
-      >
-        <CategoryManager />
-      </Modal>
+      {/* Click outside handler for dropdown */}
+      {showDropdown && (
+        <div
+          className="fixed inset-0 z-30"
+          onClick={() => setShowDropdown(false)}
+        />
+      )}
     </>
   );
 };
