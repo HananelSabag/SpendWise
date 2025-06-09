@@ -115,8 +115,10 @@ const Transactions = () => {
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  // ✅ ADD: Missing editingSingle state
   const [editingSingle, setEditingSingle] = useState(false);
+  const [showAddTransactions, setShowAddTransactions] = useState(false);
+  // ✅ ADD: Success state like Dashboard
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // Advanced filter state
   const [filters, setFilters] = useState({
@@ -252,6 +254,14 @@ const Transactions = () => {
   const handleTransactionSuccess = useCallback(() => {
     refresh();
     refreshRecurring();
+    // ✅ ADD: Show success message like Dashboard
+    setShowSuccess(true);
+    
+    // ✅ ADD: Auto-close after showing success like Dashboard
+    setTimeout(() => {
+      setShowAddTransactions(false);
+      setShowSuccess(false);
+    }, 2000); // Same timing as Dashboard
   }, [refresh, refreshRecurring]);
 
   // ✅ UPDATED: Handle edit with proper scope setting
@@ -282,7 +292,8 @@ const Transactions = () => {
     setSelectedTransaction(null);
     setEditingSingle(false);
     setShowEditModal(false);
-    setShowActionsPanel(true);
+    setShowActionsPanel(false);
+    setShowAddTransactions(true); // ✅ FIX: Use Dashboard state
   }, []);
 
   const handleDelete = useCallback((transaction) => {
@@ -293,7 +304,8 @@ const Transactions = () => {
     setSelectedTransaction(null);
     setEditingSingle(false);
     setShowActionsPanel(false);
-    setShowEditModal(false); // ✅ FIX: Close edit modal too
+    setShowEditModal(false);
+    setShowAddTransactions(false); // ✅ FIX: Close Dashboard modal too
   }, []);
 
   const handleDeleteConfirm = useCallback(async (transactionToDelete, deleteFuture = false) => {
@@ -418,14 +430,7 @@ const Transactions = () => {
                     </div>
                   </Button>
                   
-                  <Button
-                    variant="default"
-                    onClick={handleAddTransaction}
-                    className="bg-white text-indigo-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all px-6 py-3 font-semibold whitespace-nowrap"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    {t('actions.add') || 'Add Transaction'}
-                  </Button>
+                  {/* ✅ REMOVED: Old Add Transaction button */}
                 </div>
               </div>
 
@@ -746,96 +751,56 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
-        {/* Mobile floating action menu */}
-        <div className={`fixed ${isRTL ? 'left-6' : 'right-6'} bottom-6 z-40 lg:hidden`}>
-          <div className="flex flex-col items-end space-y-3">
-            <AnimatePresence>
-              {showFloatingMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-3 border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="flex flex-col space-y-2">
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      onClick={() => {
-                        handleAddTransaction();
-                        setShowFloatingMenu(false);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('actions.add') || 'Add Transaction'}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      onClick={() => {
-                        setShowRecurring(true);
-                        setShowFloatingMenu(false);
-                      }}
-                    >
-                      <div className="flex items-center mr-2">
-                        <Clock className="w-4 h-4" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                      </div>
-                      {t('transactions.recurringManagement') || 'Recurring'}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="small" 
-                      className="justify-start"
-                      onClick={() => {
-                        refresh();
-                        setShowFloatingMenu(false);
-                      }}
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      {t('common.refresh') || 'Refresh'}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            <Button
-              variant="primary"
-              className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-              onClick={() => setShowFloatingMenu(!showFloatingMenu)}
-              aria-label={t('actions.quickAdd') || 'Quick Add'}
-            >
-              <motion.div
-                animate={{ rotate: showFloatingMenu ? 45 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Plus className="w-6 h-6" />
-              </motion.div>
-            </Button>
-          </div>
-        </div>
+        {/* ✅ REMOVED: Mobile floating action menu - replaced with Dashboard-style button */}
 
-        {/* ✅ FIXED: Separate modals - no more overlapping */}
-        
-        {/* Add Transaction Modal - Only when adding */}
-        <Modal
-          isOpen={showActionsPanel && !selectedTransaction}
-          onClose={handleFormClose}
-          size="xxl"
-          className="max-w-6xl max-h-[95vh]"
-          hideHeader={true}
+        {/* ✅ ADDED: Dashboard-style floating action button */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
+          className="fixed left-4 bottom-4 z-50"
         >
-          <AddTransactions 
-            onClose={handleFormClose}
-            context="transactions"
-            onSuccess={handleTransactionSuccess}
-          />
-        </Modal>
+          <motion.button
+            onClick={() => setShowAddTransactions(true)}
+            className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            title={t('actions.quickAdd') || 'Quick Add'}
+          >
+            <motion.div
+              className="relative z-10"
+              animate={{ rotate: [0, 0, 90, 90, 0] }}
+              transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+            >
+              <Plus className="w-6 h-6" />
+            </motion.div>
+            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
+          </motion.button>
+        </motion.div>
 
-        {/* ✅ FIXED: Edit Transaction Modal - Only when editing */}
+        {/* ✅ UPDATED: Modal logic - exactly like Dashboard with success handling */}
+        
+        {/* Add Transaction Modal - Dashboard style */}
+        <AnimatePresence>
+          {showAddTransactions && (
+            <Modal
+              isOpen={showAddTransactions}
+              onClose={() => setShowAddTransactions(false)}
+              size="large"
+              className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto"
+              hideHeader={true}
+            >
+              <AddTransactions 
+                onClose={() => setShowAddTransactions(false)}
+                context="dashboard"
+                onSuccess={handleTransactionSuccess}
+                showSuccess={showSuccess} // ✅ ADD: Pass success state like Dashboard
+              />
+            </Modal>
+          )}
+        </AnimatePresence>
+
+        {/* ✅ KEEP: Edit Transaction Modal - Only when editing */}
         <Modal
           isOpen={showEditModal && !!selectedTransaction}
           onClose={handleFormClose}
