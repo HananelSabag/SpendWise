@@ -1,9 +1,7 @@
-/**
- * Main Application Component
- * Root component with routing and context providers
- */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+// client/src/app.jsx
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Suspense, lazy, useEffect } from 'react';
 
 // Core components
@@ -18,7 +16,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
-import { ThemeProvider } from './context/ThemeContext'; // ✅ ADD THIS IMPORT
+import { ThemeProvider } from './context/ThemeContext';
 
 // Lazy-loaded pages
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -31,10 +29,95 @@ const Transactions = lazy(() => import('./pages/Transactions'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 /**
+ * ✅ FIXED: Navigation persistence that works with authentication timing
+ */
+const useNavigationPersistence = () => {
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  // ✅ FIX: Check for hasToken instead of isAuthenticated during startup
+  const hasToken = !!localStorage.getItem('accessToken');
+
+  // Store current location when we have a token and on valid route
+  useEffect(() => {
+    if (hasToken && location.pathname) {
+      const validRoutes = ['/', '/transactions', '/profile'];
+      if (validRoutes.includes(location.pathname)) {
+        sessionStorage.setItem('lastVisitedPage', location.pathname);
+        console.log('🔄 [NAV] Stored current page:', location.pathname);
+      }
+    }
+  }, [location.pathname, hasToken]); // ← Use hasToken instead of isAuthenticated
+
+  // Clear stored location only when explicitly logged out (no token)
+  useEffect(() => {
+    if (!hasToken) {
+      sessionStorage.removeItem('lastVisitedPage');
+      console.log('🔄 [NAV] Cleared stored page (no token)');
+    }
+  }, [hasToken]);
+};
+
+/**
+ * ✅ SMART: Authentication-aware route component
+ */
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const hasToken = !!localStorage.getItem('accessToken');
+  
+  // ✅ FIX: During startup with token, show loading until auth resolves
+  if (hasToken && isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  // ✅ FIX: Check stored page preference for valid token holders
+  if (hasToken && !isAuthenticated) {
+    // Token exists but user not loaded yet - show loading
+    return <LoadingSpinner />;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+/**
+ * ✅ SMART: Redirect component that respects stored navigation
+ */
+const SmartRedirect = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const hasToken = !!localStorage.getItem('accessToken');
+  
+  // ✅ FIX: During startup, check stored page
+  if (hasToken && isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // ✅ FIX: Get stored page when authenticated
+  const lastVisitedPage = sessionStorage.getItem('lastVisitedPage');
+  const validRoutes = ['/', '/transactions', '/profile'];
+  const redirectTo = (lastVisitedPage && validRoutes.includes(lastVisitedPage)) 
+    ? lastVisitedPage 
+    : '/';
+
+  console.log('🔄 [NAV] Smart redirect to:', redirectTo);
+  return <Navigate to={redirectTo} replace />;
+};
+
+/**
  * Application content with routing
  */
 const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Use navigation persistence hook
+  useNavigationPersistence();
   
   // Suppress React Router warnings in development
   useEffect(() => {
@@ -70,30 +153,30 @@ const AppContent = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={
-              !isAuthenticated ? <Login /> : <Navigate to="/" replace />
+              !isAuthenticated ? <Login /> : <SmartRedirect />
             } />
             <Route path="/register" element={
-              !isAuthenticated ? <Register /> : <Navigate to="/" replace />
+              !isAuthenticated ? <Register /> : <SmartRedirect />
             } />
             <Route path="/forgot-password" element={
-              !isAuthenticated ? <PasswordReset /> : <Navigate to="/" replace />
+              !isAuthenticated ? <PasswordReset /> : <SmartRedirect />
             } />
             <Route path="/reset-password" element={
-              !isAuthenticated ? <PasswordReset /> : <Navigate to="/" replace />
+              !isAuthenticated ? <PasswordReset /> : <SmartRedirect />
             } />
             <Route path="/verify-email/:token" element={
-              !isAuthenticated ? <VerifyEmail /> : <Navigate to="/" replace />
+              !isAuthenticated ? <VerifyEmail /> : <SmartRedirect />
             } />
             
-            {/* Protected Routes */}
+            {/* ✅ FIXED: Protected Routes that respect stored navigation */}
             <Route path="/" element={
-              isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+              <ProtectedRoute><Dashboard /></ProtectedRoute>
             } />
             <Route path="/transactions" element={
-              isAuthenticated ? <Transactions /> : <Navigate to="/login" replace />
+              <ProtectedRoute><Transactions /></ProtectedRoute>
             } />
             <Route path="/profile" element={
-              isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
+              <ProtectedRoute><Profile /></ProtectedRoute>
             } />
             
             {/* 404 Route */}

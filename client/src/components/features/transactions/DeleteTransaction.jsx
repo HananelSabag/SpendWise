@@ -22,7 +22,7 @@ import {
 
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
-import { useTransactionTemplates } from '../../../hooks/useTransactions';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Modal, Button, Badge } from '../../ui';
 import toast from 'react-hot-toast';
@@ -42,7 +42,7 @@ const DeleteTransaction = ({
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
-  const { deleteTemplate } = useTransactionTemplates();
+  const { deleteTemplate } = useTransactionActions();
   
   const [selectedAction, setSelectedAction] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);

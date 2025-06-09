@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 // ✅ NEW: Updated imports - Use new hooks instead of old context
-import { useTransactions } from '../../../hooks/useTransactions';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { useDate } from '../../../context/DateContext';
 import { Card, Button, Badge } from '../../ui';
@@ -22,9 +22,7 @@ import { amountValidation } from '../../../utils/validationSchemas';
 const QuickActionsBar = () => {
   const { t, language } = useLanguage();
   // ✅ FIX: Use only the createTransaction function, not full hook
-  const { createTransaction, isCreating } = useTransactions({
-    limit: 1 // Minimal config since we're only creating
-  });
+  const { createTransaction, isCreating } = useTransactionActions();
   const { formatAmount, currency } = useCurrency();
   const { selectedDate, getDateForServer, resetToToday } = useDate();
   
@@ -266,19 +264,6 @@ const QuickActionsBar = () => {
           </motion.button>
         ))}
       </div>
-
-      {/* Advanced Actions Button */}
-      <motion.button
-        onClick={() => setShowActionsPanel(true)}
-        className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-      >
-        <div className="flex items-center justify-center gap-2">
-          <Plus className="w-5 h-5" />
-          <span className="font-medium">{t('dashboard.quickActions.advanced')}</span>
-        </div>
-      </motion.button>
 
       {/* Error Display */}
       <AnimatePresence>

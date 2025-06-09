@@ -109,41 +109,68 @@ const RecentTransactions = ({
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredTransactions.map(transaction => (
-              <div key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${transaction.transaction_type === 'income' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
-                      {transaction.description || t('transactions.noDescription')}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {(() => {
-                        try {
-                          const date = new Date(transaction.date);
-                          // Validate date
-                          if (isNaN(date.getTime())) {
-                            return 'Invalid date';
-                          }
-                          
-                          return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            timeZone: 'UTC' // Prevent timezone shifts
-                          });
-                        } catch (error) {
-                          console.warn('Date formatting error:', error);
-                          return transaction.date || 'No date';
-                        }
-                      })()}
-                    </p>
+            {filteredTransactions.map(transaction => {
+              // ✅ Fix transaction type detection - match TransactionList logic
+              const amount = parseFloat(transaction.amount) || 0;
+              const isIncome = transaction.transaction_type === 'income' || 
+                              transaction.type === 'income';
+              
+              const displayAmount = Math.abs(amount);
+              
+              return (
+                <div key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                  <div className="flex items-center gap-3">
+                    {/* ✅ Improved visual indicator */}
+                    <div className={`w-3 h-3 rounded-full ${
+                      isIncome 
+                        ? 'bg-green-500 shadow-sm' 
+                        : 'bg-red-500 shadow-sm'
+                    }`}></div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
+                        {transaction.description || t('transactions.noDescription')}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-gray-500">
+                          {(() => {
+                            try {
+                              const date = new Date(transaction.date);
+                              // Validate date
+                              if (isNaN(date.getTime())) {
+                                return 'Invalid date';
+                              }
+                              
+                              return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                timeZone: 'UTC' // Prevent timezone shifts
+                              });
+                            } catch (error) {
+                              console.warn('Date formatting error:', error);
+                              return transaction.date || 'No date';
+                            }
+                          })()}
+                        </p>
+                        {/* ✅ Add category display if available */}
+                        {transaction.category && (
+                          <span className="text-xs text-gray-400 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                            {transaction.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* ✅ Fixed amount display with proper colors and signs */}
+                  <div className={`text-sm font-semibold ${
+                    isIncome 
+                      ? 'text-green-600 dark:text-green-400' 
+                      : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {isIncome ? '+' : '-'}{formatAmount(displayAmount)}
                   </div>
                 </div>
-                <div className={`text-sm font-medium ${transaction.transaction_type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {transaction.transaction_type === 'income' ? '+' : '-'}{formatAmount(Math.abs(transaction.amount))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

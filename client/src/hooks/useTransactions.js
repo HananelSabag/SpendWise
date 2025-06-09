@@ -1,6 +1,8 @@
+// client/src/hooks/useTransactions.js
 /**
  * useTransactions Hook - Complete Transaction Management
- * Handles all transaction operations with optimistic updates and caching
+ * ✅ FIXED: Proper data structure handling for recurring transactions
+ * ✅ ENHANCED: Better cache invalidation for proper component refreshes
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -10,6 +12,36 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { useDate } from '../context/DateContext';
 import toast from 'react-hot-toast';
+
+/**
+ * ✅ ENHANCED: Global cache invalidation function for all transaction-related queries
+ */
+const invalidateAllTransactionData = (queryClient) => {
+  const queriesToInvalidate = [
+    'transactions',           // TransactionList component
+    'dashboard',             // BalancePanel + RecentTransactions 
+    'transactionsSummary',   // Balance calculations
+    'templates',             // Recurring transaction templates
+    'transactionsRecurring', // Recurring transactions
+    'transactionsSearch',    // Search results
+    'categories'             // Categories (in case transaction affects category stats)
+  ];
+
+  // Invalidate each query type
+  queriesToInvalidate.forEach(queryKey => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+  });
+
+  // Force refetch for currently active queries to ensure immediate refresh
+  queryClient.refetchQueries({ 
+    queryKey: ['transactions'], 
+    type: 'active' 
+  });
+  queryClient.refetchQueries({ 
+    queryKey: ['dashboard'], 
+    type: 'active' 
+  });
+};
 
 /**
  * Main transactions hook with comprehensive functionality
@@ -32,9 +64,9 @@ export const useTransactions = (options = {}) => {
     limit: options.limit || 50
   });
   
-  // ✅ FIX: Main transactions query - fixed baseKey parameter
+  // Main transactions query
   const transactionsQuery = usePaginatedQuery(
-    ['transactions'], // ✅ FIX: Pass array as baseKey, not function call
+    ['transactions'], 
     (params) => transactionAPI.getAll(params),
     {
       ...filters,
@@ -66,17 +98,15 @@ export const useTransactions = (options = {}) => {
     };
   }, [transactionsQuery.data, filters]);
   
-  // Create transaction mutation
+  // ✅ ENHANCED: Create transaction mutation with comprehensive cache invalidation
   const createTransactionMutation = useApiMutation(
     ({ type, data }) => transactionAPI.create(type, data),
     {
       mutationKey: mutationKeys.createTransaction,
-      invalidateKeys: [
-        queryKeys.transactions(filters),
-        queryKeys.dashboard(getDateForServer(selectedDate)),
-        queryKeys.transactionsSummary
-      ],
-      successMessage: 'Transaction created successfully',
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Transaction created successfully');
+      },
       optimisticUpdate: {
         queryKey: queryKeys.transactions(filters),
         updater: (old, variables) => {
@@ -105,16 +135,15 @@ export const useTransactions = (options = {}) => {
     }
   );
   
-  // Update transaction mutation
+  // ✅ ENHANCED: Update transaction mutation
   const updateTransactionMutation = useApiMutation(
     ({ type, id, data }) => transactionAPI.update(type, id, data),
     {
       mutationKey: mutationKeys.updateTransaction,
-      invalidateKeys: [
-        queryKeys.transactions(filters),
-        queryKeys.dashboard(getDateForServer(selectedDate))
-      ],
-      successMessage: 'Transaction updated successfully',
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Transaction updated successfully');
+      },
       optimisticUpdate: {
         queryKey: queryKeys.transactions(filters),
         updater: (old, variables) => {
@@ -126,7 +155,7 @@ export const useTransactions = (options = {}) => {
               ...old.data,
               transactions: old.data.transactions.map(t => 
                 t.id === variables.id 
-                  ? { ...t, ...variables.data }
+                  ? { ...t, ...variables.data, updated_at: new Date().toISOString() }
                   : t
               )
             }
@@ -136,17 +165,15 @@ export const useTransactions = (options = {}) => {
     }
   );
   
-  // Delete transaction mutation
+  // ✅ ENHANCED: Delete transaction mutation
   const deleteTransactionMutation = useApiMutation(
-    ({ type, id, deleteFuture }) => transactionAPI.delete(type, id, deleteFuture),
+    ({ id, deleteAll }) => transactionAPI.delete(id, deleteAll),
     {
       mutationKey: mutationKeys.deleteTransaction,
-      invalidateKeys: [
-        queryKeys.transactions(filters),
-        queryKeys.dashboard(getDateForServer(selectedDate)),
-        queryKeys.transactionsSummary
-      ],
-      successMessage: 'Transaction deleted successfully',
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Transaction deleted successfully');
+      },
       optimisticUpdate: {
         queryKey: queryKeys.transactions(filters),
         updater: (old, variables) => {
@@ -168,40 +195,42 @@ export const useTransactions = (options = {}) => {
     }
   );
   
-  // Helper functions
+  // ✅ ENHANCED: Manual refresh function
+  const refreshAllTransactionData = useCallback(() => {
+    invalidateAllTransactionData(queryClient);
+    return transactionsQuery.refetch();
+  }, [queryClient, transactionsQuery]);
+
+  // CRUD operation wrappers
   const createTransaction = useCallback(async (type, data) => {
     return createTransactionMutation.mutateAsync({ type, data });
   }, [createTransactionMutation]);
-  
-  const updateTransaction = useCallback(async (type, id, data, updateFuture = false) => {
-    return updateTransactionMutation.mutateAsync({ 
-      type, 
-      id, 
-      data: { ...data, updateFuture } 
-    });
+
+  const updateTransaction = useCallback(async (type, id, data) => {
+    return updateTransactionMutation.mutateAsync({ type, id, data });
   }, [updateTransactionMutation]);
-  
-  const deleteTransaction = useCallback(async (type, id, deleteFuture = false) => {
-    return deleteTransactionMutation.mutateAsync({ type, id, deleteFuture });
+
+  const deleteTransaction = useCallback(async (id, deleteAll = false) => {
+    return deleteTransactionMutation.mutateAsync({ id, deleteAll });
   }, [deleteTransactionMutation]);
-  
-  // Filter update functions
+
+  // Filter management functions
   const updateFilters = useCallback((newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters, page: 1 }));
   }, []);
-  
+
   const setPage = useCallback((page) => {
     setFilters(prev => ({ ...prev, page }));
   }, []);
-  
+
   const setSearchTerm = useCallback((searchTerm) => {
     setFilters(prev => ({ ...prev, searchTerm, page: 1 }));
   }, []);
-  
+
   const setSortBy = useCallback((sortBy, sortOrder = 'DESC') => {
     setFilters(prev => ({ ...prev, sortBy, sortOrder, page: 1 }));
   }, []);
-  
+
   const clearFilters = useCallback(() => {
     setFilters({
       type: null,
@@ -246,7 +275,49 @@ export const useTransactions = (options = {}) => {
     clearFilters,
     
     // Refresh
-    refresh: transactionsQuery.refetch
+    refresh: transactionsQuery.refetch,
+    refreshAll: refreshAllTransactionData
+  };
+};
+
+/**
+ * ✅ ENHANCED: Dashboard hook with better cache invalidation
+ */
+export const useDashboard = () => {
+  const { isAuthenticated } = useAuth();
+  const { selectedDate, getDateForServer } = useDate();
+  const queryClient = useQueryClient();
+  
+  const dashboardQuery = useApiQuery(
+    queryKeys.dashboard(getDateForServer(selectedDate)),
+    () => transactionAPI.getDashboard(getDateForServer(selectedDate)),
+    {
+      config: 'dynamic',
+      enabled: isAuthenticated,
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000
+    }
+  );
+  
+  const refreshDashboard = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['transactionsSummary'] });
+    
+    queryClient.refetchQueries({ 
+      queryKey: ['dashboard'], 
+      type: 'active' 
+    });
+    
+    return dashboardQuery.refetch();
+  }, [queryClient, dashboardQuery]);
+
+  return {
+    data: dashboardQuery.data?.data,
+    isLoading: dashboardQuery.isLoading,
+    isFetching: dashboardQuery.isFetching,
+    error: dashboardQuery.error,
+    refresh: refreshDashboard
   };
 };
 
@@ -275,10 +346,11 @@ export const useTransactionSearch = (searchTerm, options = {}) => {
 };
 
 /**
- * Hook for recurring transactions
+ * ✅ FIXED: Hook for recurring transactions with proper data structure handling
  */
 export const useRecurringTransactions = (type = null) => {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   
   const recurringQuery = useApiQuery(
     queryKeys.transactionsRecurring(type),
@@ -286,8 +358,8 @@ export const useRecurringTransactions = (type = null) => {
     {
       config: 'user',
       enabled: Boolean(isAuthenticated),
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      cacheTime: 30 * 60 * 1000 // 30 minutes
+      staleTime: 10 * 60 * 1000,
+      cacheTime: 30 * 60 * 1000
     }
   );
   
@@ -295,41 +367,37 @@ export const useRecurringTransactions = (type = null) => {
     () => transactionAPI.generateRecurring(),
     {
       mutationKey: mutationKeys.generateRecurring,
-      invalidateKeys: [
-        queryKeys.transactionsRecurring(type),
-        ['transactions'],
-        ['dashboard']
-      ],
-      successMessage: 'Recurring transactions generated successfully'
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Recurring transactions generated successfully');
+      }
     }
   );
-  
+
+  // Calculate monthly impact helper
   const calculateMonthlyImpact = (template) => {
-    // Enhanced validation for template data
-    if (!template || typeof template.amount === 'undefined') {
-      return 0;
-    }
+    if (!template || !template.amount || !template.interval_type) return 0;
     
-    const amount = parseFloat(template.amount) || 0;
+    const amount = parseFloat(template.amount);
+    const multiplier = template.transaction_type === 'expense' ? -1 : 1;
     
     switch (template.interval_type) {
-      case 'daily':
-        return amount * 30.44; // Average days per month
-      case 'weekly':
-        return amount * 4.35; // Average weeks per month
-      case 'monthly':
-        return amount;
-      case 'yearly':
-        return amount / 12;
-      default:
-        return amount;
+      case 'daily': return amount * 30 * multiplier;
+      case 'weekly': return amount * 4.33 * multiplier;
+      case 'monthly': return amount * multiplier;
+      case 'quarterly': return (amount / 3) * multiplier;
+      case 'yearly': return (amount / 12) * multiplier;
+      default: return 0;
     }
   };
-  
+
+  // ✅ FIXED: Proper data structure handling for recurring transactions
   const processedData = useMemo(() => {
-    // ✅ FIX: Handle Axios response object structure
+    if (!recurringQuery.data) return [];
+    
     let recurringData = null;
     
+    // ✅ Handle different API response structures
     if (recurringQuery.data) {
       // Handle Axios response object first
       let rawData = recurringQuery.data;
@@ -349,18 +417,18 @@ export const useRecurringTransactions = (type = null) => {
       } else if (rawData.recurring && Array.isArray(rawData.recurring)) {
         recurringData = rawData.recurring;
       } else {
-        console.warn('[RECURRING] Unexpected data structure after Axios handling:', rawData);
+        console.warn('[RECURRING] Unexpected data structure:', rawData);
         recurringData = [];
       }
     }
     
+    // ✅ Ensure we have an array before mapping
     if (!Array.isArray(recurringData)) {
-      console.warn('[RECURRING] Recurring data is not an array:', typeof recurringData, recurringData);
+      console.warn('[RECURRING] Data is not an array:', typeof recurringData, recurringData);
       return [];
     }
     
     return recurringData.map(template => {
-      // Validate template structure
       if (!template || typeof template !== 'object') {
         console.warn('[RECURRING] Invalid template:', template);
         return null;
@@ -397,7 +465,7 @@ export const useTransactionTemplates = () => {
     {
       config: 'user',
       enabled: isAuthenticated,
-      staleTime: 30 * 60 * 1000 // 30 minutes
+      staleTime: 30 * 60 * 1000
     }
   );
   
@@ -405,8 +473,10 @@ export const useTransactionTemplates = () => {
     ({ id, data }) => transactionAPI.updateTemplate(id, data),
     {
       mutationKey: mutationKeys.updateTemplate,
-      invalidateKeys: [queryKeys.templates, queryKeys.transactionsRecurring()],
-      successMessage: 'Template updated successfully'
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Template updated successfully');
+      }
     }
   );
   
@@ -414,8 +484,10 @@ export const useTransactionTemplates = () => {
     ({ id, deleteFuture }) => transactionAPI.deleteTemplate(id, deleteFuture),
     {
       mutationKey: mutationKeys.deleteTemplate,
-      invalidateKeys: [queryKeys.templates, queryKeys.transactionsRecurring()],
-      successMessage: 'Template deleted successfully'
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Template deleted successfully');
+      }
     }
   );
   
@@ -423,8 +495,10 @@ export const useTransactionTemplates = () => {
     ({ templateId, dates }) => transactionAPI.skipDates(templateId, dates),
     {
       mutationKey: mutationKeys.skipTemplateDates,
-      invalidateKeys: [queryKeys.templates, queryKeys.transactionsRecurring()],
-      successMessage: 'Dates skipped successfully'
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toast.success('Dates skipped successfully');
+      }
     }
   );
   
@@ -441,82 +515,3 @@ export const useTransactionTemplates = () => {
     refresh: templatesQuery.refetch
   };
 };
-
-/**
- * Hook for transaction statistics by period
- */
-export const useTransactionsByPeriod = (period, date) => {
-  const { isAuthenticated } = useAuth();
-  
-  const periodQuery = useApiQuery(
-    queryKeys.transactionsPeriod(period, date),
-    () => transactionAPI.getByPeriod(period, date),
-    {
-      config: 'dynamic',
-      enabled: isAuthenticated && period && date,
-      staleTime: 10 * 60 * 1000
-    }
-  );
-  
-  return {
-    data: periodQuery.data?.data || null,
-    transactions: periodQuery.data?.data?.transactions || [],
-    isLoading: periodQuery.isLoading,
-    error: periodQuery.error,
-    refresh: periodQuery.refetch
-  };
-};
-
-/**
- * Hook for category breakdown
- */
-export const useCategoryBreakdown = (startDate, endDate) => {
-  const { isAuthenticated } = useAuth();
-  
-  const breakdownQuery = useApiQuery(
-    queryKeys.categoryBreakdown(startDate, endDate),
-    () => transactionAPI.getCategoryBreakdown(startDate, endDate),
-    {
-      config: 'user',
-      enabled: isAuthenticated && startDate && endDate,
-      staleTime: 30 * 60 * 1000
-    }
-  );
-  
-  const processedData = useMemo(() => {
-    if (!breakdownQuery.data?.data) return null;
-    
-    const data = breakdownQuery.data.data;
-    
-    // Process for charts
-    const chartData = Object.entries(data).map(([category, amounts]) => ({
-      category,
-      income: parseFloat(amounts.income) || 0,
-      expenses: parseFloat(amounts.expenses) || 0,
-      total: (parseFloat(amounts.income) || 0) - (parseFloat(amounts.expenses) || 0)
-    }));
-    
-    return {
-      raw: data,
-      chartData,
-      topExpenseCategories: chartData
-        .filter(c => c.expenses > 0)
-        .sort((a, b) => b.expenses - a.expenses)
-        .slice(0, 5),
-      topIncomeCategories: chartData
-        .filter(c => c.income > 0)
-        .sort((a, b) => b.income - a.income)
-        .slice(0, 5)
-    };
-  }, [breakdownQuery.data]);
-  
-  return {
-    breakdown: processedData,
-    isLoading: breakdownQuery.isLoading,
-    error: breakdownQuery.error,
-    refresh: breakdownQuery.refetch
-  };
-};
-
-// Export for components
-export default useTransactions;

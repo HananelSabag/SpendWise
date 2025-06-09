@@ -25,7 +25,7 @@ import {
 } from '../../../config/categoryIcons';
 
 import { useLanguage } from '../../../context/LanguageContext';
-import { useTransactions } from '../../../hooks/useTransactions';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { useCategories } from '../../../hooks/useCategory';
 import { useDate } from '../../../context/DateContext';
 import { Card, Button, Badge } from '../../ui';
@@ -44,7 +44,7 @@ const AddTransactions = ({
   onSuccess 
 }) => {
   const { t, language } = useLanguage();
-  const { createTransaction, isCreating } = useTransactions();
+  const { createTransaction, isCreating } = useTransactionActions();
   const { categories: allCategories = [], isLoading: categoriesLoading } = useCategories();
   const { selectedDate } = useDate();
   

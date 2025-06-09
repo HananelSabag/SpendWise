@@ -19,7 +19,7 @@ import {
 // ✅ NEW: Use centralized icon system
 import { getIconComponent, getColorForCategory, getGradientForCategory } from '../../../config/categoryIcons';
 import { useLanguage } from '../../../context/LanguageContext';
-import { useTransactions } from '../../../hooks/useTransactions';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { useCategories } from '../../../hooks/useCategory';
 import { Card, Button, Badge, Modal } from '../../ui';
 import { transactionSchemas, validate, amountValidation } from '../../../utils/validationSchemas';
@@ -36,7 +36,7 @@ const EditTransactionPanel = ({
   onSuccess 
 }) => {
   const { t, language } = useLanguage();
-  const { updateTransaction, isUpdating } = useTransactions();
+  const { updateTransaction, isUpdating } = useTransactionActions();
   const { categories: allCategories = [], isLoading: categoriesLoading } = useCategories();
   
   const isRTL = language === 'he';
