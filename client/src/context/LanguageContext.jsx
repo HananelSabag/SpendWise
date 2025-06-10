@@ -220,7 +220,6 @@ const translations = {
     resetPassword: 'Reset Password',
     changePassword: 'Change Password',
     sendResetLink: 'Send Reset Link',
-    backToLogin: 'Back to Login',
     agreeToTerms: 'I agree to the Terms of Service and Privacy Policy',
 
     // Password reset
@@ -252,7 +251,6 @@ const translations = {
     welcomeDescription: 'Take control of your financial future with intelligent expense tracking',
     loginSuccess: 'Login successful',
     logoutSuccess: 'Logged out successfully',
-    registrationSuccess: 'Registration successful! Please login to continue.',
     passwordChanged: 'Password changed successfully',
     resetTokenInvalid: 'Invalid or missing reset token',
     resetTokenExpired: 'Reset token has expired',
@@ -357,32 +355,56 @@ const translations = {
       todayWarning: 'Transaction will be added to today, not the displayed date',
       switchToToday: 'Transaction added! Switch to today\'s view to see it?',
       hint: 'Use quick actions for fast transaction entry'
-    },
+        },
 
-    stats: {
+        stats: {
       title: 'Statistics',
-      subtitle: 'Transaction insights and trends', // ✅ ADD: Missing translation
-      loadingStats: 'Loading statistics...',
-      dailyAverage: 'Daily Average',
-      monthlyGoal: 'Monthly Goal',
-      recurringActive: 'Active Recurring',
-      savedThisMonth: 'Saved This Month',
-      trend: 'Trend',
-      categories: 'Categories',
-      noData: 'No data available',
-      noTrendData: 'No trend data available',
-      noCategoryData: 'No category data available',
+      subtitle: 'Transaction insights',
+      showMore: 'Show More',
+      showLess: 'Show Less',
       savingsRate: 'Savings Rate',
-      monthlyBalance: 'Monthly Balance'
-    },
+      dailyAvg: 'Daily Avg',
+      budget: 'Budget',
+      health: 'Health',
+      excellent: 'Excellent',
+      good: 'Good',
+      improve: 'Improve',
+      spendingPerDay: 'spending/day',
+      onTrack: 'On track',
+      review: 'Review',
+      great: 'Great',
+      ok: 'OK',
+      poor: 'Poor',
+      incomeVsExpenses: 'Income vs Expenses Breakdown',
+      detailedInsights: 'Detailed Insights',
+      averageTransaction: 'Average Transaction',
+      totalTransactions: '{count} total transactions',
+      recurringImpact: 'Recurring Impact',
+      monthlyRecurringBalance: 'Monthly recurring balance',
+      largestTransaction: 'Largest Transaction',
+      singleTransaction: 'Single transaction',
+      topCategory: 'Top Category',
+      mostUsedCategory: 'Most used category',
+      balanceTrend: 'Balance Trend',
+      currentPeriodTrend: 'Current period trend',
+      noData: 'No data for this period',
+      income: 'Income',
+      expenses: 'Expenses',
+      ofTotal: 'of total',
+      trend: {
+        positive: 'Positive',
+        negative: 'Negative',
+        stable: 'Stable'
+      }
+        },
 
-    tips: {
+        tips: {
       title: 'Finance Tip',
       content: 'Track your daily expenses to identify spending patterns and potential savings opportunities.',
       nextTip: 'Next Tip',
       previousTip: 'Previous Tip'
-    }
-  },
+        }
+      },
 
   // Transactions
   transactions: {
@@ -526,7 +548,6 @@ const translations = {
     generateNow: 'Generate Now',
     generated: 'Recurring transactions generated',
     generateError: 'Failed to generate recurring transactions',
-    noRecurringTemplates: "No recurring templates found",
 
 
     // Skip Dates
@@ -955,7 +976,7 @@ const translations = {
     privacyPreferences: 'Privacy Preferences',
 
     // Notification types
-    notifications: {
+    notificationTypes: {
       email: 'Email Notifications',
       push: 'Push Notifications',
       sms: 'SMS Notifications',
@@ -1003,7 +1024,6 @@ const translations = {
       subtitle: 'Choose your preferred format for downloading',
       dataIncluded: "What's included in your export",
       loadingOptions: 'Loading export options...',
-      selectFormat: 'Select export format:',
       formatsAvailable: 'formats available',
 
       // Format descriptions  
@@ -1443,7 +1463,6 @@ const translations = {
       resetPassword: 'איפוס סיסמה',
       changePassword: 'שינוי סיסמה',
       sendResetLink: 'שלח קישור איפוס',
-      backToLogin: 'חזרה להתחברות',
       agreeToTerms: 'אני מסכים לתנאי השימוש ומדיניות הפרטיות',
 
       // Password reset
@@ -1475,7 +1494,6 @@ const translations = {
       welcomeDescription: 'קחו שליטה על העתיד הפיננסי שלכם עם מעקב הוצאות חכם',
       loginSuccess: 'ההתחברות בוצעה בהצלחה',
       logoutSuccess: 'התנתקת בהצלחה',
-      registrationSuccess: 'ההרשמה בוצעה בהצלחה! אנא התחבר כדי להמשיך.',
       passwordChanged: 'הסיסמה שונתה בהצלחה',
       resetTokenInvalid: 'קישור איפוס לא תקין או חסר',
       resetTokenExpired: 'תוקף קישור האיפוס פג',
@@ -1504,8 +1522,8 @@ const translations = {
       veryStrong: 'חזק מאוד',
 
       // Steps
-      accountInfo: 'פרטי חשבון',
-      security: 'אבטחה',
+      stepAccountInfo: 'פרטי חשבון',
+      stepSecurity: 'אבטחה',
 
       // Features showcase
       features: {
@@ -1580,32 +1598,56 @@ const translations = {
         todayWarning: 'הפעולה תתווסף להיום, לא לתאריך המוצג',
         switchToToday: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?',
         hint: 'השתמש בפעולות מהירות להזנת עסקאות מהירה'
-      },
+            },
 
-      stats: {
+            stats: {
         title: 'סטטיסטיקות',
-        subtitle: 'תובנות ומגמות עסקאות', // ✅ ADD: Missing Hebrew translation
-        loadingStats: 'טוען סטטיסטיקות...',
-        dailyAverage: 'ממוצע יומי',
-        monthlyGoal: 'יעד חודשי',
-        recurringActive: 'הוראות קבע פעילות',
-        savedThisMonth: 'נחסך החודש',
-        trend: 'מגמה',
-        categories: 'קטגוריות',
-        noData: 'אין נתונים זמינים',
-        noTrendData: 'אין נתוני מגמה זמינים',
-        noCategoryData: 'אין נתוני קטגוריות זמינים',
+        subtitle: 'תובנות עסקאות',
+        showMore: 'הצג עוד',
+        showLess: 'הצג פחות',
         savingsRate: 'שיעור חיסכון',
-        monthlyBalance: 'יתרה חודשית'
-      },
+        dailyAvg: 'ממוצע יומי',
+        budget: 'תקציב',
+        health: 'בריאות',
+        excellent: 'מעולה',
+        good: 'טוב',
+        improve: 'לשיפור',
+        spendingPerDay: 'הוצאה/יום',
+        onTrack: 'במסלול',
+        review: 'לבדיקה',
+        great: 'נהדר',
+        ok: 'בסדר',
+        poor: 'חלש',
+        incomeVsExpenses: 'פירוט הכנסות מול הוצאות',
+        detailedInsights: 'תובנות מפורטות',
+        averageTransaction: 'עסקה ממוצעת',
+        totalTransactions: '{count} עסקאות סה״כ',
+        recurringImpact: 'השפעת עסקאות קבועות',
+        monthlyRecurringBalance: 'יתרה חודשית קבועה',
+        largestTransaction: 'העסקה הגדולה ביותר',
+        singleTransaction: 'עסקה יחידה',
+        topCategory: 'קטגוריה מובילה',
+        mostUsedCategory: 'הקטגוריה הנפוצה ביותר',
+        balanceTrend: 'מגמת יתרה',
+        currentPeriodTrend: 'מגמת התקופה הנוכחית',
+        noData: 'אין נתונים לתקופה זו',
+        income: 'הכנסות',
+        expenses: 'הוצאות',
+        ofTotal: 'מהסכום הכולל',
+        trend: {
+          positive: 'חיובי',
+          negative: 'שלילי',
+          stable: 'יציב'
+        }
+            },
 
-      tips: {
+            tips: {
         title: 'טיפ פיננסי',
         content: 'עקוב אחר ההוצאות היומיות שלך כדי לזהות דפוסי הוצאות והזדמנויות חיסכון פוטנציאליות.',
         nextTip: 'הטיפ הבא',
         previousTip: 'הטיפ הקודם'
-      }
-    },
+            }
+          },
 
     // Transactions
     transactions: {
@@ -1744,7 +1786,6 @@ const translations = {
       generateNow: 'צור עכשיו',
       generated: 'עסקאות קבועות נוצרו',
       generateError: 'נכשל ביצירת עסקאות קבועות',
-      noRecurringTemplates: "אין תבניות חוזרות",
 
 
       // Skip Dates
@@ -1760,7 +1801,6 @@ const translations = {
         error: 'נכשל בשמירת תאריכי דילוג',
         save: 'שמור תאריכי דילוג'
       },
-
       delete: {
         singleOccurrence: 'מחק מופע יחיד',
         skipDates: 'דלג על תאריכים',
@@ -2172,7 +2212,7 @@ const translations = {
       privacyPreferences: 'העדפות פרטיות',
 
       // Notification types
-      notifications: {
+      notificationTypes: {
         email: 'התראות דוא״ל',
         push: 'התראות דחיפה',
         sms: 'התראות SMS',
@@ -2220,7 +2260,6 @@ const translations = {
         subtitle: 'בחר את הפורמט המועדף עליך להורדה',
         dataIncluded: 'מה כלול בייצוא שלך',
         loadingOptions: 'טוען אפשרויות ייצוא...',
-        selectFormat: 'בחר פורמט ייצוא:',
         formatsAvailable: 'פורמטים זמינים',
 
         // Format descriptions  

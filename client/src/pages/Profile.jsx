@@ -230,7 +230,7 @@ const Profile = () => {
                   size="xl"
                   name={user?.username}
                   src={user?.preferences?.profilePicture}
-                  className="ring-4 ring-white dark:ring-gray-800 shadow-xl"
+                  className="shadow-xl"
                 />
                 
                 <div className="flex-1 text-center sm:text-left">

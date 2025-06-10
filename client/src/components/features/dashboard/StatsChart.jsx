@@ -1,13 +1,13 @@
 /**
- * Enhanced StatsChart Component - Beautiful Graphs & Animations
- * ✅ Based on your working version
- * ✅ Added beautiful animated graphs (Pie & Bar charts)
- * ✅ More alive animations in the main row
- * ✅ User-friendly graph type selection
- * ✅ Smooth transitions and micro-interactions
+ * Enhanced StatsChart Component - Compact Summary Design
+ * ✅ One row compact summary with key stats
+ * ✅ "Show More" expansion for detailed insights
+ * ✅ Income vs Expense pie chart (not categories!)
+ * ✅ Transaction insights based on selected period
+ * ✅ Stunning visual effects matching other components
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
@@ -16,328 +16,346 @@ import { cn } from '../../../utils/helpers';
 import { Card, Badge } from '../../ui';
 import LoadingSpinner from '../../ui/LoadingSpinner';
 import { 
-  ChevronDownIcon, 
-  ChevronUpIcon,
-  CalendarIcon
-} from '@heroicons/react/24/outline';
-import { PieChart, BarChart3, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+  TrendingUp, 
+  TrendingDown, 
+  Activity,
+  DollarSign,
+  Clock,
+  BarChart3,
+  ChevronDown,
+  ChevronUp,
+  Calendar,
+  Zap,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight
+} from 'lucide-react';
 
 /**
- * ✅ Beautiful Pie Chart Component
+ * ✅ Beautiful Income vs Expense Pie Chart
  */
-const AnimatedPieChart = ({ data, formatAmount }) => {
+const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
   const [hoveredSlice, setHoveredSlice] = useState(null);
   
-  const total = data.reduce((sum, item) => sum + item.amount, 0);
-  let currentAngle = 0;
-  
-  const slices = data.map((item, index) => {
-    const percentage = (item.amount / total) * 100;
-    const angle = (percentage / 100) * 360;
-    const startAngle = currentAngle;
-    currentAngle += angle;
-    
-    const x1 = 50 + 45 * Math.cos((startAngle * Math.PI) / 180);
-    const y1 = 50 + 45 * Math.sin((startAngle * Math.PI) / 180);
-    const x2 = 50 + 45 * Math.cos(((startAngle + angle) * Math.PI) / 180);
-    const y2 = 50 + 45 * Math.sin(((startAngle + angle) * Math.PI) / 180);
-    
-    const largeArc = angle > 180 ? 1 : 0;
-    const pathData = `M 50 50 L ${x1} ${y1} A 45 45 0 ${largeArc} 1 ${x2} ${y2} Z`;
-    
-    const hue = (index * 360) / data.length;
-    const color = `hsl(${hue}, 70%, ${item.isIncome ? '55%' : '60%'})`;
-    
-    return {
-      ...item,
-      pathData,
-      color,
-      percentage,
-      angle: startAngle + angle / 2
-    };
-  });
-
-  return (
-    <div className="relative w-80 h-80 mx-auto">
-      <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-        {slices.map((slice, index) => (
-          <motion.path
-            key={slice.name}
-            d={slice.pathData}
-            fill={slice.color}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: index * 0.1, duration: 0.5, type: "spring" }}
-            whileHover={{ scale: 1.05 }}
-            className="cursor-pointer transition-all duration-200"
-            onMouseEnter={() => setHoveredSlice(slice)}
-            onMouseLeave={() => setHoveredSlice(null)}
-            style={{
-              filter: hoveredSlice?.name === slice.name ? 'brightness(1.1)' : 'none',
-              transformOrigin: '50% 50%'
-            }}
-          />
-        ))}
-      </svg>
-      
-      {/* Center Info */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center bg-white dark:bg-gray-800 rounded-full w-24 h-24 flex flex-col items-center justify-center shadow-lg">
-          <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {data.length}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Categories
-          </div>
+  const total = income + expenses;
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          <div className="text-4xl mb-2">💰</div>
+          <div className="text-sm">{t('dashboard.stats.noData')}</div>
         </div>
       </div>
-      
-      {/* Hover Tooltip */}
-      <AnimatePresence>
-        {hoveredSlice && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700"
-          >
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {hoveredSlice.name}
-            </div>
-            <div className="text-lg font-bold" style={{ color: hoveredSlice.color }}>
-              {formatAmount(hoveredSlice.amount)}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {hoveredSlice.percentage.toFixed(1)}% • {hoveredSlice.count} transactions
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-/**
- * ✅ Beautiful Bar Chart Component
- */
-const AnimatedBarChart = ({ data, formatAmount }) => {
-  const [hoveredBar, setHoveredBar] = useState(null);
-  const maxAmount = Math.max(...data.map(item => item.amount));
+    );
+  }
   
+  const incomePercentage = (income / total) * 100;
+  const expensePercentage = (expenses / total) * 100;
+  
+  // Calculate angles for pie slices
+  const incomeAngle = (incomePercentage / 100) * 360;
+  const expenseAngle = (expensePercentage / 100) * 360;
+  
+  // Income slice path
+  const incomeX1 = 50 + 40 * Math.cos(0);
+  const incomeY1 = 50 + 40 * Math.sin(0);
+  const incomeX2 = 50 + 40 * Math.cos((incomeAngle * Math.PI) / 180);
+  const incomeY2 = 50 + 40 * Math.sin((incomeAngle * Math.PI) / 180);
+  const incomeLargeArc = incomeAngle > 180 ? 1 : 0;
+  const incomePathData = `M 50 50 L ${incomeX1} ${incomeY1} A 40 40 0 ${incomeLargeArc} 1 ${incomeX2} ${incomeY2} Z`;
+  
+  // Expense slice path
+  const expenseX1 = incomeX2;
+  const expenseY1 = incomeY2;
+  const expenseX2 = 50 + 40 * Math.cos(((incomeAngle + expenseAngle) * Math.PI) / 180);
+  const expenseY2 = 50 + 40 * Math.sin(((incomeAngle + expenseAngle) * Math.PI) / 180);
+  const expenseLargeArc = expenseAngle > 180 ? 1 : 0;
+  const expensePathData = `M 50 50 L ${expenseX1} ${expenseY1} A 40 40 0 ${expenseLargeArc} 1 ${expenseX2} ${expenseY2} Z`;
+
   return (
-    <div className="space-y-4">
-      {data.map((item, index) => {
-        const percentage = (item.amount / maxAmount) * 100;
-        const hue = (index * 360) / data.length;
-        const color = `hsl(${hue}, 70%, ${item.isIncome ? '55%' : '60%'})`;
+    <div className="relative w-full max-w-sm mx-auto">
+      <div className="aspect-square">
+        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+          {/* Background circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r="42"
+            fill="none"
+            stroke="rgba(156, 163, 175, 0.2)"
+            strokeWidth="2"
+          />
+          
+          {/* Income slice */}
+          <motion.g>
+            {/* Glow effect */}
+            <motion.path
+              d={incomePathData}
+              fill="hsl(142, 70%, 55%)"
+              filter="blur(2px)"
+              opacity="0.3"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.3 }}
+              transition={{ duration: 0.8, type: "spring" }}
+            />
+            {/* Main slice */}
+            <motion.path
+              d={incomePathData}
+              fill="hsl(142, 70%, 55%)"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.8, type: "spring" }}
+              whileHover={{ scale: 1.05 }}
+              className="cursor-pointer transition-all duration-200"
+              onMouseEnter={() => setHoveredSlice('income')}
+              onMouseLeave={() => setHoveredSlice(null)}
+              style={{
+                filter: hoveredSlice === 'income' ? 'brightness(1.15)' : 'none',
+                transformOrigin: '50% 50%'
+              }}
+            />
+          </motion.g>
+          
+          {/* Expense slice */}
+          <motion.g>
+            {/* Glow effect */}
+            <motion.path
+              d={expensePathData}
+              fill="hsl(0, 70%, 60%)"
+              filter="blur(2px)"
+              opacity="0.3"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.3 }}
+              transition={{ duration: 0.8, type: "spring", delay: 0.2 }}
+            />
+            {/* Main slice */}
+            <motion.path
+              d={expensePathData}
+              fill="hsl(0, 70%, 60%)"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.8, type: "spring", delay: 0.2 }}
+              whileHover={{ scale: 1.05 }}
+              className="cursor-pointer transition-all duration-200"
+              onMouseEnter={() => setHoveredSlice('expense')}
+              onMouseLeave={() => setHoveredSlice(null)}
+              style={{
+                filter: hoveredSlice === 'expense' ? 'brightness(1.15)' : 'none',
+                transformOrigin: '50% 50%'
+              }}
+            />
+          </motion.g>
+        </svg>
         
-        return (
-          <motion.div
-            key={item.name}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="relative"
-            onMouseEnter={() => setHoveredBar(item)}
-            onMouseLeave={() => setHoveredBar(null)}
+        {/* Center Info */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <motion.div 
+            className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-lg border border-white/30"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {item.name}
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {item.count}
-                </Badge>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-purple-500/10 rounded-full blur-lg"></div>
+            <div className="relative z-10 text-center">
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {Math.round(incomePercentage)}%
               </div>
-              <span className="font-bold text-gray-900 dark:text-gray-100">
-                {formatAmount(item.amount)}
-              </span>
-            </div>
-            
-            <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${percentage}%` }}
-                transition={{ delay: index * 0.1 + 0.2, duration: 0.8, ease: "easeOut" }}
-                className="h-full rounded-full relative"
-                style={{ backgroundColor: color }}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
-                  animate={{ x: ['-100%', '100%'] }}
-                  transition={{ 
-                    duration: 2, 
-                    delay: index * 0.1 + 0.5,
-                    ease: "easeInOut" 
-                  }}
-                />
-              </motion.div>
-            </div>
-            
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {item.percentage.toFixed(1)}% • Avg: {formatAmount(item.amount / item.count)}
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dashboard.stats.income')}
+              </div>
             </div>
           </motion.div>
-        );
-      })}
+        </div>
+        
+        {/* Hover Tooltip */}
+        <AnimatePresence>
+          {hoveredSlice && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-xl p-3 border border-gray-200 dark:border-gray-700 z-20"
+            >
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {hoveredSlice === 'income' ? t('dashboard.stats.income') : t('dashboard.stats.expenses')}
+              </div>
+              <div className={`text-lg font-bold ${hoveredSlice === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                {formatAmount(hoveredSlice === 'income' ? income : expenses)}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {hoveredSlice === 'income' ? incomePercentage.toFixed(1) : expensePercentage.toFixed(1)}% {t('dashboard.stats.ofTotal')}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      
+      {/* Legend */}
+      <div className="flex justify-center gap-6 mt-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dashboard.stats.income')}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dashboard.stats.expenses')}</span>
+        </div>
+      </div>
     </div>
   );
 };
 
 /**
- * ✅ Main StatsChart Component (Enhanced version of your working code)
+ * ✅ Main StatsChart Component - Enhanced with Better Financial Insights
  */
 const StatsChart = ({ className = '' }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   
   // State management
-  const [selectedRange, setSelectedRange] = useState('month');
+  const [selectedRange, setSelectedRange] = useState('monthly');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeView, setActiveView] = useState('overview');
-  const [chartType, setChartType] = useState('bar'); // 'bar' or 'pie'
   
-  // ✅ Your working range configurations
+  // ✅ Updated range configurations with clearer mobile icons
   const ranges = [
-    { key: 'week', label: t('common.last7Days') || 'Last 7 Days', days: 7 },
-    { key: 'month', label: t('common.last30Days') || 'Last 30 Days', days: 30 },
-    { key: 'quarter', label: t('common.last90Days') || 'Last 90 Days', days: 90 },
-    { key: 'year', label: t('common.thisYear') || 'This Year', days: 365 }
+    { key: 'daily', label: t('dashboard.balance.periods.daily') || 'Today', days: 1, icon: '1D', shortLabel: 'Day' },
+    { key: 'weekly', label: t('dashboard.balance.periods.weekly') || 'Week', days: 7, icon: '7D', shortLabel: 'Week' },
+    { key: 'monthly', label: t('dashboard.balance.periods.monthly') || 'Month', days: 30, icon: '1M', shortLabel: 'Month' },
+    { key: 'yearly', label: t('dashboard.balance.periods.yearly') || 'Year', days: 365, icon: '1Y', shortLabel: 'Year' }
   ];
 
-  // ✅ Your working dashboard data usage
+  // ✅ Use dashboard data directly with proper balance periods (no date needed)
   const { data: dashboardData, isLoading, error } = useDashboard();
 
-  // ✅ Your working stats calculation (keeping exactly as you had it)
+  // ✅ Enhanced stats calculation using real dashboard data
   const stats = useMemo(() => {
-    if (!dashboardData?.recentTransactions) {
+    if (!dashboardData?.balances || !dashboardData?.recentTransactions) {
       return {
-        totalIncome: 0,
-        totalExpenses: 0,
-        netBalance: 0,
-        transactionCount: 0,
+        savingsRate: 0,
         dailyAverage: 0,
-        categoryBreakdown: [],
-        incomeCount: 0,
-        expenseCount: 0,
+        transactionCount: 0,
+        budgetPerformance: 0,
+        recurringImpact: 0,
         averageTransaction: 0,
-        biggestExpense: 0,
-        biggestIncome: 0
+        mostFrequentCategory: '',
+        largestTransaction: 0,
+        balanceTrend: 'stable',
+        financialHealth: 50
       };
     }
 
+    // Get current period balance data
+    const currentBalance = dashboardData.balances[selectedRange] || { income: 0, expenses: 0, balance: 0 };
+    const totalIncome = Math.abs(parseFloat(currentBalance.income) || 0);
+    const totalExpenses = Math.abs(parseFloat(currentBalance.expenses) || 0);
+    const netBalance = parseFloat(currentBalance.balance) || 0;
+    
+    // Get recent transactions for additional insights
+    const recentTransactions = dashboardData.recentTransactions || [];
     const currentRange = ranges.find(r => r.key === selectedRange);
-    const daysToFilter = currentRange?.days || 30;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToFilter);
-
-    const filteredTransactions = dashboardData.recentTransactions.filter(tx => {
-      const txDate = new Date(tx.date);
-      return txDate >= cutoffDate;
-    });
-
-    const totals = filteredTransactions.reduce((acc, tx) => {
-      const amount = Math.abs(parseFloat(tx.amount || 0));
-      const isIncome = tx.transaction_type === 'income' || tx.type === 'income';
-      
-      if (isIncome) {
-        acc.totalIncome += amount;
-        acc.incomeCount++;
-        acc.incomeAmounts.push(amount);
-      } else {
-        acc.totalExpenses += amount;
-        acc.expenseCount++;
-        acc.expenseAmounts.push(amount);
-      }
-      acc.allAmounts.push(amount);
-      return acc;
-    }, { 
-      totalIncome: 0, 
-      totalExpenses: 0, 
-      incomeCount: 0, 
-      expenseCount: 0,
-      incomeAmounts: [],
-      expenseAmounts: [],
-      allAmounts: []
-    });
-
-    const netBalance = totals.totalIncome - totals.totalExpenses;
-    const dailyAverage = totals.totalExpenses > 0 ? totals.totalExpenses / daysToFilter : 0;
+    const daysInPeriod = currentRange?.days || 30;
     
-    const averageTransaction = totals.allAmounts.length > 0 
-      ? totals.allAmounts.reduce((a, b) => a + b, 0) / totals.allAmounts.length 
+    // Calculate advanced insights
+    const savingsRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0;
+    const dailyAverage = totalExpenses / daysInPeriod;
+    
+    // Budget performance (assuming 70% of income should be expenses for healthy budget)
+    const healthyExpenseRatio = 0.7;
+    const currentExpenseRatio = totalIncome > 0 ? totalExpenses / totalIncome : 0;
+    const budgetPerformance = Math.max(0, Math.min(100, 100 - ((currentExpenseRatio - healthyExpenseRatio) * 100)));
+    
+    // Recurring impact from dashboard data
+    const recurringInfo = dashboardData.recurringInfo || {};
+    const recurringIncome = parseFloat(recurringInfo.recurring_income) || 0;
+    const recurringExpense = parseFloat(recurringInfo.recurring_expense) || 0;
+    const recurringImpact = recurringIncome - recurringExpense;
+    
+    // Transaction insights
+    const transactionAmounts = recentTransactions.map(tx => Math.abs(parseFloat(tx.amount) || 0));
+    const averageTransaction = transactionAmounts.length > 0 
+      ? transactionAmounts.reduce((a, b) => a + b, 0) / transactionAmounts.length 
       : 0;
+    const largestTransaction = transactionAmounts.length > 0 ? Math.max(...transactionAmounts) : 0;
     
-    const biggestExpense = totals.expenseAmounts.length > 0 ? Math.max(...totals.expenseAmounts) : 0;
-    const biggestIncome = totals.incomeAmounts.length > 0 ? Math.max(...totals.incomeAmounts) : 0;
-    
-    // Category breakdown
-    const categoryMap = new Map();
-    filteredTransactions.forEach(tx => {
-      if (tx.category_name || tx.category) {
-        const categoryName = tx.category_name || tx.category;
-        const amount = Math.abs(parseFloat(tx.amount || 0));
-        const current = categoryMap.get(categoryName) || { amount: 0, count: 0, isIncome: false };
-        const isIncome = tx.transaction_type === 'income' || tx.type === 'income';
-        
-        categoryMap.set(categoryName, {
-          amount: current.amount + amount,
-          count: current.count + 1,
-          isIncome: isIncome || current.isIncome
-        });
-      }
+    // Most frequent category
+    const categoryCount = new Map();
+    recentTransactions.forEach(tx => {
+      const category = tx.category_name || 'Unknown';
+      categoryCount.set(category, (categoryCount.get(category) || 0) + 1);
     });
+    const mostFrequentCategory = Array.from(categoryCount.entries())
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || '';
     
-    const categoryBreakdown = Array.from(categoryMap.entries())
-      .map(([name, data]) => ({ 
-        name, 
-        amount: data.amount,
-        count: data.count,
-        isIncome: data.isIncome,
-        percentage: (totals.totalIncome + totals.totalExpenses) > 0 
-          ? (data.amount / (totals.totalIncome + totals.totalExpenses)) * 100 
-          : 0 
-      }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 8);
+    // Balance trend (compare with previous periods if available)
+    const balanceTrend = netBalance > 0 ? 'positive' : netBalance < 0 ? 'negative' : 'stable';
+    
+    // Financial health score (0-100)
+    const healthFactors = [
+      savingsRate > 10 ? 25 : (savingsRate > 0 ? 15 : 0), // Savings rate
+      budgetPerformance > 70 ? 25 : (budgetPerformance > 50 ? 15 : 5), // Budget control
+      recurringImpact > 0 ? 25 : (recurringImpact >= 0 ? 15 : 5), // Recurring balance
+      recentTransactions.length > 0 ? 25 : 10 // Financial activity
+    ];
+    const financialHealth = healthFactors.reduce((a, b) => a + b, 0);
 
     return {
-      totalIncome: totals.totalIncome,
-      totalExpenses: totals.totalExpenses,
-      netBalance,
-      transactionCount: filteredTransactions.length,
+      savingsRate: Math.max(-100, Math.min(100, savingsRate)),
       dailyAverage,
-      categoryBreakdown,
-      incomeCount: totals.incomeCount,
-      expenseCount: totals.expenseCount,
+      transactionCount: recentTransactions.length,
+      budgetPerformance: Math.round(budgetPerformance),
+      recurringImpact,
       averageTransaction,
-      biggestExpense,
-      biggestIncome
+      mostFrequentCategory,
+      largestTransaction,
+      balanceTrend,
+      financialHealth: Math.min(100, financialHealth),
+      // Keep totals for expanded view
+      totalIncome,
+      totalExpenses,
+      netBalance
     };
-  }, [dashboardData?.recentTransactions, selectedRange, ranges]);
+  }, [dashboardData, selectedRange, ranges]);
 
   if (isLoading) {
     return (
-      <Card className={cn('p-6', className)}>
-        <div className="flex items-center justify-center h-32">
-          <LoadingSpinner size="large" text={t('stats.loadingStats') || 'Loading stats...'} />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative"
+        data-component="StatsChart"
+      >
+        {/* Loading Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 opacity-100 rounded-2xl">
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl"></div>
         </div>
-      </Card>
+        
+        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl">
+          <div className="p-4">
+            <div className="animate-pulse">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
+              <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <Card className={cn('p-6', className)}>
-        <div className="flex items-center justify-center h-32">
-          <div className="text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative"
+        data-component="StatsChart"
+      >
+        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl">
+          <div className="p-6 text-center">
             <div className="text-red-600 dark:text-red-400 mb-4">
-              {t('stats.error') || 'Failed to load statistics'}
+              {t('dashboard.stats.error')}
             </div>
             <button
               onClick={() => window.location.reload()}
@@ -346,434 +364,340 @@ const StatsChart = ({ className = '' }) => {
               {t('common.retry')}
             </button>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <Card className={cn('p-0 overflow-hidden', className)}>
-      {/* ✅ ENHANCED: More alive header with better animations */}
-      <motion.div 
-        className="p-4 bg-gradient-to-r from-primary-50 via-blue-50 to-purple-50 dark:from-primary-900/20 dark:via-blue-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700"
-        whileHover={{ backgroundPosition: "200% 0" }}
-        transition={{ duration: 0.5 }}
-        style={{ backgroundSize: "200% 100%" }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <motion.div 
-              className="flex items-center gap-2"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <motion.div 
-                className="w-5 h-5 bg-primary-600 dark:bg-primary-400 rounded-full flex items-center justify-center"
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <span className="text-white text-xs">📊</span>
-              </motion.div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('dashboard.stats.title') || 'Statistics'}
-              </h3>
-            </motion.div>
-            
-            {/* ✅ ENHANCED: Animated range selector */}
-            <div className="flex gap-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-1 border border-gray-200 dark:border-gray-700">
-              {ranges.map((range) => (
-                <motion.button
-                  key={range.key}
-                  onClick={() => setSelectedRange(range.key)}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-all relative overflow-hidden ${
-                    selectedRange === range.key
-                      ? 'text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {selectedRange === range.key && (
-                    <motion.div
-                      layoutId="activeRange"
-                      className="absolute inset-0 bg-primary-500 rounded-md"
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10">{range.label}</span>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          {/* ✅ ENHANCED: More alive expand button */}
-          <motion.button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span>{isExpanded ? 'Show Less' : 'Show More'}</span>
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              <ChevronDownIcon className="w-4 h-4" />
-            </motion.div>
-          </motion.button>
-        </div>
-      </motion.div>
-
-      {/* ✅ ENHANCED: More alive key stats row */}
-      <div className="p-4 bg-white dark:bg-gray-800">
-        <div className="grid grid-cols-4 gap-4">
-          {/* ✅ Balance with animation */}
-          <motion.div 
-            className="text-center"
-            whileHover={{ scale: 1.05, y: -5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <motion.span 
-                className={stats.netBalance >= 0 ? "text-green-500 text-sm" : "text-red-500 text-sm"}
-                animate={{ y: [0, -2, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {stats.netBalance >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              </motion.span>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {t('common.balance') || 'Balance'}
-              </span>
-            </div>
-            <motion.div 
-              className={cn(
-                'text-xl font-bold',
-                stats.netBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-              )}
-              key={stats.netBalance} // Re-animate when value changes
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
-            >
-              {formatAmount(stats.netBalance)}
-            </motion.div>
-          </motion.div>
-
-          {/* ✅ Income with animation */}
-          <motion.div 
-            className="text-center"
-            whileHover={{ scale: 1.05, y: -5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <motion.div 
-                className="w-2 h-2 bg-green-500 rounded-full"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {t('transactions.income') || 'Income'}
-              </span>
-            </div>
-            <motion.div 
-              className="text-xl font-bold text-green-600 dark:text-green-400"
-              key={stats.totalIncome}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
-            >
-              {formatAmount(stats.totalIncome)}
-            </motion.div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {stats.incomeCount} {t('transactions.items') || 'items'}
-            </div>
-          </motion.div>
-
-          {/* ✅ Expenses with animation */}
-          <motion.div 
-            className="text-center"
-            whileHover={{ scale: 1.05, y: -5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <motion.div 
-                className="w-2 h-2 bg-red-500 rounded-full"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              />
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {t('transactions.expense') || 'Expenses'}
-              </span>
-            </div>
-            <motion.div 
-              className="text-xl font-bold text-red-600 dark:text-red-400"
-              key={stats.totalExpenses}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
-            >
-              {formatAmount(stats.totalExpenses)}
-            </motion.div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {stats.expenseCount} {t('transactions.items') || 'items'}
-            </div>
-          </motion.div>
-
-          {/* ✅ Daily Average with animation */}
-          <motion.div 
-            className="text-center"
-            whileHover={{ scale: 1.05, y: -5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <motion.div
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              >
-                <CalendarIcon className="w-3 h-3 text-purple-500" />
-              </motion.div>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {t('stats.dailyAverage') || 'Daily Avg'}
-              </span>
-            </div>
-            <motion.div 
-              className="text-xl font-bold text-purple-600 dark:text-purple-400"
-              key={stats.dailyAverage}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
-            >
-              {formatAmount(stats.dailyAverage)}
-            </motion.div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {t('stats.perDay') || 'per day'}
-            </div>
-          </motion.div>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative"
+      data-component="StatsChart"
+    >
+      {/* Animated Background Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 opacity-100 rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl"></div>
+        
+        {/* Floating Orbs */}
+        <motion.div 
+          className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full blur-xl"
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3]
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute bottom-4 left-4 w-12 h-12 bg-emerald-300/20 rounded-full blur-lg"
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            opacity: [0.4, 0.7, 0.4]
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
       </div>
 
-      {/* ✅ ENHANCED: Beautiful expandable section */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-            className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
-          >
-            {/* ✅ ENHANCED: View selector with chart type toggle */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  {[
-                    { key: 'overview', label: 'Overview', icon: '📈' },
-                    { key: 'categories', label: 'Categories', icon: '📊' }
-                  ].map(({ key, label, icon }) => (
+      <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl">
+        {/* Compact Header */}
+        <div className="relative p-4 overflow-hidden">
+          {/* Header Glow Effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 blur-xl"></div>
+          
+          <div className="relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              {/* Title */}
+              <div className="flex items-center gap-3">
+                <motion.div 
+                  className="relative p-2.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl blur-lg opacity-70"></div>
+                  <BarChart3 className="relative w-4 h-4 text-white" />
+                </motion.div>
+                
+                <div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-200 bg-clip-text text-transparent">
+                    {t('dashboard.stats.title')}
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {t('dashboard.stats.subtitle')}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Range Selector & Show More Button */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                {/* Mobile-friendly range selector */}
+                <div className="flex gap-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-1 border border-white/20 shadow-lg overflow-x-auto">
+                  {ranges.map((range) => (
                     <motion.button
-                      key={key}
-                      onClick={() => setActiveView(key)}
-                      className={cn(
-                        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all relative',
-                        activeView === key
+                      key={range.key}
+                      onClick={() => setSelectedRange(range.key)}
+                      className={`flex-shrink-0 px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all relative min-w-[40px] ${
+                        selectedRange === range.key
                           ? 'text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800'
-                      )}
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      {activeView === key && (
+                      {selectedRange === range.key && (
                         <motion.div
-                          layoutId="activeView"
-                          className="absolute inset-0 bg-primary-500 rounded-lg"
+                          layoutId="activeRange"
+                          className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md"
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
                         />
                       )}
-                      <span className="relative z-10 text-sm">{icon}</span>
-                      <span className="relative z-10">{label}</span>
+                      {/* Desktop: Full label */}
+                      <span className="relative z-10 hidden sm:inline">{range.label}</span>
+                      {/* Mobile: Clear period indicators */}
+                      <span className="relative z-10 sm:hidden font-bold text-[10px]">{range.icon}</span>
                     </motion.button>
                   ))}
                 </div>
-
-                {/* ✅ Chart Type Selector (only show for categories) */}
-                {activeView === 'categories' && stats.categoryBreakdown.length > 0 && (
-                  <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
-                    <motion.button
-                      onClick={() => setChartType('bar')}
-                      className={cn(
-                        'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all relative',
-                        chartType === 'bar' ? 'text-white' : 'text-gray-600 dark:text-gray-400'
-                      )}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {chartType === 'bar' && (
-                        <motion.div
-                          layoutId="chartType"
-                          className="absolute inset-0 bg-primary-500 rounded-md"
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                      <BarChart3 className="w-3 h-3 relative z-10" />
-                      <span className="relative z-10">Bar</span>
-                    </motion.button>
-                    <motion.button
-                      onClick={() => setChartType('pie')}
-                      className={cn(
-                        'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all relative',
-                        chartType === 'pie' ? 'text-white' : 'text-gray-600 dark:text-gray-400'
-                      )}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {chartType === 'pie' && (
-                        <motion.div
-                          layoutId="chartType"
-                          className="absolute inset-0 bg-primary-500 rounded-md"
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                      <PieChart className="w-3 h-3 relative z-10" />
-                      <span className="relative z-10">Pie</span>
-                    </motion.button>
-                  </div>
-                )}
+                
+                <motion.button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span>{isExpanded ? t('dashboard.stats.showLess') : t('dashboard.stats.showMore')}</span>
+                  <motion.div
+                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </motion.div>
+                </motion.button>
               </div>
             </div>
+            
+            {/* 📱 MOBILE RESPONSIVE: Enhanced Financial Insights Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              {/* Savings Rate */}
+              <motion.div
+                className="group relative overflow-hidden bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
+                whileHover={{ scale: 1.03, y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-300 via-green-400 to-teal-500 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-1.5 right-1.5 w-1 h-1 bg-white/40 rounded-full animate-pulse"></div>
+                
+                <div className="relative z-10 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.savingsRate')}</span>
+                    <Target className="w-3 h-3" />
+                  </div>
+                  <div className="text-lg sm:text-xl font-bold">
+                    {stats.savingsRate}%
+                  </div>
+                  <div className="text-xs opacity-75">
+                    {stats.savingsRate > 10 ? t('dashboard.stats.excellent') : stats.savingsRate > 0 ? t('dashboard.stats.good') : t('dashboard.stats.improve')}
+                  </div>
+                </div>
+              </motion.div>
 
-            {/* ✅ ENHANCED: Beautiful content sections */}
-            <div className="p-6">
-              <AnimatePresence mode="wait">
-                {activeView === 'overview' && (
-                  <motion.div
-                    key="overview"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <motion.div 
-                        className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800"
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                      >
-                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
-                          Average Transaction
-                        </div>
-                        <motion.div 
-                          className="text-2xl font-bold text-blue-700 dark:text-blue-300"
-                          key={stats.averageTransaction}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        >
-                          {formatAmount(stats.averageTransaction)}
-                        </motion.div>
-                      </motion.div>
-                      
-                      <motion.div 
-                        className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800"
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                      >
-                        <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                          Biggest Income
-                        </div>
-                        <motion.div 
-                          className="text-2xl font-bold text-green-700 dark:text-green-300"
-                          key={stats.biggestIncome}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        >
-                          {formatAmount(stats.biggestIncome)}
-                        </motion.div>
-                      </motion.div>
-                      
-                      <motion.div 
-                        className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800"
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                      >
-                        <div className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
-                          Biggest Expense
-                        </div>
-                        <motion.div 
-                          className="text-2xl font-bold text-red-700 dark:text-red-300"
-                          key={stats.biggestExpense}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        >
-                          {formatAmount(stats.biggestExpense)}
-                        </motion.div>
-                      </motion.div>
-                    </div>
-                  </motion.div>
-                )}
+              {/* Daily Average */}
+              <motion.div
+                className="group relative overflow-hidden bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
+                whileHover={{ scale: 1.03, y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-300 via-indigo-400 to-purple-500 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-1.5 right-1.5 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-300"></div>
+                
+                <div className="relative z-10 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.dailyAvg')}</span>
+                    <Clock className="w-3 h-3" />
+                  </div>
+                  <div className="text-lg sm:text-xl font-bold">
+                    {formatAmount(stats.dailyAverage)}
+                  </div>
+                  <div className="text-xs opacity-75">{t('dashboard.stats.spendingPerDay')}</div>
+                </div>
+              </motion.div>
 
-                {activeView === 'categories' && (
-                  <motion.div
-                    key="categories"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {stats.categoryBreakdown.length > 0 ? (
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                          Category Breakdown
-                        </h4>
-                        
-                        {/* ✅ Beautiful Charts */}
-                        <AnimatePresence mode="wait">
-                          {chartType === 'pie' ? (
-                            <motion.div
-                              key="pie"
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.9 }}
-                              transition={{ duration: 0.3 }}
-                            >
-                              <AnimatedPieChart data={stats.categoryBreakdown} formatAmount={formatAmount} />
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              key="bar"
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.9 }}
-                              transition={{ duration: 0.3 }}
-                            >
-                              <AnimatedBarChart data={stats.categoryBreakdown} formatAmount={formatAmount} />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <motion.div 
-                          className="w-12 h-12 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4"
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <span className="text-white text-2xl">📊</span>
-                        </motion.div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          No category data available for the selected period
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Budget Performance */}
+              <motion.div
+                className="group relative overflow-hidden bg-gradient-to-br from-violet-400 via-purple-500 to-indigo-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
+                whileHover={{ scale: 1.03, y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-300 via-purple-400 to-indigo-500 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-1.5 right-1.5 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-500"></div>
+                
+                <div className="relative z-10 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.budget')}</span>
+                    <BarChart3 className="w-3 h-3" />
+                  </div>
+                  <div className="text-lg sm:text-xl font-bold">
+                    {stats.budgetPerformance}%
+                  </div>
+                  <div className="text-xs opacity-75">
+                    {stats.budgetPerformance > 70 ? t('dashboard.stats.onTrack') : t('dashboard.stats.review')}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Financial Health */}
+              <motion.div
+                className={`group relative overflow-hidden rounded-xl p-2.5 sm:p-3 shadow-lg ${
+                  stats.financialHealth > 70
+                    ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600'
+                    : stats.financialHealth > 40
+                    ? 'bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600'
+                    : 'bg-gradient-to-br from-red-400 via-rose-500 to-pink-600'
+                }`}
+                whileHover={{ scale: 1.03, y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className={`absolute inset-0 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity ${
+                  stats.financialHealth > 70
+                    ? 'bg-gradient-to-br from-green-300 via-emerald-400 to-teal-500'
+                    : stats.financialHealth > 40
+                    ? 'bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500'
+                    : 'bg-gradient-to-br from-red-300 via-rose-400 to-pink-500'
+                }`}></div>
+                <div className="absolute top-1.5 right-1.5 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-700"></div>
+                
+                <div className="relative z-10 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.health')}</span>
+                    <Zap className="w-3 h-3" />
+                  </div>
+                  <div className="text-lg sm:text-xl font-bold">
+                    {stats.financialHealth}
+                  </div>
+                  <div className="text-xs opacity-75">
+                    {stats.financialHealth > 70 ? t('dashboard.stats.great') : stats.financialHealth > 40 ? t('dashboard.stats.ok') : t('dashboard.stats.poor')}
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+          </div>
+        </div>
+
+        {/* Expandable Section - Updated with Income/Expense Chart */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.4, ease: 'easeInOut' }}
+              className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+            >
+              <div className="p-4 pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Income vs Expense Chart */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      {t('dashboard.stats.incomeVsExpenses')}
+                    </h4>
+                    <IncomeExpensePieChart 
+                      income={stats.totalIncome} 
+                      expenses={stats.totalExpenses} 
+                      formatAmount={formatAmount}
+                      t={t}
+                    />
+                  </div>
+
+                  {/* Enhanced Transaction Insights */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      {t('dashboard.stats.detailedInsights')}
+                    </h4>
+                    
+                    <motion.div 
+                      className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800"
+                      whileHover={{ scale: 1.02, y: -2 }}
+                    >
+                      <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                        {t('dashboard.stats.averageTransaction')}
+                      </div>
+                      <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                        {formatAmount(stats.averageTransaction)}
+                      </div>
+                      <div className="text-xs text-blue-600/70 dark:text-blue-400/70">
+                        {t('dashboard.stats.totalTransactions', { count: stats.transactionCount })}
+                      </div>
+                    </motion.div>
+                    
+                    <motion.div 
+                      className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800"
+                      whileHover={{ scale: 1.02, y: -2 }}
+                    >
+                      <div className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">
+                        {t('dashboard.stats.recurringImpact')}
+                      </div>
+                      <div className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                        {formatAmount(stats.recurringImpact)}
+                      </div>
+                      <div className="text-xs text-purple-600/70 dark:text-purple-400/70">
+                        {t('dashboard.stats.monthlyRecurringBalance')}
+                      </div>
+                    </motion.div>
+                    
+                    <motion.div 
+                      className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800"
+                      whileHover={{ scale: 1.02, y: -2 }}
+                    >
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                        {t('dashboard.stats.largestTransaction')}
+                      </div>
+                      <div className="text-xl font-bold text-green-700 dark:text-green-300">
+                        {formatAmount(stats.largestTransaction)}
+                      </div>
+                      <div className="text-xs text-green-600/70 dark:text-green-400/70">
+                        {t('dashboard.stats.singleTransaction')}
+                      </div>
+                    </motion.div>
+                    
+                    {stats.mostFrequentCategory && (
+                      <motion.div 
+                        className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                      >
+                        <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">
+                          {t('dashboard.stats.topCategory')}
+                        </div>
+                        <div className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                          {stats.mostFrequentCategory}
+                        </div>
+                        <div className="text-xs text-amber-600/70 dark:text-amber-400/70">
+                          {t('dashboard.stats.mostUsedCategory')}
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    <motion.div 
+                      className="bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-rose-200 dark:border-rose-800"
+                      whileHover={{ scale: 1.02, y: -2 }}
+                    >
+                      <div className="text-sm font-medium text-rose-600 dark:text-rose-400 mb-1">
+                        {t('dashboard.stats.balanceTrend')}
+                      </div>
+                      <div className="text-xl font-bold text-rose-700 dark:text-rose-300 capitalize">
+                        {t(`dashboard.stats.trend.${stats.balanceTrend}`)}
+                      </div>
+                      <div className="text-xs text-rose-600/70 dark:text-rose-400/70">
+                        {t('dashboard.stats.currentPeriodTrend')}
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </motion.div>
   );
 };
 

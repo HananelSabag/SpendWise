@@ -256,16 +256,16 @@ const BalancePanel = () => {
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="relative" // ✅ REMOVE: overflow-hidden that clips calendar
+      className="relative"
       data-component="BalancePanel"
     >
       {/* Animated Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700 opacity-100">
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20"></div>
         
-        {/* Floating Orbs */}
+        {/* Floating Orbs - smaller */}
         <motion.div 
-          className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"
+          className="absolute top-6 right-6 w-20 h-20 bg-white/10 rounded-full blur-2xl"
           animate={{ 
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.6, 0.3]
@@ -273,7 +273,7 @@ const BalancePanel = () => {
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute bottom-10 left-10 w-24 h-24 bg-purple-300/20 rounded-full blur-xl"
+          className="absolute bottom-6 left-6 w-16 h-16 bg-purple-300/20 rounded-full blur-xl"
           animate={{ 
             scale: [1.2, 1, 1.2],
             opacity: [0.4, 0.7, 0.4]
@@ -281,7 +281,7 @@ const BalancePanel = () => {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         />
         <motion.div 
-          className="absolute top-1/2 left-1/3 w-16 h-16 bg-blue-200/30 rounded-full blur-lg"
+          className="absolute top-1/2 left-1/3 w-12 h-12 bg-blue-200/30 rounded-full blur-lg"
           animate={{ 
             y: [-10, 10, -10],
             opacity: [0.2, 0.5, 0.2]
@@ -291,44 +291,44 @@ const BalancePanel = () => {
       </div>
 
       <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
-        {/* Enhanced Header with Glow Effects */}
-        <div className="relative p-8 overflow-hidden">
+        {/* Compact Header with Glow Effects */}
+        <div className="relative p-4 overflow-hidden">
           {/* Header Glow Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-blue-500/10 blur-xl"></div>
           
           <div className="relative z-10">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-              {/* Enhanced Title */}
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              {/* Compact Title */}
+              <div className="flex items-center gap-3">
                 <motion.div 
-                  className="relative p-4 bg-gradient-to-br from-primary-500 to-purple-600 rounded-2xl shadow-lg"
+                  className="relative p-3 bg-gradient-to-br from-primary-500 to-purple-600 rounded-xl shadow-lg"
                   whileHover={{ scale: 1.05, rotate: 5 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   {/* Icon Glow */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary-400 to-purple-500 rounded-2xl blur-lg opacity-70"></div>
-                  <Activity className="relative w-6 h-6 text-white" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary-400 to-purple-500 rounded-xl blur-lg opacity-70"></div>
+                  <Activity className="relative w-5 h-5 text-white" />
                 </motion.div>
                 
                 <div>
-                  <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-900 dark:from-white dark:via-purple-200 dark:to-blue-200 bg-clip-text text-transparent">
+                  <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-900 dark:from-white dark:via-purple-200 dark:to-blue-200 bg-clip-text text-transparent">
                     {t('dashboard.balance.title')}
                   </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                     {t('dashboard.balance.subtitle')}
                   </p>
                 </div>
               </div>
               
-              {/* Enhanced Date Navigation */}
-              <div className="flex items-center gap-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-2 border border-white/20 shadow-xl">
+              {/* Compact Date Navigation */}
+              <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-1.5 border border-white/20 shadow-xl">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={goToPreviousDay}
-                  className="p-2.5 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-xl hover:from-primary-100 hover:to-purple-100 dark:hover:from-primary-900/50 dark:hover:to-purple-900/50 transition-all shadow-md"
+                  className="p-2 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-lg hover:from-primary-100 hover:to-purple-100 dark:hover:from-primary-900/50 dark:hover:to-purple-900/50 transition-all shadow-md"
                 >
-                  <ChevronLeft className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                  <ChevronLeft className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
                 </motion.button>
                 
                 <div className="relative">
@@ -337,13 +337,13 @@ const BalancePanel = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCalendar(!showCalendar)}
-                    className={`min-w-[160px] px-4 py-2.5 rounded-xl font-medium transition-all shadow-md ${
+                    className={`min-w-[140px] px-3 py-2 rounded-lg font-medium transition-all shadow-md text-sm ${
                       dateWarning 
                         ? 'bg-gradient-to-r from-amber-100 to-orange-100 border-amber-300 text-amber-800 dark:from-amber-900/30 dark:to-orange-900/30 dark:border-amber-600 dark:text-amber-200' 
                         : 'bg-gradient-to-r from-white to-gray-50 border-gray-200 text-gray-700 hover:from-primary-50 hover:to-purple-50 dark:from-gray-700 dark:to-gray-600 dark:border-gray-500 dark:text-gray-200'
                     }`}
                   >
-                    <Calendar className="w-4 h-4 mr-2 inline" />
+                    <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
                     {(() => {
                       const date = selectedDate || new Date();
                       const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -351,7 +351,6 @@ const BalancePanel = () => {
                     })()}
                   </motion.button>
                   
-                  {/* ✅ FIX: Remove AnimatePresence wrapper that can interfere */}
                   {showCalendar && (
                     <CalendarWidget
                       triggerRef={calendarRef}
@@ -370,13 +369,13 @@ const BalancePanel = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={goToNextDay}
                   disabled={!canGoNext}
-                  className={`p-2.5 rounded-xl transition-all shadow-md ${
+                  className={`p-2 rounded-lg transition-all shadow-md ${
                     canGoNext 
                       ? 'bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-primary-100 hover:to-purple-100 dark:hover:from-primary-900/50 dark:hover:to-purple-900/50' 
                       : 'bg-gray-100 dark:bg-gray-800 opacity-50 cursor-not-allowed'
                   }`}
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
                 </motion.button>
                 
                 <AnimatePresence>
@@ -388,26 +387,26 @@ const BalancePanel = () => {
                       whileHover={{ scale: 1.1, rotate: 180 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={resetToToday}
-                      className="p-2.5 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-xl hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-800/50 dark:hover:to-indigo-800/50 transition-all shadow-md"
+                      className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-lg hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-800/50 dark:hover:to-indigo-800/50 transition-all shadow-md"
                       title={t('dashboard.balance.backToToday')}
                     >
-                      <RotateCcw className="w-4 h-4 text-blue-700 dark:text-blue-300" />
+                      <RotateCcw className="w-3.5 h-3.5 text-blue-700 dark:text-blue-300" />
                     </motion.button>
                   )}
                 </AnimatePresence>
               </div>
             </div>
             
-            {/* Enhanced Period Tabs */}
-            <div className="mt-8">
-              <div className="flex gap-2 p-2 bg-gradient-to-r from-white/60 via-gray-50/80 to-white/60 dark:from-gray-800/60 dark:via-gray-700/80 dark:to-gray-800/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-inner">
+            {/* Compact Period Tabs */}
+            <div className="mt-4">
+              <div className="flex gap-1.5 p-1.5 bg-gradient-to-r from-white/60 via-gray-50/80 to-white/60 dark:from-gray-800/60 dark:via-gray-700/80 dark:to-gray-800/60 backdrop-blur-sm rounded-xl border border-white/30 shadow-inner">
                 {periods.map((p, index) => (
                   <motion.button
                     key={p.id}
                     whileHover={{ scale: 1.02, y: -1 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handlePeriodChange(p.id)}
-                    className={`relative flex-1 px-4 py-3 rounded-xl font-medium transition-all text-sm overflow-hidden ${
+                    className={`relative flex-1 px-3 py-2 rounded-lg font-medium transition-all text-xs overflow-hidden ${
                       period === p.id 
                         ? 'text-white shadow-lg' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
@@ -418,12 +417,12 @@ const BalancePanel = () => {
                         {/* Active Tab Background with Gradient */}
                         <motion.div 
                           layoutId="activeTab"
-                          className="absolute inset-0 bg-gradient-to-r from-primary-500 via-purple-500 to-blue-500 rounded-xl"
+                          className="absolute inset-0 bg-gradient-to-r from-primary-500 via-purple-500 to-blue-500 rounded-lg"
                           transition={{ type: "spring", stiffness: 400, damping: 30 }}
                         />
                         {/* Active Tab Glow */}
                         <motion.div 
-                          className="absolute inset-0 bg-gradient-to-r from-primary-400 via-purple-400 to-blue-400 rounded-xl blur-md opacity-60"
+                          className="absolute inset-0 bg-gradient-to-r from-primary-400 via-purple-400 to-blue-400 rounded-lg blur-md opacity-60"
                           animate={{ opacity: [0.4, 0.8, 0.4] }}
                           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         />
@@ -437,13 +436,13 @@ const BalancePanel = () => {
           </div>
         </div>
         
-        {/* Enhanced Balance Cards with Stunning Effects */}
-        <div className="p-8 pt-0">
+        {/* Compact Balance Cards with Stunning Effects */}
+        <div className="p-4 pt-0">
           <motion.div 
-            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
             variants={cardVariants}
           >
-            {/* Glowing Income Card */}
+            {/* Compact Glowing Income Card */}
             <motion.div
               variants={cardVariants}
               whileHover={{ 
@@ -451,27 +450,27 @@ const BalancePanel = () => {
                 y: -5,
                 transition: { type: "spring", stiffness: 400, damping: 10 }
               }}
-              className="group relative overflow-hidden bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-3xl p-6 shadow-2xl"
+              className="group relative overflow-hidden bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-2xl p-4 shadow-2xl"
             >
               {/* Card Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-300 via-green-400 to-teal-500 rounded-3xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-300 via-green-400 to-teal-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500"></div>
               
               {/* Floating Particles */}
-              <div className="absolute top-4 right-4 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-              <div className="absolute top-8 right-8 w-1 h-1 bg-white/60 rounded-full animate-ping"></div>
-              <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce"></div>
+              <div className="absolute top-3 right-3 w-1.5 h-1.5 bg-white/40 rounded-full animate-pulse"></div>
+              <div className="absolute top-5 right-5 w-1 h-1 bg-white/60 rounded-full animate-ping"></div>
+              <div className="absolute bottom-4 left-4 w-1 h-1 bg-white/30 rounded-full animate-bounce"></div>
               
               <div className="relative z-10 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-emerald-100 font-medium text-sm tracking-wide uppercase">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-emerald-100 font-medium text-xs tracking-wide uppercase">
                     {t('dashboard.balance.income')}
                   </span>
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
+                    className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm"
                   >
-                    <ArrowUpRight className="w-5 h-5" />
+                    <ArrowUpRight className="w-4 h-4" />
                   </motion.div>
                 </div>
                 <motion.div
@@ -479,17 +478,17 @@ const BalancePanel = () => {
                   initial="initial"
                   animate="animate"
                   key={`${period}-income-${isAnimating}`}
-                  className="text-3xl lg:text-4xl font-bold mb-2"
+                  className="text-2xl lg:text-3xl font-bold mb-1.5"
                 >
                   {formatValue(currentBalance.income)}
                 </motion.div>
-                <div className="text-emerald-100 text-sm">
+                <div className="text-emerald-100 text-xs">
                   ↗ {t('dashboard.balance.trending')}
                 </div>
               </div>
             </motion.div>
             
-            {/* Glowing Expenses Card */}
+            {/* Compact Glowing Expenses Card */}
             <motion.div
               variants={cardVariants}
               whileHover={{ 
@@ -497,27 +496,27 @@ const BalancePanel = () => {
                 y: -5,
                 transition: { type: "spring", stiffness: 400, damping: 10 }
               }}
-              className="group relative overflow-hidden bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 rounded-3xl p-6 shadow-2xl"
+              className="group relative overflow-hidden bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 rounded-2xl p-4 shadow-2xl"
             >
               {/* Card Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-rose-300 via-red-400 to-pink-500 rounded-3xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-300 via-red-400 to-pink-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500"></div>
               
               {/* Floating Particles */}
-              <div className="absolute top-6 right-6 w-2 h-2 bg-white/40 rounded-full animate-pulse delay-300"></div>
-              <div className="absolute top-4 right-12 w-1 h-1 bg-white/60 rounded-full animate-ping delay-700"></div>
-              <div className="absolute bottom-8 left-8 w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce delay-500"></div>
+              <div className="absolute top-4 right-4 w-1.5 h-1.5 bg-white/40 rounded-full animate-pulse delay-300"></div>
+              <div className="absolute top-3 right-7 w-1 h-1 bg-white/60 rounded-full animate-ping delay-700"></div>
+              <div className="absolute bottom-5 left-5 w-1 h-1 bg-white/30 rounded-full animate-bounce delay-500"></div>
               
               <div className="relative z-10 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-rose-100 font-medium text-sm tracking-wide uppercase">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-rose-100 font-medium text-xs tracking-wide uppercase">
                     {t('dashboard.balance.expenses')}
                   </span>
                   <motion.div
                     animate={{ rotate: [0, -10, 10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
+                    className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm"
                   >
-                    <ArrowDownRight className="w-5 h-5" />
+                    <ArrowDownRight className="w-4 h-4" />
                   </motion.div>
                 </div>
                 <motion.div
@@ -525,17 +524,17 @@ const BalancePanel = () => {
                   initial="initial"
                   animate="animate"
                   key={`${period}-expenses-${isAnimating}`}
-                  className="text-3xl lg:text-4xl font-bold mb-2"
+                  className="text-2xl lg:text-3xl font-bold mb-1.5"
                 >
                   {formatValue(currentBalance.expenses)}
                 </motion.div>
-                <div className="text-rose-100 text-sm">
+                <div className="text-rose-100 text-xs">
                   ↘ {t('dashboard.balance.spent')}
                 </div>
               </div>
             </motion.div>
             
-            {/* Dynamic Balance Card */}
+            {/* Compact Dynamic Balance Card */}
             <motion.div
               variants={cardVariants}
               whileHover={{ 
@@ -543,27 +542,27 @@ const BalancePanel = () => {
                 y: -5,
                 transition: { type: "spring", stiffness: 400, damping: 10 }
               }}
-              className={`group relative overflow-hidden rounded-3xl p-6 shadow-2xl ${
+              className={`group relative overflow-hidden rounded-2xl p-4 shadow-2xl ${
                 currentBalance.balance >= 0
                   ? 'bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600'
                   : 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-600'
               }`}
             >
               {/* Dynamic Card Glow */}
-              <div className={`absolute inset-0 rounded-3xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500 ${
+              <div className={`absolute inset-0 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity duration-500 ${
                 currentBalance.balance >= 0
                   ? 'bg-gradient-to-br from-blue-300 via-indigo-400 to-purple-500'
                   : 'bg-gradient-to-br from-orange-300 via-amber-400 to-yellow-500'
               }`}></div>
               
               {/* Dynamic Floating Particles */}
-              <div className="absolute top-5 right-5 w-2 h-2 bg-white/40 rounded-full animate-pulse delay-200"></div>
-              <div className="absolute top-8 right-10 w-1 h-1 bg-white/60 rounded-full animate-ping delay-1000"></div>
-              <div className="absolute bottom-7 left-7 w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce delay-700"></div>
+              <div className="absolute top-3.5 right-3.5 w-1.5 h-1.5 bg-white/40 rounded-full animate-pulse delay-200"></div>
+              <div className="absolute top-5 right-6 w-1 h-1 bg-white/60 rounded-full animate-ping delay-1000"></div>
+              <div className="absolute bottom-4.5 left-4.5 w-1 h-1 bg-white/30 rounded-full animate-bounce delay-700"></div>
               
               <div className="relative z-10 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`font-medium text-sm tracking-wide uppercase ${
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`font-medium text-xs tracking-wide uppercase ${
                     currentBalance.balance >= 0 ? 'text-blue-100' : 'text-orange-100'
                   }`}>
                     {t('dashboard.balance.total')}
@@ -574,12 +573,12 @@ const BalancePanel = () => {
                       rotate: currentBalance.balance >= 0 ? [0, 5, -5, 0] : [0, -5, 5, 0]
                     }}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
+                    className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm"
                   >
                     {currentBalance.balance >= 0 ? (
-                      <TrendingUp className="w-5 h-5" />
+                      <TrendingUp className="w-4 h-4" />
                     ) : (
-                      <TrendingDown className="w-5 h-5" />
+                      <TrendingDown className="w-4 h-4" />
                     )}
                   </motion.div>
                 </div>
@@ -588,11 +587,11 @@ const BalancePanel = () => {
                   initial="initial"
                   animate="animate"
                   key={`${period}-balance-${isAnimating}`}
-                  className="text-3xl lg:text-4xl font-bold mb-2"
+                  className="text-2xl lg:text-3xl font-bold mb-1.5"
                 >
                   {formatValue(currentBalance.balance)}
                 </motion.div>
-                <div className={`text-sm ${
+                <div className={`text-xs ${
                   currentBalance.balance >= 0 ? 'text-blue-100' : 'text-orange-100'
                 }`}>
                   {currentBalance.balance >= 0 ? '📈 ' : '📉 '}

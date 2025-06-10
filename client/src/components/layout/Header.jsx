@@ -7,25 +7,33 @@ import {
   X,
   Home,
   CreditCard,
-  Tag,
+  Layers,
   User,
   LogOut,
   Sun,
   Moon,
   Globe,
   Settings,
-  ChevronDown
+  ChevronDown,
+  ChevronRight,
+  Tag,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/helpers';
+import { Avatar } from '../ui'; // Add Avatar import
 import CategoryManager from '../features/categories/CategoryManager';
+import RecurringModal from '../features/transactions/RecurringModal';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showPanelsDropdown, setShowPanelsDropdown] = useState(false);
+  const [showMobilePanels, setShowMobilePanels] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
   
   // ✅ IMPROVED: Better authentication state handling
   const { user, logout, isAuthenticated, isLoggingOut, isLoading, isInitialized } = useAuth();
@@ -46,6 +54,21 @@ const Header = () => {
   const handleLanguageToggle = () => {
     console.log('🌐 [HEADER] Session-only language toggle triggered');
     toggleLanguage(); // This calls changeLanguageSession() - session only!
+  };
+
+  // ✅ NEW: Handle panel modal opening
+  const handleOpenCategoryManager = () => {
+    setShowCategoryManager(true);
+    setShowPanelsDropdown(false);
+    setShowMobilePanels(false);
+    setIsOpen(false);
+  };
+
+  const handleOpenRecurringModal = () => {
+    setShowRecurringModal(true);
+    setShowPanelsDropdown(false);
+    setShowMobilePanels(false);
+    setIsOpen(false);
   };
 
   // Check if the path is active
@@ -75,20 +98,37 @@ const Header = () => {
     open: { opacity: 1, x: 0 }
   };
 
-  // Updated navigation items
-  const navigation = [
+  // ✅ UPDATED: Navigation items for desktop
+  const desktopNavigation = [
     { name: t('nav.dashboard'), href: '/', icon: Home },
     { name: t('nav.transactions'), href: '/transactions', icon: CreditCard },
-    { 
-      name: t('nav.categories'), 
-      href: '#', 
-      icon: Tag, 
-      onClick: () => setShowCategoryManager(true)
-    },
     { name: t('nav.profile'), href: '/profile', icon: User }
   ];
 
-  // Handle navigation click for modal items
+  // ✅ NEW: Mobile navigation including panels and logout
+  const mobileNavigation = [
+    { name: t('nav.dashboard'), href: '/', icon: Home },
+    { name: t('nav.transactions'), href: '/transactions', icon: CreditCard },
+    { name: t('nav.profile'), href: '/profile', icon: User }
+  ];
+
+  // ✅ NEW: Panel options
+  const panelOptions = [
+    {
+      name: t('nav.categoryManager'),
+      icon: Tag,
+      onClick: handleOpenCategoryManager,
+      description: t('nav.categoryManagerDesc')
+    },
+    {
+      name: t('nav.recurringManager'),
+      icon: Clock,
+      onClick: handleOpenRecurringModal,
+      description: t('nav.recurringManagerDesc')
+    }
+  ];
+
+  // Handle navigation click
   const handleNavClick = (item, e) => {
     if (item.onClick) {
       e.preventDefault();
@@ -103,6 +143,8 @@ const Header = () => {
   // Handle logout with loading state
   const handleLogout = async () => {
     try {
+      setIsOpen(false);
+      setShowDropdown(false);
       await logout();
     } catch (error) {
       console.error('Logout failed:', error);
@@ -150,9 +192,9 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-8" dir={isRTL ? 'rtl' : 'ltr'}>
-              {navigation.map((item) => (
+            {/* ✅ UPDATED: Desktop Navigation with Panels dropdown */}
+            <nav className="hidden md:flex items-center space-x-8" dir={isRTL ? 'rtl' : 'ltr'}>
+              {desktopNavigation.map((item) => (
                 <button
                   key={item.name}
                   onClick={(e) => handleNavClick(item, e)}
@@ -167,6 +209,49 @@ const Header = () => {
                   {item.name}
                 </button>
               ))}
+
+              {/* ✅ NEW: Panels Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowPanelsDropdown(!showPanelsDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  <Layers className="w-4 h-4" />
+                  {t('nav.panels')}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {/* Panels Dropdown Menu */}
+                <AnimatePresence>
+                  {showPanelsDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className={cn(
+                        "absolute top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
+                        isRTL ? 'right-0' : 'left-0'
+                      )}
+                    >
+                      {panelOptions.map((option) => (
+                        <button
+                          key={option.name}
+                          onClick={option.onClick}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-3 transition-colors"
+                        >
+                          <option.icon className="w-4 h-4 mt-0.5 text-primary-500" />
+                          <div>
+                            <div className="font-medium">{option.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {option.description}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </nav>
 
             {/* Right side controls */}
@@ -209,20 +294,22 @@ const Header = () => {
                 )}
               </button>
 
-              {/* User dropdown */}
-              <div className="relative">
+              {/* ✅ UPDATED: Desktop-only User dropdown with profile picture */}
+              <div className="relative hidden md:block">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="flex items-center gap-2 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   aria-label={t('common.openUserMenu')}
                 >
-                  <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                  </div>
+                  <Avatar
+                    size="sm"
+                    name={user?.username}
+                    src={user?.preferences?.profilePicture}
+                  />
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
-                {/* Dropdown menu */}
+                {/* Desktop Dropdown menu */}
                 <AnimatePresence>
                   {showDropdown && (
                     <motion.div
@@ -285,7 +372,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* ✅ UPDATED: Mobile menu with Panels and Logout */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -296,7 +383,8 @@ const Header = () => {
               className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700"
             >
               <div className="px-4 py-4 space-y-2">
-                {navigation.map((item) => (
+                {/* Regular navigation items */}
+                {mobileNavigation.map((item) => (
                   <motion.button
                     key={item.name}
                     variants={itemVariants}
@@ -312,16 +400,118 @@ const Header = () => {
                     {item.name}
                   </motion.button>
                 ))}
+
+                {/* ✅ NEW: Mobile Panels with expandable menu */}
+                <motion.div variants={itemVariants}>
+                  <button
+                    onClick={() => setShowMobilePanels(!showMobilePanels)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-5 h-5" />
+                      {t('nav.panels')}
+                    </div>
+                    <ChevronRight 
+                      className={cn(
+                        'w-4 h-4 transition-transform',
+                        showMobilePanels && 'rotate-90'
+                      )} 
+                    />
+                  </button>
+
+                  {/* Mobile Panels Submenu */}
+                  <AnimatePresence>
+                    {showMobilePanels && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="ml-8 mt-2 space-y-1 overflow-hidden"
+                      >
+                        {panelOptions.map((option) => (
+                          <button
+                            key={option.name}
+                            onClick={option.onClick}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            <option.icon className="w-4 h-4" />
+                            {option.name}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* ✅ NEW: Mobile User Section */}
+                <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="px-3 py-2 mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user?.username}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Session override indicators */}
+                    {(sessionTheme || sessionLanguage) && (
+                      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                        Session overrides active
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ✅ NEW: Mobile Logout */}
+                  <motion.button
+                    variants={itemVariants}
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    {isLoggingOut ? t('common.loading') : t('nav.logout')}
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </header>
-      {/* Click outside handler for dropdown */}
+
+      {/* ✅ Click outside handlers */}
       {showDropdown && (
         <div
           className="fixed inset-0 z-30"
           onClick={() => setShowDropdown(false)}
+        />
+      )}
+      {showPanelsDropdown && (
+        <div
+          className="fixed inset-0 z-30"
+          onClick={() => setShowPanelsDropdown(false)}
+        />
+      )}
+
+      {/* ✅ FIXED: Modals with proper state management */}
+      {showCategoryManager && (
+        <CategoryManager
+          isOpen={showCategoryManager}
+          onClose={() => setShowCategoryManager(false)}
+        />
+      )}
+
+      {showRecurringModal && (
+        <RecurringModal
+          isOpen={showRecurringModal}
+          onClose={() => setShowRecurringModal(false)}
+          onEdit={() => {}}
+          onSuccess={() => {}}
         />
       )}
     </>

@@ -328,15 +328,15 @@ const Dashboard = () => {
               <MobileCompactBalance dashboardData={dashboardData} t={t} />
             </motion.div>
 
-            {/* Mobile Quick Actions - FIXED */}
+            {/* Mobile Quick Actions */}
             <motion.div variants={itemVariants}>
-              <FixedMobileQuickActions setShowAddTransactions={setShowAddTransactions} t={t} />
+              <MemoizedQuickActionsBar />
             </motion.div>
 
-            {/* Mobile Transactions */}
+            {/* Mobile Transactions - COMPACT HEIGHT */}
             <motion.div variants={itemVariants}>
-              <div className="h-[300px]">
-                <MemoizedRecentTransactions limit={6} />
+              <div className="h-[280px]">
+                <MemoizedRecentTransactions limit={4} />
               </div>
             </motion.div>
 
@@ -348,54 +348,50 @@ const Dashboard = () => {
             </motion.div>
           </div>
 
-          {/* 💻 DESKTOP: REDESIGNED COMPACT LAYOUT */}
+          {/* 💻 DESKTOP: OPTIMIZED COMPACT LAYOUT */}
           <div className="hidden lg:block">
             
-            {/* ROW 1: Balance Panel + Quick Actions - Compact Row */}
+            {/* ROW 1: Balance Panel - Full Width */}
             <motion.div variants={itemVariants} className="mb-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                
-                {/* Balance Panel - Takes 2/3 width, more compact */}
-                <div className="lg:col-span-2">
-                  <div className="relative">
-                    {!showWelcomeBanner && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 1.02 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
-                        className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
-                      />
-                    )}
-                    <div className="relative">
-                      <MemoizedBalancePanel />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions - Takes 1/3 width, compact */}
-                <div className="lg:col-span-1">
-                  <MemoizedQuickActionsBar />
+              <div className="relative">
+                {!showWelcomeBanner && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 1.02 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
+                  />
+                )}
+                <div className="relative">
+                  <MemoizedBalancePanel />
                 </div>
               </div>
             </motion.div>
 
-            {/* ROW 2: Recent Transactions + Stats Chart */}
+            {/* ROW 2: Quick Actions + Recent Transactions - COMPACT EQUAL HEIGHT */}
             <motion.div variants={itemVariants} className="mb-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 
-                {/* Recent Transactions - Left side */}
-                <div className="relative">
-                  <MemoizedRecentTransactions />
+                {/* Quick Actions - Left side - COMPACT HEIGHT */}
+                <div className="relative h-[320px]">
+                  <MemoizedQuickActionsBar />
                 </div>
 
-                {/* Stats Chart - Right side */}
-                <div className="relative">
-                  <MemoizedStatsChart />
+                {/* Recent Transactions - Right side - SAME COMPACT HEIGHT */}
+                <div className="relative h-[320px]">
+                  <MemoizedRecentTransactions />
                 </div>
               </div>
             </motion.div>
 
-            {/* ROW 3: Compact Tips Section */}
+            {/* ROW 3: Stats Chart - Full Width */}
+            <motion.div variants={itemVariants} className="mb-4">
+              <div className="relative">
+                <MemoizedStatsChart />
+              </div>
+            </motion.div>
+
+            {/* ROW 4: Compact Tips Section */}
             <motion.div variants={itemVariants}>
               <CompactTipsSection t={t} />
             </motion.div>
@@ -458,17 +454,21 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
     exit="exit"
     className="relative overflow-hidden mb-3"
   >
-    <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-4 shadow-lg"> {/* Reduced padding */}
+    <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-3 sm:p-4 shadow-lg">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 -right-4 w-20 h-20 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse" />
         <div className="absolute -bottom-4 -left-4 w-16 h-16 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-1000" />
       </div>
       
       <div className="relative z-10">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
+        {/* Mobile-first responsive layout */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          
+          {/* Main content - Avatar + Text */}
+          <div className="flex items-start sm:items-center gap-3">
+            {/* Avatar section */}
+            <div className="relative flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
                 {user?.preferences?.profilePicture ? (
                   <img 
                     src={user.preferences.profilePicture} 
@@ -476,7 +476,7 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-base lg:text-lg font-bold text-white">
+                  <span className="text-sm sm:text-base lg:text-lg font-bold text-white">
                     {user?.username?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 )}
@@ -484,33 +484,48 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
             </div>
             
-            <div>
-              <h1 className="text-base sm:text-lg lg:text-xl font-bold mb-1 flex items-center gap-2">
-                <span dir="ltr">SpendWise</span> - {greeting}
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                >
-                  <Sparkles className="w-4 h-4" />
-                </motion.div>
-              </h1>
-              <p className="text-white/90 flex items-center gap-2 text-sm">
-                <Calendar className="w-3 h-3" />
-                {(() => {
-                  const date = selectedDate || new Date();
-                  const formatOptions = language === 'he' 
-                    ? { weekday: 'short', month: 'short', day: 'numeric' }
-                    : { weekday: 'short', month: 'short', day: 'numeric' };
-                  return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
-                })()}
+            {/* Text section - Mobile optimized */}
+            <div className="flex-1 min-w-0">
+              {/* Title - Mobile: Stack SpendWise and greeting */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 mb-1">
+                <h1 className="text-sm sm:text-base lg:text-xl font-bold text-white">
+                  <span dir="ltr" className="text-white">SpendWise</span>
+                </h1>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="text-sm sm:text-base lg:text-xl font-bold text-white">
+                    {greeting}
+                  </span>
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                    className="flex-shrink-0"
+                  >
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </motion.div>
+                </div>
+              </div>
+              
+              {/* Date section */}
+              <p className="text-white/90 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Calendar className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">
+                  {(() => {
+                    const date = selectedDate || new Date();
+                    const formatOptions = language === 'he' 
+                      ? { weekday: 'short', month: 'short', day: 'numeric' }
+                      : { weekday: 'short', month: 'short', day: 'numeric' };
+                    return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', formatOptions);
+                  })()}
+                </span>
               </p>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="default" className="bg-white/20 text-white border-white/30 px-3 py-1 text-xs">
+          {/* Badge section - Mobile: Right aligned, smaller */}
+          <div className="flex justify-end sm:justify-start">
+            <Badge variant="default" className="bg-white/20 text-white border-white/30 px-2 sm:px-3 py-1 text-xs flex-shrink-0">
               <Activity className="w-3 h-3 mr-1" />
-              Active
+              <span>Active</span>
             </Badge>
           </div>
         </div>
@@ -658,240 +673,6 @@ const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
         </motion.div>
       </div>
     </div>
-  );
-});
-
-// 📱 FIXED: Mobile Quick Actions - הבאג תוקן!
-const FixedMobileQuickActions = React.memo(({ setShowAddTransactions, t }) => {
-  const [activeType, setActiveType] = useState('expense');
-  const [amount, setAmount] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const { formatAmount, currency } = useCurrency();
-  const { selectedDate, getDateForServer } = useDate();
-  
-  // ✅ FIX: Use the same hook as desktop
-  const { createTransaction, isCreating } = useTransactionActions();
-  const inputRef = useRef(null);
-  
-  const quickAmounts = [10, 20, 50, 100, 200];
-  
-  const handleQuickAmount = useCallback((value) => {
-    setAmount(value.toString());
-    setError('');
-    inputRef.current?.focus();
-  }, []);
-  
-  const handleAmountChange = useCallback((e) => {
-    // ✅ FIX: Better amount validation like desktop
-    const value = e.target.value.replace(/[^\d.-]/g, '');
-    setAmount(value);
-    setError('');
-  }, []);
-  
-  // ✅ FIX: Same logic as desktop QuickActionsBar
-  const handleSubmit = useCallback(async () => {
-    const numericAmount = parseFloat(amount);
-    
-    if (!amount || numericAmount <= 0) {
-      setError(t('actions.errors.amountRequired') || 'נא להזין סכום');
-      inputRef.current?.focus();
-      return;
-    }
-    
-    try {
-      setError('');
-      
-      // ✅ FIX: Use exact same parameters as desktop
-      await createTransaction(activeType, {
-        amount: numericAmount,
-        description: t('dashboard.quickActions.defaultDescription') || `Quick ${activeType}`,
-        category_id: 8, // Same default category as desktop
-        date: getDateForServer(selectedDate),
-        is_recurring: false
-      });
-      
-      setSuccess(true);
-      setAmount('');
-      
-      // Reset success state
-      setTimeout(() => setSuccess(false), 3000);
-      
-    } catch (err) {
-      console.error('Mobile QuickActions Error:', err);
-      setError(err.message || t('actions.errors.addingTransaction') || 'שגיאה בהוספת העסקה');
-    }
-  }, [amount, activeType, selectedDate, createTransaction, t, getDateForServer]);
-
-  const handleKeyPress = useCallback((e) => {
-    if (e.key === 'Enter' && !isCreating) {
-      handleSubmit();
-    }
-  }, [handleSubmit, isCreating]);
-
-  return (
-    <Card className="p-3">
-      <div className="space-y-3">
-        {/* Header with success indicator */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></span>
-            {t('dashboard.quickActions.title') || 'Quick Add'}
-          </h3>
-          <AnimatePresence>
-            {success && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full text-xs"
-              >
-                <Check className="w-3 h-3" />
-                ✓
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        
-        {/* Type Switch */}
-        <div className="flex rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
-          <motion.button
-            onClick={() => setActiveType('expense')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-md text-xs font-medium transition-all relative ${
-              activeType === 'expense'
-                ? 'text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {activeType === 'expense' && (
-              <motion.div
-                layoutId="mobileActiveType"
-                className="absolute inset-0 bg-red-500 rounded-md"
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-            <TrendingDown className="w-3 h-3 relative z-10" />
-            <span className="relative z-10">{t('transactions.expense')}</span>
-          </motion.button>
-          
-          <motion.button
-            onClick={() => setActiveType('income')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 px-3 rounded-md text-xs font-medium transition-all relative ${
-              activeType === 'income'
-                ? 'text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {activeType === 'income' && (
-              <motion.div
-                layoutId="mobileActiveType"
-                className="absolute inset-0 bg-green-500 rounded-md"
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-            <TrendingUp className="w-3 h-3 relative z-10" />
-            <span className="relative z-10">{t('transactions.income')}</span>
-          </motion.button>
-        </div>
-        
-        {/* Amount Input Field */}
-        <div className="space-y-2">
-          <div className="relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={amount}
-              onChange={handleAmountChange}
-              onKeyPress={handleKeyPress}
-              placeholder="0.00"
-              className="w-full p-3 text-center text-lg font-medium border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
-              {currency?.symbol || '₪'}
-            </div>
-          </div>
-          
-          {/* Quick amount buttons */}
-          <div className="grid grid-cols-5 gap-1">
-            {quickAmounts.map((quickAmount) => (
-              <motion.button
-                key={quickAmount}
-                onClick={() => handleQuickAmount(quickAmount)}
-                className="py-2 px-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {formatAmount(quickAmount)}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Error Display */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-200 dark:border-red-800 text-center"
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        {/* Submit Button */}
-        <motion.button
-          onClick={handleSubmit}
-          disabled={isCreating || !amount || parseFloat(amount) <= 0}
-          className={`w-full py-3 text-sm font-medium rounded-lg transition-all ${
-            activeType === 'expense'
-              ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
-              : 'bg-green-500 hover:bg-green-600 disabled:bg-green-300'
-          } text-white disabled:text-gray-500 disabled:cursor-not-allowed`}
-          whileHover={{ scale: isCreating ? 1 : 1.02 }}
-          whileTap={{ scale: isCreating ? 1 : 0.98 }}
-        >
-          <AnimatePresence mode="wait">
-            {isCreating ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center gap-2"
-              >
-                <motion.div
-                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
-                {t('actions.adding') || 'מוסיף...'}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="submit"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>
-                  {t('actions.add') || 'הכנס'} {activeType === 'expense' ? t('transactions.expense') : t('transactions.income')}
-                  {amount && ` • ${formatAmount(parseFloat(amount))}`}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.button>
-      </div>
-    </Card>
   );
 });
 

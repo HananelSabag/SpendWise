@@ -129,7 +129,6 @@ const Avatar = ({
           className={cn(
             'rounded-full object-cover',
             sizeClasses[size],
-            'ring-2 ring-white dark:ring-gray-800',
             onClick && 'cursor-pointer hover:ring-4 transition-all'
           )}
           onError={handleImageError}
@@ -141,7 +140,6 @@ const Avatar = ({
             'rounded-full flex items-center justify-center font-semibold text-white',
             sizeClasses[size],
             getColorFromName(name),
-            'ring-2 ring-white dark:ring-gray-800',
             onClick && 'cursor-pointer hover:ring-4 transition-all'
           )}
         >

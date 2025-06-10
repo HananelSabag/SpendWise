@@ -68,13 +68,21 @@ const ProtectedRoute = ({ children }) => {
   
   // ✅ FIX: During startup with token, show loading until auth resolves
   if (hasToken && isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <LoadingSpinner />
+      </div>
+    );
   }
   
   // ✅ FIX: Check stored page preference for valid token holders
   if (hasToken && !isAuthenticated) {
     // Token exists but user not loaded yet - show loading
-    return <LoadingSpinner />;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <LoadingSpinner />
+      </div>
+    );
   }
   
   if (!isAuthenticated) {
@@ -93,7 +101,11 @@ const SmartRedirect = () => {
   
   // ✅ FIX: During startup, check stored page
   if (hasToken && isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <LoadingSpinner />
+      </div>
+    );
   }
   
   if (!isAuthenticated) {
@@ -139,7 +151,7 @@ const AppContent = () => {
   // Show loading screen while authentication state is being determined
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
         <LoadingSpinner size="large" />
       </div>
     );
@@ -150,7 +162,11 @@ const AppContent = () => {
       {isAuthenticated && <Header />}
       
       <main className="flex-grow">
-        <Suspense fallback={<LoadingSpinner />}>
+        <Suspense fallback={
+          <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+            <LoadingSpinner />
+          </div>
+        }>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={
@@ -302,7 +318,7 @@ function App() {
                 <DateProvider>
                   <CurrencyProvider>
                     <Suspense fallback={
-                      <div className="h-screen w-screen flex items-center justify-center">
+                      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
                         <LoadingSpinner size="large" />
                       </div>
                     }>

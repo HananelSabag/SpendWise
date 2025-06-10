@@ -149,7 +149,7 @@ const ProfileInfo = ({ user }) => {
             size="lg"
             name={user?.username}
             src={user?.preferences?.profilePicture}
-            className="ring-4 ring-gray-100 dark:ring-gray-800 group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
+            className="group-hover:ring-primary-300 dark:group-hover:ring-primary-600 transition-all"
           />
           
           {/* Upload overlay */}
