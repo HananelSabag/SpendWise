@@ -57,10 +57,10 @@ const AddTransactions = ({
   
   const dateButtonRef = useRef(null);
 
-  // ✅ PRESERVED: Exact same form data initialization as original
+  // ✅ PRESERVED: Exact same form data initialization but with smart defaults
   const [formData, setFormData] = useState({
     amount: '',
-    description: '',
+    description: '', // Will use smart default if empty
     category_id: null, // Will be set when categories load
     is_recurring: initialActionType?.isRecurring || false,
     recurring_interval: 'monthly',
@@ -192,22 +192,70 @@ const AddTransactions = ({
     setError('');
   };
 
-  // ✅ PRESERVED: Exact same form submission logic with all original validation
+  // ✅ NEW: Function to generate smart default description
+  const getSmartDefaultDescription = () => {
+    if (formData.description.trim()) return formData.description.trim();
+    
+    // Find the selected category
+    const allCats = [...categorizedCategories.general, ...categorizedCategories.customized];
+    const selectedCategory = allCats.find(cat => cat.id === formData.category_id);
+    const categoryName = selectedCategory ? selectedCategory.name : '';
+    
+    // Generate smart default based on type and category
+    if (activeType?.type === 'income') {
+      if (activeType.isRecurring) {
+        return categoryName ? `${t('actions.monthlyIncome')} - ${categoryName}` : t('actions.monthlyIncome');
+      } else {
+        return categoryName ? `${t('actions.income')} - ${categoryName}` : t('actions.income');
+      }
+    } else {
+      if (activeType.isRecurring) {
+        return categoryName ? `${t('actions.monthlyExpense')} - ${categoryName}` : t('actions.monthlyExpense');
+      } else {
+        return categoryName ? `${t('actions.expense')} - ${categoryName}` : t('actions.expense');
+      }
+    }
+  };
+
+  // ✅ MODIFIED: Updated form submission with smart defaults
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
+    // Only validate amount as required
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      setError(t('actions.errors.amountRequired'));
+      return;
+    }
+
+    // Use smart defaults for missing fields
+    const smartDescription = getSmartDefaultDescription();
+    const defaultCategoryId = formData.category_id || (() => {
+      const allCats = [...categorizedCategories.general, ...categorizedCategories.customized];
+      return allCats[0]?.id || null;
+    })();
+
+    if (!defaultCategoryId) {
+      setError(t('actions.errors.categoryRequired'));
+      return;
+    }
+
+    // Validation with smart defaults
+    const submitData = {
+      amount: parseFloat(formData.amount),
+      description: smartDescription,
+      date: new Date(formData.date),
+      category_id: defaultCategoryId,
+      is_recurring: formData.is_recurring,
+      recurring_interval: formData.recurring_interval,
+      recurring_end_date: formData.recurring_end_date ? new Date(formData.recurring_end_date) : null,
+      day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
+        ? formData.day_of_week 
+        : null
+    };
+
     const { success: isValid, errors: validationErrors } = validate(
       transactionSchemas.create,
-      {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
-        date: new Date(formData.date),
-        category_id: formData.category_id,
-        is_recurring: formData.is_recurring,
-        recurring_interval: formData.recurring_interval,
-        recurring_end_date: formData.recurring_end_date ? new Date(formData.recurring_end_date) : null
-      }
+      submitData
     );
 
     if (!isValid) {
@@ -215,24 +263,18 @@ const AddTransactions = ({
       return;
     }
 
-    // Additional validation
-    if (!formData.category_id) {
-      setError(t('actions.errors.categoryRequired'));
-      return;
-    }
-
     try {
       setError('');
       
-      const submitData = {
+      await createTransaction(activeType.type, {
         ...formData,
         amount: parseFloat(formData.amount),
+        description: smartDescription,
+        category_id: defaultCategoryId,
         day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
           ? formData.day_of_week 
           : null
-      };
-
-      await createTransaction(activeType.type, submitData);
+      });
       
       setSuccess(true);
       
@@ -537,29 +579,33 @@ const AddTransactions = ({
 
                   <Card className="p-4">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                      {t('common.description')} <span className="text-red-500">*</span>
+                      {t('common.description')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
                     </label>
                     <div className="relative">
                       <input
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder={t('actions.descriptionPlaceholder')}
+                        placeholder={getSmartDefaultDescription()}
                         className="w-full py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        required
                       />
                       <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
+                    {!formData.description.trim() && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        {t('actions.willUseDefault')}: "{getSmartDefaultDescription()}"
+                      </p>
+                    )}
                   </Card>
                 </div>
 
-                {/* ✅ ENHANCED: Better category and date layout */}
+                {/* ✅ MODIFIED: Updated category and date layout with optional indicators */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   
-                  {/* ✅ PRESERVED: Category Selection with exact same logic */}
+                  {/* ✅ MODIFIED: Category Selection with optional indicator */}
                   <Card className="p-4 md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                      {t('common.category')}
+                      {t('common.category')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
                     </label>
                     
                     {categoriesLoading ? (
@@ -581,7 +627,9 @@ const AddTransactions = ({
                           >
                             <div className="flex items-center justify-center gap-2">
                               <Crown className="w-4 h-4" />
-                              <span>{t('categories.defaultCategories')} ({categorizedCategories.general.length})</span>
+                              <span className="hidden sm:inline">{t('categories.defaultCategories')}</span>
+                              <span className="sm:hidden">{t('categories.default')}</span>
+                              <span>({categorizedCategories.general.length})</span>
                             </div>
                           </button>
                           <button
@@ -595,10 +643,21 @@ const AddTransactions = ({
                           >
                             <div className="flex items-center justify-center gap-2">
                               {React.createElement(getIconComponent('tag'), { className: 'w-4 h-4' })}
-                              <span>{t('categories.userCategoriesDesc')} ({categorizedCategories.customized.length})</span>
+                              <span className="hidden sm:inline">{t('categories.userCategoriesDesc')}</span>
+                              <span className="sm:hidden">{t('categories.custom')}</span>
+                              <span>({categorizedCategories.customized.length})</span>
                             </div>
                           </button>
                         </div>
+
+                        {/* Default category info */}
+                        {!formData.category_id && currentTabCategories.length > 0 && (
+                          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                              {t('actions.willUseFirstCategory')}: <span className="font-medium">{currentTabCategories[0]?.name}</span>
+                            </p>
+                          </div>
+                        )}
 
                         {/* Category Grid */}
                         {currentTabCategories.length === 0 ? (
@@ -678,10 +737,10 @@ const AddTransactions = ({
                     )}
                   </Card>
 
-                  {/* ✅ ENHANCED: Compact Date Selection */}
+                  {/* ✅ MODIFIED: Date Selection with optional indicator */}
                   <Card className="p-4">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                      {t('common.date')}
+                      {t('common.date')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
                     </label>
                     <div className="relative">
                       <Button
@@ -695,7 +754,7 @@ const AddTransactions = ({
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-500" />
                           <span className="font-medium truncate">
-                            {new Date(formData.date).toLocaleDateString('en-US', {
+                            {new Date(formData.date).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
                               month: 'short',
                               day: 'numeric'
                             })}
@@ -720,6 +779,9 @@ const AddTransactions = ({
                         />
                       )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {t('actions.defaultToday')}
+                    </p>
                   </Card>
                 </div>
 
@@ -875,7 +937,7 @@ const AddTransactions = ({
         </div>
       </div>
 
-      {/* ✅ PRESERVED: Footer with all original translation keys */}
+      {/* ✅ MODIFIED: Footer with updated validation */}
       {currentStep === 1 && activeType && !success && (
         <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
           <div className="flex gap-3">
@@ -894,7 +956,7 @@ const AddTransactions = ({
               type="submit"
               variant="primary"
               loading={isCreating}
-              disabled={isCreating || !formData.amount || !formData.description || !formData.category_id}
+              disabled={isCreating || !formData.amount || parseFloat(formData.amount) <= 0}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md hover:shadow-lg py-3"
               onClick={handleSubmit}
             >
