@@ -348,51 +348,55 @@ const Dashboard = () => {
             </motion.div>
           </div>
 
-          {/* 💻 DESKTOP: COMPACT 2-Column Layout */}
+          {/* 💻 DESKTOP: REDESIGNED COMPACT LAYOUT */}
           <div className="hidden lg:block">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
-              
-              {/* LEFT COLUMN: Balance & Actions */}
-              <div className="space-y-3">
+            
+            {/* ROW 1: Balance Panel + Quick Actions - Compact Row */}
+            <motion.div variants={itemVariants} className="mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 
-                {/* Balance Panel - Compact size */}
-                <motion.div variants={itemVariants} className="relative">
-                  {!showWelcomeBanner && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 1.02 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                      className="absolute -inset-2 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-lg"
-                    />
-                  )}
+                {/* Balance Panel - Takes 2/3 width, more compact */}
+                <div className="lg:col-span-2">
                   <div className="relative">
-                    <MemoizedBalancePanel />
+                    {!showWelcomeBanner && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 1.02 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
+                      />
+                    )}
+                    <div className="relative">
+                      <MemoizedBalancePanel />
+                    </div>
                   </div>
-                </motion.div>
+                </div>
 
-                {/* Quick Actions - Compact */}
-                <motion.div variants={itemVariants}>
+                {/* Quick Actions - Takes 1/3 width, compact */}
+                <div className="lg:col-span-1">
                   <MemoizedQuickActionsBar />
-                </motion.div>
+                </div>
               </div>
+            </motion.div>
 
-              {/* RIGHT COLUMN: Transactions & Stats Chart */}
-              <div className="space-y-3">
+            {/* ROW 2: Recent Transactions + Stats Chart */}
+            <motion.div variants={itemVariants} className="mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 
-                {/* Recent Transactions - Optimized height */}
-                <motion.div variants={itemVariants}>
+                {/* Recent Transactions - Left side */}
+                <div className="relative">
                   <MemoizedRecentTransactions />
-                </motion.div>
+                </div>
 
-                {/* Stats Chart */}
-                <motion.div variants={itemVariants}>
+                {/* Stats Chart - Right side */}
+                <div className="relative">
                   <MemoizedStatsChart />
-                </motion.div>
+                </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Enhanced Tips Section - Compact */}
-            <motion.div variants={itemVariants} className="mt-3">
+            {/* ROW 3: Compact Tips Section */}
+            <motion.div variants={itemVariants}>
               <CompactTipsSection t={t} />
             </motion.div>
           </div>

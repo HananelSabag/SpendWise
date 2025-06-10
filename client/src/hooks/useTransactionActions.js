@@ -1,18 +1,16 @@
-// client/src/hooks/useTransactionActions.js
 /**
- * useTransactionActions Hook - Optimized Component Refresh System
+ * useTransactionActions Hook - OPTIMIZED FOR INFINITE LOADING
  * 
- * PERFORMANCE IMPROVEMENTS:
- * ✅ Removed setTimeout delays - immediate cache invalidation  
- * ✅ Efficient cache management - invalidate only necessary queries
- * ✅ Cross-component synchronization - QuickActions updates BalancePanel + RecentTransactions instantly
- * ✅ Clean architecture - relies purely on React Query cache invalidation
+ * ✅ FIXED: Clean integration with infinite loading architecture
+ * ✅ FIXED: Proper cache invalidation for infinite queries
+ * ✅ FIXED: Simplified context-aware operations
+ * ✅ PRESERVED: All existing functionality and CRUD operations
  * 
- * USAGE:
- * - QuickActionsBar: Creates transactions and updates dashboard immediately
- * - AddTransactions: Full transaction creation with instant refresh
- * - EditTransaction: Updates existing transactions with real-time sync
- * - DeleteTransaction: Removes transactions with immediate UI updates
+ * ARCHITECTURE:
+ * - Works with useInfiniteQuery data structure
+ * - Proper cache invalidation for infinite queries
+ * - Context-aware performance optimization
+ * - All original functionality preserved
  */
 
 import { useCallback } from 'react';
@@ -20,74 +18,131 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from './useTransactions';
 import toast from 'react-hot-toast';
 
-export const useTransactionActions = () => {
-  const queryClient = useQueryClient();
+/**
+ * ✅ ENHANCED: Context strategies optimized for infinite loading
+ */
+const CONTEXT_STRATEGIES = {
+  dashboard: {
+    strategy: 'dashboard',
+    invalidationPriority: 'high',
+    autoRefresh: true
+  },
   
-  // ✅ PERFORMANCE: Use smaller limit for better responsiveness
+  transactions: {
+    strategy: 'progressive', 
+    invalidationPriority: 'high',
+    autoRefresh: true
+  },
+  
+  quickActions: {
+    strategy: 'dashboard',
+    invalidationPriority: 'critical',
+    autoRefresh: true
+  },
+  
+  search: {
+    strategy: 'search',
+    invalidationPriority: 'medium',
+    autoRefresh: false
+  },
+  
+  analytics: {
+    strategy: 'analytics',
+    invalidationPriority: 'low',
+    autoRefresh: false
+  },
+
+  mobile: {
+    strategy: 'mobile',
+    invalidationPriority: 'high',
+    autoRefresh: true
+  }
+};
+
+export const useTransactionActions = (context = 'transactions') => {
+  const queryClient = useQueryClient();
+  const contextConfig = CONTEXT_STRATEGIES[context] || CONTEXT_STRATEGIES.transactions;
+  
+  // ✅ SIMPLIFIED: Use the optimized useTransactions hook
   const {
     createTransaction: baseCreateTransaction,
     updateTransaction: baseUpdateTransaction,
     deleteTransaction: baseDeleteTransaction,
     isCreating,
     isUpdating,
-    isDeleting
-  } = useTransactions({ limit: 25 }); // ✅ REDUCED: From 50 to 25
+    isDeleting,
+    refreshAll
+  } = useTransactions({ strategy: contextConfig.strategy });
 
   /**
-   * ✅ OPTIMIZED: Selective cache invalidation for better performance
+   * ✅ ENHANCED: Smart cache invalidation for infinite queries
    */
-  const invalidateRelevantQueries = useCallback(async () => {
-    // Only invalidate active queries to avoid unnecessary refetches
-    const activeQueries = queryClient.getQueryCache().getAll()
-      .filter(query => query.getObserversCount() > 0);
+  const invalidateRelevantQueries = useCallback(async (priority = 'high') => {
+    const priorityMap = {
+      critical: ['transactions', 'dashboard'],
+      high: ['transactions', 'dashboard', 'transactionsSummary'],
+      medium: ['transactions', 'dashboard', 'transactionsSummary', 'categories'],
+      low: ['transactions', 'dashboard', 'transactionsSummary', 'categories', 'templates', 'transactionsRecurring']
+    };
     
-    const relevantQueryKeys = ['dashboard', 'transactions', 'transactionsSummary'];
+    const queriesToInvalidate = priorityMap[priority] || priorityMap.high;
     
-    for (const query of activeQueries) {
-      const queryKey = query.queryKey[0];
-      if (relevantQueryKeys.includes(queryKey)) {
-        await queryClient.invalidateQueries({ queryKey: [queryKey] });
-      }
+    // ✅ FIXED: Invalidate infinite queries properly
+    for (const queryKey of queriesToInvalidate) {
+      await queryClient.invalidateQueries({ 
+        queryKey: [queryKey],
+        exact: false // This ensures infinite queries are also invalidated
+      });
     }
     
-    // Force refetch only for visible components
-    await queryClient.refetchQueries({ 
-      queryKey: ['transactions'], 
-      type: 'active',
-      exact: false
-    });
-  }, [queryClient]);
+    // ✅ NEW: For high priority operations, force immediate refresh
+    if (priority === 'critical' || priority === 'high') {
+      // Refetch infinite transaction queries
+      await queryClient.refetchQueries({ 
+        queryKey: ['transactions', 'infinite'], 
+        type: 'active',
+        exact: false
+      });
+      
+      if (context === 'quickActions' || context === 'dashboard') {
+        await queryClient.refetchQueries({ 
+          queryKey: ['dashboard'], 
+          type: 'active',
+          exact: false
+        });
+      }
+    }
+  }, [queryClient, context]);
 
   /**
-   * Create Transaction - Optimized for immediate component updates
-   * 
-   * BEFORE: setTimeout(100ms) → delayed refresh → QuickActions didn't update other components
-   * AFTER: Immediate invalidation → instant refresh → all components sync immediately
+   * Create Transaction - Optimized for infinite loading
    * 
    * @param {string} type - 'income' or 'expense'
-   * @param {object} data - Transaction data (amount, description, category_id, date, etc.)
+   * @param {object} data - Transaction data
    * @returns {Promise} - Transaction creation result
    */
   const createTransaction = useCallback(async (type, data) => {
     try {
-      // Create the transaction first
       const result = await baseCreateTransaction(type, data);
       
-      // ✅ PERFORMANCE: Selective invalidation instead of broad refresh
-      await invalidateRelevantQueries();
+      // ✅ ENHANCED: Context-aware invalidation
+      await invalidateRelevantQueries(contextConfig.invalidationPriority);
+      
+      // ✅ NEW: Auto-refresh for high-priority contexts
+      if (contextConfig.autoRefresh && (context === 'quickActions' || context === 'dashboard')) {
+        setTimeout(() => {
+          refreshAll();
+        }, 500); // Small delay to allow server to process
+      }
       
       return result;
     } catch (error) {
-      // Let the base mutation handle error toasts and logging
       throw error;
     }
-  }, [baseCreateTransaction, invalidateRelevantQueries]);
+  }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll]);
 
   /**
-   * Update Transaction - Immediate refresh for edit operations
-   * 
-   * Ensures edit operations from TransactionList or EditModal 
-   * immediately update dashboard components
+   * Update Transaction - Context-aware immediate refresh
    * 
    * @param {string} type - Transaction type
    * @param {number} id - Transaction ID
@@ -97,18 +152,25 @@ export const useTransactionActions = () => {
   const updateTransaction = useCallback(async (type, id, data) => {
     try {
       const result = await baseUpdateTransaction(type, id, data);
-      await invalidateRelevantQueries();
+      
+      // Always use high priority for updates since they're user-initiated
+      await invalidateRelevantQueries('high');
+      
+      // Auto-refresh for immediate feedback
+      if (contextConfig.autoRefresh) {
+        setTimeout(() => {
+          refreshAll();
+        }, 300);
+      }
+      
       return result;
     } catch (error) {
       throw error;
     }
-  }, [baseUpdateTransaction, invalidateRelevantQueries]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll]);
 
   /**
-   * Delete Transaction - Clean removal with immediate UI updates
-   * 
-   * Handles both single transaction deletion and bulk recurring deletion
-   * Updates all dashboard components immediately
+   * Delete Transaction - Clean removal with infinite query support
    * 
    * @param {number} id - Transaction ID to delete
    * @param {boolean} deleteAll - Whether to delete all recurring instances
@@ -117,7 +179,9 @@ export const useTransactionActions = () => {
   const deleteTransaction = useCallback(async (id, deleteAll = false) => {
     try {
       const result = await baseDeleteTransaction(id, deleteAll);
-      await invalidateRelevantQueries();
+      
+      // Use critical priority for deletions to ensure immediate UI updates
+      await invalidateRelevantQueries('critical');
       
       // For recurring deletions, also refresh templates
       if (deleteAll) {
@@ -125,38 +189,91 @@ export const useTransactionActions = () => {
         await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
       }
       
+      // Always refresh after deletion for immediate feedback
+      setTimeout(() => {
+        refreshAll();
+      }, 200);
+      
       return result;
     } catch (error) {
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll]);
 
   /**
-   * Bulk Operations - For future expansion
-   * 
-   * Placeholder for bulk transaction operations
-   * with optimized cache invalidation
+   * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading
    */
-  const bulkOperations = useCallback(async (operation, transactionIds) => {
+  const bulkOperations = useCallback(async (operation, transactionIds, options = {}) => {
     try {
-      // Future implementation for bulk create/update/delete
-      // Will follow the same immediate invalidation pattern
+      const { batchSize = 10, onProgress } = options;
+      const results = [];
       
-      throw new Error('Bulk operations not yet implemented');
+      // Process in batches
+      for (let i = 0; i < transactionIds.length; i += batchSize) {
+        const batch = transactionIds.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(id => {
+          switch (operation) {
+            case 'delete':
+              return baseDeleteTransaction(id);
+            case 'update':
+              return baseUpdateTransaction(options.type, id, options.data);
+            default:
+              throw new Error(`Unsupported bulk operation: ${operation}`);
+          }
+        });
+        
+        const batchResults = await Promise.allSettled(batchPromises);
+        results.push(...batchResults);
+        
+        // Report progress
+        if (onProgress) {
+          onProgress({
+            completed: i + batch.length,
+            total: transactionIds.length,
+            percentage: Math.round(((i + batch.length) / transactionIds.length) * 100)
+          });
+        }
+        
+        // Small delay between batches
+        if (i + batchSize < transactionIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+      
+      // Invalidate caches once after all operations
+      await invalidateRelevantQueries('high');
+      
+      // Refresh data
+      setTimeout(() => {
+        refreshAll();
+      }, 500);
+      
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      
+      if (successful > 0) {
+        toast.success(`${successful} transactions ${operation}d successfully`);
+      }
+      
+      if (failed > 0) {
+        toast.error(`${failed} transactions failed to ${operation}`);
+      }
+      
+      return { successful, failed, results };
+      
     } catch (error) {
+      toast.error(`Bulk ${operation} failed`);
       throw error;
     }
-  }, [queryClient]);
+  }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries, refreshAll]);
 
   /**
-   * Force Refresh All - Manual refresh trigger
-   * 
-   * Utility function to manually refresh all transaction-related data
-   * Useful for debugging or manual sync operations
+   * ✅ ENHANCED: Force refresh with infinite query support
    */
   const forceRefreshAll = useCallback(async () => {
     try {
-      // Clear and refetch all transaction-related queries
+      // Clear all transaction-related queries, including infinite queries
       await queryClient.invalidateQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey[0];
@@ -171,14 +288,17 @@ export const useTransactionActions = () => {
         }
       });
       
-      // Force immediate refetch of active queries
+      // Force immediate refetch of infinite queries
       await queryClient.refetchQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0];
-          return ['dashboard', 'transactions'].includes(queryKey) && 
-                 query.getObserversCount() > 0;
-        },
-        type: 'active'
+        queryKey: ['transactions', 'infinite'],
+        type: 'active',
+        exact: false
+      });
+      
+      await queryClient.refetchQueries({ 
+        queryKey: ['dashboard'],
+        type: 'active',
+        exact: false
       });
       
       toast.success('All transaction data refreshed');
@@ -188,24 +308,27 @@ export const useTransactionActions = () => {
     }
   }, [queryClient]);
 
-  // Return all transaction operations with loading states
   return {
-    // CRUD Operations - optimized for immediate component updates
+    // ✅ PRESERVED: CRUD Operations (enhanced with infinite loading support)
     createTransaction,
     updateTransaction, 
     deleteTransaction,
     
-    // Loading States - directly from base mutations
+    // ✅ PRESERVED: Loading States
     isCreating,
     isUpdating,
     isDeleting,
     
-    // Utility Operations
+    // ✅ ENHANCED: Operations with infinite loading support
     bulkOperations,
     forceRefreshAll,
     
-    // State Helper - check if any transaction operation is in progress
-    isOperating: isCreating || isUpdating || isDeleting
+    // ✅ PRESERVED: State Helper
+    isOperating: isCreating || isUpdating || isDeleting,
+    
+    // ✅ NEW: Context information for debugging
+    context,
+    contextConfig: process.env.NODE_ENV === 'development' ? contextConfig : undefined
   };
 };
 
