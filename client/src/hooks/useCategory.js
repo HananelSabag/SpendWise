@@ -38,8 +38,14 @@ export const useCategories = (type = null) => {
   // ✅ ADD: Debug logging to see what API returns
   console.log('🔍 [CATEGORIES-DEBUG] Raw API response:', categoriesQuery.data);
   
-  // ✅ FIXED: Process categories with proper data structure handling
+  // ✅ FIXED: Process categories with proper data structure handling and initial state
   const processedCategories = useMemo(() => {
+    // ✅ FIXED: Handle initial loading state properly
+    if (!categoriesQuery.data) {
+      console.log('🔍 [CATEGORIES] No data yet - returning empty state');
+      return { all: [], user: [], system: [] };
+    }
+    
     // ✅ Add detailed logging for debugging
     console.log('🔍 [CATEGORIES-DEBUG] Processing categories:', {
       hasData: !!categoriesQuery.data,
@@ -52,55 +58,54 @@ export const useCategories = (type = null) => {
     // ✅ FIXED: Handle axios response structure properly
     let categoriesData = null;
     
-    if (categoriesQuery.data) {
-      // First check if this is an axios response (has data, status, headers etc.)
-      if (categoriesQuery.data.data && typeof categoriesQuery.data.status === 'number') {
-        console.log('🔍 [CATEGORIES] Detected axios response structure');
-        
-        // Check if the inner data has the expected API response structure
-        if (categoriesQuery.data.data.data && Array.isArray(categoriesQuery.data.data.data)) {
-          // Case: axios.data.data.data (API wraps in { success, data, timestamp })
-          categoriesData = categoriesQuery.data.data.data;
-          console.log('✅ [CATEGORIES] Found axios.data.data.data array with', categoriesData.length, 'items');
-        } else if (Array.isArray(categoriesQuery.data.data)) {
-          // Case: axios.data.data (direct array)
-          categoriesData = categoriesQuery.data.data;
-          console.log('✅ [CATEGORIES] Found axios.data.data array with', categoriesData.length, 'items');
-        } else {
-          console.warn('❌ [CATEGORIES] Axios response data is not in expected format:', categoriesQuery.data.data);
-          categoriesData = [];
-        }
-      }
-      // Handle direct API response (if axios interceptor already extracted data)
-      else if (categoriesQuery.data.data && Array.isArray(categoriesQuery.data.data)) {
+    // First check if this is an axios response (has data, status, headers etc.)
+    if (categoriesQuery.data.data && typeof categoriesQuery.data.status === 'number') {
+      console.log('🔍 [CATEGORIES] Detected axios response structure');
+      
+      // Check if the inner data has the expected API response structure
+      if (categoriesQuery.data.data.data && Array.isArray(categoriesQuery.data.data.data)) {
+        // Case: axios.data.data.data (API wraps in { success, data, timestamp })
+        categoriesData = categoriesQuery.data.data.data;
+        console.log('✅ [CATEGORIES] Found axios.data.data.data array with', categoriesData.length, 'items');
+      } else if (Array.isArray(categoriesQuery.data.data)) {
+        // Case: axios.data.data (direct array)
         categoriesData = categoriesQuery.data.data;
-        console.log('✅ [CATEGORIES] Found response.data.data array');
-      } 
-      // Direct array (shouldn't happen with current setup)
-      else if (Array.isArray(categoriesQuery.data)) {
-        categoriesData = categoriesQuery.data;
-        console.log('✅ [CATEGORIES] Found direct array');
-      } 
-      // Other possible structures
-      else if (categoriesQuery.data.categories && Array.isArray(categoriesQuery.data.categories)) {
-        categoriesData = categoriesQuery.data.categories;
-        console.log('✅ [CATEGORIES] Found data.categories array');
+        console.log('✅ [CATEGORIES] Found axios.data.data array with', categoriesData.length, 'items');
       } else {
-        console.warn('❌ [CATEGORIES] Unexpected data structure:', categoriesQuery.data);
-        console.log('❌ [CATEGORIES] Available keys:', Object.keys(categoriesQuery.data));
-        
-        // Try to find any array in the response
-        const allValues = Object.values(categoriesQuery.data);
-        const arrayValue = allValues.find(val => Array.isArray(val));
-        if (arrayValue) {
-          console.log('✅ [CATEGORIES] Found array in response values:', arrayValue.length, 'items');
-          categoriesData = arrayValue;
-        } else {
-          categoriesData = [];
-        }
+        console.warn('❌ [CATEGORIES] Axios response data is not in expected format:', categoriesQuery.data.data);
+        categoriesData = [];
+      }
+    }
+    // Handle direct API response (if axios interceptor already extracted data)
+    else if (categoriesQuery.data.data && Array.isArray(categoriesQuery.data.data)) {
+      categoriesData = categoriesQuery.data.data;
+      console.log('✅ [CATEGORIES] Found response.data.data array');
+    } 
+    // Direct array (shouldn't happen with current setup)
+    else if (Array.isArray(categoriesQuery.data)) {
+      categoriesData = categoriesQuery.data;
+      console.log('✅ [CATEGORIES] Found direct array');
+    } 
+    // Other possible structures
+    else if (categoriesQuery.data.categories && Array.isArray(categoriesQuery.data.categories)) {
+      categoriesData = categoriesQuery.data.categories;
+      console.log('✅ [CATEGORIES] Found data.categories array');
+    } else {
+      console.warn('❌ [CATEGORIES] Unexpected data structure:', categoriesQuery.data);
+      console.log('❌ [CATEGORIES] Available keys:', Object.keys(categoriesQuery.data));
+      
+      // Try to find any array in the response
+      const allValues = Object.values(categoriesQuery.data);
+      const arrayValue = allValues.find(val => Array.isArray(val));
+      if (arrayValue) {
+        console.log('✅ [CATEGORIES] Found array in response values:', arrayValue.length, 'items');
+        categoriesData = arrayValue;
+      } else {
+        categoriesData = [];
       }
     }
     
+    // ✅ FIXED: Ensure we always have an array
     if (!Array.isArray(categoriesData)) {
       console.warn('❌ [CATEGORIES] Categories data is not an array:', typeof categoriesData, categoriesData);
       return { all: [], user: [], system: [] };

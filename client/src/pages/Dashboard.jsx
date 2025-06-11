@@ -323,9 +323,9 @@ const Dashboard = () => {
 
           {/* 📱 MOBILE: Stack everything vertically */}
           <div className="lg:hidden space-y-3">
-            {/* Mobile Compact Balance */}
+            {/* Mobile Balance Panel - Now handled internally */}
             <motion.div variants={itemVariants}>
-              <MobileCompactBalance dashboardData={dashboardData} t={t} />
+              <MemoizedBalancePanel />
             </motion.div>
 
             {/* Mobile Quick Actions */}
@@ -585,96 +585,6 @@ const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
     </div>
   </motion.div>
 ));
-
-// 📱 MOBILE: Compact balance (same as before)
-const MobileCompactBalance = React.memo(({ dashboardData, t }) => {
-  const { formatAmount } = useCurrency();
-  
-  const balanceData = dashboardData?.balances?.daily || { income: 0, expenses: 0, balance: 0 };
-  
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-primary-600" />
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.balance.title')}</span>
-        </div>
-        <Badge variant="secondary" className="text-xs px-2 py-1">
-          {t('dashboard.balance.periods.daily')}
-        </Badge>
-      </div>
-      
-      <div className="grid grid-cols-3 gap-2">
-        {/* Income Box */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-2xl p-3 shadow-lg relative overflow-hidden"
-        >
-          <div className="absolute top-1 right-1 w-1 h-1 bg-white/40 rounded-full animate-pulse"></div>
-          <div className="relative z-10 text-white text-center">
-            <div className="flex items-center justify-center mb-1">
-              <ArrowUpRight className="w-3 h-3" />
-            </div>
-            <div className="text-xs text-emerald-100 mb-1 uppercase tracking-wide">
-              {t('dashboard.balance.income')}
-            </div>
-            <div className="text-lg font-bold">
-              {formatAmount(balanceData.income)}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Expenses Box */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 rounded-2xl p-3 shadow-lg relative overflow-hidden"
-        >
-          <div className="absolute top-1 right-1 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-300"></div>
-          <div className="relative z-10 text-white text-center">
-            <div className="flex items-center justify-center mb-1">
-              <ArrowDownRight className="w-3 h-3" />
-            </div>
-            <div className="text-xs text-rose-100 mb-1 uppercase tracking-wide">
-              {t('dashboard.balance.expenses')}
-            </div>
-            <div className="text-lg font-bold">
-              {formatAmount(balanceData.expenses)}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Balance Box */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className={`rounded-2xl p-3 shadow-lg relative overflow-hidden ${
-            balanceData.balance >= 0
-              ? 'bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600'
-              : 'bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-600'
-          }`}
-        >
-          <div className="absolute top-1 right-1 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-500"></div>
-          <div className="relative z-10 text-white text-center">
-            <div className="flex items-center justify-center mb-1">
-              {balanceData.balance >= 0 ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
-            </div>
-            <div className={`text-xs mb-1 uppercase tracking-wide ${
-              balanceData.balance >= 0 ? 'text-blue-100' : 'text-orange-100'
-            }`}>
-              {t('dashboard.balance.total')}
-            </div>
-            <div className="text-lg font-bold">
-              {formatAmount(balanceData.balance)}
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-});
 
 // COMPACT: Tips Section
 const CompactTipsSection = React.memo(({ t }) => (

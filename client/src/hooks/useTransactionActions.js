@@ -74,6 +74,13 @@ export const useTransactionActions = (context = 'transactions') => {
     refreshAll
   } = useTransactions({ strategy: contextConfig.strategy });
 
+  // ✅ FIXED: Add proper logging utility
+  const logAction = useCallback((message, data = null) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔄 [TRANSACTION_ACTIONS] ${message}`, data ? { context, ...data } : { context });
+    }
+  }, [context]);
+
   /**
    * ✅ ENHANCED: Smart cache invalidation for infinite queries
    */
@@ -123,6 +130,7 @@ export const useTransactionActions = (context = 'transactions') => {
    */
   const createTransaction = useCallback(async (type, data) => {
     try {
+      logAction(`Creating ${type} transaction`, { amount: data.amount });
       const result = await baseCreateTransaction(type, data);
       
       // ✅ ENHANCED: Context-aware invalidation
@@ -132,14 +140,16 @@ export const useTransactionActions = (context = 'transactions') => {
       if (contextConfig.autoRefresh && (context === 'quickActions' || context === 'dashboard')) {
         setTimeout(() => {
           refreshAll();
-        }, 500); // Small delay to allow server to process
+        }, 500);
       }
       
+      logAction(`${type} transaction created successfully`);
       return result;
     } catch (error) {
+      logAction(`Failed to create ${type} transaction`, { error: error.message });
       throw error;
     }
-  }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll]);
+  }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll, logAction]);
 
   /**
    * Update Transaction - Context-aware immediate refresh
@@ -151,23 +161,24 @@ export const useTransactionActions = (context = 'transactions') => {
    */
   const updateTransaction = useCallback(async (type, id, data) => {
     try {
+      logAction(`Updating transaction ${id}`, { type });
       const result = await baseUpdateTransaction(type, id, data);
       
-      // Always use high priority for updates since they're user-initiated
       await invalidateRelevantQueries('high');
       
-      // Auto-refresh for immediate feedback
       if (contextConfig.autoRefresh) {
         setTimeout(() => {
           refreshAll();
         }, 300);
       }
       
+      logAction(`Transaction ${id} updated successfully`);
       return result;
     } catch (error) {
+      logAction(`Failed to update transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, logAction]);
 
   /**
    * Delete Transaction - Clean removal with infinite query support
@@ -178,27 +189,27 @@ export const useTransactionActions = (context = 'transactions') => {
    */
   const deleteTransaction = useCallback(async (id, deleteAll = false) => {
     try {
+      logAction(`Deleting transaction ${id}`, { deleteAll });
       const result = await baseDeleteTransaction(id, deleteAll);
       
-      // Use critical priority for deletions to ensure immediate UI updates
       await invalidateRelevantQueries('critical');
       
-      // For recurring deletions, also refresh templates
       if (deleteAll) {
         await queryClient.invalidateQueries({ queryKey: ['templates'] });
         await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
       }
       
-      // Always refresh after deletion for immediate feedback
       setTimeout(() => {
         refreshAll();
       }, 200);
       
+      logAction(`Transaction ${id} deleted successfully`);
       return result;
     } catch (error) {
+      logAction(`Failed to delete transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, logAction]);
 
   /**
    * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading

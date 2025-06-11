@@ -106,6 +106,19 @@ const actionItemVariants = {
   }
 };
 
+// ✅ ADD: Helper function to get template ID
+const getTemplateId = (transaction) => {
+  if (!transaction) return null;
+  
+  // If transaction has template_id, it's a generated transaction from a template
+  if (transaction.template_id) return transaction.template_id;
+  
+  // If transaction has interval_type but no template_id, it's a template itself
+  if (transaction.interval_type && !transaction.template_id) return transaction.id;
+  
+  return null;
+};
+
 /**
  * Enhanced TransactionCard - Production Ready with Modern Design
  * 
@@ -139,9 +152,14 @@ const TransactionCard = ({
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   
-  // ✅ PRESERVED: Same transaction operations hooks
+  // ✅ FIXED: Get hooks at component level
   const { updateTransaction, deleteTransaction, isUpdating, isDeleting, refresh } = useTransactions();
-  const { updateTemplate, skipDates, isSkipping } = useTransactionTemplates();
+  const { 
+    updateTemplate, 
+    skipDates, 
+    isUpdating: isTemplateUpdating, 
+    isSkipping 
+  } = useTransactionTemplates();
 
   // ✅ PRESERVED: Same local state management
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -149,11 +167,22 @@ const TransactionCard = ({
 
   const isRTL = language === 'he';
   
+  // ✅ FIXED: Add missing isFuture calculation
+  const isFuture = useMemo(() => {
+    if (!transaction.date) return false;
+    const transactionDate = new Date(transaction.date);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+    return transactionDate > today;
+  }, [transaction.date]);
+  
+  // ✅ FIXED: Use helper function instead of undefined getValidTemplateId
+  const templateId = getTemplateId(transaction);
+  
   // ✅ PRESERVED: Same transaction type detection logic
+  const isExpense = transaction.type === 'expense' || parseFloat(transaction.amount) < 0;
   const isRecurring = Boolean(transaction.template_id || transaction.is_recurring);
-  const isTemplate = Boolean(transaction.id && !transaction.template_id && transaction.interval_type);
-  const isExpense = transaction.transaction_type === 'expense' || transaction.type === 'expense';
-  const isFuture = variant === 'future' || isUpcoming;
+  const isTemplate = Boolean(transaction.interval_type && !transaction.template_id);
   const isActive = transaction.is_active !== false;
   const isMobile = variant === 'mobile';
   const isCompact = variant === 'compact';
@@ -234,19 +263,26 @@ const TransactionCard = ({
     }
   }, [transaction, isRecurring, isTemplate, onEditTemplate, onEdit, t]);
 
+  // ✅ FIXED: Skip dates with proper parameter format
   const handleQuickSkip = useCallback(async () => {
-    const templateId = transaction.template_id || (isTemplate ? transaction.id : null);
-    
     if (!templateId) {
       toast.error(t('transactions.cannotSkipNonRecurring'));
       return;
     }
     
     try {
+      // Calculate next occurrence date with validation
       const today = new Date();
       const nextDate = new Date(today);
+      const intervalType = transaction.interval_type || transaction.recurring_interval;
       
-      switch (transaction.interval_type || transaction.recurring_interval) {
+      if (!intervalType) {
+        toast.error(t('transactions.unknownInterval'));
+        return;
+      }
+      
+      // Calculate next occurrence date
+      switch (intervalType) {
         case 'daily':
           nextDate.setDate(nextDate.getDate() + 1);
           break;
@@ -256,29 +292,43 @@ const TransactionCard = ({
         case 'monthly':
           nextDate.setMonth(nextDate.getMonth() + 1);
           break;
+        case 'yearly':
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          break;
         default:
           toast.error(t('transactions.unknownInterval'));
           return;
       }
       
-      await skipDates(templateId, [nextDate.toISOString().split('T')[0]]);
+      // ✅ FIXED: Proper date formatting for API
+      const skipDate = nextDate.toISOString().split('T')[0];
+      
+      // ✅ FIXED: Correct parameter format
+      await skipDates(templateId, [skipDate]);
       toast.success(t('transactions.nextPaymentSkipped'));
       await refresh();
     } catch (error) {
-      console.error('Skip failed:', error);
-      toast.error(t('common.error'));
+      console.error('❌ [CARD] Skip failed:', error);
+      // ✅ ENHANCED: Better error messages based on error type
+      if (error.response?.status === 400) {
+        toast.error(error.response.data?.message || t('transactions.skipError.invalidTemplate'));
+      } else if (error.response?.status === 404) {
+        toast.error(t('transactions.skipError.templateNotFound'));
+      } else {
+        toast.error(t('transactions.skipError.general'));
+      }
     }
-  }, [transaction, isTemplate, skipDates, refresh, t]);
+  }, [transaction, templateId, skipDates, refresh, t]);
 
+  // ✅ FIXED: Toggle active with proper parameter format
   const handleToggleActive = useCallback(async () => {
-    const templateId = transaction.template_id || (isTemplate ? transaction.id : null);
-    
     if (!templateId) {
       toast.error(t('transactions.cannotToggleNonTemplate'));
       return;
     }
     
     try {
+      // ✅ FIXED: Correct parameter format
       await updateTemplate(templateId, {
         is_active: !isActive
       });
@@ -289,7 +339,7 @@ const TransactionCard = ({
       console.error('Toggle failed:', error);
       toast.error(t('common.error'));
     }
-  }, [transaction, isTemplate, isActive, updateTemplate, refresh, t]);
+  }, [templateId, isActive, updateTemplate, refresh, t]);
 
   const handleDelete = useCallback(() => {
     setShowDeleteModal(true);
@@ -350,7 +400,7 @@ const TransactionCard = ({
       });
     }
 
-    // ✅ ENHANCED: Recurring-specific actions with better visual design
+    // ✅ ENHANCED: Recurring-specific actions with better validation
     if (isRecurring || isTemplate) {
       if (isActive) {
         buttons.push({
@@ -361,7 +411,8 @@ const TransactionCard = ({
           onClick: handleToggleActive,
           variant: 'warning',
           className: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700',
-          iconClassName: 'text-orange-600 dark:text-orange-400'
+          iconClassName: 'text-orange-600 dark:text-orange-400',
+          disabled: !templateId
         });
       } else {
         buttons.push({
@@ -372,7 +423,8 @@ const TransactionCard = ({
           onClick: handleToggleActive,
           variant: 'success',
           className: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
-          iconClassName: 'text-green-600 dark:text-green-400'
+          iconClassName: 'text-green-600 dark:text-green-400',
+          disabled: !templateId
         });
       }
 
@@ -385,7 +437,7 @@ const TransactionCard = ({
         variant: 'secondary',
         className: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
         iconClassName: 'text-yellow-600 dark:text-yellow-400',
-        disabled: isSkipping
+        disabled: isSkipping || !templateId
       });
     }
 
@@ -404,7 +456,7 @@ const TransactionCard = ({
     buttons.push(deleteAction);
 
     return buttons;
-  }, [isRecurring, isTemplate, isActive, isSkipping, t, handleEditSingle, handleEditTemplate, handleToggleActive, handleQuickSkip, handleDelete]);
+  }, [isRecurring, isTemplate, isActive, isSkipping, t, handleEditSingle, handleEditTemplate, handleToggleActive, handleQuickSkip, handleDelete, templateId]);
 
   // ✅ ENHANCED: Responsive layout configuration
   const layoutConfig = useMemo(() => {

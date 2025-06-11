@@ -64,11 +64,32 @@ const Header = () => {
     setIsOpen(false);
   };
 
+  // ✅ FIXED: Update the handleOpenRecurringModal function
   const handleOpenRecurringModal = () => {
+    console.log('🔄 [HEADER] Opening recurring modal from navigation');
     setShowRecurringModal(true);
     setShowPanelsDropdown(false);
     setShowMobilePanels(false);
     setIsOpen(false);
+  };
+
+  // ✅ FIXED: Add proper handleEditTransaction function
+  const handleEditTransaction = (transaction, editSingle = false) => {
+    console.log('✏️ [HEADER] Edit transaction triggered from recurring modal:', { 
+      transactionId: transaction?.id, 
+      editSingle 
+    });
+    
+    // Close recurring modal first
+    setShowRecurringModal(false);
+    
+    // Navigate to transactions page with edit state
+    navigate('/transactions', { 
+      state: { 
+        editTransaction: transaction, 
+        editingSingle: editSingle 
+      } 
+    });
   };
 
   // Check if the path is active
@@ -509,9 +530,15 @@ const Header = () => {
       {showRecurringModal && (
         <RecurringModal
           isOpen={showRecurringModal}
-          onClose={() => setShowRecurringModal(false)}
-          onEdit={() => {}}
-          onSuccess={() => {}}
+          onClose={() => {
+            console.log('❌ [HEADER] Closing recurring modal');
+            setShowRecurringModal(false);
+          }}
+          onEdit={handleEditTransaction} // ✅ FIXED: Pass the edit handler
+          onSuccess={() => {
+            console.log('✅ [HEADER] Recurring modal operation successful');
+            // Optionally refresh data or show success message
+          }}
         />
       )}
     </>

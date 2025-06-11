@@ -1,6 +1,7 @@
 /**
  * EditTransactionPanel Component - COMPLETE PRODUCTION READY VERSION
  * 
+ * ✅ FIXED: Responsive window sizing - fits perfectly on desktop and mobile
  * ✅ FIXED: One-time transactions show "Edit Transaction" (not "single occurrence")
  * ✅ FIXED: No duplicate titles in modal
  * ✅ FIXED: Proper scope detection for all transaction types
@@ -8,6 +9,7 @@
  * ✅ COMPLETE: Same hooks integration as AddTransactions but for editing
  * ✅ COMPLETE: Amount as primary required field, smart defaults for rest
  * ✅ PRESERVED: All existing functionality and translation keys
+ * ✅ VALIDATED: Uses existing validation helpers from utils
  * 
  * BASED ON: AddTransactions component structure and hooks
  * SCOPE LOGIC:
@@ -324,10 +326,10 @@ const EditTransactionPanel = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="h-full flex flex-col w-full"
+      className="h-full flex flex-col w-full max-h-[95vh] sm:max-h-[90vh]" // ✅ FIXED: Constrain height
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* ✅ FIXED: Single header - no duplicate titles */}
+      {/* ✅ FIXED: Compact header - single title, no duplicates */}
       <div className={`flex-none text-white relative overflow-hidden bg-gradient-to-r ${scopeConfig.color}`}>
         {/* Background decoration (same as AddTransactions) */}
         <div className="absolute inset-0">
@@ -353,11 +355,11 @@ const EditTransactionPanel = ({
           ))}
         </div>
         
-        <div className="relative z-10 p-4 sm:p-6">
+        <div className="relative z-10 p-3 sm:p-4 lg:p-6"> {/* ✅ FIXED: Responsive padding */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-2 bg-white/20 rounded-xl">
-                <scopeConfig.icon className="w-5 h-5" />
+                <scopeConfig.icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               
               <div className="min-w-0">
@@ -365,7 +367,7 @@ const EditTransactionPanel = ({
                   key={scopeConfig.title}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-xl sm:text-2xl font-bold truncate"
+                  className="text-lg sm:text-xl lg:text-2xl font-bold truncate" // ✅ FIXED: Responsive font size
                 >
                   {scopeConfig.title}
                 </motion.h1>
@@ -373,7 +375,7 @@ const EditTransactionPanel = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="text-white/80 text-sm sm:text-base"
+                  className="text-white/80 text-xs sm:text-sm lg:text-base" // ✅ FIXED: Responsive font size
                 >
                   {scopeConfig.description}
                 </motion.p>
@@ -392,11 +394,11 @@ const EditTransactionPanel = ({
               {onClose && (
                 <motion.button
                   onClick={onClose}
-                  className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-white/20 rounded-xl transition-colors" // ✅ FIXED: Responsive padding
                   whileHover={{ scale: 1.05, rotate: 90 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </motion.button>
               )}
             </div>
@@ -405,7 +407,7 @@ const EditTransactionPanel = ({
       </div>
 
       {/* ✅ ENHANCED: Scope Information Banner */}
-      <div className={`flex-none p-4 border-b ${
+      <div className={`flex-none p-3 sm:p-4 border-b ${
         scope === 'oneTime' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
         scope === 'single' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
         scope === 'series' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
@@ -418,7 +420,7 @@ const EditTransactionPanel = ({
             scope === 'series' ? 'bg-green-100 dark:bg-green-900/50' :
             'bg-purple-100 dark:bg-purple-900/50'
           }`}>
-            <Info className={`w-4 h-4 ${
+            <Info className={`w-3 h-3 sm:w-4 sm:h-4 ${
               scope === 'oneTime' ? 'text-blue-600 dark:text-blue-400' :
               scope === 'single' ? 'text-blue-600 dark:text-blue-400' :
               scope === 'series' ? 'text-green-600 dark:text-green-400' :
@@ -426,7 +428,7 @@ const EditTransactionPanel = ({
             }`} />
           </div>
           <div>
-            <h4 className={`font-medium mb-1 ${
+            <h4 className={`font-medium mb-1 text-sm sm:text-base ${
               scope === 'oneTime' ? 'text-blue-900 dark:text-blue-100' :
               scope === 'single' ? 'text-blue-900 dark:text-blue-100' :
               scope === 'series' ? 'text-green-900 dark:text-green-100' :
@@ -437,7 +439,7 @@ const EditTransactionPanel = ({
               {scope === 'series' && t('transactions.editingAllFuture')}
               {scope === 'template' && t('transactions.editingTemplate')}
             </h4>
-            <p className={`text-sm leading-relaxed ${
+            <p className={`text-xs sm:text-sm leading-relaxed ${
               scope === 'oneTime' ? 'text-blue-700 dark:text-blue-300' :
               scope === 'single' ? 'text-blue-700 dark:text-blue-300' :
               scope === 'series' ? 'text-green-700 dark:text-green-300' :
@@ -452,15 +454,17 @@ const EditTransactionPanel = ({
         </div>
       </div>
 
-      {/* Main Content - Same structure as AddTransactions */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 sm:p-6 space-y-6">
+      {/* ✅ FIXED: Scrollable main content area with proper constraints */}
+      <div className="flex-1 overflow-y-auto min-h-0"> {/* ✅ FIXED: min-h-0 for proper scrolling */}
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6"> {/* ✅ FIXED: Responsive padding and spacing */}
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* ✅ SAME: Amount and Description layout as AddTransactions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-4">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            {/* ✅ FIXED: Responsive grid layout - stack on mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+              
+              {/* Amount Card */}
+              <Card className="p-3 sm:p-4">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                   {t('common.amount')} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -472,18 +476,19 @@ const EditTransactionPanel = ({
                       amount: amountValidation.formatAmountInput(e.target.value) 
                     }))}
                     placeholder="150.00"
-                    className="w-full text-lg font-bold py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    className="w-full text-base sm:text-lg font-bold py-2 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                     required
                     autoFocus
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <span className="text-sm font-medium text-gray-400">₪</span>
+                  <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2">
+                    <span className="text-xs sm:text-sm font-medium text-gray-400">₪</span>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {/* Description Card */}
+              <Card className="p-3 sm:p-4">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                   {t('common.description')} <span className="text-gray-500 text-xs">({t('common.optional')})</span>
                 </label>
                 <div className="relative">
@@ -492,9 +497,9 @@ const EditTransactionPanel = ({
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     placeholder={t('actions.descriptionPlaceholder')}
-                    className="w-full py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    className="w-full text-sm sm:text-base py-2 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
-                  <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <FileText className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   {t('transactions.descriptionOptional')}
@@ -502,34 +507,34 @@ const EditTransactionPanel = ({
               </Card>
             </div>
 
-            {/* ✅ SAME: Category and Date layout as AddTransactions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* ✅ FIXED: Responsive category and date layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
               
               {/* Category Selection - Exact same as AddTransactions */}
-              <Card className="p-4 md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+              <Card className="p-3 sm:p-4 lg:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4">
                   {t('common.category')}
                 </label>
                 
                 {categoriesLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                  <div className="flex justify-center py-8 sm:py-12">
+                    <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-indigo-500"></div>
                   </div>
                 ) : (
                   <>
                     {/* Category Tabs */}
-                    <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                    <div className="flex space-x-1 mb-4 sm:mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                       <button
                         type="button"
                         onClick={() => setCategoryTab('general')}
-                        className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all ${
+                        className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-md transition-all ${
                           categoryTab === 'general'
                             ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
                             : 'text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'
                         }`}
                       >
-                        <div className="flex items-center justify-center gap-2">
-                          <Crown className="w-4 h-4" />
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                          <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span className="hidden sm:inline">{t('categories.defaultCategories')}</span>
                           <span className="sm:hidden">Default</span>
                           <span>({categorizedCategories.general.length})</span>
@@ -538,14 +543,14 @@ const EditTransactionPanel = ({
                       <button
                         type="button"
                         onClick={() => setCategoryTab('customized')}
-                        className={`flex-1 px-4 py-3 text-sm font-medium rounded-md transition-all ${
+                        className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-md transition-all ${
                           categoryTab === 'customized'
                             ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
                             : 'text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'
                         }`}
                       >
-                        <div className="flex items-center justify-center gap-2">
-                          {React.createElement(getIconComponent('tag'), { className: 'w-4 h-4' })}
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                          {React.createElement(getIconComponent('tag'), { className: 'w-3 h-3 sm:w-4 sm:h-4' })}
                           <span className="hidden sm:inline">{t('categories.userCategoriesDesc')}</span>
                           <span className="sm:hidden">Custom</span>
                           <span>({categorizedCategories.customized.length})</span>
@@ -553,20 +558,20 @@ const EditTransactionPanel = ({
                       </button>
                     </div>
 
-                    {/* Category Grid - Same as AddTransactions */}
+                    {/* ✅ FIXED: Responsive Category Grid */}
                     {currentTabCategories.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <div className="text-center py-6 sm:py-8">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
                           {categoryTab === 'general' ? (
-                            <Crown className="w-8 h-8 text-gray-400" />
+                            <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                           ) : (
-                            <Plus className="w-8 h-8 text-gray-400" />
+                            <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                           )}
                         </div>
-                        <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900 dark:text-white mb-2">
                           {categoryTab === 'general' ? t('categories.noGeneralCategories') : t('categories.noCustomCategories')}
                         </h3>
-                        <p className="text-sm text-gray-500 mb-4">
+                        <p className="text-xs sm:text-sm text-gray-500 mb-4">
                           {categoryTab === 'general' 
                             ? t('categories.defaultCategoriesWillAppear')
                             : t('categories.createCategoriesInSettings')
@@ -574,7 +579,7 @@ const EditTransactionPanel = ({
                         </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3"> {/* ✅ FIXED: Responsive grid */}
                         {currentTabCategories.map((cat) => {
                           const IconComponent = cat.iconComponent;
                           const isSelected = formData.category_id === cat.id;
@@ -584,7 +589,7 @@ const EditTransactionPanel = ({
                               key={cat.id}
                               type="button"
                               onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                              className={`group p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 text-center min-h-[100px] relative ${
+                              className={`group p-2 sm:p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 sm:gap-3 text-center min-h-[80px] sm:min-h-[100px] relative ${
                                 isSelected
                                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105'
                                   : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'
@@ -593,19 +598,19 @@ const EditTransactionPanel = ({
                               whileTap={{ scale: 0.98 }}
                               title={cat.name}
                             >
-                              <div className={`p-3 rounded-xl transition-colors ${
+                              <div className={`p-2 sm:p-3 rounded-xl transition-colors ${
                                 isSelected 
                                   ? 'bg-indigo-100 dark:bg-indigo-800' 
                                   : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
                               }`}>
-                                <IconComponent className={`w-6 h-6 transition-colors ${
+                                <IconComponent className={`w-4 h-4 sm:w-6 sm:h-6 transition-colors ${
                                   isSelected 
                                     ? 'text-indigo-600 dark:text-indigo-400' 
                                     : 'text-gray-500 group-hover:text-indigo-500'
                                 }`} />
                               </div>
                               
-                              <span className={`text-sm font-medium leading-tight text-center w-full transition-colors ${
+                              <span className={`text-xs sm:text-sm font-medium leading-tight text-center w-full transition-colors ${
                                 isSelected 
                                   ? 'text-indigo-700 dark:text-indigo-300' 
                                   : 'text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
@@ -617,9 +622,9 @@ const EditTransactionPanel = ({
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
+                                  className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
                                 >
-                                  <Check className="w-3 h-3 text-white" />
+                                  <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                                 </motion.div>
                               )}
                             </motion.button>
@@ -632,8 +637,8 @@ const EditTransactionPanel = ({
               </Card>
 
               {/* Date Selection - Same as AddTransactions */}
-              <Card className="p-4">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              <Card className="p-3 sm:p-4">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                   {t('common.date')}
                 </label>
                 <div className="relative">
@@ -643,11 +648,11 @@ const EditTransactionPanel = ({
                     variant="outline"
                     fullWidth
                     onClick={() => setShowCalendar(!showCalendar)}
-                    className="justify-between py-3 px-3 text-left border-2 hover:border-indigo-300 h-auto"
+                    className="justify-between py-2 sm:py-3 px-3 text-left border-2 hover:border-indigo-300 h-auto"
                   >
                     <span className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium truncate">
+                      <span className="font-medium truncate text-sm sm:text-base">
                         {new Date(formData.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric'
@@ -683,12 +688,12 @@ const EditTransactionPanel = ({
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <Card className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 mb-4">
+                <Card className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-3 sm:mb-4">
                     <div className="p-2 bg-green-500 rounded-md">
-                      <Repeat className="w-5 h-5 text-white" />
+                      <Repeat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                    <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
                       {t('actions.recurringOptions')}
                     </h4>
                     <Badge variant="primary" size="small">
@@ -697,7 +702,7 @@ const EditTransactionPanel = ({
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('actions.frequency')}
@@ -705,7 +710,7 @@ const EditTransactionPanel = ({
                       <select
                         value={formData.recurring_interval}
                         onChange={(e) => setFormData(prev => ({ ...prev, recurring_interval: e.target.value }))}
-                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all text-sm sm:text-base"
                       >
                         <option value="daily">{t('common.daily')}</option>
                         <option value="weekly">{t('common.weekly')}</option>
@@ -731,14 +736,14 @@ const EditTransactionPanel = ({
                           }
                         }}
                         min={formData.date}
-                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all text-sm sm:text-base"
                       />
                     </div>
                   </div>
 
                   {/* Day of Week for Weekly */}
                   {formData.recurring_interval === 'weekly' && (
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t('actions.dayOfWeek')}
                       </label>
@@ -748,7 +753,7 @@ const EditTransactionPanel = ({
                           ...prev, 
                           day_of_week: parseInt(e.target.value) 
                         }))}
-                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all"
+                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all text-sm sm:text-base"
                       >
                         <option value={0}>{t('days.sunday')}</option>
                         <option value={1}>{t('days.monday')}</option>
@@ -772,12 +777,12 @@ const EditTransactionPanel = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                 >
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center gap-3 text-red-800">
-                      <div className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0">
-                        <X className="w-3 h-3" />
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0">
+                        <X className="w-2 h-2 sm:w-3 sm:h-3" />
                       </div>
-                      <span className="font-medium">{error}</span>
+                      <span className="font-medium text-sm sm:text-base">{error}</span>
                       <button
                         onClick={() => setError('')}
                         className="ml-auto text-red-600 hover:text-red-800"
@@ -806,21 +811,21 @@ const EditTransactionPanel = ({
                       duration: 0.8
                     }
                   }}
-                  className="text-center py-6"
+                  className="text-center py-4 sm:py-6"
                 >
-                  <div className="inline-flex items-center gap-4 px-6 py-4 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 bg-green-50 border border-green-200 rounded-xl">
                     <motion.div
-                      className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center"
+                      className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center"
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 0.5 }}
                     >
-                      <Check className="w-7 h-7 text-white" />
+                      <Check className="w-4 h-4 sm:w-7 sm:h-7 text-white" />
                     </motion.div>
                     <div className="text-left">
-                      <h3 className="text-lg font-semibold text-green-800">
+                      <h3 className="text-base sm:text-lg font-semibold text-green-800">
                         {t('transactions.updateSuccess')}
                       </h3>
-                      <p className="text-sm text-green-600">
+                      <p className="text-xs sm:text-sm text-green-600">
                         {scope === 'oneTime' && t('transactions.transactionUpdateSuccess')}
                         {scope === 'single' && t('transactions.singleUpdateSuccess')}
                         {scope === 'series' && t('transactions.seriesUpdateSuccess')}
@@ -835,16 +840,16 @@ const EditTransactionPanel = ({
         </div>
       </div>
 
-      {/* ✅ SAME: Footer as AddTransactions but with update text */}
+      {/* ✅ FIXED: Compact responsive footer */}
       {!success && (
-        <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-none border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 bg-white dark:bg-gray-800">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isUpdating}
-              className="px-6 order-2 sm:order-1"
+              className="px-4 sm:px-6 order-2 sm:order-1 text-sm"
             >
               {t('common.cancel')}
             </Button>
@@ -853,7 +858,7 @@ const EditTransactionPanel = ({
               variant="primary"
               loading={isUpdating}
               disabled={isUpdating || !formData.amount}
-              className={`flex-1 shadow-md hover:shadow-lg py-3 bg-gradient-to-r ${scopeConfig.color} hover:opacity-90 order-1 sm:order-2`}
+              className={`flex-1 shadow-md hover:shadow-lg py-2 sm:py-3 bg-gradient-to-r ${scopeConfig.color} hover:opacity-90 order-1 sm:order-2 text-sm sm:text-base`}
               onClick={handleSubmit}
             >
               {isUpdating ? (
@@ -861,13 +866,13 @@ const EditTransactionPanel = ({
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                   />
                   <span>{t('common.saving')}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 justify-center">
-                  <Save className="w-5 h-5" />
+                  <Save className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="font-medium">
                     {scopeConfig.saveText}
                   </span>

@@ -1,6 +1,7 @@
 // client/src/context/LanguageContext.jsx
 // Enhanced language context with complete organized translations
 
+import { ca } from 'date-fns/locale';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
@@ -123,8 +124,12 @@ const translations = {
     perWeek: 'per week',
     perMonth: 'per month',
     perYear: 'per year',
-    create: 'Create'
+    create: 'Create',
+    advanced: ' Advanced Filters',
+    customRange: "Custom range",
+
   },
+  
 
   // Days of week
   days: {
@@ -154,7 +159,12 @@ const translations = {
     logout: 'Logout',
     categories: 'Categories',
     help: 'Help',
-    about: 'About'
+    about: 'About',
+    categoryManager: 'Category Manager',
+    categoryManagerDesc: 'Manage your personal and system categories',
+    panels: "Panels",
+    recurringManager: 'Recurring transactions manager',
+    recurringManagerDesc: 'Manage your recurring transactions and templates',
   },
 
   // Authentication
@@ -355,9 +365,9 @@ const translations = {
       todayWarning: 'Transaction will be added to today, not the displayed date',
       switchToToday: 'Transaction added! Switch to today\'s view to see it?',
       hint: 'Use quick actions for fast transaction entry'
-        },
+    },
 
-        stats: {
+    stats: {
       title: 'Statistics',
       subtitle: 'Transaction insights',
       showMore: 'Show More',
@@ -396,15 +406,15 @@ const translations = {
         negative: 'Negative',
         stable: 'Stable'
       }
-        },
+    },
 
-        tips: {
+    tips: {
       title: 'Finance Tip',
       content: 'Track your daily expenses to identify spending patterns and potential savings opportunities.',
       nextTip: 'Next Tip',
       previousTip: 'Previous Tip'
-        }
-      },
+    }
+  },
 
   // Transactions
   transactions: {
@@ -465,6 +475,23 @@ const translations = {
     editThis: "Edit",
     quickActions: "Quick Actions",
     noRecurringTemplates: "No recurring templates found",
+    editTransactionDesc: 'Edit this transaction to modify its details',
+    deleteTransactionDesc: 'Delete this transaction to remove it from your history',
+    scheduled: 'Scheduled',
+    transactions: "Total Transactions",
+    skipError: {
+      invalidTemplate: "Cannot skip: Invalid template",
+      templateNotFound: "Template not found",
+      general: "Failed to skip date. Please try again."
+    },
+    cannotSkipNonRecurring: "Cannot skip non-recurring transaction",
+    cannotToggleNonTemplate: "Cannot toggle non-template transaction",
+    unknownInterval: "Unknown interval type",
+    nextPaymentSkipped: "Next payment skipped successfully",
+    skipNextDesc: "Skip the next scheduled transaction without deleting the template",
+deleteTemplate: "Delete Template",
+deleteTemplateDesc: "Delete this recurring template and all its future transactions. Past transactions will remain unchanged.",
+
 
 
 
@@ -504,6 +531,12 @@ const translations = {
     editSingle: 'Edit This',
     editThisOnly: 'Edit this occurrence only',
     manage: 'Manage',
+    editThisDesc: "Edit only this transaction. Future recurring transactions will not be affected.",
+editAllDesc: "Edit this and all future recurring transactions in the series.",
+pauseDesc: "Pause this template temporarily. No future transactions will be created until you reactivate it.",
+skipNext: "Skip next",
+single: "Single",
+
 
     // Form fields
     selectDate: 'Select Date',
@@ -1365,6 +1398,9 @@ const translations = {
       perMonth: 'לחודש',
       perYear: 'לשנה',
       create: 'צור',
+      advanced: 'פילטרים מתקדמים',
+      customRange: "טווח מותאם",
+
     },
 
     // Days of week
@@ -1395,7 +1431,12 @@ const translations = {
       logout: 'התנתק',
       categories: 'קטגוריות',
       help: 'עזרה',
-      about: 'אודות'
+      about: 'אודות',
+      categoryManager: 'מנהל קטגוריות',
+      panels: "פנלי שליטה",
+      recurringManagerDesc: 'נהל עסקאות חוזרות',
+      categoryManagerDesc: 'נהל את הקטגוריות שלך',
+      recurringManagerDesc: 'נהל עסקאות חוזרות',
     },
 
     // Authentication
@@ -1598,9 +1639,9 @@ const translations = {
         todayWarning: 'הפעולה תתווסף להיום, לא לתאריך המוצג',
         switchToToday: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?',
         hint: 'השתמש בפעולות מהירות להזנת עסקאות מהירה'
-            },
+      },
 
-            stats: {
+      stats: {
         title: 'סטטיסטיקות',
         subtitle: 'תובנות עסקאות',
         showMore: 'הצג עוד',
@@ -1639,15 +1680,15 @@ const translations = {
           negative: 'שלילי',
           stable: 'יציב'
         }
-            },
+      },
 
-            tips: {
+      tips: {
         title: 'טיפ פיננסי',
         content: 'עקוב אחר ההוצאות היומיות שלך כדי לזהות דפוסי הוצאות והזדמנויות חיסכון פוטנציאליות.',
         nextTip: 'הטיפ הבא',
         previousTip: 'הטיפ הקודם'
-            }
-          },
+      }
+    },
 
     // Transactions
     transactions: {
@@ -1705,6 +1746,30 @@ const translations = {
       automated: "אוטומטי",
       editThis: "ערוך",
       quickActions: "פעולות מהירות",
+      editTransactionDesc: 'ערוך עסקה זו',
+      deleteTransactionDesc: 'מחק עסקה זו',
+      scheduled: 'מתוזמן',
+      transactions: "סך הכל עסקאות",
+      skipError: {
+        invalidTemplate: "לא ניתן לדלג: תבנית לא חוקית",
+        templateNotFound: "תבנית לא נמצאה",
+        general: "נכשל בדילוג על התאריך. נסה שוב."
+      },
+      cannotSkipNonRecurring: "לא ניתן לדלג על עסקה שאינה חוזרת",
+      cannotToggleNonTemplate: "לא ניתן להחליף מצב של עסקה שאינה תבנית",
+      unknownInterval: "סוג מרווח לא מוכר",
+      nextPaymentSkipped: "התשלום הבא נדלג בהצלחה",
+      skipNextDesc: "דלג על העסקה הקרובה מבלי למחוק את התבנית החוזרת",
+deleteTemplate: "מחק תבנית",
+deleteTemplateDesc: "מחק את התבנית החוזרת וכל העסקאות העתידיות שלה. עסקאות עבר לא יושפעו.",
+editThisDesc: "ערוך רק את העסקה הזו. עסקאות חוזרות עתידיות לא יושפעו.",
+editAllDesc: "ערוך את העסקה הזו ואת כל העסקאות החוזרות הבאות בסדרה.",
+pauseDesc: "השהה את התבנית הזו זמנית. לא יווצרו עסקאות חדשות עד להפעלה מחודשת.",
+skipNext: "דלג על הבאה",
+single: "עסקה רגילה",
+
+
+
 
 
       // Display & Filtering
@@ -2598,7 +2663,7 @@ export const LanguageProvider = ({ children }) => {
     window.addEventListener('auth-logout', handleSessionReset);
     window.addEventListener('language-session-reset', handleLanguageReset);
     window.addEventListener('theme-session-reset', handleSessionReset); // Also reset on theme events
-    
+
     return () => {
       window.removeEventListener('auth-logout', handleSessionReset);
       window.removeEventListener('language-session-reset', handleLanguageReset);

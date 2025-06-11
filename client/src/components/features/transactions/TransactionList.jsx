@@ -80,6 +80,16 @@ const emptyVariants = {
 };
 
 /**
+ * ✅ SMART LOGGING: Only for user interactions
+ */
+const isDevelopment = process.env.NODE_ENV === 'development';
+const logUserAction = (action, data) => {
+  if (isDevelopment) {
+    console.log(`👤 [USER-ACTION] ${action}`, data);
+  }
+};
+
+/**
  * ENHANCED TransactionList with cohesive design
  */
 const TransactionList = ({ 
@@ -181,7 +191,7 @@ const TransactionList = ({
       }));
   }, [pastTransactions]);
 
-  // ✅ PRESERVED: Infinite scroll intersection observer
+  // ✅ PRESERVED: Infinite scroll intersection observer with smart logging
   const loadMoreRef = useRef();
   const observerRef = useRef();
 
@@ -197,7 +207,11 @@ const TransactionList = ({
     observerRef.current = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !isLoadingMore) {
-          console.log('🔄 [TRANSACTION-LIST] Auto-loading more transactions...');
+          // ✅ FIXED: Only log actual auto-load triggers
+          logUserAction('Auto-loading more transactions', {
+            loadedCount: progressiveStatus.loadedCount,
+            totalCount: progressiveStatus.totalCount
+          });
           onLoadMore();
         }
       },
@@ -216,7 +230,7 @@ const TransactionList = ({
         observerRef.current.disconnect();
       }
     };
-  }, [hasMoreToLoad, progressiveStatus.canAutoLoad, onLoadMore, isLoadingMore]);
+  }, [hasMoreToLoad, progressiveStatus.canAutoLoad, onLoadMore, isLoadingMore, progressiveStatus.loadedCount, progressiveStatus.totalCount]);
 
   // ✅ PRESERVED: Loading state
   if (isLoading && transactions.length === 0) {

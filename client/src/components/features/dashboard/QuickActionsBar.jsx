@@ -466,36 +466,36 @@ const QuickActionsBar = () => {
           </div>
         </div>
 
-        {/* 💻 DESKTOP VERSION: Original beautiful layout */}
-        <div className="hidden lg:block relative p-4 sm:p-6">
+        {/* 💻 DESKTOP VERSION: COMPACT layout to prevent overflow */}
+        <div className="hidden lg:block relative p-3 sm:p-4">
           {/* ENHANCED: Multiple layered glow effects */}
           <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 via-red-400/20 to-pink-400/20 blur-2xl"></div>
           <div className="absolute top-0 left-0 w-full h-2/3 bg-gradient-to-b from-orange-300/15 to-transparent"></div>
           <div className="absolute bottom-0 right-0 w-2/3 h-full bg-gradient-to-l from-red-300/10 to-transparent"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
                 <motion.div 
-                  className="relative p-3 sm:p-4 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-2xl shadow-2xl"
+                  className="relative p-2.5 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-xl shadow-xl"
                   whileHover={{ scale: 1.1, rotate: 10 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   style={{
-                    boxShadow: '0 10px 30px rgba(249, 115, 22, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                    boxShadow: '0 6px 20px rgba(249, 115, 22, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
                   }}
                 >
                   {/* ENHANCED: Multiple glow layers for icon */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-300 to-red-400 rounded-2xl blur-xl opacity-80"></div>
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent rounded-2xl"></div>
-                  <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
-                  <Zap className="relative w-5 sm:w-6 h-5 sm:h-6 text-white drop-shadow-2xl" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-300 to-red-400 rounded-xl blur-lg opacity-70"></div>
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent rounded-xl"></div>
+                  <div className="absolute inset-0 bg-white/10 rounded-xl"></div>
+                  <Zap className="relative w-4 h-4 text-white drop-shadow-lg" />
                 </motion.div>
                 
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 via-orange-700 to-red-800 dark:from-white dark:via-orange-100 dark:to-red-100 bg-clip-text text-transparent drop-shadow-lg">
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-gray-800 via-orange-700 to-red-800 dark:from-white dark:via-orange-100 dark:to-red-100 bg-clip-text text-transparent drop-shadow-sm">
                     {t('dashboard.quickActions.title')}
                   </h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium">
+                  <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
                     {t('dashboard.quickActions.subtitle')}
                   </p>
                 </div>
@@ -506,18 +506,18 @@ const QuickActionsBar = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-2 px-3 py-2 bg-amber-400/20 dark:bg-amber-600/30 backdrop-blur-md rounded-xl border border-amber-300/50 dark:border-amber-500/50 shadow-xl"
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-amber-400/20 dark:bg-amber-600/30 backdrop-blur-md rounded-lg border border-amber-300/50 dark:border-amber-500/50 shadow-lg"
                   style={{
-                    boxShadow: '0 4px 20px rgba(245, 158, 11, 0.2)'
+                    boxShadow: '0 2px 15px rgba(245, 158, 11, 0.15)'
                   }}
                 >
-                  <Clock className="w-4 h-4 text-amber-700 dark:text-amber-300" />
-                  <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  <Clock className="w-3 h-3 text-amber-700 dark:text-amber-300" />
+                  <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
                     {t('dashboard.quickActions.notToday')}
                   </span>
                   <button
                     onClick={resetToToday}
-                    className="text-sm font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 underline"
+                    className="text-xs font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 underline"
                   >
                     {t('dashboard.quickActions.goToToday')}
                   </button>
@@ -525,20 +525,20 @@ const QuickActionsBar = () => {
               )}
             </div>
 
-            {/* ENHANCED: Amount Input Section with stronger visual effects */}
-            <div className="mb-6">
-              <label className="block text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
+            {/* COMPACT: Amount Input Section with reduced spacing */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
                 {t('dashboard.quickActions.amount')}
               </label>
               
-              {/* ENHANCED: More vibrant quick amount buttons */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              {/* COMPACT: Smaller quick amount buttons */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 {quickAmounts.map((quick) => (
                   <motion.button
                     key={quick.value}
                     onClick={() => handleQuickAmount(quick.value)}
-                    className="px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg backdrop-blur-sm border border-white/30"
-                    whileHover={{ scale: 1.1, y: -2 }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md backdrop-blur-sm border border-white/30"
+                    whileHover={{ scale: 1.05, y: -1 }}
                     whileTap={{ scale: 0.95 }}
                     style={{
                       background: quick.color.includes('blue') ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(29, 78, 216, 0.2))' : 
@@ -546,7 +546,7 @@ const QuickActionsBar = () => {
                                   quick.color.includes('purple') ? 'linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(107, 33, 168, 0.2))' :
                                   quick.color.includes('orange') ? 'linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(194, 65, 12, 0.2))' :
                                   'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(185, 28, 28, 0.2))',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                       color: quick.color.includes('blue') ? '#1e40af' : 
                              quick.color.includes('green') ? '#15803d' :
                              quick.color.includes('purple') ? '#6b21a8' :
@@ -558,11 +558,11 @@ const QuickActionsBar = () => {
                 ))}
               </div>
               
-              {/* ENHANCED: Much more visible amount input with strong glow */}
+              {/* COMPACT: Smaller amount input */}
               <div className="relative">
                 {/* ENHANCED: Multiple background glow layers */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-400/20 via-red-400/20 to-pink-400/20 blur-xl"></div>
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/30 to-transparent"></div>
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-orange-400/20 via-red-400/20 to-pink-400/20 blur-lg"></div>
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 to-transparent"></div>
                 
                 <motion.input
                   ref={inputRef}
@@ -570,48 +570,47 @@ const QuickActionsBar = () => {
                   value={amount}
                   onChange={handleAmountChange}
                   placeholder="0.00"
-                  className="relative w-full text-2xl font-bold py-4 px-4 pr-16 rounded-2xl border-2 border-white/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl focus:border-orange-400 focus:ring-4 focus:ring-orange-400/30 transition-all"
-                  whileFocus={{ scale: 1.02 }}
+                  className="relative w-full text-xl font-bold py-3 px-3 pr-12 rounded-xl border-2 border-white/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl focus:border-orange-400 focus:ring-2 focus:ring-orange-400/30 transition-all"
+                  whileFocus={{ scale: 1.01 }}
                   style={{
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
                   }}
                 />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <span className="text-xl font-bold text-gray-500 drop-shadow-sm">{currency.symbol}</span>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <span className="text-lg font-bold text-gray-500 drop-shadow-sm">{currency.symbol}</span>
                 </div>
               </div>
             </div>
 
-            {/* ENHANCED: Much more stunning action buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* COMPACT: Smaller action buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <motion.button
                 onClick={() => handleSubmit('expense')}
                 disabled={isCreating || !amount}
-                className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-red-400 via-red-500 to-red-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ scale: 1.05, y: -3 }}
+                className="group relative overflow-hidden p-3 rounded-xl bg-gradient-to-r from-red-400 via-red-500 to-red-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 style={{
-                  boxShadow: '0 10px 40px rgba(239, 68, 68, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                  boxShadow: '0 6px 25px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
                 }}
               >
                 {/* ENHANCED: Multiple glow layers for buttons */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-300 to-red-400 rounded-2xl blur-2xl opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-2xl"></div>
-                <div className="absolute inset-0 bg-white/5 rounded-2xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-300 to-red-400 rounded-xl blur-lg opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-xl"></div>
+                <div className="absolute inset-0 bg-white/5 rounded-xl"></div>
                 
                 {/* ENHANCED: More visible floating particles */}
-                <div className="absolute top-2 right-2 w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
-                <div className="absolute bottom-2 left-2 w-1.5 h-1.5 bg-white/80 rounded-full animate-ping delay-300"></div>
-                <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-white/50 rounded-full animate-pulse delay-700"></div>
+                <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-white/60 rounded-full animate-pulse"></div>
+                <div className="absolute bottom-1.5 left-1.5 w-1 h-1 bg-white/80 rounded-full animate-ping delay-300"></div>
                 
-                <div className="relative z-10 flex items-center justify-center gap-3">
-                  <TrendingDown className="w-5 h-5 drop-shadow-2xl" />
-                  <span className="text-base drop-shadow-2xl">{t('actions.quickExpense')}</span>
+                <div className="relative z-10 flex items-center justify-center gap-2">
+                  <TrendingDown className="w-4 h-4 drop-shadow-lg" />
+                  <span className="text-sm drop-shadow-lg">{t('actions.quickExpense')}</span>
                   {isCreating && (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                      className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full"
                     />
                   )}
                 </div>
@@ -620,31 +619,30 @@ const QuickActionsBar = () => {
               <motion.button
                 onClick={() => handleSubmit('income')}
                 disabled={isCreating || !amount}
-                className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ scale: 1.05, y: -3 }}
+                className="group relative overflow-hidden p-3 rounded-xl bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 style={{
-                  boxShadow: '0 10px 40px rgba(34, 197, 94, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                  boxShadow: '0 6px 25px rgba(34, 197, 94, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
                 }}
               >
                 {/* ENHANCED: Multiple glow layers for buttons */}
-                <div className="absolute inset-0 bg-gradient-to-r from-green-300 to-green-400 rounded-2xl blur-2xl opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-2xl"></div>
-                <div className="absolute inset-0 bg-white/5 rounded-2xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-300 to-green-400 rounded-xl blur-lg opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-xl"></div>
+                <div className="absolute inset-0 bg-white/5 rounded-xl"></div>
                 
                 {/* ENHANCED: More visible floating particles */}
-                <div className="absolute top-2 right-2 w-2 h-2 bg-white/60 rounded-full animate-pulse delay-500"></div>
-                <div className="absolute bottom-2 left-2 w-1.5 h-1.5 bg-white/80 rounded-full animate-ping delay-700"></div>
-                <div className="absolute top-1/2 left-1/3 w-1 h-1 bg-white/50 rounded-full animate-pulse delay-200"></div>
+                <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-white/60 rounded-full animate-pulse delay-500"></div>
+                <div className="absolute bottom-1.5 left-1.5 w-1 h-1 bg-white/80 rounded-full animate-ping delay-700"></div>
                 
-                <div className="relative z-10 flex items-center justify-center gap-3">
-                  <TrendingUp className="w-5 h-5 drop-shadow-2xl" />
-                  <span className="text-base drop-shadow-2xl">{t('actions.quickIncome')}</span>
+                <div className="relative z-10 flex items-center justify-center gap-2">
+                  <TrendingUp className="w-4 h-4 drop-shadow-lg" />
+                  <span className="text-sm drop-shadow-lg">{t('actions.quickIncome')}</span>
                   {isCreating && (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                      className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full"
                     />
                   )}
                 </div>
