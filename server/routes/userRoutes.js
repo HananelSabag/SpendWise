@@ -176,19 +176,18 @@ router.post('/profile/picture',
         });
       }
 
-      // Create full URL for the uploaded file
+      const relativePath = `/uploads/profiles/${req.file.filename}`;
+      // Store only relative path in database for better flexibility
+      const User = require('../models/User');
+      await User.updatePreferences(req.user.id, {
+        profilePicture: relativePath  // Store relative path only
+      });
+
+      // But return full URL in response
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
         : 'http://localhost:5000';
-      
-      const relativePath = `/uploads/profiles/${req.file.filename}`;
       const fullUrl = `${baseUrl}${relativePath}`;
-
-      // Update user preferences with full URL
-      const User = require('../models/User');
-      await User.updatePreferences(req.user.id, {
-        profilePicture: fullUrl
-      });
 
       res.json({
         success: true,

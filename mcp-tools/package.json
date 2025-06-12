@@ -1,0 +1,30 @@
+{
+  "name": "spendwise-mcp-tools",
+  "version": "1.0.0",
+  "description": "Model Context Protocol tools for SpendWise Supabase database",
+  "main": "spendwise-db-server.js",
+  "scripts": {
+    "start": "node spendwise-db-server.js",
+    "test": "node test-mcp-tools.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "pg": "^8.13.1",
+    "pg-connection-string": "^2.6.4"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "database",
+    "supabase",
+    "spendwise"
+  ],
+  "author": "SpendWise Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

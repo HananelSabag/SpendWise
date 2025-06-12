@@ -52,6 +52,39 @@ const LOADING_STRATEGIES = {
 };
 
 /**
+ * ✅ NEW: Client-side recurring filter utility
+ * Since server doesn't support isRecurring filter yet, we handle it elegantly on client
+ */
+const applyRecurringFilter = (transactions, recurringFilter) => {
+  if (!recurringFilter || recurringFilter === 'all' || !Array.isArray(transactions)) {
+    return transactions;
+  }
+
+  const filteredTransactions = transactions.filter(transaction => {
+    const isRecurring = Boolean(transaction.template_id);
+    
+    if (recurringFilter === 'recurring') {
+      return isRecurring;
+    } else if (recurringFilter === 'single') {
+      return !isRecurring;
+    }
+    
+    return true; // fallback
+  });
+
+  // ✅ DEV: Log filter results in development
+  if (process.env.NODE_ENV === 'development' && recurringFilter !== 'all') {
+    console.log(`🔍 [RECURRING-FILTER] Applied "${recurringFilter}" filter:`, {
+      original: transactions.length,
+      filtered: filteredTransactions.length,
+      removed: transactions.length - filteredTransactions.length
+    });
+  }
+
+  return filteredTransactions;
+};
+
+/**
  * Main transactions hook with TRUE infinite loading
  */
 export const useTransactions = (options = {}) => {
@@ -105,16 +138,21 @@ export const useTransactions = (options = {}) => {
     setFilters(optimizedFilters);
   }, [optimizedFilters]);
 
-  // ✅ OPTIMIZED: Build query key for cache management
+  // ✅ ENHANCED: Build query key for cache management (excluding client-side filters)
   const queryKey = useMemo(() => {
-    const cleanFilters = Object.entries(filters).reduce((acc, [key, value]) => {
+    const serverFilters = Object.entries(filters).reduce((acc, [key, value]) => {
+      // ✅ FIX: Exclude client-side filters from server requests
+      if (key === 'recurring' || key === 'isRecurring') {
+        return acc; // Don't send to server
+      }
+      
       if (value !== null && value !== '' && (Array.isArray(value) ? value.length > 0 : true)) {
         acc[key] = value;
       }
       return acc;
     }, {});
     
-    return ['transactions', 'infinite', cleanFilters];
+    return ['transactions', 'infinite', serverFilters];
   }, [filters]);
 
   // ✅ CORE FIX: Use useInfiniteQuery for TRUE progressive loading
@@ -128,9 +166,11 @@ export const useTransactions = (options = {}) => {
         sortOrder: filters.sortOrder
       };
       
-      // Add non-empty filters
+      // ✅ FIX: Only send server-supported filters
       Object.entries(filters).forEach(([key, value]) => {
-        if (key !== 'sortBy' && key !== 'sortOrder' && key !== 'recurring' && value !== null && value !== undefined &&
+        if (key !== 'sortBy' && key !== 'sortOrder' && 
+            key !== 'recurring' && key !== 'isRecurring' && // ✅ Exclude client-side filters
+            value !== null && value !== undefined &&
             (Array.isArray(value) ? value.length > 0 : true)) {
           params[key] = value;
         }
@@ -151,7 +191,6 @@ export const useTransactions = (options = {}) => {
       const totalPages = pages;
       const hasMore = currentPage < totalPages;
       
-      // ✅ FIXED: No more excessive logging
       if (hasMore) {
         const nextPage = currentPage + 1;
         return nextPage;
@@ -166,7 +205,7 @@ export const useTransactions = (options = {}) => {
     keepPreviousData: true
   });
 
-  // ✅ OPTIMIZED: Flatten infinite data with minimal logging
+  // ✅ ENHANCED: Flatten infinite data with CLIENT-SIDE RECURRING FILTER
   const processedData = useMemo(() => {
     if (!transactionsQuery.data?.pages) {
       return {
@@ -198,17 +237,23 @@ export const useTransactions = (options = {}) => {
       }
     });
 
-    // ✅ FIXED: No more excessive logging
+    // ✅ NEW: Apply client-side recurring filter AFTER data loading
+    const filteredTransactions = applyRecurringFilter(allTransactions, filters.recurring);
+
+    // ✅ FIX: Update pagination for filtered results
+    const filteredPagination = {
+      ...latestPagination,
+      total: filteredTransactions.length,
+      hasMore: !!transactionsQuery.hasNextPage,
+      isLoading: transactionsQuery.isFetchingNextPage
+    };
+
     return {
-      transactions: allTransactions,
-      pagination: {
-        ...latestPagination,
-        hasMore: !!transactionsQuery.hasNextPage,
-        isLoading: transactionsQuery.isFetchingNextPage
-      },
+      transactions: filteredTransactions,
+      pagination: filteredPagination,
       summary: latestSummary
     };
-  }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage]);
+  }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage, filters.recurring]);
 
   // ✅ PRESERVED: All CRUD mutations with enhanced cache management
   const createTransactionMutation = useApiMutation(
@@ -261,7 +306,7 @@ export const useTransactions = (options = {}) => {
       categories: [],
       minAmount: null,
       maxAmount: null,
-      // ✅ FIXED: Reset isRecurring as well
+      // ✅ FIXED: Reset all recurring filters
       isRecurring: null,
       recurring: 'all'
     });

@@ -124,9 +124,9 @@ const Transactions = () => {
       categories: filters.categories.length > 0 ? filters.categories : null
     };
     
-    // ✅ FIXED: Proper recurring filter handling
+    // ✅ FIX: Pass recurring filter directly to useTransactions (handled client-side)
     if (filters.recurring !== 'all') {
-      options.isRecurring = filters.recurring === 'recurring';
+      options.recurring = filters.recurring;
     }
     
     return options;

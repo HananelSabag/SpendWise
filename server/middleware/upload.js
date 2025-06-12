@@ -121,6 +121,9 @@ const deleteOldProfilePicture = async (req, res, next) => {
             const relativePath = urlParts[1];
             oldPath = path.join(__dirname, '..', 'uploads', relativePath);
           }
+        } else if (!preferences.profilePicture.startsWith('http')) {
+          // Handle relative paths without /uploads/ prefix
+          oldPath = path.join(__dirname, '..', 'uploads', 'profiles', preferences.profilePicture);
         }
         
         if (oldPath) {

@@ -72,7 +72,7 @@ const Avatar = ({
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // CRITICAL UPDATE: Fix image URL handling - FIXES PROFILE IMAGE DISPLAY
+  // UPDATED: Improved image URL handling with better error recovery
   const getImageSrc = () => {
     if (!src) return null;
     
@@ -94,23 +94,35 @@ const Avatar = ({
 
   const [imageError, setImageError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Reset error state when src changes
   React.useEffect(() => {
     setImageError(false);
     setRetryCount(0);
+    setIsLoading(true);
   }, [src]);
+
+  const handleImageLoad = () => {
+    setIsLoading(false);
+    setImageError(false);
+  };
 
   const handleImageError = (e) => {
     console.error('Avatar image failed to load:', e.target.src);
+    setIsLoading(false);
     
-    // Try to retry once with a slight delay
-    if (retryCount < 1) {
+    // Try to retry with a cache buster
+    if (retryCount < 2) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
-        e.target.src = getImageSrc() + '?t=' + Date.now(); // Add cache buster
-      }, 1000);
+        const newSrc = getImageSrc() + '?t=' + Date.now();
+        console.log('Retrying avatar image load:', newSrc);
+        e.target.src = newSrc;
+        setIsLoading(true);
+      }, 1000 * (retryCount + 1)); // Increasing delay
     } else {
+      console.warn('Avatar image failed to load after retries, showing fallback');
       setImageError(true);
     }
   };
@@ -123,17 +135,26 @@ const Avatar = ({
       tabIndex={onClick ? 0 : undefined}
     >
       {src && !imageError ? (
-        <img
-          src={getImageSrc() + (retryCount > 0 ? '?t=' + Date.now() : '')}
-          alt={name || 'Avatar'}
-          className={cn(
-            'rounded-full object-cover',
-            sizeClasses[size],
-            onClick && 'cursor-pointer hover:ring-4 transition-all'
+        <div className="relative">
+          <img
+            src={getImageSrc() + (retryCount > 0 ? '?t=' + Date.now() : '')}
+            alt={name || 'Avatar'}
+            className={cn(
+              'rounded-full object-cover',
+              sizeClasses[size],
+              onClick && 'cursor-pointer hover:ring-4 transition-all',
+              isLoading && 'opacity-50'
+            )}
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+            loading="lazy"
+          />
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full">
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin"></div>
+            </div>
           )}
-          onError={handleImageError}
-          loading="lazy"
-        />
+        </div>
       ) : (
         <div
           className={cn(

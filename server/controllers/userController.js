@@ -178,10 +178,13 @@ const getProfile = asyncHandler(async (req, res) => {
       ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
       : 'http://localhost:5000';
     
-    // If it's a relative path, make it absolute
+    // Always construct full URL from relative path
     if (user.preferences.profilePicture.startsWith('/uploads/')) {
       user.preferences.profilePicture = `${baseUrl}${user.preferences.profilePicture}`;
     } else if (user.preferences.profilePicture.startsWith('uploads/')) {
+      user.preferences.profilePicture = `${baseUrl}/${user.preferences.profilePicture}`;
+    } else if (!user.preferences.profilePicture.startsWith('http')) {
+      // Handle any other relative path format
       user.preferences.profilePicture = `${baseUrl}/${user.preferences.profilePicture}`;
     }
   }

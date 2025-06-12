@@ -294,6 +294,9 @@ export const useAuth = () => {
               }
             };
           });
+          
+          // Force a profile refetch to ensure fresh data
+          queryClient.invalidateQueries(queryKeys.profile);
         }
       }
     }
