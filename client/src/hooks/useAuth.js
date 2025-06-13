@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApiQuery, useApiMutation } from './useApi';
 import { authAPI, queryKeys, mutationKeys } from '../utils/api';
 import { useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { useToast } from './useToast';
 import AuthContext from '../context/AuthContext';
 
 /**
@@ -22,6 +22,7 @@ export const useAuth = () => {
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const toastService = useToast();
   
   // Check if user has valid token
   const hasToken = !!localStorage.getItem('accessToken');
@@ -39,7 +40,7 @@ export const useAuth = () => {
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 30 * 60 * 1000, // 30 minutes
       retry: (failureCount, error) => {
-        // ✅ IMPROVED: Better error handling - don't show toast for network errors
+        // ✅ IMPROVED: Better error handling for production
         if (error?.response?.status === 401) {
           console.log('🔑 [AUTH] Token invalid, clearing auth state');
           localStorage.removeItem('accessToken');
@@ -48,31 +49,45 @@ export const useAuth = () => {
           return false;
         }
         
-        // ✅ FIX: Don't retry on server errors that aren't auth-related
+        // ✅ NEW: Don't retry immediately on server errors during cold start
         if (error?.response?.status >= 500) {
-          console.warn('🔑 [AUTH] Server error during profile fetch, will retry');
-          return failureCount < 1; // Reduced retries for server errors
+          if (failureCount < 1) {
+            console.warn('🔑 [AUTH] Server error during profile fetch, will retry once');
+            return true;
+          }
+          console.warn('🔑 [AUTH] Server consistently failing, stopping retries');
+          return false;
         }
         
-        // Network errors - retry silently
+        // ✅ IMPROVED: Network errors - retry with exponential backoff
         if (!error?.response) {
-          console.warn('🔑 [AUTH] Network error during profile fetch, will retry');
-          return failureCount < 2;
+          if (failureCount < 2) {
+            console.warn('🔑 [AUTH] Network error during profile fetch, will retry');
+            return true;
+          }
+          console.warn('🔑 [AUTH] Network consistently failing, user may be offline');
+          return false;
         }
         
         return false;
       },
-      // ✅ FIX: Don't show error toast for profile queries
+      retryDelay: (attemptIndex) => {
+        // ✅ NEW: Exponential backoff for retries
+        return Math.min(1000 * Math.pow(2, attemptIndex), 10000);
+      },
+      // ✅ IMPROVED: Better error handling that doesn't confuse users
       onError: (error) => {
         if (error?.response?.status === 401) {
-          console.log('🔑 [AUTH] Authentication required - redirecting to login');
+          console.log('🔑 [AUTH] Authentication required - will handle redirect gracefully');
           // Let the app handle redirect, don't show toast here
         } else if (error?.response?.status >= 500) {
-          console.warn('🔑 [AUTH] Server error during profile fetch');
-          // Don't show toast for server errors
+          console.warn('🔑 [AUTH] Server error during profile fetch - user remains logged in');
+          // Don't show toast for server errors - user should stay logged in
         } else if (!error?.response) {
-          console.warn('🔑 [AUTH] Network error during profile fetch');
-          // Don't show toast for network errors
+          console.warn('🔑 [AUTH] Network error during profile fetch - may be offline');
+          // Don't show toast for network errors - user should stay logged in
+        } else {
+          console.error('🔑 [AUTH] Unexpected error during profile fetch:', error);
         }
       }
     }
@@ -161,7 +176,7 @@ export const useAuth = () => {
           console.log('🔑 [AUTH] Login successful, user preferences will be loaded by contexts');
         }
         
-        toast.success('Welcome back!');
+        toastService.loginSuccess();
         navigate('/');
       },
       onError: (error) => {
@@ -171,8 +186,7 @@ export const useAuth = () => {
           return;
         }
         
-        const message = errorData?.message || 'Login failed';
-        toast.error(message);
+        toastService.error(error);
       }
     }
   );
@@ -187,7 +201,7 @@ export const useAuth = () => {
           return;
         }
         
-        toast.success('Registration successful! Please check your email.');
+        toastService.registerSuccess();
       },
       showErrorToast: false
     }
@@ -211,7 +225,7 @@ export const useAuth = () => {
         
         console.log('🔄 [AUTH] Session reset triggered for contexts');
         
-        toast.success('Logged out successfully');
+        toastService.logoutSuccess();
         navigate('/login');
       },
       showErrorToast: false
@@ -224,7 +238,7 @@ export const useAuth = () => {
     {
       mutationKey: mutationKeys.updateProfile,
       invalidateKeys: [queryKeys.profile],
-      successMessage: 'Profile updated successfully',
+      showSuccessToast: false,
       onSuccess: (response) => {
         const updatedUser = response.data?.data;
         if (updatedUser) {
@@ -316,7 +330,7 @@ export const useAuth = () => {
           queryClient.invalidateQueries(queryKeys.profile);
         }
         
-        toast.success('Email verified successfully!');
+        toastService.emailVerified();
         navigate('/');
       }
     }

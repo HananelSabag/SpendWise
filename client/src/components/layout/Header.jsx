@@ -13,19 +13,24 @@ import {
   Sun,
   Moon,
   Globe,
+  DollarSign,
   Settings,
   ChevronDown,
   ChevronRight,
   Tag,
-  Clock
+  Clock,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+
 import { cn } from '../../utils/helpers';
 import { Avatar } from '../ui'; // Add Avatar import
 import CategoryManager from '../features/categories/CategoryManager';
 import RecurringModal from '../features/transactions/RecurringModal';
+import ExchangeCalculator from '../features/exchange/ExchangeCalculator';
+import OnboardingModal from '../features/onboarding/OnboardingModal';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,15 +39,22 @@ const Header = () => {
   const [showMobilePanels, setShowMobilePanels] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [showExchangeCalculator, setShowExchangeCalculator] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   // ✅ IMPROVED: Better authentication state handling
   const { user, logout, isAuthenticated, isLoggingOut, isLoading, isInitialized } = useAuth();
   const { t, language, sessionLanguage, toggleLanguage } = useLanguage();
   const { toggleTheme, isDark, sessionTheme } = useTheme();
+
   const navigate = useNavigate();
   
   const location = useLocation();
   const isRTL = language === 'he';
+  
+  // ✅ FIXED: Proper session override detection
+  const themeSessionOverride = sessionTheme && sessionTheme !== (user?.preferences?.theme || 'light');
+  const languageSessionOverride = sessionLanguage && sessionLanguage !== (user?.preferences?.language || 'en');
   
   // ✅ VERIFIED: Session-only theme toggle - no database updates
   const handleThemeToggle = () => {
@@ -68,6 +80,15 @@ const Header = () => {
   const handleOpenRecurringModal = () => {
     console.log('🔄 [HEADER] Opening recurring modal from navigation');
     setShowRecurringModal(true);
+    setShowPanelsDropdown(false);
+    setShowMobilePanels(false);
+    setIsOpen(false);
+  };
+
+  // ✅ NEW: Handle exchange calculator modal opening
+  const handleOpenExchangeCalculator = () => {
+    console.log('💱 [HEADER] Opening exchange calculator from navigation');
+    setShowExchangeCalculator(true);
     setShowPanelsDropdown(false);
     setShowMobilePanels(false);
     setIsOpen(false);
@@ -146,6 +167,12 @@ const Header = () => {
       icon: Clock,
       onClick: handleOpenRecurringModal,
       description: t('nav.recurringManagerDesc')
+    },
+    {
+      name: 'Exchange Calculator',
+      icon: DollarSign,
+      onClick: handleOpenExchangeCalculator,
+      description: 'Convert currencies with live rates'
     }
   ];
 
@@ -277,40 +304,40 @@ const Header = () => {
 
             {/* Right side controls */}
             <div className="flex items-center gap-2">
-              {/* ✅ Theme toggle - Session only with indicator */}
+              {/* ✅ FIXED: Theme toggle - Session only with proper indicator */}
               <button
                 onClick={handleThemeToggle}
                 className={cn(
                   "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
-                  sessionTheme && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
+                  themeSessionOverride && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
                 )}
                 aria-label={t('common.toggleTheme')}
-                title={sessionTheme ? `Session Override: ${sessionTheme}` : undefined}
+                title={themeSessionOverride ? `Session Override: ${sessionTheme} (Saved: ${user?.preferences?.theme || 'light'})` : undefined}
               >
                 {isDark ? (
                   <Sun className="w-5 h-5" />
                 ) : (
                   <Moon className="w-5 h-5" />
                 )}
-                {/* Session override indicator */}
-                {sessionTheme && (
+                {/* ✅ FIXED: Session override indicator - only show when different from user preference */}
+                {themeSessionOverride && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
                 )}
               </button>
 
-              {/* ✅ Language toggle - Session only with indicator */}
+              {/* ✅ FIXED: Language toggle - Session only with proper indicator */}
               <button
                 onClick={handleLanguageToggle}
                 className={cn(
                   "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
-                  sessionLanguage && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
+                  languageSessionOverride && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
                 )}
                 aria-label={t('common.toggleLanguage')}
-                title={sessionLanguage ? `Session Override: ${sessionLanguage === 'he' ? 'עברית' : 'English'}` : undefined}
+                title={languageSessionOverride ? `Session Override: ${sessionLanguage === 'he' ? 'עברית' : 'English'} (Saved: ${user?.preferences?.language === 'he' ? 'עברית' : 'English'})` : undefined}
               >
                 <Globe className="w-5 h-5" />
-                {/* Session override indicator */}
-                {sessionLanguage && (
+                {/* ✅ FIXED: Session override indicator - only show when different from user preference */}
+                {languageSessionOverride && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
                 )}
               </button>
@@ -349,8 +376,8 @@ const Header = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {user?.email}
                         </p>
-                        {/* ✅ ADD: Session override indicators in dropdown */}
-                        {(sessionTheme || sessionLanguage) && (
+                        {/* ✅ FIXED: Session override indicators in dropdown */}
+                        {(themeSessionOverride || languageSessionOverride) && (
                           <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                             Session overrides active
                           </div>
@@ -375,6 +402,23 @@ const Header = () => {
                       >
                         <LogOut className="w-4 h-4" />
                         {isLoggingOut ? t('common.loading') : t('nav.logout')}
+                      </button>
+
+                      {/* Help - Show Onboarding */}
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setShowOnboarding(true);
+                        }}
+                        className={cn(
+                          'flex items-center gap-3 w-full px-4 py-3 text-sm',
+                          'text-gray-700 dark:text-gray-300',
+                          'hover:bg-gray-50 dark:hover:bg-gray-700',
+                          'transition-colors duration-200'
+                        )}
+                      >
+                        <HelpCircle size={18} />
+                        <span>{t('nav.help')}</span>
                       </button>
                     </motion.div>
                   )}
@@ -480,8 +524,8 @@ const Header = () => {
                         </p>
                       </div>
                     </div>
-                    {/* Session override indicators */}
-                    {(sessionTheme || sessionLanguage) && (
+                    {/* ✅ FIXED: Session override indicators in mobile */}
+                    {(themeSessionOverride || languageSessionOverride) && (
                       <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                         Session overrides active
                       </div>
@@ -539,6 +583,25 @@ const Header = () => {
             console.log('✅ [HEADER] Recurring modal operation successful');
             // Optionally refresh data or show success message
           }}
+        />
+      )}
+
+      {showExchangeCalculator && (
+        <ExchangeCalculator
+          isOpen={showExchangeCalculator}
+          onClose={() => {
+            console.log('❌ [HEADER] Closing exchange calculator');
+            setShowExchangeCalculator(false);
+          }}
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          forceShow={true}
         />
       )}
     </>

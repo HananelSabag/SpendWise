@@ -43,7 +43,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Badge, Button } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
-import toast from 'react-hot-toast';
+import { useToast } from '../../../hooks/useToast';
 
 /**
  * ✅ ENHANCED: Improved animation configurations for smoother interactions
@@ -151,6 +151,7 @@ const TransactionCard = ({
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  const toastService = useToast();
   
   // ✅ FIXED: Get hooks at component level
   const { updateTransaction, deleteTransaction, isUpdating, isDeleting, refresh } = useTransactions();
@@ -252,7 +253,7 @@ const TransactionCard = ({
 
   const handleEditTemplate = useCallback(() => {
     if (!isRecurring && !isTemplate) {
-      toast.error(t('transactions.notRecurring'));
+      toastService.error('toast.error.cannotSkipNonRecurring');
       return;
     }
     
@@ -266,7 +267,7 @@ const TransactionCard = ({
   // ✅ FIXED: Skip dates with proper parameter format
   const handleQuickSkip = useCallback(async () => {
     if (!templateId) {
-      toast.error(t('transactions.cannotSkipNonRecurring'));
+              toastService.error('toast.error.cannotSkipNonRecurring');
       return;
     }
     
@@ -277,7 +278,7 @@ const TransactionCard = ({
       const intervalType = transaction.interval_type || transaction.recurring_interval;
       
       if (!intervalType) {
-        toast.error(t('transactions.unknownInterval'));
+                    toastService.error('toast.error.unknownInterval');
         return;
       }
       
@@ -296,7 +297,7 @@ const TransactionCard = ({
           nextDate.setFullYear(nextDate.getFullYear() + 1);
           break;
         default:
-          toast.error(t('transactions.unknownInterval'));
+          toastService.error('toast.error.unknownInterval');
           return;
       }
       
@@ -305,25 +306,19 @@ const TransactionCard = ({
       
       // ✅ FIXED: Correct parameter format
       await skipDates(templateId, [skipDate]);
-      toast.success(t('transactions.nextPaymentSkipped'));
+              toastService.success('toast.success.nextPaymentSkipped');
       await refresh();
     } catch (error) {
       console.error('❌ [CARD] Skip failed:', error);
       // ✅ ENHANCED: Better error messages based on error type
-      if (error.response?.status === 400) {
-        toast.error(error.response.data?.message || t('transactions.skipError.invalidTemplate'));
-      } else if (error.response?.status === 404) {
-        toast.error(t('transactions.skipError.templateNotFound'));
-      } else {
-        toast.error(t('transactions.skipError.general'));
-      }
+      toastService.error(error);
     }
   }, [transaction, templateId, skipDates, refresh, t]);
 
   // ✅ FIXED: Toggle active with proper parameter format
   const handleToggleActive = useCallback(async () => {
     if (!templateId) {
-      toast.error(t('transactions.cannotToggleNonTemplate'));
+      toastService.error('toast.error.cannotToggleNonTemplate');
       return;
     }
     
@@ -333,11 +328,11 @@ const TransactionCard = ({
         is_active: !isActive
       });
       
-      toast.success(isActive ? t('transactions.paused') : t('transactions.resumed'));
+      toastService.success(isActive ? 'toast.success.nextPaymentSkipped' : 'toast.success.transactionGenerated');
       await refresh();
     } catch (error) {
       console.error('Toggle failed:', error);
-      toast.error(t('common.error'));
+      toastService.error(error);
     }
   }, [templateId, isActive, updateTemplate, refresh, t]);
 

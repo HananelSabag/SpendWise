@@ -14,6 +14,7 @@ CREATE TABLE users (
     language_preference VARCHAR(10) DEFAULT 'en',
     theme_preference VARCHAR(20) DEFAULT 'light',
     currency_preference VARCHAR(10) DEFAULT 'USD',
+    onboarding_completed BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     preferences JSONB DEFAULT '{}',
@@ -117,4 +118,5 @@ CREATE INDEX idx_email_verification_user ON email_verification_tokens(user_id) W
 CREATE INDEX idx_users_email_verified ON users(email_verified);
 CREATE INDEX idx_users_language ON users(language_preference);
 CREATE INDEX idx_users_theme ON users(theme_preference);
+CREATE INDEX idx_users_onboarding ON users(onboarding_completed) WHERE onboarding_completed = false;
 CREATE INDEX idx_recurring_templates_user_active ON recurring_templates(user_id, is_active); -- Added composite index for better performance

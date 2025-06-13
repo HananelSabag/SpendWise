@@ -11,7 +11,7 @@ import { useApiQuery, useApiMutation } from './useApi';
 import { transactionAPI, queryKeys, mutationKeys } from '../utils/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
-import toast from 'react-hot-toast';
+import { useToast } from './useToast';
 
 /**
  * ✅ ENHANCED: Smart cache invalidation for all transaction-related data
@@ -90,6 +90,7 @@ const applyRecurringFilter = (transactions, recurringFilter) => {
 export const useTransactions = (options = {}) => {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const toastService = useToast();
   
   // ✅ STABLE: Detect mobile for strategy selection
   const isMobile = useMemo(() => {
@@ -262,7 +263,7 @@ export const useTransactions = (options = {}) => {
       mutationKey: mutationKeys.createTransaction,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Transaction created successfully');
+        toastService.transactionCreated();
       }
     }
   );
@@ -273,7 +274,7 @@ export const useTransactions = (options = {}) => {
       mutationKey: mutationKeys.updateTransaction,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Transaction updated successfully');
+        toastService.transactionUpdated();
       }
     }
   );
@@ -284,7 +285,7 @@ export const useTransactions = (options = {}) => {
       mutationKey: mutationKeys.deleteTransaction,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Transaction deleted successfully');
+        toastService.transactionDeleted();
       }
     }
   );
@@ -445,7 +446,7 @@ export const useRecurringTransactions = (type = null) => {
       mutationKey: mutationKeys.generateRecurring,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Recurring transactions generated successfully');
+        toastService.success('toast.success.transactionGenerated');
       }
     }
   );
@@ -501,7 +502,7 @@ export const useTransactionTemplates = () => {
       mutationKey: mutationKeys.updateTemplate,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Template updated successfully');
+        toastService.success('toast.success.templateUpdated');
       }
     }
   );
@@ -512,7 +513,7 @@ export const useTransactionTemplates = () => {
       mutationKey: mutationKeys.skipDates,
       onSuccess: () => {
         invalidateAllTransactionData(queryClient);
-        toast.success('Dates skipped successfully');
+        toastService.success('toast.success.skipDatesSuccess');
       }
     }
   );

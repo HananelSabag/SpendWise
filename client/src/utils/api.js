@@ -11,11 +11,21 @@ const config = {
   API_URL: import.meta.env.VITE_API_URL,
   API_VERSION: import.meta.env.VITE_API_VERSION || 'v1',
   CLIENT_URL: import.meta.env.VITE_CLIENT_URL,
-  DEBUG_MODE: import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.DEV,
+  DEBUG_MODE: import.meta.env.VITE_DEBUG_MODE === 'true',
   REQUEST_TIMEOUT: parseInt(import.meta.env.VITE_REQUEST_TIMEOUT) || 15000,
   RETRY_ATTEMPTS: parseInt(import.meta.env.VITE_RETRY_ATTEMPTS) || 3,
   MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 5242880,
-  ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT || 'development'
+  ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT || 'development',
+  // ✅ NEW: Server health monitoring
+  COLD_START_THRESHOLD: 10000, // 10 seconds
+  MAX_COLD_START_WAIT: 60000, // 60 seconds
+};
+
+// ✅ NEW: Server state tracking
+let serverState = {
+  isWakingUp: false,
+  lastSuccessfulRequest: Date.now(),
+  consecutiveFailures: 0
 };
 
 // Validate required environment variables
@@ -37,9 +47,9 @@ const api = axios.create({
   },
 });
 
-// Debug logger
+// Debug logger - Only in development and when explicitly enabled
 const log = (message, data = null) => {
-  if (config.DEBUG_MODE) {
+  if (config.DEBUG_MODE && !import.meta.env.PROD) {
     console.log(`[API] ${message}`, data);
   }
 };
@@ -105,7 +115,30 @@ api.interceptors.request.use(
   }
 );
 
-// Enhanced response interceptor with token refresh
+// ✅ NEW: Cold start detection and user feedback
+const detectColdStart = (duration) => {
+  return duration > config.COLD_START_THRESHOLD;
+};
+
+const showColdStartNotification = () => {
+  if (!serverState.isWakingUp) {
+    serverState.isWakingUp = true;
+    toast.loading('Server is starting up, please wait...', {
+      id: 'cold-start',
+      duration: 30000
+    });
+  }
+};
+
+const hideColdStartNotification = () => {
+  if (serverState.isWakingUp) {
+    serverState.isWakingUp = false;
+    toast.dismiss('cold-start');
+    toast.success('Server is ready!', { duration: 2000 });
+  }
+};
+
+// ✅ IMPROVED: Enhanced response interceptor with cold start handling
 api.interceptors.response.use(
   (response) => {
     const duration = Date.now() - response.config.metadata.startTime;
@@ -115,20 +148,37 @@ api.interceptors.response.use(
       pendingRequests.delete(response.config.metadata.requestKey);
     }
     
-    log(`✓ ${response.config.url} (${duration}ms)`, { 
-      status: response.status,
-      data: response.data
-    });
+    // ✅ NEW: Cold start detection and user feedback
+    if (detectColdStart(duration) && !config.DEBUG_MODE) {
+      hideColdStartNotification();
+    }
+    
+    // ✅ FIXED: Only log in development, never show timing to users
+    if (config.DEBUG_MODE && !import.meta.env.PROD) {
+      log(`✓ ${response.config.url} (${duration}ms)`, { 
+        status: response.status,
+        data: response.data
+      });
+    }
+    
+    // ✅ NEW: Reset server state on successful response
+    serverState.lastSuccessfulRequest = Date.now();
+    serverState.consecutiveFailures = 0;
     
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
+    const startTime = originalRequest?.metadata?.startTime || Date.now();
+    const duration = Date.now() - startTime;
     
     // Clean up pending requests
     if (originalRequest?.metadata?.requestKey) {
       pendingRequests.delete(originalRequest.metadata.requestKey);
     }
+    
+    // ✅ NEW: Track server failures
+    serverState.consecutiveFailures++;
     
     // Handle cancelled requests
     if (axios.isCancel(error)) {
@@ -136,16 +186,26 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // Handle 401 - Token refresh
+    // ✅ NEW: Cold start detection for slow/failed requests
+    if (duration > config.COLD_START_THRESHOLD || !error.response) {
+      showColdStartNotification();
+    }
+    
+    // ✅ IMPROVED: Smart token refresh with cold start awareness
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await axios.post(`${config.API_URL}/api/${config.API_VERSION}/users/refresh-token`, {
-            refreshToken
-          });
+          // ✅ NEW: Longer timeout for refresh during cold start
+          const refreshTimeout = serverState.isWakingUp ? 60000 : 15000;
+          
+          const response = await axios.post(
+            `${config.API_URL}/api/${config.API_VERSION}/users/refresh-token`, 
+            { refreshToken },
+            { timeout: refreshTimeout }
+          );
           
           const { accessToken } = response.data.data;
           localStorage.setItem('accessToken', accessToken);
@@ -154,6 +214,17 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
+        // ✅ NEW: Better error handling for refresh failures
+        const isNetworkError = !refreshError.response;
+        const isServerError = refreshError.response?.status >= 500;
+        
+        if (isNetworkError || isServerError) {
+          // Don't immediately logout on server issues
+          log('Token refresh failed due to server issues, keeping user logged in temporarily');
+          return Promise.reject(refreshError);
+        }
+        
+        // Only logout on actual auth failures
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         window.location.href = '/login';
@@ -161,23 +232,32 @@ api.interceptors.response.use(
       }
     }
 
-    // Enhanced error handling
+    // ✅ IMPROVED: Enhanced error handling with user-friendly messages
     const message = error.response?.data?.error?.message || error.message;
     const code = error.response?.data?.error?.code;
     const status = error.response?.status;
     
-    // User-friendly error messages
-    if (status === 429) {
+    // ✅ NEW: Smart error messages based on server state
+    if (!error.response && serverState.consecutiveFailures >= 3) {
+      toast.error('Unable to connect to server. Please check your internet connection.', {
+        id: 'network-error',
+        duration: 8000
+      });
+    } else if (status === 429) {
       toast.error('Too many requests. Please slow down.');
-    } else if (status === 500) {
+    } else if (status === 500 && !serverState.isWakingUp) {
       toast.error('Server error. Please try again later.');
     } else if (status === 503) {
-      toast.error('Service temporarily unavailable.');
-    } else if (code !== 'VALIDATION_ERROR' && message && !error.config?.silent) {
+      showColdStartNotification();
+    } else if (code !== 'VALIDATION_ERROR' && message && !error.config?.silent && !serverState.isWakingUp) {
       toast.error(message);
     }
 
-    log(`❌ ${originalRequest?.url}`, { status, message, code });
+    // ✅ FIXED: Only log in development
+    if (config.DEBUG_MODE && !import.meta.env.PROD) {
+      log(`❌ ${originalRequest?.url}`, { status, message, code });
+    }
+    
     return Promise.reject(error);
   }
 );

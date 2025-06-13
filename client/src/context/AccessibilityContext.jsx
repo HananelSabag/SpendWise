@@ -12,6 +12,9 @@ export const useAccessibility = () => {
 };
 
 export const AccessibilityProvider = ({ children, initialDarkMode = false }) => {
+  // ✅ FIX: Don't use useAuth directly to avoid circular dependency
+  // We'll sync with auth state via events instead
+  
   // Clear any existing dark mode setting on initial load
   useEffect(() => {
     // Force light mode on initial load if initialDarkMode is false
@@ -117,6 +120,25 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
     localStorage.removeItem('a11y_darkMode');
     localStorage.removeItem('a11y_menuCollapsed');
   }, []);
+
+  // ✅ FIX: Sync with user preferences via event system
+  useEffect(() => {
+    const handleUserPreferencesSync = (event) => {
+      const { user } = event.detail;
+      if (user?.preferences?.theme_preference) {
+        const userTheme = user.preferences.theme_preference;
+        const isDark = userTheme === 'dark';
+        if (isDark !== darkMode) {
+          console.log(`🎨 [THEME] Syncing with user preference: ${darkMode ? 'dark' : 'light'} → ${userTheme}`);
+          setDarkMode(isDark);
+          localStorage.setItem('a11y_darkMode', isDark.toString());
+        }
+      }
+    };
+
+    window.addEventListener('user-preferences-loaded', handleUserPreferencesSync);
+    return () => window.removeEventListener('user-preferences-loaded', handleUserPreferencesSync);
+  }, [darkMode]);
 
   // Add system theme listener
   useEffect(() => {

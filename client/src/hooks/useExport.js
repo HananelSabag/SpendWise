@@ -7,13 +7,14 @@ import { useState, useCallback } from 'react';
 import { useApiQuery, useApiMutation } from './useApi';
 import { exportAPI, queryKeys } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
+import { useToast } from './useToast';
 
 /**
  * Main export hook with progress tracking
  */
 export const useExport = () => {
   const { isAuthenticated, user } = useAuth();
+  const toastService = useToast();
   const [exportProgress, setExportProgress] = useState({
     isExporting: false,
     format: null,
@@ -66,13 +67,13 @@ export const useExport = () => {
         
         // Better error handling
         if (error.response?.status === 404) {
-          toast.error('No data available to export');
+          toastService.error('toast.error.noDataToExport');
         } else if (error.response?.status === 401) {
-          toast.error('Please login to export data');
+          toastService.unauthorized();
         } else if (error.response?.status === 429) {
-          toast.error('Too many export requests. Please wait a moment.');
+          toastService.error('toast.error.exportLimitReached');
         } else {
-          toast.error('CSV export failed. Please try again.');
+          toastService.error('toast.error.exportFailed', { params: { format: 'CSV' } });
         }
         
         throw error;
@@ -80,7 +81,7 @@ export const useExport = () => {
     },
     {
       onSuccess: () => {
-        toast.success('CSV export completed successfully!');
+        toastService.csvExportCompleted();
       },
       showErrorToast: false // We handle errors manually above
     }
@@ -103,13 +104,13 @@ export const useExport = () => {
         setExportProgress({ isExporting: false, format: null, progress: 0 });
         
         if (error.response?.status === 404) {
-          toast.error('No data available to export');
+          toastService.error('toast.error.noDataToExport');
         } else if (error.response?.status === 401) {
-          toast.error('Please login to export data');
+          toastService.unauthorized();
         } else if (error.response?.status === 429) {
-          toast.error('Too many export requests. Please wait a moment.');
+          toastService.error('toast.error.exportLimitReached');
         } else {
-          toast.error('JSON export failed. Please try again.');
+          toastService.error('toast.error.exportFailed', { params: { format: 'JSON' } });
         }
         
         throw error;
@@ -117,7 +118,7 @@ export const useExport = () => {
     },
     {
       onSuccess: () => {
-        toast.success('JSON export completed successfully!');
+        toastService.jsonExportCompleted();
       },
       showErrorToast: false
     }
@@ -140,11 +141,11 @@ export const useExport = () => {
         setExportProgress({ isExporting: false, format: null, progress: 0 });
         
         if (error.response?.status === 501) {
-          toast.info('PDF export coming soon! Please use CSV or JSON for now.');
+          toastService.pdfExportComingSoon();
         } else if (error.response?.status === 404) {
-          toast.error('No data available to export');
+          toastService.error('toast.error.noDataToExport');
         } else {
-          toast.error('PDF export failed. Please try again.');
+          toastService.error('toast.error.exportFailed', { params: { format: 'PDF' } });
         }
         
         throw error;
@@ -158,7 +159,7 @@ export const useExport = () => {
   // ✅ FIX: Enhanced export functions with validation
   const exportAsCSV = useCallback(async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to export data');
+      toastService.unauthorized();
       return;
     }
     
@@ -172,7 +173,7 @@ export const useExport = () => {
   
   const exportAsJSON = useCallback(async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to export data');
+      toastService.unauthorized();
       return;
     }
     
@@ -186,14 +187,14 @@ export const useExport = () => {
   
   const exportAsPDF = useCallback(async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to export data');
+      toastService.unauthorized();
       return;
     }
     
     // Check if PDF is available from server
     const pdfFormat = exportOptions.availableFormats?.find(f => f.format === 'pdf');
     if (pdfFormat && !pdfFormat.available) {
-      toast.info('PDF export coming soon! Please use CSV or JSON for now.');
+      toastService.pdfExportComingSoon();
       return;
     }
     

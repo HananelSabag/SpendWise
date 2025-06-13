@@ -16,7 +16,7 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from './useTransactions';
-import toast from 'react-hot-toast';
+import { useToast } from './useToast';
 
 /**
  * ✅ ENHANCED: Context strategies optimized for infinite loading
@@ -62,6 +62,7 @@ const CONTEXT_STRATEGIES = {
 export const useTransactionActions = (context = 'transactions') => {
   const queryClient = useQueryClient();
   const contextConfig = CONTEXT_STRATEGIES[context] || CONTEXT_STRATEGIES.transactions;
+  const toastService = useToast();
   
   // ✅ SIMPLIFIED: Use the optimized useTransactions hook
   const {
@@ -264,17 +265,23 @@ export const useTransactionActions = (context = 'transactions') => {
       const failed = results.filter(r => r.status === 'rejected').length;
       
       if (successful > 0) {
-        toast.success(`${successful} transactions ${operation}d successfully`);
+        toastService.success('toast.success.bulkOperationSuccess', { 
+          params: { count: successful, operation } 
+        });
       }
       
       if (failed > 0) {
-        toast.error(`${failed} transactions failed to ${operation}`);
+        toastService.error('toast.error.bulkOperationPartialFail', { 
+          params: { failed, operation } 
+        });
       }
       
       return { successful, failed, results };
       
     } catch (error) {
-      toast.error(`Bulk ${operation} failed`);
+              toastService.error('toast.error.bulkOperationFailed', { 
+          params: { operation } 
+        });
       throw error;
     }
   }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries, refreshAll]);
@@ -312,9 +319,9 @@ export const useTransactionActions = (context = 'transactions') => {
         exact: false
       });
       
-      toast.success('All transaction data refreshed');
+              toastService.success('toast.success.dataRefreshed');
     } catch (error) {
-      toast.error('Failed to refresh transaction data');
+              toastService.error('toast.error.operationFailed');
       console.error('Force refresh error:', error);
     }
   }, [queryClient]);

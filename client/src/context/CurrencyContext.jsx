@@ -1,53 +1,48 @@
 /**
- * CurrencyContext - Database-Driven Multi-Currency Support
- * Syncs with user preferences from database, no localStorage for authenticated users
+ * CurrencyContext - Display-Only Currency Support
+ * Shows amounts in user's preferred currency symbol format
+ * NO actual conversion - symbol display only for user convenience
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getExchangeRates, formatCurrency as formatCurrencyUtil } from '../utils/currencyAPI';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { queryKeys } from '../utils/api';
-import toast from 'react-hot-toast';
+import { useToast } from '../hooks/useToast';
 
 const CurrencyContext = createContext(null);
 
-// Supported currencies with full metadata
+// Supported currencies with symbol information only
 export const SUPPORTED_CURRENCIES = {
   USD: { 
     code: 'USD', 
     symbol: '$', 
     name: 'US Dollar',
-    locale: 'en-US',
-    position: 'before' // Symbol position
+    locale: 'en-US'
   },
   ILS: { 
     code: 'ILS', 
     symbol: '₪', 
     name: 'Israeli Shekel',
-    locale: 'he-IL',
-    position: 'before'
+    locale: 'he-IL'
   },
   EUR: { 
     code: 'EUR', 
     symbol: '€', 
     name: 'Euro',
-    locale: 'de-DE',
-    position: 'before'
+    locale: 'de-DE'
   },
   GBP: { 
     code: 'GBP', 
     symbol: '£', 
     name: 'British Pound',
-    locale: 'en-GB',
-    position: 'before'
+    locale: 'en-GB'
   }
 };
 
 export const CurrencyProvider = ({ children }) => {
   const { user, isAuthenticated, updateProfile } = useAuth();
+  const toastService = useToast();
   
-  // Currency state - database driven for authenticated users
+  // Currency state - user's display preference (SYMBOL ONLY)
   const [currency, setCurrencyState] = useState(() => {
     // For authenticated users, use user preference
     if (user?.preferences?.currency) {
@@ -57,12 +52,12 @@ export const CurrencyProvider = ({ children }) => {
     // For guests, check localStorage fallback
     if (!isAuthenticated) {
       const saved = localStorage.getItem('guestCurrency');
-      return saved || 'USD';
+      return saved || 'ILS';
     }
     
-    return 'USD';
+    return 'ILS'; // Default to ILS for Israeli app
   });
-  
+
   // Sync currency with user preferences
   useEffect(() => {
     if (user?.preferences?.currency && user.preferences.currency !== currency) {
@@ -70,88 +65,48 @@ export const CurrencyProvider = ({ children }) => {
     }
   }, [user?.preferences?.currency]);
   
-  // Exchange rates query with smart caching
-  const { data: exchangeRates, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.exchangeRates(currency),
-    queryFn: () => getExchangeRates(currency),
-    staleTime: 4 * 60 * 60 * 1000, // 4 hours - rates don't change frequently
-    cacheTime: 12 * 60 * 60 * 1000, // 12 hours
-    retry: 2,
-    refetchInterval: 4 * 60 * 60 * 1000, // Refetch every 4 hours
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    enabled: !!currency,
-    initialData: {
-      USD: currency === 'ILS' ? 0.27 : currency === 'EUR' ? 1.08 : currency === 'GBP' ? 1.27 : 1,
-      ILS: currency === 'USD' ? 3.70 : currency === 'EUR' ? 4.00 : currency === 'GBP' ? 4.70 : 1,
-      EUR: currency === 'USD' ? 0.93 : currency === 'ILS' ? 0.25 : currency === 'GBP' ? 1.16 : 1,
-      GBP: currency === 'USD' ? 0.79 : currency === 'ILS' ? 0.21 : currency === 'EUR' ? 0.86 : 1
-    }
-  });
-  
-  // Change currency - syncs with database for authenticated users
-  const changeCurrency = useCallback(async (newCurrency) => {
+  // Currency change (updates symbol preference only)
+  const changeCurrency = useCallback(async (newCurrency, options = {}) => {
     if (!SUPPORTED_CURRENCIES[newCurrency]) {
       console.warn('Invalid currency code:', newCurrency);
       return;
     }
     
+    console.log(`💰 [CURRENCY] Symbol change: ${currency} → ${newCurrency}`);
+    
+    const previousCurrency = currency;
+    
     // Optimistically update UI
     setCurrencyState(newCurrency);
     
     if (isAuthenticated) {
-      // ✅ FIX: השתמש ב-updateProfile במקום updatePreferences
       try {
         await updateProfile({ currency_preference: newCurrency });
-        toast.success(`Currency changed to ${SUPPORTED_CURRENCIES[newCurrency].name}`);
+        // ✅ FIXED: Only show toast if not suppressed (ProfileManager handles its own toasts)
+        if (!options.suppressToast) {
+          toastService.success('toast.success.preferencesUpdated');
+        }
       } catch (error) {
         // Revert on error
-        setCurrencyState(currency);
-        toast.error('Failed to update currency preference');
+        setCurrencyState(previousCurrency);
+        if (!options.suppressToast) {
+          toastService.error('toast.error.operationFailed');
+        }
+        throw error; // Re-throw so ProfileManager can handle the error
       }
     } else {
       // For guests, save to localStorage
       localStorage.setItem('guestCurrency', newCurrency);
-      toast.success(`Currency changed to ${SUPPORTED_CURRENCIES[newCurrency].name}`);
+      if (!options.suppressToast) {
+        toastService.success('toast.success.preferencesUpdated');
+      }
     }
-  }, [isAuthenticated, updateProfile, currency]); // ✅ וודא ש-updateProfile בdependencies
+  }, [isAuthenticated, updateProfile, currency, toastService]);
   
-  // Convert amount between currencies with caching
-  const convertAmount = useCallback((amount, fromCurrency, toCurrency = currency) => {
-    if (!amount || fromCurrency === toCurrency) return amount;
-    
+  // Format amount with currency symbol (NO CONVERSION - DISPLAY ONLY)
+  const formatAmount = useCallback((amount, sourceCurrency = 'ILS', options = {}) => {
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount)) return 0;
-    
-    // If we have the direct rate
-    if (fromCurrency === currency && exchangeRates?.[toCurrency]) {
-      return numAmount * exchangeRates[toCurrency];
-    }
-    
-    // If we need to convert through the base currency
-    if (exchangeRates?.[fromCurrency] && exchangeRates?.[toCurrency]) {
-      // Convert to base currency first, then to target
-      const inBaseCurrency = numAmount / exchangeRates[fromCurrency];
-      return inBaseCurrency * exchangeRates[toCurrency];
-    }
-    
-    // Fallback rates
-    const fallbackRates = {
-      USD: { ILS: 3.70, EUR: 0.93, GBP: 0.79 },
-      ILS: { USD: 0.27, EUR: 0.25, GBP: 0.21 },
-      EUR: { USD: 1.08, ILS: 4.00, GBP: 0.86 },
-      GBP: { USD: 1.27, ILS: 4.70, EUR: 1.16 }
-    };
-    
-    const rate = fallbackRates[fromCurrency]?.[toCurrency];
-    return rate ? numAmount * rate : numAmount;
-  }, [currency, exchangeRates]);
-  
-  // Format amount in the selected currency with proper locale
-  const formatAmount = useCallback((amount, sourceCurrency = currency, options = {}) => {
-    const convertedAmount = sourceCurrency === currency 
-      ? amount 
-      : convertAmount(amount, sourceCurrency, currency);
+    if (isNaN(numAmount)) return '0';
     
     const currencyInfo = SUPPORTED_CURRENCIES[currency];
     const locale = options.locale || currencyInfo.locale || 'en-US';
@@ -162,127 +117,45 @@ export const CurrencyProvider = ({ children }) => {
       minimumFractionDigits: options.minimumFractionDigits ?? 0,
       maximumFractionDigits: options.maximumFractionDigits ?? 2,
       ...options
-    }).format(convertedAmount);
-  }, [currency, convertAmount]);
-  
-  // Format with compact notation for large numbers
-  const formatCompact = useCallback((amount, sourceCurrency = currency) => {
-    const convertedAmount = sourceCurrency === currency 
-      ? amount 
-      : convertAmount(amount, sourceCurrency, currency);
-    
-    const currencyInfo = SUPPORTED_CURRENCIES[currency];
-    const formatter = new Intl.NumberFormat('en', {
-      notation: 'compact',
-      compactDisplay: 'short',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    });
-    
-    return `${currencyInfo.symbol}${formatter.format(convertedAmount)}`;
-  }, [currency, convertAmount]);
-  
-  // Cycle through currencies
-  const toggleCurrency = useCallback(() => {
-    const currencies = Object.keys(SUPPORTED_CURRENCIES);
-    const currentIndex = currencies.indexOf(currency);
-    const nextIndex = (currentIndex + 1) % currencies.length;
-    changeCurrency(currencies[nextIndex]);
-  }, [currency, changeCurrency]);
-  
-  // Get rate between two currencies
-  const getRate = useCallback((from, to) => {
-    if (from === to) return 1;
-    
-    if (from === currency) {
-      return exchangeRates?.[to] || 1;
-    }
-    
-    if (to === currency) {
-      return 1 / (exchangeRates?.[from] || 1);
-    }
-    
-    // Convert through base currency
-    const fromRate = exchangeRates?.[from] || 1;
-    const toRate = exchangeRates?.[to] || 1;
-    return toRate / fromRate;
-  }, [currency, exchangeRates]);
-  
-  // Memoized currency info
-  const currentCurrency = useMemo(() => 
-    SUPPORTED_CURRENCIES[currency] || SUPPORTED_CURRENCIES.USD,
-    [currency]
-  );
-  
-  // Listen for external currency changes
-  useEffect(() => {
-    const handleCurrencyChange = (event) => {
-      const newCurrency = event.detail;
-      if (SUPPORTED_CURRENCIES[newCurrency] && newCurrency !== currency) {
-        setCurrencyState(newCurrency);
-      }
-    };
-    
-    window.addEventListener('currency-changed', handleCurrencyChange);
-    return () => window.removeEventListener('currency-changed', handleCurrencyChange);
+    }).format(numAmount);
   }, [currency]);
   
-  // Prefetch exchange rates for common currencies
-  useEffect(() => {
-    if (!exchangeRates || error) return;
+  // Format with compact notation for large numbers (SYMBOL ONLY)
+  const formatCompact = useCallback((amount, sourceCurrency = 'ILS') => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return '0';
     
-    // Prefetch rates for quick switching
-    const prefetchCurrencies = Object.keys(SUPPORTED_CURRENCIES).filter(c => c !== currency);
-    prefetchCurrencies.forEach(targetCurrency => {
-      // Cache the conversion calculation
-      const testAmount = 100;
-      convertAmount(testAmount, currency, targetCurrency);
-    });
-  }, [currency, exchangeRates, error, convertAmount]);
-  
-  const value = useMemo(() => ({
-    // Current currency
-    currency,
-    setCurrency: changeCurrency,
-    toggleCurrency,
+    const currencyInfo = SUPPORTED_CURRENCIES[currency];
     
-    // Currency data
-    currencies: SUPPORTED_CURRENCIES,
-    currentCurrency,
-    currencySymbol: currentCurrency.symbol,
-    currencyName: currentCurrency.name,
-    currencyLocale: currentCurrency.locale,
-    
-    // Exchange rates
-    exchangeRates: exchangeRates || {},
-    isLoadingRates: isLoading,
-    ratesError: error,
-    refreshRates: refetch,
-    
-    // Conversion methods
-    convertAmount,
-    formatAmount,
-    formatCompact,
-    getRate,
-    
-    // Utility
-    formatCurrency: formatCurrencyUtil,
-    isSupported: (code) => !!SUPPORTED_CURRENCIES[code]
-  }), [
+    return new Intl.NumberFormat(currencyInfo.locale || 'en-US', {
+      style: 'currency',
+      currency: currency,
+      notation: 'compact',
+      compactDisplay: 'short'
+    }).format(numAmount);
+  }, [currency]);
+
+  // Get currency symbol
+  const getCurrencySymbol = useCallback((currencyCode) => {
+    return SUPPORTED_CURRENCIES[currencyCode]?.symbol || '₪';
+  }, []);
+
+  // Get currency info
+  const getCurrencyInfo = useCallback((currencyCode) => {
+    return SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.ILS;
+  }, []);
+
+  const value = {
     currency,
     changeCurrency,
-    toggleCurrency,
-    currentCurrency,
-    exchangeRates,
-    isLoading,
-    error,
-    refetch,
-    convertAmount,
     formatAmount,
     formatCompact,
-    getRate
-  ]);
-  
+    getCurrencySymbol,
+    getCurrencyInfo,
+    supportedCurrencies: SUPPORTED_CURRENCIES,
+    isLoading: false // No API calls in display-only mode
+  };
+
   return (
     <CurrencyContext.Provider value={value}>
       {children}
@@ -298,5 +171,4 @@ export const useCurrency = () => {
   return context;
 };
 
-// Export for external use
 export default CurrencyContext;

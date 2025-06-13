@@ -7,7 +7,7 @@ import React, { createContext, useContext, useCallback, useMemo, useState, useEf
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authAPI, queryKeys, mutationKeys } from '../utils/api';
-import toast from 'react-hot-toast';
+import { useToast } from '../hooks/useToast';
 
 const AuthContext = createContext(null);
 
@@ -22,6 +22,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const toastService = useToast();
   
   // Check if user has valid token
   const hasToken = !!localStorage.getItem('accessToken');
@@ -93,11 +94,11 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
     
-    // Structure user preferences from database columns and JSONB
+    // ✅ FIXED: Structure user preferences from database columns and JSONB
     const processedUser = {
       ...userData,
       preferences: {
-        // Database columns
+        // ✅ FIXED: Map database columns to correct preference names
         language: userData.language_preference || 'en',
         theme: userData.theme_preference || 'light',
         currency: userData.currency_preference || 'USD',
@@ -129,7 +130,12 @@ export const AuthProvider = ({ children }) => {
   const applyUserPreferences = useCallback((userData) => {
     if (!userData) return;
     
-    // Emit events for context providers to handle
+    // ✅ ADD: Emit unified event for all context providers
+    window.dispatchEvent(new CustomEvent('user-preferences-loaded', { 
+      detail: { user: userData }
+    }));
+    
+    // Legacy events for backwards compatibility
     if (userData.theme_preference) {
       window.dispatchEvent(new CustomEvent('theme-preference-changed', { 
         detail: userData.theme_preference 
@@ -174,22 +180,16 @@ export const AuthProvider = ({ children }) => {
         applyUserPreferences(data.user);
       }
       
-      toast.success('Welcome back!');
+      toastService.loginSuccess();
       
       // Navigate to dashboard
       navigate('/');
     },
     onError: (error) => {
-      const errorData = error.response?.data?.error;
-      
-      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-        // Don't show toast, let component handle it
-        return;
-      }
-      
-      // Show other errors
-      const message = errorData?.message || 'Login failed';
-      toast.error(message);
+      console.error('Login error:', error);
+      clearTokens();
+      const message = error.response?.data?.message || 'Login failed';
+      toastService.error(message);
     }
   });
   
@@ -203,7 +203,12 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      toast.success('Registration successful! Please check your email.');
+      toastService.registerSuccess();
+    },
+    onError: (error) => {
+      console.error('Registration error:', error);
+      // Let the error propagate to the form
+      throw error;
     }
   });
   
@@ -227,7 +232,7 @@ export const AuthProvider = ({ children }) => {
       
       console.log('🔄 [AUTH] Complete session cleanup (language + theme + preferences)');
       
-      toast.success('Logged out successfully');
+      toastService.logoutSuccess();
       
       // Navigate to login
       navigate('/login');
@@ -266,7 +271,7 @@ export const AuthProvider = ({ children }) => {
         applyUserPreferences(updatedUser);
       }
       
-      toast.success('Profile updated successfully');
+      toastService.profileUpdated();
     }
   });
   
@@ -291,7 +296,8 @@ export const AuthProvider = ({ children }) => {
         };
       });
       
-      toast.success('Preferences updated successfully');
+      // ✅ REMOVED: Don't show generic toast - let specific components handle their own toasts
+      // toastService.preferencesUpdated();
     }
   });
   
@@ -319,7 +325,7 @@ export const AuthProvider = ({ children }) => {
         });
       }
       
-      toast.success('Profile picture uploaded successfully');
+      toastService.profilePictureUploaded();
     }
   });
   
@@ -336,7 +342,7 @@ export const AuthProvider = ({ children }) => {
         queryClient.invalidateQueries(queryKeys.profile);
       }
       
-      toast.success('Email verified successfully!');
+      toastService.emailVerified();
       navigate('/');
     }
   });
@@ -345,7 +351,7 @@ export const AuthProvider = ({ children }) => {
     mutationFn: (email) => authAPI.resendVerificationEmail(email),
     mutationKey: mutationKeys.resendVerification,
     onSuccess: () => {
-      toast.success('Verification email sent!');
+      toastService.verificationSent();
     }
   });
   
@@ -359,7 +365,7 @@ export const AuthProvider = ({ children }) => {
     mutationFn: ({ token, newPassword }) => authAPI.resetPassword(token, newPassword),
     mutationKey: mutationKeys.resetPassword,
     onSuccess: () => {
-      toast.success('Password reset successfully');
+      toastService.passwordReset();
       navigate('/login');
     }
   });
@@ -406,6 +412,31 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = useCallback(async (token, newPassword) => {
     return resetPasswordMutation.mutateAsync({ token, newPassword });
   }, [resetPasswordMutation]);
+  
+  // Mark onboarding as complete
+  const markOnboardingComplete = useCallback(async () => {
+    try {
+      const response = await authAPI.post('/onboarding/complete');
+      
+      // Update the user data locally
+      queryClient.setQueryData(queryKeys.profile, (old) => {
+        if (!old?.data) return old;
+        
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            onboarding_completed: true
+          }
+        };
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark onboarding complete:', error);
+      throw error;
+    }
+  }, [queryClient]);
   
   // Refresh profile data
   const refreshProfile = useCallback(() => {
@@ -455,6 +486,7 @@ export const AuthProvider = ({ children }) => {
     resendVerificationEmail,
     forgotPassword,
     resetPassword,
+    markOnboardingComplete,
     
     // Utility
     refreshProfile,
@@ -487,6 +519,7 @@ export const AuthProvider = ({ children }) => {
     resendVerificationEmail,
     forgotPassword,
     resetPassword,
+    markOnboardingComplete,
     refreshProfile,
     applyUserPreferences,
     profileQuery,

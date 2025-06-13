@@ -72,24 +72,34 @@ const Avatar = ({
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // UPDATED: Improved image URL handling with better error recovery
-  const getImageSrc = () => {
+  // UPDATED: Improved image URL handling with better error recovery and cache busting
+  const getImageSrc = (addTimestamp = false) => {
     if (!src) return null;
+    
+    let fullUrl;
     
     // If it's already a full URL (http/https), use it as is
     if (src.startsWith('http://') || src.startsWith('https://')) {
-      return src;
+      fullUrl = src;
     }
-    
     // If it's a relative path starting with /, prepend the API URL
-    if (src.startsWith('/')) {
+    else if (src.startsWith('/')) {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      return `${apiUrl}${src}`;
+      fullUrl = `${apiUrl}${src}`;
+    }
+    // Otherwise, assume it's a relative path and prepend API URL with /
+    else {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      fullUrl = `${apiUrl}/${src}`;
     }
     
-    // Otherwise, assume it's a relative path and prepend API URL with /
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    return `${apiUrl}/${src}`;
+    // Add cache busting parameter if requested
+    if (addTimestamp) {
+      const separator = fullUrl.includes('?') ? '&' : '?';
+      fullUrl += `${separator}t=${Date.now()}`;
+    }
+    
+    return fullUrl;
   };
 
   const [imageError, setImageError] = React.useState(false);
@@ -100,7 +110,7 @@ const Avatar = ({
   React.useEffect(() => {
     setImageError(false);
     setRetryCount(0);
-    setIsLoading(true);
+    setIsLoading(!!src); // Only set loading if there's a src
   }, [src]);
 
   const handleImageLoad = () => {
@@ -116,7 +126,7 @@ const Avatar = ({
     if (retryCount < 2) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
-        const newSrc = getImageSrc() + '?t=' + Date.now();
+        const newSrc = getImageSrc(true); // Use cache busting
         console.log('Retrying avatar image load:', newSrc);
         e.target.src = newSrc;
         setIsLoading(true);
@@ -137,7 +147,7 @@ const Avatar = ({
       {src && !imageError ? (
         <div className="relative">
           <img
-            src={getImageSrc() + (retryCount > 0 ? '?t=' + Date.now() : '')}
+            src={getImageSrc(retryCount > 0)}
             alt={name || 'Avatar'}
             className={cn(
               'rounded-full object-cover',

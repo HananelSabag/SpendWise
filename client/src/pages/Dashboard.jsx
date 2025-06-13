@@ -38,6 +38,7 @@ import RecentTransactions from '../components/features/dashboard/RecentTransacti
 import AddTransactions from '../components/features/transactions/AddTransactions';
 import StatsChart from '../components/features/dashboard/StatsChart';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
+import OnboardingModal from '../components/features/onboarding/OnboardingModal';
 import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
 import { Link } from 'react-router-dom';
 
@@ -154,6 +155,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
   const [showAddTransactions, setShowAddTransactions] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   const isRTL = language === 'he';
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
@@ -175,6 +177,16 @@ const Dashboard = () => {
       return () => clearTimeout(timer);
     }
   }, [loading, isDashboardLoading, isFetching]);
+
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (user && !loading && !isDashboardLoading) {
+      // Show onboarding if user hasn't completed it
+      if (!user.onboarding_completed) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user, loading, isDashboardLoading]);
   
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -440,6 +452,17 @@ const Dashboard = () => {
             </Modal>
           )}
         </AnimatePresence>
+
+        {/* Onboarding Modal */}
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          onComplete={() => {
+            setShowOnboarding(false);
+            // Refresh dashboard to get updated user data
+            refreshDashboard();
+          }}
+        />
       </div>
     </div>
   );

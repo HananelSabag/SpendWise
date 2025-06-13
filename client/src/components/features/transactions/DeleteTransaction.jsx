@@ -25,7 +25,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Modal, Button, Badge } from '../../ui';
-import toast from 'react-hot-toast';
+import { useToast } from '../../../hooks/useToast';
 
 /**
  * Enhanced DeleteTransaction Component - User-Friendly with Clear Options
@@ -43,6 +43,7 @@ const DeleteTransaction = ({
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const { deleteTemplate } = useTransactionActions();
+  const toastService = useToast();
   
   const [selectedAction, setSelectedAction] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -162,7 +163,7 @@ const DeleteTransaction = ({
     
     if (actionId === 'skip') {
       // Redirect to skip dates management
-      toast.info(t('transactions.delete.redirectingToSkip'));
+      toastService.info('toast.info.dataLoading');
       onOpenSkipDates?.(transaction);
       onClose();
       return;
@@ -203,11 +204,11 @@ const DeleteTransaction = ({
           return;
       }
       
-      toast.success(t('transactions.deleteMessages.confirmDeletion'));
+      toastService.transactionDeleted();
       onClose();
       
     } catch (error) {
-      toast.error(t('common.error'));
+      toastService.error(error);
       console.error('Delete failed:', error);
     } finally {
       setIsDeleting(false);

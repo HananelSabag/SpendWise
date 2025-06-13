@@ -74,6 +74,25 @@ export const ThemeProvider = ({ children }) => {
     setSessionTheme(null);
   };
 
+  // ✅ ADD: Sync with user preferences from database
+  useEffect(() => {
+    const handleUserPreferencesSync = (event) => {
+      const { user } = event.detail || {};
+      if (user?.preferences?.theme) {
+        const userTheme = user.preferences.theme;
+        if (['light', 'dark', 'system'].includes(userTheme)) {
+          console.log(`🎨 [THEME] Syncing from database: ${theme} → ${userTheme}`);
+          setTheme(userTheme);
+          setSessionTheme(null); // Clear session override when loading user preferences
+          localStorage.setItem('preferredTheme', userTheme);
+        }
+      }
+    };
+
+    window.addEventListener('user-preferences-loaded', handleUserPreferencesSync);
+    return () => window.removeEventListener('user-preferences-loaded', handleUserPreferencesSync);
+  }, [theme]);
+
   // ✅ ADD: Effect to sync theme changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -109,21 +128,23 @@ export const ThemeProvider = ({ children }) => {
     if (metaThemeColor) {
       metaThemeColor.setAttribute('content', effectiveTheme === 'dark' ? '#1f2937' : '#ffffff');
     }
+
+    console.log(`🎨 [THEME] Applied to DOM: ${effectiveTheme}`);
   }, [effectiveTheme]);
 
-  // ✅ ADD: Listen for session reset events (logout)
+  // ✅ FIXED: Listen for session reset events (logout)
   useEffect(() => {
     const handleSessionReset = () => {
-      console.log(`🎨 [THEME] Session reset detected`);
+      console.log(`🎨 [THEME] Session reset detected - clearing session overrides`);
       resetToSavedTheme();
     };
 
     window.addEventListener('auth-logout', handleSessionReset);
-    window.addEventListener('language-session-reset', handleSessionReset);
+    window.addEventListener('theme-session-reset', handleSessionReset);
     
     return () => {
       window.removeEventListener('auth-logout', handleSessionReset);
-      window.removeEventListener('language-session-reset', handleSessionReset);
+      window.removeEventListener('theme-session-reset', handleSessionReset);
     };
   }, []);
 

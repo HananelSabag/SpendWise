@@ -22,7 +22,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Button, Badge, Card } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
-import toast from 'react-hot-toast';
+import { useToast } from '../../../hooks/useToast';
 import { useRecurringTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
 
 /**
@@ -36,6 +36,7 @@ const RecurringModal = ({
 }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  const toastService = useToast();
   const isRTL = language === 'he';
   
   // ✅ PRESERVED: State management
@@ -183,7 +184,7 @@ const RecurringModal = ({
   // ✅ ENHANCED: Template operation handlers with better error handling
   const handleToggleActive = async (template) => {
     if (!template?.id) {
-      toast.error(t('transactions.invalidTemplate'));
+      toastService.error('toast.error.formErrors');
       return;
     }
     
@@ -192,43 +193,43 @@ const RecurringModal = ({
         is_active: !template.isActive
       });
       
-      toast.success(template.isActive ? t('transactions.paused') : t('transactions.resumed'));
+      toastService.success(template.isActive ? 'toast.success.nextPaymentSkipped' : 'toast.success.transactionGenerated');
       refreshTemplates();
       refreshRecurring();
       onSuccess?.();
     } catch (error) {
       console.error('Toggle template failed:', error);
-      toast.error(error.response?.data?.message || t('common.error'));
+      toastService.error(error);
     }
   };
 
   const handleQuickSkip = async (template) => {
     if (!template?.id || !template.nextPayment) {
-      toast.error(t('transactions.noNextPayment'));
+      toastService.error('toast.error.operationFailed');
       return;
     }
     
     try {
       await skipDates(template.id, [template.nextPayment]);
-      toast.success(t('transactions.nextPaymentSkipped'));
+      toastService.success('toast.success.nextPaymentSkipped');
       refreshTemplates();
       refreshRecurring();
       onSuccess?.();
     } catch (error) {
       console.error('Skip date failed:', error);
-      toast.error(error.response?.data?.message || t('common.error'));
+      toastService.error(error);
     }
   };
 
   const handleBulkSkip = async (templateId, dates) => {
     if (!templateId || !Array.isArray(dates) || dates.length === 0) {
-      toast.error(t('transactions.invalidSkipDates'));
+      toastService.error('toast.error.formErrors');
       return;
     }
     
     try {
       await skipDates(templateId, dates);
-      toast.success(t('transactions.skipDates.success'));
+      toastService.success('toast.success.skipDatesSuccess');
       setShowSkipModal(null);
       setSelectedSkipDates([]);
       refreshTemplates();
@@ -236,20 +237,20 @@ const RecurringModal = ({
       onSuccess?.();
     } catch (error) {
       console.error('Bulk skip failed:', error);
-      toast.error(error.response?.data?.message || t('transactions.skipDates.error'));
+      toastService.error(error);
     }
   };
 
   const handleGenerateRecurring = async () => {
     try {
       await generateRecurring();
-      toast.success(t('transactions.recurring.generated'));
+      toastService.success('toast.success.transactionGenerated');
       refreshTemplates();
       refreshRecurring();
       onSuccess?.();
     } catch (error) {
       console.error('Generate recurring failed:', error);
-      toast.error(error.response?.data?.message || t('transactions.recurring.generateError'));
+      toastService.error(error);
     }
   };
 
@@ -337,7 +338,7 @@ const RecurringModal = ({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-5xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           dir={isRTL ? 'rtl' : 'ltr'}
         >
           
@@ -374,98 +375,44 @@ const RecurringModal = ({
               ))}
             </div>
             
-            <div className="relative z-10 p-4 lg:p-6">
-              {/* ✅ NEW: Header with title and close button */}
-              <div className="flex items-center justify-between mb-4">
+            <div className="relative z-10 p-4">
+              {/* ✅ REDUCED: Compact header with title and close button */}
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <motion.div 
-                    className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
-                    animate={{ 
-                      rotate: [0, 5, -5, 0],
-                      scale: [1, 1.05, 1]
-                    }}
-                    transition={{ 
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <Activity className="w-6 h-6" />
-                  </motion.div>
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Activity className="w-5 h-5" />
+                  </div>
                   <div>
-                    <motion.h1 
-                      className="text-xl lg:text-2xl font-bold mb-1 flex items-center gap-2"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
+                    <h1 className="text-lg lg:text-xl font-bold flex items-center gap-2">
                       {t('nav.recurringManager') || 'Recurring Manager'}
-                      <motion.div
-                        animate={{ rotate: [0, 15, -15, 0] }}
-                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                      >
-                        <Sparkles className="w-5 h-5" />
-                      </motion.div>
-                    </motion.h1>
-                    <motion.div 
-                      className="flex items-center gap-2 text-white/90"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">
+                      <Sparkles className="w-4 h-4" />
+                    </h1>
+                    <div className="flex items-center gap-2 text-white/90 text-sm">
+                      <Clock className="w-3 h-3" />
+                      <span>
                         {templateStats.total} {t('transactions.templates')} • {templateStats.active} {t('transactions.active')}
                       </span>
-                      <span className="text-white/70">•</span>
-                      <span className="font-medium">{formatAmount(templateStats.activeAmount)}/month</span>
-                    </motion.div>
+                    </div>
                   </div>
                 </div>
                 
-                {/* ✅ NEW: Close button with backdrop */}
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6 }}
+                {/* ✅ REDUCED: Smaller close button */}
+                <button
                   onClick={onClose}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all duration-200"
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-200"
                 >
-                  <X className="w-5 h-5" />
-                </motion.button>
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* ✅ NEW: Stats badges */}
+              {/* ✅ REDUCED: Compact search and filters */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="flex flex-wrap gap-3 mb-4"
-              >
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <Package className="w-4 h-4" />
-                  <span className="text-sm font-medium">{templateStats.total} {t('common.total')}</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 rounded-lg backdrop-blur-sm">
-                  <Play className="w-4 h-4" />
-                  <span className="text-sm font-medium">{templateStats.active} {t('transactions.active')}</span>
-                </div>
-                {templateStats.paused > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-orange-500/20 rounded-lg backdrop-blur-sm">
-                    <Pause className="w-4 h-4" />
-                    <span className="text-sm font-medium">{templateStats.paused} {t('transactions.paused')}</span>
-                  </div>
-                )}
-              </motion.div>
-
-              {/* ✅ NEW: Search and filters integrated into header */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.0 }}
+                transition={{ delay: 0.3 }}
                 className="space-y-3"
               >
-                {/* Search Bar */}
+                {/* Compact Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
                   <input
@@ -473,14 +420,14 @@ const RecurringModal = ({
                     placeholder={t('transactions.searchTemplates') || 'Search recurring templates...'}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm text-sm"
                   />
                 </div>
 
-                {/* Filter and Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-between">
+                {/* Compact Filter and Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 justify-between">
                   {/* Filter Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     {[
                       { key: 'all', label: t('common.all') || 'All', icon: Package },
                       { key: 'active', label: t('transactions.activeOnly') || 'Active', icon: Play },
@@ -489,26 +436,27 @@ const RecurringModal = ({
                       <button
                         key={key}
                         onClick={() => setFilterType(key)}
-                        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all backdrop-blur-sm ${
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all backdrop-blur-sm ${
                           filterType === key
                             ? 'bg-white/30 text-white shadow-sm'
                             : 'bg-white/10 text-white/80 hover:text-white hover:bg-white/20'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-3 h-3" />
                         <span className="hidden sm:inline">{label}</span>
                       </button>
                     ))}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Button
                       onClick={handleGenerateRecurring}
                       loading={isGenerating}
-                      className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+                      size="small"
+                      className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm text-xs"
                     >
-                      <Zap className="w-4 h-4 mr-2" />
+                      <Zap className="w-3 h-3 mr-1.5" />
                       <span className="hidden sm:inline">{t('transactions.generate')}</span>
                     </Button>
                     
@@ -516,9 +464,10 @@ const RecurringModal = ({
                       variant="outline"
                       onClick={refreshAll}
                       loading={isLoading}
+                      size="small"
                       className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm"
                     >
-                      <RefreshCw className="w-4 h-4" />
+                      <RefreshCw className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>

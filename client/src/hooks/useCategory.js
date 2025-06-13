@@ -7,7 +7,7 @@ import { useCallback, useMemo } from 'react';
 import { useApiQuery, useApiMutation } from './useApi';
 import { categoryAPI, queryKeys, mutationKeys } from '../utils/api';
 import { useAuth } from './useAuth';
-import toast from 'react-hot-toast';
+import { useToast } from './useToast';
 
 // ✅ UPDATED: Import ONLY from centralized icon system
 import {
@@ -22,6 +22,7 @@ import {
  */
 export const useCategories = (type = null) => {
   const { isAuthenticated } = useAuth();
+  const toastService = useToast();
   
   // Categories query with long cache
   const categoriesQuery = useApiQuery(
@@ -280,7 +281,7 @@ export const useCategories = (type = null) => {
       },
       onError: (error) => {
         if (error.response?.data?.error?.code === 'CATEGORY_IN_USE') {
-          toast.error('Cannot delete category that has transactions');
+          toastService.error('toast.error.categoryInUse');
         }
       }
     }
@@ -290,12 +291,12 @@ export const useCategories = (type = null) => {
   const createCategory = useCallback(async (data) => {
     // Validate data
     if (!data.name?.trim()) {
-      toast.error('Category name is required');
+      toastService.error('toast.error.categoryNameRequired');
       return;
     }
     
     if (!data.type || !['income', 'expense'].includes(data.type)) {
-      toast.error('Category type must be income or expense');
+      toastService.error('toast.error.categoryTypeRequired');
       return;
     }
     
@@ -321,7 +322,7 @@ export const useCategories = (type = null) => {
     // Check if it's a default category
     const category = processedCategories.all.find(c => c.id === id);
     if (category?.is_default) {
-      toast.error('Cannot delete default categories');
+      toastService.error('toast.error.cannotDeleteDefault');
       return;
     }
     

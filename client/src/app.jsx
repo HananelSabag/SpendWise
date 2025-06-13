@@ -1,9 +1,9 @@
 // client/src/app.jsx
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Toaster } from 'react-hot-toast';
+import Button from './components/ui/Button';
 
 // Core components
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -18,6 +18,7 @@ import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './hooks/useToast';
 
 // Lazy-loaded pages
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -60,31 +61,110 @@ const useNavigationPersistence = () => {
 };
 
 /**
- * ✅ SMART: Authentication-aware route component
+ * ✅ IMPROVED: Authentication-aware route component with server connectivity handling
  */
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const hasToken = !!localStorage.getItem('accessToken');
+  const [showOfflineMessage, setShowOfflineMessage] = useState(false);
   
-  // ✅ FIX: During startup with token, show loading until auth resolves
+  // ✅ NEW: Monitor online status
+  useEffect(() => {
+    const handleOnline = () => setShowOfflineMessage(false);
+    const handleOffline = () => setShowOfflineMessage(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
+  // ✅ IMPROVED: Show offline message if detected
+  if (showOfflineMessage) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
+        <div className="text-center p-8">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            No Internet Connection
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Please check your internet connection and try again.
+          </p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="primary"
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // ✅ IMPROVED: During startup with token, show better loading state
   if (hasToken && isLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
-        <LoadingSpinner />
+      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
+        <div className="text-center">
+          <LoadingSpinner size="large" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Connecting to server...
+          </p>
+        </div>
       </div>
     );
   }
   
-  // ✅ FIX: Check stored page preference for valid token holders
-  if (hasToken && !isAuthenticated) {
-    // Token exists but user not loaded yet - show loading
+  // ✅ IMPROVED: Handle token exists but user not loaded yet
+  if (hasToken && !isAuthenticated && !isLoading) {
+    // Token exists but authentication failed - could be server issue
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
-        <LoadingSpinner />
+      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
+        <div className="text-center p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Connection Issues
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Unable to verify your login. This might be temporary.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+            >
+              Retry
+            </Button>
+            <Button 
+              onClick={() => {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                window.location.href = '/login';
+              }} 
+              variant="primary"
+            >
+              Login Again
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
   
+  // ✅ STANDARD: Not authenticated - redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -311,56 +391,35 @@ function App() {
           v7_relativeSplatPath: true
         }}
       >
-        <AuthProvider>
+        <LanguageProvider>
           <AccessibilityProvider initialDarkMode={false}>
             <ThemeProvider>
-              <LanguageProvider>
+              <AuthProvider>
                 <DateProvider>
                   <CurrencyProvider>
-                    <Suspense fallback={
-                      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
-                        <LoadingSpinner size="large" />
-                      </div>
-                    }>
-                      <AppInitializer>
-                        <AppContent />
-                      </AppInitializer>
-                    </Suspense>
+                    <ToastProvider>
+                      <Suspense fallback={
+                        <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+                          <LoadingSpinner size="large" />
+                        </div>
+                      }>
+                        <AppInitializer>
+                          <AppContent />
+                        </AppInitializer>
+                      </Suspense>
+                    </ToastProvider>
                   </CurrencyProvider>
                 </DateProvider>
-              </LanguageProvider>
+              </AuthProvider>
             </ThemeProvider>
           </AccessibilityProvider>
-        </AuthProvider>
+        </LanguageProvider>
       </Router>
 
       {/* ✅ Development tools */}
       {process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}
-
-      {/* Global toast notifications */}
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            maxWidth: '500px',
-          },
-          success: {
-            style: {
-              background: '#10B981',
-              color: 'white',
-            },
-          },
-          error: {
-            style: {
-              background: '#EF4444',
-              color: 'white',
-            },
-          },
-        }}
-      />
     </QueryClientProvider>
   );
 }

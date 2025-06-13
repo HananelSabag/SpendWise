@@ -1,13 +1,13 @@
 /**
- * Enhanced StatsChart Component - Compact Summary Design
- * ✅ One row compact summary with key stats
- * ✅ "Show More" expansion for detailed insights
- * ✅ Income vs Expense pie chart (not categories!)
- * ✅ Transaction insights based on selected period
- * ✅ Stunning visual effects matching other components
+ * Enhanced StatsChart Component - Intelligent Financial Analytics
+ * ✅ Smart data analysis with actionable insights
+ * ✅ Multiple visualization options (pie chart, bar chart, trends)
+ * ✅ Advanced financial health scoring
+ * ✅ Mobile-first responsive design
+ * ✅ Real-time period switching with smooth animations
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
@@ -28,11 +28,17 @@ import {
   Zap,
   Target,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  PieChart,
+  LineChart,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Sparkles
 } from 'lucide-react';
 
 /**
- * ✅ Beautiful Income vs Expense Pie Chart
+ * Beautiful Income vs Expense Pie Chart with enhanced animations
  */
 const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
   const [hoveredSlice, setHoveredSlice] = useState(null);
@@ -88,7 +94,6 @@ const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
           
           {/* Income slice */}
           <motion.g>
-            {/* Glow effect */}
             <motion.path
               d={incomePathData}
               fill="hsl(142, 70%, 55%)"
@@ -98,7 +103,6 @@ const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
               animate={{ scale: 1, opacity: 0.3 }}
               transition={{ duration: 0.8, type: "spring" }}
             />
-            {/* Main slice */}
             <motion.path
               d={incomePathData}
               fill="hsl(142, 70%, 55%)"
@@ -118,7 +122,6 @@ const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
           
           {/* Expense slice */}
           <motion.g>
-            {/* Glow effect */}
             <motion.path
               d={expensePathData}
               fill="hsl(0, 70%, 60%)"
@@ -128,7 +131,6 @@ const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
               animate={{ scale: 1, opacity: 0.3 }}
               transition={{ duration: 0.8, type: "spring", delay: 0.2 }}
             />
-            {/* Main slice */}
             <motion.path
               d={expensePathData}
               fill="hsl(0, 70%, 60%)"
@@ -205,7 +207,215 @@ const IncomeExpensePieChart = ({ income, expenses, formatAmount, t }) => {
 };
 
 /**
- * ✅ Main StatsChart Component - Enhanced with Better Financial Insights
+ * Enhanced Mini Bar Chart for spending trends
+ */
+const MiniBarChart = ({ data, formatAmount, t }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+        {t('dashboard.stats.noTrendData')}
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(d => Math.abs(d.value)));
+  
+  return (
+    <div className="flex items-end justify-between h-32 gap-1 px-2">
+      {data.map((item, index) => {
+        const height = maxValue > 0 ? (Math.abs(item.value) / maxValue) * 100 : 0;
+        const isPositive = item.value >= 0;
+        
+        return (
+          <motion.div
+            key={index}
+            className="flex flex-col items-center gap-1 flex-1"
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            transition={{ duration: 0.5, delay: index * 0.1 }}
+          >
+            <div 
+              className={`w-full rounded-t-sm ${
+                isPositive 
+                  ? 'bg-gradient-to-t from-green-500 to-green-400' 
+                  : 'bg-gradient-to-t from-red-500 to-red-400'
+              } shadow-sm`}
+              style={{ height: `${height}%`, minHeight: '4px' }}
+              title={`${item.label}: ${formatAmount(item.value)}`}
+            />
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              {item.label}
+            </span>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
+/**
+ * Smart Financial Health Score Calculator
+ */
+const calculateFinancialHealth = (dashboardData, selectedPeriod) => {
+  if (!dashboardData?.balances) {
+    return { score: 0, insights: [], level: 'poor' };
+  }
+
+  const balance = dashboardData.balances[selectedPeriod] || {};
+  const recurringInfo = dashboardData.recurringInfo || {};
+  const recentTransactions = dashboardData.recentTransactions || [];
+  
+  const income = Math.abs(parseFloat(balance.income) || 0);
+  const expenses = Math.abs(parseFloat(balance.expenses) || 0);
+  const netBalance = parseFloat(balance.balance) || 0;
+  
+  const recurringIncome = parseFloat(recurringInfo.recurring_income) || 0;
+  const recurringExpenses = parseFloat(recurringInfo.recurring_expense) || 0;
+  
+  let score = 50; // Base score
+  const insights = [];
+  
+  // 1. Savings Rate Analysis (25 points)
+  const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
+  if (savingsRate > 20) {
+    score += 25;
+    insights.push({
+      type: 'positive',
+      message: `Excellent savings rate of ${savingsRate.toFixed(1)}%`,
+      impact: 'high'
+    });
+  } else if (savingsRate > 10) {
+    score += 15;
+    insights.push({
+      type: 'neutral', 
+      message: `Good savings rate of ${savingsRate.toFixed(1)}%`,
+      impact: 'medium'
+    });
+  } else if (savingsRate > 0) {
+    score += 5;
+    insights.push({
+      type: 'warning',
+      message: `Low savings rate of ${savingsRate.toFixed(1)}%`,
+      impact: 'high'
+    });
+  } else {
+    score -= 10;
+    insights.push({
+      type: 'negative',
+      message: 'Spending exceeds income this period',
+      impact: 'critical'
+    });
+  }
+  
+  // 2. Expense Ratio Analysis (20 points)
+  const expenseRatio = income > 0 ? (expenses / income) * 100 : 100;
+  if (expenseRatio < 70) {
+    score += 20;
+    insights.push({
+      type: 'positive',
+      message: 'Healthy expense-to-income ratio',
+      impact: 'medium'
+    });
+  } else if (expenseRatio < 90) {
+    score += 10;
+  } else {
+    score -= 5;
+    insights.push({
+      type: 'warning',
+      message: 'High expense-to-income ratio',
+      impact: 'high'
+    });
+  }
+  
+  // 3. Recurring Income Stability (15 points)
+  const recurringIncomeRatio = income > 0 ? (recurringIncome / income) * 100 : 0;
+  if (recurringIncomeRatio > 70) {
+    score += 15;
+    insights.push({
+      type: 'positive',
+      message: 'Strong recurring income foundation',
+      impact: 'medium'
+    });
+  } else if (recurringIncomeRatio > 40) {
+    score += 8;
+    insights.push({
+      type: 'neutral',
+      message: 'Moderate recurring income stability',
+      impact: 'medium'
+    });
+  } else if (recurringIncomeRatio > 0) {
+    score += 3;
+    insights.push({
+      type: 'warning',
+      message: 'Limited recurring income stability',
+      impact: 'medium'
+    });
+  }
+  
+  // 4. Transaction Activity Analysis (10 points)
+  const transactionCount = recentTransactions.length;
+  if (transactionCount > 0) {
+    const avgTransactionSize = expenses / Math.max(transactionCount, 1);
+    const largeTransactions = recentTransactions.filter(t => 
+      Math.abs(parseFloat(t.amount)) > avgTransactionSize * 2
+    ).length;
+    
+    if (largeTransactions / transactionCount < 0.2) {
+      score += 10;
+      insights.push({
+        type: 'positive',
+        message: 'Consistent spending patterns',
+        impact: 'low'
+      });
+    } else if (largeTransactions / transactionCount > 0.5) {
+      score -= 5;
+      insights.push({
+        type: 'warning',
+        message: 'Irregular spending patterns detected',
+        impact: 'medium'
+      });
+    }
+  }
+  
+  // 5. Balance Trend (10 points)
+  if (netBalance > 0) {
+    score += 10;
+    insights.push({
+      type: 'positive',
+      message: 'Positive balance for this period',
+      impact: 'medium'
+    });
+  } else if (netBalance < 0) {
+    score -= 5;
+    insights.push({
+      type: 'negative',
+      message: 'Negative balance for this period',
+      impact: 'high'
+    });
+  }
+  
+  // Determine level
+  let level = 'poor';
+  if (score >= 80) level = 'excellent';
+  else if (score >= 65) level = 'good';
+  else if (score >= 50) level = 'fair';
+  
+  return {
+    score: Math.max(0, Math.min(100, score)),
+    insights: insights.slice(0, 4), // Limit to most important insights
+    level,
+    breakdown: {
+      savingsRate: savingsRate.toFixed(1),
+      expenseRatio: expenseRatio.toFixed(1),
+      recurringIncomeRatio: recurringIncomeRatio.toFixed(1),
+      transactionCount,
+      netBalance
+    }
+  };
+};
+
+/**
+ * Main Enhanced StatsChart Component
  */
 const StatsChart = ({ className = '' }) => {
   const { t, language } = useLanguage();
@@ -214,8 +424,9 @@ const StatsChart = ({ className = '' }) => {
   // State management
   const [selectedRange, setSelectedRange] = useState('monthly');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [chartType, setChartType] = useState('pie'); // 'pie' or 'bars'
   
-  // ✅ Updated range configurations with clearer mobile icons
+  // Enhanced range configurations
   const ranges = [
     { key: 'daily', label: t('dashboard.balance.periods.daily') || 'Today', days: 1, icon: '1D', shortLabel: 'Day' },
     { key: 'weekly', label: t('dashboard.balance.periods.weekly') || 'Week', days: 7, icon: '7D', shortLabel: 'Week' },
@@ -223,97 +434,156 @@ const StatsChart = ({ className = '' }) => {
     { key: 'yearly', label: t('dashboard.balance.periods.yearly') || 'Year', days: 365, icon: '1Y', shortLabel: 'Year' }
   ];
 
-  // ✅ Use dashboard data directly with proper balance periods (no date needed)
+  // Get dashboard data
   const { data: dashboardData, isLoading, error } = useDashboard();
 
-  // ✅ Enhanced stats calculation using real dashboard data
-  const stats = useMemo(() => {
-    if (!dashboardData?.balances || !dashboardData?.recentTransactions) {
+  // Helper functions - defined before use
+  const getDaysInPeriod = useCallback((period) => {
+    const range = ranges.find(r => r.key === period);
+    return range ? range.days : 30;
+  }, [ranges]);
+
+  const calculateExpenseVolatility = useCallback((transactions) => {
+    if (!transactions || transactions.length < 2) return 0;
+    
+    const expenseAmounts = transactions
+      .filter(tx => tx.transaction_type === 'expense')
+      .map(tx => Math.abs(parseFloat(tx.amount) || 0));
+    
+    if (expenseAmounts.length < 2) return 0;
+    
+    const mean = expenseAmounts.reduce((a, b) => a + b, 0) / expenseAmounts.length;
+    const variance = expenseAmounts.reduce((sum, amount) => sum + Math.pow(amount - mean, 2), 0) / expenseAmounts.length;
+    
+    return Math.sqrt(variance) / mean * 100; // Coefficient of variation as percentage
+  }, []);
+
+  const generateRecommendations = useCallback((metrics, health, income, expenses) => {
+    const recommendations = [];
+    
+    if (metrics.savingsRate < 10) {
+      recommendations.push({
+        type: 'savings',
+        priority: 'high',
+        title: 'Increase Savings Rate',
+        description: `Current savings rate is ${metrics.savingsRate.toFixed(1)}%. Aim for at least 10-20%.`,
+        action: 'Review expenses and identify areas to cut spending'
+      });
+    }
+    
+    if (metrics.expenseVolatility > 50) {
+      recommendations.push({
+        type: 'consistency',
+        priority: 'medium',
+        title: 'Stabilize Spending',
+        description: 'High spending volatility detected. More consistent spending helps with budgeting.',
+        action: 'Create a monthly budget and track spending categories'
+      });
+    }
+    
+    if (metrics.recurringCoverage < 50) {
+      recommendations.push({
+        type: 'income',
+        priority: 'medium',
+        title: 'Build Recurring Income',
+        description: `Only ${metrics.recurringCoverage.toFixed(1)}% of income is recurring. More predictable income improves financial stability.`,
+        action: 'Consider subscriptions, retainers, or passive income sources'
+      });
+    }
+    
+    if (metrics.burnRate > income / 20) { // If daily burn rate is > 5% of income
+      recommendations.push({
+        type: 'expenses',
+        priority: 'high',
+        title: 'High Burn Rate',
+        description: 'Daily spending rate is high relative to income.',
+        action: 'Review and reduce daily discretionary expenses'
+      });
+    }
+    
+    return recommendations.slice(0, 3); // Top 3 recommendations
+  }, []);
+
+  // Enhanced analytics calculations
+  const analytics = useMemo(() => {
+    if (!dashboardData?.balances) {
       return {
-        savingsRate: 0,
-        dailyAverage: 0,
-        transactionCount: 0,
-        budgetPerformance: 0,
-        recurringImpact: 0,
-        averageTransaction: 0,
-        mostFrequentCategory: '',
-        largestTransaction: 0,
-        balanceTrend: 'stable',
-        financialHealth: 50
+        currentPeriod: { income: 0, expenses: 0, balance: 0 },
+        financialHealth: { score: 0, insights: [], level: 'poor' },
+        trends: [],
+        keyMetrics: {},
+        recommendations: []
       };
     }
 
-    // Get current period balance data
     const currentBalance = dashboardData.balances[selectedRange] || { income: 0, expenses: 0, balance: 0 };
     const totalIncome = Math.abs(parseFloat(currentBalance.income) || 0);
     const totalExpenses = Math.abs(parseFloat(currentBalance.expenses) || 0);
     const netBalance = parseFloat(currentBalance.balance) || 0;
     
-    // Get recent transactions for additional insights
-    const recentTransactions = dashboardData.recentTransactions || [];
-    const currentRange = ranges.find(r => r.key === selectedRange);
-    const daysInPeriod = currentRange?.days || 30;
+    // Calculate financial health
+    const financialHealth = calculateFinancialHealth(dashboardData, selectedRange);
     
-    // Calculate advanced insights
-    const savingsRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0;
-    const dailyAverage = totalExpenses / daysInPeriod;
+    // Generate trend data for mini chart
+    const allPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
+    const trends = allPeriods
+      .filter(period => period !== selectedRange)
+      .slice(0, 4)
+      .map(period => {
+        const balance = dashboardData.balances[period] || { balance: 0 };
+        return {
+          label: ranges.find(r => r.key === period)?.icon || period[0].toUpperCase(),
+          value: parseFloat(balance.balance) || 0
+        };
+      });
     
-    // Budget performance (assuming 70% of income should be expenses for healthy budget)
-    const healthyExpenseRatio = 0.7;
-    const currentExpenseRatio = totalIncome > 0 ? totalExpenses / totalIncome : 0;
-    const budgetPerformance = Math.max(0, Math.min(100, 100 - ((currentExpenseRatio - healthyExpenseRatio) * 100)));
-    
-    // Recurring impact from dashboard data
+    // Key metrics calculation
     const recurringInfo = dashboardData.recurringInfo || {};
-    const recurringIncome = parseFloat(recurringInfo.recurring_income) || 0;
-    const recurringExpense = parseFloat(recurringInfo.recurring_expense) || 0;
-    const recurringImpact = recurringIncome - recurringExpense;
+    const recentTransactions = dashboardData.recentTransactions || [];
     
-    // Transaction insights
-    const transactionAmounts = recentTransactions.map(tx => Math.abs(parseFloat(tx.amount) || 0));
-    const averageTransaction = transactionAmounts.length > 0 
-      ? transactionAmounts.reduce((a, b) => a + b, 0) / transactionAmounts.length 
+    const avgTransactionSize = recentTransactions.length > 0 
+      ? recentTransactions.reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount) || 0), 0) / recentTransactions.length
       : 0;
-    const largestTransaction = transactionAmounts.length > 0 ? Math.max(...transactionAmounts) : 0;
     
-    // Most frequent category
-    const categoryCount = new Map();
-    recentTransactions.forEach(tx => {
-      const category = tx.category_name || 'Unknown';
-      categoryCount.set(category, (categoryCount.get(category) || 0) + 1);
-    });
-    const mostFrequentCategory = Array.from(categoryCount.entries())
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const largestTransaction = recentTransactions.length > 0
+      ? Math.max(...recentTransactions.map(tx => Math.abs(parseFloat(tx.amount) || 0)))
+      : 0;
     
-    // Balance trend (compare with previous periods if available)
-    const balanceTrend = netBalance > 0 ? 'positive' : netBalance < 0 ? 'negative' : 'stable';
+    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+    const burnRate = getDaysInPeriod(selectedRange) > 0 ? totalExpenses / getDaysInPeriod(selectedRange) : 0;
     
-    // Financial health score (0-100)
-    const healthFactors = [
-      savingsRate > 10 ? 25 : (savingsRate > 0 ? 15 : 0), // Savings rate
-      budgetPerformance > 70 ? 25 : (budgetPerformance > 50 ? 15 : 5), // Budget control
-      recurringImpact > 0 ? 25 : (recurringImpact >= 0 ? 15 : 5), // Recurring balance
-      recentTransactions.length > 0 ? 25 : 10 // Financial activity
-    ];
-    const financialHealth = healthFactors.reduce((a, b) => a + b, 0);
-
-    return {
-      savingsRate: Math.max(-100, Math.min(100, savingsRate)),
-      dailyAverage,
-      transactionCount: recentTransactions.length,
-      budgetPerformance: Math.round(budgetPerformance),
-      recurringImpact,
-      averageTransaction,
-      mostFrequentCategory,
+    const keyMetrics = {
+      savingsRate,
+      burnRate,
+      avgTransactionSize,
       largestTransaction,
-      balanceTrend,
-      financialHealth: Math.min(100, financialHealth),
-      // Keep totals for expanded view
-      totalIncome,
-      totalExpenses,
-      netBalance
+      transactionFrequency: recentTransactions.length / Math.max(getDaysInPeriod(selectedRange), 1),
+      recurringCoverage: totalIncome > 0 ? ((parseFloat(recurringInfo.recurring_income) || 0) / totalIncome) * 100 : 0,
+      expenseVolatility: calculateExpenseVolatility(recentTransactions)
     };
-  }, [dashboardData, selectedRange, ranges]);
+    
+    // Generate smart recommendations
+    const recommendations = generateRecommendations(keyMetrics, financialHealth, totalIncome, totalExpenses);
+    
+    return {
+      currentPeriod: { income: totalIncome, expenses: totalExpenses, balance: netBalance },
+      financialHealth,
+      trends,
+      keyMetrics,
+      recommendations
+    };
+  }, [dashboardData, selectedRange, ranges, getDaysInPeriod, calculateExpenseVolatility, generateRecommendations]);
+
+  // Event handlers
+  const handlePeriodChange = useCallback((newPeriod) => {
+    setSelectedRange(newPeriod);
+  }, []);
+
+  const handleChartTypeChange = useCallback((newType) => {
+    setChartType(newType);
+  }, []);
+
+  // Loading and error states
 
   if (isLoading) {
     return (
@@ -323,7 +593,6 @@ const StatsChart = ({ className = '' }) => {
         className="relative"
         data-component="StatsChart"
       >
-        {/* Loading Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 opacity-100 rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl"></div>
         </div>
@@ -332,9 +601,9 @@ const StatsChart = ({ className = '' }) => {
           <div className="p-4">
             <div className="animate-pulse">
               <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                  <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
                 ))}
               </div>
             </div>
@@ -400,9 +669,8 @@ const StatsChart = ({ className = '' }) => {
       </div>
 
       <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl">
-        {/* Compact Header */}
+        {/* Header */}
         <div className="relative p-4 overflow-hidden">
-          {/* Header Glow Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 blur-xl"></div>
           
           <div className="relative z-10">
@@ -428,14 +696,59 @@ const StatsChart = ({ className = '' }) => {
                 </div>
               </div>
               
-              {/* Range Selector & Show More Button */}
+              {/* Controls */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                {/* Mobile-friendly range selector */}
+                {/* Chart Type Toggle */}
+                <div className="flex gap-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-1 border border-white/20 shadow-lg">
+                  <motion.button
+                    onClick={() => handleChartTypeChange('pie')}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                      chartType === 'pie'
+                        ? 'text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {chartType === 'pie' && (
+                      <motion.div
+                        layoutId="activeChartType"
+                        className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md"
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                    <PieChart className="relative z-10 w-3 h-3" />
+                    <span className="relative z-10 hidden sm:inline">Pie</span>
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={() => handleChartTypeChange('bars')}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                      chartType === 'bars'
+                        ? 'text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {chartType === 'bars' && (
+                      <motion.div
+                        layoutId="activeChartType"
+                        className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md"
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                    <BarChart3 className="relative z-10 w-3 h-3" />
+                    <span className="relative z-10 hidden sm:inline">Bars</span>
+                  </motion.button>
+                </div>
+                
+                {/* Period Selector */}
                 <div className="flex gap-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-1 border border-white/20 shadow-lg overflow-x-auto">
                   {ranges.map((range) => (
                     <motion.button
                       key={range.key}
-                      onClick={() => setSelectedRange(range.key)}
+                      onClick={() => handlePeriodChange(range.key)}
                       className={`flex-shrink-0 px-2 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all relative min-w-[40px] ${
                         selectedRange === range.key
                           ? 'text-white shadow-sm'
@@ -451,9 +764,7 @@ const StatsChart = ({ className = '' }) => {
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
                         />
                       )}
-                      {/* Desktop: Full label */}
                       <span className="relative z-10 hidden sm:inline">{range.label}</span>
-                      {/* Mobile: Clear period indicators */}
                       <span className="relative z-10 sm:hidden font-bold text-[10px]">{range.icon}</span>
                     </motion.button>
                   ))}
@@ -476,8 +787,48 @@ const StatsChart = ({ className = '' }) => {
               </div>
             </div>
             
-            {/* 📱 MOBILE RESPONSIVE: Enhanced Financial Insights Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {/* Financial Health Score - Mobile & Desktop */}
+            <motion.div
+              className="bg-gradient-to-r from-white/60 via-gray-50/80 to-white/60 dark:from-gray-800/60 dark:via-gray-700/80 dark:to-gray-800/60 backdrop-blur-sm rounded-xl p-3 border border-white/30 shadow-inner mb-4"
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                      analytics.financialHealth.level === 'excellent'
+                        ? 'bg-gradient-to-br from-green-400 to-green-600'
+                        : analytics.financialHealth.level === 'good'
+                        ? 'bg-gradient-to-br from-blue-400 to-blue-600'
+                        : analytics.financialHealth.level === 'fair'
+                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
+                        : 'bg-gradient-to-br from-red-400 to-red-600'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    {analytics.financialHealth.score}
+                  </motion.div>
+                  
+                  <div>
+                    <h4 className="font-bold text-gray-900 dark:text-white">
+                      Financial Health Score
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                      {analytics.financialHealth.level} • {analytics.financialHealth.insights.length} insights
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  {analytics.financialHealth.level === 'excellent' && <CheckCircle className="w-5 h-5 text-green-500" />}
+                  {analytics.financialHealth.level === 'good' && <Info className="w-5 h-5 text-blue-500" />}
+                  {(analytics.financialHealth.level === 'fair' || analytics.financialHealth.level === 'poor') && <AlertTriangle className="w-5 h-5 text-orange-500" />}
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Key Metrics Grid - Enhanced for Mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {/* Savings Rate */}
               <motion.div
                 className="group relative overflow-hidden bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
@@ -489,19 +840,19 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.savingsRate')}</span>
+                    <span className="text-xs font-medium opacity-90">Savings Rate</span>
                     <Target className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
-                    {stats.savingsRate}%
+                    {analytics.keyMetrics.savingsRate.toFixed(1)}%
                   </div>
                   <div className="text-xs opacity-75">
-                    {stats.savingsRate > 10 ? t('dashboard.stats.excellent') : stats.savingsRate > 0 ? t('dashboard.stats.good') : t('dashboard.stats.improve')}
+                    {analytics.keyMetrics.savingsRate > 15 ? 'Excellent' : analytics.keyMetrics.savingsRate > 5 ? 'Good' : 'Improve'}
                   </div>
                 </div>
               </motion.div>
 
-              {/* Daily Average */}
+              {/* Burn Rate */}
               <motion.div
                 className="group relative overflow-hidden bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
                 whileHover={{ scale: 1.03, y: -2 }}
@@ -512,17 +863,17 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.dailyAvg')}</span>
+                    <span className="text-xs font-medium opacity-90">Daily Burn</span>
                     <Clock className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
-                    {formatAmount(stats.dailyAverage)}
+                    {formatAmount(analytics.keyMetrics.burnRate)}
                   </div>
-                  <div className="text-xs opacity-75">{t('dashboard.stats.spendingPerDay')}</div>
+                  <div className="text-xs opacity-75">Per day spending</div>
                 </div>
               </motion.div>
 
-              {/* Budget Performance */}
+              {/* Transaction Frequency */}
               <motion.div
                 className="group relative overflow-hidden bg-gradient-to-br from-violet-400 via-purple-500 to-indigo-600 rounded-xl p-2.5 sm:p-3 shadow-lg"
                 whileHover={{ scale: 1.03, y: -2 }}
@@ -533,49 +884,47 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.budget')}</span>
-                    <BarChart3 className="w-3 h-3" />
+                    <span className="text-xs font-medium opacity-90">Frequency</span>
+                    <Activity className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
-                    {stats.budgetPerformance}%
+                    {analytics.keyMetrics.transactionFrequency.toFixed(1)}
                   </div>
-                  <div className="text-xs opacity-75">
-                    {stats.budgetPerformance > 70 ? t('dashboard.stats.onTrack') : t('dashboard.stats.review')}
-                  </div>
+                  <div className="text-xs opacity-75">Transactions/day</div>
                 </div>
               </motion.div>
 
-              {/* Financial Health */}
+              {/* Expense Volatility */}
               <motion.div
                 className={`group relative overflow-hidden rounded-xl p-2.5 sm:p-3 shadow-lg ${
-                  stats.financialHealth > 70
-                    ? 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600'
-                    : stats.financialHealth > 40
+                  analytics.keyMetrics.expenseVolatility > 50
+                    ? 'bg-gradient-to-br from-red-400 via-rose-500 to-pink-600'
+                    : analytics.keyMetrics.expenseVolatility > 25
                     ? 'bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600'
-                    : 'bg-gradient-to-br from-red-400 via-rose-500 to-pink-600'
+                    : 'bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600'
                 }`}
                 whileHover={{ scale: 1.03, y: -2 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
                 <div className={`absolute inset-0 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity ${
-                  stats.financialHealth > 70
-                    ? 'bg-gradient-to-br from-green-300 via-emerald-400 to-teal-500'
-                    : stats.financialHealth > 40
+                  analytics.keyMetrics.expenseVolatility > 50
+                    ? 'bg-gradient-to-br from-red-300 via-rose-400 to-pink-500'
+                    : analytics.keyMetrics.expenseVolatility > 25
                     ? 'bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500'
-                    : 'bg-gradient-to-br from-red-300 via-rose-400 to-pink-500'
+                    : 'bg-gradient-to-br from-green-300 via-emerald-400 to-teal-500'
                 }`}></div>
                 <div className="absolute top-1.5 right-1.5 w-1 h-1 bg-white/40 rounded-full animate-pulse delay-700"></div>
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.health')}</span>
+                    <span className="text-xs font-medium opacity-90">Volatility</span>
                     <Zap className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
-                    {stats.financialHealth}
+                    {analytics.keyMetrics.expenseVolatility.toFixed(0)}%
                   </div>
                   <div className="text-xs opacity-75">
-                    {stats.financialHealth > 70 ? t('dashboard.stats.great') : stats.financialHealth > 40 ? t('dashboard.stats.ok') : t('dashboard.stats.poor')}
+                    {analytics.keyMetrics.expenseVolatility > 50 ? 'High' : analytics.keyMetrics.expenseVolatility > 25 ? 'Medium' : 'Low'}
                   </div>
                 </div>
               </motion.div>
@@ -583,7 +932,7 @@ const StatsChart = ({ className = '' }) => {
           </div>
         </div>
 
-        {/* Expandable Section - Updated with Income/Expense Chart */}
+        {/* Expandable Section */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -595,101 +944,147 @@ const StatsChart = ({ className = '' }) => {
             >
               <div className="p-4 pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Income vs Expense Chart */}
+                  {/* Chart Visualization */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      {t('dashboard.stats.incomeVsExpenses')}
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      {chartType === 'pie' ? (
+                        <>
+                          <PieChart className="w-4 h-4" />
+                          Income vs Expenses
+                        </>
+                      ) : (
+                        <>
+                          <BarChart3 className="w-4 h-4" />
+                          Balance Trends
+                        </>
+                      )}
                     </h4>
-                    <IncomeExpensePieChart 
-                      income={stats.totalIncome} 
-                      expenses={stats.totalExpenses} 
-                      formatAmount={formatAmount}
-                      t={t}
-                    />
+                    
+                    <AnimatePresence mode="wait">
+                      {chartType === 'pie' ? (
+                        <motion.div
+                          key="pie-chart"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <IncomeExpensePieChart 
+                            income={analytics.currentPeriod.income} 
+                            expenses={analytics.currentPeriod.expenses} 
+                            formatAmount={formatAmount}
+                            t={t}
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="bar-chart"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <MiniBarChart 
+                            data={analytics.trends}
+                            formatAmount={formatAmount}
+                            t={t}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
-                  {/* Enhanced Transaction Insights */}
+                  {/* Insights and Recommendations */}
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      {t('dashboard.stats.detailedInsights')}
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Smart Insights
                     </h4>
                     
-                    <motion.div 
-                      className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800"
-                      whileHover={{ scale: 1.02, y: -2 }}
-                    >
-                      <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
-                        {t('dashboard.stats.averageTransaction')}
-                      </div>
-                      <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
-                        {formatAmount(stats.averageTransaction)}
-                      </div>
-                      <div className="text-xs text-blue-600/70 dark:text-blue-400/70">
-                        {t('dashboard.stats.totalTransactions', { count: stats.transactionCount })}
-                      </div>
-                    </motion.div>
+                    {/* Financial Health Insights */}
+                    <div className="space-y-3">
+                      {analytics.financialHealth.insights.map((insight, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={`p-3 rounded-lg border-l-4 ${
+                            insight.type === 'positive'
+                              ? 'bg-green-50 border-green-500 dark:bg-green-900/20 dark:border-green-400'
+                              : insight.type === 'warning'
+                              ? 'bg-yellow-50 border-yellow-500 dark:bg-yellow-900/20 dark:border-yellow-400'
+                              : insight.type === 'negative'
+                              ? 'bg-red-50 border-red-500 dark:bg-red-900/20 dark:border-red-400'
+                              : 'bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-400'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {insight.type === 'positive' && <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />}
+                            {insight.type === 'warning' && <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />}
+                            {insight.type === 'negative' && <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />}
+                            {insight.type === 'neutral' && <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />}
+                            
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium ${
+                                insight.type === 'positive'
+                                  ? 'text-green-800 dark:text-green-200'
+                                  : insight.type === 'warning'
+                                  ? 'text-yellow-800 dark:text-yellow-200'
+                                  : insight.type === 'negative'
+                                  ? 'text-red-800 dark:text-red-200'
+                                  : 'text-blue-800 dark:text-blue-200'
+                              }`}>
+                                {insight.message}
+                              </p>
+                              {insight.impact && (
+                                <Badge 
+                                  variant={insight.impact === 'critical' ? 'destructive' : insight.impact === 'high' ? 'default' : 'secondary'}
+                                  className="mt-1 text-xs"
+                                >
+                                  {insight.impact} impact
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                     
-                    <motion.div 
-                      className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800"
-                      whileHover={{ scale: 1.02, y: -2 }}
-                    >
-                      <div className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">
-                        {t('dashboard.stats.recurringImpact')}
+                    {/* Recommendations */}
+                    {analytics.recommendations.length > 0 && (
+                      <div className="space-y-3">
+                        <h5 className="font-semibold text-gray-900 dark:text-white text-sm">
+                          Recommendations
+                        </h5>
+                        {analytics.recommendations.map((rec, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 + index * 0.1 }}
+                            className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+                          >
+                            <div className="flex items-start gap-2">
+                              <Badge variant={rec.priority === 'high' ? 'destructive' : 'default'} className="text-xs mt-0.5">
+                                {rec.priority}
+                              </Badge>
+                              <div className="flex-1">
+                                <h6 className="font-medium text-gray-900 dark:text-white text-sm">
+                                  {rec.title}
+                                </h6>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                  {rec.description}
+                                </p>
+                                <p className="text-xs text-primary-600 dark:text-primary-400 mt-2 font-medium">
+                                  💡 {rec.action}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
-                      <div className="text-xl font-bold text-purple-700 dark:text-purple-300">
-                        {formatAmount(stats.recurringImpact)}
-                      </div>
-                      <div className="text-xs text-purple-600/70 dark:text-purple-400/70">
-                        {t('dashboard.stats.monthlyRecurringBalance')}
-                      </div>
-                    </motion.div>
-                    
-                    <motion.div 
-                      className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800"
-                      whileHover={{ scale: 1.02, y: -2 }}
-                    >
-                      <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                        {t('dashboard.stats.largestTransaction')}
-                      </div>
-                      <div className="text-xl font-bold text-green-700 dark:text-green-300">
-                        {formatAmount(stats.largestTransaction)}
-                      </div>
-                      <div className="text-xs text-green-600/70 dark:text-green-400/70">
-                        {t('dashboard.stats.singleTransaction')}
-                      </div>
-                    </motion.div>
-                    
-                    {stats.mostFrequentCategory && (
-                      <motion.div 
-                        className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800"
-                        whileHover={{ scale: 1.02, y: -2 }}
-                      >
-                        <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">
-                          {t('dashboard.stats.topCategory')}
-                        </div>
-                        <div className="text-xl font-bold text-amber-700 dark:text-amber-300">
-                          {stats.mostFrequentCategory}
-                        </div>
-                        <div className="text-xs text-amber-600/70 dark:text-amber-400/70">
-                          {t('dashboard.stats.mostUsedCategory')}
-                        </div>
-                      </motion.div>
                     )}
-                    
-                    <motion.div 
-                      className="bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-rose-200 dark:border-rose-800"
-                      whileHover={{ scale: 1.02, y: -2 }}
-                    >
-                      <div className="text-sm font-medium text-rose-600 dark:text-rose-400 mb-1">
-                        {t('dashboard.stats.balanceTrend')}
-                      </div>
-                      <div className="text-xl font-bold text-rose-700 dark:text-rose-300 capitalize">
-                        {t(`dashboard.stats.trend.${stats.balanceTrend}`)}
-                      </div>
-                      <div className="text-xs text-rose-600/70 dark:text-rose-400/70">
-                        {t('dashboard.stats.currentPeriodTrend')}
-                      </div>
-                    </motion.div>
                   </div>
                 </div>
               </div>

@@ -18,6 +18,153 @@ export const useLanguage = () => {
 const translations = {
   // === ENGLISH TRANSLATIONS ===
 
+  // Toast messages
+  toast: {
+    // Success messages
+    success: {
+      // Authentication
+      loginSuccess: 'Welcome back!',
+      registerSuccess: 'Registration successful! Please check your email.',
+      logoutSuccess: 'Logged out successfully',
+      emailVerified: 'Email verified successfully!',
+      verificationSent: 'Verification email sent!',
+      passwordReset: 'Password reset successfully',
+      passwordChanged: 'Password changed successfully',
+
+      // Profile
+      profileUpdated: 'Profile updated successfully',
+      profilePictureUploaded: 'Profile picture uploaded successfully',
+      preferencesUpdated: 'Preferences updated successfully',
+
+      // Transactions
+      transactionCreated: 'Transaction created successfully',
+      transactionUpdated: 'Transaction updated successfully',
+      transactionDeleted: 'Transaction deleted successfully',
+      transactionGenerated: 'Recurring transactions generated successfully',
+      templateUpdated: 'Template updated successfully',
+      skipDatesSuccess: 'Dates skipped successfully',
+      dataRefreshed: 'All transaction data refreshed',
+      nextPaymentSkipped: 'Next payment skipped successfully',
+
+      // Categories
+      categoryCreated: 'Category created successfully',
+      categoryUpdated: 'Category updated successfully',
+      categoryDeleted: 'Category deleted successfully',
+
+      // Export
+      csvExportCompleted: 'CSV export completed successfully!',
+      jsonExportCompleted: 'JSON export completed successfully!',
+
+      // Bulk operations
+      bulkOperationSuccess: '{{count}} transactions {{operation}} successfully',
+
+      // General
+      actionCompleted: 'Action completed successfully',
+      changesSaved: 'Changes saved successfully',
+      operationSuccess: 'Operation completed successfully'
+    },
+
+    // Error messages
+    error: {
+      // Authentication errors
+      invalidCredentials: 'Invalid email or password',
+      emailNotVerified: 'Your email is not verified. Please check your inbox.',
+      emailAlreadyExists: 'This email is already registered',
+      usernameExists: 'Username already exists',
+      tokenExpired: 'Session expired. Please login again.',
+      unauthorized: 'You are not authorized to perform this action',
+      authenticationFailed: 'Authentication failed. Please try again.',
+
+      // Validation errors
+      categoryNameRequired: 'Category name is required',
+      categoryTypeRequired: 'Category type must be income or expense',
+      invalidAmount: 'Please enter a valid amount',
+      invalidDate: 'Please enter a valid date',
+      descriptionRequired: 'Description is required',
+      categoryRequired: 'Please select a category',
+      emailRequired: 'Email is required',
+      passwordRequired: 'Password is required',
+      formErrors: 'Please correct the errors in the form',
+
+      // Category errors
+      cannotDeleteDefault: 'Cannot delete default categories',
+      categoryInUse: 'Cannot delete category that has transactions',
+
+      // Transaction errors
+      cannotSkipNonRecurring: 'Cannot skip non-recurring transaction',
+      cannotToggleNonTemplate: 'Cannot toggle non-template transaction',
+      unknownInterval: 'Unknown interval type',
+
+      // Server errors
+      serverError: 'Server error. Please try again later.',
+      networkError: 'Network error. Please check your connection.',
+      serviceUnavailable: 'Service temporarily unavailable',
+      tooManyRequests: 'Too many requests. Please slow down.',
+      notFound: 'The requested item was not found',
+      operationFailed: 'Operation failed. Please try again.',
+
+      // Export errors
+      noDataToExport: 'No data available to export',
+      exportFailed: '{{format}} export failed. Please try again.',
+      exportLimitReached: 'Too many export requests. Please wait a moment.',
+
+      // Bulk operation errors
+      bulkOperationFailed: 'Bulk {{operation}} failed',
+      bulkOperationPartialFail: '{{failed}} transactions failed to {{operation}}',
+
+      // File upload errors
+      fileTooLarge: 'File size must be less than 5MB',
+      invalidFileType: 'Please select a valid file type',
+      uploadFailed: 'Upload failed. Please try again.',
+
+      // Database errors
+      databaseError: 'Database error occurred',
+      queryFailed: 'Query failed to execute',
+      connectionError: 'Connection to database failed',
+
+      // General errors
+      unexpectedError: 'An unexpected error occurred',
+      operationTimeout: 'Operation timed out. Please try again.',
+      unknownError: 'An unknown error occurred',
+      generic: 'Something went wrong. Please try again.'
+    },
+
+    // Info messages
+    info: {
+      pdfExportComingSoon: 'PDF export coming soon! Please use CSV or JSON for now.',
+      featureComingSoon: 'This feature is coming soon!',
+      noNewNotifications: 'No new notifications',
+      dataLoading: 'Loading your data...',
+      operationInProgress: 'Operation in progress...',
+      syncingData: 'Syncing your data...',
+      checkingStatus: 'Checking status...'
+    },
+
+    // Warning messages
+    warning: {
+      unsavedChanges: 'You have unsaved changes',
+      actionCannotBeUndone: 'This action cannot be undone',
+      confirmDelete: 'Are you sure you want to delete this?',
+      sessionExpiringSoon: 'Your session will expire soon',
+      offlineMode: 'You are currently offline',
+      dataOutOfSync: 'Your data might be out of sync'
+    },
+
+    // Loading messages
+    loading: {
+      authenticating: 'Authenticating...',
+      savingChanges: 'Saving changes...',
+      deletingItem: 'Deleting...',
+      uploadingFile: 'Uploading file...',
+      generatingExport: 'Generating export...',
+      processingRequest: 'Processing request...',
+      loadingData: 'Loading data...',
+      refreshingData: 'Refreshing data...',
+      preparingExport: 'Preparing {{format}} export...',
+      syncingPreferences: 'Syncing preferences...'
+    }
+  },
+
   // Common/Shared
   common: {
     comingSoon: "Coming soon",
@@ -129,7 +276,7 @@ const translations = {
     customRange: "Custom range",
 
   },
-  
+
 
   // Days of week
   days: {
@@ -343,6 +490,7 @@ const translations = {
 
     transactions: {
       recent: 'Recent Transactions',
+      latestActivity: 'Latest Activity',
       viewAll: 'View All',
       noTransactions: 'No transactions yet',
       noTransactionsDesc: 'Start tracking your finances by adding your first transaction',
@@ -489,8 +637,8 @@ const translations = {
     unknownInterval: "Unknown interval type",
     nextPaymentSkipped: "Next payment skipped successfully",
     skipNextDesc: "Skip the next scheduled transaction without deleting the template",
-deleteTemplate: "Delete Template",
-deleteTemplateDesc: "Delete this recurring template and all its future transactions. Past transactions will remain unchanged.",
+    deleteTemplate: "Delete Template",
+    deleteTemplateDesc: "Delete this recurring template and all its future transactions. Past transactions will remain unchanged.",
 
 
 
@@ -532,10 +680,10 @@ deleteTemplateDesc: "Delete this recurring template and all its future transacti
     editThisOnly: 'Edit this occurrence only',
     manage: 'Manage',
     editThisDesc: "Edit only this transaction. Future recurring transactions will not be affected.",
-editAllDesc: "Edit this and all future recurring transactions in the series.",
-pauseDesc: "Pause this template temporarily. No future transactions will be created until you reactivate it.",
-skipNext: "Skip next",
-single: "Single",
+    editAllDesc: "Edit this and all future recurring transactions in the series.",
+    pauseDesc: "Pause this template temporarily. No future transactions will be created until you reactivate it.",
+    skipNext: "Skip next",
+    single: "Single",
 
 
     // Form fields
@@ -577,11 +725,9 @@ single: "Single",
     resume: 'Resume',
     paused: 'Transaction paused',
     resumed: 'Transaction resumed',
-    skipDates: 'Skip Dates',
     generateNow: 'Generate Now',
     generated: 'Recurring transactions generated',
     generateError: 'Failed to generate recurring transactions',
-
 
     // Skip Dates
     skipDates: {
@@ -899,30 +1045,41 @@ single: "Single",
   },
 
   // Profile
-  profile: {
-    title: 'Profile',
-    personalInformation: 'Personal Information',
-    profilePhoto: 'Profile Photo',
-    username: 'Username',
-    email: 'Email',
-    phone: 'Phone',
-    location: 'Location',
-    website: 'Website',
-    bio: 'Bio',
-    emailNotEditable: 'Email cannot be changed',
-    changePassword: 'Change Password',
-    currentPassword: 'Current Password',
-    newPassword: 'New Password',
-    confirmPassword: 'Confirm New Password',
-    changePhoto: 'Change Photo',
-    uploadPhoto: 'Upload Photo',
-    photoHelper: 'JPG, PNG or GIF. Max size 5MB',
-    uploading: 'Uploading...',
-    photoUploaded: 'Photo uploaded successfully',
-    invalidImageType: 'Please select a valid image file (JPG, PNG, or GIF)',
-    imageTooLarge: 'Image size must be less than 5MB',
-    active: "Active",
-    subtitle: "Manage your account details and preferences",
+      profile: {
+      title: 'Profile',
+      personalInformation: 'Personal Information',
+      accountInformation: 'Account Information',
+      profilePhoto: 'Profile Photo',
+      username: 'Username',
+      email: 'Email',
+      phone: 'Phone',
+      location: 'Location',
+      website: 'Website',
+      bio: 'Bio',
+      emailNotEditable: 'Email cannot be changed',
+      changePassword: 'Change Password',
+      currentPassword: 'Current Password',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm New Password',
+      changePhoto: 'Change Photo',
+      uploadPhoto: 'Upload Photo',
+      photoHelper: 'JPG, PNG or GIF. Max size 5MB',
+      uploading: 'Uploading...',
+      photoUploaded: 'Photo uploaded successfully',
+      invalidImageType: 'Please select a valid image file (JPG, PNG, or GIF)',
+      imageTooLarge: 'Image size must be less than 5MB',
+      active: "Active",
+      subtitle: "Manage your account details and preferences",
+      status: "Status",
+      security: "Security",
+      level: "Level",
+      tier: "Tier",
+      pro: "Pro",
+      premium: "Premium",
+      profileLastUpdate: "Profile Last Update",
+      unknown: "unknown",
+      notUpdatedYet: "Not updated yet",
+      edit: "Edit",
 
 
 
@@ -1060,9 +1217,9 @@ single: "Single",
       formatsAvailable: 'formats available',
 
       // Format descriptions  
-      csvDescription: 'Compatible with Excel, Google Sheets, and all spreadsheet applications',
+      csvFormat: 'Compatible with Excel, Google Sheets, and all spreadsheet applications',
       csvUseCase: 'Perfect for data analysis, reporting, and further processing',
-      jsonDescription: 'Machine-readable format with complete data structure and metadata',
+      jsonFormat: 'Machine-readable format with complete data structure and metadata',
       jsonUseCase: 'Ideal for developers, data scientists, and technical users',
 
       // Metadata
@@ -1289,8 +1446,294 @@ single: "Single",
     helpMessage: 'Contact our support team if you continue having issues.'
   },
 
+  // Onboarding translations
+  onboarding: {
+    // Common onboarding terms
+    common: {
+      next: 'Next',
+      previous: 'Previous',
+      skip: 'Skip',
+      complete: 'Complete Setup',
+      completing: 'Completing...',
+      confirmClose: 'Are you sure you want to close? Your progress will be saved.',
+      of: 'of',
+      step: 'Step'
+    },
+
+    // Welcome step
+    welcome: {
+      title: 'Welcome to SpendWise!',
+      greeting: 'Hello {{name}}!',
+      description: 'Let\'s set up your financial management experience and help you understand how SpendWise can simplify your money management.',
+      
+      features: {
+        recurring: {
+          title: 'Recurring Transactions',
+          description: 'Automate your regular income and expenses for effortless tracking.'
+        },
+        analytics: {
+          title: 'Smart Analytics',
+          description: 'Get insights into your spending patterns and financial trends.'
+        },
+        security: {
+          title: 'Secure & Private',
+          description: 'Your financial data is encrypted and stored securely.'
+        }
+      },
+
+      highlight: {
+        title: 'Recurring Transactions',
+        subtitle: 'The key to effortless financial management',
+        description: 'Set up transactions that happen regularly - like salary, rent, or subscriptions - and SpendWise will automatically track them for you.'
+      },
+
+      examples: {
+        salary: 'Monthly Salary',
+        rent: 'Rent Payment',
+        phone: 'Phone Bill',
+        utilities: 'Utilities'
+      },
+
+      cta: {
+        description: 'Ready to take control of your finances? Let\'s get started!',
+        button: 'Let\'s Begin'
+      },
+
+      stats: {
+        minutes: 'Minutes to Setup',
+        steps: 'Simple Steps',
+        benefits: 'Benefits'
+      }
+    },
+
+    // Preferences step
+    preferences: {
+      title: 'Customize Your Experience',
+      subtitle: 'Set your preferences to personalize SpendWise'
+    },
+
+    // Recurring explanation step
+    recurring: {
+      title: 'Understanding Recurring Transactions',
+      subtitle: 'Learn how to automate your financial tracking'
+    },
+
+    // Templates step
+    templates: {
+      title: 'Add Your First Recurring Transactions',
+      subtitle: 'Set up common recurring transactions to get started'
+    },
+
+    // Step subtitles for header
+    step1: {
+      subtitle: 'Welcome to your financial journey'
+    },
+    step2: {
+      subtitle: 'Personalize your experience'
+    },
+    step3: {
+      subtitle: 'Master recurring transactions'
+    },
+    step4: {
+      subtitle: 'Set up your first templates'
+    }
+  },
+
+  // Recurring transactions education
+  recurring: {
+    whatAre: {
+      title: 'What are Recurring Transactions?',
+      description: 'Recurring transactions are payments or income that happen automatically on a regular schedule. Instead of manually entering them each time, you set them up once and SpendWise handles the rest.'
+    },
+    
+    examples: {
+      title: 'Real Examples',
+      demo: 'Play Demo',
+      salaryDesc: 'Your monthly income automatically tracked',
+      rentDesc: 'Monthly housing payment never forgotten',
+      phoneDesc: 'Regular subscription automatically recorded'
+    },
+    
+    benefits: {
+      title: 'Why Use Recurring Transactions?',
+      timeTitle: 'Save Time',
+      timeDesc: 'Set up once, track automatically forever',
+      insightsTitle: 'Better Insights',
+      insightsDesc: 'See your real spending patterns and trends',
+      accuracyTitle: 'Stay Accurate',
+      accuracyDesc: 'Never forget regular payments again'
+    },
+    
+    cta: {
+      title: 'Ready to Set Up Your First Recurring Transaction?',
+      description: 'In the next step, we\'ll help you add common recurring transactions to get started.',
+      button: 'Let\'s Set Them Up'
+    }
+  },
+
+  // Templates management
+  templates: {
+    quickSetup: 'Quick Setup Suggestions',
+    yourTemplates: 'Your Templates',
+    createCustom: 'Create Custom Template',
+    setupComplete: 'Great! You\'ve set up {{count}} recurring transactions',
+    setupOptional: 'No templates yet - that\'s okay!',
+    canAddMore: 'You can always add more from the dashboard',
+    canSkipForNow: 'You can add recurring transactions anytime from your dashboard',
+    addedFromOnboarding: 'Added during onboarding',
+    carPayment: 'Car Payment',
+    internet: 'Internet Bill'
+  },
+
   // === HEBREW TRANSLATIONS ===
   he: {
+    // Toast messages in Hebrew
+    toast: {
+      // Success messages
+      success: {
+        // Authentication
+        loginSuccess: 'ברוך השב!',
+        registerSuccess: 'ההרשמה הושלמה בהצלחה! אנא בדוק את האימייל שלך.',
+        logoutSuccess: 'התנתקת בהצלחה',
+        emailVerified: 'האימייל אומת בהצלחה!',
+        verificationSent: 'אימייל אימות נשלח!',
+        passwordReset: 'הסיסמה אופסה בהצלחה',
+        passwordChanged: 'הסיסמה שונתה בהצלחה',
+
+        // Profile
+        profileUpdated: 'הפרופיל עודכן בהצלחה',
+        profilePictureUploaded: 'תמונת הפרופיל הועלתה בהצלחה',
+        preferencesUpdated: 'ההעדפות עודכנו בהצלחה',
+
+        // Transactions
+        transactionCreated: 'העסקה נוצרה בהצלחה',
+        transactionUpdated: 'העסקה עודכנה בהצלחה',
+        transactionDeleted: 'העסקה נמחקה בהצלחה',
+        transactionGenerated: 'עסקאות קבועות נוצרו בהצלחה',
+        templateUpdated: 'התבנית עודכנה בהצלחה',
+        skipDatesSuccess: 'תאריכים נדלגו בהצלחה',
+        dataRefreshed: 'כל נתוני העסקאות רוענו',
+        nextPaymentSkipped: 'התשלום הבא נדלג בהצלחה',
+
+        // Categories
+        categoryCreated: 'הקטגוריה נוצרה בהצלחה',
+        categoryUpdated: 'הקטגוריה עודכנה בהצלחה',
+        categoryDeleted: 'הקטגוריה נמחקה בהצלחה',
+
+        // Export
+        csvExportCompleted: 'יצוא CSV הושלם בהצלחה!',
+        jsonExportCompleted: 'יצוא JSON הושלם בהצלחה!',
+
+        // Bulk operations
+        bulkOperationSuccess: '{{count}} עסקאות {{operation}} בהצלחה',
+
+        // General
+        actionCompleted: 'הפעולה הושלמה בהצלחה',
+        changesSaved: 'השינויים נשמרו בהצלחה',
+        operationSuccess: 'הפעולה הושלמה בהצלחה'
+      },
+
+      // Error messages
+      error: {
+        // Authentication errors
+        invalidCredentials: 'דואר אלקטרוני או סיסמה לא תקינים',
+        emailNotVerified: 'האימייל שלך לא אומת. אנא בדוק את תיבת הדואר.',
+        emailAlreadyExists: 'כתובת האימייל הזו כבר רשומה',
+        usernameExists: 'שם המשתמש כבר תפוס',
+        tokenExpired: 'תוקף ההתחברות פג. אנא התחבר שוב.',
+        unauthorized: 'אין לך הרשאה לבצע פעולה זו',
+        authenticationFailed: 'האימות נכשל. אנא נסה שוב.',
+
+        // Validation errors
+        categoryNameRequired: 'שם הקטגוריה נדרש',
+        categoryTypeRequired: 'סוג הקטגוריה חייב להיות הכנסה או הוצאה',
+        invalidAmount: 'אנא הזן סכום תקין',
+        invalidDate: 'אנא הזן תאריך תקין',
+        descriptionRequired: 'תיאור נדרש',
+        categoryRequired: 'אנא בחר קטגוריה',
+        emailRequired: 'דואר אלקטרוני נדרש',
+        passwordRequired: 'סיסמה נדרשת',
+        formErrors: 'אנא תקן את השגיאות בטופס',
+
+        // Category errors
+        cannotDeleteDefault: 'לא ניתן למחוק קטגוריות ברירת מחדל',
+        categoryInUse: 'לא ניתן למחוק קטגוריה שיש לה עסקאות',
+
+        // Transaction errors
+        cannotSkipNonRecurring: 'לא ניתן לדלג על עסקה שאינה חוזרת',
+        cannotToggleNonTemplate: 'לא ניתן להחליף מצב של עסקה שאינה תבנית',
+        unknownInterval: 'סוג מרווח לא מוכר',
+
+        // Server errors
+        serverError: 'שגיאת שרת. אנא נסה שוב מאוחר יותר.',
+        networkError: 'שגיאת רשת. אנא בדוק את החיבור שלך.',
+        serviceUnavailable: 'השירות אינו זמין זמנית',
+        tooManyRequests: 'יותר מדי בקשות. אנא האט.',
+        notFound: 'הפריט המבוקש לא נמצא',
+        operationFailed: 'הפעולה נכשלה. אנא נסה שוב.',
+
+        // Export errors
+        noDataToExport: 'אין נתונים זמינים לייצוא',
+        exportFailed: 'יצוא {{format}} נכשל. אנא נסה שוב.',
+        exportLimitReached: 'יותר מדי בקשות ייצוא. אנא המתן רגע.',
+
+        // Bulk operation errors
+        bulkOperationFailed: 'פעולה קבוצתית {{operation}} נכשלה',
+        bulkOperationPartialFail: '{{failed}} עסקאות נכשלו ב{{operation}}',
+
+        // File upload errors
+        fileTooLarge: 'גודל הקובץ חייב להיות קטן מ-5MB',
+        invalidFileType: 'אנא בחר סוג קובץ תקין',
+        uploadFailed: 'ההעלאה נכשלה. אנא נסה שוב.',
+
+        // Database errors
+        databaseError: 'אירעה שגיאת בסיס נתונים',
+        queryFailed: 'השאילתה נכשלה בביצוע',
+        connectionError: 'החיבור לבסיס הנתונים נכשל',
+
+        // General errors
+        unexpectedError: 'אירעה שגיאה לא צפויה',
+        operationTimeout: 'הפעולה תם זמנה. אנא נסה שוב.',
+        unknownError: 'אירעה שגיאה לא ידועה',
+        generic: 'משהו השתבש. אנא נסה שוב.'
+      },
+
+      // Info messages
+      info: {
+        pdfExportComingSoon: 'יצוא PDF בקרוב! אנא השתמש ב-CSV או JSON כרגע.',
+        featureComingSoon: 'התכונה הזו בקרוב!',
+        noNewNotifications: 'אין התראות חדשות',
+        dataLoading: 'טוען את הנתונים שלך...',
+        operationInProgress: 'פעולה בתהליך...',
+        syncingData: 'מסנכרן את הנתונים שלך...',
+        checkingStatus: 'בודק סטטוס...'
+      },
+
+      // Warning messages
+      warning: {
+        unsavedChanges: 'יש לך שינויים שלא נשמרו',
+        actionCannotBeUndone: 'לא ניתן לבטל פעולה זו',
+        confirmDelete: 'האם אתה בטוח שברצונך למחוק את זה?',
+        sessionExpiringSoon: 'ההתחברות שלך תפוג בקרוב',
+        offlineMode: 'אתה כרגע במצב לא מקוון',
+        dataOutOfSync: 'הנתונים שלך עלולים להיות לא מסונכרנים'
+      },
+
+      // Loading messages
+      loading: {
+        authenticating: 'מאמת...',
+        savingChanges: 'שומר שינויים...',
+        deletingItem: 'מוחק...',
+        uploadingFile: 'מעלה קובץ...',
+        generatingExport: 'יוצר ייצוא...',
+        processingRequest: 'מעבד בקשה...',
+        loadingData: 'טוען נתונים...',
+        refreshingData: 'מרענן נתונים...',
+        preparingExport: 'מכין יצוא {{format}}...',
+        syncingPreferences: 'מסנכרן העדפות...'
+      }
+    },
+
     // Common/Shared
     common: {
       comingSoon: "בקרוב...",
@@ -1400,7 +1843,6 @@ single: "Single",
       create: 'צור',
       advanced: 'פילטרים מתקדמים',
       customRange: "טווח מותאם",
-
     },
 
     // Days of week
@@ -1433,10 +1875,10 @@ single: "Single",
       help: 'עזרה',
       about: 'אודות',
       categoryManager: 'מנהל קטגוריות',
-      panels: "פנלי שליטה",
-      recurringManagerDesc: 'נהל עסקאות חוזרות',
-      categoryManagerDesc: 'נהל את הקטגוריות שלך',
-      recurringManagerDesc: 'נהל עסקאות חוזרות',
+          panels: "פנלי שליטה",
+    recurringManager: 'מנהל עסקאות חוזרות',
+    recurringManagerDesc: 'נהל עסקאות חוזרות',
+    categoryManagerDesc: 'נהל את הקטגוריות שלך',
     },
 
     // Authentication
@@ -1460,9 +1902,9 @@ single: "Single",
       usernamePlaceholder: 'בחרו שם משתמש',
       currentPassword: 'סיסמה נוכחית',
       newPassword: 'סיסמה חדשה',
-      accountInfo: 'פרטי חשבון',
-      security: 'אבטחה',
-      emailVerificationNotice: 'נשלח אליך אימייל לאימות על מנת לאשר את החשבון שלך.',
+              accountInfo: 'פרטי חשבון',
+        security: 'אבטחה',
+        emailVerificationNotice: 'נשלח אליך אימייל לאימות על מנת לאשר את החשבון שלך.',
       registrationSuccess: 'ההרשמה הושלמה בהצלחה!',
       verificationEmailSent: 'שלחנו אימייל אימות אל',
       checkEmailInstructions: 'אנא בדוק את תיבת הדואר ולחץ על קישור האימות להפעלת החשבון.',
@@ -1615,14 +2057,15 @@ single: "Single",
         }
       },
 
-      transactions: {
-        recent: 'עסקאות אחרונות',
-        viewAll: 'הצג הכל',
-        noTransactions: 'אין עסקאות עדיין',
-        noTransactionsDesc: 'התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה',
-        fetchError: 'לא ניתן לטעון עסקאות',
-        loading: 'טוען עסקאות...'
-      },
+              transactions: {
+          recent: 'עסקאות אחרונות',
+          latestActivity: 'פעילות אחרונה',
+          viewAll: 'הצג הכל',
+          noTransactions: 'אין עסקאות עדיין',
+          noTransactionsDesc: 'התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה',
+          fetchError: 'לא ניתן לטעון עסקאות',
+          loading: 'טוען עסקאות...'
+        },
 
       quickActions: {
         title: 'הוספה מהירה',
@@ -1847,11 +2290,9 @@ single: "עסקה רגילה",
       resume: 'חדש',
       paused: 'עסקה הושהתה',
       resumed: 'עסקה חודשה',
-      skipDates: 'דלג על תאריכים',
       generateNow: 'צור עכשיו',
       generated: 'עסקאות קבועות נוצרו',
       generateError: 'נכשל ביצירת עסקאות קבועות',
-
 
       // Skip Dates
       skipDates: {
@@ -2170,6 +2611,7 @@ single: "עסקה רגילה",
     profile: {
       title: 'פרופיל',
       personalInformation: 'מידע אישי',
+      accountInformation: 'פרטי חשבון',
       profilePhoto: 'תמונת פרופיל',
       username: 'שם משתמש',
       email: 'דואר אלקטרוני',
@@ -2191,6 +2633,16 @@ single: "עסקה רגילה",
       imageTooLarge: 'גודל התמונה חייב להיות פחות מ-5MB',
       active: "פעיל",
       subtitle: "נהל את פרטי החשבון וההעדפות שלך",
+      status: "סטטוס",
+      security: "אבטחה",
+      level: "רמה",
+      tier: "דרגה",
+      pro: "מקצועי",
+      premium: "פרימיום",
+      profileLastUpdate: "עדכון אחרון של הפרופיל",
+      unknown: "לא ידוע",
+      notUpdatedYet: "לא עודכן עדיין",
+      edit: "ערוך",
 
 
 
@@ -2327,11 +2779,11 @@ single: "עסקה רגילה",
         loadingOptions: 'טוען אפשרויות ייצוא...',
         formatsAvailable: 'פורמטים זמינים',
 
-        // Format descriptions  
-        csvDescription: 'תואם ל-Excel, Google Sheets ויישומי גיליונות אלקטרוניים',
-        csvUseCase: 'מושלם לניתוח נתונים, דיווחים ועיבוד נוסף',
-        jsonDescription: 'פורמט קריא למכונה עם מבנה נתונים מלא ומטא-דאטה',
-        jsonUseCase: 'אידיאלי למפתחים, מדעני נתונים ומשתמשים טכניים',
+                  // Format descriptions
+          csvFormat: 'תואם ל-Excel, Google Sheets ויישומי גיליונות אלקטרוניים',
+          csvUseCase: 'מושלם לניתוח נתונים, דיווחים ועיבוד נוסף',
+          jsonFormat: 'פורמט קריא למכונה עם מבנה נתונים מלא ומטא-דאטה',
+          jsonUseCase: 'אידיאלי למפתחים, מדעני נתונים ומשתמשים טכניים',
 
         // Metadata
         estimatedSize: 'גודל',
@@ -2555,11 +3007,153 @@ single: "עסקה רגילה",
       goHome: 'חזרה לדשבורד',
       needHelp: 'צריך עזרה?',
       helpMessage: 'צור קשר עם צוות התמיכה אם אתה ממשיך להיתקל בבעיות.'
+    },
+
+    // Onboarding translations in Hebrew
+    onboarding: {
+          // Common onboarding terms
+    common: {
+      next: 'הבא',
+      previous: 'הקודם',
+      skip: 'דלג',
+      complete: 'השלם הגדרה',
+      completing: 'משלים...',
+      confirmClose: 'האם אתה בטוח שברצונך לסגור? ההתקדמות שלך תישמר.',
+      of: 'מתוך',
+      step: 'שלב'
+    },
+
+      // Welcome step
+      welcome: {
+        title: 'ברוכים הבאים ל-SpendWise!',
+        greeting: 'שלום {{name}}!',
+        description: 'בואו נגדיר את חוויית ניהול הכספים שלכם ונעזור לכם להבין איך SpendWise יכול לפשט את ניהול הכסף שלכם.',
+        
+        features: {
+          recurring: {
+            title: 'עסקאות חוזרות',
+            description: 'הפכו את ההכנסות וההוצאות הקבועות שלכם לאוטומטיות למעקב קל.'
+          },
+          analytics: {
+            title: 'אנליטיקה חכמה',
+            description: 'קבלו תובנות על דפוסי ההוצאות והמגמות הפיננסיות שלכם.'
+          },
+          security: {
+            title: 'בטוח ופרטי',
+            description: 'הנתונים הפיננסיים שלכם מוצפנים ומאוחסנים בבטחה.'
+          }
+        },
+
+        highlight: {
+          title: 'עסקאות חוזרות',
+          subtitle: 'המפתח לניהול פיננסי קל',
+          description: 'הגדירו עסקאות שקורות באופן קבוע - כמו משכורת, שכר דירה או מנויים - ו-SpendWise יעקוב אחריהן אוטומטית עבורכם.'
+        },
+
+        examples: {
+          salary: 'משכורת חודשית',
+          rent: 'תשלום דירה',
+          phone: 'חשבון טלפון',
+          utilities: 'שירותים'
+        },
+
+        cta: {
+          description: 'מוכנים להשתלט על הכספים שלכם? בואו נתחיל!',
+          button: 'בואו נתחיל'
+        },
+
+        stats: {
+          minutes: 'דקות הגדרה',
+          steps: 'שלבים פשוטים',
+          benefits: 'יתרונות'
+        }
+      },
+
+      // Preferences step
+      preferences: {
+        title: 'התאימו את החוויה שלכם',
+        subtitle: 'הגדירו את ההעדפות שלכם כדי להתאים אישית את SpendWise'
+      },
+
+      // Recurring explanation step
+      recurring: {
+        title: 'הבנת עסקאות חוזרות',
+        subtitle: 'למדו איך להפוך את המעקב הפיננסי לאוטומטי'
+      },
+
+      // Templates step
+      templates: {
+        title: 'הוסיפו את העסקאות החוזרות הראשונות שלכם',
+        subtitle: 'הגדירו עסקאות חוזרות נפוצות כדי להתחיל'
+      },
+
+      // Step subtitles for header
+      step1: {
+        subtitle: 'ברוכים הבאים למסע הפיננסי שלכם'
+      },
+      step2: {
+        subtitle: 'התאימו אישית את החוויה שלכם'
+      },
+      step3: {
+        subtitle: 'שלטו בעסקאות חוזרות'
+      },
+      step4: {
+        subtitle: 'הגדירו את התבניות הראשונות שלכם'
+      }
+    },
+
+    // Recurring transactions education in Hebrew
+    recurring: {
+      whatAre: {
+        title: 'מה הן עסקאות חוזרות?',
+        description: 'עסקאות חוזרות הן תשלומים או הכנסות שקורים אוטומטית לפי לוח זמנים קבוע. במקום להכניס אותן ידנית בכל פעם, אתם מגדירים אותן פעם אחת ו-SpendWise מטפל בשאר.'
+      },
+      
+      examples: {
+        title: 'דוגמאות אמיתיות',
+        demo: 'הפעל הדגמה',
+        salaryDesc: 'ההכנסה החודשית שלכם נרשמת אוטומטית',
+        rentDesc: 'תשלום דיור חודשי שלא נשכח אף פעם',
+        phoneDesc: 'מנוי קבוע נרשם אוטומטית'
+      },
+      
+      benefits: {
+        title: 'למה להשתמש בעסקאות חוזרות?',
+        timeTitle: 'חוסך זמן',
+        timeDesc: 'הגדרה פעם אחת, מעקב אוטומטי לתמיד',
+        insightsTitle: 'תובנות טובות יותר',
+        insightsDesc: 'רואים את דפוסי ההוצאות והמגמות האמיתיים שלכם',
+        accuracyTitle: 'נשארים מדויקים',
+        accuracyDesc: 'לא שוכחים תשלומים קבועים יותר'
+      },
+      
+      cta: {
+        title: 'מוכנים להגדיר את העסקה החוזרת הראשונה שלכם?',
+        description: 'בשלב הבא, נעזור לכם להוסיף עסקאות חוזרות נפוצות כדי להתחיל.',
+        button: 'בואו נגדיר אותן'
+      }
+    },
+
+    // Templates management in Hebrew
+    templates: {
+      quickSetup: 'הצעות הגדרה מהירה',
+      yourTemplates: 'התבניות שלכם',
+      createCustom: 'צור תבנית מותאמת אישית',
+      setupComplete: 'מעולה! הגדרתם {{count}} עסקאות חוזרות',
+      setupOptional: 'אין תבניות עדיין - זה בסדר!',
+      canAddMore: 'תמיד אפשר להוסיף עוד מהדשבורד',
+      canSkipForNow: 'אפשר להוסיף עסקאות חוזרות בכל זמן מהדשבורד שלכם',
+      addedFromOnboarding: 'נוסף במהלך האונבורדינג',
+      carPayment: 'תשלום רכב',
+      internet: 'חשבון אינטרנט'
     }
   }
 };
 
 export const LanguageProvider = ({ children }) => {
+  // ✅ FIX: Don't use useAuth directly to avoid circular dependency
+  // We'll sync with auth state via events instead
+  
   // ✅ FIX: Initialize language from localStorage first, then fallback to browser/default
   const [language, setLanguage] = useState(() => {
     // Check localStorage first
@@ -2622,6 +3216,25 @@ export const LanguageProvider = ({ children }) => {
     setSessionLanguage(null);
   };
 
+  // ✅ FIX: Sync with user preferences via event system
+  useEffect(() => {
+    const handleUserPreferencesSync = (event) => {
+      const { user } = event.detail;
+      if (user?.preferences?.language) {
+        const userLang = user.preferences.language;
+        if (userLang !== language) {
+          console.log(`🌐 [LANGUAGE] Syncing with user preference: ${language} → ${userLang}`);
+          setLanguage(userLang);
+          setSessionLanguage(null); // Clear any session override
+          localStorage.setItem('preferredLanguage', userLang);
+        }
+      }
+    };
+
+    window.addEventListener('user-preferences-loaded', handleUserPreferencesSync);
+    return () => window.removeEventListener('user-preferences-loaded', handleUserPreferencesSync);
+  }, [language]);
+
   // ✅ ADD: Effect to sync language changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -2648,26 +3261,24 @@ export const LanguageProvider = ({ children }) => {
     }
   }, [effectiveLanguage, language, sessionLanguage]);
 
-  // ✅ ADD: Listen for session reset events (logout) - MISSING!
+  // ✅ ADD: Listen for session reset events (logout)
   useEffect(() => {
     const handleSessionReset = () => {
-      console.log(`🌐 [LANGUAGE] Session reset detected - clearing session language`);
+      console.log(`🌐 [LANGUAGE] Session reset detected - clearing session overrides`);
       resetToSavedLanguage();
     };
 
     const handleLanguageReset = () => {
-      console.log(`🌐 [LANGUAGE] Language session reset detected`);
+      console.log(`🌐 [LANGUAGE] Language-specific reset detected`);
       resetToSavedLanguage();
     };
 
     window.addEventListener('auth-logout', handleSessionReset);
     window.addEventListener('language-session-reset', handleLanguageReset);
-    window.addEventListener('theme-session-reset', handleSessionReset); // Also reset on theme events
-
+    
     return () => {
       window.removeEventListener('auth-logout', handleSessionReset);
       window.removeEventListener('language-session-reset', handleLanguageReset);
-      window.removeEventListener('theme-session-reset', handleSessionReset);
     };
   }, []);
 

@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Edit2, Trash2, Save, X, Star,
+  Plus, Edit2, Trash2, Save, X, Star, Tag, Package,
   TrendingUp, TrendingDown, Crown, Search, Filter,
   MoreVertical, Grid, List
 } from 'lucide-react';
@@ -16,7 +16,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useCategories } from '../../../hooks/useCategory';
 import { Card, Button, Input, Badge, Modal, LoadingSpinner } from '../../ui';
 import { cn } from '../../../utils/helpers';
-import toast from 'react-hot-toast';
+import { useToast } from '../../../hooks/useToast';
 
 import {
   iconCategories,
@@ -32,6 +32,7 @@ import {
  */
 const CategoryManager = ({ isOpen, onClose }) => {
   const { t, language } = useLanguage();
+  const toastService = useToast();
   const {
     categories: allCategories = [],
     isLoading,
@@ -132,16 +133,10 @@ const CategoryManager = ({ isOpen, onClose }) => {
     try {
       if (editingCategory) {
         await updateCategory(editingCategory.id, formData);
-        toast.success(t('categories.updated'), {
-          icon: '✨',
-          duration: 3000
-        });
+        toastService.categoryUpdated();
       } else {
         await createCategory(formData);
-        toast.success(t('categories.created'), {
-          icon: '🎉',
-          duration: 3000
-        });
+        toastService.categoryCreated();
       }
       
       setShowForm(false);
@@ -170,10 +165,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
     
     try {
       await deleteCategory(categoryId);
-      toast.success(t('categories.deleted'), {
-        icon: '🗑️',
-        duration: 3000
-      });
+      toastService.categoryDeleted();
     } catch (error) {
       // Error handling is managed by the hook
     }
@@ -198,15 +190,25 @@ const CategoryManager = ({ isOpen, onClose }) => {
       isOpen={isOpen}
       onClose={handleClose}
       title={
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
-            <Tag className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
+              <Tag className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="text-lg font-semibold">{t('nav.categoryManager')}</span>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <Package className="w-4 h-4" />
+                <span>
+                  {userCategories.length} {t('categories.userCategories')} • {defaultCategories.length} {t('categories.default')}
+                </span>
+              </div>
+            </div>
           </div>
-          <span>{t('nav.categoryManager')}</span>
         </div>
       }
-      size="xxl"
-      className="max-h-[90vh] overflow-hidden"
+      size="large"
+      className="max-w-4xl max-h-[90vh] overflow-hidden"
     >
       <div className="space-y-4 sm:space-y-6 p-6">
         {/* Mobile Header */}

@@ -18,6 +18,7 @@ const authRoutes = require('./routes/authRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const exportRoutes = require('./routes/exportRoutes'); // ✅ ADD: Export routes
+const onboardingRoutes = require('./routes/onboarding'); // ✅ ADD: Onboarding routes
 
 // Initialize express app
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/v1/users', authRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/export', exportRoutes); // ✅ ADD: Register export routes
+app.use('/api/v1/onboarding', onboardingRoutes); // ✅ ADD: Register onboarding routes
 
 // Error handling middleware
 app.use(errorHandler);

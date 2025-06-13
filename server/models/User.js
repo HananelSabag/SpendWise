@@ -29,13 +29,14 @@ class User {
           email_verified,
           language_preference,
           theme_preference,
-          currency_preference
+          currency_preference,
+          onboarding_completed
         )
-        VALUES ($1, $2, $3, false, 'en', 'light', 'USD')
+        VALUES ($1, $2, $3, false, 'en', 'light', 'USD', false)
         RETURNING 
           id, email, username, created_at, 
           language_preference, theme_preference, currency_preference,
-          preferences, email_verified;
+          preferences, email_verified, onboarding_completed;
       `;
       
       const result = await db.query(query, [email, username, hashedPassword]);
@@ -61,7 +62,7 @@ class User {
       SELECT 
         id, email, username, password_hash, 
         language_preference, theme_preference, currency_preference,
-        preferences, last_login, email_verified
+        preferences, last_login, email_verified, onboarding_completed
       FROM users 
       WHERE email = $1;
     `;
@@ -80,7 +81,7 @@ class User {
       SELECT 
         id, email, username, 
         language_preference, theme_preference, currency_preference,
-        preferences, created_at, last_login, email_verified
+        preferences, created_at, last_login, email_verified, onboarding_completed
       FROM users 
       WHERE id = $1;
     `;
@@ -526,6 +527,36 @@ static async getExportData(userId) {
     client.release();
   }
 }
+
+  /**
+   * Mark user onboarding as complete
+   * @param {number} userId - User's ID
+   * @returns {Promise<Object>} Updated user object
+   */
+  static async markOnboardingComplete(userId) {
+    try {
+      const query = `
+        UPDATE users 
+        SET onboarding_completed = true, updated_at = NOW()
+        WHERE id = $1
+        RETURNING 
+          id, email, username, 
+          language_preference, theme_preference, currency_preference,
+          preferences, created_at, last_login, email_verified, onboarding_completed
+      `;
+      
+      const result = await db.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error marking onboarding complete:', { userId, error: error.message });
+      throw error;
+    }
+  }
 }
 
 module.exports = User;

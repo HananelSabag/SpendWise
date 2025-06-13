@@ -196,7 +196,7 @@ const BalancePanel = () => {
   };
 
   const formatValue = (value) => {
-    return numbers.formatAmount(value || 0);
+    return formatAmount(value || 0);
   };
   
   // ✅ ADD: Click outside handler for calendar
