@@ -249,6 +249,8 @@ const Login = () => {
     } catch (error) {
       if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
         setUnverifiedEmail(formData.email);
+        setShowResendModal(true);
+        // Still show a brief error message for accessibility
         setErrors({
           general: t('auth.emailNotVerifiedLogin')
         });

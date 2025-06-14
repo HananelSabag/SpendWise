@@ -462,7 +462,16 @@ const translations = {
       fastDesc: 'Real-time updates and tracking',
       smart: 'Smart Analytics',
       smartDesc: 'Intelligent insights for better decisions'
-    }
+    },
+
+    // Email verification modal
+    emailNotVerifiedModalTitle: 'Email Not Verified',
+    emailNotVerifiedModalMessage: 'You haven\'t verified your email address yet.',
+    checkEmailSpamMessage: 'Please check your inbox and spam folder. Sometimes verification emails end up there.',
+    resendVerificationSuccess: 'Verification email sent successfully!',
+    checkEmailAgainMessage: 'Please check your inbox again (including spam folder)',
+    stillNoEmailMessage: 'Still don\'t see the email?',
+    clickToResendMessage: 'Click here to resend',
   },
 
   // Dashboard
@@ -2222,7 +2231,16 @@ const translations = {
         fastDesc: 'עדכונים ומעקב בזמן אמת',
         smart: 'ניתוח חכם',
         smartDesc: 'תובנות חכמות להחלטות טובות יותר'
-      }
+      },
+
+      // Email verification modal
+      emailNotVerifiedModalTitle: 'האימייל לא מאומת',
+      emailNotVerifiedModalMessage: 'עדיין לא אימתם את כתובת האימייל שלכם.',
+      checkEmailSpamMessage: 'אנא בדקו את תיבת הדואר שלכם ותיקיית הספאם. לפעמים מיילי אימות מגיעים לשם.',
+      resendVerificationSuccess: 'אימייל אימות נשלח בהצלחה!',
+      checkEmailAgainMessage: 'אנא בדקו שוב את תיבת הדואר (כולל תיקיית הספאם)',
+      stillNoEmailMessage: 'עדיין לא רואים את האימייל?',
+      clickToResendMessage: 'לחצו כאן לשליחה חוזרת',
     },
 
     // Dashboard
