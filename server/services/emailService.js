@@ -93,7 +93,7 @@ class EmailService {
 
     try {
       // Use shorter server-side redirect URL for better iPhone compatibility
-      const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
+      const serverUrl = process.env.SERVER_URL || 'https://spendwise-server-production.up.railway.app';
       const shortVerificationLink = `${serverUrl}/api/v1/users/v/${token}`;
       const fullVerificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
       

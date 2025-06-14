@@ -49,7 +49,7 @@ router.get('/v/:token', (req, res) => {
   console.log('📱 Short URL accessed:', { token, userAgent, isIPhone });
   
   // Redirect to client verification page
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const clientUrl = process.env.CLIENT_URL || 'https://spend-wise-kappa.vercel.app';
   res.redirect(`${clientUrl}/verify-email/${token}`);
 });
 
