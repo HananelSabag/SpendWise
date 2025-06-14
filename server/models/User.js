@@ -21,6 +21,9 @@ class User {
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
       
+      // Normalize email to lowercase to prevent case sensitivity issues
+      const normalizedEmail = email.toLowerCase().trim();
+      
       const query = `
         INSERT INTO users (
           email, 
@@ -39,7 +42,7 @@ class User {
           preferences, email_verified, onboarding_completed;
       `;
       
-      const result = await db.query(query, [email, username, hashedPassword]);
+      const result = await db.query(query, [normalizedEmail, username, hashedPassword]);
       return result.rows[0];
     } catch (error) {
       if (error.code === '23505') {
@@ -53,21 +56,24 @@ class User {
   }
 
   /**
-   * Find user by email
+   * Find user by email (case-insensitive)
    * @param {string} email - User's email
    * @returns {Promise<Object|null>} User object or null
    */
   static async findByEmail(email) {
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = email.toLowerCase().trim();
+    
     const query = `
       SELECT 
         id, email, username, password_hash, 
         language_preference, theme_preference, currency_preference,
         preferences, last_login, email_verified, onboarding_completed
       FROM users 
-      WHERE email = $1;
+      WHERE LOWER(email) = $1;
     `;
     
-    const result = await db.query(query, [email]);
+    const result = await db.query(query, [normalizedEmail]);
     return result.rows[0] || null;
   }
 
@@ -91,13 +97,14 @@ class User {
   }
 
   /**
-   * Verify user's password
+   * Verify user's password (case-insensitive email lookup)
    * @param {string} email - User's email
    * @param {string} password - Password to verify
    * @returns {Promise<Object|null>} User object if verified
    */
   static async verifyPassword(email, password) {
     try {
+      // Use case-insensitive email lookup
       const user = await this.findByEmail(email);
       
       if (!user) {

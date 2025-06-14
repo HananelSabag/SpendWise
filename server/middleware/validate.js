@@ -85,6 +85,9 @@ const validate = {
       ));
     }
 
+    // Normalize email to lowercase for consistent handling
+    req.body.email = email.toLowerCase().trim();
+
     // Password validation
     if (!password) {
       return res.status(400).json(createValidationError(
@@ -138,6 +141,9 @@ const validate = {
       ));
     }
 
+    // Normalize email to lowercase for consistent handling
+    req.body.email = email.toLowerCase().trim();
+
     next();
   },
 
@@ -160,6 +166,9 @@ const validate = {
         'Invalid email format'
       ));
     }
+
+    // Normalize email to lowercase for consistent handling
+    req.body.email = email.toLowerCase().trim();
 
     next();
   },
