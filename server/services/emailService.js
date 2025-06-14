@@ -23,7 +23,7 @@ class EmailService {
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
       }
 
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
         secure: process.env.SMTP_SECURE === 'true',
@@ -1041,3 +1041,5 @@ This is an automated message, please do not reply to this email.
 }
 
 module.exports = new EmailService();
+
+z
