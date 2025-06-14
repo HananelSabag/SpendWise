@@ -144,6 +144,7 @@ export const useAuth = () => {
     (credentials) => authAPI.login(credentials),
     {
       mutationKey: mutationKeys.login,
+      showErrorToast: false, // ✅ Disable automatic error toast
       onSuccess: (response) => {
         const { data } = response.data;
         
@@ -165,14 +166,13 @@ export const useAuth = () => {
       onError: (error) => {
         const errorData = error.response?.data?.error;
         
-        // ✅ FIX: Don't suppress EMAIL_NOT_VERIFIED errors - let them propagate
-        // to the component so the modal can be shown. Only prevent the toast.
+        // ✅ For EMAIL_NOT_VERIFIED, don't show toast - let component handle modal
         if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-          // Don't show toast for email verification errors
-          // Let the Login component handle the modal display
-          throw error; // Re-throw to let component handle it
+          console.log('🔑 [AUTH] Email not verified, letting component handle modal');
+          return; // Don't show toast, let error propagate to component
         }
         
+        // For other errors, show toast
         toastService.error(error);
       }
     }

@@ -251,7 +251,14 @@ const Login = () => {
         navigate('/');
       }
     } catch (error) {
-      if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+      console.log('🔐 [LOGIN] Full error object:', error);
+      console.log('🔐 [LOGIN] Error response:', error.response?.data);
+      
+      // ✅ Check for EMAIL_NOT_VERIFIED in multiple possible locations
+      const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
+      console.log('🔐 [LOGIN] Error code found:', errorCode);
+      
+      if (errorCode === 'EMAIL_NOT_VERIFIED') {
         console.log('🔐 [LOGIN] Email not verified error caught, showing modal for:', formData.email);
         setUnverifiedEmail(formData.email);
         setShowResendModal(true);
@@ -261,6 +268,7 @@ const Login = () => {
         });
       } else {
         const errorMessage = error.response?.data?.error?.message || error.response?.data?.message;
+        console.log('🔐 [LOGIN] Other error:', errorMessage);
         setErrors({
           general: errorMessage || t('auth.invalidCredentials')
         });
@@ -483,6 +491,23 @@ const Login = () => {
                     </>
                   )}
                 </Button>
+
+                {/* DEBUG: Test Modal Button */}
+                {process.env.NODE_ENV === 'development' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    fullWidth
+                    onClick={() => {
+                      console.log('🧪 [DEBUG] Testing modal');
+                      setUnverifiedEmail('test@example.com');
+                      setShowResendModal(true);
+                    }}
+                    className="mt-2"
+                  >
+                    🧪 Test Modal (Dev Only)
+                  </Button>
+                )}
 
                 {/* Sign Up Link */}
                 <div className="text-center">
