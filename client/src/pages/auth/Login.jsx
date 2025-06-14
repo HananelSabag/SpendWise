@@ -35,7 +35,7 @@ import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
- * Resend verification email modal
+ * Resend verification email modal - Enhanced version
  */
 const ResendVerificationModal = ({ email, onClose }) => {
   const { t } = useLanguage();
@@ -52,7 +52,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
       
       setTimeout(() => {
         onClose();
-      }, 3000);
+      }, 4000);
     } catch (err) {
       const errorMessage = err.response?.data?.error?.message || t('errors.generic');
       setError(errorMessage);
@@ -71,62 +71,101 @@ const ResendVerificationModal = ({ email, onClose }) => {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full"
+        className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full mb-4">
-            <Mail className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          <div className="mx-auto flex items-center justify-center w-16 h-16 bg-orange-100 dark:bg-orange-900 rounded-full mb-4">
+            <AlertCircle className="w-8 h-8 text-orange-600 dark:text-orange-400" />
           </div>
           
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('auth.resendVerificationEmail')}
+            {t('auth.emailNotVerifiedModalTitle') || 'Email Not Verified'}
           </h3>
           
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {t('auth.resendVerificationDescription')} <strong>{email}</strong>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {t('auth.emailNotVerifiedModalMessage') || 'You haven\'t verified your email address yet.'}
           </p>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+            <div className="flex items-start space-x-3">
+              <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                  {t('auth.checkEmailSpamMessage') || 'Please check your inbox and spam folder. Sometimes verification emails end up there.'}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  <strong>{email}</strong>
+                </p>
+              </div>
+            </div>
+          </div>
 
           {error && (
-            <Alert type="error" className="mb-4">
+            <Alert type="error" className="mb-4 text-left">
               {error}
             </Alert>
           )}
 
           {sent ? (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto mb-2" />
-              <p className="text-sm text-green-800 dark:text-green-200">
-                {t('auth.verificationEmailSent')}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6"
+            >
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                {t('auth.resendVerificationSuccess') || 'Verification email sent successfully!'}
               </p>
-            </div>
+              <p className="text-xs text-green-600 dark:text-green-400">
+                {t('auth.checkEmailAgainMessage') || 'Please check your inbox again (including spam folder)'}
+              </p>
+            </motion.div>
           ) : (
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={onClose}
-                disabled={isResendingVerification}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={handleResend}
-                loading={isResendingVerification}
-                disabled={isResendingVerification}
-              >
-                {isResendingVerification ? (
-                  <LoadingSpinner size="small" />
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    {t('auth.resendEmail')}
-                  </>
-                )}
-              </Button>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                {t('auth.stillNoEmailMessage') || 'Still don\'t see the email?'}
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={onClose}
+                  disabled={isResendingVerification}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleResend}
+                  loading={isResendingVerification}
+                  disabled={isResendingVerification}
+                  className="relative"
+                >
+                  {isResendingVerification ? (
+                    <LoadingSpinner size="small" />
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {t('auth.clickToResendMessage') || 'Click here to resend'}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
+          )}
+
+          {sent && (
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={onClose}
+              className="mt-4"
+            >
+              {t('common.close')}
+            </Button>
           )}
         </div>
       </motion.div>
