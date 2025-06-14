@@ -1,6 +1,6 @@
 /**
  * Email Service - Production Ready with Mobile Fixes
- * Handles all email communications with polished templates.
+ * Handles all email communications with polished templates optimized for mobile devices
  * @module services/emailService
  */
 
@@ -23,7 +23,7 @@ class EmailService {
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
       }
 
-      this.transporter = nodemailer.createTransport({
+      this.transporter = nodemailer.createTransporter({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
         secure: process.env.SMTP_SECURE === 'true',
@@ -141,312 +141,6 @@ class EmailService {
     }
   }
 
-  getVerificationEmailTemplate(username, verificationLink) {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-        <meta name="format-detection" content="telephone=no">
-        <title>Verify Your SpendWise Account</title>
-        <style>
-          /* BASE STYLES */
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background-color: #f0f4ff; 
-            line-height: 1.6;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-          }
-          .container { 
-            max-width: 600px; 
-            margin: 40px auto; 
-            background-color: white; 
-            border-radius: 16px; 
-            overflow: hidden; 
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.15); 
-          }
-          .header { 
-            background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 50%, #2563EB 100%); 
-            padding: 40px 20px; 
-            text-align: center; 
-            position: relative; 
-          }
-          .header::before { 
-            content: ''; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            right: 0; 
-            bottom: 0; 
-            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%); 
-          }
-          
-          /* LOGO FIXES - Perfect centering */
-          .logo { 
-            width: 80px; 
-            height: 80px; 
-            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #60A5FA 100%); 
-            border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            margin: 0 auto 20px auto;
-            box-shadow: 0 8px 25px rgba(30, 64, 175, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            position: relative;
-            z-index: 1;
-          }
-          .logo-text { 
-            color: white; 
-            font-size: 36px; 
-            font-weight: 900; 
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-          }
-          
-          .title { 
-            color: white; 
-            margin: 0; 
-            font-size: 28px; 
-            font-weight: 700; 
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
-            position: relative; 
-            z-index: 1; 
-          }
-          .content { 
-            padding: 40px 30px; 
-          }
-          .message { 
-            color: #374151; 
-            font-size: 16px; 
-            line-height: 1.7; 
-            margin-bottom: 20px; 
-          }
-          .button-container { 
-            text-align: center; 
-            margin: 40px 0; 
-          }
-          
-          /* MOBILE-OPTIMIZED BUTTON */
-          .button { 
-            display: inline-block;
-            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
-            color: white !important;
-            padding: 18px 50px;
-            text-decoration: none !important;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-            transition: all 0.2s ease;
-            min-height: 50px;
-            min-width: 200px;
-            /* Mobile touch optimizations */
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            border: none;
-            cursor: pointer;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            touch-action: manipulation;
-            /* Force button behavior on iOS */
-            -webkit-border-radius: 12px;
-          }
-          .button:hover, .button:focus, .button:active, .button:visited { 
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-            transform: translateY(-1px);
-            text-decoration: none !important;
-            color: white !important;
-            outline: none;
-          }
-          
-          .url { 
-            color: #3B82F6; 
-            word-break: break-all; 
-            font-size: 14px; 
-            background-color: #F0F4FF;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 20px 0;
-          }
-          .footer { 
-            border-top: 1px solid #E5E7EB; 
-            padding: 30px; 
-            text-align: center; 
-            color: #6B7280; 
-            font-size: 13px; 
-            background-color: #F9FAFB; 
-          }
-          .warning { 
-            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); 
-            border: 1px solid #F59E0B; 
-            color: #92400E; 
-            padding: 20px; 
-            border-radius: 12px; 
-            margin: 25px 0; 
-            border-left: 4px solid #F59E0B; 
-          }
-          .warning-icon {
-            font-size: 20px;
-            margin-right: 8px;
-          }
-          .features { 
-            background: linear-gradient(135deg, #EBF4FF 0%, #DBEAFE 100%); 
-            padding: 25px; 
-            border-radius: 12px; 
-            margin: 25px 0; 
-            border: 1px solid #BFDBFE; 
-          }
-          .features ul { 
-            margin: 0; 
-            padding-left: 20px; 
-          }
-          .features li { 
-            margin-bottom: 12px; 
-            color: #1E40AF; 
-            font-weight: 500; 
-          }
-          .username-highlight { 
-            color: #3B82F6; 
-            font-weight: 700; 
-          }
-          
-          /* ENHANCED MOBILE RESPONSIVE */
-          @media screen and (max-width: 600px) {
-            .container {
-              margin: 20px 10px;
-              border-radius: 12px;
-            }
-            .header {
-              padding: 30px 20px;
-            }
-            .title {
-              font-size: 24px;
-            }
-            .content {
-              padding: 30px 20px;
-            }
-            .button {
-              padding: 16px 40px;
-              font-size: 15px;
-              width: auto;
-              display: inline-block;
-              min-height: 48px;
-              /* Enhanced mobile button */
-              -webkit-tap-highlight-color: transparent;
-            }
-            .logo {
-              width: 70px;
-              height: 70px;
-            }
-            .logo-text {
-              font-size: 32px;
-            }
-          }
-          @media screen and (max-width: 480px) {
-            .container {
-              margin: 10px 5px;
-            }
-            .button {
-              padding: 18px 32px;
-              font-size: 16px;
-              min-height: 50px;
-              width: 85%;
-              text-align: center;
-              box-sizing: border-box;
-              /* Stronger mobile optimization */
-              -webkit-tap-highlight-color: transparent;
-            }
-            .content {
-              padding: 25px 15px;
-            }
-          }
-          
-          /* iOS SPECIFIC FIXES */
-          @supports (-webkit-touch-callout: none) {
-            .button {
-              -webkit-tap-highlight-color: transparent;
-              -webkit-touch-callout: none;
-              -webkit-user-select: none;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">
-              <span class="logo-text">S</span>
-            </div>
-            <h1 class="title">Welcome to SpendWise!</h1>
-          </div>
-          
-          <div class="content">
-            <p class="message">Hi <span class="username-highlight">${username}</span>,</p>
-            
-            <p class="message">
-              Thank you for registering with SpendWise! To complete your registration and start managing 
-              your finances, please verify your email address.
-            </p>
-            
-            <div class="button-container">
-              <a href="${verificationLink}" class="button" target="_blank" rel="noopener noreferrer">
-                Verify Email Address
-              </a>
-            </div>
-            
-            <p class="message">
-              <strong>If the button doesn't work, copy and paste this link into your browser:</strong>
-            </p>
-            
-            <div class="url">${verificationLink}</div>
-            
-            <div class="warning">
-              <strong><span class="warning-icon">⚠️</span>Important:</strong> 
-              This verification link will expire in <strong>24 hours</strong>. 
-              If you didn't create a SpendWise account, please ignore this email.
-            </div>
-            
-            <div class="features">
-              <p class="message" style="margin-bottom: 15px; color: #1E40AF; font-weight: 600;">
-                <strong>🚀 Once verified, you'll be able to:</strong>
-              </p>
-              <ul>
-                <li>💰 Track your income and expenses with ease</li>
-                <li>🔄 Set up recurring transactions for automation</li>
-                <li>📊 View detailed financial insights and reports</li>
-                <li>🏷️ Organize expenses with custom categories</li>
-                <li>🎯 Monitor your financial goals and progress</li>
-              </ul>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <p><strong>Best regards,<br>The SpendWise Team</strong> 💙</p>
-            <p>This is an automated message, please do not reply to this email.</p>
-            <p><strong>© 2024 SpendWise</strong> - Your Smart Finance Companion</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
   getPasswordResetTemplate(resetUrl, email) {
     return `
       <!DOCTYPE html>
@@ -494,24 +188,24 @@ class EmailService {
             height: 80px; 
             background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #60A5FA 100%); 
             border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            display: table; 
             margin: 0 auto 20px auto;
             box-shadow: 0 8px 25px rgba(30, 64, 175, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
             border: 3px solid rgba(255, 255, 255, 0.3);
             position: relative;
             z-index: 1;
+            text-align: center;
           }
           .logo-text { 
             color: white; 
             font-size: 36px; 
             font-weight: 900; 
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            line-height: 80px;
+            height: 80px;
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
           }
           .title { 
             color: white; 
@@ -545,11 +239,13 @@ class EmailService {
             font-weight: 600;
             font-size: 16px;
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-            transition: all 0.2s ease;
+            transition: none;
             min-height: 50px;
             min-width: 200px;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
+            line-height: 1.4;
+            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+            -webkit-touch-callout: default;
+            -webkit-user-select: none;
             border: none;
             cursor: pointer;
             outline: none;
@@ -557,14 +253,17 @@ class EmailService {
             -moz-appearance: none;
             appearance: none;
             touch-action: manipulation;
+            position: relative;
+            z-index: 10;
+            box-sizing: border-box;
+            vertical-align: middle;
           }
-          .button:hover, .button:focus, .button:active, .button:visited { 
+          .button:hover, .button:focus, .button:active, .button:visited, .button:link { 
             background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-            transform: translateY(-1px);
-            text-decoration: none !important;
             color: white !important;
+            text-decoration: none !important;
             outline: none;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
           }
           .url { 
             color: #3B82F6; 
@@ -622,12 +321,14 @@ class EmailService {
               padding: 30px 20px;
             }
             .button {
-              padding: 16px 40px;
-              font-size: 15px;
+              padding: 18px 40px;
+              font-size: 16px;
               width: auto;
               display: inline-block;
-              min-height: 48px;
-              -webkit-tap-highlight-color: transparent;
+              min-height: 56px;
+              min-width: 240px;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
             }
             .logo {
               width: 70px;
@@ -635,6 +336,8 @@ class EmailService {
             }
             .logo-text {
               font-size: 32px;
+              line-height: 70px;
+              height: 70px;
             }
           }
           @media screen and (max-width: 480px) {
@@ -642,16 +345,32 @@ class EmailService {
               margin: 10px 5px;
             }
             .button {
-              padding: 18px 32px;
+              padding: 20px 32px;
               font-size: 16px;
-              min-height: 50px;
-              width: 85%;
+              min-height: 60px;
+              width: 90%;
+              max-width: 280px;
               text-align: center;
               box-sizing: border-box;
-              -webkit-tap-highlight-color: transparent;
+              display: block;
+              margin: 0 auto;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
             }
             .content {
               padding: 25px 15px;
+            }
+          }
+          @supports (-webkit-touch-callout: none) {
+            .button {
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              -webkit-touch-callout: default;
+            }
+          }
+          @media screen and (-webkit-device-pixel-ratio: 2) {
+            .button {
+              touch-action: manipulation;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
             }
           }
         </style>
@@ -678,7 +397,8 @@ class EmailService {
             </p>
             
             <div class="button-container">
-              <a href="${resetUrl}" class="button" target="_blank" rel="noopener noreferrer">
+              <a href="${resetUrl}" class="button" target="_blank" rel="noopener noreferrer"
+                 style="color: white !important; text-decoration: none !important;">
                 Reset Your Password
               </a>
             </div>
@@ -707,6 +427,367 @@ class EmailService {
         </div>
       </body>
       </html>
+    `;
+  }
+
+  getPasswordResetTextTemplate(resetUrl) {
+    return `
+Password Reset Request - SpendWise
+
+We received a request to reset your password for your SpendWise account.
+
+Click this link to reset your password: ${resetUrl}
+
+IMPORTANT:
+- This link will expire in 1 hour
+- Only use this link if you requested a password reset
+- If you didn't request this, please ignore this email
+- Never share this link with anyone
+
+If the link doesn't work, copy and paste it into your browser.
+
+© 2024 SpendWise. All rights reserved.
+This is an automated message, please do not reply to this email.
+    `;
+  }
+
+  getVerificationEmailTemplate(username, verificationLink) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <meta name="format-detection" content="telephone=no">
+        <title>Verify Your SpendWise Account</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f0f4ff; 
+            line-height: 1.6;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            background-color: white; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.15); 
+          }
+          .header { 
+            background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 50%, #2563EB 100%); 
+            padding: 40px 20px; 
+            text-align: center; 
+            position: relative; 
+          }
+          .header::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%); 
+          }
+          .logo { 
+            width: 80px; 
+            height: 80px; 
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #60A5FA 100%); 
+            border-radius: 20px; 
+            display: table; 
+            margin: 0 auto 20px auto;
+            box-shadow: 0 8px 25px rgba(30, 64, 175, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 1;
+            text-align: center;
+          }
+          .logo-text { 
+            color: white; 
+            font-size: 36px; 
+            font-weight: 900; 
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            line-height: 80px;
+            height: 80px;
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
+          }
+          .title { 
+            color: white; 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 700; 
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+            position: relative; 
+            z-index: 1; 
+          }
+          .content { 
+            padding: 40px 30px; 
+          }
+          .message { 
+            color: #374151; 
+            font-size: 16px; 
+            line-height: 1.7; 
+            margin-bottom: 20px; 
+          }
+          .button-container { 
+            text-align: center; 
+            margin: 40px 0; 
+          }
+          .button { 
+            display: inline-block;
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
+            color: white !important;
+            padding: 18px 50px;
+            text-decoration: none !important;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transition: none;
+            min-height: 50px;
+            min-width: 200px;
+            line-height: 1.4;
+            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+            -webkit-touch-callout: default;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            position: relative;
+            z-index: 10;
+            box-sizing: border-box;
+            vertical-align: middle;
+          }
+          .button:hover, 
+          .button:focus, 
+          .button:active, 
+          .button:visited,
+          .button:link { 
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
+            color: white !important;
+            text-decoration: none !important;
+            outline: none;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+          }
+          .url { 
+            color: #3B82F6; 
+            word-break: break-all; 
+            font-size: 14px; 
+            background-color: #F0F4FF;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 20px 0;
+          }
+          .footer { 
+            border-top: 1px solid #E5E7EB; 
+            padding: 30px; 
+            text-align: center; 
+            color: #6B7280; 
+            font-size: 13px; 
+            background-color: #F9FAFB; 
+          }
+          .warning { 
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); 
+            border: 1px solid #F59E0B; 
+            color: #92400E; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin: 25px 0; 
+            border-left: 4px solid #F59E0B; 
+          }
+          .warning-icon {
+            font-size: 20px;
+            margin-right: 8px;
+          }
+          .features { 
+            background: linear-gradient(135deg, #EBF4FF 0%, #DBEAFE 100%); 
+            padding: 25px; 
+            border-radius: 12px; 
+            margin: 25px 0; 
+            border: 1px solid #BFDBFE; 
+          }
+          .features ul { 
+            margin: 0; 
+            padding-left: 20px; 
+          }
+          .features li { 
+            margin-bottom: 12px; 
+            color: #1E40AF; 
+            font-weight: 500; 
+          }
+          .username-highlight { 
+            color: #3B82F6; 
+            font-weight: 700; 
+          }
+          @media screen and (max-width: 600px) {
+            .container {
+              margin: 20px 10px;
+              border-radius: 12px;
+            }
+            .header {
+              padding: 30px 20px;
+            }
+            .title {
+              font-size: 24px;
+            }
+            .content {
+              padding: 30px 20px;
+            }
+            .button {
+              padding: 18px 40px;
+              font-size: 16px;
+              width: auto;
+              display: inline-block;
+              min-height: 56px;
+              min-width: 240px;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
+            }
+            .logo {
+              width: 70px;
+              height: 70px;
+            }
+            .logo-text {
+              font-size: 32px;
+              line-height: 70px;
+              height: 70px;
+            }
+          }
+          @media screen and (max-width: 480px) {
+            .container {
+              margin: 10px 5px;
+            }
+            .button {
+              padding: 20px 32px;
+              font-size: 16px;
+              min-height: 60px;
+              width: 90%;
+              max-width: 280px;
+              text-align: center;
+              box-sizing: border-box;
+              display: block;
+              margin: 0 auto;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
+            }
+            .content {
+              padding: 25px 15px;
+            }
+          }
+          @supports (-webkit-touch-callout: none) {
+            .button {
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              -webkit-touch-callout: default;
+            }
+          }
+          @media screen and (-webkit-device-pixel-ratio: 2) {
+            .button {
+              touch-action: manipulation;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">
+              <span class="logo-text">S</span>
+            </div>
+            <h1 class="title">Welcome to SpendWise!</h1>
+          </div>
+          
+          <div class="content">
+            <p class="message">Hi <span class="username-highlight">${username}</span>,</p>
+            
+            <p class="message">
+              Thank you for registering with SpendWise! To complete your registration and start managing 
+              your finances, please verify your email address.
+            </p>
+            
+            <div class="button-container">
+              <a href="${verificationLink}" class="button" target="_blank" rel="noopener noreferrer" 
+                 style="color: white !important; text-decoration: none !important;">
+                Verify Email Address
+              </a>
+            </div>
+            
+            <p class="message">
+              <strong>If the button doesn't work, copy and paste this link into your browser:</strong>
+            </p>
+            
+            <div class="url">${verificationLink}</div>
+            
+            <div class="warning">
+              <strong><span class="warning-icon">⚠️</span>Important:</strong> 
+              This verification link will expire in <strong>24 hours</strong>. 
+              If you didn't create a SpendWise account, please ignore this email.
+            </div>
+            
+            <div class="features">
+              <p class="message" style="margin-bottom: 15px; color: #1E40AF; font-weight: 600;">
+                <strong>🚀 Once verified, you'll be able to:</strong>
+              </p>
+              <ul>
+                <li>💰 Track your income and expenses with ease</li>
+                <li>🔄 Set up recurring transactions for automation</li>
+                <li>📊 View detailed financial insights and reports</li>
+                <li>🏷️ Organize expenses with custom categories</li>
+                <li>🎯 Monitor your financial goals and progress</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p><strong>Best regards,<br>The SpendWise Team</strong> 💙</p>
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p><strong>© 2024 SpendWise</strong> - Your Smart Finance Companion</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  getVerificationEmailTextTemplate(username, verificationLink) {
+    return `
+Welcome to SpendWise - Email Verification Required
+
+Hi ${username},
+
+Thank you for registering with SpendWise! To complete your registration and start managing your finances, please verify your email address.
+
+Click this link to verify your email: ${verificationLink}
+
+IMPORTANT:
+- This verification link will expire in 24 hours
+- If you didn't create a SpendWise account, please ignore this email
+
+Once verified, you'll be able to:
+- Track your income and expenses with ease
+- Set up recurring transactions for automation
+- View detailed financial insights and reports
+- Organize expenses with custom categories
+- Monitor your financial goals and progress
+
+Best regards,
+The SpendWise Team
+
+© 2024 SpendWise. All rights reserved.
+This is an automated message, please do not reply to this email.
     `;
   }
 
@@ -757,24 +838,24 @@ class EmailService {
             height: 80px; 
             background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #60A5FA 100%); 
             border-radius: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            display: table; 
             margin: 0 auto 20px auto;
             box-shadow: 0 8px 25px rgba(30, 64, 175, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
             border: 3px solid rgba(255, 255, 255, 0.3);
             position: relative;
             z-index: 1;
+            text-align: center;
           }
           .logo-text { 
             color: white; 
             font-size: 36px; 
             font-weight: 900; 
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            line-height: 80px;
+            height: 80px;
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
           }
           .title { 
             color: white; 
@@ -808,11 +889,13 @@ class EmailService {
             font-weight: 600;
             font-size: 16px;
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-            transition: all 0.2s ease;
+            transition: none;
             min-height: 50px;
             min-width: 200px;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
+            line-height: 1.4;
+            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+            -webkit-touch-callout: default;
+            -webkit-user-select: none;
             border: none;
             cursor: pointer;
             outline: none;
@@ -820,14 +903,17 @@ class EmailService {
             -moz-appearance: none;
             appearance: none;
             touch-action: manipulation;
+            position: relative;
+            z-index: 10;
+            box-sizing: border-box;
+            vertical-align: middle;
           }
-          .button:hover, .button:focus, .button:active, .button:visited { 
+          .button:hover, .button:focus, .button:active, .button:visited, .button:link { 
             background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-            transform: translateY(-1px);
-            text-decoration: none !important;
             color: white !important;
+            text-decoration: none !important;
             outline: none;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
           }
           .footer { 
             border-top: 1px solid #E5E7EB; 
@@ -883,12 +969,14 @@ class EmailService {
               padding: 30px 20px;
             }
             .button {
-              padding: 16px 40px;
-              font-size: 15px;
+              padding: 18px 40px;
+              font-size: 16px;
               width: auto;
               display: inline-block;
-              min-height: 48px;
-              -webkit-tap-highlight-color: transparent;
+              min-height: 56px;
+              min-width: 240px;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
             }
             .logo {
               width: 70px;
@@ -896,6 +984,8 @@ class EmailService {
             }
             .logo-text {
               font-size: 32px;
+              line-height: 70px;
+              height: 70px;
             }
           }
           @media screen and (max-width: 480px) {
@@ -903,16 +993,32 @@ class EmailService {
               margin: 10px 5px;
             }
             .button {
-              padding: 18px 32px;
+              padding: 20px 32px;
               font-size: 16px;
-              min-height: 50px;
-              width: 85%;
+              min-height: 60px;
+              width: 90%;
+              max-width: 280px;
               text-align: center;
               box-sizing: border-box;
-              -webkit-tap-highlight-color: transparent;
+              display: block;
+              margin: 0 auto;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              touch-action: manipulation;
             }
             .content {
               padding: 25px 15px;
+            }
+          }
+          @supports (-webkit-touch-callout: none) {
+            .button {
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+              -webkit-touch-callout: default;
+            }
+          }
+          @media screen and (-webkit-device-pixel-ratio: 2) {
+            .button {
+              touch-action: manipulation;
+              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
             }
           }
         </style>
@@ -947,7 +1053,8 @@ class EmailService {
             </div>
             
             <div class="button-container">
-              <a href="${process.env.CLIENT_URL}/dashboard" class="button" target="_blank" rel="noopener noreferrer">
+              <a href="${process.env.CLIENT_URL}/dashboard" class="button" target="_blank" rel="noopener noreferrer"
+                 style="color: white !important; text-decoration: none !important;">
                 Go to Dashboard
               </a>
             </div>
@@ -961,56 +1068,6 @@ class EmailService {
         </div>
       </body>
       </html>
-    `;
-  }
-
-  getPasswordResetTextTemplate(resetUrl) {
-    return `
-Password Reset Request - SpendWise
-
-We received a request to reset your password for your SpendWise account.
-
-Click this link to reset your password: ${resetUrl}
-
-IMPORTANT:
-- This link will expire in 1 hour
-- Only use this link if you requested a password reset
-- If you didn't request this, please ignore this email
-- Never share this link with anyone
-
-If the link doesn't work, copy and paste it into your browser.
-
-© 2024 SpendWise. All rights reserved.
-This is an automated message, please do not reply to this email.
-    `;
-  }
-
-  getVerificationEmailTextTemplate(username, verificationLink) {
-    return `
-Welcome to SpendWise - Email Verification Required
-
-Hi ${username},
-
-Thank you for registering with SpendWise! To complete your registration and start managing your finances, please verify your email address.
-
-Click this link to verify your email: ${verificationLink}
-
-IMPORTANT:
-- This verification link will expire in 24 hours
-- If you didn't create a SpendWise account, please ignore this email
-
-Once verified, you'll be able to:
-- Track your income and expenses with ease
-- Set up recurring transactions for automation
-- View detailed financial insights and reports
-- Organize expenses with custom categories
-- Monitor your financial goals and progress
-
-Best regards,
-The SpendWise Team
-
-© 2024 SpendWise. All rights reserved.
-This is an automated message, please do not reply to this email.
     `;
   }
 
@@ -1041,5 +1098,3 @@ This is an automated message, please do not reply to this email.
 }
 
 module.exports = new EmailService();
-
-z
