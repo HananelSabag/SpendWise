@@ -66,7 +66,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
       onClick={onClose}
     >
       <motion.div
@@ -403,17 +403,32 @@ const Login = () => {
                   icon={Lock}
                   error={errors.password}
                   required
-                  autoFocus={!!emailFromRegistration}
-                  suffix={
+                  rightElement={
                     <button
                       type="button"
+                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   }
                 />
+
+                {/* Resend verification email link */}
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.email) {
+                        setUnverifiedEmail(formData.email);
+                        setShowResendModal(true);
+                      }
+                    }}
+                    className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
+                  >
+                    {t('auth.resendVerificationEmail')}
+                  </button>
+                </div>
 
                 {/* Remember Me & Forgot Password */}
                 <div className="flex items-center justify-between">

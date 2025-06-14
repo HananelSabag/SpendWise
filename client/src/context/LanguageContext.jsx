@@ -2235,12 +2235,12 @@ const translations = {
 
       // Email verification modal
       emailNotVerifiedModalTitle: 'האימייל לא מאומת',
-      emailNotVerifiedModalMessage: 'עדיין לא אימתם את כתובת האימייל שלכם.',
-      checkEmailSpamMessage: 'אנא בדקו את תיבת הדואר שלכם ותיקיית הספאם. לפעמים מיילי אימות מגיעים לשם.',
+      emailNotVerifiedModalMessage: 'עדיין לא אימתת את כתובת האימייל שלך.',
+      checkEmailSpamMessage: 'אנא בדוק את תיבת הדואר ותיקיית הספאם. לפעמים אימיילי אימות מגיעים לשם.',
       resendVerificationSuccess: 'אימייל אימות נשלח בהצלחה!',
-      checkEmailAgainMessage: 'אנא בדקו שוב את תיבת הדואר (כולל תיקיית הספאם)',
-      stillNoEmailMessage: 'עדיין לא רואים את האימייל?',
-      clickToResendMessage: 'לחצו כאן לשליחה חוזרת',
+      checkEmailAgainMessage: 'אנא בדוק את תיבת הדואר שוב (כולל תיקיית ספאם)',
+      stillNoEmailMessage: 'עדיין לא רואה את האימייל?',
+      clickToResendMessage: 'לחצו כאן לשלוח מחדש',
     },
 
     // Dashboard
