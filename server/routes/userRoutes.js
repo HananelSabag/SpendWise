@@ -35,7 +35,6 @@ router.get('/verify-email/:token',
   userController.verifyEmail
 );
 
-
 /**
  * @route   GET /api/v1/users/verify-email-debug/:token
  * @desc    Debug email verification - helps troubleshoot iPhone issues

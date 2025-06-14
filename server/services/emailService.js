@@ -92,7 +92,6 @@ class EmailService {
     }
 
     try {
-      // Use direct client URL with shorter token for better iPhone compatibility
       const verificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
       
       const mailOptions = {
@@ -104,10 +103,7 @@ class EmailService {
       };
       
       await this.transporter.sendMail(mailOptions);
-      logger.info('Verification email sent successfully', { 
-        verificationLink: verificationLink,
-        tokenLength: token.length 
-      });
+      logger.info('Verification email sent successfully');
       return true;
     } catch (error) {
       logger.error('Failed to send verification email:', {
@@ -762,27 +758,25 @@ This is an automated message, please do not reply to this email.
             <!-- iPhone-specific fallback link -->
             <div class="mobile-fallback" style="margin-top: 15px; display: block; background: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3;">
               <p class="message" style="font-size: 14px; color: #1565C0; margin: 0;">
-                <strong>📱 iPhone Users - Important!</strong>
+                <strong>📱 iPhone Users - Improved!</strong>
               </p>
               <p style="font-size: 13px; color: #1976D2; margin: 8px 0 0 0;">
-                We've made this verification token shorter for better iPhone compatibility! If the button still doesn't work:
+                We've made the verification link shorter for better iPhone compatibility.
+                If the button still doesn't work in the Mail app:
               </p>
               <ol style="font-size: 13px; color: #1976D2; margin: 8px 0; padding-left: 20px;">
                 <li>Long-press and copy the link below</li>
                 <li>Open Safari browser (not Mail)</li>
                 <li>Paste the link and tap Go</li>
               </ol>
-              <p style="font-size: 12px; color: #1976D2; margin: 5px 0 0 0;">
-                <strong>Token length:</strong> Much shorter for iPhone compatibility!
-              </p>
             </div>
             
             <p class="message">
               <strong>If the button doesn't work, copy and paste this link into your browser:</strong>
             </p>
             
-            <div class="url" style="user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;">
-              <a href="${verificationLink}" style="color: #3B82F6; text-decoration: underline; word-break: break-all;">${verificationLink}</a>
+            <div class="url" style="user-select: all; -webkit-user-select: all; -webkit-touch-callout: default; word-wrap: break-word; overflow-wrap: break-word;">
+              <a href="${verificationLink}" style="color: #3B82F6; text-decoration: underline; word-break: break-all; display: block; white-space: pre-wrap;">${verificationLink}</a>
             </div>
             
             <div class="warning">
@@ -826,9 +820,7 @@ Thank you for registering with SpendWise! To complete your registration and star
 
 Click this link to verify your email: ${verificationLink}
 
-IMPORTANT - iPhone Users:
-- We've created a shorter verification token for better iPhone compatibility
-- If Gmail asks which browser to use, choose Safari
+IMPORTANT:
 - This verification link will expire in 24 hours
 - If you didn't create a SpendWise account, please ignore this email
 
