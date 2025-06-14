@@ -165,8 +165,12 @@ export const useAuth = () => {
       onError: (error) => {
         const errorData = error.response?.data?.error;
         
+        // ✅ FIX: Don't suppress EMAIL_NOT_VERIFIED errors - let them propagate
+        // to the component so the modal can be shown. Only prevent the toast.
         if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-          return;
+          // Don't show toast for email verification errors
+          // Let the Login component handle the modal display
+          throw error; // Re-throw to let component handle it
         }
         
         toastService.error(error);

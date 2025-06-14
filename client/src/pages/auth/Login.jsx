@@ -43,6 +43,8 @@ const ResendVerificationModal = ({ email, onClose }) => {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
+  console.log('📧 [MODAL] ResendVerificationModal rendered for email:', email);
+
   const handleResend = async () => {
     setError('');
 
@@ -64,14 +66,14 @@ const ResendVerificationModal = ({ email, onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center">
@@ -107,21 +109,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
             </Alert>
           )}
 
-          {sent ? (
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6"
-            >
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
-              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
-                {t('auth.resendVerificationSuccess') || 'Verification email sent successfully!'}
-              </p>
-              <p className="text-xs text-green-600 dark:text-green-400">
-                {t('auth.checkEmailAgainMessage') || 'Please check your inbox again (including spam folder)'}
-              </p>
-            </motion.div>
-          ) : (
+          {!sent ? (
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 {t('auth.stillNoEmailMessage') || 'Still don\'t see the email?'}
@@ -155,17 +143,30 @@ const ResendVerificationModal = ({ email, onClose }) => {
                 </Button>
               </div>
             </div>
-          )}
-
-          {sent && (
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={onClose}
-              className="mt-4"
-            >
-              {t('common.close')}
-            </Button>
+          ) : (
+            <>
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6"
+              >
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                  {t('auth.resendVerificationSuccess') || 'Verification email sent successfully!'}
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  {t('auth.checkEmailAgainMessage') || 'Please check your inbox again (including spam folder)'}
+                </p>
+              </motion.div>
+              
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={onClose}
+              >
+                {t('common.close')}
+              </Button>
+            </>
           )}
         </div>
       </motion.div>
@@ -194,6 +195,9 @@ const Login = () => {
   // Email verification state
   const [showResendModal, setShowResendModal] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+
+  // Debug logging
+  console.log('🔍 [LOGIN] Modal state:', { showResendModal, unverifiedEmail });
 
   // Registration redirect message
   const message = location.state?.message;
@@ -248,6 +252,7 @@ const Login = () => {
       }
     } catch (error) {
       if (error.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+        console.log('🔐 [LOGIN] Email not verified error caught, showing modal for:', formData.email);
         setUnverifiedEmail(formData.email);
         setShowResendModal(true);
         // Still show a brief error message for accessibility
@@ -600,6 +605,7 @@ const Login = () => {
           <ResendVerificationModal
             email={unverifiedEmail}
             onClose={() => {
+              console.log('📧 [MODAL] Closing modal');
               setShowResendModal(false);
               setUnverifiedEmail('');
             }}
