@@ -192,8 +192,9 @@ export const AuthProvider = ({ children }) => {
       // Don't show toast for EMAIL_NOT_VERIFIED - let component handle modal
       const errorCode = error.response?.data?.error?.code;
       if (errorCode === 'EMAIL_NOT_VERIFIED') {
-        // Re-throw the error so the component can handle it
-        throw error;
+        // Don't throw error here - let the login helper function handle it
+        console.log('EMAIL_NOT_VERIFIED caught in mutation, will be handled by component');
+        return;
       }
       
       const message = error.response?.data?.message || 'Login failed';
@@ -385,7 +386,17 @@ export const AuthProvider = ({ children }) => {
   
   // Helper functions
   const login = useCallback(async (credentials) => {
-    return loginMutation.mutateAsync(credentials);
+    try {
+      return await loginMutation.mutateAsync(credentials);
+    } catch (error) {
+      // Re-throw EMAIL_NOT_VERIFIED errors so component can handle them
+      const errorCode = error.response?.data?.error?.code;
+      if (errorCode === 'EMAIL_NOT_VERIFIED') {
+        throw error;
+      }
+      // For other errors, re-throw as well
+      throw error;
+    }
   }, [loginMutation]);
   
   const register = useCallback(async (userData) => {
