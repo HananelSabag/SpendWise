@@ -13,7 +13,8 @@ const emailService = require('../services/emailService');
 const crypto = require('crypto');
 
 const generateVerificationToken = () => {
-  return crypto.randomBytes(32).toString('hex');
+  // Generate shorter token for iPhone compatibility (20 chars instead of 64)
+  return crypto.randomBytes(10).toString('hex');
 };
 
 /**

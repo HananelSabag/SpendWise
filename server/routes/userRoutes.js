@@ -36,6 +36,24 @@ router.get('/verify-email/:token',
 );
 
 /**
+ * @route   GET /api/v1/users/v/:token
+ * @desc    Short verification URL for iPhone compatibility
+ * @access  Public
+ */
+router.get('/v/:token', (req, res) => {
+  const { token } = req.params;
+  const userAgent = req.get('User-Agent');
+  const isIPhone = userAgent && userAgent.includes('iPhone');
+  
+  // Log for debugging
+  console.log('📱 Short URL accessed:', { token, userAgent, isIPhone });
+  
+  // Redirect to client verification page
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  res.redirect(`${clientUrl}/verify-email/${token}`);
+});
+
+/**
  * @route   GET /api/v1/users/verify-email-debug/:token
  * @desc    Debug email verification - helps troubleshoot iPhone issues
  * @access  Public

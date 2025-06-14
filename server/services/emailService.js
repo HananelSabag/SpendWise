@@ -92,18 +92,24 @@ class EmailService {
     }
 
     try {
-      const verificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
+      // Use shorter server-side redirect URL for better iPhone compatibility
+      const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
+      const shortVerificationLink = `${serverUrl}/api/v1/users/v/${token}`;
+      const fullVerificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
       
       const mailOptions = {
         from: `"${process.env.FROM_NAME || 'SpendWise'}" <${process.env.FROM_EMAIL}>`,
         to: email,
         subject: 'Verify Your SpendWise Account',
-        html: this.getVerificationEmailTemplate(username, verificationLink),
-        text: this.getVerificationEmailTextTemplate(username, verificationLink)
+        html: this.getVerificationEmailTemplate(username, shortVerificationLink, fullVerificationLink),
+        text: this.getVerificationEmailTextTemplate(username, shortVerificationLink, fullVerificationLink)
       };
       
       await this.transporter.sendMail(mailOptions);
-      logger.info('Verification email sent successfully');
+      logger.info('Verification email sent successfully', { 
+        shortLink: shortVerificationLink,
+        tokenLength: token.length 
+      });
       return true;
     } catch (error) {
       logger.error('Failed to send verification email:', {
@@ -451,7 +457,8 @@ This is an automated message, please do not reply to this email.
     `;
   }
 
-  getVerificationEmailTemplate(username, verificationLink) {
+  getVerificationEmailTemplate(username, shortVerificationLink, fullVerificationLink = null) {
+    const verificationLink = shortVerificationLink; // Use the short link as primary
     return `
       <!DOCTYPE html>
       <html>
@@ -559,7 +566,7 @@ This is an automated message, please do not reply to this email.
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            border: none;
+            border: 2px solid #1D4ED8;
             cursor: pointer;
             outline: none;
             -webkit-appearance: none;
@@ -570,6 +577,10 @@ This is an automated message, please do not reply to this email.
             z-index: 10;
             box-sizing: border-box;
             vertical-align: middle;
+            /* iPhone specific improvements */
+            -webkit-text-size-adjust: 100% !important;
+            -ms-text-size-adjust: 100% !important;
+            text-size-adjust: 100% !important;
           }
           .button:hover, 
           .button:focus, 
@@ -719,11 +730,36 @@ This is an automated message, please do not reply to this email.
             </p>
             
             <div class="button-container">
-              <a href="${verificationLink}" class="button" target="_blank" rel="noopener noreferrer" 
-                 style="color: white !important; text-decoration: none !important;"
-                 data-link-type="email-verification">
-                Verify Email Address
-              </a>
+              <table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" style="background-color: #1F7F4C; border-radius: 8px; border: 2px solid #1F7F4C;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" 
+                      href="${verificationLink}" style="height:56px;v-text-anchor:middle;width:280px;" 
+                      arcsize="15%" strokecolor="#1F7F4C" fillcolor="#1F7F4C">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:Helvetica, Arial, sans-serif;font-size:18px;font-weight:bold;">
+                        Verify Email Address
+                      </center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <a href="${verificationLink}" target="_blank" rel="noopener noreferrer" 
+                       style="color: #ffffff !important; text-decoration: none !important; 
+                              background-color: #1F7F4C; border: 2px solid #1F7F4C; 
+                              border-radius: 8px; display: inline-block; 
+                              padding: 16px 32px; font-size: 18px; font-weight: bold;
+                              font-family: Helvetica, Arial, sans-serif; text-align: center;
+                              min-width: 200px; line-height: 24px;
+                              -webkit-text-size-adjust: 100% !important; 
+                              -ms-text-size-adjust: 100% !important;
+                              mso-hide: all; box-sizing: border-box;
+                              -webkit-tap-highlight-color: rgba(31, 127, 76, 0.3);"
+                       data-link-type="email-verification">
+                      Verify Email Address
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </div>
             
             <!-- iPhone-specific fallback link -->
@@ -732,13 +768,16 @@ This is an automated message, please do not reply to this email.
                 <strong>📱 iPhone Users - Important!</strong>
               </p>
               <p style="font-size: 13px; color: #1976D2; margin: 8px 0 0 0;">
-                If the button doesn't work in the Mail app:
+                We've made this link shorter for better iPhone compatibility! If the button still doesn't work:
               </p>
               <ol style="font-size: 13px; color: #1976D2; margin: 8px 0; padding-left: 20px;">
-                <li>Long-press and copy the link below</li>
+                <li>Long-press and copy the short link below</li>
                 <li>Open Safari browser (not Mail)</li>
                 <li>Paste the link and tap Go</li>
               </ol>
+              <p style="font-size: 12px; color: #1976D2; margin: 5px 0 0 0;">
+                <strong>Link length:</strong> ${verificationLink.length} characters (much shorter!)
+              </p>
             </div>
             
             <p class="message">
@@ -780,7 +819,7 @@ This is an automated message, please do not reply to this email.
     `;
   }
 
-  getVerificationEmailTextTemplate(username, verificationLink) {
+  getVerificationEmailTextTemplate(username, shortVerificationLink, fullVerificationLink = null) {
     return `
 Welcome to SpendWise - Email Verification Required
 
@@ -788,9 +827,11 @@ Hi ${username},
 
 Thank you for registering with SpendWise! To complete your registration and start managing your finances, please verify your email address.
 
-Click this link to verify your email: ${verificationLink}
+Click this SHORT link to verify your email: ${shortVerificationLink}
 
-IMPORTANT:
+IMPORTANT - iPhone Users:
+- We've created a shorter link (${shortVerificationLink.length} characters) for better iPhone compatibility
+- If Gmail asks which browser to use, choose Safari
 - This verification link will expire in 24 hours
 - If you didn't create a SpendWise account, please ignore this email
 
