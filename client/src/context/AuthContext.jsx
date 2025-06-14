@@ -192,12 +192,13 @@ export const AuthProvider = ({ children }) => {
       // Don't show toast for EMAIL_NOT_VERIFIED - let component handle modal
       const errorCode = error.response?.data?.error?.code;
       if (errorCode === 'EMAIL_NOT_VERIFIED') {
+        // Don't throw error here - let the login helper function handle it
         console.log('EMAIL_NOT_VERIFIED caught in mutation, will be handled by component');
-        // Don't show toast but let error propagate to Login component
-      } else {
-        const message = error.response?.data?.message || 'Login failed';
-        toastService.error(message);
+        return;
       }
+      
+      const message = error.response?.data?.message || 'Login failed';
+      toastService.error(message);
     }
   });
   

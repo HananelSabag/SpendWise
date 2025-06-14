@@ -88,6 +88,7 @@ router.get('/verify-email-debug/:token', (req, res) => {
  */
 router.post('/resend-verification', 
   emailVerificationLimiter,
+  validate.resendVerification,
   userController.resendVerificationEmail
 );
 
