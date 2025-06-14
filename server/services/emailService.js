@@ -727,22 +727,27 @@ This is an automated message, please do not reply to this email.
             </div>
             
             <!-- iPhone-specific fallback link -->
-            <div class="mobile-fallback" style="margin-top: 15px; display: block;">
-              <p class="message" style="font-size: 14px; color: #666;">
-                <strong>📱 If you're using an iPhone and the button doesn't work:</strong>
+            <div class="mobile-fallback" style="margin-top: 15px; display: block; background: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3;">
+              <p class="message" style="font-size: 14px; color: #1565C0; margin: 0;">
+                <strong>📱 iPhone Users - Important!</strong>
               </p>
-              <p style="font-size: 14px; color: #666; margin-top: 5px;">
-                1. Copy the link below<br>
-                2. Open Safari browser<br>
-                3. Paste the link and press Enter
+              <p style="font-size: 13px; color: #1976D2; margin: 8px 0 0 0;">
+                If the button doesn't work in the Mail app:
               </p>
+              <ol style="font-size: 13px; color: #1976D2; margin: 8px 0; padding-left: 20px;">
+                <li>Long-press and copy the link below</li>
+                <li>Open Safari browser (not Mail)</li>
+                <li>Paste the link and tap Go</li>
+              </ol>
             </div>
             
             <p class="message">
               <strong>If the button doesn't work, copy and paste this link into your browser:</strong>
             </p>
             
-            <div class="url">${verificationLink}</div>
+            <div class="url" style="user-select: all; -webkit-user-select: all; -webkit-touch-callout: default;">
+              <a href="${verificationLink}" style="color: #3B82F6; text-decoration: underline; word-break: break-all;">${verificationLink}</a>
+            </div>
             
             <div class="warning">
               <strong><span class="warning-icon">⚠️</span>Important:</strong> 

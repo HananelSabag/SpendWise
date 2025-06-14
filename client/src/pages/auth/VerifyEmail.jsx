@@ -27,8 +27,14 @@ const VerifyEmail = () => {
   const [status, setStatus] = useState('verifying');
   const [errorMessage, setErrorMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [isIPhone, setIsIPhone] = useState(false);
 
   useEffect(() => {
+    // Detect iPhone
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isiPhone = /iPhone|iPad|iPod/i.test(userAgent);
+    setIsIPhone(isiPhone);
+    
     if (token) {
       handleVerifyEmail();
     }
@@ -103,14 +109,15 @@ const VerifyEmail = () => {
           color: 'blue'
         };
         
-      case 'error':
-      default:
-        return {
-          icon: <XCircle className="w-16 h-16 text-red-500" />,
-          title: t('auth.verificationFailed'),
-          description: errorMessage || t('auth.verificationFailedMessage'),
-          color: 'red'
-        };
+              case 'error':
+        default:
+          return {
+            icon: <XCircle className="w-16 h-16 text-red-500" />,
+            title: t('auth.verificationFailed'),
+            description: errorMessage || t('auth.verificationFailedMessage'),
+            color: 'red',
+            showTroubleshooting: isIPhone
+          };
     }
   };
 
@@ -165,6 +172,29 @@ const VerifyEmail = () => {
           >
             {content.description}
           </motion.p>
+
+          {/* iPhone-specific troubleshooting */}
+          {content.showTroubleshooting && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 text-left"
+            >
+              <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center">
+                📱 iPhone Troubleshooting
+              </h4>
+              <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                <p>This verification link might not work properly in the iPhone Mail app. Try:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Copy the verification link from your email</li>
+                  <li>Open Safari browser (not Mail app)</li>
+                  <li>Paste the link and tap Go</li>
+                  <li>Or try opening the email on a computer</li>
+                </ol>
+              </div>
+            </motion.div>
+          )}
 
           {/* Success Message */}
           {status === 'success' && (
