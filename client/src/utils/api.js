@@ -73,9 +73,12 @@ api.interceptors.request.use(
     config.headers['X-Request-ID'] = requestId;
     config.metadata = { requestId, startTime: Date.now() };
     
-    // Add auth token
+    // Add auth token (skip for auth endpoints)
+    const authEndpoints = ['/users/login', '/users/register', '/users/verify-email', '/users/resend-verification', '/users/forgot-password', '/users/reset-password'];
+    const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
+    
     const token = localStorage.getItem('accessToken');
-    if (token) {
+    if (token && !isAuthEndpoint) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     

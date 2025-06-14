@@ -188,6 +188,14 @@ export const AuthProvider = ({ children }) => {
     onError: (error) => {
       console.error('Login error:', error);
       clearTokens();
+      
+      // Don't show toast for EMAIL_NOT_VERIFIED - let component handle modal
+      const errorCode = error.response?.data?.error?.code;
+      if (errorCode === 'EMAIL_NOT_VERIFIED') {
+        // Re-throw the error so the component can handle it
+        throw error;
+      }
+      
       const message = error.response?.data?.message || 'Login failed';
       toastService.error(message);
     }
@@ -351,7 +359,12 @@ export const AuthProvider = ({ children }) => {
     mutationFn: (email) => authAPI.resendVerificationEmail(email),
     mutationKey: mutationKeys.resendVerification,
     onSuccess: () => {
-      toastService.verificationSent();
+      // Don't show toast here - let modal handle success feedback
+      console.log('Verification email sent successfully');
+    },
+    onError: (error) => {
+      // Let modal handle error display
+      console.error('Failed to send verification email:', error);
     }
   });
   
