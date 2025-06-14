@@ -125,7 +125,11 @@ const showColdStartNotification = () => {
     serverState.isWakingUp = true;
     toast.loading('Server is starting up, please wait...', {
       id: 'cold-start',
-      duration: 30000
+      duration: 60000, // Keep it longer but will be dismissed on success
+      style: {
+        background: '#3B82F6',
+        color: 'white',
+      }
     });
   }
 };
@@ -134,7 +138,8 @@ const hideColdStartNotification = () => {
   if (serverState.isWakingUp) {
     serverState.isWakingUp = false;
     toast.dismiss('cold-start');
-    toast.success('Server is ready!', { duration: 2000 });
+    // Show success message briefly, then auto-dismiss
+    toast.success('Server is ready!', { duration: 1500 });
   }
 };
 
@@ -148,8 +153,8 @@ api.interceptors.response.use(
       pendingRequests.delete(response.config.metadata.requestKey);
     }
     
-    // ✅ NEW: Cold start detection and user feedback
-    if (detectColdStart(duration) && !config.DEBUG_MODE) {
+    // ✅ IMPROVED: Hide cold start notification on any successful response if it was showing
+    if (serverState.isWakingUp) {
       hideColdStartNotification();
     }
     
@@ -298,10 +303,9 @@ export const authAPI = {
     return api.put('/users/profile', data);
   },
   updatePreferences: (preferences) => {
-    // ✅ FIX: Send in correct format expected by server  
-    const payload = { preferences };
-    console.log('API updatePreferences sending:', payload);
-    return api.put('/users/preferences', payload);
+    // ✅ FIX: Send preferences directly as body (not wrapped)
+    console.log('API updatePreferences sending:', preferences);
+    return api.put('/users/preferences', preferences);
   },
   
   // Profile picture with progress tracking

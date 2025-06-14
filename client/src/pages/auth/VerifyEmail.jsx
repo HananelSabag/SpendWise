@@ -11,6 +11,8 @@ import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import GuestPreferences from '../../components/common/GuestPreferences';
+import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
@@ -115,14 +117,20 @@ const VerifyEmail = () => {
   const content = getStatusContent();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative">
+      {/* Guest Preferences & Accessibility - Top Right */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        <AccessibilityMenu />
+        <GuestPreferences />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full"
+        className="max-w-sm w-full"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
           {/* Status Icon */}
           <motion.div
             initial={{ scale: 0 }}
@@ -133,7 +141,7 @@ const VerifyEmail = () => {
               stiffness: 200, 
               damping: 10 
             }}
-            className="mb-6 flex justify-center"
+            className="mb-4 flex justify-center"
           >
             {content.icon}
           </motion.div>
@@ -143,7 +151,7 @@ const VerifyEmail = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-2xl font-bold text-gray-900 dark:text-white mb-4"
+            className="text-xl font-bold text-gray-900 dark:text-white mb-3"
           >
             {content.title}
           </motion.h1>
@@ -153,7 +161,7 @@ const VerifyEmail = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="text-gray-600 dark:text-gray-400 mb-8"
+            className="text-gray-600 dark:text-gray-400 mb-6"
           >
             {content.description}
           </motion.p>

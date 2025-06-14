@@ -2,6 +2,7 @@
 import React from 'react';
 import { AlertCircle, CheckCircle, Info, XCircle, X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Alert = ({
   type = 'info',
@@ -12,6 +13,8 @@ const Alert = ({
   className = '',
   ...props
 }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
   const icons = {
     info: Info,
     success: CheckCircle,
@@ -33,12 +36,17 @@ const Alert = ({
       className={cn(
         'rounded-xl border p-4 flex',
         styles[type],
+        isRTL && 'flex-row-reverse',
         className
       )}
+      dir={isRTL ? 'rtl' : 'ltr'}
       {...props}
     >
       <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-      <div className="ml-3 flex-1">
+      <div className={cn(
+        "flex-1",
+        isRTL ? "mr-3 text-right" : "ml-3 text-left"
+      )}>
         {title && (
           <h4 className="font-medium mb-1">{title}</h4>
         )}
@@ -47,7 +55,10 @@ const Alert = ({
       {dismissible && (
         <button
           onClick={onDismiss}
-          className="ml-3 -mr-1 -mt-1 p-1 rounded-lg hover:bg-black/10 transition-colors"
+          className={cn(
+            "p-1 rounded-lg hover:bg-black/10 transition-colors -mt-1",
+            isRTL ? "mr-3 -ml-1" : "ml-3 -mr-1"
+          )}
         >
           <X className="w-4 h-4" />
         </button>

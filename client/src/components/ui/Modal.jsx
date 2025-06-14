@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Modal = ({ 
   isOpen, 
@@ -15,6 +16,8 @@ const Modal = ({
   hideHeader,
   ...props 
 }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
   // נהל את לחיצת ESC כדי לסגור את המודל
   useEffect(() => {
     const handleEscape = (e) => {
@@ -68,12 +71,19 @@ const Modal = ({
               sizeClasses[size],
               className
             )}
+            dir={isRTL ? 'rtl' : 'ltr'}
             {...props}
           >
             {/* Header */}
             {title && !hideHeader && (
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex-1">
+              <div className={cn(
+                "flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700",
+                isRTL && "flex-row-reverse"
+              )}>
+                <div className={cn(
+                  "flex-1",
+                  isRTL && "text-right"
+                )}>
                   {typeof title === 'string' ? (
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                       {title}
@@ -84,7 +94,10 @@ const Modal = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className={cn(
+                    "p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700",
+                    isRTL ? "ml-3" : "mr-3"
+                  )}
                 >
                   <X className="w-5 h-5" />
                 </button>

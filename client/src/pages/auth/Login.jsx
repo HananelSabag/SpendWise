@@ -30,6 +30,8 @@ import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Footer from '../../components/layout/Footer';
+import GuestPreferences from '../../components/common/GuestPreferences';
+import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
@@ -257,19 +259,23 @@ const Login = () => {
   return (
     <>
       <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
-
+        {/* Guest Preferences & Accessibility - Top Right */}
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+          <AccessibilityMenu />
+          <GuestPreferences />
+        </div>
         
         {/* Login Form Side */}
         <motion.div 
           className={cn(
-            'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
+            'w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-6 bg-white dark:bg-gray-900',
             isRTL ? 'lg:order-2' : 'lg:order-1'
           )}
           initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="w-full max-w-md space-y-8">
+          <div className="w-full max-w-sm space-y-6">
             {/* Logo */}
             <motion.div 
               className="text-center"
@@ -277,22 +283,22 @@ const Login = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Link to="/" className="inline-flex items-center justify-center mb-8">
+              <Link to="/" className="inline-flex items-center justify-center mb-4">
                 <motion.div 
-                  className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg"
+                  className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg"
                   whileHover={{ scale: 1.05, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <span className="text-3xl text-white font-bold">S</span>
+                  <span className="text-2xl text-white font-bold">S</span>
                 </motion.div>
               </Link>
             </motion.div>
 
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="text-center mb-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                 {t('auth.welcomeBack')}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {t('auth.loginSubtitle')}
               </p>
             </div>
@@ -318,9 +324,9 @@ const Login = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
             >
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   label={t('auth.email')}
                   type="email"

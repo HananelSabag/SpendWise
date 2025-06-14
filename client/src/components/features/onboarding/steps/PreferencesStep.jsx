@@ -12,7 +12,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Palette, DollarSign, Target, 
-  Check, ChevronDown, Moon, Sun 
+  Check, ChevronDown, Moon, Sun, Heart, Shield, ChevronRight, ChevronLeft, Monitor
 } from 'lucide-react';
 
 import { useLanguage } from '../../../../context/LanguageContext';
@@ -27,17 +27,15 @@ import { Button } from '../../../ui';
  */
 const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
   const { t, language, changeLanguagePermanent } = useLanguage();
-  const { user, updatePreferences } = useAuth();
-  const { currency, setCurrency } = useCurrency();
-  const { theme, toggleTheme } = useTheme();
+  const { user, updateProfile, updatePreferences } = useAuth();
+  const { currency } = useCurrency();
+  const { theme, setTheme } = useTheme();
   const isRTL = language === 'he';
 
   const [preferences, setPreferences] = useState({
     language: language || 'en',
     currency: currency || 'USD',
     theme: theme || 'light',
-    budgetAlerts: true,
-    monthlyBudget: '',
     ...stepData.preferences
   });
 
@@ -58,6 +56,13 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
     { code: 'JPY', name: 'Japanese Yen', symbol: '¥' }
   ];
 
+  // Theme options
+  const themes = [
+    { code: 'light', name: 'בהיר', icon: Sun },
+    { code: 'dark', name: 'כהה', icon: Moon },
+    { code: 'system', name: 'מערכת', icon: Monitor }
+  ];
+
   // Handle preference changes
   const handleChange = (key, value) => {
     const newPreferences = { ...preferences, [key]: value };
@@ -69,209 +74,245 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
   const handleContinue = async () => {
     setIsLoading(true);
     try {
-      // Apply preferences immediately
+      // ✅ OPTIMIZATION: Only apply changes if they're different from current values
+      let hasChanges = false;
+      const profileUpdates = {};
+
+      // Check and apply language change
       if (preferences.language !== language) {
+        console.log('🌐 [ONBOARDING] Language change detected:', language, '→', preferences.language);
         changeLanguagePermanent(preferences.language);
+        profileUpdates.language_preference = preferences.language;
+        hasChanges = true;
       }
       
-      if (preferences.currency !== currency) {
-        setCurrency(preferences.currency);
-      }
-      
+      // Check and apply theme change
       if (preferences.theme !== theme) {
-        toggleTheme();
+        console.log('🎨 [ONBOARDING] Theme change detected:', theme, '→', preferences.theme);
+        setTheme(preferences.theme);
+        profileUpdates.theme_preference = preferences.theme;
+        hasChanges = true;
       }
 
-      // Save preferences to user profile
-      await updatePreferences({
-        language: preferences.language,
-        currency: preferences.currency,
-        theme: preferences.theme,
-        budgetAlerts: preferences.budgetAlerts,
-        monthlyBudget: preferences.monthlyBudget ? parseFloat(preferences.monthlyBudget) : null
-      });
+      // Check and apply currency change
+      if (preferences.currency !== currency) {
+        console.log('💰 [ONBOARDING] Currency change detected:', currency, '→', preferences.currency);
+        profileUpdates.currency_preference = preferences.currency;
+        hasChanges = true;
+      }
 
+      // ✅ OPTIMIZATION: Only save to database if there are actual changes
+      if (hasChanges) {
+        console.log('💾 [ONBOARDING] Saving profile changes:', profileUpdates);
+        await updateProfile(profileUpdates);
+      } else {
+        console.log('✅ [ONBOARDING] No preference changes detected, skipping API call');
+      }
+
+      // ✅ REMOVED: Monthly budget feature not implemented yet
+      // No JSONB preferences to save in onboarding for now
+      console.log('✅ [ONBOARDING] No additional preferences to save, basic settings only');
+
+      // ✅ IMPROVED: Better success message
+      if (hasChanges) {
+        console.log('🎉 [ONBOARDING] Preferences saved successfully');
+      } else {
+        console.log('✅ [ONBOARDING] No changes to save, proceeding to next step');
+      }
+      
+      console.log('🚀 [ONBOARDING] Calling onNext() to proceed to next step');
       onNext();
+      console.log('✅ [ONBOARDING] onNext() called successfully');
     } catch (error) {
-      console.error('Failed to save preferences:', error);
+      console.error('❌ [ONBOARDING] Failed to save preferences:', error);
+      
+      // ✅ IMPROVED: Better error handling - show specific error message
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save preferences';
+      console.error('Full error details:', error);
+      
+      // Still allow user to continue but show warning
+      if (window.confirm(`שגיאה בשמירת ההעדפות: ${errorMessage}\n\nהאם לאפתח להמשיך בכל זאת?`)) {
+        onNext();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center min-h-screen p-6",
-      "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800"
-    )}>
+    <div className="max-w-5xl mx-auto h-full flex flex-col justify-center">
+      {/* ✅ COMPACT: Ultra-Compact Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
+        transition={{ duration: 0.5 }}
+        className="text-center mb-4"
       >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 text-white rounded-full mb-4">
-            <Palette className="w-8 h-8" />
-          </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('onboarding.preferences.title')}
-          </h2>
-          
-          <p className="text-gray-600 dark:text-gray-300">
-            {t('onboarding.preferences.subtitle')}
-          </p>
-        </div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+          {t('onboarding.preferences.title')}
+        </h2>
+        <p className="text-xs text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+          {t('onboarding.preferences.description')}
+        </p>
+      </motion.div>
 
-        {/* Preferences Form */}
-        <div className="space-y-6">
-          {/* Language Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Globe className="inline w-4 h-4 mr-2" />
-              {t('profile.language')}
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {languages.map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleChange('language', lang.code)}
-                  className={cn(
-                    "flex items-center p-3 rounded-lg border-2 transition-all",
-                    preferences.language === lang.code
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
-                  )}
-                >
-                  <span className="text-2xl mr-3">{lang.flag}</span>
-                  <span className="font-medium">{lang.name}</span>
-                  {preferences.language === lang.code && (
-                    <Check className="w-5 h-5 text-blue-500 ml-auto" />
-                  )}
-                </button>
-              ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
+        {/* Language & Currency - ULTRA-COMPACT */}
+        <motion.div
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="card space-y-3 p-4 rounded-xl"
+        >
+          <h3 className={cn(
+            "text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2",
+            isRTL && "flex-row-reverse"
+          )}>
+            <Globe className="w-4 h-4 text-blue-600" />
+            {t('onboarding.preferences.localization')}
+          </h3>
+
+          <div className="space-y-3">
+            {/* Language Selection - ULTRA-COMPACT */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                {t('onboarding.preferences.language')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {languages.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleChange('language', lang.code)}
+                    className={cn(
+                      "p-2 rounded-lg border transition-all duration-200 text-xs",
+                      preferences.language === lang.code
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "flex items-center gap-2 justify-center",
+                      isRTL && "flex-row-reverse"
+                    )}>
+                      <span className="text-sm">{lang.flag}</span>
+                      <span className="font-medium text-xs">{lang.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Currency Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <DollarSign className="inline w-4 h-4 mr-2" />
-              {t('profile.currency')}
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {currencies.slice(0, 4).map(curr => (
-                <button
-                  key={curr.code}
-                  onClick={() => handleChange('currency', curr.code)}
-                  className={cn(
-                    "flex items-center p-3 rounded-lg border-2 transition-all",
-                    preferences.currency === curr.code
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
-                  )}
-                >
-                  <span className="text-lg font-bold mr-2">{curr.symbol}</span>
-                  <span className="font-medium">{curr.code}</span>
-                  {preferences.currency === curr.code && (
-                    <Check className="w-5 h-5 text-blue-500 ml-auto" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Theme Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Palette className="inline w-4 h-4 mr-2" />
-              {t('profile.theme')}
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleChange('theme', 'light')}
+            {/* Currency Selection - ULTRA-COMPACT */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                {t('onboarding.preferences.currency')}
+              </label>
+              <select
+                value={preferences.currency}
+                onChange={(e) => handleChange('currency', e.target.value)}
                 className={cn(
-                  "flex items-center p-3 rounded-lg border-2 transition-all",
-                  preferences.theme === 'light'
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
+                  "input w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs bg-white dark:bg-gray-800",
+                  isRTL && "text-right"
                 )}
               >
-                <Sun className="w-5 h-5 mr-3 text-yellow-500" />
-                <span className="font-medium">{t('theme.light')}</span>
-                {preferences.theme === 'light' && (
-                  <Check className="w-5 h-5 text-blue-500 ml-auto" />
-                )}
-              </button>
-              
-              <button
-                onClick={() => handleChange('theme', 'dark')}
-                className={cn(
-                  "flex items-center p-3 rounded-lg border-2 transition-all",
-                  preferences.theme === 'dark'
-                    ? "border-blue-500 bg-blue-900/20"
-                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300"
-                )}
-              >
-                <Moon className="w-5 h-5 mr-3 text-blue-500" />
-                <span className="font-medium">{t('theme.dark')}</span>
-                {preferences.theme === 'dark' && (
-                  <Check className="w-5 h-5 text-blue-500 ml-auto" />
-                )}
-              </button>
+                {currencies.map((currency) => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.symbol} {currency.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+        </motion.div>
 
-          {/* Monthly Budget (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Target className="inline w-4 h-4 mr-2" />
-              {t('budget.monthlyBudget')} <span className="text-gray-400">({t('common.optional')})</span>
-            </label>
-            <input
-              type="number"
-              placeholder={t('budget.enterAmount')}
-              value={preferences.monthlyBudget}
-              onChange={(e) => handleChange('monthlyBudget', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
+        {/* Theme & Budget - ULTRA-COMPACT */}
+        <motion.div
+          initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="card space-y-3 p-4 rounded-xl"
+        >
+          <h3 className={cn(
+            "text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2",
+            isRTL && "flex-row-reverse"
+          )}>
+            <Palette className="w-4 h-4 text-purple-600" />
+            {t('onboarding.preferences.appearance')}
+          </h3>
+
+          <div className="space-y-3">
+            {/* Theme Selection - ULTRA-COMPACT */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                {t('onboarding.preferences.theme')}
+              </label>
+              <div className="grid grid-cols-3 gap-1">
+                {themes.map((themeOption) => (
+                  <button
+                    key={themeOption.code}
+                    onClick={() => handleChange('theme', themeOption.code)}
+                    className={cn(
+                      "p-2 rounded-lg border transition-all duration-200 text-center",
+                      preferences.theme === themeOption.code
+                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    )}
+                  >
+                    <themeOption.icon className="w-3 h-3 mx-auto mb-0.5" />
+                    <span className="text-xs font-medium">{themeOption.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Future Features Placeholder - Budget will be added later */}
+            <div className="text-center py-4">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {isRTL ? "תכונות נוספות יתווספו בקרוב" : "More features coming soon"}
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* Navigation */}
-        <div className={cn(
-          "flex justify-between items-center mt-8 pt-6 border-t",
-          isRTL ? "flex-row-reverse" : ""
-        )}>
-          <Button
-            variant="ghost"
-            onClick={onPrevious}
-            className="flex items-center"
-          >
-            {isRTL ? <ChevronDown className="w-4 h-4 mr-2 rotate-90" /> : <ChevronDown className="w-4 h-4 ml-2 -rotate-90" />}
-            {t('onboarding.common.previous')}
-          </Button>
-
-          <Button
-            onClick={handleContinue}
-            disabled={isLoading}
-            className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-8"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                {t('common.saving')}
-              </>
-            ) : (
-              <>
-                {t('onboarding.common.next')}
-                {isRTL ? <ChevronDown className="w-4 h-4 mr-2 -rotate-90" /> : <ChevronDown className="w-4 h-4 ml-2 rotate-90" />}
-              </>
-            )}
-          </Button>
-        </div>
+      {/* ✅ COMPACT: Continue Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.5 }}
+        className="text-center mt-4"
+      >
+        <Button
+          onClick={handleContinue}
+          disabled={isLoading}
+          className={cn(
+            "px-6 py-2 text-sm font-semibold",
+            "bg-gradient-to-r from-purple-600 to-blue-600",
+            "hover:from-purple-700 hover:to-blue-700",
+            "transform hover:scale-105 transition-all duration-200",
+            "shadow-md hover:shadow-lg",
+            isRTL && "flex-row-reverse"
+          )}
+        >
+          {isLoading ? (
+            <span className={cn(
+              "flex items-center gap-2",
+              isRTL && "flex-row-reverse"
+            )}>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>{t('onboarding.preferences.saving')}</span>
+            </span>
+          ) : (
+            <span className={cn(
+              "flex items-center gap-2",
+              isRTL && "flex-row-reverse"
+            )}>
+              <Heart className="w-4 h-4" />
+              <span>{t('onboarding.common.next')}</span>
+              {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </span>
+          )}
+        </Button>
       </motion.div>
     </div>
   );

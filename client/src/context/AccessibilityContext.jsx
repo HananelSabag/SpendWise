@@ -15,29 +15,70 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
   // ✅ FIX: Don't use useAuth directly to avoid circular dependency
   // We'll sync with auth state via events instead
   
-  // Clear any existing dark mode setting on initial load
+  // ✅ NEW: Session-based reset - clear settings on new browser session
   useEffect(() => {
-    // Force light mode on initial load if initialDarkMode is false
+    const isNewSession = !sessionStorage.getItem('a11y_session_started');
+    
+    if (isNewSession) {
+      console.log('🎨 [ACCESSIBILITY] New browser session detected - resetting accessibility settings to defaults');
+      
+      // Clear all accessibility localStorage on new session
+      localStorage.removeItem('a11y_fontSize');
+      localStorage.removeItem('a11y_highContrast');
+      localStorage.removeItem('a11y_darkMode');
+      localStorage.removeItem('a11y_menuCollapsed');
+      
+      // Mark this session as started
+      sessionStorage.setItem('a11y_session_started', 'true');
+      
+      // Reset document styles immediately
+      document.documentElement.style.fontSize = '1rem';
+      document.documentElement.classList.remove('high-contrast');
+    }
+    
+    // Only clear localStorage if needed, don't touch DOM classes
     if (initialDarkMode === false) {
       localStorage.removeItem('a11y_darkMode');
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark-mode');
+      console.log('🎨 [ACCESSIBILITY] Cleared dark mode setting on init');
     }
   }, [initialDarkMode]);
 
-  // States with localStorage persistence
+  // ✅ NEW: Check if this is a session that should use defaults
+  const shouldUseDefaults = () => {
+    // If this is a new session, use defaults
+    const isNewSession = !sessionStorage.getItem('a11y_session_started');
+    if (isNewSession) {
+      return true;
+    }
+    
+    // If user is not authenticated, use defaults
+    const hasAuth = localStorage.getItem('accessToken');
+    if (!hasAuth) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // States with conditional localStorage persistence
   const [fontSize, setFontSize] = useState(() => {
+    if (shouldUseDefaults()) {
+      return 1; // Default font size
+    }
     const saved = localStorage.getItem('a11y_fontSize');
     return saved ? parseFloat(saved) : 1;
   });
   
   const [highContrast, setHighContrast] = useState(() => {
+    if (shouldUseDefaults()) {
+      return false; // Default high contrast off
+    }
     return localStorage.getItem('a11y_highContrast') === 'true';
   });
   
   const [darkMode, setDarkMode] = useState(() => {
     // IMPORTANT: Override localStorage if initialDarkMode is explicitly false
-    if (initialDarkMode === false) {
+    if (initialDarkMode === false || shouldUseDefaults()) {
       return false;
     }
     
@@ -57,6 +98,9 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
   
   // Fix: Define isCollapsed state properly
   const [menuCollapsed, setMenuCollapsed] = useState(() => {
+    if (shouldUseDefaults()) {
+      return false; // Default menu not collapsed
+    }
     return localStorage.getItem('a11y_menuCollapsed') === 'true';
   });
 
@@ -76,16 +120,12 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
     localStorage.setItem('a11y_highContrast', highContrast.toString());
   }, [highContrast]);
 
-  // Effect to apply dark mode
+  // ✅ REMOVED: Don't apply dark mode here - let ThemeContext handle it
+  // The AccessibilityProvider should not interfere with theme management
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark-mode');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark-mode');
-    }
+    // Only save to localStorage, don't apply classes
     localStorage.setItem('a11y_darkMode', darkMode.toString());
+    console.log('🎨 [ACCESSIBILITY] Dark mode preference saved:', darkMode, '(but not applied - ThemeContext handles this)');
   }, [darkMode]);
 
   // Effect for menu collapsed state
@@ -121,8 +161,28 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
     localStorage.removeItem('a11y_menuCollapsed');
   }, []);
 
-  // ✅ FIX: Sync with user preferences via event system
+  // ✅ FIX: Reset accessibility settings on logout
   useEffect(() => {
+    const handleLogout = () => {
+      console.log('🎨 [ACCESSIBILITY] User logged out - resetting accessibility settings to defaults');
+      
+      // Reset all accessibility settings to defaults (but don't clear localStorage)
+      setFontSize(1);
+      setHighContrast(false);
+      setDarkMode(false); // Always reset to light mode on logout
+      setMenuCollapsed(false);
+      
+      // ✅ IMPORTANT: Clear accessibility localStorage on logout
+      localStorage.removeItem('a11y_fontSize');
+      localStorage.removeItem('a11y_highContrast');
+      localStorage.removeItem('a11y_darkMode');
+      localStorage.removeItem('a11y_menuCollapsed');
+      
+      // Reset document styles immediately
+      document.documentElement.style.fontSize = '1rem';
+      document.documentElement.classList.remove('high-contrast');
+    };
+
     const handleUserPreferencesSync = (event) => {
       const { user } = event.detail;
       if (user?.preferences?.theme_preference) {
@@ -136,8 +196,14 @@ export const AccessibilityProvider = ({ children, initialDarkMode = false }) => 
       }
     };
 
+    // ✅ NEW: Listen for logout events
+    window.addEventListener('auth-logout', handleLogout);
     window.addEventListener('user-preferences-loaded', handleUserPreferencesSync);
-    return () => window.removeEventListener('user-preferences-loaded', handleUserPreferencesSync);
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleLogout);
+      window.removeEventListener('user-preferences-loaded', handleUserPreferencesSync);
+    };
   }, [darkMode]);
 
   // Add system theme listener

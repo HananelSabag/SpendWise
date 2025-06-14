@@ -1,6 +1,7 @@
 // components/ui/Card.jsx
 import React from 'react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Card = ({
   children,
@@ -19,6 +20,8 @@ const Card = ({
   onClick,
   ...props
 }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
   const variants = {
     default: 'bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700',
     outlined: 'bg-transparent border-2 border-gray-200 dark:border-gray-700',
@@ -49,8 +52,14 @@ const Card = ({
           padding !== 'none' && paddings[padding],
           headerClassName
         )}>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+          <div className={cn(
+            "flex items-start justify-between",
+            isRTL && "flex-row-reverse"
+          )}>
+            <div className={cn(
+              "flex-1",
+              isRTL && "text-right"
+            )}>
               {title && (
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {title}
@@ -62,7 +71,11 @@ const Card = ({
                 </p>
               )}
             </div>
-            {actions && <div className="ml-4">{actions}</div>}
+            {actions && (
+              <div className={isRTL ? "mr-4" : "ml-4"}>
+                {actions}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -91,6 +104,7 @@ const Card = ({
       <div
         onClick={onClick}
         className={cardStyles}
+        dir={isRTL ? 'rtl' : 'ltr'}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === 'Enter' && onClick()}
@@ -102,7 +116,11 @@ const Card = ({
   }
 
   return (
-    <div className={cardStyles} {...props}>
+    <div 
+      className={cardStyles} 
+      dir={isRTL ? 'rtl' : 'ltr'}
+      {...props}
+    >
       {content}
     </div>
   );

@@ -20,13 +20,18 @@ export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     // Check localStorage first
     const savedTheme = localStorage.getItem('preferredTheme');
+    console.log('🎨 [THEME] Initializing theme from localStorage:', savedTheme);
+    
     if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+      console.log('🎨 [THEME] Using saved theme:', savedTheme);
       return savedTheme;
     }
 
     // Check system preference as fallback
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return systemPrefersDark ? 'dark' : 'light';
+    const fallbackTheme = systemPrefersDark ? 'dark' : 'light';
+    console.log('🎨 [THEME] Using system fallback:', fallbackTheme);
+    return fallbackTheme;
   });
 
   // ✅ ADD: Track session-only theme changes
@@ -38,28 +43,32 @@ export const ThemeProvider = ({ children }) => {
   // ✅ FIX: Permanent theme change (for profile settings)
   const changeThemePermanent = (newTheme) => {
     if (!['light', 'dark', 'system'].includes(newTheme)) {
-      console.warn('Invalid theme:', newTheme);
+      console.warn('🎨 [THEME] Invalid theme:', newTheme);
       return;
     }
 
-    console.log(`🎨 [THEME] Permanent change: ${theme} → ${newTheme}`);
+    console.log(`🎨 [THEME] Permanent change: ${theme} → ${newTheme} (session: ${sessionTheme})`);
 
     setTheme(newTheme);
     setSessionTheme(null); // Clear session override
     localStorage.setItem('preferredTheme', newTheme);
+    
+    console.log(`🎨 [THEME] Permanent change completed. New effective theme: ${newTheme}`);
   };
 
   // ✅ ADD: Session-only theme change (for header toggle)
   const changeThemeSession = (newTheme) => {
     if (!['light', 'dark', 'system'].includes(newTheme)) {
-      console.warn('Invalid theme:', newTheme);
+      console.warn('🎨 [THEME] Invalid session theme:', newTheme);
       return;
     }
 
-    console.log(`🎨 [THEME] Session change: ${effectiveTheme} → ${newTheme}`);
+    console.log(`🎨 [THEME] Session change: ${effectiveTheme} → ${newTheme} (saved: ${theme})`);
 
     setSessionTheme(newTheme);
     // Note: Don't save to localStorage for session changes
+    
+    console.log(`🎨 [THEME] Session change completed. New effective theme: ${newTheme}`);
   };
 
   // ✅ FIX: Enhanced toggleTheme for session-only changes
@@ -107,29 +116,26 @@ export const ThemeProvider = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [theme]);
 
-  // ✅ FIX: Apply theme to document
+  // ✅ FIX: Apply theme to document - Tailwind expects only 'dark' class
   useEffect(() => {
     const root = document.documentElement;
     
-    // Remove existing theme classes
-    root.classList.remove('light', 'dark');
-    
-    // Apply effective theme
+    // ✅ FIXED: Tailwind only needs 'dark' class, not 'light'
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
       root.style.colorScheme = 'dark';
     } else {
-      root.classList.add('light');
+      root.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
 
     // Update meta theme-color
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', effectiveTheme === 'dark' ? '#1f2937' : '#ffffff');
+      metaThemeColor.setAttribute('content', effectiveTheme === 'dark' ? '#0a0a0a' : '#ffffff');
     }
 
-    console.log(`🎨 [THEME] Applied to DOM: ${effectiveTheme}`);
+    console.log(`🎨 [THEME] Applied to DOM: ${effectiveTheme} (dark class: ${root.classList.contains('dark')})`);
   }, [effectiveTheme]);
 
   // ✅ FIXED: Listen for session reset events (logout)

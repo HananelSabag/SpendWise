@@ -233,11 +233,24 @@ const Profile = () => {
 
   // Enhanced theme change
   const handleThemeChange = async (newTheme) => {
+    // ✅ OPTIMIZATION: Only save if theme actually changed
+    if (newTheme === theme) {
+      console.log('🎨 [THEME] No change needed, theme already set to:', newTheme);
+      return;
+    }
+
     try {
+      console.log('🎨 [THEME] Profile permanent change:', theme, '→', newTheme);
+      
+      // ✅ FIX: Use setTheme for permanent changes (this calls changeThemePermanent)
       setTheme(newTheme);
+      
+      // Save to database
       await updateProfile({
         theme_preference: newTheme
       });
+      
+      console.log('🎨 [THEME] Permanent change saved to database');
       toastService.success(`Theme saved to ${newTheme} mode! 🎨`);
     } catch (error) {
       console.error('Failed to save theme preference:', error);
@@ -247,8 +260,15 @@ const Profile = () => {
 
   // Enhanced currency change handler
   const handleCurrencyChange = async (newCurrency) => {
+    // ✅ OPTIMIZATION: Only save if currency actually changed
+    if (newCurrency === currency) {
+      console.log('💰 [CURRENCY] No change needed, currency already set to:', newCurrency);
+      return;
+    }
+
     try {
       await changeCurrency(newCurrency, { suppressToast: true });
+      console.log('💰 [CURRENCY] Permanent change saved:', currency, '→', newCurrency);
       toastService.success(`Currency saved to ${newCurrency}! 💰`);
     } catch (error) {
       console.error('Failed to save currency preference:', error);
@@ -258,11 +278,18 @@ const Profile = () => {
 
   // Enhanced language change handler
   const handleLanguageChange = async (newLanguage) => {
+    // ✅ OPTIMIZATION: Only save if language actually changed
+    if (newLanguage === language) {
+      console.log('🌐 [LANGUAGE] No change needed, language already set to:', newLanguage);
+      return;
+    }
+
     try {
       setLanguage(newLanguage);
       await updateProfile({
         language_preference: newLanguage
       });
+      console.log('🌐 [LANGUAGE] Permanent change saved:', language, '→', newLanguage);
       toastService.success(`Language saved to ${newLanguage === 'he' ? 'Hebrew' : 'English'}! 🌐`);
     } catch (error) {
       console.error('Failed to save language preference:', error);
@@ -298,11 +325,11 @@ const Profile = () => {
         className="space-y-4"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* ✅ COMPACT: Profile Header with Actions */}
+        {/* ✅ COMPACT: Optimized Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-xl"
+          className="relative overflow-hidden rounded-2xl"
         >
           {/* Animated Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
@@ -310,15 +337,15 @@ const Profile = () => {
           </div>
 
           <div className="relative p-4">
-            <div className="flex flex-col lg:flex-row items-center gap-4">
-              {/* Enhanced Profile Picture */}
+            {/* Desktop Layout */}
+            <div className="hidden lg:flex items-center gap-4">
+              {/* Enhanced Profile Picture - Smaller */}
               <motion.div 
-                className="relative group cursor-pointer"
+                className="relative group cursor-pointer flex-shrink-0"
                 onClick={() => !isUploadingPicture && document.getElementById('profile-picture-upload').click()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {/* Glowing ring */}
                 <div className="absolute inset-0 bg-gradient-to-r from-white via-yellow-200 to-white rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity p-1"></div>
                 
                 <Avatar
@@ -326,103 +353,220 @@ const Profile = () => {
                   size="lg"
                   name={user?.username}
                   src={user?.preferences?.profilePicture}
-                  className="relative z-10 w-16 h-16 border-2 border-white/50 group-hover:border-white/80 transition-all duration-300"
+                  className="relative z-10 w-16 h-16 transition-all duration-300"
                 />
                 
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
-                  <Upload className="w-4 h-4 text-white mb-0.5" />
-                  <span className="text-[10px] text-white font-medium">Change</span>
+                  <Upload className="w-3 h-3 text-white mb-0.5" />
+                  <span className="text-[8px] text-white font-medium">Edit</span>
                 </div>
                 
                 {isUploadingPicture && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full z-30">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   </div>
                 )}
               </motion.div>
 
-              {/* Profile Summary */}
-              <div className="flex-1 text-center lg:text-left text-white">
-                <motion.h1 
-                  className="text-3xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  {user?.username}
-                </motion.h1>
-                
-                <motion.div 
-                  className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-sm">
-                    <Mail className="w-4 h-4" />
-                    <span>{user?.email}</span>
+              {/* Compact Profile Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <motion.h1 
+                      className="text-2xl font-bold text-white mb-1 truncate"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {user?.username}
+                    </motion.h1>
+                    
+                    <motion.div 
+                      className="flex items-center gap-2 mb-3"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs">
+                        <Mail className="w-3 h-3" />
+                        <span className="truncate max-w-[200px]">{user?.email}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/30 backdrop-blur-sm rounded-full text-xs">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Verified</span>
+                      </div>
+                    </motion.div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/30 backdrop-blur-sm rounded-full text-sm">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Verified</span>
-                  </div>
-                </motion.div>
 
-                {/* Quick Stats */}
+                  {/* Action Buttons - Right Side */}
+                  <motion.div 
+                    className="flex items-center gap-2 ml-4"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowExportModal(true)}
+                      icon={Download}
+                      className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 text-xs px-2 py-1.5"
+                    >
+                      Export
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLogout}
+                      icon={LogOut}
+                      className="bg-red-500/20 backdrop-blur-sm border-red-300/30 text-red-100 hover:bg-red-500/30 text-xs px-2 py-1.5"
+                    >
+                      Logout
+                    </Button>
+                  </motion.div>
+                </div>
+
+                {/* Compact Stats Grid */}
                 <motion.div 
-                  className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+                  className="grid grid-cols-4 gap-2"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <div className="text-center">
-                    <div className="text-lg font-bold">{currency}</div>
-                    <div className="text-xs opacity-80">Currency</div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-white">{currency}</div>
+                    <div className="text-[10px] text-white/70">Currency</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">{language.toUpperCase()}</div>
-                    <div className="text-xs opacity-80">Language</div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-white">{language.toUpperCase()}</div>
+                    <div className="text-[10px] text-white/70">Language</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold capitalize">{theme}</div>
-                    <div className="text-xs opacity-80">Theme</div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-white capitalize">{theme}</div>
+                    <div className="text-[10px] text-white/70">Theme</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                    <div className="text-sm font-bold text-white">
                       {user?.created_at ? Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}
                     </div>
-                    <div className="text-xs opacity-80">Days Active</div>
+                    <div className="text-[10px] text-white/70">Days</div>
                   </div>
                 </motion.div>
               </div>
+            </div>
 
-              {/* Action Buttons */}
+            {/* Mobile Layout - Super Compact */}
+            <div className="lg:hidden space-y-3">
+              <div className="flex items-center justify-between">
+                {/* Profile Picture & Basic Info */}
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    className="relative group cursor-pointer flex-shrink-0"
+                    onClick={() => !isUploadingPicture && document.getElementById('profile-picture-upload').click()}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white via-yellow-200 to-white rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity p-1"></div>
+                    
+                    <Avatar
+                      key={`avatar-${user?.id}-${avatarKey}-mobile`}
+                      size="md"
+                      name={user?.username}
+                      src={user?.preferences?.profilePicture}
+                      className="relative z-10 w-14 h-14 transition-all duration-300"
+                    />
+                    
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                      <Upload className="w-2.5 h-2.5 text-white" />
+                    </div>
+                    
+                    {isUploadingPicture && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full z-30">
+                        <div className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </motion.div>
+
+                  <div className="flex-1 min-w-0">
+                    <motion.h1 
+                      className="text-lg font-bold text-white truncate"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {user?.username}
+                    </motion.h1>
+                    
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/30 backdrop-blur-sm rounded-full text-xs">
+                      <CheckCircle className="w-2.5 h-2.5" />
+                      <span>Verified</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons - Compact */}
+                <motion.div 
+                  className="flex items-center gap-1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowExportModal(true)}
+                    icon={Download}
+                    className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 text-xs px-2 py-1.5"
+                  />
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                    icon={LogOut}
+                    className="bg-red-500/20 backdrop-blur-sm border-red-300/30 text-red-100 hover:bg-red-500/30 text-xs px-2 py-1.5"
+                  />
+                </motion.div>
+              </div>
+
+              {/* Email Badge */}
               <motion.div 
-                className="flex items-center gap-2"
-                initial={{ opacity: 0, x: 20 }}
+                className="flex items-center gap-1.5 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs w-fit"
+                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.3 }}
               >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowExportModal(true)}
-                  icon={Download}
-                  className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 text-xs px-3 py-1.5"
-                >
-                  Export
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  icon={LogOut}
-                  className="bg-red-500/20 backdrop-blur-sm border-red-300/30 text-red-100 hover:bg-red-500/30 text-xs px-3 py-1.5"
-                >
-                  Logout
-                </Button>
+                <Mail className="w-3 h-3" />
+                <span className="truncate max-w-[250px]">{user?.email}</span>
+              </motion.div>
+
+              {/* Mobile Stats Grid - Super Compact */}
+              <motion.div 
+                className="grid grid-cols-4 gap-1.5"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
+                  <div className="text-xs font-bold text-white">{currency}</div>
+                  <div className="text-[8px] text-white/70">Currency</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
+                  <div className="text-xs font-bold text-white">{language.toUpperCase()}</div>
+                  <div className="text-[8px] text-white/70">Language</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
+                  <div className="text-xs font-bold text-white capitalize">{theme}</div>
+                  <div className="text-[8px] text-white/70">Theme</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
+                  <div className="text-xs font-bold text-white">
+                    {user?.created_at ? Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}
+                  </div>
+                  <div className="text-[8px] text-white/70">Days</div>
+                </div>
               </motion.div>
             </div>
           </div>

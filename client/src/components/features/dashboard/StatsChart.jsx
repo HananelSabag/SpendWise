@@ -420,6 +420,7 @@ const calculateFinancialHealth = (dashboardData, selectedPeriod) => {
 const StatsChart = ({ className = '' }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
+  const isRTL = language === 'he';
   
   // State management
   const [selectedRange, setSelectedRange] = useState('monthly');
@@ -674,19 +675,19 @@ const StatsChart = ({ className = '' }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 blur-xl"></div>
           
           <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
               {/* Title */}
-              <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <motion.div 
                   className="relative p-2.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg"
-                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  whileHover={{ scale: 1.05, rotate: isRTL ? -5 : 5 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl blur-lg opacity-70"></div>
                   <BarChart3 className="relative w-4 h-4 text-white" />
                 </motion.div>
                 
-                <div>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-teal-900 dark:from-white dark:via-emerald-200 dark:to-teal-200 bg-clip-text text-transparent">
                     {t('dashboard.stats.title')}
                   </h3>
@@ -697,7 +698,7 @@ const StatsChart = ({ className = '' }) => {
               </div>
               
               {/* Controls */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
                 {/* Chart Type Toggle */}
                 <div className="flex gap-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-1 border border-white/20 shadow-lg">
                   <motion.button
@@ -772,7 +773,7 @@ const StatsChart = ({ className = '' }) => {
                 
                 <motion.button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 ${isRTL ? 'flex-row-reverse' : ''}`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

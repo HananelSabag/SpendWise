@@ -2,6 +2,7 @@
 import React from 'react';
 import { Loader } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Button = React.forwardRef(({ 
   children,
@@ -17,6 +18,8 @@ const Button = React.forwardRef(({
   onClick,
   ...props
 }, ref) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'he';
   const baseStyles = `
     inline-flex items-center justify-center font-medium
     transition-all duration-200 rounded-xl
@@ -97,8 +100,8 @@ const Button = React.forwardRef(({
       {iconPosition === 'left' && renderIcon()}
       {children && (
         <span className={cn(
-          (loading || Icon) && iconPosition === 'left' && 'ml-2',
-          (loading || Icon) && iconPosition === 'right' && 'mr-2'
+          (loading || Icon) && iconPosition === 'left' && (isRTL ? 'mr-2' : 'ml-2'),
+          (loading || Icon) && iconPosition === 'right' && (isRTL ? 'ml-2' : 'mr-2')
         )}>
           {children}
         </span>

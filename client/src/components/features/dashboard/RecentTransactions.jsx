@@ -133,18 +133,18 @@ const RecentTransactions = ({
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-xl"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-between mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <motion.div 
                   className="relative p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg"
-                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  whileHover={{ scale: 1.05, rotate: isRTL ? -5 : 5 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl blur-lg opacity-70"></div>
                   <Activity className="relative w-4 h-4 text-white" />
                 </motion.div>
                 
-                <div>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h3 className="text-base font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
                     {t('dashboard.transactions.recent')}
                   </h3>
@@ -156,7 +156,7 @@ const RecentTransactions = ({
               
               <Link 
                 to="/transactions" 
-                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-xs font-medium flex items-center gap-1 px-2 py-1 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-all"
+                className={`text-primary-600 hover:text-primary-700 dark:text-primary-400 text-xs font-medium flex items-center gap-1 px-2 py-1 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
               >
                 <Eye className="w-3 h-3" />
                 <span className="hidden sm:inline">{t('dashboard.transactions.viewAll')}</span>
@@ -195,18 +195,18 @@ const RecentTransactions = ({
                 return (
                   <motion.div 
                     key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`} 
-                    className="group relative overflow-hidden flex items-center justify-between py-2 px-2.5 rounded-lg bg-gradient-to-r from-white/60 to-gray-50/80 dark:from-gray-800/60 dark:to-gray-700/80 hover:from-white/80 hover:to-gray-50/90 dark:hover:from-gray-700/80 dark:hover:to-gray-600/90 border border-gray-100/50 dark:border-gray-700/50 transition-all backdrop-blur-sm"
-                    initial={{ opacity: 0, x: -20 }}
+                    className={`group relative overflow-hidden flex items-center justify-between py-2 px-2.5 rounded-lg bg-gradient-to-r from-white/60 to-gray-50/80 dark:from-gray-800/60 dark:to-gray-700/80 hover:from-white/80 hover:to-gray-50/90 dark:hover:from-gray-700/80 dark:hover:to-gray-600/90 border border-gray-100/50 dark:border-gray-700/50 transition-all backdrop-blur-sm ${isRTL ? 'flex-row-reverse' : ''}`}
+                    initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.01, x: 2 }}
+                    whileHover={{ scale: 1.01, x: isRTL ? -2 : 2 }}
                   >
                     {/* Item glow effect */}
                     <div className={`absolute inset-0 rounded-lg blur-sm opacity-0 group-hover:opacity-30 transition-opacity ${
                       isIncome ? 'bg-green-500/20' : 'bg-red-500/20'
                     }`}></div>
                     
-                    <div className="relative z-10 flex items-center gap-2 min-w-0 flex-1">
+                    <div className={`relative z-10 flex items-center gap-2 min-w-0 flex-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       {/* Enhanced visual indicator */}
                       <motion.div 
                         className={`relative w-2.5 h-2.5 rounded-full shadow-sm flex-shrink-0 ${
@@ -221,12 +221,12 @@ const RecentTransactions = ({
                         }`}></div>
                       </motion.div>
                       
-                      <div className="min-w-0 flex-1">
+                      <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                           {transaction.description || t('transactions.noDescription')}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <div className={`flex items-center gap-1.5 mt-0.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                          <p className={`text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <Calendar className="w-2.5 h-2.5 flex-shrink-0" />
                             <span className="text-xs">
                               {(() => {
@@ -258,7 +258,7 @@ const RecentTransactions = ({
                     </div>
                     
                     {/* Enhanced amount display */}
-                    <div className={`relative z-10 flex items-center gap-1 text-xs font-semibold flex-shrink-0 ${
+                    <div className={`relative z-10 flex items-center gap-1 text-xs font-semibold flex-shrink-0 ${isRTL ? 'flex-row-reverse' : ''} ${
                       isIncome 
                         ? 'text-green-600 dark:text-green-400' 
                         : 'text-red-600 dark:text-red-400'
@@ -279,7 +279,7 @@ const RecentTransactions = ({
                 <div className="flex-1 flex items-center justify-center py-2">
                   <Link 
                     to="/transactions/add"
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs flex items-center gap-1 px-3 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-400 dark:hover:border-primary-500 transition-all"
+                    className={`text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs flex items-center gap-1 px-3 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-400 dark:hover:border-primary-500 transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
                   >
                     <TrendingUp className="w-3 h-3" />
                     <span>{t('transactions.addMore')}</span>

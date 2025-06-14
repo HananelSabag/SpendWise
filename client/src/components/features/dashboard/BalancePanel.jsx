@@ -262,27 +262,74 @@ const BalancePanel = () => {
       {/* 📱 MOBILE VERSION - Compact with period tabs */}
       <div className="lg:hidden">
         <div className="space-y-3 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-primary-600" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.balance.title')}</span>
+          <div className="space-y-3">
+            {/* ✅ NEW: Mobile date navigation with RTL support */}
+            <div className={`flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <motion.button
+                onClick={goToPreviousDay}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </motion.button>
+              
+              <button
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="flex-1 text-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-1"
+              >
+                <Calendar className={`w-3.5 h-3.5 inline ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                {formatDate(selectedDate, 'MMM d, yyyy')}
+              </button>
+              
+              <motion.button
+                onClick={goToNextDay}
+                disabled={!canGoNext}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: !canGoNext ? 1 : 1.1 }}
+                whileTap={{ scale: !canGoNext ? 1 : 0.9 }}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </motion.button>
+              
+              {!isToday() && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  whileHover={{ scale: 1.1, rotate: 180 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={resetToToday}
+                  className="p-2 ml-1 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-lg transition-colors"
+                  title={t('dashboard.balance.backToToday')}
+                >
+                  <RotateCcw className="w-3 h-3 text-blue-700 dark:text-blue-300" />
+                </motion.button>
+              )}
             </div>
             
-            {/* Mobile Period Tabs */}
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-              {periods.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => handlePeriodChange(p.id)}
-                  className={`px-2 py-1 text-xs font-medium rounded transition-all ${
-                    period === p.id
-                      ? 'bg-primary-500 text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Activity className="w-4 h-4 text-primary-600" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.balance.title')}</span>
+              </div>
+              
+              {/* Mobile Period Tabs */}
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                {periods.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePeriodChange(p.id)}
+                    className={`px-2 py-1 text-xs font-medium rounded transition-all ${
+                      period === p.id
+                        ? 'bg-primary-500 text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           
@@ -398,11 +445,11 @@ const BalancePanel = () => {
             
             <div className="relative z-10">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                {/* Compact Title */}
-                <div className="flex items-center gap-3">
+                {/* Compact Title with RTL support */}
+                <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <motion.div 
                     className="relative p-3 bg-gradient-to-br from-primary-500 to-purple-600 rounded-xl shadow-lg"
-                    whileHover={{ scale: 1.05, rotate: 5 }}
+                    whileHover={{ scale: 1.05, rotate: isRTL ? -5 : 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     {/* Icon Glow */}
@@ -410,7 +457,7 @@ const BalancePanel = () => {
                     <Activity className="relative w-5 h-5 text-white" />
                   </motion.div>
                   
-                  <div>
+                  <div className={isRTL ? 'text-right' : 'text-left'}>
                     <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-900 dark:from-white dark:via-purple-200 dark:to-blue-200 bg-clip-text text-transparent">
                       {t('dashboard.balance.title')}
                     </h2>
@@ -420,8 +467,8 @@ const BalancePanel = () => {
                   </div>
                 </div>
                 
-                {/* Compact Date Navigation */}
-                <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-1.5 border border-white/20 shadow-xl">
+                {/* Compact Date Navigation with RTL support */}
+                <div className={`flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-1.5 border border-white/20 shadow-xl ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -437,13 +484,13 @@ const BalancePanel = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setShowCalendar(!showCalendar)}
-                      className={`min-w-[140px] px-3 py-2 rounded-lg font-medium transition-all shadow-md text-sm ${
+                      className={`min-w-[140px] px-3 py-2 rounded-lg font-medium transition-all shadow-md text-sm ${isRTL ? 'text-right' : 'text-left'} ${
                         dateWarning 
                           ? 'bg-gradient-to-r from-amber-100 to-orange-100 border-amber-300 text-amber-800 dark:from-amber-900/30 dark:to-orange-900/30 dark:border-amber-600 dark:text-amber-200' 
                           : 'bg-gradient-to-r from-white to-gray-50 border-gray-200 text-gray-700 hover:from-primary-50 hover:to-purple-50 dark:from-gray-700 dark:to-gray-600 dark:border-gray-500 dark:text-gray-200'
                       }`}
                     >
-                      <Calendar className="w-3.5 h-3.5 mr-1.5 inline" />
+                      <Calendar className={`w-3.5 h-3.5 inline ${isRTL ? 'ml-1.5' : 'mr-1.5'}`} />
                       {(() => {
                         const date = selectedDate || new Date();
                         const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -470,7 +517,7 @@ const BalancePanel = () => {
                     onClick={goToNextDay}
                     disabled={!canGoNext}
                     className={`p-2 rounded-lg transition-all shadow-md ${
-                      canGoNext 
+                      canGoNext
                         ? 'bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-primary-100 hover:to-purple-100 dark:hover:from-primary-900/50 dark:hover:to-purple-900/50' 
                         : 'bg-gray-100 dark:bg-gray-800 opacity-50 cursor-not-allowed'
                     }`}

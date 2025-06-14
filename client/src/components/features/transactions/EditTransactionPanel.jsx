@@ -304,20 +304,28 @@ const EditTransactionPanel = ({
 
       await updateTransaction(transactionType, transaction.id, submitData);
       
+      // ✅ ENHANCED: Beautiful success animation with auto-close
       setSuccess(true);
       
-      // Success callback and cleanup
+      // Success callback
       onSuccess?.(submitData);
       
+      // Auto-close after success animation
       setTimeout(() => {
         if (onClose) {
           onClose();
         }
-      }, 2500);
+      }, 2000);
       
     } catch (err) {
       console.error('Transaction update failed:', err);
+      // ✅ ENHANCED: Show error animation
       setError(err.message || t('actions.errors.updatingTransaction'));
+      
+      // Clear error after some time to allow retry
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     }
   };
 
@@ -326,7 +334,7 @@ const EditTransactionPanel = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="h-full flex flex-col w-full max-h-[95vh] sm:max-h-[90vh]" // ✅ FIXED: Constrain height
+      className="h-full flex flex-col w-full max-h-[85vh] overflow-hidden" // ✅ FIXED: Constrain height
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* ✅ FIXED: Compact header - single title, no duplicates */}
@@ -456,11 +464,11 @@ const EditTransactionPanel = ({
 
       {/* ✅ FIXED: Scrollable main content area with proper constraints */}
       <div className="flex-1 overflow-y-auto min-h-0"> {/* ✅ FIXED: min-h-0 for proper scrolling */}
-        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6"> {/* ✅ FIXED: Responsive padding and spacing */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4"> {/* ✅ FIXED: Responsive padding and spacing */}
+                      <form onSubmit={handleSubmit} className="space-y-3">
             
             {/* ✅ FIXED: Responsive grid layout - stack on mobile */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3">
               
               {/* Amount Card */}
               <Card className="p-3 sm:p-4">
@@ -769,23 +777,31 @@ const EditTransactionPanel = ({
               </motion.div>
             )}
 
-            {/* ✅ SAME: Error Display as AddTransactions */}
+            {/* ✅ ENHANCED: Beautiful Error Animation */}
             <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 >
-                  <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center gap-3 text-red-800">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0">
-                        <X className="w-2 h-2 sm:w-3 sm:h-3" />
+                  <div className="p-3 sm:p-4 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-lg">
+                    <div className="flex items-center gap-3 text-red-800 dark:text-red-300">
+                      <motion.div 
+                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 shadow-md"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                      </motion.div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-xs sm:text-sm">שגיאת עדכון</h4>
+                        <p className="font-medium text-xs sm:text-sm">{error}</p>
                       </div>
-                      <span className="font-medium text-sm sm:text-base">{error}</span>
                       <button
                         onClick={() => setError('')}
-                        className="ml-auto text-red-600 hover:text-red-800"
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -795,7 +811,7 @@ const EditTransactionPanel = ({
               )}
             </AnimatePresence>
 
-            {/* ✅ SAME: Success Animation as AddTransactions */}
+            {/* ✅ ENHANCED: Beautiful Success Animation with Auto-Close */}
             <AnimatePresence>
               {success && (
                 <motion.div
@@ -813,24 +829,40 @@ const EditTransactionPanel = ({
                   }}
                   className="text-center py-4 sm:py-6"
                 >
-                  <div className="inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl shadow-lg">
                     <motion.div
-                      className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 0.5 }}
+                      className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-md"
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 10, -10, 0]
+                      }}
+                      transition={{ duration: 0.8, type: "spring" }}
                     >
-                      <Check className="w-4 h-4 sm:w-7 sm:h-7 text-white" />
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                      >
+                        <Check className="w-4 h-4 sm:w-7 sm:h-7 text-white drop-shadow-sm" />
+                      </motion.div>
                     </motion.div>
                     <div className="text-left">
-                      <h3 className="text-base sm:text-lg font-semibold text-green-800">
-                        {t('transactions.updateSuccess')}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-green-600">
-                        {scope === 'oneTime' && t('transactions.transactionUpdateSuccess')}
-                        {scope === 'single' && t('transactions.singleUpdateSuccess')}
-                        {scope === 'series' && t('transactions.seriesUpdateSuccess')}
-                        {scope === 'template' && t('transactions.templateUpdateSuccess')}
-                      </p>
+                      <motion.h3 
+                        className="text-base sm:text-lg font-bold text-green-800 dark:text-green-300"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        {t('actions.updateSuccess') || 'עודכן בהצלחה!'}
+                      </motion.h3>
+                      <motion.p 
+                        className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        החלון יסגר אוטומטית...
+                      </motion.p>
                     </div>
                   </div>
                 </motion.div>

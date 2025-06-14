@@ -1,6 +1,6 @@
 // components/features/dashboard/QuickActionsBar.jsx
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   TrendingDown, 
@@ -45,6 +45,23 @@ const QuickActionsBar = () => {
     setTodayWarning(!isToday);
   }, [selectedDate, getDateForServer]);
 
+  // ✅ NEW: Enhanced date protection with UX logic
+  const isHistoricalDate = useMemo(() => {
+    const today = new Date();
+    const selected = new Date(selectedDate);
+    return today.toDateString() !== selected.toDateString();
+  }, [selectedDate]);
+
+  // ✅ NEW: Smart date handling for transactions
+  const getTransactionDate = useCallback(() => {
+    // For historical dates, show warning but allow user choice
+    if (isHistoricalDate) {
+      return getDateForServer(selectedDate);
+    }
+    // For today, use current date
+    return getDateForServer(new Date());
+  }, [selectedDate, isHistoricalDate, getDateForServer]);
+
   // Compact quick amounts with enhanced visual improvements
   const quickAmounts = [
     { value: 10, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/40' },
@@ -88,20 +105,27 @@ const QuickActionsBar = () => {
         amount: parseFloat(amount),
         description: getDescription(type),
         category_id: 8, // Default category
-        date: getDateForServer(selectedDate),
+        date: getTransactionDate(),
         is_recurring: false
       });
       
+      // ✅ ENHANCED: Beautiful success animation + reset
       setSuccess(true);
-      setAmount('');
+      setAmount(''); // Clear input immediately
       
       // Reset success state after animation
       setTimeout(() => {
         setSuccess(false);
-      }, 3000);
+      }, 2500);
       
     } catch (err) {
+      // ✅ ENHANCED: Show error animation
       setError(err.message || t('actions.errors.addingTransaction'));
+      
+      // Clear error after a reasonable time
+      setTimeout(() => {
+        setError('');
+      }, 4000);
     }
   };
 
@@ -260,6 +284,36 @@ const QuickActionsBar = () => {
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-orange-300/10 to-transparent"></div>
           
           <div className="relative z-10 space-y-3">
+            {/* ✅ NEW: Mobile historical date warning */}
+            <AnimatePresence>
+              {isHistoricalDate && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3"
+                >
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                    <Clock className="w-4 h-4" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {t('dashboard.quickActions.historicalDateWarning', 'Historical Date Mode')}
+                      </p>
+                      <p className="text-xs opacity-80">
+                        {new Date(selectedDate).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={resetToToday}
+                      className="text-xs bg-amber-200 dark:bg-amber-800 px-2 py-1 rounded hover:bg-amber-300 dark:hover:bg-amber-700 transition-colors"
+                    >
+                      {t('dashboard.quickActions.goToToday', 'Today')}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
             {/* Mobile Header with success indicator */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -401,6 +455,35 @@ const QuickActionsBar = () => {
               )}
             </AnimatePresence>
             
+            {/* ✅ ENHANCED: Success/Error Animation Overlay */}
+            <AnimatePresence>
+              {success && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="absolute inset-0 bg-green-500 rounded-xl flex items-center justify-center z-20"
+                  style={{ boxShadow: '0 6px 25px rgba(34, 197, 94, 0.4)' }}
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                    className="flex items-center gap-2 text-white"
+                  >
+                    <motion.div
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                      <Check className="w-6 h-6" />
+                    </motion.div>
+                    <span className="font-bold">{t('actions.addSuccess') || 'הוסף בהצלחה!'}</span>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Mobile Submit Button with stunning effects */}
             <motion.button
               onClick={() => handleSubmit(activeType)}
@@ -501,8 +584,8 @@ const QuickActionsBar = () => {
                 </div>
               </div>
               
-              {/* ENHANCED: More visible today warning */}
-              {todayWarning && (
+              {/* ✅ ENHANCED: Smart historical date warning */}
+              {isHistoricalDate && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -512,14 +595,19 @@ const QuickActionsBar = () => {
                   }}
                 >
                   <Clock className="w-3 h-3 text-amber-700 dark:text-amber-300" />
-                  <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-                    {t('dashboard.quickActions.notToday')}
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-200 block">
+                      {t('dashboard.quickActions.historicalDateWarning', 'Historical Date Mode')}
+                    </span>
+                    <span className="text-xs text-amber-700 dark:text-amber-300">
+                      {new Date(selectedDate).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}
+                    </span>
+                  </div>
                   <button
                     onClick={resetToToday}
                     className="text-xs font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 underline"
                   >
-                    {t('dashboard.quickActions.goToToday')}
+                    {t('dashboard.quickActions.goToToday', 'Today')}
                   </button>
                 </motion.div>
               )}

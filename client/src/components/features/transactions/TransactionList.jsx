@@ -343,9 +343,9 @@ const TransactionList = ({
                 >
                   <div className="p-3">
                     <div className="grid gap-2 lg:grid-cols-2">
-                      {futureTransactions.slice(0, 6).map((transaction) => (
+                      {futureTransactions.slice(0, 6).map((transaction, index) => (
                         <TransactionCard
-                          key={`future-${transaction.id}`}
+                          key={`future-${transaction.id}-${transaction.date}-${index}`}
                           transaction={transaction}
                           onEdit={onEdit}
                           onEditSingle={onEditSingle}
@@ -433,9 +433,9 @@ const TransactionList = ({
               {/* 📱 MOBILE: Enhanced transaction list */}
               <div className="lg:hidden p-4">
                 <div className="space-y-3">
-                  {dayTransactions.map((transaction) => (
+                  {dayTransactions.map((transaction, index) => (
                     <motion.div
-                      key={`mobile-${transaction.id}`}
+                      key={`mobile-${transaction.id}-${transaction.date}-${index}`}
                       variants={cardVariants}
                       initial="hidden"
                       animate="visible"
@@ -457,9 +457,9 @@ const TransactionList = ({
               {/* 💻 DESKTOP: Enhanced 2-column grid */}
               <div className="hidden lg:block p-4">
                 <div className="grid grid-cols-2 gap-3">
-                  {dayTransactions.map((transaction) => (
+                  {dayTransactions.map((transaction, index) => (
                     <motion.div
-                      key={`desktop-${transaction.id}`}
+                      key={`desktop-${transaction.id}-${transaction.date}-${index}`}
                       variants={cardVariants}
                       initial="hidden"
                       animate="visible"

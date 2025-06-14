@@ -33,6 +33,7 @@ import { userSchemas, validate } from "../../utils/validationSchemas";
 import { cn } from '../../utils/helpers';
 import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import Footer from '../../components/layout/Footer';
+import GuestPreferences from '../../components/common/GuestPreferences';
 
 /**
  * Password strength indicator component
@@ -290,19 +291,23 @@ const Register = () => {
   return (
     <>
       <div className="min-h-screen flex relative" dir={isRTL ? 'rtl' : 'ltr'}>
-        <AccessibilityMenu />
+        {/* Guest Preferences & Accessibility - Top Right */}
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+          <AccessibilityMenu />
+          <GuestPreferences />
+        </div>
         
         {/* Registration Form Side */}
         <motion.div 
           className={cn(
-            'w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900',
+            'w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-6 bg-white dark:bg-gray-900',
             isRTL ? 'lg:order-2' : 'lg:order-1'
           )}
           initial={{ opacity: 0, x: isRTL ? 50 : -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="w-full max-w-md space-y-8">
+          <div className="w-full max-w-sm space-y-6">
             {/* Logo */}
             <motion.div 
               className="text-center"
@@ -310,29 +315,29 @@ const Register = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Link to="/" className="inline-flex items-center justify-center mb-8">
+              <Link to="/" className="inline-flex items-center justify-center mb-4">
                 <motion.div 
-                  className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg"
+                  className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg"
                   whileHover={{ scale: 1.05, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <span className="text-3xl text-white font-bold">S</span>
+                  <span className="text-2xl text-white font-bold">S</span>
                 </motion.div>
               </Link>
               
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <div className="text-center mb-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                   {t('auth.createAccount')}
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {t('auth.registerSubtitle')}
                 </p>
               </div>
             </motion.div>
 
             {/* Progress Steps */}
-            <div className="flex items-center justify-center mb-8">
-              <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center space-x-3">
                 <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                     currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
@@ -366,7 +371,7 @@ const Register = () => {
             {/* Registration Form */}
             <motion.form 
               onSubmit={handleSubmit}
-              className="space-y-6"
+              className="space-y-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -379,7 +384,7 @@ const Register = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
                     <Input
                       label={t('auth.username')}

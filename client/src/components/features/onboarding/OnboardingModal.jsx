@@ -58,12 +58,6 @@ const OnboardingModal = ({
       skippable: false
     },
     {
-      id: 'preferences',
-      title: t('onboarding.preferences.title'),
-      component: PreferencesStep,
-      skippable: true
-    },
-    {
       id: 'recurring',
       title: t('onboarding.recurring.title'),
       component: RecurringExplanationStep,
@@ -77,16 +71,27 @@ const OnboardingModal = ({
     }
   ];
 
+  // Debug current step changes
+  useEffect(() => {
+    console.log(`🚀 [ONBOARDING] Current step changed to: ${currentStep} (${steps[currentStep]?.id || 'undefined'})`);
+    console.log(`🚀 [ONBOARDING] Steps array:`, steps.map(s => s.id));
+  }, [currentStep, steps]);
+
   // Load saved progress from localStorage
   useEffect(() => {
     if (isOpen) {
       const savedProgress = localStorage.getItem('spendwise-onboarding-progress');
+      console.log(`🚀 [ONBOARDING] Loading saved progress:`, savedProgress);
+      
       if (savedProgress) {
         try {
           const { step, data } = JSON.parse(savedProgress);
+          console.log(`🚀 [ONBOARDING] Parsed progress:`, { step, data, forceShow });
+          
           if (!forceShow) {
             setCurrentStep(step || 0);
             setStepData(data || { preferences: {}, templates: [] });
+            console.log(`🚀 [ONBOARDING] Restored to step ${step || 0}`);
           }
         } catch (error) {
           console.warn('Failed to load onboarding progress:', error);
@@ -96,71 +101,88 @@ const OnboardingModal = ({
   }, [isOpen, forceShow]);
 
   // Save progress to localStorage
-  const saveProgress = () => {
+  const saveProgress = (stepOverride = null) => {
     const progress = {
-      step: currentStep,
+      step: stepOverride !== null ? stepOverride : currentStep,
       data: stepData,
       timestamp: Date.now()
     };
+    console.log(`🚀 [ONBOARDING] Saving progress:`, progress);
     localStorage.setItem('spendwise-onboarding-progress', JSON.stringify(progress));
   };
 
   // Navigation handlers
   const goToNextStep = () => {
+    console.log(`🚀 [ONBOARDING] goToNextStep called. Current: ${currentStep}, Total: ${steps.length}`);
+    
     if (currentStep < steps.length - 1) {
       const nextStep = currentStep + 1;
+      console.log(`🚀 [ONBOARDING] Moving to step ${nextStep}`);
       setCurrentStep(nextStep);
-      saveProgress();
+      console.log(`🚀 [ONBOARDING] setCurrentStep(${nextStep}) called`);
+      
+      // ✅ FIX: Save progress with the new step immediately
+      saveProgress(nextStep);
     } else {
+      console.log(`🚀 [ONBOARDING] Last step reached, completing onboarding`);
       handleComplete();
     }
   };
 
   const goToPreviousStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-      saveProgress();
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      saveProgress(prevStep);
     }
   };
 
   const goToStep = (stepIndex) => {
     if (stepIndex >= 0 && stepIndex < steps.length) {
       setCurrentStep(stepIndex);
-      saveProgress();
+      saveProgress(stepIndex);
     }
   };
 
   // Skip current step
   const skipStep = () => {
+    console.log(`🚀 [ONBOARDING] skipStep called from step ${currentStep}`);
     goToNextStep();
   };
 
   // Update step data
   const updateStepData = (key, value) => {
-    setStepData(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    console.log(`🚀 [ONBOARDING] updateStepData called:`, { key, value });
+    setStepData(prev => {
+      const newData = { ...prev, [key]: value };
+      console.log(`🚀 [ONBOARDING] stepData updated:`, newData);
+      return newData;
+    });
   };
 
   // Complete onboarding
   const handleComplete = async () => {
+    console.log(`🚀 [ONBOARDING] handleComplete called, isCompleting: ${isCompleting}`);
+    
     if (isCompleting) return;
     
     setIsCompleting(true);
     
     try {
+      console.log(`🚀 [ONBOARDING] Marking onboarding as complete...`);
       // Mark onboarding as complete in the backend
       await markOnboardingComplete();
       
       // Clear saved progress
       localStorage.removeItem('spendwise-onboarding-progress');
+      console.log(`🚀 [ONBOARDING] Progress cleared, calling completion callback`);
       
       // Call completion callback
       onComplete?.();
       
       // Close modal
       onClose();
+      console.log(`🚀 [ONBOARDING] Onboarding completed successfully`);
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
       // Still close modal to avoid user being stuck
@@ -173,14 +195,32 @@ const OnboardingModal = ({
   // Close handler with confirmation if in progress
   const handleClose = () => {
     if (currentStep > 0 && !forceShow) {
-      if (window.confirm(t('onboarding.common.confirmClose'))) {
-        saveProgress();
+      const confirmMessage = isRTL 
+        ? `האם אתה בטוח שברצונך לצאת מתהליך האונבורדינג?\n\nההתקדמות שלך תישמר ותוכל להמשיך מאוחר יותר.`
+        : `Are you sure you want to exit the onboarding process?\n\nYour progress will be saved and you can continue later.`;
+        
+      if (window.confirm(confirmMessage)) {
+        saveProgress(currentStep);
         onClose();
       }
     } else {
       onClose();
     }
   };
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   // Don't render if not open
   if (!isOpen) return null;
@@ -190,6 +230,14 @@ const OnboardingModal = ({
   const isLastStep = currentStep === steps.length - 1;
   const isFirstStep = currentStep === 0;
 
+  console.log(`🚀 [ONBOARDING] Rendering step ${currentStep}:`, {
+    component: CurrentStepComponent?.name,
+    config: currentStepConfig?.id,
+    isLastStep,
+    isFirstStep,
+    totalSteps: steps.length
+  });
+
   return (
     <AnimatePresence>
       <motion.div
@@ -197,180 +245,89 @@ const OnboardingModal = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={(e) => e.target === e.currentTarget && handleClose()}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            console.log(`🚀 [ONBOARDING] Backdrop clicked from step ${currentStep}`);
+            handleClose();
+          }
+        }}
       >
         {/* Main Modal */}
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ type: "spring", duration: 0.3 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
           className={cn(
-            "relative w-full h-full max-w-4xl mx-auto bg-white dark:bg-gray-900",
-            "shadow-2xl overflow-hidden",
-            "lg:my-8 lg:h-auto lg:max-h-[90vh] lg:rounded-2xl"
+            "relative w-full h-full max-w-7xl mx-auto bg-white dark:bg-gray-900",
+            "shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700",
+            "lg:my-4 lg:h-[95vh] lg:max-h-[1000px] lg:rounded-2xl",
+            "flex flex-col"
           )}
         >
-          {/* Header with Gradient */}
-          <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20" />
-            
-            {/* Close Button */}
+          {/* Progress Bar ONLY - No Header */}
+          <div className="relative bg-white dark:bg-gray-900 flex-shrink-0">
+            {/* Close Button - More prominent */}
             <button
-              onClick={handleClose}
+              onClick={() => {
+                console.log(`🚀 [ONBOARDING] Close button clicked from step ${currentStep}`);
+                handleClose();
+              }}
               className={cn(
-                "absolute top-4 z-10 p-2 text-white/80 hover:text-white",
-                "hover:bg-white/10 rounded-lg transition-colors",
-                isRTL ? "left-4" : "right-4"
+                "absolute top-3 z-10 p-2 text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400",
+                "hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200",
+                "border border-gray-300 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500",
+                "shadow-sm hover:shadow-md backdrop-blur-sm bg-white/80 dark:bg-gray-800/80",
+                isRTL ? "left-3" : "right-3"
               )}
+              title={isRTL ? "סגור ויציאה" : "Close and exit"}
             >
-              <X size={24} />
+              <X size={20} className="stroke-2" />
             </button>
 
             {/* Progress Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-white/20">
+            <div className="h-1 bg-gray-200 dark:bg-gray-700">
               <motion.div
-                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
+                className="h-full bg-gradient-to-r from-blue-600 to-purple-600"
                 initial={{ width: 0 }}
                 animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
               />
-            </div>
-
-            {/* Header Content */}
-            <div className="relative px-6 pt-16 pb-8 text-center">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                <div className="flex items-center justify-center mb-4">
-                  <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                    {currentStep === 0 && <Sparkles className="w-8 h-8 text-white" />}
-                    {currentStep === 1 && <Heart className="w-8 h-8 text-white" />}
-                    {currentStep === 2 && <Zap className="w-8 h-8 text-white" />}
-                    {currentStep === 3 && <Target className="w-8 h-8 text-white" />}
-                  </div>
-                </div>
-                
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  {currentStepConfig?.title}
-                </h1>
-                
-                <p className="text-white/80 text-lg">
-                  {t(`onboarding.step${currentStep + 1}.subtitle`)}
-                </p>
-              </motion.div>
-
-              {/* Step Indicators */}
-              <div className="flex justify-center mt-8 space-x-2">
-                {steps.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToStep(index)}
-                    className={cn(
-                      "w-3 h-3 rounded-full transition-all duration-300",
-                      index <= currentStep
-                        ? "bg-white shadow-lg scale-110"
-                        : "bg-white/30 hover:bg-white/50"
-                    )}
-                  />
-                ))}
-              </div>
             </div>
           </div>
 
-          {/* Step Content */}
-          <div className="relative flex-1 overflow-y-auto">
+          {/* Step Content - FULL HEIGHT with no footer */}
+          <div className="flex-1 overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep}
+                key={`step-${currentStep}`}
                 initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-                transition={{ duration: 0.3 }}
-                className="p-6 lg:p-8"
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="h-full flex flex-col"
               >
                 {CurrentStepComponent && (
-                  <CurrentStepComponent
-                    onNext={goToNextStep}
-                    onPrevious={goToPreviousStep}
-                    onSkip={skipStep}
-                    stepData={stepData}
-                    updateStepData={updateStepData}
-                    isLastStep={isLastStep}
-                    isFirstStep={isFirstStep}
-                  />
+                  <div className="flex-1 p-2 lg:p-6">
+                    <CurrentStepComponent
+                      onNext={() => {
+                        console.log(`🚀 [ONBOARDING] onNext called from step ${currentStep} (${steps[currentStep]?.id})`);
+                        goToNextStep();
+                      }}
+                      onPrevious={goToPreviousStep}
+                      onSkip={currentStepConfig?.skippable ? skipStep : undefined}
+                      stepData={stepData}
+                      updateStepData={updateStepData}
+                      isLastStep={isLastStep}
+                      isFirstStep={isFirstStep}
+                      onComplete={handleComplete}
+                      isCompleting={isCompleting}
+                      stepConfig={currentStepConfig}
+                    />
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>
-          </div>
-
-          {/* Footer Navigation */}
-          <div className="border-t border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between">
-              {/* Previous Button */}
-              <Button
-                variant="ghost"
-                onClick={goToPreviousStep}
-                disabled={isFirstStep}
-                className={cn(
-                  "flex items-center gap-2",
-                  isFirstStep && "invisible"
-                )}
-              >
-                {isRTL ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-                {t('onboarding.common.previous')}
-              </Button>
-
-              {/* Step Counter */}
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {currentStep + 1} {t('onboarding.common.of')} {steps.length}
-              </span>
-
-              {/* Next/Complete Button */}
-              <div className="flex items-center gap-3">
-                {/* Skip Button */}
-                {currentStepConfig?.skippable && !isLastStep && (
-                  <Button
-                    variant="ghost"
-                    onClick={skipStep}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    {t('onboarding.common.skip')}
-                  </Button>
-                )}
-
-                {/* Next/Complete Button */}
-                <Button
-                  onClick={isLastStep ? handleComplete : goToNextStep}
-                  disabled={isCompleting}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                >
-                  {isCompleting ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                      />
-                      {t('onboarding.common.completing')}
-                    </>
-                  ) : isLastStep ? (
-                    <>
-                      <Check size={20} />
-                      {t('onboarding.common.complete')}
-                    </>
-                  ) : (
-                    <>
-                      {t('onboarding.common.next')}
-                      {isRTL ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
           </div>
         </motion.div>
       </motion.div>

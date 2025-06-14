@@ -46,7 +46,7 @@ const useNavigationPersistence = () => {
       const validRoutes = ['/', '/transactions', '/profile'];
       if (validRoutes.includes(location.pathname)) {
         sessionStorage.setItem('lastVisitedPage', location.pathname);
-        console.log('🔄 [NAV] Stored current page:', location.pathname);
+
       }
     }
   }, [location.pathname, hasToken]); // ← Use hasToken instead of isAuthenticated
@@ -55,7 +55,7 @@ const useNavigationPersistence = () => {
   useEffect(() => {
     if (!hasToken) {
       sessionStorage.removeItem('lastVisitedPage');
-      console.log('🔄 [NAV] Cleared stored page (no token)');
+
     }
   }, [hasToken]);
 };
@@ -199,7 +199,7 @@ const SmartRedirect = () => {
     ? lastVisitedPage 
     : '/';
 
-  console.log('🔄 [NAV] Smart redirect to:', redirectTo);
+
   return <Navigate to={redirectTo} replace />;
 };
 
@@ -321,19 +321,19 @@ const AppInitializer = ({ children }) => {
   useEffect(() => {
     // ✅ ADD: Listen for session reset events
     const handleSessionReset = () => {
-      console.log('🔄 [APP] Session reset detected, clearing contexts');
+
       // Language context will handle its own reset
       // Theme context will handle its own reset
     };
 
     const handleAuthLogout = () => {
-      console.log('🔄 [APP] Auth logout detected');
+
       // Clear any app-level state if needed
     };
 
     // ✅ ADD: Listen for language session reset
     const handleLanguageSessionReset = () => {
-      console.log('🔄 [APP] Language session reset');
+
       // LanguageContext will handle this internally
     };
 
@@ -356,12 +356,8 @@ const AppInitializer = ({ children }) => {
  */
 function App() {
   useEffect(() => {
-    // Initialize application preferences
-    document.documentElement.classList.remove('dark');
-    document.body.classList.remove('dark-mode');
-    document.body.classList.add('light-mode');
-    
-    localStorage.removeItem('a11y_darkMode');
+    // ✅ REMOVED: Don't force theme initialization - let ThemeContext handle it
+    // The ThemeContext will properly initialize theme based on user preferences
     
     // Restore user preferences
     const initializePreferences = () => {
@@ -369,14 +365,10 @@ function App() {
         const savedLanguage = localStorage.getItem('preferredLanguage');
         const savedCurrency = localStorage.getItem('preferredCurrency');
         
-        console.log('🚀 [APP] Initializing with preferences:', {
-          language: savedLanguage || 'browser-default',
-          currency: savedCurrency || 'ILS',
-          timestamp: new Date().toISOString()
-        });
+
         
       } catch (error) {
-        console.warn('⚠️ [APP] Error restoring preferences:', error);
+
       }
     };
     

@@ -22,6 +22,8 @@ import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Alert from '../../components/ui/Alert';
+import GuestPreferences from '../../components/common/GuestPreferences';
+import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
@@ -149,18 +151,24 @@ const PasswordReset = () => {
   const strengthColor = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-green-600'];
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 bg-gray-50 dark:bg-gray-900 relative" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Guest Preferences & Accessibility - Top Right */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        <AccessibilityMenu />
+        <GuestPreferences />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-sm"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           {/* Header */}
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center justify-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
-                <span className="text-2xl text-white font-bold">S</span>
+          <div className="text-center mb-6">
+            <Link to="/" className="inline-flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center">
+                <span className="text-xl text-white font-bold">S</span>
               </div>
             </Link>
             

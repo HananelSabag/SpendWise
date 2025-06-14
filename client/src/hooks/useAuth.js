@@ -407,6 +407,31 @@ export const useAuth = () => {
   const resetPassword = useCallback(async (token, newPassword) => {
     return resetPasswordMutation.mutateAsync({ token, newPassword });
   }, [resetPasswordMutation]);
+
+  // Mark onboarding as complete
+  const markOnboardingComplete = useCallback(async () => {
+    try {
+      const response = await authAPI.post('/onboarding/complete');
+      
+      // Update the user data locally
+      queryClient.setQueryData(queryKeys.profile, (old) => {
+        if (!old?.data) return old;
+        
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            onboarding_completed: true
+          }
+        };
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark onboarding complete:', error);
+      throw error;
+    }
+  }, [queryClient]);
   
   // Computed states
   const isAuthenticated = !!user && hasToken;
@@ -444,6 +469,7 @@ export const useAuth = () => {
     resendVerificationEmail,
     forgotPassword,
     resetPassword,
+    markOnboardingComplete,
     
     // Utility
     refreshProfile: profileQuery.refetch,

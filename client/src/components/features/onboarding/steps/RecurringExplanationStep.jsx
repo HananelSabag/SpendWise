@@ -1,299 +1,427 @@
 /**
- * RecurringExplanationStep Component - Explains recurring transactions
+ * RecurringExplanationStep Component - Enhanced explanation with real TransactionCard examples
  * 
- * ✅ FEATURES:
- * - Interactive explanation
- * - Examples and scenarios
- * - Visual demonstrations
- * - Benefits highlighting
+ * ✅ ENHANCED FEATURES:
+ * - Uses REAL TransactionCard component from the main app
+ * - Shows expanded comparison: recurring vs one-time transactions
+ * - Edit options visible by default (no animation needed)
+ * - Better space utilization with no scrolling
+ * - Improved button alignment and spacing
+ * - Modern design with better visual hierarchy
  */
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   RefreshCw, Calendar, Clock, TrendingUp, 
-  DollarSign, Home, Phone, Lightbulb,
-  ChevronDown, ArrowRight, Play, CheckCircle
+  DollarSign, Home, Phone, Coffee,
+  ChevronDown, ArrowRight, Play, CheckCircle,
+  Plus, Search, Filter, Settings, CreditCard, Layers, 
+  Target, Sparkles, Shield, Users, Zap, BarChart3,
+  Star, Crown, Heart, Repeat, Activity,
+  Edit2, Trash2, Pause, CalendarX, ChevronLeft
 } from 'lucide-react';
 
 import { useLanguage } from '../../../../context/LanguageContext';
+import { useCurrency } from '../../../../context/CurrencyContext';
 import { cn } from '../../../../utils/helpers';
 import { Button } from '../../../ui';
 
 /**
- * RecurringExplanationStep - Learn about recurring transactions
+ * DemoTransactionCard - Simplified card component specifically for onboarding demo
+ * Shows edit options by default without animation or real functionality
  */
-const RecurringExplanationStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
-  const { t, language } = useLanguage();
-  const isRTL = language === 'he';
+const DemoTransactionCard = ({ transaction, isRTL, formatAmount, t }) => {
+  const isRecurring = transaction.is_recurring;
+  const isExpense = transaction.type === 'expense';
   
-  const [currentExample, setCurrentExample] = useState(0);
-  const [playingDemo, setPlayingDemo] = useState(false);
-
-  // Example scenarios
-  const examples = [
-    {
-      type: 'income',
-      icon: DollarSign,
-      title: t('onboarding.welcome.examples.salary'),
-      amount: 5000,
-      frequency: t('transactions.frequencies.monthly'),
-      description: t('recurring.examples.salaryDesc'),
-      color: 'green'
-    },
-    {
-      type: 'expense',
-      icon: Home,
-      title: t('onboarding.welcome.examples.rent'),
-      amount: -1200,
-      frequency: t('transactions.frequencies.monthly'),
-      description: t('recurring.examples.rentDesc'),
-      color: 'red'
-    },
-    {
-      type: 'expense',
-      icon: Phone,
-      title: t('onboarding.welcome.examples.phone'),
-      amount: -50,
-      frequency: t('transactions.frequencies.monthly'),
-      description: t('recurring.examples.phoneDesc'),
-      color: 'blue'
-    }
+  // Demo action buttons (non-functional)
+  const demoActions = isRecurring ? [
+    { icon: Edit2, label: t('transactions.editThis'), color: 'blue' },
+    { icon: Zap, label: t('transactions.editAll'), color: 'purple' },
+    { icon: Pause, label: t('transactions.pause'), color: 'orange' },
+    { icon: CalendarX, label: t('transactions.skipNext'), color: 'yellow' },
+    { icon: Trash2, label: t('common.delete'), color: 'red' }
+  ] : [
+    { icon: Edit2, label: t('common.edit'), color: 'blue' },
+    { icon: Trash2, label: t('common.delete'), color: 'red' }
   ];
-
-  // Benefits of recurring transactions
-  const benefits = [
-    {
-      icon: Clock,
-      title: t('recurring.benefits.timeTitle'),
-      description: t('recurring.benefits.timeDesc')
-    },
-    {
-      icon: TrendingUp,
-      title: t('recurring.benefits.insightsTitle'),
-      description: t('recurring.benefits.insightsDesc')
-    },
-    {
-      icon: CheckCircle,
-      title: t('recurring.benefits.accuracyTitle'),
-      description: t('recurring.benefits.accuracyDesc')
-    }
-  ];
-
-  // Play demo animation
-  const playDemo = () => {
-    setPlayingDemo(true);
-    setTimeout(() => setPlayingDemo(false), 3000);
-  };
-
-  // Next example
-  const nextExample = () => {
-    setCurrentExample((prev) => (prev + 1) % examples.length);
-  };
-
-  const currentExampleData = examples[currentExample];
 
   return (
     <div className={cn(
-      "flex flex-col items-center justify-center min-h-screen p-6",
-      "bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800"
+      'bg-white dark:bg-gray-800 rounded-xl border-2 overflow-hidden',
+      'shadow-sm transition-all duration-200',
+      isRecurring 
+        ? 'border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50/30 to-indigo-50/30 dark:from-purple-900/5 dark:to-indigo-900/5'
+        : 'border-gray-200 dark:border-gray-700'
     )}>
+      {/* Card Header */}
+      <div className="p-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              'p-1.5 rounded-lg',
+              isExpense ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20'
+            )}>
+              <DollarSign className={cn(
+                'w-3 h-3',
+                isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+              )} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white text-xs">
+                {transaction.description}
+              </h3>
+              <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-300">
+                  <Calendar className="w-2 h-2" />
+                  <span className="text-xs">Jun 14</span>
+                </div>
+                <div className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-300">
+                  {transaction.category_name}
+                </div>
+                {isRecurring && (
+                  <div className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 rounded text-xs text-purple-700 dark:text-purple-300 font-medium">
+                    Monthly
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className={cn(
+            'text-sm font-bold',
+            isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+          )}>
+            {isExpense ? '-' : '+'}{formatAmount(Math.abs(transaction.amount))}
+          </div>
+        </div>
+      </div>
+
+      {/* Demo Actions - Always Visible */}
+      <div className="border-t border-gray-100 dark:border-gray-700 p-2 bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="grid grid-cols-2 gap-1.5">
+          {demoActions.map((action, index) => (
+            <button
+              key={index}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 text-xs font-medium transition-all duration-200',
+                'cursor-default', // Non-functional demo button
+                action.color === 'blue' && 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+                action.color === 'purple' && 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700',
+                action.color === 'orange' && 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700',
+                action.color === 'yellow' && 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
+                action.color === 'red' && 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
+              )}
+              title="Demo only - no functionality"
+              disabled
+            >
+              <action.icon className="w-3 h-3" />
+              <span className="truncate">{action.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * RecurringExplanationStep - Enhanced recurring transactions explanation
+ * ✅ Shows both transaction types with edit options visible by default
+ */
+const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
+  const { t, language } = useLanguage();
+  const { formatAmount } = useCurrency();
+  const isRTL = language === 'he';
+
+  // ✅ DEMO TRANSACTION DATA for visual demonstration
+  const recurringTransaction = {
+    id: 'demo-recurring-1',
+    description: isRTL ? "משכורת חודשית" : "Monthly Salary",
+    amount: 12000,
+    type: 'income',
+    category_name: isRTL ? "שכר" : "Salary",
+    date: new Date().toISOString().split('T')[0],
+    is_recurring: true,
+    recurring_interval: 'monthly'
+  };
+
+  const oneTimeTransaction = {
+    id: 'demo-onetime-1',
+    description: isRTL ? "קפה בוקר" : "Morning Coffee",
+    amount: -5,
+    type: 'expense',
+    category_name: isRTL ? "אוכל ושתייה" : "Food & Drinks",
+    date: new Date().toISOString().split('T')[0],
+    is_recurring: false
+  };
+
+  // ✅ ENHANCED: Key features showcase
+  const keyFeatures = [
+    {
+      icon: RefreshCw,
+      title: isRTL ? "מנהל עסקאות חוזרות" : "Recurring Manager",
+      description: isRTL ? "ניהול מרכזי של כל העסקאות החוזרות" : "Central management of all recurring transactions",
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/20'
+    },
+    {
+      icon: Plus,
+      title: isRTL ? "הוספה מהירה" : "Quick Add",
+      description: isRTL ? "הוסף עסקאות מהדשבורד בקליק אחד" : "Add transactions from dashboard with one click",
+      color: 'text-green-600',
+      bgColor: 'bg-green-100 dark:bg-green-900/20'
+    },
+    {
+      icon: Layers,
+      title: isRTL ? "מנהל קטגוריות" : "Categories Manager",
+      description: isRTL ? t('nav.categoryManagerDesc') || "צור קטגוריות אישיות בהתאמה אישית" : t('nav.categoryManagerDesc') || "Manage your personal and system categories",
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/20'
+    },
+    {
+      icon: BarChart3,
+      title: isRTL ? "דף עסקאות מתקדם" : "Advanced Transactions",
+      description: isRTL ? "סינון וחיפוש מתקדם עם תובנות" : "Advanced filtering & search with insights",
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100 dark:bg-indigo-900/20'
+    }
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto h-full flex flex-col justify-between py-1 bg-gradient-to-br from-purple-50/30 via-indigo-50/20 to-blue-50/30 dark:from-purple-900/10 dark:via-indigo-900/10 dark:to-blue-900/10">
+      {/* ✅ COMPACT: Minimal header for no scrolling */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
+        transition={{ duration: 0.5 }}
+        className="text-center mb-2"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 text-white">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <RefreshCw className="w-8 h-8" />
-            </div>
-          </div>
-          
-          <h2 className="text-3xl font-bold text-center mb-2">
-            {t('onboarding.recurring.title')}
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <motion.div
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            <RefreshCw className="w-5 h-5 text-purple-600" />
+          </motion.div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            {isRTL ? "עסקאות חוזרות" : "Recurring Transactions"}
           </h2>
-          
-          <p className="text-center text-purple-100">
-            {t('onboarding.recurring.subtitle')}
-          </p>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles className="w-4 h-4 text-yellow-500" />
+          </motion.div>
         </div>
+        <p className={cn(
+          "text-xs text-gray-600 dark:text-gray-300",
+          isRTL && "text-right"
+        )}>
+          {isRTL 
+            ? "אוטומציה חכמה למעקב פיננסי - הגדר פעם, עקוב תמיד" 
+            : "Smart automation for financial tracking - set once, track forever"
+          }
+        </p>
+      </motion.div>
 
-        <div className="p-8">
-          {/* What are recurring transactions */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-              <Lightbulb className="w-5 h-5 mr-2 text-yellow-500" />
-              {t('recurring.whatAre.title')}
+      {/* ✅ ENHANCED: Two-column layout for better space utilization */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 items-start">
+        
+        {/* Left Column: Demo Transaction Cards */}
+        <motion.div
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="space-y-2 pb-8"
+        >
+          <div className="card p-3 rounded-xl">
+            <h3 className={cn(
+              "text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2",
+              isRTL && "flex-row-reverse"
+            )}>
+              <Crown className="w-4 h-4 text-purple-600" />
+              {isRTL ? "השוואה: חוזר לעומת חד-פעמי" : "Compare: Recurring vs One-time"}
             </h3>
             
-            <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed mb-6">
-              {t('recurring.whatAre.description')}
-            </p>
-
-            {/* Interactive example */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white">
-                  {t('recurring.examples.title')}
-                </h4>
-                
-                <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={nextExample}
-                    className="text-sm"
-                  >
-                    {t('common.next')} {t('common.example')}
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={playDemo}
-                    disabled={playingDemo}
-                    className="text-sm"
-                  >
-                    <Play className="w-4 h-4 mr-1" />
-                    {t('recurring.examples.demo')}
-                  </Button>
+            {/* ✅ ENHANCED: Demo transaction cards with edit options always visible */}
+            <div className="space-y-2">
+              {/* Recurring Transaction Card */}
+              <div>
+                <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  {isRTL ? "עסקה חוזרת (עם תג סגול)" : "Recurring Transaction (with purple badge)"}
                 </div>
+                <DemoTransactionCard
+                  transaction={recurringTransaction}
+                  isRTL={isRTL}
+                  formatAmount={formatAmount}
+                  t={t}
+                />
+              </div>
+              
+              {/* One-time Transaction Card */}
+              <div className="pb-6">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  {isRTL ? "עסקה חד-פעמית (ללא תג)" : "One-time Transaction (no badge)"}
+                </div>
+                <DemoTransactionCard
+                  transaction={oneTimeTransaction}
+                  isRTL={isRTL}
+                  formatAmount={formatAmount}
+                  t={t}
+                />
+              </div>
+            </div>
+
+            {/* ✅ KEY DIFFERENCES */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.3 }}
+              className="mt-2 p-2 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-800"
+            >
+              <h4 className="text-xs font-bold text-purple-700 dark:text-purple-300 mb-1 flex items-center gap-1">
+                <Star className="w-3 h-3" />
+                {isRTL ? "הבדלים מרכזיים:" : "Key Differences:"}
+              </h4>
+              <ul className={cn(
+                "text-xs text-purple-600 dark:text-purple-300 space-y-0.5",
+                isRTL && "text-right"
+              )}>
+                <li>• {isRTL ? "עסקאות חוזרות יש להן תג סגול ואפשרויות עריכה נוספות" : "Recurring transactions have purple badge and more edit options"}</li>
+                <li>• {isRTL ? "יש להן אפשרות 'השהיה' ו'דילוג' ייחודיות" : "They have unique 'Pause' and 'Skip' options"}</li>
+              </ul>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Right Column: Benefits and Features */}
+        <motion.div
+          initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="space-y-2"
+        >
+          {/* How It Works */}
+          <div className="card p-3 rounded-xl">
+            <h3 className={cn(
+              "text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2",
+              isRTL && "flex-row-reverse"
+            )}>
+              <Zap className="w-4 h-4 text-blue-600" />
+              {isRTL ? "איך זה עובד?" : "How It Works?"}
+            </h3>
+            
+                        <div className="space-y-2">
+              {/* Monthly distribution explanation */}
+              <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <h4 className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {isRTL ? "איך זה עובד?" : "How It Works?"}
+                </h4>
+                <p className={cn(
+                  "text-xs text-blue-600 dark:text-blue-300",
+                  isRTL && "text-right"
+                )}>
+                  {isRTL 
+                    ? "אתה קובע תאריך - זה מתווסף לרשימה ולמאזנים בתאריך הזה, אבל מפורס על כל החודש מתחילתו"
+                    : "You set the date - it's added to the list and balances on that date, but distributed throughout the month from the beginning"
+                  }
+                </p>
               </div>
 
-              {/* Example card */}
-              <motion.div
-                key={currentExample}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={cn(
-                  "border-2 rounded-lg p-4 transition-all",
-                  currentExampleData.color === 'green' && "border-green-200 bg-green-50 dark:bg-green-900/20",
-                  currentExampleData.color === 'red' && "border-red-200 bg-red-50 dark:bg-red-900/20",
-                  currentExampleData.color === 'blue' && "border-blue-200 bg-blue-50 dark:bg-blue-900/20",
-                  playingDemo && "animate-pulse"
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <currentExampleData.icon className={cn(
-                      "w-6 h-6 mr-3",
-                      currentExampleData.color === 'green' && "text-green-600",
-                      currentExampleData.color === 'red' && "text-red-600",
-                      currentExampleData.color === 'blue' && "text-blue-600"
-                    )} />
-                    
-                    <div>
-                      <h5 className="font-medium text-gray-900 dark:text-white">
-                        {currentExampleData.title}
-                      </h5>
-                      <p className="text-sm text-gray-500">
-                        {currentExampleData.frequency}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className={cn(
-                    "text-lg font-bold",
-                    currentExampleData.amount > 0 ? "text-green-600" : "text-red-600"
-                  )}>
-                    {currentExampleData.amount > 0 ? '+' : ''}
-                    {Math.abs(currentExampleData.amount).toLocaleString()}₪
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                  {currentExampleData.description}
+              {/* Peace of Mind */}
+              <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800">
+                <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1 flex items-center gap-1">
+                  <Heart className="w-3 h-3 text-red-500" />
+                  {isRTL ? "תהיה רגוע!" : "Be at Peace!"}
+                </h4>
+                <p className={cn(
+                  "text-xs text-emerald-600 dark:text-emerald-300",
+                  isRTL && "text-right"
+                )}>
+                  {isRTL 
+                    ? "הכל מאוזן מתחילת החודש - אין הפתעות!"
+                    : "Everything is balanced from the start of the month - no surprises!"
+                  }
                 </p>
-
-                {playingDemo && (
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 3 }}
-                    className="h-1 bg-blue-500 rounded-full mt-3"
-                  />
-                )}
-              </motion.div>
+              </div>
             </div>
           </div>
 
-          {/* Benefits */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
-              {t('recurring.benefits.title')}
+          {/* Available Tools */}
+          <div className="card p-2 rounded-xl">
+            <h3 className={cn(
+              "text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2",
+              isRTL && "flex-row-reverse"
+            )}>
+              <Activity className="w-4 h-4 text-indigo-600" />
+              {isRTL ? "כלים זמינים" : "Available Tools"}
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {benefits.map((benefit, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="text-center p-6 bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600"
-                >
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-full mb-4">
-                    <benefit.icon className="w-6 h-6" />
-                  </div>
-                  
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    {benefit.title}
-                  </h4>
-                  
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {benefit.description}
-                  </p>
-                </motion.div>
-              ))}
+            <div className="space-y-2">
+              {keyFeatures.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 + index * 0.1, duration: 0.3 }}
+                    className={cn(
+                      "flex items-start gap-2.5 p-2.5 rounded-lg",
+                      feature.bgColor,
+                      isRTL && "flex-row-reverse text-right"
+                    )}
+                  >
+                    <div className="p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+                      <Icon className={cn("w-3 h-3", feature.color)} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-0.5">
+                        {feature.title}
+                      </h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
+
+
           </div>
 
-          {/* Call to action */}
-          <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {t('recurring.cta.title')}
-            </h4>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              {t('recurring.cta.description')}
-            </p>
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <div className={cn(
-          "flex justify-between items-center p-8 border-t border-gray-200 dark:border-gray-700",
-          isRTL ? "flex-row-reverse" : ""
-        )}>
-          <Button
-            variant="ghost"
-            onClick={onPrevious}
-            className="flex items-center"
-          >
-            {isRTL ? <ChevronDown className="w-4 h-4 mr-2 rotate-90" /> : <ChevronDown className="w-4 h-4 ml-2 -rotate-90" />}
-            {t('onboarding.common.previous')}
-          </Button>
+        </motion.div>
+      </div>
 
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={onNext}
-              className="text-gray-500 text-sm"
-            >
-              {t('onboarding.common.skip')}
-            </Button>
-          </div>
-
-          <Button
-            onClick={onNext}
-            className="flex items-center bg-purple-500 hover:bg-purple-600 text-white px-8"
-          >
-            {t('recurring.cta.button')}
-            {isRTL ? <ArrowRight className="w-4 h-4 mr-2 rotate-180" /> : <ArrowRight className="w-4 h-4 ml-2" />}
-          </Button>
-        </div>
+      {/* ✅ FIXED: Bottom buttons with proper positioning */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7, duration: 0.5 }}
+        className="flex items-center justify-between mt-3 px-6 pb-3"
+      >
+        <Button
+          onClick={onPrevious}
+          variant="outline"
+          size="md"
+          className="px-6 py-2.5 rounded-lg border-2 text-sm font-medium"
+        >
+          {isRTL ? "חזור" : "Back"}
+        </Button>
+        
+        <Button
+          onClick={onNext}
+          size="md"
+          className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg text-sm"
+        >
+          {isRTL ? "בואו נגדיר!" : "Let's Set Up!"}
+        </Button>
       </motion.div>
     </div>
   );

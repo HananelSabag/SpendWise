@@ -43,7 +43,7 @@ const AddTransactions = ({
   const { t, language } = useLanguage();
   const { createTransaction, isCreating } = useTransactionActions();
   const { categories: allCategories = [], isLoading: categoriesLoading } = useCategories();
-  const { selectedDate } = useDate();
+  const { selectedDate, isToday, resetToToday } = useDate();
   
   const isRTL = language === 'he';
   
@@ -54,6 +54,9 @@ const AddTransactions = ({
   const [success, setSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(initialActionType ? 1 : 0);
   const [categoryTab, setCategoryTab] = useState('general');
+  
+  // ✅ NEW: Date awareness for better UX
+  const isHistoricalDate = !isToday(selectedDate);
   
   const dateButtonRef = useRef(null);
 
@@ -276,20 +279,28 @@ const AddTransactions = ({
           : null
       });
       
+      // ✅ ENHANCED: Beautiful success animation with auto-close
       setSuccess(true);
       
-      // Success callback and cleanup
+      // Success callback
       onSuccess?.(submitData);
       
+      // Auto-close after success animation
       setTimeout(() => {
         if (onClose) {
           onClose();
         }
-      }, 2500);
+      }, 2000);
       
     } catch (err) {
       console.error('Transaction creation failed:', err);
+      // ✅ ENHANCED: Show error animation
       setError(err.message || t('actions.errors.addingTransaction'));
+      
+      // Clear error after some time to allow retry
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     }
   };
 
@@ -370,7 +381,7 @@ const AddTransactions = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="h-full flex flex-col max-h-[90vh]"
+      className="h-full flex flex-col max-h-[85vh] overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* ✅ ENHANCED: Header with better visual design but all original translations */}
@@ -399,7 +410,37 @@ const AddTransactions = ({
           ))}
         </div>
         
-        <div className="relative z-10 p-4 sm:p-6">
+        <div className="relative z-10 p-3 sm:p-4">
+          {/* ✅ NEW: Historical date warning */}
+          <AnimatePresence>
+            {isHistoricalDate && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 rounded-xl p-3"
+              >
+                <div className="flex items-center gap-2 text-amber-100">
+                  <Calendar className="w-4 h-4" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {t('actions.historicalDateWarning', 'Adding transaction to historical date')}
+                    </p>
+                    <p className="text-xs opacity-80">
+                      {new Date(selectedDate).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={resetToToday}
+                    className="text-xs bg-amber-400/30 hover:bg-amber-400/50 px-2 py-1 rounded-lg transition-colors"
+                  >
+                    {t('actions.goToToday', 'Today')}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               {activeType && !initialActionType && (
@@ -475,7 +516,7 @@ const AddTransactions = ({
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-3 sm:p-4 space-y-4">
           <AnimatePresence mode="wait">
             
             {/* STEP 0: Type Selection */}
@@ -506,8 +547,8 @@ const AddTransactions = ({
                       >
                         <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         
-                        <div className="relative p-4 sm:p-6">
-                          <div className={`inline-flex p-3 sm:p-4 rounded-2xl bg-gradient-to-r ${type.gradient} mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        <div className="relative p-3 sm:p-4">
+                          <div className={`inline-flex p-2 sm:p-3 rounded-xl bg-gradient-to-r ${type.gradient} mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                             <type.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
                           
@@ -523,7 +564,7 @@ const AddTransactions = ({
                               {t('actions.example')}:
                             </p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {type.example}
+                              {t(`actions.${type.example}`)}
                             </p>
                           </div>
                           
@@ -873,23 +914,31 @@ const AddTransactions = ({
                   </motion.div>
                 )}
 
-                {/* ✅ PRESERVED: Error Display with all original translation keys */}
+                {/* ✅ ENHANCED: Beautiful Error Animation */}
                 <AnimatePresence>
                   {error && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     >
-                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center gap-3 text-red-800">
-                          <div className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0">
-                            <X className="w-3 h-3" />
+                      <div className="p-4 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-lg">
+                        <div className="flex items-center gap-3 text-red-800 dark:text-red-300">
+                          <motion.div 
+                            className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 shadow-md"
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <X className="w-4 h-4 text-white" />
+                          </motion.div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm">שגיאה</h4>
+                            <p className="font-medium text-sm">{error}</p>
                           </div>
-                          <span className="font-medium">{error}</span>
                           <button
                             onClick={() => setError('')}
-                            className="ml-auto text-red-600 hover:text-red-800"
+                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -899,7 +948,7 @@ const AddTransactions = ({
                   )}
                 </AnimatePresence>
 
-                {/* ✅ PRESERVED: Success Animation with all original translation keys */}
+                {/* ✅ ENHANCED: Beautiful Success Animation with Auto-Close */}
                 <AnimatePresence>
                   {success && (
                     <motion.div
@@ -908,24 +957,40 @@ const AddTransactions = ({
                       animate="animate"
                       className="text-center py-6"
                     >
-                      <div className="inline-flex items-center gap-4 px-6 py-4 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="inline-flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl shadow-lg">
                         <motion.div
-                          className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center"
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ duration: 0.5 }}
+                          className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-md"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            rotate: [0, 10, -10, 0]
+                          }}
+                          transition={{ duration: 0.8, type: "spring" }}
                         >
-                          <Check className="w-7 h-7 text-white" />
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                          >
+                            <Check className="w-7 h-7 text-white drop-shadow-sm" />
+                          </motion.div>
                         </motion.div>
                         <div className="text-left">
-                          <h3 className="text-lg font-semibold text-green-800">
-                            {t('actions.success')}
-                          </h3>
-                          <p className="text-sm text-green-600">
-                            {activeType.isRecurring 
-                              ? t('actions.recurringTransactionCreated')
-                              : t('actions.transactionAdded')
-                            }
-                          </p>
+                          <motion.h3 
+                            className="text-lg font-bold text-green-800 dark:text-green-300"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4 }}
+                          >
+                            {t('actions.addSuccess') || 'הוסף בהצלחה!'}
+                          </motion.h3>
+                          <motion.p 
+                            className="text-sm text-green-600 dark:text-green-400 font-medium"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 }}
+                          >
+                            החלון יסגר אוטומטית...
+                          </motion.p>
                         </div>
                       </div>
                     </motion.div>

@@ -217,10 +217,13 @@ const translations = {
     selectDate: 'Select Date',
     invalidDate: 'Invalid date',
     toggleTheme: 'Toggle Theme',
+    switchToLight: 'Switch to Light Mode',
+    switchToDark: 'Switch to Dark Mode',
     toggleLanguage: 'Toggle Language',
     openUserMenu: 'Open User Menu',
     openMenu: 'Open Menu',
     closeMenu: 'Close Menu',
+    sessionOverrideActive: 'Session overrides active',
     floatingMenu: 'Floating Menu',
     accessibility: 'Accessibility',
     statement: 'Statement',
@@ -504,15 +507,21 @@ const translations = {
       fast: 'Fast Entry',
       smart: 'Smart',
       placeholder: 'Enter amount',
-      amount: 'Amount', // ✅ ADD: Missing translation
+      amount: 'Amount',
       addExpense: 'Add Expense',
       addIncome: 'Add Income',
       defaultDescription: 'Quick transaction',
       added: 'Added!',
-      advanced: 'Advanced Actions', // ✅ ADD: Missing translation
+      advanced: 'Advanced Actions',
       todayWarning: 'Transaction will be added to today, not the displayed date',
       switchToToday: 'Transaction added! Switch to today\'s view to see it?',
-      hint: 'Use quick actions for fast transaction entry'
+      hint: 'Use quick actions for fast transaction entry',
+      quickExpense: 'Quick Expense',
+      quickIncome: 'Quick Income',
+      quickRecurring: 'Quick Recurring',
+      historicalDateWarning: 'Adding to Historical Date',
+      goToToday: 'Today',
+      notToday: 'Historical Date Mode'
     },
 
     stats: {
@@ -931,6 +940,10 @@ const translations = {
     // Examples
     example: 'Example',
     examples: 'Examples',
+    expenseExample: 'e.g., Groceries, Gas, Shopping',
+    recurringExpenseExample: 'e.g., Rent, Insurance, Subscription',
+    incomeExample: 'e.g., Salary, Bonus, Gift',
+    recurringIncomeExample: 'e.g., Salary, Dividend, Rental Income',
     examplePlaceholders: {
       coffee: 'Coffee with friends',
       lunch: 'Lunch at restaurant',
@@ -946,6 +959,19 @@ const translations = {
     added: 'Added!',
     create: 'Create',
     update: 'Update',
+    save: 'Save',
+    cancel: 'Cancel',
+    creating: 'Creating...',
+    adding: 'Adding...',
+    updating: 'Updating...',
+    
+    // Success messages
+    addSuccess: 'Transaction Added Successfully',
+    updateSuccess: 'Transaction Updated Successfully',
+    
+    // Historical date warnings
+    historicalDateWarning: 'Adding transaction to historical date',
+    goToToday: 'Go to Today',
 
     // Frequencies
     frequencies: {
@@ -1130,8 +1156,57 @@ const translations = {
     theme: 'Theme',
     lightTheme: 'Light',
     darkTheme: 'Dark',
+    systemTheme: 'System',
     languageChanged: 'Language changed successfully',
     currencyChanged: 'Currency changed successfully',
+    
+    // Budget
+    budget: {
+      monthlyBudget: 'Monthly Budget',
+      enterAmount: 'Enter budget amount',
+      optional: 'Optional'
+    },
+    
+    // Templates
+    templates: {
+      quickSetup: 'Quick Setup',
+      yourTemplates: 'Your Templates',
+      setupComplete: 'Setup Complete! {{count}} templates ready',
+      setupOptional: 'Templates are optional',
+      canAddMore: 'You can add more templates anytime',
+      canSkipForNow: 'You can skip this step and add templates later',
+      carPayment: 'Car Payment',
+      internet: 'Internet Service'
+    },
+    
+    // Recurring transactions
+    recurring: {
+      whatAre: {
+        title: 'What are Recurring Transactions?',
+        description: 'Recurring transactions are payments or income that happen regularly - like your salary, rent, or monthly subscriptions. Instead of manually entering them each time, you can set them up once and SpendWise will track them automatically.'
+      },
+      examples: {
+        title: 'Example',
+        demo: 'Demo',
+        salaryDesc: 'Your monthly salary automatically added as income',
+        rentDesc: 'Monthly rent payment tracked as expense',
+        phoneDesc: 'Phone bill automatically deducted each month'
+      },
+      benefits: {
+        title: 'Why Use Recurring Transactions?',
+        timeTitle: 'Save Time',
+        timeDesc: 'No need to manually enter the same transactions every month',
+        insightsTitle: 'Better Insights',
+        insightsDesc: 'Get accurate predictions of your future financial situation',
+        accuracyTitle: 'Stay Accurate',
+        accuracyDesc: 'Never forget to track regular payments or income'
+      },
+      cta: {
+        title: 'Ready to Set Up Your First Recurring Transactions?',
+        description: 'Let\'s add some common recurring transactions to get you started.',
+        button: 'Set Up Templates'
+      }
+    },
     themeChanged: 'Theme changed successfully',
     passwordChanged: 'Password changed successfully',
     incorrectPassword: 'Current password is incorrect',
@@ -1373,25 +1448,92 @@ const translations = {
     compliance: 'This site complies with the Israeli accessibility regulations (IS 5568).',
     accessibilityStatement: 'Accessibility Statement',
 
-    statement: {
-      title: 'Accessibility Statement',
-      intro: 'SpendWise is committed to making its website accessible to people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law (1998) and the Equal Rights for Persons with Disabilities Regulations (Service Accessibility Adaptations) of 2013.',
-      features: 'Accessibility Features:',
-      featuresList: [
-        'Screen reader compatibility',
-        'Adjustable color contrast',
-        'Text size adjustment',
-        'Keyboard navigation support',
-        'Hebrew and English language support'
-      ],
-      level: 'Accessibility Level:',
-      levelDescription: 'This site conforms to Level AA compliance per WCAG 2.1 guidelines and the Israeli Standard (IS 5568).',
-      contact: 'Accessibility Contact:',
-      contactDescription: 'If you encounter accessibility issues or wish to provide feedback about accessibility on our site, please contact our accessibility coordinator:',
-      email: 'Email: accessibility@spendwise.com',
-      phone: 'Phone: 03-1234567',
-      lastUpdated: 'Last updated: 01/01/{{year}}',
-      close: 'Close'
+          statement: {
+        title: 'Accessibility Statement',
+        intro: 'SpendWise is committed to making its website accessible to people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law (1998) and the Equal Rights for Persons with Disabilities Regulations (Service Accessibility Adaptations) of 2013.',
+        features: 'Accessibility Features:',
+        featuresList: {
+          screenReader: 'Screen reader compatibility',
+          colorContrast: 'Adjustable color contrast',
+          textSize: 'Text size adjustment',
+          keyboardNav: 'Keyboard navigation support',
+          multiLanguage: 'Hebrew and English language support'
+        },
+        level: 'Accessibility Level:',
+        levelDescription: 'This site conforms to Level AA compliance per WCAG 2.1 guidelines and the Israeli Standard (IS 5568).',
+        contact: 'Accessibility Contact:',
+        contactDescription: 'If you encounter accessibility issues or wish to provide feedback about accessibility on our site, please contact our accessibility coordinator:',
+        phone: 'Phone',
+        lastUpdated: 'Last updated: 01/01/{{year}}',
+        close: 'Close'
+      }
+    },
+
+  // Privacy Policy
+  privacy: {
+    title: 'Privacy Policy',
+    lastUpdated: 'Last updated: {{date}}',
+    sections: {
+      intro: {
+        title: 'Introduction',
+        content: 'SpendWise ("we", "our", or "us") respects your privacy and is committed to protecting your personal data in accordance with Israeli Privacy Protection Law 1981 and applicable regulations.'
+      },
+      dataCollection: {
+        title: 'Data We Collect',
+        content: 'We collect information you provide directly to us (account information, financial data) and automatically through your use of our service (usage analytics, device information).'
+      },
+      dataUse: {
+        title: 'How We Use Your Data',
+        content: 'Your data is used to provide our financial management services, improve user experience, ensure security, and comply with legal obligations.'
+      },
+      dataProtection: {
+        title: 'Data Protection',
+        content: 'We implement appropriate security measures including encryption, secure servers, and regular security audits to protect your personal information.'
+      },
+      userRights: {
+        title: 'Your Rights',
+        content: 'You have the right to access, correct, delete, or export your personal data. Contact us for any data-related requests.'
+      },
+      contact: {
+        title: 'Contact Us',
+        content: 'For privacy-related questions, contact us at: spendwise.verifiction@gmail.com'
+      }
+    }
+  },
+
+  // Terms of Service
+  terms: {
+    title: 'Terms of Service',
+    lastUpdated: 'Last updated: {{date}}',
+    sections: {
+      acceptance: {
+        title: 'Acceptance of Terms',
+        content: 'By using SpendWise, you agree to these terms and conditions. If you do not agree, please discontinue use of our service.'
+      },
+      service: {
+        title: 'Service Description',
+        content: 'SpendWise provides personal financial management tools including expense tracking, budget management, and financial analytics.'
+      },
+      userResponsibilities: {
+        title: 'User Responsibilities',
+        content: 'You are responsible for maintaining account security, providing accurate information, and using the service in compliance with applicable laws.'
+      },
+      limitations: {
+        title: 'Service Limitations',
+        content: 'Our service is provided "as is" without warranties. We are not liable for any financial decisions made based on our tools.'
+      },
+      termination: {
+        title: 'Termination',
+        content: 'Either party may terminate this agreement. Upon termination, your access will cease but your data retention rights remain as per our Privacy Policy.'
+      },
+      governingLaw: {
+        title: 'Governing Law',
+        content: 'These terms are governed by Israeli law. Disputes will be resolved in Israeli courts.'
+      },
+      contact: {
+        title: 'Contact Us',
+        content: 'For questions about these terms, contact us at: spendwise.verifiction@gmail.com'
+      }
     }
   },
 
@@ -1400,6 +1542,8 @@ const translations = {
     changeLanguage: 'Change Language',
     switchCurrency: 'Switch Currency',
     toggleTheme: 'Toggle Theme',
+    switchToLight: 'Switch to Light Mode',
+    switchToDark: 'Switch to Dark Mode',
     accessibility: 'Accessibility'
   },
 
@@ -1509,7 +1653,25 @@ const translations = {
     // Preferences step
     preferences: {
       title: 'Customize Your Experience',
-      subtitle: 'Set your preferences to personalize SpendWise'
+      subtitle: 'Set your preferences to personalize SpendWise',
+      description: 'Configure these settings to personalize your SpendWise experience. You can change these anytime in your profile.',
+      
+      localization: 'Language & Region',
+      language: 'Language',
+      currency: 'Currency',
+      
+      appearance: 'Appearance',
+      theme: 'Theme',
+      themes: {
+        light: 'Light',
+        dark: 'Dark',
+        system: 'System'
+      },
+      
+      budget: 'Monthly Budget',
+      monthlyBudget: 'Monthly Budget',
+      enterAmount: 'Enter budget amount',
+      saving: 'Saving...'
     },
 
     // Recurring explanation step
@@ -1583,6 +1745,14 @@ const translations = {
     addedFromOnboarding: 'Added during onboarding',
     carPayment: 'Car Payment',
     internet: 'Internet Bill'
+  },
+
+  // Budget settings
+  budget: {
+    monthlyBudget: 'Monthly Budget',
+    enterAmount: 'Enter budget amount',
+    optional: 'Optional',
+    saving: 'Saving...'
   },
 
   // === HEBREW TRANSLATIONS ===
@@ -1786,10 +1956,13 @@ const translations = {
       selectDate: 'בחר תאריך',
       invalidDate: 'תאריך לא תקין',
       toggleTheme: 'החלף ערכת נושא',
+      switchToLight: 'עבור למצב בהיר',
+      switchToDark: 'עבור למצב כהה',
       toggleLanguage: 'החלף שפה',
       openUserMenu: 'פתח תפריט משתמש',
       openMenu: 'פתח תפריט',
       closeMenu: 'סגור תפריט',
+      sessionOverrideActive: 'עקיפת העדפות פעילה',
       floatingMenu: 'תפריט צף',
       accessibility: 'נגישות',
       statement: 'הצהרה',
@@ -2073,15 +2246,21 @@ const translations = {
         fast: 'הזנה מהירה',
         smart: 'חכם',
         placeholder: 'הזן סכום',
-        amount: 'סכום', // ✅ ADD: Missing Hebrew translation
+        amount: 'סכום',
         addExpense: 'הוסף הוצאה',
         addIncome: 'הוסף הכנסה',
         defaultDescription: 'עסקה מהירה',
         added: 'נוסף!',
-        advanced: 'פעולות מתקדמות', // ✅ ADD: Missing Hebrew translation
+        advanced: 'פעולות מתקדמות',
         todayWarning: 'הפעולה תתווסף להיום, לא לתאריך המוצג',
         switchToToday: 'הפעולה נוספה! לעבור לתצוגת היום כדי לראות אותה?',
-        hint: 'השתמש בפעולות מהירות להזנת עסקאות מהירה'
+        hint: 'השתמש בפעולות מהירות להזנת עסקאות מהירה',
+        quickExpense: 'הוצאה מהירה',
+        quickIncome: 'הכנסה מהירה',
+        quickRecurring: 'עסקה קבועה מהירה',
+        historicalDateWarning: 'הוספה לתאריך היסטורי',
+        goToToday: 'היום',
+        notToday: 'מצב תאריך היסטורי'
       },
 
       stats: {
@@ -2494,6 +2673,10 @@ single: "עסקה רגילה",
       // Examples
       example: 'דוגמה',
       examples: 'דוגמאות',
+      expenseExample: 'לדוגמה: קניות, דלק, קניות',
+      recurringExpenseExample: 'לדוגמה: שכר דירה, ביטוח, מנוי',
+      incomeExample: 'לדוגמה: משכורת, בונוס, מתנה',
+      recurringIncomeExample: 'לדוגמה: משכורת, דיבידנד, שכר דירה',
       examplePlaceholders: {
         coffee: 'קפה עם חברים',
         lunch: 'ארוחת צהריים במסעדה',
@@ -2690,11 +2873,60 @@ single: "עסקה רגילה",
       billingSettings: 'חיוב ומנוי',
       language: 'שפה',
       currency: 'מטבע',
-      theme: 'ערכת נושא',
-      lightTheme: 'בהיר',
-      darkTheme: 'כהה',
+          theme: 'ערכת נושא',
+    lightTheme: 'בהיר',
+    darkTheme: 'כהה',
+    systemTheme: 'מערכת',
       languageChanged: 'השפה שונתה בהצלחה',
       currencyChanged: 'המטבע שונה בהצלחה',
+      
+      // Budget
+      budget: {
+        monthlyBudget: 'תקציב חודשי',
+        enterAmount: 'הכניסו סכום תקציב',
+        optional: 'אופציונלי'
+      },
+      
+      // Templates
+      templates: {
+        quickSetup: 'הגדרה מהירה',
+        yourTemplates: 'התבניות שלכם',
+        setupComplete: 'הגדרה הושלמה! {{count}} תבניות מוכנות',
+        setupOptional: 'תבניות הן אופציונליות',
+        canAddMore: 'תוכלו להוסיף עוד תבניות בכל זמן',
+        canSkipForNow: 'תוכלו לדלג על השלב הזה ולהוסיף תבניות מאוחר יותר',
+        carPayment: 'תשלום רכב',
+        internet: 'שירות אינטרנט'
+      },
+      
+      // Recurring transactions
+      recurring: {
+        whatAre: {
+          title: 'מה הן עסקאות חוזרות?',
+          description: 'עסקאות חוזרות הן תשלומים או הכנסות שקורים באופן קבוע - כמו המשכורת, שכר דירה, או מנויים חודשיים. במקום להזין אותם ידנית בכל פעם, תוכלו להגדיר אותם פעם אחת ו-SpendWise יעקוב אחריהם אוטומטית.'
+        },
+        examples: {
+          title: 'דוגמה',
+          demo: 'הדגמה',
+          salaryDesc: 'המשכורת החודשית שלכם מתווספת אוטומטית כהכנסה',
+          rentDesc: 'תשלום שכר דירה חודשי נרשם כהוצאה',
+          phoneDesc: 'חשבון הטלפון מנוכה אוטומטית כל חודש'
+        },
+        benefits: {
+          title: 'למה להשתמש בעסקאות חוזרות?',
+          timeTitle: 'חיסכון בזמן',
+          timeDesc: 'אין צורך להזין ידנית את אותן עסקאות כל חודש',
+          insightsTitle: 'תובנות טובות יותר',
+          insightsDesc: 'קבלו תחזיות מדויקות של המצב הכלכלי העתידי שלכם',
+          accuracyTitle: 'דיוק מושלם',
+          accuracyDesc: 'לעולם לא תשכחו לעקוב אחר תשלומים או הכנסות קבועות'
+        },
+        cta: {
+          title: 'מוכנים להגדיר את העסקאות החוזרות הראשונות שלכם?',
+          description: 'בואו נוסיף כמה עסקאות חוזרות נפוצות כדי להתחיל.',
+          button: 'הגדרת תבניות'
+        }
+      },
       themeChanged: 'ערכת הנושא שונתה בהצלחה',
       passwordChanged: 'הסיסמה שונתה בהצלחה',
       incorrectPassword: 'הסיסמה הנוכחית שגויה',
@@ -2940,29 +3172,98 @@ single: "עסקה רגילה",
         title: 'הצהרת נגישות',
         intro: 'אתר SpendWise מחויב להנגיש את שירותיו לאנשים עם מוגבלויות, בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות (התשנ"ח-1998) ותקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013.',
         features: 'תכונות נגישות באתר:',
-        featuresList: [
-          'תאימות לקורא מסך',
-          'ניגודיות צבעים מתכווננת',
-          'התאמת גודל טקסט',
-          'תמיכה בניווט במקלדת',
-          'תמיכה בעברית ובאנגלית'
-        ],
+        featuresList: {
+          screenReader: 'תאימות לקורא מסך',
+          colorContrast: 'ניגודיות צבעים מתכווננת',
+          textSize: 'התאמת גודל טקסט',
+          keyboardNav: 'תמיכה בניווט במקלדת',
+          multiLanguage: 'תמיכה בעברית ובאנגלית'
+        },
         level: 'דרגת הנגישות:',
         levelDescription: 'אתר זה עומד ברמת תאימות AA לפי הנחיות WCAG 2.1 ועומד בתקן הישראלי (ת"י 5568).',
         contact: 'יצירת קשר בנושאי נגישות:',
         contactDescription: 'אם נתקלת בבעיות נגישות או ברצונך לשלוח משוב לגבי הנגישות באתר, אנא צור קשר עם רכז הנגישות שלנו:',
-        email: 'דוא״ל: accessibility@spendwise.com',
-        phone: 'טלפון: 03-1234567',
+        phone: 'טלפון',
         lastUpdated: 'עודכן לאחרונה: 01/01/{{year}}',
         close: 'סגור'
       }
     },
+
+  // Privacy Policy Hebrew
+  privacy: {
+    title: 'מדיניות פרטיות',
+    lastUpdated: 'עודכן לאחרונה: {{date}}',
+    sections: {
+      intro: {
+        title: 'הקדמה',
+        content: 'SpendWise ("אנחנו", "שלנו") מכבדת את פרטיותכם ומתחייבת להגן על המידע האישי שלכם בהתאם לחוק הגנת הפרטיות התשמ"א-1981 ותקנותיו.'
+      },
+      dataCollection: {
+        title: 'המידע שאנו אוספים',
+        content: 'אנו אוספים מידע שאתם מספקים לנו ישירות (פרטי חשבון, נתונים פיננסיים) ומידע שנאסף אוטומטית דרך השימוש בשירות (נתוני שימוש, מידע על המכשיר).'
+      },
+      dataUse: {
+        title: 'איך אנו משתמשים במידע',
+        content: 'המידע שלכם משמש לספק את שירותי ניהול הכספים, לשפר את חוויית המשתמש, להבטיח אבטחה ולעמוד בחובות חוקיות.'
+      },
+      dataProtection: {
+        title: 'הגנה על המידע',
+        content: 'אנו מיישמים אמצעי אבטחה מתאימים כולל הצפנה, שרתים מאובטחים וביקורות אבטחה קבועות כדי להגן על המידע האישי שלכם.'
+      },
+      userRights: {
+        title: 'הזכויות שלכם',
+        content: 'יש לכם זכות לגשת, לתקן, למחוק או לייצא את המידע האישי שלכם. צרו איתנו קשר לכל בקשה הקשורה למידע.'
+      },
+      contact: {
+        title: 'צרו קשר',
+        content: 'לשאלות הקשורות לפרטיות, צרו קשר: spendwise.verifiction@gmail.com'
+      }
+    }
+  },
+
+  // Terms of Service Hebrew
+  terms: {
+    title: 'תקנון שימוש',
+    lastUpdated: 'עודכן לאחרונה: {{date}}',
+    sections: {
+      acceptance: {
+        title: 'הסכמה לתנאים',
+        content: 'על ידי שימוש ב-SpendWise, אתם מסכימים לתנאים והתנאים הללו. אם אינכם מסכימים, אנא הפסיקו להשתמש בשירות שלנו.'
+      },
+      service: {
+        title: 'תיאור השירות',
+        content: 'SpendWise מספקת כלים לניהול כספים אישיים כולל מעקב הוצאות, ניהול תקציב ואנליטיקה פיננסית.'
+      },
+      userResponsibilities: {
+        title: 'אחריות המשתמש',
+        content: 'אתם אחראים לשמירה על אבטחת החשבון, למתן מידע מדויק ולשימוש בשירות בהתאם לחוקים החלים.'
+      },
+      limitations: {
+        title: 'מגבלות השירות',
+        content: 'השירות שלנו מסופק "כפי שהוא" ללא אחריות. איננו אחראים להחלטות פיננסיות שנעשות על בסיס הכלים שלנו.'
+      },
+      termination: {
+        title: 'סיום הסכם',
+        content: 'כל צד יכול לסיים הסכם זה. עם הסיום, הגישה שלכם תיפסק אך זכויות שמירת הנתונים שלכם יישארו כפי שמפורט במדיניות הפרטיות.'
+      },
+      governingLaw: {
+        title: 'חוק החל',
+        content: 'תנאים אלה כפופים לחוק הישראלי. מחלוקות ייפתרו בבתי המשפט הישראליים.'
+      },
+      contact: {
+        title: 'צרו קשר',
+        content: 'לשאלות על תנאים אלה, צרו קשר: spendwise.verifiction@gmail.com'
+      }
+    }
+  },
 
     // Floating Menu
     floatingMenu: {
       changeLanguage: 'שנה שפה',
       switchCurrency: 'החלף מטבע',
       toggleTheme: 'החלף ערכת נושא',
+      switchToLight: 'עבור למצב בהיר',
+      switchToDark: 'עבור למצב כהה',
       accessibility: 'נגישות'
     },
 
@@ -3072,7 +3373,25 @@ single: "עסקה רגילה",
       // Preferences step
       preferences: {
         title: 'התאימו את החוויה שלכם',
-        subtitle: 'הגדירו את ההעדפות שלכם כדי להתאים אישית את SpendWise'
+        subtitle: 'הגדירו את ההעדפות שלכם כדי להתאים אישית את SpendWise',
+        description: 'הגדירו את ההגדרות האלה כדי להתאים אישית את חוויית SpendWise שלכם. תוכלו לשנות אותן בכל זמן בפרופיל שלכם.',
+        
+        localization: 'שפה ואזור',
+        language: 'שפה',
+        currency: 'מטבע',
+        
+        appearance: 'מראה',
+        theme: 'נושא',
+        themes: {
+          light: 'בהיר',
+          dark: 'כהה',
+          system: 'מערכת'
+        },
+        
+        budget: 'תקציב חודשי',
+        monthlyBudget: 'תקציב חודשי',
+        enterAmount: 'הכניסו סכום תקציב',
+        saving: 'שומר...'
       },
 
       // Recurring explanation step
@@ -3146,6 +3465,14 @@ single: "עסקה רגילה",
       addedFromOnboarding: 'נוסף במהלך האונבורדינג',
       carPayment: 'תשלום רכב',
       internet: 'חשבון אינטרנט'
+    },
+
+    // Budget settings in Hebrew
+    budget: {
+      monthlyBudget: 'תקציב חודשי',
+      enterAmount: 'הכניסו סכום תקציב',
+      optional: 'אופציונלי',
+      saving: 'שומר...'
     }
   }
 };
@@ -3337,6 +3664,7 @@ export const LanguageProvider = ({ children }) => {
       savedLanguage: language, // ✅ Expose saved preference
       sessionLanguage, // ✅ Expose session override
       setLanguage: changeLanguagePermanent, // ✅ For profile settings
+      changeLanguagePermanent, // ✅ ADD: Export function with expected name
       setLanguageSession: changeLanguageSession, // ✅ For header toggle
       toggleLanguage, // ✅ Session-only toggle
       resetToSavedLanguage, // ✅ Reset on logout
