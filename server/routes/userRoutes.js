@@ -36,6 +36,52 @@ router.get('/verify-email/:token',
 );
 
 /**
+ * @route   GET /api/v1/users/verify-email-debug/:token
+ * @desc    Debug email verification - helps troubleshoot iPhone issues
+ * @access  Public
+ */
+router.get('/verify-email-debug/:token', (req, res) => {
+  const { token } = req.params;
+  const userAgent = req.get('User-Agent');
+  const origin = req.get('Origin');
+  const referer = req.get('Referer');
+  const isIPhone = userAgent && userAgent.includes('iPhone');
+  
+  res.json({
+    success: true,
+    debug: {
+      token: token,
+      userAgent: userAgent,
+      origin: origin,
+      referer: referer,
+      isIPhone: isIPhone,
+      timestamp: new Date().toISOString(),
+      expectedVerificationUrl: `${process.env.CLIENT_URL}/verify-email/${token}`,
+      serverUrl: process.env.SERVER_URL || 'Not set',
+      clientUrl: process.env.CLIENT_URL || 'Not set'
+    },
+    troubleshooting: isIPhone ? {
+      steps: [
+        '1. Make sure you\'re using Safari browser (not Mail app browser)',
+        '2. Copy the verification link and paste it directly in Safari',
+        '3. Check if your CLIENT_URL environment variable is correct',
+        '4. Try clearing Safari cache and cookies',
+        '5. Make sure you have good internet connection'
+      ],
+      possibleIssues: [
+        'iPhone Mail app sometimes blocks external links',
+        'iOS Safari might have strict security settings',
+        'Network connectivity issues on mobile',
+        'Cached DNS or routing issues'
+      ]
+    } : {
+      message: 'This debug info is specifically designed for iPhone troubleshooting'
+    },
+    message: 'Debug endpoint for email verification issues'
+  });
+});
+
+/**
  * @route   POST /api/v1/users/resend-verification
  * @desc    Resend email verification link
  * @access  Public

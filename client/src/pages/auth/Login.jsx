@@ -66,7 +66,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
       onClick={onClose}
     >
       <motion.div
@@ -260,6 +260,7 @@ const Login = () => {
       
       if (errorCode === 'EMAIL_NOT_VERIFIED') {
         console.log('🔐 [LOGIN] Email not verified error caught, showing modal for:', formData.email);
+        console.log('🔐 [LOGIN] Setting modal state - unverifiedEmail:', formData.email, 'showResendModal: true');
         setUnverifiedEmail(formData.email);
         setShowResendModal(true);
         // Still show a brief error message for accessibility
@@ -637,6 +638,13 @@ const Login = () => {
           />
         )}
       </AnimatePresence>
+      
+      {/* Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black text-white p-2 text-xs rounded z-[10000]">
+          Modal State: {showResendModal ? 'OPEN' : 'CLOSED'} | Email: {unverifiedEmail}
+        </div>
+      )}
 
       <Footer />
     </>

@@ -720,9 +720,22 @@ This is an automated message, please do not reply to this email.
             
             <div class="button-container">
               <a href="${verificationLink}" class="button" target="_blank" rel="noopener noreferrer" 
-                 style="color: white !important; text-decoration: none !important;">
+                 style="color: white !important; text-decoration: none !important;"
+                 data-link-type="email-verification">
                 Verify Email Address
               </a>
+            </div>
+            
+            <!-- iPhone-specific fallback link -->
+            <div class="mobile-fallback" style="margin-top: 15px; display: block;">
+              <p class="message" style="font-size: 14px; color: #666;">
+                <strong>📱 If you're using an iPhone and the button doesn't work:</strong>
+              </p>
+              <p style="font-size: 14px; color: #666; margin-top: 5px;">
+                1. Copy the link below<br>
+                2. Open Safari browser<br>
+                3. Paste the link and press Enter
+              </p>
             </div>
             
             <p class="message">

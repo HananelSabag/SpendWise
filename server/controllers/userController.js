@@ -424,6 +424,18 @@ const logout = asyncHandler(async (req, res) => {
  */
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
+  const userAgent = req.get('User-Agent');
+  const isIPhone = userAgent && userAgent.includes('iPhone');
+
+  // Log debug info for iPhone issues
+  if (isIPhone) {
+    logger.info('iPhone email verification attempt', { 
+      token, 
+      userAgent, 
+      origin: req.get('Origin'),
+      referer: req.get('Referer')
+    });
+  }
 
   if (!token) {
     throw { ...errorCodes.MISSING_REQUIRED, details: 'Verification token is required' };
@@ -432,7 +444,11 @@ const verifyEmail = asyncHandler(async (req, res) => {
   const verificationData = await User.findVerificationToken(token);
 
   if (!verificationData) {
-    throw { ...errorCodes.NOT_FOUND, message: 'Invalid or expired verification token' };
+    // Enhanced error for iPhone debugging
+    const errorMessage = isIPhone 
+      ? 'Invalid or expired verification token. If you\'re using iPhone, try opening the link in Safari browser.' 
+      : 'Invalid or expired verification token';
+    throw { ...errorCodes.NOT_FOUND, message: errorMessage };
   }
 
   if (new Date(verificationData.expires_at) < new Date()) {
@@ -452,7 +468,10 @@ const verifyEmail = asyncHandler(async (req, res) => {
   // Generate auth tokens for immediate login
   const { accessToken, refreshToken } = generateTokens(user);
 
-  logger.info('Email verified successfully', { userId: verificationData.user_id });
+  logger.info('Email verified successfully', { 
+    userId: verificationData.user_id,
+    userAgent: isIPhone ? 'iPhone' : 'Other'
+  });
 
   res.json({
     success: true,

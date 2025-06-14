@@ -14,7 +14,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const exportRoutes = require('./routes/exportRoutes'); // ✅ ADD: Export routes
@@ -23,9 +23,33 @@ const onboardingRoutes = require('./routes/onboarding'); // ✅ ADD: Onboarding 
 // Initialize express app
 const app = express();
 
+// CORS Configuration - Fix for iPhone email verification issues
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',')
+      : ['http://localhost:5173', 'http://localhost:3000'];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
 // Middleware
-app.use(cors());
-app.use(helmet());
+app.use(cors(corsOptions));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable CSP for now to avoid issues with email links
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,13 +71,25 @@ app.use(apiLimiter);
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) => {
+  // Handle client-side routing - IMPORTANT: This catches all non-API routes
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    // Log iPhone specific requests for debugging
+    const userAgent = req.get('User-Agent');
+    if (userAgent && userAgent.includes('iPhone')) {
+      console.log('iPhone request to:', req.path, 'User-Agent:', userAgent);
+    }
+    
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
   });
 }
 
 // Routes
-app.use('/api/v1/users', authRoutes);
+app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/export', exportRoutes); // ✅ ADD: Register export routes
