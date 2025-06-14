@@ -92,22 +92,20 @@ class EmailService {
     }
 
     try {
-      // Use shorter server-side redirect URL for better iPhone compatibility
-      const serverUrl = process.env.SERVER_URL || 'https://spendwise-server-production.up.railway.app';
-      const shortVerificationLink = `${serverUrl}/api/v1/users/v/${token}`;
-      const fullVerificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
+      // Use direct client URL with shorter token for better iPhone compatibility
+      const verificationLink = `${process.env.CLIENT_URL}/verify-email/${token}`;
       
       const mailOptions = {
         from: `"${process.env.FROM_NAME || 'SpendWise'}" <${process.env.FROM_EMAIL}>`,
         to: email,
         subject: 'Verify Your SpendWise Account',
-        html: this.getVerificationEmailTemplate(username, shortVerificationLink, fullVerificationLink),
-        text: this.getVerificationEmailTextTemplate(username, shortVerificationLink, fullVerificationLink)
+        html: this.getVerificationEmailTemplate(username, verificationLink),
+        text: this.getVerificationEmailTextTemplate(username, verificationLink)
       };
       
       await this.transporter.sendMail(mailOptions);
       logger.info('Verification email sent successfully', { 
-        shortLink: shortVerificationLink,
+        verificationLink: verificationLink,
         tokenLength: token.length 
       });
       return true;
@@ -457,8 +455,7 @@ This is an automated message, please do not reply to this email.
     `;
   }
 
-  getVerificationEmailTemplate(username, shortVerificationLink, fullVerificationLink = null) {
-    const verificationLink = shortVerificationLink; // Use the short link as primary
+  getVerificationEmailTemplate(username, verificationLink) {
     return `
       <!DOCTYPE html>
       <html>
@@ -768,15 +765,15 @@ This is an automated message, please do not reply to this email.
                 <strong>📱 iPhone Users - Important!</strong>
               </p>
               <p style="font-size: 13px; color: #1976D2; margin: 8px 0 0 0;">
-                We've made this link shorter for better iPhone compatibility! If the button still doesn't work:
+                We've made this verification token shorter for better iPhone compatibility! If the button still doesn't work:
               </p>
               <ol style="font-size: 13px; color: #1976D2; margin: 8px 0; padding-left: 20px;">
-                <li>Long-press and copy the short link below</li>
+                <li>Long-press and copy the link below</li>
                 <li>Open Safari browser (not Mail)</li>
                 <li>Paste the link and tap Go</li>
               </ol>
               <p style="font-size: 12px; color: #1976D2; margin: 5px 0 0 0;">
-                <strong>Link length:</strong> ${verificationLink.length} characters (much shorter!)
+                <strong>Token length:</strong> Much shorter for iPhone compatibility!
               </p>
             </div>
             
@@ -819,7 +816,7 @@ This is an automated message, please do not reply to this email.
     `;
   }
 
-  getVerificationEmailTextTemplate(username, shortVerificationLink, fullVerificationLink = null) {
+  getVerificationEmailTextTemplate(username, verificationLink) {
     return `
 Welcome to SpendWise - Email Verification Required
 
@@ -827,10 +824,10 @@ Hi ${username},
 
 Thank you for registering with SpendWise! To complete your registration and start managing your finances, please verify your email address.
 
-Click this SHORT link to verify your email: ${shortVerificationLink}
+Click this link to verify your email: ${verificationLink}
 
 IMPORTANT - iPhone Users:
-- We've created a shorter link (${shortVerificationLink.length} characters) for better iPhone compatibility
+- We've created a shorter verification token for better iPhone compatibility
 - If Gmail asks which browser to use, choose Safari
 - This verification link will expire in 24 hours
 - If you didn't create a SpendWise account, please ignore this email
