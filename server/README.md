@@ -1,328 +1,416 @@
-# SpendWise Backend API
+# SpendWise Server - Node.js Backend API
 
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-green.svg)](https://nodejs.org/)
-[![Express.js](https://img.shields.io/badge/Express.js-4.21.2-blue.svg)](https://expressjs.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-blue.svg)](https://postgresql.org/)
-[![License](https://img.shields.io/badge/License-ISC-yellow.svg)](LICENSE)
-[![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg)](https://spendwise-dx8g.onrender.com/health)
+A robust, production-ready Express.js backend API for the SpendWise expense tracking application, featuring JWT authentication, PostgreSQL database integration, and comprehensive security middleware.
 
-> **Enterprise-grade REST API for expense tracking and financial management**
-> 
-> Developed by **Hananel Sabag** - Full Stack Developer
+## 👨‍💻 Author & Portfolio Project
 
-## 🚀 Live Production API
+**Hananel Sabag** - Software Engineer  
+💼 GitHub: [@HananelSabag](https://github.com/HananelSabag)
 
-- **Base URL**: `https://spendwise-dx8g.onrender.com`
-- **Health Check**: `https://spendwise-dx8g.onrender.com/health`
-- **API Version**: `v1`
-- **Status**: ✅ **Production Ready**
+> **Backend Portfolio Showcase** - This Node.js API demonstrates backend development expertise including Express.js, PostgreSQL, JWT authentication, security middleware, email services, file uploads, logging, and production deployment.
 
-## 🏗️ Architecture Overview
+## ⚠️ **Portfolio Project Notice**
 
-SpendWise Backend is a robust, production-ready Node.js API built with modern enterprise patterns and best practices. The system is designed for scalability, security, and maintainability.
+This backend is part of a portfolio demonstration project. While you can explore and learn from the code, please note that sensitive configuration files and production secrets are excluded for security reasons.
 
-### **Key Features**
+## 🚀 Tech Stack
 
-- 🔐 **JWT Authentication** with refresh token rotation
-- 📊 **Real-time Dashboard** with optimized queries
-- 🔄 **Recurring Transactions** with intelligent scheduling
-- 📧 **Email Verification** with SMTP integration
-- 🗃️ **Data Export** (CSV, JSON, PDF ready)
-- 📱 **File Upload** with security validation
-- ⚡ **Rate Limiting** and DDoS protection
-- 🔍 **Advanced Search** with full-text capabilities
-- 📈 **Analytics & Statistics** with period-based insights
-- 🛡️ **Security Headers** and XSS protection
+### Core Framework
+- **Node.js 18+** - JavaScript runtime with ES2020+ features
+- **Express.js 4.21** - Fast, unopinionated web framework
+- **PostgreSQL** - Robust relational database with JSON support
 
-## 🗄️ Database Architecture
+### Authentication & Security
+- **JWT (jsonwebtoken)** - Stateless authentication tokens
+- **bcrypt** - Password hashing with salt rounds
+- **Helmet** - Security headers and protection
+- **CORS** - Cross-origin resource sharing configuration
+- **XSS Protection** - Cross-site scripting prevention
+- **Rate Limiting** - API request rate limiting
 
-### **Supabase PostgreSQL Cloud Database**
+### Database & ORM
+- **pg (node-postgres)** - Native PostgreSQL client
+- **Connection Pooling** - Efficient database connection management
+- **Migrations** - Database schema version control
 
-- **Provider**: Supabase (PostgreSQL 15.x)
-- **Connection**: Direct IP with SSL encryption
-- **Pool Configuration**: Optimized for cloud deployment
-- **Backup**: Automated daily backups
-- **Scaling**: Horizontal scaling ready
+### Utilities & Services
+- **Nodemailer** - Email service integration (Gmail SMTP)
+- **Multer** - File upload handling for profile images
+- **Winston** - Comprehensive logging with daily rotation
+- **Node-cron** - Scheduled task management
+- **Moment Timezone** - Date/time manipulation with timezone support
+- **Compression** - Response compression middleware
 
-### **Database Schema**
+## 📁 Project Structure
 
-```sql
--- Core Tables
-├── users                    # User accounts and preferences
-├── categories              # Transaction categories (income/expense)
-├── expenses                # Expense transactions
-├── income                  # Income transactions
-├── recurring_templates     # Recurring transaction templates
-├── user_verification_tokens # Email verification system
-└── password_reset_tokens   # Password reset workflow
-
--- Views & Functions
-├── daily_balances          # Optimized balance calculations
-├── get_period_balance()    # Period-based balance function
-├── generate_recurring_transactions() # Auto-generation system
-└── update_future_transactions()     # Template propagation
+```
+server/
+├── config/                 # Configuration files
+│   ├── db.js              # Database connection and pooling
+│   └── email.js           # Email service configuration
+├── controllers/           # Business logic controllers
+│   ├── authController.js  # Authentication logic
+│   ├── userController.js  # User management
+│   ├── transactionController.js
+│   ├── categoryController.js
+│   └── exportController.js
+├── middleware/            # Express middleware
+│   ├── auth.js           # JWT authentication middleware
+│   ├── errorHandler.js   # Global error handling
+│   ├── rateLimiter.js    # Rate limiting configuration
+│   ├── requestId.js      # Request ID generation
+│   └── validation.js     # Input validation
+├── routes/               # API route definitions
+│   ├── userRoutes.js     # User-related endpoints
+│   ├── transactionRoutes.js
+│   ├── categoryRoutes.js
+│   ├── exportRoutes.js
+│   └── onboarding.js
+├── utils/                # Utility functions
+│   ├── logger.js         # Winston logger configuration
+│   ├── scheduler.js      # Cron job management
+│   ├── emailService.js   # Email sending utilities
+│   └── helpers.js        # General helper functions
+├── models/               # Database models (if using ORM)
+├── migrations/           # Database migration files
+├── db/                   # Database-related files
+│   └── seeds/           # Database seed files
+├── uploads/              # File upload storage
+├── logs/                 # Application logs
+├── index.js              # Main server entry point
+├── app.js                # Express app configuration
+└── package.json          # Dependencies and scripts
 ```
 
-### **Advanced Database Features**
+## 🔐 Authentication Flow
 
-- **Soft Deletes**: Data integrity with `deleted_at` timestamps
-- **Optimized Indexes**: Performance-tuned for common queries
-- **Stored Procedures**: Complex business logic in database
-- **Views**: Pre-computed balance calculations
-- **Triggers**: Automatic data consistency
-- **Connection Pooling**: Efficient resource management
+### JWT Token System
+- **Access Token** - Short-lived (15 minutes) for API access
+- **Refresh Token** - Long-lived (7 days) for token renewal
+- **Email Verification** - Required for account activation
 
-## 🛠️ Technology Stack
-
-### **Backend Framework**
-- **Node.js** 18.x - JavaScript runtime
-- **Express.js** 4.21.2 - Web application framework
-- **PostgreSQL** 15.x - Primary database (Supabase)
-
-### **Authentication & Security**
-- **jsonwebtoken** - JWT implementation
-- **bcrypt** - Password hashing
-- **helmet** - Security headers
-- **cors** - Cross-origin resource sharing
-- **express-rate-limit** - API rate limiting
-- **xss** - XSS protection
-
-### **Data & Utilities**
-- **pg** - PostgreSQL client
-- **multer** - File upload handling
-- **nodemailer** - Email service
-- **winston** - Advanced logging
-- **node-cron** - Scheduled tasks
-- **moment-timezone** - Date/time management
-
-### **Production & Monitoring**
-- **compression** - Response compression
-- **winston-daily-rotate-file** - Log rotation
-- **dotenv** - Environment management
+### Authentication Endpoints
+```
+POST /api/auth/register    # User registration
+POST /api/auth/login       # User login
+POST /api/auth/refresh     # Token refresh
+POST /api/auth/logout      # User logout
+POST /api/auth/verify-email # Email verification
+POST /api/auth/forgot-password # Password reset request
+POST /api/auth/reset-password  # Password reset
+```
 
 ## 📊 API Endpoints
 
-### **Authentication & User Management**
-```http
-POST   /api/v1/users/register              # User registration
-POST   /api/v1/users/login                 # User authentication
-POST   /api/v1/users/logout                # Session termination
-POST   /api/v1/users/refresh-token         # Token refresh
-GET    /api/v1/users/verify-email/:token   # Email verification
-POST   /api/v1/users/resend-verification   # Resend verification
-POST   /api/v1/users/forgot-password       # Password reset request
-POST   /api/v1/users/reset-password        # Password reset
-GET    /api/v1/users/profile               # Get user profile
-PUT    /api/v1/users/profile               # Update profile
-POST   /api/v1/users/profile/picture       # Upload profile picture
-```
+### Authentication Routes (`/api/auth`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/register` | Register new user | No |
+| POST | `/login` | User login | No |
+| POST | `/refresh` | Refresh access token | No |
+| POST | `/logout` | User logout | Yes |
+| POST | `/verify-email` | Verify email address | No |
+| POST | `/forgot-password` | Request password reset | No |
+| POST | `/reset-password` | Reset password with token | No |
 
-### **Transaction Management**
-```http
-GET    /api/v1/transactions/dashboard       # Dashboard data
-GET    /api/v1/transactions/recent          # Recent transactions
-GET    /api/v1/transactions/period/:period  # Period-based data
-GET    /api/v1/transactions                 # List with filters
-POST   /api/v1/transactions/:type           # Create transaction
-PUT    /api/v1/transactions/:type/:id       # Update transaction
-DELETE /api/v1/transactions/:type/:id       # Delete transaction
-GET    /api/v1/transactions/search          # Search transactions
-GET    /api/v1/transactions/stats           # Statistics
-```
+### User Routes (`/api/users`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/profile` | Get user profile | Yes |
+| PUT | `/profile` | Update user profile | Yes |
+| PUT | `/preferences` | Update user preferences | Yes |
+| POST | `/upload-avatar` | Upload profile image | Yes |
+| DELETE | `/account` | Delete user account | Yes |
 
-### **Recurring Transactions**
-```http
-GET    /api/v1/transactions/recurring       # List templates
-GET    /api/v1/transactions/templates       # Template management
-PUT    /api/v1/transactions/templates/:id   # Update template
-DELETE /api/v1/transactions/templates/:id   # Delete template
-POST   /api/v1/transactions/templates/:id/skip # Skip dates
-POST   /api/v1/transactions/generate-recurring # Manual generation
-```
+### Transaction Routes (`/api/transactions`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | Get user transactions | Yes |
+| POST | `/` | Create new transaction | Yes |
+| GET | `/:id` | Get specific transaction | Yes |
+| PUT | `/:id` | Update transaction | Yes |
+| DELETE | `/:id` | Delete transaction | Yes |
+| GET | `/stats` | Get transaction statistics | Yes |
+| POST | `/bulk` | Bulk transaction operations | Yes |
 
-### **Categories & Analytics**
-```http
-GET    /api/v1/categories                   # List categories
-POST   /api/v1/categories                   # Create category
-PUT    /api/v1/categories/:id               # Update category
-DELETE /api/v1/categories/:id               # Delete category
-GET    /api/v1/categories/:id/stats         # Category statistics
-```
+### Category Routes (`/api/categories`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | Get user categories | Yes |
+| POST | `/` | Create new category | Yes |
+| PUT | `/:id` | Update category | Yes |
+| DELETE | `/:id` | Delete category | Yes |
+| GET | `/default` | Get default categories | Yes |
 
-### **Data Export**
-```http
-GET    /api/v1/export/options               # Export options
-GET    /api/v1/export/csv                   # CSV export
-GET    /api/v1/export/json                  # JSON export
-GET    /api/v1/export/pdf                   # PDF export (coming)
-```
+### Export Routes (`/api/export`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/csv` | Export transactions as CSV | Yes |
+| GET | `/json` | Export transactions as JSON | Yes |
+| GET | `/pdf` | Export transactions as PDF | Yes |
 
-## 🏃‍♂️ Quick Start
+### Onboarding Routes (`/api/onboarding`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/status` | Get onboarding status | Yes |
+| POST | `/complete` | Complete onboarding step | Yes |
+| POST | `/skip` | Skip onboarding step | Yes |
 
-### **Prerequisites**
-- Node.js 18.x or higher
-- PostgreSQL database (or Supabase account)
-- npm or yarn package manager
+## 🛠 Development
 
-### **Installation**
+### Prerequisites
+- Node.js 18+ and npm 8+
+- PostgreSQL 12+ (or Supabase account)
+- Gmail account for email services (optional)
+
+### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd SpendWise/server
-
 # Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start development server
+# Start development server with auto-reload
 npm run dev
 
-# Or production server
+# Start production server
 npm start
 ```
 
-### **Environment Configuration**
+### Environment Variables
+
+Create a `.env` file in the server directory:
+
+```env
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/spendwise
+DB_MAX_CONNECTIONS=10
+DB_MIN_CONNECTIONS=2
+DB_CONNECTION_TIMEOUT=30000
+DB_IDLE_TIMEOUT=30000
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-min-32-chars
+JWT_REFRESH_SECRET=your-refresh-secret-key-min-32-chars
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Email Configuration (Optional)
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-16-char-app-password
+EMAIL_FROM=SpendWise <noreply@spendwise.com>
+
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+CLIENT_URL=http://localhost:5173
+
+# File Upload Configuration
+MAX_FILE_SIZE=5242880
+UPLOAD_PATH=./uploads
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Logging
+LOG_LEVEL=info
+LOG_MAX_SIZE=20m
+LOG_MAX_FILES=14d
+```
+
+### Database Setup
+
+#### Using Local PostgreSQL
 
 ```bash
-# Database (Required)
-DATABASE_URL=postgresql://username:password@host:port/database
+# Connect to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE spendwise;
+
+# Connect to the database
+\c spendwise
+
+# Run migrations (in order)
+\i db/migrations/001_init.sql
+\i db/migrations/002_users.sql
+\i db/migrations/003_categories.sql
+\i db/migrations/004_transactions.sql
+\i db/migrations/005_recurring.sql
+
+# Insert seed data (optional)
+\i db/seeds/development.sql
+```
+
+#### Using Supabase
+
+1. Create a new Supabase project
+2. Copy the connection string from Settings > Database
+3. Import the provided SQL schema file
+4. Update `DATABASE_URL` in your `.env` file
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev          # Start with nodemon (auto-reload)
+npm start           # Start production server
+
+# Database
+npm run migrate     # Run database migrations
+npm run seed        # Insert seed data
+npm run db:reset    # Reset database (dev only)
+
+# Utilities
+npm run logs        # View application logs
+npm test           # Run tests (when implemented)
+```
+
+## 🔒 Security Features
+
+### Authentication Security
+- **Password Hashing** - bcrypt with 12 salt rounds
+- **JWT Tokens** - Secure token generation and validation
+- **Token Rotation** - Automatic refresh token rotation
+- **Rate Limiting** - Prevent brute force attacks
+
+### API Security
+- **Helmet** - Security headers (CSP, HSTS, etc.)
+- **CORS** - Strict origin validation
+- **XSS Protection** - Input sanitization
+- **SQL Injection Prevention** - Parameterized queries
+- **File Upload Security** - Type and size validation
+
+### Data Protection
+- **Input Validation** - Comprehensive request validation
+- **Error Handling** - Secure error messages
+- **Logging** - Security event logging
+- **Environment Variables** - Sensitive data protection
+
+## 📝 Middleware Stack
+
+### Request Processing Order
+1. **Trust Proxy** - Handle reverse proxy headers
+2. **Helmet** - Security headers
+3. **Compression** - Response compression
+4. **CORS** - Cross-origin handling
+5. **Body Parser** - JSON/URL-encoded parsing
+6. **Request ID** - Unique request identification
+7. **Rate Limiter** - Request rate limiting
+8. **Authentication** - JWT token validation (protected routes)
+9. **Route Handlers** - Business logic
+10. **Error Handler** - Global error handling
+
+## 📊 Database Schema
+
+### Core Tables
+- **users** - User accounts and profiles
+- **categories** - Transaction categories (user + default)
+- **transactions** - Financial transactions
+- **recurring_transactions** - Recurring transaction templates
+- **user_preferences** - User settings and preferences
+- **email_verifications** - Email verification tokens
+- **password_resets** - Password reset tokens
+
+### Key Relationships
+- Users have many transactions
+- Users have many categories
+- Transactions belong to categories
+- Users have preferences
+- Recurring transactions generate transactions
+
+## 🚀 Production Deployment
+
+### Render Deployment
+
+1. **Create Web Service** on Render
+2. **Connect Repository** - Link your GitHub repository
+3. **Configure Build Settings**:
+   - **Root Directory**: `server`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Node Version**: 18+
+
+4. **Environment Variables** (Production):
+```env
+# Database
+DATABASE_URL=your-supabase-connection-string
 
 # Server
 NODE_ENV=production
 PORT=10000
 
-# JWT Secrets (Required)
-JWT_SECRET=your_super_secure_jwt_secret
-JWT_REFRESH_SECRET=your_refresh_secret
+# JWT Secrets (Generate strong secrets!)
+JWT_SECRET=your-production-jwt-secret-min-32-chars
+JWT_REFRESH_SECRET=your-production-refresh-secret-min-32-chars
 
 # Email Service
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+GMAIL_USER=your-production-email@gmail.com
+GMAIL_APP_PASSWORD=your-gmail-app-password
 
-# Security
-ALLOWED_ORIGINS=https://your-frontend.com
+# CORS
+ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
+CLIENT_URL=https://your-frontend-domain.vercel.app
+
+# Performance
+DB_MAX_CONNECTIONS=10
+DB_MIN_CONNECTIONS=2
 ```
 
-## 🛡️ Security Features
+### Health Monitoring
 
-### **Authentication Security**
-- JWT with refresh token rotation
-- Secure password hashing (bcrypt)
-- Email verification system
-- Rate limiting on auth endpoints
-- Session management
+The server includes a health check endpoint:
 
-### **API Security**
-- CORS protection
-- Helmet security headers
-- XSS protection
-- SQL injection prevention
-- Input validation & sanitization
-- File upload security
+```bash
+GET /health
 
-### **Data Protection**
-- Sensitive data filtering in logs
-- Soft deletes for data integrity
-- Environment variable protection
-- SSL/TLS encryption
-- Database connection pooling
+Response:
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "environment": "production",
+  "version": "1.0.0"
+}
+```
 
-## 📈 Performance Optimizations
+## 📋 Logging
 
-### **Database Performance**
-- Optimized indexes on frequently queried columns
-- Connection pooling for efficient resource usage
-- Prepared statements for SQL injection prevention
-- Database views for complex calculations
-- Query result caching
+### Log Levels
+- **error** - Error conditions
+- **warn** - Warning conditions
+- **info** - Informational messages
+- **debug** - Debug-level messages
 
-### **API Performance**
-- Response compression (gzip)
-- Request deduplication
-- Efficient pagination
-- Optimized serialization
-- Memory usage monitoring
+### Log Files
+- **application.log** - General application logs
+- **error.log** - Error-only logs
+- **access.log** - HTTP request logs
 
-### **Monitoring & Logging**
-- Structured logging with Winston
-- Request ID tracking
-- Performance metrics
-- Error tracking and reporting
-- Health check endpoints
-
-## 🔄 Recurring Transaction System
-
-### **Intelligent Scheduling**
-- Daily, weekly, monthly patterns
-- Flexible date configurations
-- Skip date functionality
-- Template-based generation
-- Automatic propagation
-
-### **Business Logic**
+### Log Configuration
 ```javascript
-// Example: Monthly rent on the 1st
-{
-  interval_type: 'monthly',
-  day_of_month: 1,
-  amount: 1200,
-  description: 'Monthly Rent'
-}
-
-// Example: Weekly groceries on Sundays
-{
-  interval_type: 'weekly',
-  day_of_week: 0, // Sunday
-  amount: 150,
-  description: 'Weekly Groceries'
-}
+// Winston logger configuration
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.DailyRotateFile({
+      filename: 'logs/application-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '14d'
+    })
+  ]
+});
 ```
-
-## 📊 Analytics & Reporting
-
-### **Dashboard Metrics**
-- Real-time balance calculations
-- Period-based comparisons (daily, weekly, monthly, yearly)
-- Category breakdowns
-- Spending trends and patterns
-- Income vs expense analysis
-
-### **Advanced Features**
-- Custom date range queries
-- Category-wise statistics
-- Recurring transaction insights
-- Export capabilities
-- Search functionality
-
-## 🚀 Deployment
-
-### **Production Deployment (Render)**
-The API is deployed on Render with the following configuration:
-
-```yaml
-# Build Command
-npm install
-
-# Start Command
-npm start
-
-# Environment Variables
-NODE_ENV=production
-DATABASE_URL=<supabase_connection_string>
-JWT_SECRET=<secure_secret>
-# ... other environment variables
-```
-
-### **Health Monitoring**
-- **Health Check**: `GET /health`
-- **Database Status**: Included in health response
-- **Uptime Monitoring**: 99.9% availability target
-- **Error Tracking**: Comprehensive logging system
 
 ## 🧪 Testing
 
@@ -330,97 +418,75 @@ JWT_SECRET=<secure_secret>
 # Run tests (when implemented)
 npm test
 
-# Run with coverage
+# Run tests with coverage
 npm run test:coverage
 
-# Lint code
-npm run lint
-
-# Format code
-npm run format
+# Run integration tests
+npm run test:integration
 ```
 
-## 📁 Project Structure
+## 🔧 Configuration
 
-```
-server/
-├── config/          # Database and app configuration
-│   ├── db.js         # PostgreSQL/Supabase connection
-│   └── email.js      # Email service configuration
-├── controllers/      # Request handlers
-│   ├── authController.js
-│   ├── transactionController.js
-│   ├── categoryController.js
-│   └── exportController.js
-├── middleware/       # Express middleware
-│   ├── auth.js       # JWT authentication
-│   ├── validate.js   # Input validation
-│   ├── rateLimiter.js # API rate limiting
-│   ├── errorHandler.js # Error handling
-│   └── upload.js     # File upload handling
-├── models/          # Data layer
-│   ├── User.js       # User model
-│   ├── Transaction.js # Transaction model
-│   ├── Category.js   # Category model
-│   └── RecurringTemplate.js
-├── routes/          # API routes
-│   ├── userRoutes.js
-│   ├── transactionRoutes.js
-│   ├── categoryRoutes.js
-│   └── exportRoutes.js
-├── utils/           # Utility functions
-│   ├── logger.js     # Winston logging
-│   ├── scheduler.js  # Cron jobs
-│   ├── TimeManager.js # Date utilities
-│   ├── dbQueries.js  # Database queries
-│   └── errorCodes.js # Error definitions
-├── db/              # Database schema
-│   ├── 01_schema.sql
-│   ├── 02_procedures.sql
-│   ├── 03_balance_views.sql
-│   └── 04_indexes.sql
-└── index.js         # Application entry point
+### Database Connection Pooling
+```javascript
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
+  min: parseInt(process.env.DB_MIN_CONNECTIONS) || 2,
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 30000
+});
 ```
 
-## 🤝 Contributing
+### Rate Limiting Configuration
+```javascript
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+```
 
-This is a personal project by **Hananel Sabag**. For collaboration opportunities or questions, please reach out through professional channels.
+## 📞 Support & Troubleshooting
 
-## 📧 Contact
+### Common Issues
 
-**Hananel Sabag**  
-Full Stack Developer  
-Specializing in Node.js, React, and PostgreSQL
+1. **Database Connection Errors**
+   - Verify `DATABASE_URL` format
+   - Check network connectivity
+   - Ensure database server is running
 
-## 📄 License
+2. **JWT Token Issues**
+   - Verify `JWT_SECRET` is set and secure
+   - Check token expiration times
+   - Ensure client sends tokens correctly
 
-This project is licensed under the ISC License.
+3. **Email Service Issues**
+   - Verify Gmail app password
+   - Check SMTP settings
+   - Ensure 2FA is enabled on Gmail
+
+4. **CORS Issues**
+   - Verify `ALLOWED_ORIGINS` includes your frontend URL
+   - Check preflight request handling
+   - Ensure credentials are included in requests
+
+### Debug Mode
+
+Enable debug logging:
+```env
+LOG_LEVEL=debug
+NODE_ENV=development
+```
+
+## 🔗 Related Documentation
+
+- [Main Project README](../README.md)
+- [Client Documentation](../client/README.md)
+- [Database Schema](./db/schema.md)
 
 ---
 
-## 🏆 Technical Highlights
-
-### **Code Quality**
-- ✅ Modern ES6+ JavaScript
-- ✅ Comprehensive error handling
-- ✅ Input validation and sanitization
-- ✅ Production-ready logging
-- ✅ Security best practices
-
-### **Scalability**
-- ✅ Database connection pooling
-- ✅ Horizontal scaling ready
-- ✅ Stateless API design
-- ✅ Efficient query optimization
-- ✅ Caching strategies
-
-### **Maintainability**
-- ✅ Clean architecture patterns
-- ✅ Comprehensive documentation
-- ✅ Modular code structure
-- ✅ Environment-based configuration
-- ✅ Professional git workflow
-
----
-
-> **Note**: This backend API demonstrates enterprise-level Node.js development skills, including advanced database design, security implementation, and production deployment capabilities.
+**SpendWise Server** - A robust Node.js backend for smart expense tracking.

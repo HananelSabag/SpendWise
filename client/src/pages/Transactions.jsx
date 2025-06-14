@@ -658,35 +658,28 @@ const Transactions = () => {
         </motion.div>
       </motion.div>
 
-      {/* ✅ PRESERVED: Beautiful Floating + Button exactly as before */}
+      {/* ✅ COMPACT: Floating Action Button - Left positioned (copied from Dashboard) */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.3, y: 100 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ 
-          delay: 1.2, 
-          type: "spring",
-          stiffness: 200,
-          damping: 20
-        }}
-        className="fixed bottom-6 right-6 z-50"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.8, duration: 0.3 }}
+        className="fixed left-4 bottom-4 z-50"
       >
         <motion.button
           onClick={() => setShowAddTransactions(true)}
-          className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group relative overflow-hidden"
+          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.95 }}
           title={t('transactions.addTransaction')}
         >
-          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 animate-pulse"></div>
-          
           <motion.div
             className="relative z-10"
-            animate={{ rotate: [0, 0, 180, 180, 0] }}
-            transition={{ duration: 6, repeat: Infinity, repeatDelay: 4 }}
+            animate={{ rotate: [0, 0, 90, 90, 0] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
           >
-            <Plus className="w-8 h-8" />
+            <Plus className="w-6 h-6" />
           </motion.div>
+          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
         </motion.button>
       </motion.div>
 

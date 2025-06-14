@@ -7,6 +7,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import App from './app';
 import './index.css';
 import { queryClient } from './config/queryClient';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 // Create storage persister
 const persister = createSyncStoragePersister({
@@ -23,23 +24,28 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Application error:', error, errorInfo);
+    // Only log in development
+    if (import.meta.env.MODE === 'development') {
+      console.error('Application error:', error, errorInfo);
+    }
   }
 
   render() {
     if (this.state.hasError) {
+      // Since we can't use translations in class components outside context,
+      // we'll use a functional component with basic error display
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center p-8">
-            <h1 className="text-2xl font-bold text-error mb-4">Oops! Something went wrong</h1>
+            <h1 className="text-2xl font-bold text-error mb-4">Application Error</h1>
             <p className="text-muted-foreground mb-4">
-              We're sorry for the inconvenience. Please refresh the page or try again later.
+              Please refresh the page or contact support if the problem persists.
             </p>
             <button
               onClick={() => window.location.reload()}
               className="btn btn-primary btn-md"
             >
-              Refresh Page
+              Refresh
             </button>
           </div>
         </div>
@@ -51,21 +57,14 @@ class ErrorBoundary extends React.Component {
 }
 
 // Render the app
-console.log('🔧 [MAIN] React version:', React.version);
-console.log('🔧 [MAIN] Environment:', import.meta.env.MODE);
-
 ReactDOM.createRoot(document.getElementById('root')).render(
-  // ✅ הסר StrictMode לפרודקשן-like behavior
   <ErrorBoundary>
     <PersistQueryClientProvider 
       client={queryClient}
       persistOptions={{ persister }}
-      onSuccess={() => {
-        console.log('Query cache persisted successfully');
-      }}
     >
       <App />
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.MODE === 'development' && (
         <ReactQueryDevtools 
           initialIsOpen={false} 
           position="bottom-right"
@@ -80,19 +79,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </ErrorBoundary>
 );
 
-// ✅ ADD: Setup global utilities for development
+// Setup global utilities for development
 if (import.meta.env.MODE === 'development') {
-  // Make queryClient available globally for debugging
   window.queryClient = queryClient;
-  
-  // Make helper functions available globally
-  import('./utils/helpers').then(({ numbers }) => {
-    window.numbers = numbers;
-    
-    // Auto-start cache monitoring if enabled
-    if (localStorage.getItem('debug_cache') === 'true') {
-      console.log('🔧 [DEV] Cache monitoring enabled');
-      numbers.startCacheMonitoring();
-    }
-  });
 }

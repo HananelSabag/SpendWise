@@ -42,30 +42,25 @@ export const useAuth = () => {
       retry: (failureCount, error) => {
         // ✅ IMPROVED: Better error handling for production
         if (error?.response?.status === 401) {
-          console.log('🔑 [AUTH] Token invalid, clearing auth state');
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setShouldFetchProfile(false);
           return false;
         }
         
-        // ✅ NEW: Don't retry immediately on server errors during cold start
+        // Don't retry immediately on server errors during cold start
         if (error?.response?.status >= 500) {
           if (failureCount < 1) {
-            console.warn('🔑 [AUTH] Server error during profile fetch, will retry once');
             return true;
           }
-          console.warn('🔑 [AUTH] Server consistently failing, stopping retries');
           return false;
         }
         
-        // ✅ IMPROVED: Network errors - retry with exponential backoff
+        // Network errors - retry with exponential backoff
         if (!error?.response) {
           if (failureCount < 2) {
-            console.warn('🔑 [AUTH] Network error during profile fetch, will retry');
             return true;
           }
-          console.warn('🔑 [AUTH] Network consistently failing, user may be offline');
           return false;
         }
         
@@ -75,20 +70,10 @@ export const useAuth = () => {
         // ✅ NEW: Exponential backoff for retries
         return Math.min(1000 * Math.pow(2, attemptIndex), 10000);
       },
-      // ✅ IMPROVED: Better error handling that doesn't confuse users
+      // Better error handling that doesn't confuse users
       onError: (error) => {
-        if (error?.response?.status === 401) {
-          console.log('🔑 [AUTH] Authentication required - will handle redirect gracefully');
-          // Let the app handle redirect, don't show toast here
-        } else if (error?.response?.status >= 500) {
-          console.warn('🔑 [AUTH] Server error during profile fetch - user remains logged in');
-          // Don't show toast for server errors - user should stay logged in
-        } else if (!error?.response) {
-          console.warn('🔑 [AUTH] Network error during profile fetch - may be offline');
-          // Don't show toast for network errors - user should stay logged in
-        } else {
-          console.error('🔑 [AUTH] Unexpected error during profile fetch:', error);
-        }
+        // Error handling is managed by the app's error boundaries and toast system
+        // No console logging needed in production
       }
     }
   );
@@ -120,12 +105,10 @@ export const useAuth = () => {
     }
     
     if (!profileData.email || !profileData.username) {
-      console.error('Profile data missing required fields');
       return null;
     }
     
     if (profileData.email === 'user@example.com') {
-      console.error('Detected cached placeholder data, clearing cache');
       queryClient.removeQueries(queryKeys.profile);
       return null;
     }

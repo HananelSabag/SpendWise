@@ -47,11 +47,9 @@ const api = axios.create({
   },
 });
 
-// Debug logger - Only in development and when explicitly enabled
+// Production-safe logger - only for critical issues
 const log = (message, data = null) => {
-  if (config.DEBUG_MODE && !import.meta.env.PROD) {
-    console.log(`[API] ${message}`, data);
-  }
+  // Reserved for critical production debugging if needed
 };
 
 // Request queue management
@@ -108,9 +106,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    if (config.DEBUG_MODE) {
-      console.error(`[API-REQUEST-ERROR]`, error);
-    }
+    // Request errors are handled by response interceptor
     return Promise.reject(error);
   }
 );
@@ -158,13 +154,7 @@ api.interceptors.response.use(
       hideColdStartNotification();
     }
     
-    // ✅ FIXED: Only log in development, never show timing to users
-    if (config.DEBUG_MODE && !import.meta.env.PROD) {
-      log(`✓ ${response.config.url} (${duration}ms)`, { 
-        status: response.status,
-        data: response.data
-      });
-    }
+    // Response processed successfully
     
     // ✅ NEW: Reset server state on successful response
     serverState.lastSuccessfulRequest = Date.now();
@@ -258,10 +248,7 @@ api.interceptors.response.use(
       toast.error(message);
     }
 
-    // ✅ FIXED: Only log in development
-    if (config.DEBUG_MODE && !import.meta.env.PROD) {
-      log(`❌ ${originalRequest?.url}`, { status, message, code });
-    }
+    // Error logged and handled by toast
     
     return Promise.reject(error);
   }
@@ -297,16 +284,8 @@ export const authAPI = {
   
   // Profile management
   getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => {
-    // ✅ FIX: Log what we're sending to debug
-    console.log('API updateProfile sending:', data);
-    return api.put('/users/profile', data);
-  },
-  updatePreferences: (preferences) => {
-    // ✅ FIX: Send preferences directly as body (not wrapped)
-    console.log('API updatePreferences sending:', preferences);
-    return api.put('/users/preferences', preferences);
-  },
+  updateProfile: (data) => api.put('/users/profile', data),
+  updatePreferences: (preferences) => api.put('/users/preferences', preferences),
   
   // Profile picture with progress tracking
   uploadProfilePicture: (file, onProgress) => {
@@ -474,7 +453,6 @@ export const exportAPI = {
       
       return response;
     } catch (error) {
-      console.error('CSV export error:', error);
       throw error;
     }
   },
@@ -497,7 +475,6 @@ export const exportAPI = {
       
       return response;
     } catch (error) {
-      console.error('JSON export error:', error);
       throw error;
     }
   },
@@ -521,8 +498,7 @@ export const exportAPI = {
       return response;
     } catch (error) {
       if (error.response?.status === 501) {
-        // Don't throw, just show the message from server
-        console.log('PDF export not implemented yet');
+        // PDF export not implemented yet - error will be handled by UI
       }
       throw error;
     }

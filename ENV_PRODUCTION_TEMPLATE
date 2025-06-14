@@ -1,0 +1,66 @@
+# Production Environment Variables Template
+# Copy this file to client/.env.production and fill in your production values
+
+# ======================================
+# CRITICAL: Required for Production
+# ======================================
+
+# Your production API server URL (no trailing slash)
+VITE_API_URL=https://your-api-domain.com
+
+# Your production frontend URL (no trailing slash)
+VITE_CLIENT_URL=https://your-frontend-domain.com
+
+# Environment identifier
+VITE_ENVIRONMENT=production
+
+# ======================================
+# Performance & Debugging
+# ======================================
+
+# Disable debug mode in production
+VITE_DEBUG_MODE=false
+
+# API request timeout in milliseconds
+VITE_REQUEST_TIMEOUT=15000
+
+# Number of retry attempts for failed requests
+VITE_RETRY_ATTEMPTS=3
+
+# Maximum file upload size in bytes (5MB default)
+VITE_MAX_FILE_SIZE=5242880
+
+# ======================================
+# Optional: API Configuration
+# ======================================
+
+# API version (defaults to v1)
+VITE_API_VERSION=v1
+
+# ======================================
+# Optional: Feature Flags
+# ======================================
+
+# Enable PWA features
+VITE_ENABLE_PWA=true
+
+# Enable offline mode
+VITE_ENABLE_OFFLINE=true
+
+# ======================================
+# Development Only (remove in production)
+# ======================================
+
+# Uncomment only if you need to debug production issues
+# VITE_DEBUG_QUERIES=false
+# VITE_DEBUG_CACHE=false
+# VITE_DEBUG_PERFORMANCE=false
+
+# ======================================
+# Instructions:
+# ======================================
+# 1. Copy this file to client/.env.production
+# 2. Replace all placeholder URLs with your actual domains
+# 3. Ensure your API server allows CORS from your frontend domain
+# 4. Test thoroughly before deploying
+# 5. Never commit actual .env files to version control 

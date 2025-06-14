@@ -161,7 +161,16 @@ const translations = {
       loadingData: 'Loading data...',
       refreshingData: 'Refreshing data...',
       preparingExport: 'Preparing {{format}} export...',
-      syncingPreferences: 'Syncing preferences...'
+      syncingPreferences: 'Syncing preferences...',
+      connectingToServer: 'Connecting to server...'
+    },
+
+    // Error messages
+    errors: {
+      noInternetConnection: 'No Internet Connection',
+      checkConnectionAndRetry: 'Please check your internet connection and try again.',
+      connectionIssues: 'Connection Issues',
+      unableToVerifyLogin: 'Unable to verify your login. This might be temporary.'
     }
   },
 
@@ -375,6 +384,7 @@ const translations = {
     signIn: 'Sign In',
     signUp: 'Sign Up',
     logout: 'Logout',
+    loginAgain: 'Login Again',
     rememberMe: 'Remember me',
     forgotPassword: 'Forgot Password?',
     resetPassword: 'Reset Password',
@@ -1900,7 +1910,16 @@ const translations = {
         loadingData: 'טוען נתונים...',
         refreshingData: 'מרענן נתונים...',
         preparingExport: 'מכין יצוא {{format}}...',
-        syncingPreferences: 'מסנכרן העדפות...'
+        syncingPreferences: 'מסנכרן העדפות...',
+        connectingToServer: 'מתחבר לשרת...'
+      },
+
+      // Error messages
+      errors: {
+        noInternetConnection: 'אין חיבור לאינטרנט',
+        checkConnectionAndRetry: 'אנא בדוק את החיבור לאינטרנט ונסה שוב.',
+        connectionIssues: 'בעיות חיבור',
+        unableToVerifyLogin: 'לא ניתן לאמת את הכניסה שלך. זה יכול להיות זמני.'
       }
     },
 
@@ -2016,6 +2035,17 @@ const translations = {
       create: 'צור',
       advanced: 'פילטרים מתקדמים',
       customRange: "טווח מותאם",
+      change: 'שנה',
+      logout: 'התנתק',
+      weak: 'חלש',
+      fair: 'בינוני',
+      good: 'טוב',
+      strong: 'חזק',
+      protected: 'מוגן',
+      uploadFailed: 'ההעלאה נכשלה. אנא נסה שוב.',
+      passwordMinLength: 'הסיסמה חייבת להיות באורך של 8 תווים לפחות',
+      passwordsDoNotMatch: 'הסיסמאות אינן תואמות',
+      usernameRequired: 'שם משתמש נדרש',
     },
 
     // Days of week
@@ -2114,6 +2144,7 @@ const translations = {
       signIn: 'התחברות',
       signUp: 'הרשמה',
       logout: 'התנתק',
+      loginAgain: 'התחברות מחדש',
       rememberMe: 'זכור אותי',
       forgotPassword: 'שכחת סיסמה?',
       resetPassword: 'איפוס סיסמה',

@@ -13,7 +13,7 @@ import AccessibilityMenu from './components/common/AccessibilityMenu';
 
 // Context providers
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
@@ -65,6 +65,7 @@ const useNavigationPersistence = () => {
  */
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { t } = useLanguage();
   const hasToken = !!localStorage.getItem('accessToken');
   const [showOfflineMessage, setShowOfflineMessage] = useState(false);
   
@@ -93,17 +94,17 @@ const ProtectedRoute = ({ children }) => {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No Internet Connection
+            {t('errors.noInternetConnection')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Please check your internet connection and try again.
+            {t('errors.checkConnectionAndRetry')}
           </p>
           <Button 
             onClick={() => window.location.reload()} 
             variant="primary"
             className="mt-4"
           >
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       </div>
@@ -117,7 +118,7 @@ const ProtectedRoute = ({ children }) => {
         <div className="text-center">
           <LoadingSpinner size="large" />
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Connecting to server...
+            {t('loading.connectingToServer')}
           </p>
         </div>
       </div>
@@ -136,17 +137,17 @@ const ProtectedRoute = ({ children }) => {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Connection Issues
+            {t('errors.connectionIssues')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Unable to verify your login. This might be temporary.
+            {t('errors.unableToVerifyLogin')}
           </p>
           <div className="flex gap-3 justify-center">
             <Button 
               onClick={() => window.location.reload()} 
               variant="outline"
             >
-              Retry
+              {t('common.retry')}
             </Button>
             <Button 
               onClick={() => {
@@ -156,7 +157,7 @@ const ProtectedRoute = ({ children }) => {
               }} 
               variant="primary"
             >
-              Login Again
+              {t('auth.loginAgain')}
             </Button>
           </div>
         </div>
