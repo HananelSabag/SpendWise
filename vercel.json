@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/verify-email/:token",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/verify-email/(.*)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

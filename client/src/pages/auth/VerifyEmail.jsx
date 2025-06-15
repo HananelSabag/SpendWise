@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle, Home, LogIn } from 'lucide-react';
 import Button from '../../components/ui/Button';
@@ -16,10 +16,62 @@ import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
+ * Enhanced token extraction utility
+ * Handles various URL formats and decoding issues that may occur with iOS Gmail app
+ */
+const extractTokenFromUrl = (paramsToken, locationPathname, locationSearch) => {
+  console.log('🔍 [TOKEN] Extracting token from URL:', {
+    paramsToken,
+    pathname: locationPathname,
+    search: locationSearch
+  });
+
+  // Method 1: Use React Router params (most reliable)
+  if (paramsToken) {
+    const decoded = decodeURIComponent(paramsToken).trim();
+    console.log('🔍 [TOKEN] Method 1 - React Router params:', decoded);
+    return decoded;
+  }
+
+  // Method 2: Extract from pathname manually
+  const pathParts = locationPathname.split('/');
+  const tokenIndex = pathParts.indexOf('verify-email');
+  if (tokenIndex !== -1 && pathParts[tokenIndex + 1]) {
+    const tokenFromPath = decodeURIComponent(pathParts[tokenIndex + 1]).trim();
+    console.log('🔍 [TOKEN] Method 2 - Manual pathname extraction:', tokenFromPath);
+    return tokenFromPath;
+  }
+
+  // Method 3: Extract from search params (fallback)
+  if (locationSearch) {
+    const urlParams = new URLSearchParams(locationSearch);
+    const tokenFromSearch = urlParams.get('token');
+    if (tokenFromSearch) {
+      const decoded = decodeURIComponent(tokenFromSearch).trim();
+      console.log('🔍 [TOKEN] Method 3 - Search params:', decoded);
+      return decoded;
+    }
+  }
+
+  // Method 4: Try to extract from full URL (last resort)
+  const currentUrl = window.location.href;
+  const verifyEmailMatch = currentUrl.match(/\/verify-email\/([^/?#]+)/);
+  if (verifyEmailMatch && verifyEmailMatch[1]) {
+    const tokenFromUrl = decodeURIComponent(verifyEmailMatch[1]).trim();
+    console.log('🔍 [TOKEN] Method 4 - Full URL regex extraction:', tokenFromUrl);
+    return tokenFromUrl;
+  }
+
+  console.log('🔍 [TOKEN] No token found with any method');
+  return null;
+};
+
+/**
  * Email Verification Component
  */
 const VerifyEmail = () => {
-  const { token } = useParams();
+  const { token: paramsToken } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { verifyEmail, isVerifyingEmail } = useAuth();
@@ -28,22 +80,33 @@ const VerifyEmail = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [isIPhone, setIsIPhone] = useState(false);
+  const [extractedToken, setExtractedToken] = useState(null);
 
   useEffect(() => {
-    // Detect iPhone
+    // Detect iPhone/iOS devices
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const isiPhone = /iPhone|iPad|iPod/i.test(userAgent);
     setIsIPhone(isiPhone);
     
+    // Extract token using multiple methods
+    const token = extractTokenFromUrl(paramsToken, location.pathname, location.search);
+    setExtractedToken(token);
+    
     if (token) {
-      handleVerifyEmail();
+      handleVerifyEmail(token);
+    } else {
+      console.error('🔍 [TOKEN] No valid token found');
+      setStatus('error');
+      setErrorMessage(t('auth.invalidVerificationLink') || 'Invalid verification link');
     }
-  }, [token]);
+  }, [paramsToken, location.pathname, location.search]);
 
   /**
    * Process email verification token
    */
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = async (token) => {
+    console.log('🔍 [VERIFY] Starting verification with token:', token?.substring(0, 10) + '...');
+    
     try {
       setStatus('verifying');
       
@@ -58,6 +121,7 @@ const VerifyEmail = () => {
       }, 2000);
       
     } catch (error) {
+      console.error('🔍 [VERIFY] Verification failed:', error);
       const errorData = error.response?.data?.error;
       const errorMsg = errorData?.message || error.message;
       
@@ -65,6 +129,9 @@ const VerifyEmail = () => {
         setStatus('expired');
       } else if (errorMsg?.includes('already') || errorData?.code === 'ALREADY_VERIFIED') {
         setStatus('already-used');
+      } else if (errorMsg?.includes('invalid') || errorData?.code === 'INVALID_TOKEN') {
+        setStatus('error');
+        setErrorMessage(t('auth.invalidVerificationLink') || 'Invalid verification link');
       } else {
         setStatus('error');
         setErrorMessage(errorMsg || t('auth.verificationFailed'));
@@ -109,15 +176,15 @@ const VerifyEmail = () => {
           color: 'blue'
         };
         
-              case 'error':
-        default:
-          return {
-            icon: <XCircle className="w-16 h-16 text-red-500" />,
-            title: t('auth.verificationFailed'),
-            description: errorMessage || t('auth.verificationFailedMessage'),
-            color: 'red',
-            showTroubleshooting: isIPhone
-          };
+      case 'error':
+      default:
+        return {
+          icon: <XCircle className="w-16 h-16 text-red-500" />,
+          title: t('auth.verificationFailed'),
+          description: errorMessage || t('auth.verificationFailedMessage'),
+          color: 'red',
+          showTroubleshooting: isIPhone
+        };
     }
   };
 
@@ -173,7 +240,7 @@ const VerifyEmail = () => {
             {content.description}
           </motion.p>
 
-          {/* iPhone-specific troubleshooting */}
+          {/* Enhanced iPhone-specific troubleshooting */}
           {content.showTroubleshooting && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -182,16 +249,43 @@ const VerifyEmail = () => {
               className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 text-left"
             >
               <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center">
-                📱 iPhone Troubleshooting
+                📱 iPhone/iOS Troubleshooting
               </h4>
               <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
-                <p>This verification link might not work properly in the iPhone Mail app. Try:</p>
+                <p>This verification link might not work properly when opened from the Gmail app on iPhone/iOS. Try these solutions:</p>
                 <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>Copy the verification link from your email</li>
-                  <li>Open Safari browser (not Mail app)</li>
-                  <li>Paste the link and tap Go</li>
-                  <li>Or try opening the email on a computer</li>
+                  <li>Long-press the verification link in your email</li>
+                  <li>Select "Copy" to copy the link</li>
+                  <li>Open Safari browser (not the Gmail app)</li>
+                  <li>Paste the link in Safari's address bar and tap Go</li>
+                  <li>Alternatively, try opening the email on a computer</li>
                 </ol>
+                <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800 rounded">
+                  <p className="text-xs text-blue-600 dark:text-blue-300">
+                    <strong>Why this happens:</strong> Gmail's built-in browser on iOS sometimes modifies links, causing verification to fail.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Debug info for development */}
+          {process.env.NODE_ENV === 'development' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4 text-left"
+            >
+              <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-xs">
+                🔧 Debug Info (Development Only)
+              </h4>
+              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <p><strong>Extracted Token:</strong> {extractedToken ? `${extractedToken.substring(0, 20)}...` : 'None'}</p>
+                <p><strong>Params Token:</strong> {paramsToken ? `${paramsToken.substring(0, 20)}...` : 'None'}</p>
+                <p><strong>Pathname:</strong> {location.pathname}</p>
+                <p><strong>Search:</strong> {location.search || 'None'}</p>
+                <p><strong>User Agent:</strong> {navigator.userAgent.substring(0, 50)}...</p>
               </div>
             </motion.div>
           )}

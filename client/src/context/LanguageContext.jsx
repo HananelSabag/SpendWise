@@ -379,6 +379,11 @@ const translations = {
     proceedToLogin: 'Proceed to Login',
     needHelp: 'Need help?',
     contactSupport: 'Contact Support',
+    invalidVerificationLink: 'Invalid verification link',
+    welcomeToSpendWise: 'Welcome to SpendWise',
+    redirectingIn: 'Redirecting in',
+    seconds: 'seconds',
+    verifying: 'Verifying',
 
     // Actions
     signIn: 'Sign In',
@@ -2147,6 +2152,11 @@ const translations = {
       proceedToLogin: 'המשך להתחברות',
       needHelp: 'צריך עזרה?',
       contactSupport: 'פנה לתמיכה',
+      invalidVerificationLink: 'קישור אימות לא חוקי',
+      welcomeToSpendWise: 'ברוכים הבאים לSpendWise',
+      redirectingIn: 'מפנה תוך',
+      seconds: 'שניות',
+      verifying: 'מאמת',
 
 
       // Actions
