@@ -138,10 +138,10 @@ const Footer = () => {
               <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <Mail className="flex-shrink-0 w-4 h-4 text-gray-500 dark:text-gray-400" />
                 <a 
-                  href="mailto:spendwise.verifiction@gmail.com"
+                  href="mailto:spendwise.verification@gmail.com"
                   className={`${isRTL ? 'mr-2' : 'ml-2'} text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors`}
                 >
-                  spendwise.verifiction@gmail.com
+                  spendwise.verification@gmail.com
                 </a>
               </div>
             </div>

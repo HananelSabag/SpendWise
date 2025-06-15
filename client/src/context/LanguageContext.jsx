@@ -1520,7 +1520,7 @@ const translations = {
       },
       contact: {
         title: 'Contact Us',
-        content: 'For privacy-related questions, contact us at: spendwise.verifiction@gmail.com'
+        content: 'For privacy-related questions, contact us at: spendwise.verification@gmail.com'
       }
     }
   },
@@ -1556,7 +1556,7 @@ const translations = {
       },
       contact: {
         title: 'Contact Us',
-        content: 'For questions about these terms, contact us at: spendwise.verifiction@gmail.com'
+        content: 'For questions about these terms, contact us at: spendwise.verification@gmail.com'
       }
     }
   },
@@ -3275,7 +3275,7 @@ single: "עסקה רגילה",
       },
       contact: {
         title: 'צרו קשר',
-        content: 'לשאלות הקשורות לפרטיות, צרו קשר: spendwise.verifiction@gmail.com'
+        content: 'לשאלות הקשורות לפרטיות, צרו קשר: spendwise.verification@gmail.com'
       }
     }
   },
@@ -3311,7 +3311,7 @@ single: "עסקה רגילה",
       },
       contact: {
         title: 'צרו קשר',
-        content: 'לשאלות על תנאים אלה, צרו קשר: spendwise.verifiction@gmail.com'
+        content: 'לשאלות על תנאים אלה, צרו קשר: spendwise.verification@gmail.com'
       }
     }
   },

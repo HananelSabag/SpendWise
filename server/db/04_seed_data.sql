@@ -1,16 +1,22 @@
--- Sample data for development
+-- Sample data for development - DISABLED IN PRODUCTION
 
--- Production safety check
+-- Production safety check - ALWAYS PREVENT IN PRODUCTION
 DO $$
 BEGIN
-    IF current_setting('custom.environment', true) = 'production' THEN -- Added production check
+    IF current_setting('custom.environment', true) = 'production' THEN
         RAISE EXCEPTION 'Cannot run seed data in production environment';
+    END IF;
+    
+    -- Additional safety - check if we're in a live environment
+    IF current_database() NOT LIKE '%test%' AND current_database() NOT LIKE '%dev%' THEN
+        RAISE NOTICE 'WARNING: This appears to be a live database. Seed data execution cancelled.';
+        RETURN; -- Exit without executing
     END IF;
 END $$;
 
--- Test user with specific ID
+-- Development test user - ONLY FOR DEVELOPMENT
 INSERT INTO users (id, email, username, password_hash) VALUES
-(1, 'test@example.com', 'Test User', '$2b$10$K4KEHneHMsTHqCX7dXJf8eOKRHMXM/vJmfLHb8g7RcvYYNDLVqGqC') -- Fixed: proper bcrypt hash for 'password123'
+(1, 'dev-test@localhost.com', 'Development User', '$2b$10$K4KEHneHMsTHqCX7dXJf8eOKRHMXM/vJmfLHb8g7RcvYYNDLVqGqC') -- Password: 'dev123test'
 ON CONFLICT (id) DO NOTHING;
 
 -- Reset the sequence to continue from 2
