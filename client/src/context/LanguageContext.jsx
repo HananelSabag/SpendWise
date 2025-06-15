@@ -165,13 +165,23 @@ const translations = {
       connectingToServer: 'Connecting to server...'
     },
 
-    // Error messages
-    errors: {
-      noInternetConnection: 'No Internet Connection',
-      checkConnectionAndRetry: 'Please check your internet connection and try again.',
-      connectionIssues: 'Connection Issues',
-      unableToVerifyLogin: 'Unable to verify your login. This might be temporary.'
-    }
+          // Error messages
+      errors: {
+        noInternetConnection: 'No Internet Connection',
+        checkConnectionAndRetry: 'Please check your internet connection and try again.',
+        connectionIssues: 'Connection Issues',
+        unableToVerifyLogin: 'Unable to verify your login. This might be temporary.',
+        serverStarting: 'Server is starting up, please wait...',
+        serverReady: 'Server is ready!',
+        unableToConnectServer: 'Unable to connect to server. Please check your internet connection.',
+        tooManyRequestsSlowDown: 'Too many requests. Please slow down.',
+        serverErrorTryLater: 'Server error. Please try again later.',
+        pageNotFound: 'Page Not Found',
+        somethingWentWrong: 'Something Went Wrong',
+        applicationError: 'Application Error',
+        pleaseTryAgain: 'Please refresh the page or contact support if the problem persists.',
+        refresh: 'Refresh'
+      }
   },
 
   // Common/Shared
@@ -1933,7 +1943,17 @@ const translations = {
         noInternetConnection: 'אין חיבור לאינטרנט',
         checkConnectionAndRetry: 'אנא בדוק את החיבור לאינטרנט ונסה שוב.',
         connectionIssues: 'בעיות חיבור',
-        unableToVerifyLogin: 'לא ניתן לאמת את הכניסה שלך. זה יכול להיות זמני.'
+        unableToVerifyLogin: 'לא ניתן לאמת את הכניסה שלך. זה יכול להיות זמני.',
+        serverStarting: 'השרת מתחיל לפעול, אנא המתן...',
+        serverReady: 'השרת מוכן!',
+        unableToConnectServer: 'לא ניתן להתחבר לשרת. אנא בדוק את החיבור לאינטרנט.',
+        tooManyRequestsSlowDown: 'יותר מדי בקשות. אנא האט.',
+        serverErrorTryLater: 'שגיאת שרת. אנא נסה שוב מאוחר יותר.',
+        pageNotFound: 'עמוד לא נמצא',
+        somethingWentWrong: 'משהו השתבש',
+        applicationError: 'שגיאת יישום',
+        pleaseTryAgain: 'אנא רענן את הדף או צור קשר עם התמיכה אם הבעיה נמשכת.',
+        refresh: 'רענן'
       }
     },
 
@@ -2962,7 +2982,7 @@ single: "עסקה רגילה",
       recurring: {
         whatAre: {
           title: 'מה הן עסקאות חוזרות?',
-          description: 'עסקאות חוזרות הן תשלומים או הכנסות שקורים באופן קבוע - כמו המשכורת, שכר דירה, או מנויים חודשיים. במקום להזין אותם ידנית בכל פעם, תוכלו להגדיר אותם פעם אחת ו-SpendWise יעקוב אחריהם אוטומטית.'
+          description: 'עסקאות חוזרות הן תשלומים או הכנסות שקורים באופן קבוע - כמו המשכורת, שכר דירה, או מנויים חודשיים. במקום להכניס אותם ידנית בכל פעם, תוכלו להגדיר אותם פעם אחת ו-SpendWise יעקוב אחריהם אוטומטית.'
         },
         examples: {
           title: 'דוגמה',
@@ -3695,6 +3715,14 @@ export const LanguageProvider = ({ children }) => {
 
     return translation;
   };
+
+  // ✅ ADD: Make translation function globally available for API error messages
+  useEffect(() => {
+    window.getTranslation = t;
+    return () => {
+      delete window.getTranslation;
+    };
+  }, [effectiveLanguage]);
 
   const formatDate = (date, lang = null) => {
     const locale = lang || effectiveLanguage;

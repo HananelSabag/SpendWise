@@ -122,7 +122,14 @@ const detectColdStart = (duration) => {
 const showColdStartNotification = () => {
   if (!serverState.isWakingUp) {
     serverState.isWakingUp = true;
-    toast.loading('Server is starting up, please wait...', {
+    
+    // Use translation system for cold start message
+    const getTranslation = window.getTranslation;
+    const message = getTranslation ? 
+      getTranslation('errors.serverStarting') : 
+      'Server is starting up, please wait...';
+      
+    toast.loading(message, {
       id: 'cold-start',
       duration: 60000, // Keep it longer but will be dismissed on success
       style: {
@@ -137,8 +144,15 @@ const hideColdStartNotification = () => {
   if (serverState.isWakingUp) {
     serverState.isWakingUp = false;
     toast.dismiss('cold-start');
+    
+    // Use translation system for success message
+    const getTranslation = window.getTranslation;
+    const successMessage = getTranslation ? 
+      getTranslation('errors.serverReady') : 
+      'Server is ready!';
+      
     // Show success message briefly, then auto-dismiss
-    toast.success('Server is ready!', { duration: 1500 });
+    toast.success(successMessage, { duration: 1500 });
   }
 };
 
@@ -235,16 +249,27 @@ api.interceptors.response.use(
     const code = error.response?.data?.error?.code;
     const status = error.response?.status;
     
-    // ✅ NEW: Smart error messages based on server state
+    // ✅ NEW: Smart error messages based on server state with translations
+    const getTranslation = window.getTranslation;
+    
     if (!error.response && serverState.consecutiveFailures >= 3) {
-      toast.error('Unable to connect to server. Please check your internet connection.', {
+      const errorMessage = getTranslation ? 
+        getTranslation('errors.unableToConnectServer') : 
+        'Unable to connect to server. Please check your internet connection.';
+      toast.error(errorMessage, {
         id: 'network-error',
         duration: 8000
       });
     } else if (status === 429) {
-      toast.error('Too many requests. Please slow down.');
+      const rateLimitMessage = getTranslation ? 
+        getTranslation('errors.tooManyRequestsSlowDown') : 
+        'Too many requests. Please slow down.';
+      toast.error(rateLimitMessage);
     } else if (status === 500 && !serverState.isWakingUp) {
-      toast.error('Server error. Please try again later.');
+      const serverErrorMessage = getTranslation ? 
+        getTranslation('errors.serverErrorTryLater') : 
+        'Server error. Please try again later.';
+      toast.error(serverErrorMessage);
     } else if (status === 503) {
       showColdStartNotification();
     } else if (code !== 'VALIDATION_ERROR' && message && !error.config?.silent && !serverState.isWakingUp) {
