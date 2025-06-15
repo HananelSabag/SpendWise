@@ -260,7 +260,8 @@ const OnboardingModal = ({
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className={cn(
             "relative w-full h-full max-w-7xl mx-auto bg-white dark:bg-gray-900",
-            "shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700",
+            "shadow-2xl border border-gray-200 dark:border-gray-700",
+            "overflow-hidden lg:overflow-hidden", // Mobile: allow scroll, Desktop: hidden
             "lg:my-4 lg:h-[95vh] lg:max-h-[1000px] lg:rounded-2xl",
             "flex flex-col"
           )}
@@ -297,7 +298,7 @@ const OnboardingModal = ({
           </div>
 
           {/* Step Content - FULL HEIGHT with no footer */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto lg:overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`step-${currentStep}`}
