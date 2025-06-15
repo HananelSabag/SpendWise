@@ -723,52 +723,67 @@ This is an automated message, please do not reply to this email.
             </p>
             
             <div class="button-container">
-              <table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto;">
+              <!-- Simple iPhone-friendly button -->
+              <table border="0" cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                  <td align="center" style="background-color: #1F7F4C; border-radius: 8px; border: 2px solid #1F7F4C;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" 
-                      href="${verificationLink}" style="height:56px;v-text-anchor:middle;width:280px;" 
-                      arcsize="15%" strokecolor="#1F7F4C" fillcolor="#1F7F4C">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Helvetica, Arial, sans-serif;font-size:18px;font-weight:bold;">
-                        Verify Email Address
-                      </center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <a href="${verificationLink}" target="_blank" rel="noopener noreferrer" 
-                       style="color: #ffffff !important; text-decoration: none !important; 
-                              background-color: #1F7F4C; border: 2px solid #1F7F4C; 
-                              border-radius: 8px; display: inline-block; 
-                              padding: 16px 32px; font-size: 18px; font-weight: bold;
-                              font-family: Helvetica, Arial, sans-serif; text-align: center;
-                              min-width: 200px; line-height: 24px;
-                              -webkit-text-size-adjust: 100% !important; 
-                              -ms-text-size-adjust: 100% !important;
-                              mso-hide: all; box-sizing: border-box;
-                              -webkit-tap-highlight-color: rgba(31, 127, 76, 0.3);"
-                       data-link-type="email-verification">
-                      Verify Email Address
+                  <td style="background-color: #1F7F4C; border-radius: 8px; padding: 0; border: 2px solid #1F7F4C;">
+                    <a href="${verificationLink}" 
+                       style="background-color: #1F7F4C; 
+                              color: #ffffff; 
+                              display: block; 
+                              font-family: Arial, sans-serif; 
+                              font-size: 18px; 
+                              font-weight: bold; 
+                              line-height: 24px; 
+                              padding: 16px 32px; 
+                              text-align: center; 
+                              text-decoration: none; 
+                              border-radius: 8px;
+                              border: 2px solid #1F7F4C;
+                              min-width: 200px;
+                              box-sizing: border-box;">
+                      ✅ Verify Email Address
                     </a>
                   </td>
                 </tr>
               </table>
+              
+              <!-- Fallback VML for Outlook -->
+              <!--[if mso]>
+              <table align="center">
+                <tr>
+                  <td>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" 
+                      href="${verificationLink}" style="height:56px;v-text-anchor:middle;width:280px;" 
+                      arcsize="15%" strokecolor="#1F7F4C" fillcolor="#1F7F4C">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:Arial, sans-serif;font-size:18px;font-weight:bold;">
+                        ✅ Verify Email Address
+                      </center>
+                    </v:roundrect>
+                  </td>
+                </tr>
+              </table>
+              <![endif]-->
             </div>
             
             <!-- iPhone-specific fallback link -->
-            <div class="mobile-fallback" style="margin-top: 15px; display: block; background: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3;">
-              <p class="message" style="font-size: 14px; color: #1565C0; margin: 0;">
-                <strong>📱 iPhone Users - Improved!</strong>
+            <div class="mobile-fallback" style="margin-top: 15px; display: block; background: #FFF3CD; padding: 15px; border-radius: 8px; border-left: 4px solid #FF8C00;">
+              <p class="message" style="font-size: 14px; color: #B8860B; margin: 0;">
+                <strong>📱 iPhone/iOS Mail App Users</strong>
               </p>
-              <p style="font-size: 13px; color: #1976D2; margin: 8px 0 0 0;">
-                We've made the verification link shorter for better iPhone compatibility.
-                If the button still doesn't work in the Mail app:
+              <p style="font-size: 13px; color: #B8860B; margin: 8px 0 0 0;">
+                <strong>Known Issue:</strong> iPhone Mail app sometimes blocks secure verification links. 
+                <br><strong>Simple Fix:</strong>
               </p>
-              <ol style="font-size: 13px; color: #1976D2; margin: 8px 0; padding-left: 20px;">
-                <li>Long-press and copy the link below</li>
-                <li>Open Safari browser (not Mail)</li>
-                <li>Paste the link and tap Go</li>
+              <ol style="font-size: 13px; color: #B8860B; margin: 8px 0; padding-left: 20px;">
+                <li><strong>Copy the link below</strong> (long-press to copy)</li>
+                <li><strong>Open Safari</strong> (not Mail app)</li>
+                <li><strong>Paste & Go</strong> to verify instantly</li>
               </ol>
+              <p style="font-size: 12px; color: #8B7355; margin: 5px 0 0 0; font-style: italic;">
+                💡 This shorter link should work better, but copy-paste is 100% reliable
+              </p>
             </div>
             
             <p class="message">

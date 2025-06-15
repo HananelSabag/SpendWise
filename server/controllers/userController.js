@@ -428,15 +428,23 @@ const verifyEmail = asyncHandler(async (req, res) => {
   const userAgent = req.get('User-Agent');
   const isIPhone = userAgent && userAgent.includes('iPhone');
 
-  // Log debug info for iPhone issues
-  if (isIPhone) {
-    logger.info('iPhone email verification attempt', { 
-      token, 
-      userAgent, 
+  // Enhanced debug info for iPhone issues
+  logger.info('Email verification attempt', { 
+    token, 
+    userAgent, 
+    isIPhone,
+    headers: {
       origin: req.get('Origin'),
-      referer: req.get('Referer')
-    });
-  }
+      referer: req.get('Referer'),
+      host: req.get('Host'),
+      'x-forwarded-for': req.get('X-Forwarded-For'),
+      'x-real-ip': req.get('X-Real-IP')
+    },
+    url: req.url,
+    originalUrl: req.originalUrl,
+    method: req.method,
+    ip: req.ip
+  });
 
   if (!token) {
     throw { ...errorCodes.MISSING_REQUIRED, details: 'Verification token is required' };

@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "spendwise.app",
+        "paths": [
+          "/verify-email/*",
+          "/auth/verify/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": []
+  }
+} 
