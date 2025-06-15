@@ -42,40 +42,76 @@ router.get('/verify-email/:token',
  */
 router.get('/verify-email-debug/:token', (req, res) => {
   const { token } = req.params;
-  const userAgent = req.get('User-Agent');
-  const origin = req.get('Origin');
-  const referer = req.get('Referer');
-  const isIPhone = userAgent && userAgent.includes('iPhone');
+  const userAgent = req.get('User-Agent') || '';
+  const origin = req.get('Origin') || '';
+  const referer = req.get('Referer') || '';
+  
+  // Enhanced iPhone/iOS detection
+  const isIPhone = /iPhone|iPad|iPod/i.test(userAgent);
+  const isGmailApp = /Gmail/i.test(userAgent);
+  const isSafari = /Safari/i.test(userAgent) && !/Chrome|CriOS|FxiOS|EdgiOS/i.test(userAgent);
+  const isIOSMail = /MobileMail/i.test(userAgent);
+  
+  // Token validation
+  const isValidFormat = /^[A-Za-z0-9]{20}$/.test(token);
   
   res.json({
     success: true,
     debug: {
-      token: token,
+      token: token ? `${token.substring(0, 8)}...` : 'missing',
+      tokenLength: token ? token.length : 0,
+      tokenFormat: isValidFormat ? 'Valid' : 'Invalid',
       userAgent: userAgent,
       origin: origin,
       referer: referer,
       isIPhone: isIPhone,
+      isGmailApp: isGmailApp,
+      isSafari: isSafari,
+      isIOSMail: isIOSMail,
       timestamp: new Date().toISOString(),
       expectedVerificationUrl: `${process.env.CLIENT_URL}/verify-email/${token}`,
       serverUrl: process.env.SERVER_URL || 'Not set',
       clientUrl: process.env.CLIENT_URL || 'Not set'
     },
     troubleshooting: isIPhone ? {
-      steps: [
-        '1. Make sure you\'re using Safari browser (not Mail app browser)',
-        '2. Copy the verification link and paste it directly in Safari',
-        '3. Check if your CLIENT_URL environment variable is correct',
-        '4. Try clearing Safari cache and cookies',
-        '5. Make sure you have good internet connection'
+      detected: 'iPhone/iOS device detected',
+      recommendations: [
+        '1. If using Gmail app: Copy the verification link and paste it in Safari',
+        '2. If using iOS Mail app: Try long-pressing the link and selecting "Open in Safari"',
+        '3. Make sure you have good internet connection',
+        '4. Try clearing Safari cache if the issue persists',
+        '5. Avoid using email app browsers - use Safari directly'
       ],
-      possibleIssues: [
-        'iPhone Mail app sometimes blocks external links',
+      possibleIssues: isGmailApp ? [
+        'Gmail app on iPhone sometimes modifies verification links',
+        'Gmail app WebView has different security restrictions',
+        'Link clicking in Gmail app may not preserve full URL',
+        'Recommendation: Always copy-paste verification links on iPhone'
+      ] : [
+        'iOS email apps sometimes block external links',
         'iOS Safari might have strict security settings',
         'Network connectivity issues on mobile',
         'Cached DNS or routing issues'
-      ]
+      ],
+      solution: isGmailApp 
+        ? 'SOLUTION: Copy the verification link from Gmail and paste it directly in Safari browser'
+        : 'SOLUTION: Copy the verification link and open it in Safari browser'
     } : {
-      message: 'This debug info is specifically designed for iPhone troubleshooting'
+      detected: 'Non-iPhone device',
+      message: 'This debug info is specifically designed for iPhone troubleshooting',
+      generalTips: [
+        'Ensure you have a stable internet connection',
+        'Try refreshing the page if verification fails',
+        'Contact support if issues persist'
+      ]
+    },
+    nextSteps: {
+      verificationEndpoint: `/api/v1/users/verify-email/${token}`,
+      clientRoute: `/verify-email/${token}`,
+      fullVerificationUrl: `${process.env.CLIENT_URL}/verify-email/${token}`,
+      instructions: isIPhone && isGmailApp 
+        ? 'Copy the fullVerificationUrl above and paste it in Safari browser'
+        : 'Click the verification button in your email or use the fullVerificationUrl above'
     },
     message: 'Debug endpoint for email verification issues'
   });

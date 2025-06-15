@@ -13,8 +13,14 @@ const emailService = require('../services/emailService');
 const crypto = require('crypto');
 
 const generateVerificationToken = () => {
-  // Generate shorter token for iPhone compatibility (24 chars instead of 64)
-  return crypto.randomBytes(12).toString('hex');
+  // Generate shorter, iPhone-compatible token (20 chars instead of 24)
+  // Using only alphanumeric characters to avoid URL encoding issues
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 20; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 /**
@@ -425,38 +431,82 @@ const logout = asyncHandler(async (req, res) => {
  */
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
-  const userAgent = req.get('User-Agent');
-  const isIPhone = userAgent && userAgent.includes('iPhone');
+  const userAgent = req.get('User-Agent') || '';
+  const origin = req.get('Origin') || '';
+  const referer = req.get('Referer') || '';
+  
+  // Enhanced iPhone/iOS detection
+  const isIPhone = /iPhone|iPad|iPod/i.test(userAgent);
+  const isGmailApp = /Gmail/i.test(userAgent);
+  const isSafari = /Safari/i.test(userAgent) && !/Chrome|CriOS|FxiOS|EdgiOS/i.test(userAgent);
+  const isIOSMail = /MobileMail/i.test(userAgent);
 
   // Enhanced debug info for iPhone issues
   logger.info('Email verification attempt', { 
-    token, 
-    userAgent, 
+    token: token ? `${token.substring(0, 8)}...` : 'missing', 
+    userAgent: userAgent.substring(0, 100), 
     isIPhone,
+    isGmailApp,
+    isSafari,
+    isIOSMail,
     headers: {
-      origin: req.get('Origin'),
-      referer: req.get('Referer'),
+      origin: origin,
+      referer: referer,
       host: req.get('Host'),
       'x-forwarded-for': req.get('X-Forwarded-For'),
-      'x-real-ip': req.get('X-Real-IP')
+      'x-real-ip': req.get('X-Real-IP'),
+      'accept': req.get('Accept')?.substring(0, 100),
+      'accept-language': req.get('Accept-Language')
     },
     url: req.url,
     originalUrl: req.originalUrl,
     method: req.method,
-    ip: req.ip
+    ip: req.ip,
+    protocol: req.protocol,
+    secure: req.secure
   });
 
   if (!token) {
     throw { ...errorCodes.MISSING_REQUIRED, details: 'Verification token is required' };
   }
 
+  // Validate token format (alphanumeric, 20 chars)
+  if (!/^[A-Za-z0-9]{20}$/.test(token)) {
+    logger.warn('Invalid token format received', { 
+      token: token.substring(0, 10), 
+      isIPhone,
+      userAgent: userAgent.substring(0, 50)
+    });
+    throw { 
+      ...errorCodes.VALIDATION_ERROR, 
+      message: isIPhone 
+        ? 'Invalid verification token format. If you\'re using iPhone Gmail app, try copying the link and opening it in Safari browser.' 
+        : 'Invalid verification token format'
+    };
+  }
+
   const verificationData = await User.findVerificationToken(token);
 
   if (!verificationData) {
-    // Enhanced error for iPhone debugging
-    const errorMessage = isIPhone 
-      ? 'Invalid or expired verification token. If you\'re using iPhone, try opening the link in Safari browser.' 
-      : 'Invalid or expired verification token';
+    // Enhanced error message for iPhone users
+    let errorMessage = 'Invalid or expired verification token';
+    if (isIPhone) {
+      if (isGmailApp) {
+        errorMessage = 'Verification failed. Gmail app on iPhone sometimes modifies links. Please copy the verification link from your email and paste it in Safari browser.';
+      } else if (isIOSMail) {
+        errorMessage = 'Verification failed. iOS Mail app sometimes has issues with links. Please try copying the link and opening it in Safari.';
+      } else {
+        errorMessage = 'Invalid or expired verification token. If you clicked from an email app, try copying the link and pasting it in Safari browser.';
+      }
+    }
+    
+    logger.warn('Verification token not found', {
+      token: token.substring(0, 10),
+      isIPhone,
+      isGmailApp,
+      userAgent: userAgent.substring(0, 50)
+    });
+    
     throw { ...errorCodes.NOT_FOUND, message: errorMessage };
   }
 
@@ -477,9 +527,16 @@ const verifyEmail = asyncHandler(async (req, res) => {
   // Generate auth tokens for immediate login
   const { accessToken, refreshToken } = generateTokens(user);
 
+  // Success logging with device info
   logger.info('Email verified successfully', { 
     userId: verificationData.user_id,
-    userAgent: isIPhone ? 'iPhone' : 'Other'
+    deviceInfo: {
+      isIPhone,
+      isGmailApp,
+      isSafari,
+      isIOSMail,
+      userAgent: userAgent.substring(0, 50)
+    }
   });
 
   res.json({

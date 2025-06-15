@@ -539,53 +539,47 @@ This is an automated message, please do not reply to this email.
             text-align: center; 
             margin: 40px 0; 
           }
-          .button { 
-            display: inline-block;
-            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
-            color: white !important;
-            padding: 18px 50px;
-            text-decoration: none !important;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-            transition: none;
-            min-height: 50px;
-            min-width: 200px;
-            line-height: 1.4;
-            -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
-            -webkit-touch-callout: default;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            border: 2px solid #1D4ED8;
-            cursor: pointer;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            touch-action: manipulation;
-            position: relative;
-            z-index: 10;
-            box-sizing: border-box;
-            vertical-align: middle;
-            /* iPhone specific improvements */
-            -webkit-text-size-adjust: 100% !important;
-            -ms-text-size-adjust: 100% !important;
-            text-size-adjust: 100% !important;
+          
+          /* iPhone-specific table-based button (most compatible) */
+          .ios-button-table { 
+            margin: 0 auto; 
+            border-collapse: collapse; 
+            border-spacing: 0; 
           }
-          .button:hover, 
-          .button:focus, 
-          .button:active, 
-          .button:visited,
-          .button:link { 
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            color: white !important;
-            text-decoration: none !important;
-            outline: none;
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+          .ios-button-td { 
+            background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+            border-radius: 8px; 
+            padding: 0; 
+            border: 3px solid #059669;
+            /* Critical for iPhone compatibility */
+            mso-padding-alt: 0;
+            text-align: center;
           }
+          .ios-button-link { 
+            background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+            color: #ffffff !important; 
+            display: block !important; 
+            font-family: Arial, sans-serif !important; 
+            font-size: 18px !important; 
+            font-weight: bold !important; 
+            line-height: 24px !important; 
+            padding: 16px 32px !important; 
+            text-align: center !important; 
+            text-decoration: none !important; 
+            border-radius: 8px !important;
+            border: 3px solid #059669 !important;
+            min-width: 200px !important;
+            box-sizing: border-box !important;
+            /* iPhone-specific critical properties */
+            -webkit-text-size-adjust: none !important;
+            -ms-text-size-adjust: none !important;
+            mso-line-height-rule: exactly !important;
+            /* Ensure no text decoration override */
+            text-decoration-line: none !important;
+            text-decoration-style: none !important;
+            text-decoration-color: transparent !important;
+          }
+          
           .url { 
             color: #3B82F6; 
             word-break: break-all; 
@@ -594,6 +588,12 @@ This is an automated message, please do not reply to this email.
             padding: 12px;
             border-radius: 8px;
             margin: 20px 0;
+            /* Make URL selectable for copy-paste */
+            user-select: all;
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            -ms-user-select: all;
+            cursor: text;
           }
           .footer { 
             border-top: 1px solid #E5E7EB; 
@@ -636,6 +636,31 @@ This is an automated message, please do not reply to this email.
             color: #3B82F6; 
             font-weight: 700; 
           }
+          
+          /* iPhone-specific troubleshooting box */
+          .iphone-help { 
+            background: linear-gradient(135deg, #FFF3CD 0%, #FCF4D6 100%); 
+            border: 2px solid #FF8C00; 
+            color: #B8860B; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin: 25px 0; 
+            border-left: 5px solid #FF8C00; 
+            text-align: left;
+          }
+          .iphone-help strong {
+            color: #B8860B;
+          }
+          .iphone-help ol {
+            margin: 10px 0;
+            padding-left: 20px;
+          }
+          .iphone-help li {
+            margin: 8px 0;
+            color: #B8860B;
+            font-weight: 500;
+          }
+          
           @media screen and (max-width: 600px) {
             .container {
               margin: 20px 10px;
@@ -650,15 +675,10 @@ This is an automated message, please do not reply to this email.
             .content {
               padding: 30px 20px;
             }
-            .button {
-              padding: 18px 40px;
-              font-size: 16px;
-              width: auto;
-              display: inline-block;
-              min-height: 56px;
-              min-width: 240px;
-              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
-              touch-action: manipulation;
+            .ios-button-link {
+              padding: 18px 24px !important;
+              font-size: 16px !important;
+              min-width: 240px !important;
             }
             .logo {
               width: 70px;
@@ -674,33 +694,23 @@ This is an automated message, please do not reply to this email.
             .container {
               margin: 10px 5px;
             }
-            .button {
-              padding: 20px 32px;
-              font-size: 16px;
-              min-height: 60px;
-              width: 90%;
-              max-width: 280px;
-              text-align: center;
-              box-sizing: border-box;
-              display: block;
-              margin: 0 auto;
-              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
-              touch-action: manipulation;
+            .ios-button-link {
+              padding: 20px 16px !important;
+              font-size: 16px !important;
+              width: 90% !important;
+              max-width: 280px !important;
+              min-width: auto !important;
             }
             .content {
               padding: 25px 15px;
             }
           }
-          @supports (-webkit-touch-callout: none) {
-            .button {
-              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
-              -webkit-touch-callout: default;
-            }
-          }
-          @media screen and (-webkit-device-pixel-ratio: 2) {
-            .button {
-              touch-action: manipulation;
-              -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+          
+          /* Outlook/Windows Mail compatibility */
+          @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+            .ios-button-link {
+              border: 3px solid #059669;
+              color: #ffffff;
             }
           }
         </style>
@@ -723,75 +733,43 @@ This is an automated message, please do not reply to this email.
             </p>
             
             <div class="button-container">
-              <!-- Simple iPhone-friendly button -->
-              <table border="0" cellpadding="0" cellspacing="0" align="center">
+              <!-- iPhone-compatible table-based button -->
+              <table class="ios-button-table" border="0" cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                  <td style="background-color: #1F7F4C; border-radius: 8px; padding: 0; border: 2px solid #1F7F4C;">
+                  <td class="ios-button-td">
                     <a href="${verificationLink}" 
-                       style="background-color: #1F7F4C; 
-                              color: #ffffff; 
-                              display: block; 
-                              font-family: Arial, sans-serif; 
-                              font-size: 18px; 
-                              font-weight: bold; 
-                              line-height: 24px; 
-                              padding: 16px 32px; 
-                              text-align: center; 
-                              text-decoration: none; 
-                              border-radius: 8px;
-                              border: 2px solid #1F7F4C;
-                              min-width: 200px;
-                              box-sizing: border-box;">
+                       class="ios-button-link">
                       ✅ Verify Email Address
                     </a>
                   </td>
                 </tr>
               </table>
-              
-              <!-- Fallback VML for Outlook -->
-              <!--[if mso]>
-              <table align="center">
-                <tr>
-                  <td>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" 
-                      href="${verificationLink}" style="height:56px;v-text-anchor:middle;width:280px;" 
-                      arcsize="15%" strokecolor="#1F7F4C" fillcolor="#1F7F4C">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial, sans-serif;font-size:18px;font-weight:bold;">
-                        ✅ Verify Email Address
-                      </center>
-                    </v:roundrect>
-                  </td>
-                </tr>
-              </table>
-              <![endif]-->
             </div>
             
-            <!-- iPhone-specific fallback link -->
-            <div class="mobile-fallback" style="margin-top: 15px; display: block; background: #FFF3CD; padding: 15px; border-radius: 8px; border-left: 4px solid #FF8C00;">
-              <p class="message" style="font-size: 14px; color: #B8860B; margin: 0;">
-                <strong>📱 iPhone/iOS Mail App Users</strong>
+            <!-- iPhone-specific troubleshooting -->
+            <div class="iphone-help">
+              <p style="font-size: 14px; margin: 0 0 8px 0;"><strong>📱 iPhone/iOS Users - Known Issue Fix</strong></p>
+              <p style="font-size: 13px; margin: 0 0 10px 0;">
+                <strong>Problem:</strong> iPhone Gmail app sometimes blocks verification buttons. 
+                <strong>Simple solution:</strong>
               </p>
-              <p style="font-size: 13px; color: #B8860B; margin: 8px 0 0 0;">
-                <strong>Known Issue:</strong> iPhone Mail app sometimes blocks secure verification links. 
-                <br><strong>Simple Fix:</strong>
-              </p>
-              <ol style="font-size: 13px; color: #B8860B; margin: 8px 0; padding-left: 20px;">
-                <li><strong>Copy the link below</strong> (long-press to copy)</li>
-                <li><strong>Open Safari</strong> (not Mail app)</li>
-                <li><strong>Paste & Go</strong> to verify instantly</li>
+              <ol style="font-size: 13px; margin: 8px 0; padding-left: 20px;">
+                <li><strong>Long-press</strong> the verification link below</li>
+                <li><strong>Copy the link</strong> (select "Copy")</li>
+                <li><strong>Open Safari</strong> (not Gmail app)</li>
+                <li><strong>Paste & Go</strong> - instant verification!</li>
               </ol>
-              <p style="font-size: 12px; color: #8B7355; margin: 5px 0 0 0; font-style: italic;">
-                💡 This shorter link should work better, but copy-paste is 100% reliable
+              <p style="font-size: 12px; margin: 8px 0 0 0; font-style: italic; color: #8B7355;">
+                💡 This is faster than the button and works 100% of the time on iPhone
               </p>
             </div>
             
             <p class="message">
-              <strong>If the button doesn't work, copy and paste this link into your browser:</strong>
+              <strong>Copy this verification link if the button doesn't work:</strong>
             </p>
             
-            <div class="url" style="user-select: all; -webkit-user-select: all; -webkit-touch-callout: default; word-wrap: break-word; overflow-wrap: break-word;">
-              <a href="${verificationLink}" style="color: #3B82F6; text-decoration: underline; word-break: break-all; display: block; white-space: pre-wrap;">${verificationLink}</a>
+            <div class="url">
+              ${verificationLink}
             </div>
             
             <div class="warning">
