@@ -738,7 +738,9 @@ This is an automated message, please do not reply to this email.
                 <tr>
                   <td class="ios-button-td">
                     <a href="${verificationLink}" 
-                       class="ios-button-link">
+                       class="ios-button-link"
+                       target="_blank"
+                       rel="noopener noreferrer">
                       ✅ Verify Email Address
                     </a>
                   </td>
@@ -746,23 +748,22 @@ This is an automated message, please do not reply to this email.
               </table>
             </div>
             
-            <!-- iPhone-specific troubleshooting -->
-            <div class="iphone-help">
-              <p style="font-size: 14px; margin: 0 0 8px 0;"><strong>📱 iPhone/iOS Users - Known Issue Fix</strong></p>
-              <p style="font-size: 13px; margin: 0 0 10px 0;">
-                <strong>Problem:</strong> iPhone Gmail app sometimes blocks verification buttons. 
-                <strong>Simple solution:</strong>
-              </p>
-              <ol style="font-size: 13px; margin: 8px 0; padding-left: 20px;">
-                <li><strong>Long-press</strong> the verification link below</li>
-                <li><strong>Copy the link</strong> (select "Copy")</li>
-                <li><strong>Open Safari</strong> (not Gmail app)</li>
-                <li><strong>Paste & Go</strong> - instant verification!</li>
-              </ol>
-              <p style="font-size: 12px; margin: 8px 0 0 0; font-style: italic; color: #8B7355;">
-                💡 This is faster than the button and works 100% of the time on iPhone
-              </p>
-            </div>
+                         <!-- iPhone-specific troubleshooting -->
+             <div class="iphone-help">
+               <p style="font-size: 14px; margin: 0 0 8px 0;"><strong>📱 iPhone/iOS Users - Known Issue Fix</strong></p>
+               <p style="font-size: 13px; margin: 0 0 10px 0;">
+                 <strong>If the button doesn't work:</strong> Long-press the button and choose 'Open in Safari' or copy the link below into your browser.
+               </p>
+               <ol style="font-size: 13px; margin: 8px 0; padding-left: 20px;">
+                 <li><strong>Long-press</strong> the verification link below</li>
+                 <li><strong>Copy the link</strong> (select "Copy")</li>
+                 <li><strong>Open Safari</strong> (not Gmail app)</li>
+                 <li><strong>Paste & Go</strong> - instant verification!</li>
+               </ol>
+               <p style="font-size: 12px; margin: 8px 0 0 0; font-style: italic; color: #8B7355;">
+                 💡 This method works 100% of the time on iPhone
+               </p>
+             </div>
             
             <p class="message">
               <strong>Copy this verification link if the button doesn't work:</strong>

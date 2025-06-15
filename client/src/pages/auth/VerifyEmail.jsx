@@ -16,25 +16,26 @@ import AccessibilityMenu from '../../components/common/AccessibilityMenu';
 import { cn } from '../../utils/helpers';
 
 /**
- * Enhanced token extraction utility
- * Handles various URL formats and decoding issues that may occur with iOS Gmail app
+ * Robust token extraction utility
+ * Prioritizes React Router params but includes fallbacks for edge cases
  */
 const extractTokenFromUrl = (paramsToken, locationPathname, locationSearch) => {
   console.log('🔍 [TOKEN] Extracting token from URL:', {
     paramsToken,
     pathname: locationPathname,
-    search: locationSearch
+    search: locationSearch,
+    href: window.location.href
   });
 
-  // Method 1: Use React Router params (most reliable)
-  if (paramsToken) {
-    const decoded = decodeURIComponent(paramsToken).trim();
-    console.log('🔍 [TOKEN] Method 1 - React Router params:', decoded);
-    return decoded;
+  // Method 1: React Router useParams (most reliable after proper routing)
+  if (paramsToken && paramsToken.trim()) {
+    const cleaned = paramsToken.trim();
+    console.log('🔍 [TOKEN] Method 1 - React Router params:', cleaned);
+    return cleaned;
   }
 
-  // Method 2: Extract from pathname manually
-  const pathParts = locationPathname.split('/');
+  // Method 2: Manual pathname extraction (fallback)
+  const pathParts = locationPathname.split('/').filter(Boolean);
   const tokenIndex = pathParts.indexOf('verify-email');
   if (tokenIndex !== -1 && pathParts[tokenIndex + 1]) {
     const tokenFromPath = decodeURIComponent(pathParts[tokenIndex + 1]).trim();
@@ -42,27 +43,18 @@ const extractTokenFromUrl = (paramsToken, locationPathname, locationSearch) => {
     return tokenFromPath;
   }
 
-  // Method 3: Extract from search params (fallback)
+  // Method 3: Search params (query string fallback)
   if (locationSearch) {
     const urlParams = new URLSearchParams(locationSearch);
     const tokenFromSearch = urlParams.get('token');
-    if (tokenFromSearch) {
-      const decoded = decodeURIComponent(tokenFromSearch).trim();
-      console.log('🔍 [TOKEN] Method 3 - Search params:', decoded);
-      return decoded;
+    if (tokenFromSearch && tokenFromSearch.trim()) {
+      const cleaned = tokenFromSearch.trim();
+      console.log('🔍 [TOKEN] Method 3 - Search params:', cleaned);
+      return cleaned;
     }
   }
 
-  // Method 4: Try to extract from full URL (last resort)
-  const currentUrl = window.location.href;
-  const verifyEmailMatch = currentUrl.match(/\/verify-email\/([^/?#]+)/);
-  if (verifyEmailMatch && verifyEmailMatch[1]) {
-    const tokenFromUrl = decodeURIComponent(verifyEmailMatch[1]).trim();
-    console.log('🔍 [TOKEN] Method 4 - Full URL regex extraction:', tokenFromUrl);
-    return tokenFromUrl;
-  }
-
-  console.log('🔍 [TOKEN] No token found with any method');
+  console.log('🔍 [TOKEN] No valid token found');
   return null;
 };
 

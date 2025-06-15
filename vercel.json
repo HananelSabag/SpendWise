@@ -2,15 +2,11 @@
   "rewrites": [
     {
       "source": "/verify-email/:token",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/verify-email/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "headers": [
