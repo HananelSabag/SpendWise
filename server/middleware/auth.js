@@ -136,6 +136,44 @@ const auth = async (req, res, next) => {
       });
     }
 
+    // ✅ CRITICAL FIX: Check if user still exists in database
+    // This prevents errors when tokens are valid but users were deleted
+    const db = require('../config/db');
+    try {
+      const userCheckResult = await db.pool.query(
+        'SELECT id FROM users WHERE id = $1',
+        [decoded.id]
+      );
+      
+      if (userCheckResult.rows.length === 0) {
+        logger.warn('Token valid but user not found in database', { 
+          userId: decoded.id,
+          email: decoded.email 
+        });
+        
+        return res.status(401).json({ 
+          error: {
+            code: 'USER_NOT_FOUND',
+            message: 'User account no longer exists. Please log in again.',
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+    } catch (dbError) {
+      logger.error('Database error during user verification', { 
+        userId: decoded.id,
+        error: dbError.message 
+      });
+      
+      return res.status(500).json({ 
+        error: {
+          code: 'DATABASE_ERROR',
+          message: 'Unable to verify user account',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
     // Set user in request
     req.user = {
       id: decoded.id,

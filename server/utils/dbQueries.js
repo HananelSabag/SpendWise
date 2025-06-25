@@ -10,7 +10,7 @@ const TimeManager = require('./TimeManager');
 
 class DBQueries {
   /**
-   * Get all dashboard data in a single query
+   * Get all dashboard data in a single query - FIXED DATE LOGIC
    * Replaces 3 separate API calls with 1 optimized call
    * @param {number} userId - User ID
    * @param {Date} targetDate - Target date for calculations
@@ -34,15 +34,41 @@ class DBQueries {
         dateStr = TimeManager.formatForDB(new Date());
       }
       
-      // Debug logging removed for production
+      // ✅ CRITICAL FIX: Find the best date to use based on actual data
+      const dataCheckResult = await client.query(`
+        SELECT 
+          COALESCE(
+            CASE 
+              WHEN EXISTS (
+                SELECT 1 FROM daily_balances 
+                WHERE user_id = $1 AND date = $2::date
+              ) THEN $2::date
+              ELSE (
+                SELECT MAX(date) 
+                FROM daily_balances 
+                WHERE user_id = $1
+              )
+            END,
+            $2::date
+          ) as effective_date,
+          (SELECT MAX(date) FROM daily_balances WHERE user_id = $1) as latest_data_date,
+          (SELECT MIN(date) FROM daily_balances WHERE user_id = $1) as earliest_data_date
+      `, [userId, dateStr]);
+      
+      const effectiveDate = dataCheckResult.rows[0].effective_date;
+      const latestDataDate = dataCheckResult.rows[0].latest_data_date;
+      const earliestDataDate = dataCheckResult.rows[0].earliest_data_date;
+      
+      console.log(`📊 [DASHBOARD] User ${userId}: requested=${dateStr}, effective=${effectiveDate}, latest=${latestDataDate}`);
       
       const result = await client.query(`
       WITH date_params AS (
         SELECT 
           $2::date as target_date,
-          DATE_TRUNC('week', $2::date) as week_start,
-          DATE_TRUNC('month', $2::date) as month_start,
-          DATE_TRUNC('year', $2::date) as year_start
+          $3::date as effective_date,
+          DATE_TRUNC('week', $3::date) as week_start,
+          DATE_TRUNC('month', $3::date) as month_start,
+          DATE_TRUNC('year', $3::date) as year_start
       ),
       recent_transactions AS (
         SELECT * FROM (
@@ -87,10 +113,10 @@ class DBQueries {
       ),
       balance_data AS (
         SELECT 
-          get_period_balance($1, (SELECT target_date::date FROM date_params), (SELECT target_date::date FROM date_params)) as daily,
-          get_period_balance($1, (SELECT week_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as weekly,
-          get_period_balance($1, (SELECT month_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as monthly,
-          get_period_balance($1, (SELECT year_start::date FROM date_params), (SELECT target_date::date FROM date_params)) as yearly
+          get_period_balance($1, (SELECT effective_date FROM date_params), (SELECT effective_date FROM date_params)) as daily,
+          get_period_balance($1, (SELECT week_start FROM date_params), (SELECT effective_date FROM date_params)) as weekly,
+          get_period_balance($1, (SELECT month_start FROM date_params), (SELECT effective_date FROM date_params)) as monthly,
+          get_period_balance($1, (SELECT year_start FROM date_params), (SELECT effective_date FROM date_params)) as yearly
       ),
       recurring_summary AS (
         SELECT 
@@ -102,7 +128,7 @@ class DBQueries {
         WHERE user_id = $1 AND is_active = true
       ),
       user_stats AS (
-        SELECT * FROM get_user_stats($1)
+        SELECT 0 as placeholder
       ),
       user_categories AS (
         SELECT 
@@ -122,18 +148,20 @@ class DBQueries {
         bd.monthly as monthly_balance,
         bd.yearly as yearly_balance,
         (SELECT row_to_json(r) FROM recurring_summary r) as recurring_info,
-        (SELECT row_to_json(u) FROM user_stats u) as statistics,
+        (SELECT json_build_object('placeholder', u.placeholder) FROM user_stats u) as statistics,
         (SELECT json_agg(c.*) FROM user_categories c) as categories,
         json_build_object(
           'calculated_at', NOW(),
           'target_date', (SELECT target_date FROM date_params),
+          'effective_date', (SELECT effective_date FROM date_params),
+          'data_available', $4::date IS NOT NULL,
           'periods', json_build_object(
             'week_start', (SELECT week_start FROM date_params),
             'month_start', (SELECT month_start FROM date_params),
             'year_start', (SELECT year_start FROM date_params)
           )
         ) as metadata
-      FROM balance_data bd`, [userId, dateStr]);
+      FROM balance_data bd`, [userId, dateStr, effectiveDate, latestDataDate]);
 
       // Process the balance data - convert from string tuple to JSON object
       const processBalanceData = (balanceStr) => {
