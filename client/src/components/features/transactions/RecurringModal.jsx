@@ -198,33 +198,35 @@ const RecurringModal = ({
       toastService.success(template.isActive ? 'toast.success.nextPaymentSkipped' : 'toast.success.transactionGenerated');
       refreshTemplates();
       refreshRecurring();
-      onSuccess?.();
     } catch (error) {
-      console.error('Toggle template failed:', error);
-      toastService.error(error);
+      console.error('Toggle active failed:', error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to toggle template status';
+      toastService.error(errorMessage);
     }
   };
 
   const handleQuickSkip = async (template) => {
-    if (!template?.id || !template.nextPayment) {
-      toastService.error('toast.error.operationFailed');
+    if (!template?.id) {
+      toastService.error('toast.error.formErrors');
       return;
     }
     
     try {
-      await skipDates(template.id, [template.nextPayment]);
-      toastService.success('toast.success.nextPaymentSkipped');
+      await skipDates(template.id, [getNextPaymentDate(template)]);
+      toastService.success('toast.success.skipDatesSuccess');
       refreshTemplates();
       refreshRecurring();
-      onSuccess?.();
     } catch (error) {
-      console.error('Skip date failed:', error);
-      toastService.error(error);
+      console.error('Quick skip failed:', error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip next payment';
+      toastService.error(errorMessage);
     }
   };
 
   const handleBulkSkip = async (templateId, dates) => {
-    if (!templateId || !Array.isArray(dates) || dates.length === 0) {
+    if (!templateId || !dates?.length) {
       toastService.error('toast.error.formErrors');
       return;
     }
@@ -232,14 +234,15 @@ const RecurringModal = ({
     try {
       await skipDates(templateId, dates);
       toastService.success('toast.success.skipDatesSuccess');
-      setShowSkipModal(null);
       setSelectedSkipDates([]);
+      setShowSkipModal(null);
       refreshTemplates();
       refreshRecurring();
-      onSuccess?.();
     } catch (error) {
       console.error('Bulk skip failed:', error);
-      toastService.error(error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip selected dates';
+      toastService.error(errorMessage);
     }
   };
 
@@ -249,10 +252,11 @@ const RecurringModal = ({
       toastService.success('toast.success.transactionGenerated');
       refreshTemplates();
       refreshRecurring();
-      onSuccess?.();
     } catch (error) {
       console.error('Generate recurring failed:', error);
-      toastService.error(error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to generate recurring transactions';
+      toastService.error(errorMessage);
     }
   };
 
@@ -621,7 +625,9 @@ const RecurringModal = ({
               onSuccess?.();
             } catch (error) {
               console.error('❌ [RECURRING-MODAL] Delete failed:', error);
-              toastService.error(error);
+              // ✅ FIX: Better error handling - use error message or fallback
+              const errorMessage = error?.message || error?.response?.data?.message || 'Failed to delete template';
+              toastService.error(errorMessage);
             }
           }}
           isTemplate={true}

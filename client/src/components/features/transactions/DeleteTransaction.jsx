@@ -210,7 +210,9 @@ const DeleteTransaction = ({
       onClose();
       
     } catch (error) {
-      toastService.error(error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to delete transaction';
+      toastService.error(errorMessage);
       console.error('Delete failed:', error);
     } finally {
       setIsDeleting(false);

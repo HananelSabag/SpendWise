@@ -285,53 +285,28 @@ const TransactionCard = ({
   // ✅ FIXED: Skip dates with proper parameter format
   const handleQuickSkip = useCallback(async () => {
     if (!templateId) {
-              toastService.error('toast.error.cannotSkipNonRecurring');
+      toastService.error('toast.error.cannotSkipNonTemplate');
       return;
     }
     
     try {
-      // Calculate next occurrence date with validation
-      const today = new Date();
-      const nextDate = new Date(today);
-      const intervalType = transaction.interval_type || transaction.recurring_interval;
-      
-      if (!intervalType) {
-                    toastService.error('toast.error.unknownInterval');
+      // Skip next occurrence
+      const nextDate = getNextPaymentDate();
+      if (!nextDate) {
+        toastService.error('toast.error.noNextPayment');
         return;
       }
       
-      // Calculate next occurrence date
-      switch (intervalType) {
-        case 'daily':
-          nextDate.setDate(nextDate.getDate() + 1);
-          break;
-        case 'weekly':
-          nextDate.setDate(nextDate.getDate() + 7);
-          break;
-        case 'monthly':
-          nextDate.setMonth(nextDate.getMonth() + 1);
-          break;
-        case 'yearly':
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
-          break;
-        default:
-          toastService.error('toast.error.unknownInterval');
-          return;
-      }
-      
-      // ✅ FIXED: Proper date formatting for API
-      const skipDate = nextDate.toISOString().split('T')[0];
-      
-      // ✅ FIXED: Correct parameter format
-      await skipDates(templateId, [skipDate]);
-              toastService.success('toast.success.nextPaymentSkipped');
+      await skipDates(templateId, [nextDate]);
+      toastService.success('toast.success.nextPaymentSkipped');
       await refresh();
     } catch (error) {
-      console.error('❌ [CARD] Skip failed:', error);
-      // ✅ ENHANCED: Better error messages based on error type
-      toastService.error(error);
+      console.error('Skip failed:', error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip next payment';
+      toastService.error(errorMessage);
     }
-  }, [transaction, templateId, skipDates, refresh, t]);
+  }, [templateId, skipDates, refresh, t]);
 
   // ✅ FIXED: Toggle active with proper parameter format
   const handleToggleActive = useCallback(async () => {
@@ -350,7 +325,9 @@ const TransactionCard = ({
       await refresh();
     } catch (error) {
       console.error('Toggle failed:', error);
-      toastService.error(error);
+      // ✅ FIX: Better error handling
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to toggle template';
+      toastService.error(errorMessage);
     }
   }, [templateId, isActive, updateTemplate, refresh, t]);
 
@@ -358,6 +335,38 @@ const TransactionCard = ({
     setShowDeleteModal(true);
     onDelete?.(transaction);
   }, [transaction, onDelete]);
+
+  // ✅ NEW: Helper function to get next payment date
+  const getNextPaymentDate = useCallback(() => {
+    if (!transaction?.interval_type) return null;
+    
+    try {
+      const today = new Date();
+      const nextDate = new Date(today);
+      
+      switch (transaction.interval_type) {
+        case 'daily':
+          nextDate.setDate(nextDate.getDate() + 1);
+          break;
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + 7);
+          break;
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+        case 'yearly':
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          break;
+        default:
+          return null;
+      }
+      
+      return nextDate.toISOString().split('T')[0];
+    } catch (error) {
+      console.warn('Error calculating next payment date:', error);
+      return null;
+    }
+  }, [transaction?.interval_type]);
 
   // ✅ PRESERVED: Format frequency helper
   const formatFrequency = useCallback((interval) => {
