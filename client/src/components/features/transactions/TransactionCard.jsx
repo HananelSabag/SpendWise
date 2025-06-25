@@ -32,12 +32,12 @@ import {
   Edit2, Trash2, Calendar, Clock, Pause, Play, Settings,
   ChevronDown, ChevronUp, MoreHorizontal, Zap, CalendarX,
   ArrowUpRight, ArrowDownRight, Copy, Eye, EyeOff, Check,
-  AlertCircle, Repeat, Target, Activity, Sparkles
+  AlertCircle, Repeat, Target, Activity, Sparkles, AlertTriangle
 } from 'lucide-react';
 
 // ✅ PRESERVED: Centralized icon system integration
 import { getIconComponent, getColorForCategory, getGradientForCategory } from '../../../config/categoryIcons';
-import { useTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
+import { useTransactions, useTransactionTemplates, useTemplateStatus } from '../../../hooks/useTransactions';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
@@ -153,7 +153,7 @@ const TransactionCard = ({
   const { formatAmount } = useCurrency();
   const toastService = useToast();
   
-  // ✅ FIXED: Get hooks at component level
+  // ✅ PRESERVED: Get hooks at component level
   const { updateTransaction, deleteTransaction, isUpdating, isDeleting, refresh } = useTransactions();
   const { 
     updateTemplate, 
@@ -161,6 +161,9 @@ const TransactionCard = ({
     isUpdating: isTemplateUpdating, 
     isSkipping 
   } = useTransactionTemplates();
+  
+  // ✅ NEW: Get template status checker
+  const { getTransactionRecurringStatus } = useTemplateStatus();
 
   // ✅ PRESERVED: Same local state management
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -177,14 +180,19 @@ const TransactionCard = ({
     return transactionDate > today;
   }, [transaction.date]);
   
-  // ✅ FIXED: Use helper function instead of undefined getValidTemplateId
-  const templateId = getTemplateId(transaction);
+  // ✅ NEW: Use smart template status detection instead of simple template_id check
+  const recurringStatus = useMemo(() => {
+    return getTransactionRecurringStatus(transaction);
+  }, [transaction, getTransactionRecurringStatus]);
   
-  // ✅ PRESERVED: Same transaction type detection logic
+  // ✅ ENHANCED: Better transaction type detection with template status awareness
+  const templateId = getTemplateId(transaction);
   const isExpense = transaction.type === 'expense' || parseFloat(transaction.amount) < 0;
-  const isRecurring = Boolean(transaction.template_id || transaction.is_recurring);
+  const isRecurring = recurringStatus.isRecurring;
   const isTemplate = Boolean(transaction.interval_type && !transaction.template_id);
-  const isActive = transaction.is_active !== false;
+  const isActive = recurringStatus.templateActive;
+  const shouldShowRecurringOptions = recurringStatus.shouldShowRecurringOptions;
+  const isOrphaned = recurringStatus.reason === 'template_deleted';
   const isMobile = variant === 'mobile';
   const isCompact = variant === 'compact';
 
@@ -353,50 +361,64 @@ const TransactionCard = ({
     }
   }, [t]);
 
-  // ✅ ENHANCED: Contextual action buttons with improved design per transaction type
+  // ✅ ENHANCED: Contextual action buttons with smart template status handling
   const actionButtons = useMemo(() => {
     const buttons = [];
 
-    // ✅ ENHANCED: Contextual edit actions based on transaction type
-    if (isRecurring || isTemplate) {
-      // For recurring transactions - show both edit options with clear distinction
-      buttons.push({
-        key: 'edit-single',
-        label: t('transactions.editThis'),
-        description: t('transactions.editThisDesc'),
-        icon: Edit2,
-        onClick: handleEditSingle,
-        variant: 'primary',
-        className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
-        iconClassName: 'text-blue-600 dark:text-blue-400'
-      });
-      
-      buttons.push({
-        key: 'edit-template',
-        label: t('transactions.editAll'),
-        description: t('transactions.editAllDesc'),
-        icon: Zap,
-        onClick: handleEditTemplate,
-        variant: 'secondary',
-        className: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700',
-        iconClassName: 'text-purple-600 dark:text-purple-400'
-      });
-    } else {
-      // For one-time transactions - single edit option
-      buttons.push({
-        key: 'edit',
-        label: t('common.edit'),
-        description: t('transactions.editTransactionDesc'),
-        icon: Edit2,
-        onClick: handleEditSingle,
-        variant: 'primary',
-        className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
-        iconClassName: 'text-blue-600 dark:text-blue-400'
-      });
+    // ✅ PRESERVED: Edit buttons logic but with template status awareness
+    if (showActions) {
+      if (isRecurring && shouldShowRecurringOptions) {
+        // Template exists and is active - show full recurring options
+        buttons.push({
+          key: 'editSingle',
+          label: t('transactions.editThis'),
+          description: t('transactions.editThisDesc'),
+          icon: Edit2,
+          onClick: handleEditSingle,
+          variant: 'primary',
+          className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+          iconClassName: 'text-blue-600 dark:text-blue-400'
+        });
+
+        buttons.push({
+          key: 'editTemplate',
+          label: t('transactions.editAll'),
+          description: t('transactions.editAllDesc'),
+          icon: Zap,
+          onClick: handleEditTemplate,
+          variant: 'secondary',
+          className: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700',
+          iconClassName: 'text-purple-600 dark:text-purple-400'
+        });
+      } else if (isOrphaned) {
+        // ✅ NEW: Special handling for orphaned transactions
+        buttons.push({
+          key: 'editSingle',
+          label: t('common.edit'),
+          description: t('transactions.editTransactionDesc'),
+          icon: Edit2,
+          onClick: handleEditSingle,
+          variant: 'primary',
+          className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+          iconClassName: 'text-blue-600 dark:text-blue-400'
+        });
+      } else {
+        // Regular transaction or inactive template
+        buttons.push({
+          key: 'edit',
+          label: t('common.edit'),
+          description: t('transactions.editTransactionDesc'),
+          icon: Edit2,
+          onClick: handleEditSingle,
+          variant: 'primary',
+          className: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+          iconClassName: 'text-blue-600 dark:text-blue-400'
+        });
+      }
     }
 
-    // ✅ ENHANCED: Recurring-specific actions with better validation
-    if (isRecurring || isTemplate) {
+    // ✅ ENHANCED: Recurring management buttons only for active templates
+    if (shouldShowRecurringOptions && templateId) {
       if (isActive) {
         buttons.push({
           key: 'pause',
@@ -406,8 +428,7 @@ const TransactionCard = ({
           onClick: handleToggleActive,
           variant: 'warning',
           className: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700',
-          iconClassName: 'text-orange-600 dark:text-orange-400',
-          disabled: !templateId
+          iconClassName: 'text-orange-600 dark:text-orange-400'
         });
       } else {
         buttons.push({
@@ -418,8 +439,7 @@ const TransactionCard = ({
           onClick: handleToggleActive,
           variant: 'success',
           className: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
-          iconClassName: 'text-green-600 dark:text-green-400',
-          disabled: !templateId
+          iconClassName: 'text-green-600 dark:text-green-400'
         });
       }
 
@@ -432,15 +452,15 @@ const TransactionCard = ({
         variant: 'secondary',
         className: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
         iconClassName: 'text-yellow-600 dark:text-yellow-400',
-        disabled: isSkipping || !templateId
+        disabled: isSkipping
       });
     }
 
     // ✅ ENHANCED: Contextual delete action with better styling
     const deleteAction = {
       key: 'delete',
-      label: isRecurring || isTemplate ? t('transactions.deleteTemplate') : t('common.delete'),
-      description: isRecurring || isTemplate ? t('transactions.deleteTemplateDesc') : t('transactions.deleteTransactionDesc'),
+      label: shouldShowRecurringOptions ? t('transactions.deleteTemplate') : t('common.delete'),
+      description: shouldShowRecurringOptions ? t('transactions.deleteTemplateDesc') : t('transactions.deleteTransactionDesc'),
       icon: Trash2,
       onClick: handleDelete,
       variant: 'danger',
@@ -451,7 +471,7 @@ const TransactionCard = ({
     buttons.push(deleteAction);
 
     return buttons;
-  }, [isRecurring, isTemplate, isActive, isSkipping, t, handleEditSingle, handleEditTemplate, handleToggleActive, handleQuickSkip, handleDelete, templateId]);
+  }, [isRecurring, isTemplate, isActive, isSkipping, shouldShowRecurringOptions, isOrphaned, templateId, t, handleEditSingle, handleEditTemplate, handleToggleActive, handleQuickSkip, handleDelete]);
 
   // ✅ ENHANCED: Responsive layout configuration
   const layoutConfig = useMemo(() => {
@@ -627,78 +647,41 @@ const TransactionCard = ({
                       </span>
                     </div>
                     
-                    {/* Category badge - enhanced styling */}
-                    {transaction.category_name && (
-                      <Badge 
-                        variant="secondary" 
-                        size="small" 
-                        className={cn(
-                          'transition-colors',
-                          transactionConfig.accentColor,
-                          transactionConfig.textColor,
-                          'border-transparent',
-                          layoutConfig.metadataSize
-                        )}
-                      >
-                        {transaction.category_name}
+                    {/* ✅ PRESERVED: Category Badge */}
+                    <Badge variant="secondary" size="small" className="shrink-0">
+                      <CategoryIcon className={`w-3 h-3 mr-1 ${transactionConfig.iconColor}`} />
+                      {transaction.category_name || t('common.uncategorized')}
+                    </Badge>
+                    
+                    {/* ✅ ENHANCED: Smart recurring indicator based on template status */}
+                    {isRecurring && shouldShowRecurringOptions && (
+                      <Badge variant="primary" size="small" className="shrink-0">
+                        <Repeat className="w-3 h-3 mr-1" />
+                        {formatFrequency(transaction.interval_type || transaction.recurring_interval)}
                       </Badge>
                     )}
                     
-                    {/* ✅ ENHANCED: Recurring indicator with better visual design and animation */}
-                    {(isRecurring || isTemplate) && (
-                      <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className={cn(
-                          'flex items-center px-2.5 py-1 rounded-lg shadow-sm border',
-                          'bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 text-white border-transparent',
-                          layoutConfig.metadataSize,
-                          'font-semibold tracking-wide'
-                        )}
-                      >
-                        <motion.div
-                          animate={{ rotate: [0, 360] }}
-                          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                          className="mr-1"
-                        >
-                          <Clock className="w-3 h-3" />
-                        </motion.div>
-                        <span className="relative">
-                          {isTemplate ? t('transactions.template') : formatFrequency(transaction.recurring_interval || transaction.interval_type)}
-                          {/* Animated dots */}
-                          <div className="absolute -top-0.5 -right-1 flex space-x-0.5">
-                            <motion.div
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
-                              className="w-0.5 h-0.5 bg-white/70 rounded-full"
-                            />
-                            <motion.div
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-                              className="w-0.5 h-0.5 bg-white/70 rounded-full"
-                            />
-                            <motion.div
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
-                              className="w-0.5 h-0.5 bg-white/70 rounded-full"
-                            />
-                          </div>
-                        </span>
-                      </motion.div>
+                    {/* ✅ NEW: Orphaned transaction indicator */}
+                    {isOrphaned && (
+                      <Badge variant="warning" size="small" className="shrink-0">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        {t('transactions.orphaned')}
+                      </Badge>
                     )}
                     
-                    {/* ✅ ENHANCED: Future transaction indicator */}
+                    {/* ✅ ENHANCED: Template inactive indicator */}
+                    {isRecurring && !shouldShowRecurringOptions && !isOrphaned && (
+                      <Badge variant="secondary" size="small" className="shrink-0">
+                        <Pause className="w-3 h-3 mr-1" />
+                        {t('transactions.paused')}
+                      </Badge>
+                    )}
+                    
+                    {/* ✅ PRESERVED: Future transaction indicator */}
                     {isFuture && (
-                      <Badge 
-                        variant="secondary" 
-                        size="small" 
-                        className={cn(
-                          'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
-                          layoutConfig.metadataSize
-                        )}
-                      >
-                        <Target className="w-3 h-3 mr-1" />
-                        {t('transactions.upcoming')}
+                      <Badge variant="info" size="small" className="shrink-0">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {t('transactions.scheduled')}
                       </Badge>
                     )}
                   </div>

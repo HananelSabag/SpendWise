@@ -552,4 +552,109 @@ export const useTransactionTemplates = () => {
   };
 };
 
+/**
+ * ✅ NEW: Hook to check template status and handle orphaned transactions
+ */
+export const useTemplateStatus = () => {
+  const { templates } = useTransactionTemplates();
+  
+  // ✅ Create a map of template ID -> template status for fast lookup
+  const templateStatusMap = useMemo(() => {
+    const map = new Map();
+    
+    if (Array.isArray(templates)) {
+      templates.forEach(template => {
+        map.set(template.id, {
+          exists: true,
+          isActive: template.is_active !== false,
+          template: template
+        });
+      });
+    }
+    
+    return map;
+  }, [templates]);
+  
+  /**
+   * Check if a transaction should be treated as recurring based on template status
+   * @param {Object} transaction - Transaction object
+   * @returns {Object} - Status object with detailed information
+   */
+  const getTransactionRecurringStatus = useCallback((transaction) => {
+    if (!transaction) {
+      return {
+        isRecurring: false,
+        templateExists: false,
+        templateActive: false,
+        shouldShowRecurringOptions: false,
+        reason: 'no_transaction'
+      };
+    }
+    
+    // Check if transaction has template_id
+    if (transaction.template_id) {
+      const templateStatus = templateStatusMap.get(transaction.template_id);
+      
+      if (!templateStatus || !templateStatus.exists) {
+        // Template was deleted - treat as orphaned transaction
+        return {
+          isRecurring: false,
+          templateExists: false,
+          templateActive: false,
+          shouldShowRecurringOptions: false,
+          reason: 'template_deleted',
+          orphanedFromTemplate: transaction.template_id
+        };
+      }
+      
+      if (!templateStatus.isActive) {
+        // Template exists but is inactive - limited options
+        return {
+          isRecurring: true,
+          templateExists: true,
+          templateActive: false,
+          shouldShowRecurringOptions: false, // Don't show active management options
+          reason: 'template_inactive',
+          template: templateStatus.template
+        };
+      }
+      
+      // Template exists and is active - full recurring options
+      return {
+        isRecurring: true,
+        templateExists: true,
+        templateActive: true,
+        shouldShowRecurringOptions: true,
+        reason: 'template_active',
+        template: templateStatus.template
+      };
+    }
+    
+    // Check if it's a template itself (has interval_type but no template_id)
+    if (transaction.interval_type && !transaction.template_id) {
+      return {
+        isRecurring: true,
+        templateExists: true,
+        templateActive: transaction.is_active !== false,
+        shouldShowRecurringOptions: transaction.is_active !== false,
+        reason: 'is_template'
+      };
+    }
+    
+    // Regular one-time transaction
+    return {
+      isRecurring: false,
+      templateExists: false,
+      templateActive: false,
+      shouldShowRecurringOptions: false,
+      reason: 'one_time'
+    };
+  }, [templateStatusMap]);
+  
+  return {
+    templateStatusMap,
+    getTransactionRecurringStatus
+  };
+};
+
 export default useTransactions;

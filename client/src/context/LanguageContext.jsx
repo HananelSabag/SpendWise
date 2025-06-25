@@ -767,7 +767,9 @@ const translations = {
     // Recurring Actions
     pause: 'Pause',
     resume: 'Resume',
-    paused: 'Transaction paused',
+    paused: 'Paused',
+    scheduled: 'Scheduled',
+    orphaned: 'Template Deleted',
     resumed: 'Transaction resumed',
     generateNow: 'Generate Now',
     generated: 'Recurring transactions generated',
