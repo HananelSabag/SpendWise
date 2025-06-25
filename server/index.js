@@ -238,7 +238,7 @@ app.get('/health', async (req, res) => {
     
     const dbHealth = await db.healthCheck();
     
-    res.json({
+    res.json({ 
       status: 'healthy',
       database: dbHealth ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
@@ -248,8 +248,8 @@ app.get('/health', async (req, res) => {
   } catch (error) {
     logger.error('Health check failed', { error: error.message });
     
-    res.status(503).json({
-      status: 'unhealthy',
+    res.status(503).json({ 
+      status: 'unhealthy', 
       database: 'error',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,

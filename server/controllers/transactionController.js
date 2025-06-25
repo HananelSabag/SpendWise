@@ -665,10 +665,10 @@ const transactionController = {
         timestamp: new Date().toISOString()
       });
 
-      res.json({
-        success: true,
-        message: deleteFuture === 'true' 
-          ? 'Template and future transactions deleted' 
+    res.json({
+      success: true,
+      message: deleteFuture === 'true' 
+        ? 'Template and future transactions deleted' 
           : 'Template deactivated',
         data: {
           templateId: id,
