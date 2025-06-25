@@ -117,7 +117,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- UPDATED: Smart period balance function - The Genius Solution!
+-- FIXED: Smart period balance function - Properly scales recurring templates for different periods
 CREATE OR REPLACE FUNCTION get_period_balance(
     p_user_id INTEGER,
     p_start_date DATE,
@@ -129,27 +129,72 @@ RETURNS TABLE(
     balance DECIMAL(10,2)
 ) AS $$
 DECLARE
-    v_current_date DATE;
     v_total_income DECIMAL(10,2) := 0;
     v_total_expenses DECIMAL(10,2) := 0;
-    v_day_result RECORD;
+    v_one_time_income DECIMAL(10,2) := 0;
+    v_one_time_expenses DECIMAL(10,2) := 0;
+    v_recurring_income DECIMAL(10,2) := 0;
+    v_recurring_expenses DECIMAL(10,2) := 0;
+    v_period_days INTEGER;
 BEGIN
-    -- Loop through each day in the period and sum smart daily calculations
-    v_current_date := p_start_date;
+    -- Calculate the number of days in the period
+    v_period_days := (p_end_date - p_start_date) + 1;
     
-    WHILE v_current_date <= p_end_date LOOP
-        -- Get smart daily balance for this specific day
-        SELECT * INTO v_day_result FROM calculate_smart_daily_balance(p_user_id, v_current_date);
-        
-        -- Add to period totals
-        v_total_income := v_total_income + v_day_result.income;
-        v_total_expenses := v_total_expenses + v_day_result.expenses;
-        
-        -- Move to next day
-        v_current_date := v_current_date + INTERVAL '1 day';
-    END LOOP;
+    -- ===== ONE-TIME TRANSACTIONS (ACTUAL TRANSACTIONS IN DATE RANGE) =====
+    -- Get actual one-time transactions within the date range
+    SELECT 
+        COALESCE(SUM(i.amount), 0),
+        COALESCE(SUM(e.amount), 0)
+    INTO v_one_time_income, v_one_time_expenses
+    FROM 
+        (SELECT amount FROM income 
+         WHERE user_id = p_user_id 
+         AND date BETWEEN p_start_date AND p_end_date
+         AND template_id IS NULL 
+         AND deleted_at IS NULL) i
+    FULL OUTER JOIN 
+        (SELECT amount FROM expenses 
+         WHERE user_id = p_user_id 
+         AND date BETWEEN p_start_date AND p_end_date
+         AND template_id IS NULL 
+         AND deleted_at IS NULL) e ON FALSE;
     
-    -- Return period totals
+    -- ===== RECURRING TEMPLATES (PROPERLY SCALED FOR PERIOD) =====
+    -- Calculate recurring amounts based on template frequency and period length
+    WITH recurring_calculations AS (
+        SELECT 
+            rt.type,
+            rt.amount,
+            rt.interval_type,
+            CASE 
+                -- Daily templates: amount × days in period
+                WHEN rt.interval_type = 'daily' THEN rt.amount * v_period_days
+                
+                -- Weekly templates: amount × (days in period / 7)
+                WHEN rt.interval_type = 'weekly' THEN rt.amount * GREATEST(1, v_period_days / 7.0)
+                
+                -- Monthly templates: amount × (days in period / 30)
+                WHEN rt.interval_type = 'monthly' THEN rt.amount * GREATEST(1, v_period_days / 30.0)
+                
+                ELSE 0
+            END as period_amount
+        FROM recurring_templates rt
+        WHERE rt.user_id = p_user_id 
+        AND rt.is_active = true
+        AND rt.start_date <= p_end_date
+        AND (rt.end_date IS NULL OR rt.end_date >= p_start_date)
+    )
+    SELECT 
+        COALESCE(SUM(CASE WHEN type = 'income' THEN period_amount ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN period_amount ELSE 0 END), 0)
+    INTO v_recurring_income, v_recurring_expenses
+    FROM recurring_calculations;
+    
+    -- Calculate totals
+    v_total_income := v_one_time_income + v_recurring_income;
+    v_total_expenses := v_one_time_expenses + v_recurring_expenses;
+    
+    -- Return results
     RETURN QUERY SELECT 
         v_total_income::DECIMAL(10,2) as income,
         v_total_expenses::DECIMAL(10,2) as expenses,

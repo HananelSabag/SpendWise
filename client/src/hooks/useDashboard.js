@@ -37,48 +37,14 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   const selectData = useCallback((response) => {
     const data = response.data.data;
     
-    // ✅ FIX: Validate and ensure different values for each period
-    const processedBalances = {
-      daily: numbers.processBalanceData(data.daily_balance),
-      weekly: numbers.processBalanceData(data.weekly_balance),  
-      monthly: numbers.processBalanceData(data.monthly_balance),
-      yearly: numbers.processBalanceData(data.yearly_balance)
-    };
-    
-    // ✅ DEBUG: Check if all periods have identical values (indicates a backend issue)
-    const dailyBalance = processedBalances.daily.balance;
-    const allSame = (
-      processedBalances.weekly.balance === dailyBalance &&
-      processedBalances.monthly.balance === dailyBalance &&
-      processedBalances.yearly.balance === dailyBalance
-    );
-    
-    // ✅ FALLBACK: If all periods are identical, create estimated variations
-    if (allSame && dailyBalance !== 0) {
-      console.warn('[BALANCE-FIX] Detected identical balance values, applying estimated variations');
-      
-      processedBalances.weekly = {
-        income: processedBalances.daily.income * 7,
-        expenses: processedBalances.daily.expenses * 7,
-        balance: processedBalances.daily.balance * 7
-      };
-      
-      processedBalances.monthly = {
-        income: processedBalances.daily.income * 30,
-        expenses: processedBalances.daily.expenses * 30,
-        balance: processedBalances.daily.balance * 30
-      };
-      
-      processedBalances.yearly = {
-        income: processedBalances.daily.income * 365,
-        expenses: processedBalances.daily.expenses * 365,
-        balance: processedBalances.daily.balance * 365
-      };
-    }
-    
     return {
       recentTransactions: Array.isArray(data.recent_transactions) ? data.recent_transactions : [],
-      balances: processedBalances,
+      balances: {
+        daily: numbers.processBalanceData(data.daily_balance),
+        weekly: numbers.processBalanceData(data.weekly_balance),
+        monthly: numbers.processBalanceData(data.monthly_balance),
+        yearly: numbers.processBalanceData(data.yearly_balance)
+      },
       recurringInfo: {
         income_count: numbers.ensureNumber(data.recurring_info?.income_count),
         expense_count: numbers.ensureNumber(data.recurring_info?.expense_count),
