@@ -194,8 +194,8 @@ const DeleteTransaction = ({
           
         case 'all':
           if (isTemplate) {
-            // ✅ FIX: deleteTemplate expects (id, deleteFuture) not options object
-            await deleteTemplate(transaction.id, true); // deleteFuture = true for template deletion
+            // ✅ FIX: Call onConfirm instead of deleteTemplate directly since this component doesn't have access to deleteTemplate
+            await onConfirm(transaction, { deleteAll: true, deleteFuture: true });
           } else {
             await onConfirm(transaction, { deleteAll: true });
           }
@@ -215,7 +215,7 @@ const DeleteTransaction = ({
     } finally {
       setIsDeleting(false);
     }
-  }, [selectedAction, availableOptions, transaction, onConfirm, deleteTemplate, isTemplate, onClose, t]);
+  }, [selectedAction, availableOptions, transaction, onConfirm, isTemplate, onClose, t]);
 
   // ✅ Reset state when modal closes
   const handleClose = useCallback(() => {

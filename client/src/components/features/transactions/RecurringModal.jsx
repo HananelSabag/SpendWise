@@ -55,8 +55,10 @@ const RecurringModal = ({
     error: templatesError,
     updateTemplate,
     skipDates,
+    deleteTemplate,
     isUpdating,
     isSkipping,
+    isDeleting,
     refresh: refreshTemplates
   } = useTransactionTemplates();
 
@@ -590,15 +592,22 @@ const RecurringModal = ({
             setShowDeleteModal(false);
             setSelectedTemplate(null);
           }}
-          onConfirm={async (template, deleteFuture, deleteAll) => {
+          onConfirm={async (template, options = {}) => {
             try {
-              console.log('Deleting template:', template.id);
+              console.log('🗑️ [RECURRING-MODAL] Deleting template:', template.id, 'Options:', options);
+              
+              const { deleteFuture = true } = options;
+              await deleteTemplate(template.id, deleteFuture);
+              
+              toastService.success('toast.success.templateDeleted');
+              
               setShowDeleteModal(false);
               setSelectedTemplate(null);
               refreshAll();
               onSuccess?.();
             } catch (error) {
-              console.error('Delete failed:', error);
+              console.error('❌ [RECURRING-MODAL] Delete failed:', error);
+              toastService.error(error);
             }
           }}
           isTemplate={true}

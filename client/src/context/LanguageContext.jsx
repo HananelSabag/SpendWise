@@ -42,7 +42,8 @@ const translations = {
       transactionDeleted: 'Transaction deleted successfully',
       transactionGenerated: 'Recurring transactions generated successfully',
       templateUpdated: 'Template updated successfully',
-      skipDatesSuccess: 'Dates skipped successfully',
+      templateDeleted: 'Template deleted successfully',
+      skipDatesSuccess: 'Skip dates saved successfully',
       dataRefreshed: 'All transaction data refreshed',
       nextPaymentSkipped: 'Next payment skipped successfully',
 
