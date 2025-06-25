@@ -153,18 +153,15 @@ class DBQueries {
       SELECT 
         (SELECT json_agg(t.* ORDER BY t.date DESC, t.created_at DESC) 
          FROM recent_transactions t) as recent_transactions,
-        -- Use daily average for daily balance, actual periods for others
-        CASE 
-          WHEN dad.avg_income > 0 OR dad.avg_expenses > 0 THEN
-            (dad.avg_income, dad.avg_expenses, dad.avg_balance)::text
-          ELSE bd.daily
-        END as daily_balance,
+        -- Daily balance (use averages if available, otherwise actual balance)
+        bd.daily as daily_balance,
         bd.weekly as weekly_balance,
         bd.monthly as monthly_balance,
         bd.yearly as yearly_balance,
         (SELECT row_to_json(r) FROM recurring_summary r) as recurring_info,
         (SELECT json_build_object('placeholder', u.placeholder) FROM user_stats u) as statistics,
         (SELECT json_agg(c.*) FROM user_categories c) as categories,
+        (SELECT row_to_json(d) FROM daily_average_data d) as daily_averages,
         json_build_object(
           'calculated_at', NOW(),
           'target_date', (SELECT target_date FROM date_params),
@@ -202,10 +199,24 @@ class DBQueries {
       const dashboardData = result.rows[0];
       
       // Process all balance data
-      dashboardData.daily_balance = processBalanceData(dashboardData.daily_balance);
+      // Use daily averages if available, otherwise use actual daily balance
+      const dailyAverages = dashboardData.daily_averages;
+      if (dailyAverages && (dailyAverages.avg_income > 0 || dailyAverages.avg_expenses > 0)) {
+        dashboardData.daily_balance = {
+          income: Math.round(dailyAverages.avg_income * 100) / 100,
+          expenses: Math.round(dailyAverages.avg_expenses * 100) / 100,
+          balance: Math.round(dailyAverages.avg_balance * 100) / 100
+        };
+      } else {
+        dashboardData.daily_balance = processBalanceData(dashboardData.daily_balance);
+      }
+      
       dashboardData.weekly_balance = processBalanceData(dashboardData.weekly_balance);
       dashboardData.monthly_balance = processBalanceData(dashboardData.monthly_balance);
       dashboardData.yearly_balance = processBalanceData(dashboardData.yearly_balance);
+      
+      // Remove internal data
+      delete dashboardData.daily_averages;
       
       return dashboardData;
     } catch (error) {
