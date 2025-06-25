@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://spendwise-dx8g.onrender.com/api/:path*"
-    },
-    {
       "source": "/verify-email/:token",
       "destination": "/"
     },
