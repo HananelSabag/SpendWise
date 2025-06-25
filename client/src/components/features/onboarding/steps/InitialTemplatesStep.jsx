@@ -268,13 +268,13 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex flex-col justify-between py-4 bg-gradient-to-br from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10">
+    <div className="max-w-6xl mx-auto h-full flex flex-col bg-gradient-to-br from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10">
       {/* ✅ CLEAN: Simple header without unnecessary icons */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-3"
+        className="flex-shrink-0 text-center py-4 px-6"
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -310,8 +310,8 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
         </p>
       </motion.div>
 
-      {/* ✅ ENHANCED: Templates grid with better organization */}
-      <div className="flex-1 space-y-3">
+      {/* ✅ ENHANCED: Templates grid with better organization - Made scrollable for mobile */}
+      <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
         
         {/* ✅ MOVED TO TOP: Selected Templates Summary */}
         {templates.length > 0 && (
@@ -505,12 +505,12 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
         </motion.div>
       </div>
 
-      {/* ✅ IMPROVED: Fixed bottom buttons with proper alignment and spacing */}
+      {/* ✅ IMPROVED: Fixed bottom buttons with proper alignment and spacing - Always visible */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.0, duration: 0.5 }}
-        className="flex items-center justify-between mt-4 px-6"
+        className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700"
       >
         <Button
           onClick={onPrevious}
@@ -564,19 +564,21 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
         </Button>
       </motion.div>
 
-      {/* ✅ AddTransactions Modal */}
+      {/* ✅ AddTransactions Modal - Fixed for mobile scroll */}
       <Modal
         isOpen={showAddTransactions}
         onClose={() => setShowAddTransactions(false)}
         size="large"
-        className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto"
+        className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto max-h-[85vh] lg:max-h-[90vh]"
         hideHeader={true}
       >
-        <AddTransactions 
-          onClose={() => setShowAddTransactions(false)}
-          onSuccess={handleAddTransactionSuccess}
-          context="onboarding"
-        />
+        <div className="h-full max-h-[80vh] lg:max-h-[85vh] overflow-hidden">
+          <AddTransactions 
+            onClose={() => setShowAddTransactions(false)}
+            onSuccess={handleAddTransactionSuccess}
+            context="onboarding"
+          />
+        </div>
       </Modal>
     </div>
   );

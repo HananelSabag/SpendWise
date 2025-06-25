@@ -43,10 +43,11 @@ class DBQueries {
                 SELECT 1 FROM daily_balances 
                 WHERE user_id = $1 AND date = $2::date
               ) THEN $2::date
-              ELSE (
-                SELECT MAX(date) 
-                FROM daily_balances 
-                WHERE user_id = $1
+              ELSE COALESCE(
+                (SELECT MAX(date) 
+                 FROM daily_balances 
+                 WHERE user_id = $1),
+                $2::date
               )
             END,
             $2::date
