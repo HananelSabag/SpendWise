@@ -184,18 +184,19 @@ const DeleteTransaction = ({
       
       switch (selectedAction) {
         case 'single':
-          await onConfirm(transaction, false, false);
+          // ✅ FIX: Pass options object instead of boolean parameters
+          await onConfirm(transaction, { deleteSingle: true });
           break;
           
         case 'future':
-          await onConfirm(transaction, true, false);
+          await onConfirm(transaction, { deleteFuture: true });
           break;
           
         case 'all':
           if (isTemplate) {
-            await deleteTemplate(transaction.id, true);
+            await deleteTemplate(transaction.id, { deleteAll: true });
           } else {
-            await onConfirm(transaction, false, true);
+            await onConfirm(transaction, { deleteAll: true });
           }
           break;
           

@@ -182,16 +182,30 @@ export const useTransactionActions = (context = 'transactions') => {
   }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, logAction]);
 
   /**
-   * Delete Transaction - Clean removal with infinite query support
+   * Delete Transaction - Fixed parameter handling
    * 
    * @param {number} id - Transaction ID to delete
-   * @param {boolean} deleteAll - Whether to delete all recurring instances
+   * @param {object} options - Delete options
    * @returns {Promise} - Deletion result
    */
-  const deleteTransaction = useCallback(async (id, deleteAll = false) => {
+  const deleteTransaction = useCallback(async (id, options = {}) => {
+    const { deleteAll = false, deleteFuture = false, deleteSingle = false } = options;
+    
     try {
-      logAction(`Deleting transaction ${id}`, { deleteAll });
-      const result = await baseDeleteTransaction(id, deleteAll);
+      logAction(`Deleting transaction ${id}`, { deleteAll, deleteFuture, deleteSingle });
+      
+      // ✅ FIX: Determine the correct delete strategy
+      let result;
+      if (deleteAll) {
+        // Delete entire recurring series or template
+        result = await baseDeleteTransaction(id, { deleteAll: true });
+      } else if (deleteFuture) {
+        // Stop future occurrences  
+        result = await baseDeleteTransaction(id, { deleteFuture: true });
+      } else {
+        // Delete single occurrence (default)
+        result = await baseDeleteTransaction(id, { deleteSingle: true });
+      }
       
       await invalidateRelevantQueries('critical');
       

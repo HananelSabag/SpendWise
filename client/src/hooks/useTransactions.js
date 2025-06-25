@@ -280,7 +280,11 @@ export const useTransactions = (options = {}) => {
   );
 
   const deleteTransactionMutation = useApiMutation(
-    ({ id, deleteAll }) => transactionAPI.delete('expense', id, deleteAll), // Default to expense, server handles it
+    ({ id, deleteAll, deleteFuture, deleteSingle, ...options }) => {
+      // ✅ FIX: Handle new options object structure
+      const deleteOptions = { deleteAll, deleteFuture, deleteSingle, ...options };
+      return transactionAPI.delete('expense', id, deleteOptions); // Default to expense, server handles it
+    },
     {
       mutationKey: mutationKeys.deleteTransaction,
       onSuccess: () => {
@@ -355,8 +359,12 @@ export const useTransactions = (options = {}) => {
     return updateTransactionMutation.mutateAsync({ type, id, data });
   }, [updateTransactionMutation]);
 
-  const deleteTransaction = useCallback(async (id, deleteAll = false) => {
-    return deleteTransactionMutation.mutateAsync({ id, deleteAll });
+  const deleteTransaction = useCallback(async (id, options = {}) => {
+    // Handle both old boolean parameter and new options object
+    if (typeof options === 'boolean') {
+      options = { deleteAll: options };
+    }
+    return deleteTransactionMutation.mutateAsync({ id, ...options });
   }, [deleteTransactionMutation]);
 
   const refresh = useCallback(() => {

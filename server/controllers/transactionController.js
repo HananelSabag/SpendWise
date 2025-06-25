@@ -505,7 +505,7 @@ const transactionController = {
   update: asyncHandler(async (req, res) => {
     const { type, id } = req.params;
     const userId = req.user.id;
-    const { updateFuture, ...updateData } = req.body;
+    const { updateFuture, day_of_month, day_of_week, ...updateData } = req.body; // ✅ FIX: Extract day fields
 
     if (!['expense', 'income'].includes(type)) {
       throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
@@ -513,6 +513,12 @@ const transactionController = {
 
     if (updateData.date) {
       updateData.date = TimeManager.formatForDB(updateData.date);
+    }
+
+    // ✅ FIX: Include day fields in update data for recurring transactions
+    if (updateData.is_recurring) {
+      updateData.day_of_month = updateData.recurring_interval === 'monthly' ? day_of_month : null;
+      updateData.day_of_week = updateData.recurring_interval === 'weekly' ? day_of_week : null;
     }
 
     const transaction = await Transaction.update(type, id, userId, updateData);
@@ -530,12 +536,20 @@ const transactionController = {
   delete: asyncHandler(async (req, res) => {
     const { type, id } = req.params;
     const userId = req.user.id;
+    const { deleteAll, deleteFuture, deleteSingle } = req.query; // ✅ FIX: Extract delete options from query
 
     if (!['expense', 'income'].includes(type)) {
       throw { ...errorCodes.INVALID_INPUT, details: 'Invalid transaction type' };
     }
 
-    await Transaction.delete(type, id, userId);
+    // ✅ FIX: Pass delete options to the model
+    const deleteOptions = {
+      deleteAll: deleteAll === 'true',
+      deleteFuture: deleteFuture === 'true', 
+      deleteSingle: deleteSingle === 'true'
+    };
+
+    await Transaction.delete(type, id, userId, deleteOptions);
 
     res.json({
       success: true,

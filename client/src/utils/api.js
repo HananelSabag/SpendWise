@@ -391,8 +391,16 @@ export const transactionAPI = {
   getAll: (filters) => api.get('/transactions', { params: filters }),
   create: (type, data) => api.post(`/transactions/${type}`, data),
   update: (type, id, data) => api.put(`/transactions/${type}/${id}`, data),
-  delete: (type, id, deleteFuture = false) => 
-    api.delete(`/transactions/${type}/${id}`, { params: { deleteFuture } }),
+  delete: (type, id, options = {}) => {
+    // ✅ FIX: Build query parameters correctly
+    const { deleteAll, deleteFuture, deleteSingle } = options;
+    const queryParams = {};
+    if (deleteAll) queryParams.deleteAll = 'true';
+    if (deleteFuture) queryParams.deleteFuture = 'true';
+    if (deleteSingle) queryParams.deleteSingle = 'true';
+    
+    return api.delete(`/transactions/${type}/${id}`, { params: queryParams });
+  },
   
   // Direct expense/income creation
   addExpense: (data) => api.post('/transactions/expense', data),
