@@ -25,7 +25,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Modal, Button, Badge } from '../../ui';
-import { useToast } from '../../../hooks/useToast';
+import useToast from '../../../hooks/useToast';
 
 /**
  * Enhanced DeleteTransaction Component - User-Friendly with Clear Options
