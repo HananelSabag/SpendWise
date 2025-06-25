@@ -118,6 +118,16 @@ class DBQueries {
           get_period_balance($1, (SELECT month_start FROM date_params), (SELECT effective_date FROM date_params)) as monthly,
           get_period_balance($1, (SELECT year_start FROM date_params), (SELECT effective_date FROM date_params)) as yearly
       ),
+      daily_average_data AS (
+        -- For daily average calculation: divide monthly recurring by 30
+        SELECT 
+          COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) / 30.0 as avg_income,
+          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) / 30.0 as avg_expenses,
+          (COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) - 
+           COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)) / 30.0 as avg_balance
+        FROM recurring_templates 
+        WHERE user_id = $1 AND is_active = true AND interval_type = 'monthly'
+      ),
       recurring_summary AS (
         SELECT 
           COUNT(*) FILTER (WHERE type = 'income') as income_count,
@@ -143,7 +153,12 @@ class DBQueries {
       SELECT 
         (SELECT json_agg(t.* ORDER BY t.date DESC, t.created_at DESC) 
          FROM recent_transactions t) as recent_transactions,
-        bd.daily as daily_balance,
+        -- Use daily average for daily balance, actual periods for others
+        CASE 
+          WHEN dad.avg_income > 0 OR dad.avg_expenses > 0 THEN
+            (dad.avg_income, dad.avg_expenses, dad.avg_balance)::text
+          ELSE bd.daily
+        END as daily_balance,
         bd.weekly as weekly_balance,
         bd.monthly as monthly_balance,
         bd.yearly as yearly_balance,
@@ -161,7 +176,7 @@ class DBQueries {
             'year_start', (SELECT year_start FROM date_params)
           )
         ) as metadata
-      FROM balance_data bd`, [userId, dateStr, effectiveDate, latestDataDate]);
+      FROM balance_data bd, daily_average_data dad`, [userId, dateStr, effectiveDate, latestDataDate]);
 
       // Process the balance data - convert from string tuple to JSON object
       const processBalanceData = (balanceStr) => {

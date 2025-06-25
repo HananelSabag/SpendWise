@@ -358,8 +358,8 @@ class RecurringTemplate {
       // Delete future transactions if requested
       if (deleteFuture) {
         await client.query(
-          'SELECT delete_future_transactions($1, $2)',
-          [id, new Date()]
+          'SELECT delete_future_transactions($1, $2, $3)',
+          [id, userId, new Date()]
         );
 
         logger.info('Future transactions deleted', {
