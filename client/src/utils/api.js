@@ -339,7 +339,7 @@ export const authAPI = {
   },
   
   // ✅ ADD: Onboarding completion
-  completeOnboarding: () => api.post('/api/v1/onboarding/complete'),
+  completeOnboarding: () => api.post('/onboarding/complete'),
   
   // Utility
   testEmail: (email) => api.post('/users/test-email', { email })
