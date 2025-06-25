@@ -891,14 +891,24 @@ const TransactionCard = ({
         </AnimatePresence>
       </motion.div>
 
-      {/* ✅ PRESERVED: Delete modal exactly as before */}
+      {/* ✅ FIXED: Delete modal with proper onConfirm handler */}
       {showDeleteModal && (
         <DeleteTransaction
           transaction={transaction}
           onClose={() => setShowDeleteModal(false)}
-          onSuccess={() => {
+          onConfirm={async (transaction, options) => {
+            try {
+              await deleteTransaction(transaction.id, options);
+              setShowDeleteModal(false);
+              refresh();
+            } catch (error) {
+              console.error('Delete failed in TransactionCard:', error);
+              throw error; // Re-throw to let DeleteTransaction handle the error display
+            }
+          }}
+          onOpenSkipDates={(transaction) => {
             setShowDeleteModal(false);
-            refresh();
+            onOpenRecurringManager?.(transaction);
           }}
         />
       )}

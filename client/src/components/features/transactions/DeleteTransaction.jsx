@@ -25,7 +25,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Modal, Button, Badge } from '../../ui';
-import useToast from '../../../hooks/useToast';
+import { useToast } from '../../../hooks/useToast';
 
 /**
  * Enhanced DeleteTransaction Component - User-Friendly with Clear Options
@@ -44,6 +44,17 @@ const DeleteTransaction = ({
   const { formatAmount } = useCurrency();
   const { deleteTemplate } = useTransactionActions();
   const toastService = useToast();
+
+  // ✅ FIX: Add validation for required props
+  if (!transaction) {
+    console.error('DeleteTransaction: transaction prop is required');
+    return null;
+  }
+
+  if (!onConfirm) {
+    console.error('DeleteTransaction: onConfirm prop is required');
+    return null;
+  }
   
   const [selectedAction, setSelectedAction] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -159,44 +170,59 @@ const DeleteTransaction = ({
 
   // ✅ Enhanced Action Handler with Clear Flow
   const handleActionSelect = useCallback((actionId) => {
-    setSelectedAction(actionId);
-    
-    if (actionId === 'skip') {
-      // Redirect to skip dates management
-      toastService.info('toast.info.dataLoading');
-      onOpenSkipDates?.(transaction);
-      onClose();
-      return;
+    try {
+      setSelectedAction(actionId);
+      
+      if (actionId === 'skip') {
+        // Redirect to skip dates management
+        if (toastService?.info) {
+          toastService.info('toast.info.dataLoading');
+        }
+        onOpenSkipDates?.(transaction);
+        onClose();
+        return;
+      }
+      
+      // For delete actions, show confirmation
+      setShowConfirmation(true);
+    } catch (error) {
+      console.error('Error in handleActionSelect:', error);
+      if (toastService?.error) {
+        toastService.error('Failed to process action. Please try again.');
+      }
     }
-    
-    // For delete actions, show confirmation
-    setShowConfirmation(true);
-  }, [transaction, onOpenSkipDates, onClose, t]);
+  }, [transaction, onOpenSkipDates, onClose, toastService]);
 
   // ✅ Enhanced Confirmation Handler
   const handleConfirmDelete = useCallback(async () => {
     if (!selectedAction) return;
+    if (!onConfirm) {
+      console.error('onConfirm is not provided');
+      return;
+    }
 
     setIsDeleting(true);
     
     try {
-      const action = availableOptions.find(opt => opt.id === selectedAction);
+      console.log('🗑️ DeleteTransaction: Starting delete with action:', selectedAction);
       
       switch (selectedAction) {
         case 'single':
-          // ✅ FIX: Pass options object instead of boolean parameters
+          console.log('🗑️ Calling onConfirm with deleteSingle: true');
           await onConfirm(transaction, { deleteSingle: true });
           break;
           
         case 'future':
+          console.log('🗑️ Calling onConfirm with deleteFuture: true');
           await onConfirm(transaction, { deleteFuture: true });
           break;
           
         case 'all':
           if (isTemplate) {
-            // ✅ FIX: Call onConfirm instead of deleteTemplate directly since this component doesn't have access to deleteTemplate
+            console.log('🗑️ Calling onConfirm with deleteAll: true, deleteFuture: true (template)');
             await onConfirm(transaction, { deleteAll: true, deleteFuture: true });
           } else {
+            console.log('🗑️ Calling onConfirm with deleteAll: true');
             await onConfirm(transaction, { deleteAll: true });
           }
           break;
@@ -206,18 +232,27 @@ const DeleteTransaction = ({
           return;
       }
       
-      toastService.transactionDeleted();
+      console.log('🗑️ Delete successful');
+      
+      // Success feedback
+      if (toastService?.success) {
+        toastService.success('Transaction deleted successfully');
+      }
       onClose();
       
     } catch (error) {
-      // ✅ FIX: Better error handling
+      console.error('🗑️ Delete failed in DeleteTransaction:', error);
+      
+      // Better error handling
       const errorMessage = error?.message || error?.response?.data?.message || 'Failed to delete transaction';
-      toastService.error(errorMessage);
-      console.error('Delete failed:', error);
+      
+      if (toastService?.error) {
+        toastService.error(errorMessage);
+      }
     } finally {
       setIsDeleting(false);
     }
-  }, [selectedAction, availableOptions, transaction, onConfirm, isTemplate, onClose, t]);
+  }, [selectedAction, transaction, onConfirm, isTemplate, onClose, toastService]);
 
   // ✅ Reset state when modal closes
   const handleClose = useCallback(() => {

@@ -738,25 +738,17 @@ const Transactions = () => {
           setShowActionsPanel(false);
           setSelectedTransaction(null);
         }}
-        onConfirm={async (transaction, deleteFuture, deleteAll) => {
+        onConfirm={async (transaction, options) => {
           try {
-            // Handle the actual deletion based on the type
-            if (deleteAll) {
-              // Delete entire recurring series or template
-              await deleteTransaction(transaction.id, { deleteAll: true });
-            } else if (deleteFuture) {
-              // Stop future occurrences
-              await deleteTransaction(transaction.id, { deleteFuture: true });
-            } else {
-              // Delete single occurrence
-              await deleteTransaction(transaction.id, { deleteSingle: true });
-            }
+            // ✅ FIX: Pass options object to deleteTransaction
+            await deleteTransaction(transaction.id, options);
             
             refreshAll();
             setShowActionsPanel(false);
             setSelectedTransaction(null);
           } catch (error) {
             console.error('Delete failed:', error);
+            throw error; // Re-throw to let DeleteTransaction handle the error display
           }
         }}
         onOpenSkipDates={(transaction) => {
