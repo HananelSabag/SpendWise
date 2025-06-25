@@ -95,46 +95,56 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
 -- Add skip_dates column to recurring_templates if it doesn't exist
 ALTER TABLE recurring_templates ADD COLUMN IF NOT EXISTS skip_dates DATE[] DEFAULT '{}';
 
--- Summary statistics function
+-- Fixed user stats function with COALESCE for new users
 CREATE OR REPLACE FUNCTION get_user_stats(p_user_id INTEGER)
 RETURNS TABLE(
     total_income DECIMAL(10,2),
     total_expenses DECIMAL(10,2),
     net_balance DECIMAL(10,2),
-    active_templates INTEGER,
+    avg_daily_income DECIMAL(10,2),
     avg_daily_expense DECIMAL(10,2),
-    avg_daily_income DECIMAL(10,2)
+    active_templates INTEGER,
+    transaction_count INTEGER
 ) AS $$
 BEGIN
     RETURN QUERY
-    WITH stats AS (
+    WITH user_transactions AS (
         SELECT 
-            COALESCE(SUM(CASE WHEN deleted_at IS NULL THEN amount ELSE 0 END), 0) as total_exp
-        FROM expenses WHERE user_id = p_user_id
-    ), income_stats AS (
+            COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expenses,
+            COUNT(*) as transaction_count
+        FROM (
+            SELECT amount, 'income' as type FROM income 
+            WHERE user_id = p_user_id AND deleted_at IS NULL
+            UNION ALL
+            SELECT amount, 'expense' as type FROM expenses 
+            WHERE user_id = p_user_id AND deleted_at IS NULL
+        ) t
+    ),
+    daily_averages AS (
         SELECT 
-            COALESCE(SUM(CASE WHEN deleted_at IS NULL THEN amount ELSE 0 END), 0) as total_inc
-        FROM income WHERE user_id = p_user_id
-    ), template_stats AS (
-        SELECT COUNT(*) as active_temps
-        FROM recurring_templates 
-        WHERE user_id = p_user_id AND is_active = true
-    ), daily_stats AS (
-        SELECT 
-            COALESCE(AVG(expenses), 0) as avg_exp,
-            COALESCE(AVG(income), 0) as avg_inc
-        FROM daily_balances
-        WHERE user_id = p_user_id
-        AND date >= CURRENT_DATE - INTERVAL '30 days'
+            COALESCE(AVG(expenses), 0) as avg_daily_expense,
+            COALESCE(AVG(income), 0) as avg_daily_income
+        FROM daily_balances db
+        WHERE db.user_id = p_user_id
+    ),
+    template_count AS (
+        SELECT COALESCE(COUNT(*), 0) as active_templates
+        FROM recurring_templates rt
+        WHERE rt.user_id = p_user_id AND rt.is_active = true
     )
     SELECT 
-        income_stats.total_inc::DECIMAL(10,2),
-        stats.total_exp::DECIMAL(10,2),
-        (income_stats.total_inc - stats.total_exp)::DECIMAL(10,2),
-        template_stats.active_temps::INTEGER,
-        COALESCE(daily_stats.avg_exp, 0)::DECIMAL(10,2),
-        COALESCE(daily_stats.avg_inc, 0)::DECIMAL(10,2)
-    FROM stats, income_stats, template_stats, daily_stats;
+        ut.total_income,
+        ut.total_expenses,
+        ut.total_income - ut.total_expenses as net_balance,
+        -- ✅ CRITICAL FIX: Use COALESCE with 0 fallback for new users
+        COALESCE(da.avg_daily_income, 0) as avg_daily_income,
+        COALESCE(da.avg_daily_expense, 0) as avg_daily_expense,
+        tc.active_templates::INTEGER,
+        ut.transaction_count::INTEGER
+    FROM user_transactions ut
+    CROSS JOIN daily_averages da
+    CROSS JOIN template_count tc;
 END;
 $$ LANGUAGE plpgsql;
 

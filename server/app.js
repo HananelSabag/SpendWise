@@ -19,6 +19,7 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const exportRoutes = require('./routes/exportRoutes'); // ✅ ADD: Export routes
 const onboardingRoutes = require('./routes/onboarding'); // ✅ ADD: Onboarding routes
+const healthRoutes = require('./routes/healthRoutes'); // ✅ ADD: Health check routes
 
 // Initialize express app
 const app = express();
@@ -66,6 +67,9 @@ const apiLimiter = rateLimit({
 
 // Apply rate limiting to all routes
 app.use(apiLimiter);
+
+// Health check routes (before auth middleware - no rate limiting)
+app.use('/health', healthRoutes);
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {

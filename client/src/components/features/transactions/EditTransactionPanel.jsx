@@ -213,7 +213,9 @@ const EditTransactionPanel = ({
       is_recurring: scope === 'oneTime' ? false : (transaction.is_recurring || false),
       recurring_interval: transaction.recurring_interval || 'monthly',
       recurring_end_date: transaction.recurring_end_date || null,
-      day_of_week: transaction.day_of_week || 0,
+      // ✅ FIX: Ensure day values are properly set
+      day_of_week: transaction.day_of_week !== undefined ? transaction.day_of_week : new Date(dateString).getDay(),
+      day_of_month: transaction.day_of_month !== undefined ? transaction.day_of_month : new Date(dateString).getDate(),
       date: dateString,
     };
   });
@@ -298,6 +300,9 @@ const EditTransactionPanel = ({
         ...formData,
         description: finalDescription, // Use the final description (default or user)
         amount: parseFloat(formData.amount),
+        // ✅ ENHANCED: Include day values for recurring transactions
+        day_of_month: formData.is_recurring && formData.recurring_interval === 'monthly' ? formData.day_of_month : undefined,
+        day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' ? formData.day_of_week : undefined,
         // ✅ ENHANCED: Proper update scope handling
         updateFuture: scope === 'series' || scope === 'template'
       };
@@ -771,6 +776,35 @@ const EditTransactionPanel = ({
                         <option value={5}>{t('days.friday')}</option>
                         <option value={6}>{t('days.saturday')}</option>
                       </select>
+                    </div>
+                  )}
+
+                  {/* Day of Month for Monthly */}
+                  {formData.recurring_interval === 'monthly' && (
+                    <div className="mt-3 sm:mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('actions.dayOfMonth', 'Day of Month')}
+                      </label>
+                      <select
+                        value={formData.day_of_month || new Date().getDate()}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          day_of_month: parseInt(e.target.value) 
+                        }))}
+                        className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all text-sm sm:text-base"
+                      >
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                          <option key={day} value={day}>
+                            {day}{day === 1 ? (isRTL ? ' ראשון' : 'st') : 
+                                day === 2 ? (isRTL ? ' שני' : 'nd') : 
+                                day === 3 ? (isRTL ? ' שלישי' : 'rd') : 
+                                (isRTL ? ` ה-${day}` : 'th')}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isRTL ? 'עבור חודשים עם פחות ימים, יבוא ביום האחרון של החודש' : 'For months with fewer days, will occur on the last day of the month'}
+                      </p>
                     </div>
                   )}
                 </Card>

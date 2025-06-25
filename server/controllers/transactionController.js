@@ -446,6 +446,22 @@ const transactionController = {
         throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid recurring interval' };
       }
 
+      // ✅ ENHANCED: Smart defaults for missing day values
+      let finalDayOfMonth = day_of_month;
+      let finalDayOfWeek = req.body.day_of_week;
+      
+      if (recurring_interval === 'monthly' && !finalDayOfMonth) {
+        // Default to the day of the start date
+        const startDate = new Date(date || new Date());
+        finalDayOfMonth = startDate.getDate();
+      }
+      
+      if (recurring_interval === 'weekly' && finalDayOfWeek === undefined) {
+        // Default to the day of week of the start date
+        const startDate = new Date(date || new Date());
+        finalDayOfWeek = startDate.getDay();
+      }
+
       const template = await RecurringTemplate.create({
         user_id: userId,
         type,
@@ -453,7 +469,8 @@ const transactionController = {
         description,
         category_id,
         interval_type: recurring_interval,
-        day_of_month: recurring_interval === 'monthly' ? day_of_month : null,
+        day_of_month: recurring_interval === 'monthly' ? finalDayOfMonth : null,
+        day_of_week: recurring_interval === 'weekly' ? finalDayOfWeek : null,
         start_date: TimeManager.formatForDB(date || new Date()),
         end_date: recurring_end_date ? TimeManager.formatForDB(recurring_end_date) : null
       });

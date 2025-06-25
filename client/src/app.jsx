@@ -19,6 +19,10 @@ import { DateProvider } from './context/DateContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './hooks/useToast';
+import { AppStateProvider } from './context/AppStateContext'; // ✅ ADD: App state management
+
+// New Components
+import AppInitializer from './components/common/AppInitializer'; // ✅ ADD: Smart loading screens
 
 // Lazy-loaded pages
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -293,89 +297,37 @@ const AppContent = () => {
 };
 
 /**
- * ✅ FIX: Create QueryClient with proper configuration
+ * ✅ ENHANCED: Create QueryClient with cold start handling
  */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        // Don't retry on 401/403 errors
-        if (error?.response?.status === 401 || error?.response?.status === 403) {
-          return false;
-        }
+        // Don't retry on 4xx errors, do retry on network errors
+        if (error?.status >= 400 && error?.status < 500) return false;
         return failureCount < 2;
       },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 10 * 60 * 1000, // 10 minutes
       refetchOnWindowFocus: false,
     },
     mutations: {
-      retry: false,
+      retry: (failureCount, error) => {
+        // Retry network errors but not client errors
+        if (error?.status >= 400 && error?.status < 500) return false;
+        return failureCount < 1;
+      },
     },
   },
 });
 
-/**
- * ✅ ADD: App initialization component
- */
-const AppInitializer = ({ children }) => {
-  useEffect(() => {
-    // ✅ ADD: Listen for session reset events
-    const handleSessionReset = () => {
-
-      // Language context will handle its own reset
-      // Theme context will handle its own reset
-    };
-
-    const handleAuthLogout = () => {
-
-      // Clear any app-level state if needed
-    };
-
-    // ✅ ADD: Listen for language session reset
-    const handleLanguageSessionReset = () => {
-
-      // LanguageContext will handle this internally
-    };
-
-    window.addEventListener('auth-logout', handleAuthLogout);
-    window.addEventListener('preferences-reset', handleSessionReset);
-    window.addEventListener('language-session-reset', handleLanguageSessionReset);
-
-    return () => {
-      window.removeEventListener('auth-logout', handleAuthLogout);
-      window.removeEventListener('preferences-reset', handleSessionReset);
-      window.removeEventListener('language-session-reset', handleLanguageSessionReset);
-    };
-  }, []);
-
-  return children;
-};
+// AppInitializer is now imported from components/common/AppInitializer.jsx
 
 /**
  * Main Application Component
  */
 function App() {
-  useEffect(() => {
-    // ✅ REMOVED: Don't force theme initialization - let ThemeContext handle it
-    // The ThemeContext will properly initialize theme based on user preferences
-    
-    // Restore user preferences
-    const initializePreferences = () => {
-      try {
-        const savedLanguage = localStorage.getItem('preferredLanguage');
-        const savedCurrency = localStorage.getItem('preferredCurrency');
-        
-
-        
-      } catch (error) {
-
-      }
-    };
-    
-    initializePreferences();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <Router 
@@ -387,23 +339,19 @@ function App() {
         <LanguageProvider>
           <AccessibilityProvider initialDarkMode={false}>
             <ThemeProvider>
-              <AuthProvider>
-                <DateProvider>
-                  <CurrencyProvider>
-                    <ToastProvider>
-                      <Suspense fallback={
-                        <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
-                          <LoadingSpinner size="large" />
-                        </div>
-                      }>
-                        <AppInitializer>
+              <ToastProvider>
+                <AuthProvider>
+                  <AppStateProvider> {/* ✅ ADD: Centralized app state management */}
+                    <DateProvider>
+                      <CurrencyProvider>
+                        <AppInitializer> {/* ✅ ADD: Smart loading with cold start handling */}
                           <AppContent />
                         </AppInitializer>
-                      </Suspense>
-                    </ToastProvider>
-                  </CurrencyProvider>
-                </DateProvider>
-              </AuthProvider>
+                      </CurrencyProvider>
+                    </DateProvider>
+                  </AppStateProvider>
+                </AuthProvider>
+              </ToastProvider>
             </ThemeProvider>
           </AccessibilityProvider>
         </LanguageProvider>

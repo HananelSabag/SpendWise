@@ -225,13 +225,20 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     try {
       // Create actual recurring transactions for each template
       for (const template of templates) {
+        const currentDate = new Date();
+        const dayOfMonth = currentDate.getDate(); // Use today's day as default
+        
         const transactionData = {
           amount: Math.abs(template.amount),
           description: template.title,
           category_id: template.categoryId || 8,
           date: new Date().toISOString().split('T')[0],
           is_recurring: true,
-          recurring_interval: template.frequency || 'monthly'
+          recurring_interval: template.frequency || 'monthly',
+          // ✅ FIX: Add day_of_month for monthly intervals
+          day_of_month: template.frequency === 'monthly' ? new Date().getDate() : undefined,
+          // ✅ FIX: Add day_of_week for weekly intervals  
+          day_of_week: template.frequency === 'weekly' ? new Date().getDay() : undefined
         };
 
         await createTransaction(template.type, transactionData);

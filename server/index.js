@@ -14,6 +14,7 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
 const scheduler = require('./utils/scheduler');
 const db = require('./config/db');
+const keepAlive = require('./utils/keepAlive'); // ✅ ADD: Keep-alive service
 
 // Load environment variables
 dotenv.config();
@@ -269,6 +270,9 @@ const startServer = async () => {
       if (process.env.ENABLE_SCHEDULER !== 'false') {
         scheduler.init();
       }
+      
+      // ✅ ADD: Start keep-alive service
+      keepAlive.start();
     });
 
     // Graceful shutdown

@@ -61,18 +61,24 @@ const AddTransactions = ({
   const dateButtonRef = useRef(null);
 
   // ✅ PRESERVED: Exact same form data initialization but with smart defaults
-  const [formData, setFormData] = useState({
-    amount: '',
-    description: '', // Will use smart default if empty
-    category_id: null, // Will be set when categories load
-    is_recurring: initialActionType?.isRecurring || false,
-    recurring_interval: 'monthly',
-    recurring_end_date: null,
-    day_of_week: 0,
-    date: (() => {
-      const date = selectedDate || new Date();
+  const [formData, setFormData] = useState(() => {
+    const today = new Date();
+    const formatDateForInput = (date) => {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    })(),
+    };
+    const defaultDate = formatDateForInput(selectedDate || today);
+    
+    return {
+      amount: '',
+      description: '', // Will use smart default if empty
+      category_id: null, // Will be set when categories load
+      is_recurring: initialActionType?.isRecurring || false,
+      recurring_interval: 'monthly', // ✅ Default to monthly instead of daily
+      recurring_end_date: null,
+      day_of_month: today.getDate(), // ✅ Default to today's date
+      day_of_week: today.getDay(), // ✅ Default to today's day of week
+      date: defaultDate,
+    };
   });
 
   // ✅ PRESERVED: Exact same categories processing logic as original
@@ -253,6 +259,9 @@ const AddTransactions = ({
       recurring_end_date: formData.recurring_end_date ? new Date(formData.recurring_end_date) : null,
       day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
         ? formData.day_of_week 
+        : null,
+      day_of_month: formData.is_recurring && formData.recurring_interval === 'monthly' 
+        ? formData.day_of_month 
         : null
     };
 
@@ -276,6 +285,9 @@ const AddTransactions = ({
         category_id: defaultCategoryId,
         day_of_week: formData.is_recurring && formData.recurring_interval === 'weekly' 
           ? formData.day_of_week 
+          : null,
+        day_of_month: formData.is_recurring && formData.recurring_interval === 'monthly' 
+          ? formData.day_of_month 
           : null
       });
       
@@ -908,6 +920,35 @@ const AddTransactions = ({
                             <option value={5}>{t('days.friday')}</option>
                             <option value={6}>{t('days.saturday')}</option>
                           </select>
+                        </div>
+                      )}
+
+                      {/* Day of Month for Monthly */}
+                      {formData.recurring_interval === 'monthly' && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {t('actions.dayOfMonth', 'Day of Month')}
+                          </label>
+                          <select
+                            value={formData.day_of_month || new Date().getDate()}
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              day_of_month: parseInt(e.target.value) 
+                            }))}
+                            className="w-full py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                          >
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                              <option key={day} value={day}>
+                                {day}{day === 1 ? (isRTL ? ' ראשון' : 'st') : 
+                                    day === 2 ? (isRTL ? ' שני' : 'nd') : 
+                                    day === 3 ? (isRTL ? ' שלישי' : 'rd') : 
+                                    (isRTL ? ` ה-${day}` : 'th')}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {isRTL ? 'עבור חודשים עם פחות ימים, יבוא ביום האחרון של החודש' : 'For months with fewer days, will occur on the last day of the month'}
+                          </p>
                         </div>
                       )}
                     </Card>

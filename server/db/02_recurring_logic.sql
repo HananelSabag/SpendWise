@@ -1,6 +1,6 @@
 -- Simple recurring transaction logic
 
--- Function to generate recurring transactions
+-- Enhanced recurring transaction generation with better NULL handling
 CREATE OR REPLACE FUNCTION generate_recurring_transactions()
 RETURNS void AS $$
 DECLARE
@@ -8,15 +8,17 @@ DECLARE
     next_date DATE;
     generation_end_date DATE;
     last_generated_date DATE;
+    transactions_created INTEGER := 0;
 BEGIN
     -- Set generation period (3 months ahead)
     generation_end_date := CURRENT_DATE + INTERVAL '3 months';
     
     -- Process each active template
     FOR template IN 
-        SELECT rt.* FROM recurring_templates rt
-        WHERE rt.is_active = true 
-        AND (rt.end_date IS NULL OR rt.end_date >= CURRENT_DATE)
+        SELECT * FROM recurring_templates 
+        WHERE is_active = true 
+        AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+        ORDER BY id
     LOOP
         -- Find last generated date for this template
         EXECUTE format('
@@ -26,95 +28,61 @@ BEGIN
             CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
         ) INTO last_generated_date USING template.id;
         
-        -- ✅ CRITICAL FIX: Set starting point correctly
+        -- Set starting point correctly
         IF last_generated_date IS NULL THEN
-            -- NEW template: Start from the actual start_date (include it!)
+            -- NEW template: Start from start_date
             next_date := template.start_date;
         ELSE
-            -- EXISTING template: Start from day after last generated
-            next_date := last_generated_date;
+            -- EXISTING template: Calculate next occurrence
+            next_date := CASE template.interval_type
+                WHEN 'daily' THEN last_generated_date + INTERVAL '1 day'
+                WHEN 'weekly' THEN last_generated_date + INTERVAL '1 week'
+                WHEN 'monthly' THEN 
+                    CASE 
+                        WHEN template.day_of_month IS NOT NULL THEN
+                            -- Use the day_of_month (fixed clustering issue)
+                            (DATE_TRUNC('month', last_generated_date) + INTERVAL '1 month' + 
+                             (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', last_generated_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
+                        ELSE
+                            -- Fallback
+                            last_generated_date + INTERVAL '1 month'
+                    END
+            END;
         END IF;
         
-        -- Generate transactions until generation_end_date
+        -- Generate transactions until end date
         WHILE next_date <= generation_end_date AND (template.end_date IS NULL OR next_date <= template.end_date) LOOP
             
-            -- ✅ FIX: For existing templates, calculate NEXT occurrence first
-            IF last_generated_date IS NOT NULL THEN
+            -- Skip past dates (but allow today for new templates)
+            IF next_date < CURRENT_DATE AND NOT (last_generated_date IS NULL AND next_date = CURRENT_DATE) THEN
+                -- Move to next occurrence
                 next_date := CASE template.interval_type
                     WHEN 'daily' THEN next_date + INTERVAL '1 day'
                     WHEN 'weekly' THEN next_date + INTERVAL '1 week'
                     WHEN 'monthly' THEN 
-                        -- Smart monthly calculation
-                        CASE 
-                            WHEN template.day_of_month IS NOT NULL THEN
-                                -- Next month on specific day
-                                (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                                 (template.day_of_month - 1) * INTERVAL '1 day')::DATE
-                            ELSE
-                                next_date + INTERVAL '1 month'
-                        END
-                END;
-            END IF;
-            
-            -- Skip if in the past (but allow today!)
-            IF next_date < CURRENT_DATE THEN
-                -- ✅ FIX: For new templates on first iteration, don't skip start_date
-                IF last_generated_date IS NULL AND next_date = template.start_date AND next_date = CURRENT_DATE THEN
-                    -- This is a new template starting today - DON'T skip it!
-                ELSE
-                    CONTINUE;
-                END IF;
-            END IF;
-            
-            -- Skip if beyond template end date
-            IF template.end_date IS NOT NULL AND next_date > template.end_date THEN
-                EXIT;
-            END IF;
-            
-            -- ✅ FIX: Skip if date is in skip_dates array
-            IF template.skip_dates IS NOT NULL AND next_date = ANY(template.skip_dates) THEN
-                -- Calculate next occurrence and continue
-                next_date := CASE template.interval_type
-                    WHEN 'daily' THEN next_date + INTERVAL '1 day'
-                    WHEN 'weekly' THEN next_date + INTERVAL '1 week'
-                    WHEN 'monthly' THEN 
-                        CASE 
-                            WHEN template.day_of_month IS NOT NULL THEN
-                                (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                                 (template.day_of_month - 1) * INTERVAL '1 day')::DATE
-                            ELSE
-                                next_date + INTERVAL '1 month'
-                        END
+                        (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
+                         (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', next_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
                 END;
                 CONTINUE;
             END IF;
             
-            -- Insert transaction
+            -- Create the transaction
             EXECUTE format('
                 INSERT INTO %I (user_id, amount, description, date, category_id, template_id)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT DO NOTHING',
+                VALUES ($1, $2, $3, $4, $5, $6)',
                 CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
             ) USING template.user_id, template.amount, template.description, 
                     next_date, template.category_id, template.id;
             
-            -- ✅ FIX: For new templates, NOW calculate next occurrence after inserting
-            IF last_generated_date IS NULL THEN
-                last_generated_date := next_date; -- Mark that we're no longer "new"
-            END IF;
+            transactions_created := transactions_created + 1;
             
-            -- Calculate next occurrence for next iteration
+            -- Calculate next occurrence
             next_date := CASE template.interval_type
                 WHEN 'daily' THEN next_date + INTERVAL '1 day'
                 WHEN 'weekly' THEN next_date + INTERVAL '1 week'
                 WHEN 'monthly' THEN 
-                    CASE 
-                        WHEN template.day_of_month IS NOT NULL THEN
-                            (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                             (template.day_of_month - 1) * INTERVAL '1 day')::DATE
-                        ELSE
-                            next_date + INTERVAL '1 month'
-                    END
+                    (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
+                     (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', next_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
             END;
         END LOOP;
     END LOOP;
