@@ -115,9 +115,9 @@ class DBQueries {
       balance_data AS (
         SELECT 
           get_period_balance($1, (SELECT effective_date FROM date_params), (SELECT effective_date FROM date_params)) as daily,
-          get_period_balance($1, (SELECT week_start FROM date_params), (SELECT effective_date FROM date_params)) as weekly,
-          get_period_balance($1, (SELECT month_start FROM date_params), (SELECT effective_date FROM date_params)) as monthly,
-          get_period_balance($1, (SELECT year_start FROM date_params), (SELECT effective_date FROM date_params)) as yearly
+          get_period_balance($1, (SELECT week_start FROM date_params), (SELECT week_start FROM date_params) + INTERVAL '6 days') as weekly,
+          get_period_balance($1, (SELECT month_start FROM date_params), (SELECT month_start FROM date_params) + INTERVAL '1 month' - INTERVAL '1 day') as monthly,
+          get_period_balance($1, (SELECT year_start FROM date_params), (SELECT year_start FROM date_params) + INTERVAL '1 year' - INTERVAL '1 day') as yearly
       ),
       daily_average_data AS (
         -- For daily average calculation: divide monthly recurring by 30
