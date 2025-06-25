@@ -671,7 +671,6 @@ const translations = {
     noRecurringTemplates: "No recurring templates found",
     editTransactionDesc: 'Edit this transaction to modify its details',
     deleteTransactionDesc: 'Delete this transaction to remove it from your history',
-    scheduled: 'Scheduled',
     transactions: "Total Transactions",
     skipError: {
       invalidTemplate: "Cannot skip: Invalid template",

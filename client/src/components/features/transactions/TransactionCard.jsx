@@ -43,7 +43,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
 import { Badge, Button } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
-import { useToast } from '../../../hooks/useToast';
+import useToast from '../../../hooks/useToast';
 
 /**
  * ✅ ENHANCED: Improved animation configurations for smoother interactions

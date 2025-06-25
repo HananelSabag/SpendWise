@@ -22,7 +22,7 @@ import { useCurrency } from '../../../context/CurrencyContext';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Button, Badge, Card } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
-import { useToast } from '../../../hooks/useToast';
+import useToast from '../../../hooks/useToast';
 import { useRecurringTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
 
 /**
