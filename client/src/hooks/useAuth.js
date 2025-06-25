@@ -398,7 +398,9 @@ export const useAuth = () => {
   // Mark onboarding as complete
   const markOnboardingComplete = useCallback(async () => {
     try {
+      console.log('🚀 About to call authAPI.completeOnboarding()');
       const response = await authAPI.completeOnboarding();
+      console.log('✅ Response received:', response);
       
       // Update the user data locally
       queryClient.setQueryData(queryKeys.profile, (old) => {
@@ -415,7 +417,9 @@ export const useAuth = () => {
       
       return response.data;
     } catch (error) {
-      console.error('Failed to mark onboarding complete:', error);
+      console.error('❌ Failed to mark onboarding complete:', error);
+      console.error('❌ Error details:', error.response?.data);
+      console.error('❌ Full error:', error);
       throw error;
     }
   }, [queryClient]);
