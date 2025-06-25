@@ -420,7 +420,8 @@ export const useToast = () => {
   };
 };
 
-export default useToast;
+// ✅ FIX: Export as named export to match imports
+export { useToast };
 
 // Clean ToastProvider component using default react-hot-toast design
 export const ToastProvider = ({ children }) => {

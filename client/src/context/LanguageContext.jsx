@@ -93,8 +93,10 @@ const translations = {
 
       // Transaction errors
       cannotSkipNonRecurring: 'Cannot skip non-recurring transaction',
-      cannotToggleNonTemplate: 'Cannot toggle non-template transaction',
-      unknownInterval: 'Unknown interval type',
+              cannotToggleNonTemplate: 'Cannot toggle non-template transaction',
+        cannotSkipNonTemplate: 'Cannot skip non-template transaction',
+        unknownInterval: 'Unknown interval type',
+        noNextPayment: 'No next payment date available',
 
       // Server errors
       serverError: 'Server error. Please try again later.',
@@ -1869,6 +1871,8 @@ const translations = {
         // Transaction errors
         cannotSkipNonRecurring: 'לא ניתן לדלג על עסקה שאינה חוזרת',
         cannotToggleNonTemplate: 'לא ניתן להחליף מצב של עסקה שאינה תבנית',
+        cannotSkipNonTemplate: 'לא ניתן לדלג על עסקה שאינה תבנית',
+        noNextPayment: 'לא זמין תאריך תשלום הבא',
         unknownInterval: 'סוג מרווח לא מוכר',
 
         // Server errors
