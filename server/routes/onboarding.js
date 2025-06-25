@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const authMiddleware = require('../middleware/auth');
+const { auth: authMiddleware } = require('../middleware/auth');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
