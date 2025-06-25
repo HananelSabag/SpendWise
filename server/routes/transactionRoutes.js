@@ -68,6 +68,38 @@ router.get('/balance/history/:period',
 );
 
 /**
+ * 🔍 DEBUGGING ENDPOINTS (REMOVE IN PRODUCTION)
+ */
+
+// Debug endpoint to test template delete route
+router.get('/debug/templates/:id',
+  (req, res) => {
+    const logger = require('../utils/logger');
+    logger.info('🔍 DEBUG TEMPLATE ENDPOINT HIT', {
+      templateId: req.params.id,
+      userId: req.user?.id,
+      method: req.method,
+      url: req.originalUrl,
+      query: req.query,
+      headers: req.headers,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.json({
+      success: true,
+      message: 'Debug endpoint working',
+      data: {
+        templateId: req.params.id,
+        userId: req.user?.id,
+        timestamp: new Date().toISOString(),
+        receivedQuery: req.query,
+        receivedHeaders: req.headers
+      }
+    });
+  }
+);
+
+/**
  * Transaction Query Routes
  * Data retrieval with filtering and search
  */
@@ -129,6 +161,21 @@ router.put('/templates/:id',
 router.delete('/templates/:id',
   createTransactionLimiter,
   validate.templateId,
+  // 🔍 DEBUGGING: Add route-level logging
+  (req, res, next) => {
+    const logger = require('../utils/logger');
+    logger.info('🛣️ DELETE TEMPLATE ROUTE HIT', {
+      templateId: req.params.id,
+      userId: req.user?.id,
+      query: req.query,
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      origin: req.headers.origin,
+      timestamp: new Date().toISOString()
+    });
+    next();
+  },
   transactionController.deleteTemplate
 );
 

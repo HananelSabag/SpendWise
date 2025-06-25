@@ -632,14 +632,64 @@ const transactionController = {
     const userId = req.user.id;
     const { deleteFuture = false } = req.query;
 
-    await RecurringTemplate.delete(id, userId, deleteFuture === 'true');
-
-    res.json({
-      success: true,
-      message: deleteFuture === 'true' 
-        ? 'Template and future transactions deleted' 
-        : 'Template deactivated'
+    // 🔍 DEBUGGING: Log incoming delete request
+    logger.info('🗑️ DELETE TEMPLATE REQUEST RECEIVED', {
+      templateId: id,
+      userId: userId,
+      deleteFuture: deleteFuture,
+      query: req.query,
+      headers: {
+        origin: req.headers.origin,
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type']
+      },
+      timestamp: new Date().toISOString()
     });
+
+    try {
+      // 🔍 DEBUGGING: Log before calling delete
+      logger.info('🗑️ CALLING RecurringTemplate.delete', {
+        templateId: id,
+        userId: userId,
+        deleteFutureBoolean: deleteFuture === 'true'
+      });
+
+      const result = await RecurringTemplate.delete(id, userId, deleteFuture === 'true');
+
+      // 🔍 DEBUGGING: Log successful deletion
+      logger.info('✅ TEMPLATE DELETE SUCCESS', {
+        templateId: id,
+        userId: userId,
+        deleteFuture: deleteFuture === 'true',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        message: deleteFuture === 'true' 
+          ? 'Template and future transactions deleted' 
+          : 'Template deactivated',
+        data: {
+          templateId: id,
+          deleteFuture: deleteFuture === 'true'
+        }
+      });
+
+    } catch (error) {
+      // 🔍 DEBUGGING: Log deletion error
+      logger.error('❌ TEMPLATE DELETE FAILED', {
+        templateId: id,
+        userId: userId,
+        deleteFuture: deleteFuture,
+        error: error.message,
+        errorCode: error.code,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+
+      throw error;
+    }
   }),
 
   /**

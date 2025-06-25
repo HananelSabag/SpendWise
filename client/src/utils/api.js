@@ -599,18 +599,96 @@ export const getApiConfig = () => config;
 // ✅ ENHANCED TEMPLATES API WITH BETTER ERROR HANDLING
 export const templatesAPI = {
   delete: async (id, deleteFuture = false) => {
+    const startTime = Date.now();
+    
     try {
-      console.log(`🗑️ Deleting template ${id}, deleteFuture: ${deleteFuture}`);
+      // 🔍 DEBUGGING: Enhanced client-side logging
+      console.group('🗑️ TEMPLATE DELETE REQUEST');
+      console.log('📝 Request Details:', {
+        templateId: id,
+        deleteFuture: deleteFuture,
+        timestamp: new Date().toISOString(),
+        apiUrl: config.API_URL,
+        requestUrl: `/transactions/templates/${id}`,
+        params: { deleteFuture: deleteFuture.toString() }
+      });
+      
+      // 🔍 DEBUGGING: Log environment info
+      console.log('🌍 Environment:', {
+        apiUrl: config.API_URL,
+        environment: config.ENVIRONMENT,
+        userAgent: navigator.userAgent,
+        currentUrl: window.location.href
+      });
+      
+      console.log('⏳ Making DELETE request...');
       
       const response = await api.delete(`/transactions/templates/${id}`, {
         params: { deleteFuture: deleteFuture.toString() },
         timeout: 30000, // Longer timeout for delete operations
       });
       
-      console.log('✅ Template deleted successfully:', response.data);
+      const duration = Date.now() - startTime;
+      
+      // 🔍 DEBUGGING: Log successful response
+      console.log('✅ DELETE REQUEST SUCCESS:', {
+        status: response.status,
+        statusText: response.statusText,
+        duration: `${duration}ms`,
+        responseData: response.data,
+        headers: response.headers,
+        timestamp: new Date().toISOString()
+      });
+      console.groupEnd();
+      
       return response.data;
     } catch (error) {
-      console.error('❌ Delete template failed:', error);
+      const duration = Date.now() - startTime;
+      
+      // 🔍 DEBUGGING: Enhanced error logging
+      console.group('❌ TEMPLATE DELETE ERROR');
+      console.error('📊 Error Details:', {
+        templateId: id,
+        deleteFuture: deleteFuture,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString(),
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorName: error.name
+      });
+      
+      if (error.response) {
+        console.error('🔴 Server Response Error:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('🔴 Network Request Error:', {
+          request: error.request,
+          message: 'No response received from server'
+        });
+      } else {
+        console.error('🔴 Request Setup Error:', {
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      
+      // 🔍 DEBUGGING: Log axios config
+      if (error.config) {
+        console.error('⚙️ Request Config:', {
+          method: error.config.method,
+          url: error.config.url,
+          baseURL: error.config.baseURL,
+          params: error.config.params,
+          headers: error.config.headers,
+          timeout: error.config.timeout
+        });
+      }
+      
+      console.groupEnd();
       
       if (error.isCorsError) {
         throw new Error('Unable to connect to server. Please check your internet connection and try again.');
@@ -641,6 +719,21 @@ export const templatesAPI = {
     } catch (error) {
       console.error('Pause template failed:', error);
       throw new Error('Failed to pause recurring transaction. Please try again.');
+    }
+  },
+
+  // 🔍 DEBUGGING: Test connectivity to template endpoints
+  testConnection: async (id = 'test') => {
+    try {
+      console.log('🧪 Testing template endpoint connectivity...');
+      
+      const response = await api.get(`/transactions/debug/templates/${id}`);
+      
+      console.log('✅ Template endpoint connectivity test SUCCESS:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Template endpoint connectivity test FAILED:', error);
+      throw error;
     }
   }
 };
