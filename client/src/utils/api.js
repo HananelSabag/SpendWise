@@ -338,6 +338,9 @@ export const authAPI = {
     });
   },
   
+  // ✅ ADD: Onboarding completion
+  completeOnboarding: () => api.post('/onboarding/complete'),
+  
   // Utility
   testEmail: (email) => api.post('/users/test-email', { email })
 };

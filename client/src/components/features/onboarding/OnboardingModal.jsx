@@ -169,9 +169,10 @@ const OnboardingModal = ({
     setIsCompleting(true);
     
     try {
-      console.log(`🚀 [ONBOARDING] Marking onboarding as complete...`);
+      console.log(`🚀 [ONBOARDING] Marking onboarding as complete... User ID: ${user?.id}`);
       // Mark onboarding as complete in the backend
-      await markOnboardingComplete();
+      const result = await markOnboardingComplete();
+      console.log(`🚀 [ONBOARDING] API response:`, result);
       
       // Clear saved progress
       localStorage.removeItem('spendwise-onboarding-progress');
@@ -183,7 +184,9 @@ const OnboardingModal = ({
       
       // ✅ FIX: Force refresh user data to ensure onboarding_completed is updated
       if (refreshProfile) {
+        console.log(`🚀 [ONBOARDING] Refreshing profile...`);
         await refreshProfile();
+        console.log(`🚀 [ONBOARDING] Profile refreshed`);
       }
       
       // Call completion callback
@@ -193,7 +196,8 @@ const OnboardingModal = ({
       onClose();
       console.log(`🚀 [ONBOARDING] Onboarding completed successfully`);
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      console.error('❌ [ONBOARDING] Failed to complete onboarding:', error);
+      console.error('❌ [ONBOARDING] Error details:', error.response?.data || error.message);
       // Still close modal to avoid user being stuck
       onClose();
     } finally {
@@ -204,10 +208,11 @@ const OnboardingModal = ({
   // ✅ NEW: Handle onboarding skip
   const handleSkipOnboarding = async () => {
     try {
-      console.log(`🚀 [ONBOARDING] Skipping onboarding...`);
+      console.log(`🚀 [ONBOARDING] Skipping onboarding... User ID: ${user?.id}`);
       
       // Mark onboarding as complete in backend
-      await markOnboardingComplete();
+      const result = await markOnboardingComplete();
+      console.log(`🚀 [ONBOARDING] Skip API response:`, result);
       
       // Clear progress and mark as skipped
       localStorage.removeItem('spendwise-onboarding-progress');
@@ -215,7 +220,9 @@ const OnboardingModal = ({
       
       // Force refresh user data
       if (refreshProfile) {
+        console.log(`🚀 [ONBOARDING] Refreshing profile after skip...`);
         await refreshProfile();
+        console.log(`🚀 [ONBOARDING] Profile refreshed after skip`);
       }
       
       // Call completion callback and close
@@ -224,7 +231,8 @@ const OnboardingModal = ({
       
       console.log(`🚀 [ONBOARDING] Onboarding skipped successfully`);
     } catch (error) {
-      console.error('Failed to skip onboarding:', error);
+      console.error('❌ [ONBOARDING] Failed to skip onboarding:', error);
+      console.error('❌ [ONBOARDING] Skip error details:', error.response?.data || error.message);
       // Still close to avoid user being stuck
       onClose();
     }

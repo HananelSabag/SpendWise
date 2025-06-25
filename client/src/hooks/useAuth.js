@@ -398,7 +398,7 @@ export const useAuth = () => {
   // Mark onboarding as complete
   const markOnboardingComplete = useCallback(async () => {
     try {
-      const response = await authAPI.post('/onboarding/complete');
+      const response = await authAPI.completeOnboarding();
       
       // Update the user data locally
       queryClient.setQueryData(queryKeys.profile, (old) => {

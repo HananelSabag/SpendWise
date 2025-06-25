@@ -27,18 +27,25 @@ const OnboardingPromptDialog = ({
   const handleSkip = async () => {
     setIsSkipping(true);
     try {
-      await markOnboardingComplete();
+      console.log(`🚀 [ONBOARDING-PROMPT] Skipping onboarding...`);
+      const result = await markOnboardingComplete();
+      console.log(`🚀 [ONBOARDING-PROMPT] Skip API response:`, result);
+      
       localStorage.removeItem('spendwise-onboarding-progress');
       localStorage.setItem('spendwise-onboarding-skipped', 'true');
       
       if (refreshProfile) {
+        console.log(`🚀 [ONBOARDING-PROMPT] Refreshing profile...`);
         await refreshProfile();
+        console.log(`🚀 [ONBOARDING-PROMPT] Profile refreshed`);
       }
       
       onSkipOnboarding?.();
       onClose();
+      console.log(`🚀 [ONBOARDING-PROMPT] Onboarding skipped successfully`);
     } catch (error) {
-      console.error('Failed to skip onboarding:', error);
+      console.error('❌ [ONBOARDING-PROMPT] Failed to skip onboarding:', error);
+      console.error('❌ [ONBOARDING-PROMPT] Error details:', error.response?.data || error.message);
       onClose();
     } finally {
       setIsSkipping(false);
