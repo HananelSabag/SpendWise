@@ -747,5 +747,68 @@ export const getApiStats = () => {
   };
 };
 
+// Make templatesAPI available globally for debugging (REMOVE IN PRODUCTION)
+if (typeof window !== 'undefined') {
+  window.templatesAPI = templatesAPI;
+  window.apiConfig = config;
+  
+  // 🔍 DEBUGGING: Global test functions
+  window.debugAPI = {
+    // Test basic connectivity
+    testHealth: async () => {
+      try {
+        const response = await fetch(`${config.API_URL}/health`);
+        const data = await response.json();
+        console.log('✅ Health check success:', data);
+        return data;
+      } catch (error) {
+        console.error('❌ Health check failed:', error);
+        throw error;
+      }
+    },
+    
+    // Test template connectivity
+    testTemplates: async () => {
+      try {
+        const result = await templatesAPI.testConnection();
+        console.log('✅ Template connectivity test passed:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Template connectivity test failed:', error);
+        throw error;
+      }
+    },
+    
+    // Test template delete
+    testDelete: async (templateId, deleteFuture = false) => {
+      try {
+        console.log(`🧪 Testing delete for template ${templateId}`);
+        const result = await templatesAPI.delete(templateId, deleteFuture);
+        console.log('✅ Delete test success:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Delete test failed:', error);
+        throw error;
+      }
+    },
+    
+    // Show current configuration
+    showConfig: () => {
+      console.group('🔧 API Configuration');
+      console.log('API_URL:', config.API_URL);
+      console.log('Environment:', config.ENVIRONMENT);
+      console.log('Auth Token:', localStorage.getItem('accessToken') ? '✅ Present' : '❌ Missing');
+      console.log('Current URL:', window.location.href);
+      console.groupEnd();
+    }
+  };
+  
+  console.log('🔍 Debug API functions available:');
+  console.log('- debugAPI.showConfig()');
+  console.log('- debugAPI.testHealth()');
+  console.log('- debugAPI.testTemplates()');
+  console.log('- debugAPI.testDelete(templateId, deleteFuture)');
+}
+
 // Default export
 export default api;
