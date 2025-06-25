@@ -121,8 +121,8 @@ BEGIN
         WHERE user_id = p_user_id AND is_active = true
     ), daily_stats AS (
         SELECT 
-            AVG(expenses) as avg_exp,
-            AVG(income) as avg_inc
+            COALESCE(AVG(expenses), 0) as avg_exp,
+            COALESCE(AVG(income), 0) as avg_inc
         FROM daily_balances
         WHERE user_id = p_user_id
         AND date >= CURRENT_DATE - INTERVAL '30 days'

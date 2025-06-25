@@ -1,11 +1,12 @@
 /**
- * PERFECT Dashboard - Compact Desktop Layout + Fixed Mobile
+ * Dashboard - Main Dashboard Page
  * 
- * 💻 DESKTOP: Inspired by compact version - better organization
- * 📱 MOBILE: Fixed QuickActions bug + optimized UX
- * ✅ SMART 3-COLUMN LAYOUT: Balance+Actions left, Transactions+Stats right
- * ✅ COMPACT SIZING: No more grandiose spacing
- * ✅ PERFECT PROPORTIONS: Everything fits naturally
+ * Features:
+ * - Balance overview with time range filters
+ * - Recent transactions
+ * - Quick actions
+ * - Statistics charts
+ * - Onboarding flow integration
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -39,6 +40,7 @@ import AddTransactions from '../components/features/transactions/AddTransactions
 import StatsChart from '../components/features/dashboard/StatsChart';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import OnboardingModal from '../components/features/onboarding/OnboardingModal';
+import OnboardingPromptDialog from '../components/features/onboarding/OnboardingPromptDialog';
 import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
 import { Link } from 'react-router-dom';
 
@@ -55,32 +57,31 @@ MemoizedStatsChart.displayName = 'MemoizedStatsChart';
 const MemoizedQuickActionsBar = React.memo(QuickActionsBar);
 MemoizedQuickActionsBar.displayName = 'MemoizedQuickActionsBar';
 
-// COMPACT: Animation variants with faster timings
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08, // Faster
-      delayChildren: 0.1 // Reduced delay
+      staggerChildren: 0.08,
+      delayChildren: 0.1
     }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 15 }, // Reduced movement
+  hidden: { opacity: 0, y: 15 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      stiffness: 200, // Snappier
+      stiffness: 200,
       damping: 25
     }
   }
 };
 
-// COMPACT: Smaller welcome banner variants
 const welcomeVariants = {
   initial: { opacity: 0, scale: 0.98, height: 0 },
   animate: { 
@@ -156,34 +157,50 @@ const Dashboard = () => {
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
   const [showAddTransactions, setShowAddTransactions] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
   
   const isRTL = language === 'he';
   const dashboardId = useRef(`dashboard-${Math.random().toString(36).substr(2, 9)}`).current;
   
-  // COMPACT: Faster initial loading
+  // Initial loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 150); // Reduced from 300ms
+    }, 150);
     return () => clearTimeout(timer);
   }, []);
   
-  // COMPACT: Faster banner timing
+  // Banner timing
   useEffect(() => {
     if (!loading && !isDashboardLoading && !isFetching) {
       const timer = setTimeout(() => {
         setShowWelcomeBanner(false);
-      }, 800); // Reduced from 1500ms
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [loading, isDashboardLoading, isFetching]);
 
-  // Check if user needs onboarding
+  // ✅ IMPROVED: Check if user needs onboarding with better logic
   useEffect(() => {
     if (user && !loading && !isDashboardLoading) {
-      // Show onboarding if user hasn't completed it
+      // Check if user hasn't completed onboarding
       if (!user.onboarding_completed) {
-        setShowOnboarding(true);
+        // Check if user has started onboarding before
+        const hasStartedOnboarding = localStorage.getItem('spendwise-onboarding-progress');
+        const hasSkippedOnboarding = localStorage.getItem('spendwise-onboarding-skipped');
+        
+        if (hasSkippedOnboarding) {
+          // User already chose to skip - don't show anything
+          return;
+        }
+        
+        if (hasStartedOnboarding) {
+          // User started but didn't complete - show prompt dialog
+          setShowOnboardingPrompt(true);
+        } else {
+          // First time user - show full onboarding
+          setShowOnboarding(true);
+        }
       }
     }
   }, [user, loading, isDashboardLoading]);
@@ -205,7 +222,7 @@ const Dashboard = () => {
     return greetings.night;
   }, [user?.username, t]);
 
-  // COMPACT: Dashboard stats calculation
+  // Dashboard stats calculation
   const dashboardStats = useMemo(() => {
     if (!dashboardData || isDashboardLoading) {
       return {
@@ -299,16 +316,15 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
-      {/* COMPACT: Reduced container padding */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-3" // Reduced from space-y-6
+          className="space-y-3"
           dir={isRTL ? 'rtl' : 'ltr'}
         >
-          {/* COMPACT: Welcome Banner */}
+          {/* Welcome Banner */}
           <AnimatePresence mode="wait">
             {showWelcomeBanner ? (
               <CompactWelcomeBanner 
@@ -333,26 +349,19 @@ const Dashboard = () => {
             )}
           </AnimatePresence>
 
-          {/* 📱 MOBILE: Stack everything vertically */}
+          {/* Mobile Layout */}
           <div className="lg:hidden space-y-3">
-            {/* Mobile Balance Panel - Now handled internally */}
             <motion.div variants={itemVariants}>
               <MemoizedBalancePanel />
             </motion.div>
-
-            {/* Mobile Quick Actions */}
             <motion.div variants={itemVariants}>
               <MemoizedQuickActionsBar />
             </motion.div>
-
-            {/* Mobile Transactions - COMPACT HEIGHT */}
             <motion.div variants={itemVariants}>
               <div className="h-[280px]">
                 <MemoizedRecentTransactions limit={4} />
               </div>
             </motion.div>
-
-            {/* Mobile Stats */}
             <motion.div variants={itemVariants}>
               <div className="h-[250px]">
                 <MemoizedStatsChart />
@@ -360,10 +369,9 @@ const Dashboard = () => {
             </motion.div>
           </div>
 
-          {/* 💻 DESKTOP: OPTIMIZED COMPACT LAYOUT */}
+          {/* Desktop Layout */}
           <div className="hidden lg:block">
-            
-            {/* ROW 1: Balance Panel - Full Width */}
+            {/* Balance Panel */}
             <motion.div variants={itemVariants} className="mb-4">
               <div className="relative">
                 {!showWelcomeBanner && (
@@ -380,42 +388,38 @@ const Dashboard = () => {
               </div>
             </motion.div>
 
-            {/* ROW 2: Quick Actions + Recent Transactions - COMPACT EQUAL HEIGHT */}
+            {/* Quick Actions + Recent Transactions */}
             <motion.div variants={itemVariants} className="mb-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                
-                {/* Quick Actions - Left side - COMPACT HEIGHT */}
                 <div className="relative h-[320px]">
                   <MemoizedQuickActionsBar />
                 </div>
-
-                {/* Recent Transactions - Right side - SAME COMPACT HEIGHT */}
                 <div className="relative h-[320px]">
                   <MemoizedRecentTransactions />
                 </div>
               </div>
             </motion.div>
 
-            {/* ROW 3: Stats Chart - Full Width */}
+            {/* Stats Chart */}
             <motion.div variants={itemVariants} className="mb-4">
               <div className="relative">
                 <MemoizedStatsChart />
               </div>
             </motion.div>
 
-            {/* ROW 4: Compact Tips Section */}
+            {/* Tips Section */}
             <motion.div variants={itemVariants}>
               <CompactTipsSection t={t} />
             </motion.div>
           </div>
         </motion.div>
 
-        {/* COMPACT: Floating Action Button - Left positioned */}
+        {/* Floating Action Button */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8, duration: 0.3 }}
-          className="fixed left-4 bottom-4 z-50" // Left positioned like compact version
+          className="fixed left-4 bottom-4 z-50"
         >
           <motion.button
             onClick={() => setShowAddTransactions(true)}
@@ -435,7 +439,7 @@ const Dashboard = () => {
           </motion.button>
         </motion.div>
 
-        {/* Modal */}
+        {/* Modals */}
         <AnimatePresence>
           {showAddTransactions && (
             <Modal
@@ -459,7 +463,20 @@ const Dashboard = () => {
           onClose={() => setShowOnboarding(false)}
           onComplete={() => {
             setShowOnboarding(false);
-            // Refresh dashboard to get updated user data
+            refreshDashboard();
+          }}
+        />
+
+        {/* ✅ NEW: Onboarding Prompt Dialog */}
+        <OnboardingPromptDialog
+          isOpen={showOnboardingPrompt}
+          onClose={() => setShowOnboardingPrompt(false)}
+          onContinueOnboarding={() => {
+            setShowOnboardingPrompt(false);
+            setShowOnboarding(true);
+          }}
+          onSkipOnboarding={() => {
+            setShowOnboardingPrompt(false);
             refreshDashboard();
           }}
         />
@@ -468,7 +485,7 @@ const Dashboard = () => {
   );
 };
 
-// COMPACT: Compact Welcome Banner
+// Welcome Banner Components
 const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, language, variants, t }) => (
   <motion.div
     variants={variants}
@@ -484,12 +501,8 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
       </div>
       
       <div className="relative z-10">
-        {/* Mobile-first responsive layout */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-          
-          {/* Main content - Avatar + Text */}
           <div className="flex items-start sm:items-center gap-3">
-            {/* Avatar section */}
             <div className="relative flex-shrink-0">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
                 {user?.preferences?.profilePicture ? (
@@ -507,9 +520,7 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
             </div>
             
-            {/* Text section - Mobile optimized */}
             <div className="flex-1 min-w-0">
-              {/* Title - Mobile: Stack SpendWise and greeting */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 mb-1">
                 <h1 className="text-sm sm:text-base lg:text-xl font-bold text-white">
                   <span dir="ltr" className="text-white">SpendWise</span>
@@ -528,7 +539,6 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
                 </div>
               </div>
               
-              {/* Date section */}
               <p className="text-white/90 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Calendar className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">
@@ -544,7 +554,6 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
             </div>
           </div>
           
-          {/* Badge section - Mobile: Right aligned, smaller */}
           <div className="flex justify-end sm:justify-start">
             <Badge variant="default" className="bg-white/20 text-white border-white/30 px-2 sm:px-3 py-1 text-xs flex-shrink-0">
               <Activity className="w-3 h-3 mr-1" />
@@ -557,7 +566,6 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
   </motion.div>
 ));
 
-// COMPACT: Mini Welcome
 const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
   <motion.div
     variants={variants}
@@ -609,7 +617,6 @@ const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
   </motion.div>
 ));
 
-// COMPACT: Tips Section
 const CompactTipsSection = React.memo(({ t }) => (
   <Card className="bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 text-white p-4 border-0 shadow-lg relative overflow-hidden">
     <div className="absolute inset-0">

@@ -38,7 +38,7 @@ const OnboardingModal = ({
   forceShow = false // For re-showing onboarding from help menu
 }) => {
   const { t, language } = useLanguage();
-  const { user, markOnboardingComplete } = useAuth();
+  const { user, markOnboardingComplete, refreshProfile } = useAuth();
   const isRTL = language === 'he';
   
   // State management
@@ -175,7 +175,16 @@ const OnboardingModal = ({
       
       // Clear saved progress
       localStorage.removeItem('spendwise-onboarding-progress');
+      
+      // ✅ FIX: Clear the onboarding-skipped flag if it exists
+      localStorage.removeItem('spendwise-onboarding-skipped');
+      
       console.log(`🚀 [ONBOARDING] Progress cleared, calling completion callback`);
+      
+      // ✅ FIX: Force refresh user data to ensure onboarding_completed is updated
+      if (refreshProfile) {
+        await refreshProfile();
+      }
       
       // Call completion callback
       onComplete?.();
@@ -189,6 +198,35 @@ const OnboardingModal = ({
       onClose();
     } finally {
       setIsCompleting(false);
+    }
+  };
+
+  // ✅ NEW: Handle onboarding skip
+  const handleSkipOnboarding = async () => {
+    try {
+      console.log(`🚀 [ONBOARDING] Skipping onboarding...`);
+      
+      // Mark onboarding as complete in backend
+      await markOnboardingComplete();
+      
+      // Clear progress and mark as skipped
+      localStorage.removeItem('spendwise-onboarding-progress');
+      localStorage.setItem('spendwise-onboarding-skipped', 'true');
+      
+      // Force refresh user data
+      if (refreshProfile) {
+        await refreshProfile();
+      }
+      
+      // Call completion callback and close
+      onComplete?.();
+      onClose();
+      
+      console.log(`🚀 [ONBOARDING] Onboarding skipped successfully`);
+    } catch (error) {
+      console.error('Failed to skip onboarding:', error);
+      // Still close to avoid user being stuck
+      onClose();
     }
   };
 
