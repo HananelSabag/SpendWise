@@ -66,19 +66,6 @@ const BalancePanel = () => {
     yearly: { income: 0, expenses: 0, balance: 0 }
   };
 
-  // ✅ DEBUG: Log balance data structure for diagnosis
-  useEffect(() => {
-    if (localStorage.getItem('debug_balance_panel') === 'true') {
-      console.log('🔍 [BALANCE-PANEL] Raw dashboard data:', dashboardData);
-      console.log('🔍 [BALANCE-PANEL] Processed balance data:', balanceData);
-      console.log('🔍 [BALANCE-PANEL] Current period:', period);
-      console.log('🔍 [BALANCE-PANEL] Period data types:');
-      Object.keys(balanceData).forEach(key => {
-        console.log(`  ${key}:`, typeof balanceData[key], balanceData[key]);
-      });
-    }
-  }, [dashboardData, balanceData, period]);
-
   const recurringInfo = dashboardData?.recurringInfo || {
     income_count: 0,
     expense_count: 0,

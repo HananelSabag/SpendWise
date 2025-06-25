@@ -135,52 +135,24 @@ class DBQueries {
         ) as metadata
       FROM balance_data bd`, [userId, dateStr]);
 
-      // ✅ ENHANCED: Process balance data with better error handling
+      // Process the balance data - convert from string tuple to JSON object
       const processBalanceData = (balanceStr) => {
-        // Debug logging for development
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[DEBUG] Processing balance data:`, typeof balanceStr, balanceStr);
-        }
-        
         // Check if the balance is already an object
         if (typeof balanceStr === 'object' && balanceStr !== null) {
-          return {
-            income: parseFloat(balanceStr.income || 0),
-            expenses: parseFloat(balanceStr.expenses || 0),
-            balance: parseFloat(balanceStr.balance || 0)
-          };
+          return balanceStr;
         }
         
         // Handle string tuple format "(income,expenses,balance)"
         if (typeof balanceStr === 'string' && balanceStr.startsWith('(') && balanceStr.endsWith(')')) {
-          try {
-            const values = balanceStr.substring(1, balanceStr.length - 1).split(',').map(v => parseFloat(v.trim()));
-            return {
-              income: values[0] || 0,
-              expenses: values[1] || 0,
-              balance: values[2] || 0
-            };
-          } catch (error) {
-            console.warn('[WARN] Failed to parse balance tuple:', balanceStr, error);
-          }
+          const values = balanceStr.substring(1, balanceStr.length - 1).split(',').map(Number);
+          return {
+            income: values[0] || 0,
+            expenses: values[1] || 0,
+            balance: values[2] || 0
+          };
         }
         
-        // Handle comma-separated string without parentheses
-        if (typeof balanceStr === 'string' && balanceStr.includes(',')) {
-          try {
-            const values = balanceStr.split(',').map(v => parseFloat(v.trim()));
-            return {
-              income: values[0] || 0,
-              expenses: values[1] || 0,
-              balance: values[2] || 0
-            };
-          } catch (error) {
-            console.warn('[WARN] Failed to parse balance string:', balanceStr, error);
-          }
-        }
-        
-        // Default fallback with logging
-        console.warn('[WARN] Using default balance fallback for:', balanceStr);
+        // Default fallback
         return { income: 0, expenses: 0, balance: 0 };
       };
 

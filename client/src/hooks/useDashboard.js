@@ -33,17 +33,17 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     };
   }, [queryClient, queryKey]);
   
-  // ✅ ENHANCED: Data selector with balance validation and fallback
+  // ✅ SIMPLIFY: Data selector without excessive memoization
   const selectData = useCallback((response) => {
     const data = response.data.data;
     
     return {
       recentTransactions: Array.isArray(data.recent_transactions) ? data.recent_transactions : [],
       balances: {
-        daily: numbers.processBalanceData(data.daily_balance),
-        weekly: numbers.processBalanceData(data.weekly_balance),
-        monthly: numbers.processBalanceData(data.monthly_balance),
-        yearly: numbers.processBalanceData(data.yearly_balance)
+        daily: numbers.processBalanceData(data.daily),
+        weekly: numbers.processBalanceData(data.weekly),
+        monthly: numbers.processBalanceData(data.monthly),
+        yearly: numbers.processBalanceData(data.yearly)
       },
       recurringInfo: {
         income_count: numbers.ensureNumber(data.recurring_info?.income_count),
