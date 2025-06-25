@@ -553,22 +553,25 @@ export const useTransactionTemplates = () => {
 };
 
 /**
- * ✅ NEW: Hook to check template status and handle orphaned transactions
+ * ✅ FIXED: Hook to check template status and handle orphaned transactions
  */
 export const useTemplateStatus = () => {
-  const { templates } = useTransactionTemplates();
+  const { templates, isLoading: templatesLoading } = useTransactionTemplates();
   
   // ✅ Create a map of template ID -> template status for fast lookup
   const templateStatusMap = useMemo(() => {
     const map = new Map();
     
-    if (Array.isArray(templates)) {
+    // ✅ FIX: Add safety check and better validation
+    if (Array.isArray(templates) && templates.length > 0) {
       templates.forEach(template => {
-        map.set(template.id, {
-          exists: true,
-          isActive: template.is_active !== false,
-          template: template
-        });
+        if (template && template.id) { // ✅ FIX: Ensure template and id exist
+          map.set(template.id, {
+            exists: true,
+            isActive: template.is_active !== false,
+            template: template
+          });
+        }
       });
     }
     
@@ -588,6 +591,19 @@ export const useTemplateStatus = () => {
         templateActive: false,
         shouldShowRecurringOptions: false,
         reason: 'no_transaction'
+      };
+    }
+    
+    // ✅ FIX: If templates are still loading, use conservative fallback
+    if (templatesLoading) {
+      // Fall back to basic recurring detection while templates load
+      const isBasicRecurring = Boolean(transaction.template_id || transaction.is_recurring);
+      return {
+        isRecurring: isBasicRecurring,
+        templateExists: Boolean(transaction.template_id),
+        templateActive: true, // Assume active while loading
+        shouldShowRecurringOptions: isBasicRecurring,
+        reason: 'loading'
       };
     }
     
@@ -649,11 +665,13 @@ export const useTemplateStatus = () => {
       shouldShowRecurringOptions: false,
       reason: 'one_time'
     };
-  }, [templateStatusMap]);
+  }, [templateStatusMap, templatesLoading]);
   
   return {
     templateStatusMap,
-    getTransactionRecurringStatus
+    getTransactionRecurringStatus,
+    isLoading: templatesLoading, // ✅ FIX: Expose loading state
+    templatesCount: templates?.length || 0 // ✅ FIX: For debugging
   };
 };
 

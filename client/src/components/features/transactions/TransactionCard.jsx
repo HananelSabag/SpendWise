@@ -37,7 +37,7 @@ import {
 
 // ✅ PRESERVED: Centralized icon system integration
 import { getIconComponent, getColorForCategory, getGradientForCategory } from '../../../config/categoryIcons';
-import { useTransactions, useTransactionTemplates, useTemplateStatus } from '../../../hooks/useTransactions';
+import { useTransactions, useTransactionTemplates } from '../../../hooks/useTransactions';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
@@ -162,8 +162,8 @@ const TransactionCard = ({
     isSkipping 
   } = useTransactionTemplates();
   
-  // ✅ NEW: Get template status checker
-  const { getTransactionRecurringStatus } = useTemplateStatus();
+  // ✅ TEMPORARILY DISABLED: Get template status checker
+  // const { getTransactionRecurringStatus } = useTemplateStatus();
 
   // ✅ PRESERVED: Same local state management
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -182,8 +182,18 @@ const TransactionCard = ({
   
   // ✅ NEW: Use smart template status detection instead of simple template_id check
   const recurringStatus = useMemo(() => {
-    return getTransactionRecurringStatus(transaction);
-  }, [transaction, getTransactionRecurringStatus]);
+    // ✅ TEMPORARY FIX: Use simple logic to prevent crashes
+    const isBasicRecurring = Boolean(transaction.template_id || transaction.is_recurring);
+    const isBasicTemplate = Boolean(transaction.interval_type && !transaction.template_id);
+    
+    return {
+      isRecurring: isBasicRecurring,
+      templateExists: Boolean(transaction.template_id),
+      templateActive: true, // Assume active for now
+      shouldShowRecurringOptions: isBasicRecurring || isBasicTemplate,
+      reason: isBasicRecurring ? 'template_active' : (isBasicTemplate ? 'is_template' : 'one_time')
+    };
+  }, [transaction]);
   
   // ✅ ENHANCED: Better transaction type detection with template status awareness
   const templateId = getTemplateId(transaction);
@@ -192,7 +202,7 @@ const TransactionCard = ({
   const isTemplate = Boolean(transaction.interval_type && !transaction.template_id);
   const isActive = recurringStatus.templateActive;
   const shouldShowRecurringOptions = recurringStatus.shouldShowRecurringOptions;
-  const isOrphaned = recurringStatus.reason === 'template_deleted';
+  const isOrphaned = false; // ✅ TEMPORARILY DISABLED
   const isMobile = variant === 'mobile';
   const isCompact = variant === 'compact';
 
@@ -661,13 +671,13 @@ const TransactionCard = ({
                       </Badge>
                     )}
                     
-                    {/* ✅ NEW: Orphaned transaction indicator */}
-                    {isOrphaned && (
-                      <Badge variant="warning" size="small" className="shrink-0">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        {t('transactions.orphaned')}
-                      </Badge>
-                    )}
+                                         {/* ✅ TEMPORARILY DISABLED: Orphaned transaction indicator */}
+                     {/* {isOrphaned && (
+                       <Badge variant="warning" size="small" className="shrink-0">
+                         <AlertTriangle className="w-3 h-3 mr-1" />
+                         {t('transactions.orphaned')}
+                       </Badge>
+                     )} */}
                     
                     {/* ✅ ENHANCED: Template inactive indicator */}
                     {isRecurring && !shouldShowRecurringOptions && !isOrphaned && (
