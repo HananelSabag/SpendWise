@@ -204,6 +204,7 @@ app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
 app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
 app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
 app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
+app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
 
 // 404 handler
 app.use((req, res, next) => {
