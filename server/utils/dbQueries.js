@@ -200,17 +200,8 @@ class DBQueries {
       const dashboardData = result.rows[0];
       
       // Process all balance data
-      // Use daily averages if available, otherwise use actual daily balance
-      const dailyAverages = dashboardData.daily_averages;
-      if (dailyAverages && (dailyAverages.avg_income > 0 || dailyAverages.avg_expenses > 0)) {
-        dashboardData.daily_balance = {
-          income: Math.round(dailyAverages.avg_income * 100) / 100,
-          expenses: Math.round(dailyAverages.avg_expenses * 100) / 100,
-          balance: Math.round(dailyAverages.avg_balance * 100) / 100
-        };
-      } else {
-        dashboardData.daily_balance = processBalanceData(dashboardData.daily_balance);
-      }
+      // Always use actual balance data from the database functions
+      dashboardData.daily_balance = processBalanceData(dashboardData.daily_balance);
       
       dashboardData.weekly_balance = processBalanceData(dashboardData.weekly_balance);
       dashboardData.monthly_balance = processBalanceData(dashboardData.monthly_balance);

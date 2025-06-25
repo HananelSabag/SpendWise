@@ -194,7 +194,8 @@ const DeleteTransaction = ({
           
         case 'all':
           if (isTemplate) {
-            await deleteTemplate(transaction.id, { deleteAll: true });
+            // ✅ FIX: deleteTemplate expects (id, deleteFuture) not options object
+            await deleteTemplate(transaction.id, true); // deleteFuture = true for template deletion
           } else {
             await onConfirm(transaction, { deleteAll: true });
           }

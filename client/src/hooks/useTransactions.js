@@ -525,6 +525,18 @@ export const useTransactionTemplates = () => {
       }
     }
   );
+
+  // ✅ FIX: Add missing deleteTemplate mutation
+  const deleteTemplateMutation = useApiMutation(
+    ({ id, deleteFuture }) => transactionAPI.deleteTemplate(id, deleteFuture),
+    {
+      mutationKey: mutationKeys.deleteTemplate,
+      onSuccess: () => {
+        invalidateAllTransactionData(queryClient);
+        toastService.success('toast.success.templateDeleted');
+      }
+    }
+  );
   
   return {
     templates: templatesQuery.data?.data || [],
@@ -532,8 +544,10 @@ export const useTransactionTemplates = () => {
     error: templatesQuery.error,
     updateTemplate: (id, data) => updateTemplateMutation.mutateAsync({ id, data }),
     skipDates: (templateId, dates) => skipDatesMutation.mutateAsync({ templateId, dates }),
+    deleteTemplate: (id, deleteFuture = false) => deleteTemplateMutation.mutateAsync({ id, deleteFuture }), // ✅ FIX: Add deleteTemplate
     isUpdating: updateTemplateMutation.isLoading,
     isSkipping: skipDatesMutation.isLoading,
+    isDeleting: deleteTemplateMutation.isLoading, // ✅ FIX: Add isDeleting state
     refresh: templatesQuery.refetch
   };
 };

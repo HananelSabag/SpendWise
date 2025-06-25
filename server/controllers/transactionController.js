@@ -462,6 +462,24 @@ const transactionController = {
         finalDayOfWeek = startDate.getDay();
       }
 
+      // ✅ FIX: Always start recurring transactions from the beginning of the current month
+      // Unless user specifically chose a different start date in the future
+      const requestedDate = new Date(date || new Date());
+      const currentMonth = new Date();
+      currentMonth.setDate(1); // First day of current month
+      currentMonth.setHours(0, 0, 0, 0);
+      
+      // If requested date is in current month or past, start from beginning of current month
+      // If requested date is in future month, start from beginning of that month
+      let startDate;
+      if (requestedDate >= currentMonth) {
+        // Future date - start from beginning of that month
+        startDate = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), 1);
+      } else {
+        // Current or past date - start from beginning of current month
+        startDate = currentMonth;
+      }
+
       const template = await RecurringTemplate.create({
         user_id: userId,
         type,
@@ -471,7 +489,7 @@ const transactionController = {
         interval_type: recurring_interval,
         day_of_month: recurring_interval === 'monthly' ? finalDayOfMonth : null,
         day_of_week: recurring_interval === 'weekly' ? finalDayOfWeek : null,
-        start_date: TimeManager.formatForDB(date || new Date()),
+        start_date: TimeManager.formatForDB(startDate),
         end_date: recurring_end_date ? TimeManager.formatForDB(recurring_end_date) : null
       });
 
@@ -519,6 +537,22 @@ const transactionController = {
     if (updateData.is_recurring) {
       updateData.day_of_month = updateData.recurring_interval === 'monthly' ? day_of_month : null;
       updateData.day_of_week = updateData.recurring_interval === 'weekly' ? day_of_week : null;
+      
+      // ✅ FIX: Apply same start date logic as create - start from beginning of month
+      if (updateData.date) {
+        const requestedDate = new Date(updateData.date);
+        const currentMonth = new Date();
+        currentMonth.setDate(1);
+        currentMonth.setHours(0, 0, 0, 0);
+        
+        let startDate;
+        if (requestedDate >= currentMonth) {
+          startDate = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), 1);
+        } else {
+          startDate = currentMonth;
+        }
+        updateData.date = TimeManager.formatForDB(startDate);
+      }
     }
 
     const transaction = await Transaction.update(type, id, userId, updateData);

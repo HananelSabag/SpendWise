@@ -15,7 +15,7 @@
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTransactions } from './useTransactions';
+import { useTransactions, useTransactionTemplates } from './useTransactions';
 import { useToast } from './useToast';
 
 /**
@@ -74,6 +74,9 @@ export const useTransactionActions = (context = 'transactions') => {
     isDeleting,
     refreshAll
   } = useTransactions({ strategy: contextConfig.strategy });
+
+  // ✅ FIX: Import deleteTemplate from useTransactionTemplates properly
+  const { deleteTemplate: baseDeleteTemplate, isDeleting: isDeletingTemplate } = useTransactionTemplates();
 
   // ✅ FIXED: Add proper logging utility
   const logAction = useCallback((message, data = null) => {
@@ -345,6 +348,7 @@ export const useTransactionActions = (context = 'transactions') => {
     createTransaction,
     updateTransaction, 
     deleteTransaction,
+    deleteTemplate: baseDeleteTemplate, // ✅ FIX: Add deleteTemplate
     
     // ✅ PRESERVED: Loading States
     isCreating,
@@ -356,7 +360,7 @@ export const useTransactionActions = (context = 'transactions') => {
     forceRefreshAll,
     
     // ✅ PRESERVED: State Helper
-    isOperating: isCreating || isUpdating || isDeleting,
+    isOperating: isCreating || isUpdating || isDeleting || isDeletingTemplate,
     
     // ✅ NEW: Context information for debugging
     context,

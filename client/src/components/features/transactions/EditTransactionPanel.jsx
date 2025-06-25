@@ -296,8 +296,27 @@ const EditTransactionPanel = ({
       setError('');
       
       const transactionType = transaction.transaction_type || transaction.type;
+      
+      // ✅ FIX: Apply same start date logic as server for recurring transactions
+      let submitDate = formData.date;
+      if (formData.is_recurring && formData.date) {
+        const requestedDate = new Date(formData.date);
+        const currentMonth = new Date();
+        currentMonth.setDate(1);
+        currentMonth.setHours(0, 0, 0, 0);
+        
+        let startDate;
+        if (requestedDate >= currentMonth) {
+          startDate = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), 1);
+        } else {
+          startDate = currentMonth;
+        }
+        submitDate = startDate.toISOString().split('T')[0];
+      }
+      
       const submitData = {
         ...formData,
+        date: submitDate, // ✅ FIX: Use processed date
         description: finalDescription, // Use the final description (default or user)
         amount: parseFloat(formData.amount),
         // ✅ ENHANCED: Include day values for recurring transactions
