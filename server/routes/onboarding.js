@@ -14,6 +14,11 @@ const logger = require('../utils/logger');
  * POST /api/onboarding/complete
  * Mark user onboarding as complete
  */
+// ✅ DEBUG: Add GET route to test
+router.get('/complete', authMiddleware, async (req, res) => {
+  res.json({ error: 'This should be a POST request, not GET!' });
+});
+
 router.post('/complete', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
