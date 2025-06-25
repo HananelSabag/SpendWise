@@ -24,29 +24,29 @@ const healthRoutes = require('./routes/healthRoutes'); // ✅ ADD: Health check 
 // Initialize express app
 const app = express();
 
-// CORS Configuration - Fix for iPhone email verification issues
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:5173', 'http://localhost:3000'];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
+// ❌ CORS Configuration moved to index.js - We're using the one in index.js now
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     // Allow requests with no origin (mobile apps, curl, etc.)
+//     if (!origin) return callback(null, true);
+//     
+//     const allowedOrigins = process.env.ALLOWED_ORIGINS 
+//       ? process.env.ALLOWED_ORIGINS.split(',')
+//       : ['http://localhost:5173', 'http://localhost:3000'];
+//     
+//     if (allowedOrigins.indexOf(origin) !== -1) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+// };
 
 // Middleware
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions)); // ❌ REMOVED - We're using the one in index.js now
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: false // Disable CSP for now to avoid issues with email links

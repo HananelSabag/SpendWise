@@ -46,21 +46,19 @@ app.use(helmet({
 
 app.use(compression());
 
-// ✅ ENHANCED CORS - Mobile + Network Support
+// ✅ ENHANCED CORS - Mobile + Network Support + Health Check Fix
 const isLocalNetworkIP = (origin) => {
   if (!origin) return false;
   
-  // חילוץ ה-IP מה-origin
   const match = origin.match(/^https?:\/\/([^:]+)/);
   if (!match) return false;
   
   const host = match[1];
   
-  // בדיקת רשתות מקומיות
   const localNetworkPatterns = [
-    /^192\.168\.\d{1,3}\.\d{1,3}$/,  // 192.168.x.x
-    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,  // 10.x.x.x
-    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,  // 172.16-31.x.x
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
     /^localhost$/,
     /^127\.0\.0\.1$/
   ];
@@ -74,23 +72,23 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
 
 app.use(cors({
   origin: (origin, callback) => {
-    // ✅ אפשר בקשות ללא origin (mobile apps, Postman)
+    // Allow requests without origin (mobile apps, Postman)
     if (!origin) {
       return callback(null, true);
     }
     
-    // ✅ בדוק origins מורשים
+    // Check allowed origins
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    // ✅ NEW: אפשר רשת מקומית בפיתוח
+    // Allow local network in development
     if (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) {
       logger.info(`🌐 Allowing local network origin: ${origin}`);
       return callback(null, true);
     }
     
-    // ✅ NEW: אפשר כל localhost:5173 (כולל IP)
+    // Allow dev servers
     if (origin.includes(':5173') || origin.includes(':3000')) {
       logger.info(`🌐 Allowing dev server origin: ${origin}`);
       return callback(null, true);
@@ -103,16 +101,58 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
   maxAge: 86400,
-  exposedHeaders: ['Content-Disposition'] // Add for file downloads
+  exposedHeaders: ['Content-Disposition']
 }));
 
-// ✅ OPTIONS preflight handler
+// ✅ EXPLICIT OPTIONS HANDLERS FOR CRITICAL ENDPOINTS
+app.options('/health', (req, res) => {
+  const origin = req.headers.origin;
+  
+  if (!origin || allowedOrigins.includes(origin) || 
+      (process.env.NODE_ENV !== 'production' && (
+        isLocalNetworkIP(origin) || 
+        origin.includes(':5173') || 
+        origin.includes(':3000')
+      ))) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
+    res.status(200).end();
+  } else {
+    res.status(403).end();
+  }
+});
+
+app.options('/api/v1/transactions/templates/*', (req, res) => {
+  const origin = req.headers.origin;
+  
+  if (!origin || allowedOrigins.includes(origin) || 
+      (process.env.NODE_ENV !== 'production' && (
+        isLocalNetworkIP(origin) || 
+        origin.includes(':5173') || 
+        origin.includes(':3000')
+      ))) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
+    res.status(200).end();
+  } else {
+    res.status(403).end();
+  }
+});
+
+// ✅ GLOBAL OPTIONS HANDLER (add this AFTER the specific ones above)
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   
   if (!origin || allowedOrigins.includes(origin) || 
-      (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) ||
-      origin.includes(':5173') || origin.includes(':3000')) {
+      (process.env.NODE_ENV !== 'production' && (
+        isLocalNetworkIP(origin) || 
+        origin.includes(':5173') || 
+        origin.includes(':3000')
+      ))) {
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -180,21 +220,40 @@ if (process.env.NODE_ENV !== 'production') { // Reduce logging in production
   });
 }
 
-// Health check endpoint
+// ✅ ENHANCED HEALTH CHECK ENDPOINT
 app.get('/health', async (req, res) => {
   try {
-    const dbHealth = await db.healthCheck(); // Use dedicated health check
-    res.json({ 
+    const origin = req.headers.origin;
+    
+    // Set CORS headers for health check
+    if (origin && (allowedOrigins.includes(origin) || 
+        process.env.NODE_ENV !== 'production' && (
+          isLocalNetworkIP(origin) || 
+          origin.includes(':5173') || 
+          origin.includes(':3000')
+        ))) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    const dbHealth = await db.healthCheck();
+    
+    res.json({
       status: 'healthy',
-      database: dbHealth.status,
+      database: dbHealth ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
-      version: process.env.npm_package_version || '1.0.0' // Include version
+      version: '1.0.0'
     });
   } catch (error) {
-    res.status(503).json({ 
-      status: 'unhealthy', 
-      timestamp: new Date().toISOString()
+    logger.error('Health check failed', { error: error.message });
+    
+    res.status(503).json({
+      status: 'unhealthy',
+      database: 'error',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
     });
   }
 });
