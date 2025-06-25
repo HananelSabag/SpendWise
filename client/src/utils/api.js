@@ -422,7 +422,7 @@ export const transactionAPI = {
   getTemplates: () => api.get('/transactions/templates'),
   updateTemplate: (id, data) => api.put(`/transactions/templates/${id}`, data),
   deleteTemplate: (id, deleteFuture = false) => 
-    api.delete(`/transactions/templates/${id}`, { params: { deleteFuture } }),
+    api.delete(`/transactions/templates/${id}`, { params: { deleteFuture: deleteFuture.toString() } }),
   skipDates: (templateId, dates) =>
     api.post(`/transactions/templates/${templateId}/skip`, { dates }),
   

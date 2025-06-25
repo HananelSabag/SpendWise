@@ -596,7 +596,21 @@ const RecurringModal = ({
             try {
               console.log('🗑️ [RECURRING-MODAL] Deleting template:', template.id, 'Options:', options);
               
-              const { deleteFuture = true } = options;
+              // ✅ FIX: Handle different deletion strategies properly
+              let deleteFuture = false; // Default: keep existing transactions
+              
+              if (options.deleteAll && options.deleteFuture) {
+                // Delete template AND all future transactions
+                deleteFuture = true;
+              } else if (options.deleteFuture) {
+                // Stop recurring from now (delete future only)
+                deleteFuture = true;
+              } else {
+                // Default: Just deactivate template, keep existing transactions
+                deleteFuture = false;
+              }
+              
+              console.log('🗑️ [RECURRING-MODAL] Final deleteFuture:', deleteFuture);
               await deleteTemplate(template.id, deleteFuture);
               
               toastService.success('toast.success.templateDeleted');
