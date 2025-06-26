@@ -6,9 +6,13 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// ✅ DEBUG: Log all environment variables
+console.log('🔍 ALL VITE ENV VARS:', import.meta.env);
+console.log('🔍 VITE_API_URL specifically:', import.meta.env.VITE_API_URL);
+
 // Environment configuration
 const config = {
-  API_URL: import.meta.env.VITE_API_URL,
+  API_URL: import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com',
   API_VERSION: import.meta.env.VITE_API_VERSION || 'v1',
   CLIENT_URL: import.meta.env.VITE_CLIENT_URL,
   DEBUG_MODE: import.meta.env.VITE_DEBUG_MODE === 'true',
@@ -20,6 +24,8 @@ const config = {
   COLD_START_THRESHOLD: 10000, // 10 seconds
   MAX_COLD_START_WAIT: 60000, // 60 seconds
 };
+
+console.log('🔧 CONFIG OBJECT:', config);
 
 // ✅ NEW: Server state tracking
 let serverState = {

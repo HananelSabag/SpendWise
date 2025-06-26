@@ -220,6 +220,56 @@ export const getGradientForCategory = (categoryType) => {
 };
 
 /**
+ * Category themes configuration for organizing categories into logical groups
+ */
+export const categoryConfig = {
+  themes: {
+    daily: {
+      name: 'Daily Expenses',
+      name_he: 'הוצאות יומיות',
+      icon: 'coffee',
+      color: 'bg-blue-500',
+      categories: ['food', 'coffee', 'groceries', 'transport', 'fuel', 'gas', 'car', 'utensils', 'restaurant']
+    },
+    bills: {
+      name: 'Bills & Utilities',
+      name_he: 'חשבונות ושירותים',
+      icon: 'file-text',
+      color: 'bg-orange-500',
+      categories: ['bills', 'utilities', 'electricity', 'water', 'internet', 'phone', 'rent', 'insurance']
+    },
+    lifestyle: {
+      name: 'Lifestyle',
+      name_he: 'אורח חיים',
+      icon: 'heart',
+      color: 'bg-pink-500',
+      categories: ['shopping', 'entertainment', 'health', 'fitness', 'travel', 'movies', 'music', 'personal care']
+    },
+    professional: {
+      name: 'Professional',
+      name_he: 'מקצועי',
+      icon: 'briefcase',
+      color: 'bg-purple-500',
+      categories: ['work', 'business', 'education', 'books', 'learning', 'gifts & donations']
+    },
+    income: {
+      name: 'Income Sources',
+      name_he: 'מקורות הכנסה',
+      icon: 'trending-up',
+      color: 'bg-green-500',
+      categories: ['salary', 'freelance', 'investment', 'bonus', 'rental', 'gift', 'government', 'other income']
+    },
+    miscellaneous: {
+      name: 'Other',
+      name_he: 'אחר',
+      icon: 'more-horizontal',
+      color: 'bg-gray-500',
+      categories: ['other', 'general', 'default', 'other expense', 'miscellaneous income']
+    }
+  }
+};
+
+/**
  * Export all icons for components that need the full list
  */
 export const allIcons = Object.values(iconCategories).flat();
@@ -232,5 +282,6 @@ export default {
   getIconForCategory,
   getColorForCategory,
   getGradientForCategory,
+  categoryConfig,
   allIcons
 };

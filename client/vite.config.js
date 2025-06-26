@@ -10,7 +10,10 @@ export default defineConfig(({ command, mode }) => {
   
   return {
     plugins: [
-      react(),
+      react({
+        // ✅ FIX: Optimize React Fast Refresh to prevent DOM issues
+        fastRefresh: true
+      }),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
@@ -53,34 +56,44 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     
-    // ✅ FINAL MOBILE SERVER - Production Ready
+    // ✅ OPTIMIZED: Mobile-friendly HMR with stability fixes
     server: {
-      host: '0.0.0.0', // מאפשר גישה מהרשת
+      host: '0.0.0.0', // Allow network access
       port: 5173,
       strictPort: true,
-      open: false, // לא לפתוח דפדפן אוטומטית
+      open: false, // Don't auto-open browser
       
-      // ✅ HMR למובייל
+      // ✅ FIXED: Stable HMR configuration
       hmr: {
         host: 'localhost',
-        port: 5174
+        port: 5174,
+        // ✅ FIX: Prevent HMR from interfering with React root
+        overlay: true,
+        clientPort: 5174
       },
       
-      // ✅ Watch settings למובייל
+      // ✅ OPTIMIZED: Watch settings for stability
       watch: {
-        usePolling: true,
-        interval: 1000
-      }
+        usePolling: false, // Disable polling for performance
+        interval: 1000,
+        ignored: ['**/node_modules/**', '**/dist/**'],
+        // ✅ FIX: Prevent unnecessary reloads
+        depth: 3
+      },
+      
+      // ✅ ADD: CORS and middleware settings
+      cors: true,
+      middlewareMode: false
     },
     
-    // ✅ Preview server למובייל
+    // ✅ Preview server for mobile
     preview: {
       host: '0.0.0.0',
       port: 4173,
       strictPort: true
     },
     
-    // ✅ Build אופטימלי לפרודקשן + מובייל
+    // ✅ Build optimization for production + mobile
     build: {
       target: 'es2020',
       minify: 'terser',
@@ -105,7 +118,7 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: mode === 'production' ? 'hidden' : true
     },
     
-    // ✅ Dependency optimization
+    // ✅ Dependency optimization for stability
     optimizeDeps: {
       include: [
         'react',
@@ -114,7 +127,20 @@ export default defineConfig(({ command, mode }) => {
         '@tanstack/react-query',
         'axios',
         'date-fns'
-      ]
-    }
+      ],
+      // ✅ FIX: Exclude problematic dependencies from pre-bundling
+      exclude: ['@vitejs/plugin-react'],
+      // ✅ ADD: Force re-optimization on certain changes
+      force: mode === 'development'
+    },
+    
+    // ✅ ADD: Define globals to prevent runtime errors
+    define: {
+      global: 'globalThis',
+      __DEV__: mode === 'development'
+    },
+    
+    // ✅ ADD: Clear screen on reload for better debugging
+    clearScreen: false
   };
 });

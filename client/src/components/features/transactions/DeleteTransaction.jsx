@@ -44,17 +44,6 @@ const DeleteTransaction = ({
   const { formatAmount } = useCurrency();
   const { deleteTemplate } = useTransactionActions();
   const toastService = useToast();
-
-  // ✅ FIX: Add validation for required props
-  if (!transaction) {
-    console.error('DeleteTransaction: transaction prop is required');
-    return null;
-  }
-
-  if (!onConfirm) {
-    console.error('DeleteTransaction: onConfirm prop is required');
-    return null;
-  }
   
   const [selectedAction, setSelectedAction] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -265,6 +254,7 @@ const DeleteTransaction = ({
   // Get selected action details
   const selectedActionDetails = availableOptions.find(opt => opt.id === selectedAction);
 
+  // ✅ Note: validation no longer needed here since parent only renders with valid transaction
   return (
     <Modal
       isOpen={isOpen}

@@ -194,7 +194,7 @@ const RecentTransactions = ({
                 
                 return (
                   <motion.div 
-                    key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}`} 
+                    key={`${transaction.id}-${transaction.transaction_type || 'unknown'}-${transaction.date}-${index}`} 
                     className={`group relative overflow-hidden flex items-center justify-between py-2 px-2.5 rounded-lg bg-gradient-to-r from-white/60 to-gray-50/80 dark:from-gray-800/60 dark:to-gray-700/80 hover:from-white/80 hover:to-gray-50/90 dark:hover:from-gray-700/80 dark:hover:to-gray-600/90 border border-gray-100/50 dark:border-gray-700/50 transition-all backdrop-blur-sm ${isRTL ? 'flex-row-reverse' : ''}`}
                     initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                     animate={{ opacity: 1, x: 0 }}

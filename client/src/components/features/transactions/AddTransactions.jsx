@@ -102,8 +102,121 @@ const AddTransactions = ({
     };
   };
 
+  // ✅ NEW: Organize ALL categories by themes for better UX (showing all 43)
+  const getOrganizedCategories = (type) => {
+    if (!Array.isArray(allCategories)) return { themes: {}, userCategories: [] };
+    
+    const categories = allCategories
+      .filter(cat => cat.is_active !== false) // Show all categories, not just filtered by type
+      .map(cat => ({
+        id: cat.id,
+        name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
+        originalName: cat.name,
+        iconComponent: getIconComponent(cat.icon || 'tag'),
+        isDefault: cat.is_default,
+        type: cat.type || type,
+        actualType: cat.type // Keep track of actual type
+      }));
+
+    // Group ALL categories by themes (expense and income)
+    const themes = {};
+    const userCategories = categories.filter(cat => !cat.isDefault);
+    
+    // Expense themes
+    themes.daily = {
+      name: t('categories.themes.dailyExpenses', 'Daily Expenses'),
+      icon: getIconComponent('utensils'),
+      type: 'expense',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'expense' && 
+        ['Food & Dining', 'Transportation', 'Shopping', 'Personal Care'].includes(cat.originalName)
+      )
+    };
+    
+    themes.bills = {
+      name: t('categories.themes.billsAndUtilities', 'Bills & Utilities'),
+      icon: getIconComponent('file-text'),
+      type: 'expense',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'expense' && 
+        ['Bills & Utilities', 'Insurance', 'Taxes'].includes(cat.originalName)
+      )
+    };
+    
+    themes.lifestyle = {
+      name: t('categories.themes.lifestyle', 'Lifestyle'),
+      icon: getIconComponent('music'),
+      type: 'expense',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'expense' && 
+        ['Entertainment', 'Travel', 'Gifts & Donations'].includes(cat.originalName)
+      )
+    };
+    
+    themes.professional = {
+      name: t('categories.themes.professional', 'Professional'),
+      icon: getIconComponent('briefcase'),
+      type: 'expense',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'expense' && 
+        ['Healthcare', 'Education', 'Business', 'Home & Garden'].includes(cat.originalName)
+      )
+    };
+    
+    themes.expenseOther = {
+      name: t('categories.themes.other', 'Other Expenses'),
+      icon: getIconComponent('tag'),
+      type: 'expense',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'expense' && 
+        !['Food & Dining', 'Transportation', 'Shopping', 'Personal Care', 'Bills & Utilities', 'Insurance', 'Taxes', 'Entertainment', 'Travel', 'Gifts & Donations', 'Healthcare', 'Education', 'Business', 'Home & Garden'].includes(cat.originalName)
+      )
+    };
+    
+    // Income themes
+    themes.work = {
+      name: t('categories.themes.workIncome', 'Work Income'),
+      icon: getIconComponent('dollar-sign'),
+      type: 'income',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'income' && 
+        ['Salary', 'Freelance', 'Business Income'].includes(cat.originalName)
+      )
+    };
+    
+    themes.investments = {
+      name: t('categories.themes.investments', 'Investments'),
+      icon: getIconComponent('trending-up'),
+      type: 'income',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'income' && 
+        ['Investment', 'Rental'].includes(cat.originalName)
+      )
+    };
+    
+    themes.incomeOther = {
+      name: t('categories.themes.otherIncome', 'Other Income'),
+      icon: getIconComponent('gift'),
+      type: 'income',
+      categories: categories.filter(cat => 
+        cat.isDefault && cat.actualType === 'income' && 
+        !['Salary', 'Freelance', 'Business Income', 'Investment', 'Rental'].includes(cat.originalName)
+      )
+    };
+
+    // Filter out empty themes
+    Object.keys(themes).forEach(key => {
+      if (themes[key].categories.length === 0) {
+        delete themes[key];
+      }
+    });
+
+    return { themes, userCategories };
+  };
+
   const categorizedCategories = getCategoriesForType(activeType?.type || 'expense');
-  const currentTabCategories = categorizedCategories[categoryTab] || [];
+  const organizedCategories = getOrganizedCategories(activeType?.type || 'expense');
+  const currentTabCategories = categoryTab === 'general' ? categorizedCategories.general : categorizedCategories.customized;
 
   // ✅ PRESERVED: Exact same transaction types with all original translation keys
   const transactionTypes = [
@@ -117,7 +230,7 @@ const AddTransactions = ({
       gradient: 'from-red-500 via-red-600 to-red-700',
       bgGradient: 'from-red-50 to-rose-100 dark:from-red-900/20 dark:to-rose-900/30',
       iconBg: 'bg-red-500',
-      example: t('actions.expenseExample'),
+      example: 'expenseExample',
     },
     {
       id: 'recurring-expense',
@@ -129,7 +242,7 @@ const AddTransactions = ({
       gradient: 'from-orange-500 via-orange-600 to-red-600',
       bgGradient: 'from-orange-50 to-red-100 dark:from-orange-900/20 dark:to-red-900/30',
       iconBg: 'bg-orange-500',
-      example: t('actions.recurringExpenseExample'),
+      example: 'recurringExpenseExample',
     },
     {
       id: 'income',
@@ -141,7 +254,7 @@ const AddTransactions = ({
       gradient: 'from-emerald-500 via-green-600 to-teal-600',
       bgGradient: 'from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/30',
       iconBg: 'bg-emerald-500',
-      example: t('actions.incomeExample'),
+      example: 'incomeExample',
     },
     {
       id: 'recurring-income',
@@ -153,7 +266,7 @@ const AddTransactions = ({
       gradient: 'from-blue-500 via-indigo-600 to-purple-600',
       bgGradient: 'from-blue-50 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/30',
       iconBg: 'bg-blue-500',
-      example: t('actions.recurringIncomeExample'),
+      example: 'recurringIncomeExample',
     },
   ];
 
@@ -700,7 +813,7 @@ const AddTransactions = ({
                               <Crown className="w-4 h-4" />
                               <span className="hidden sm:inline">{t('categories.defaultCategories')}</span>
                               <span className="sm:hidden">{t('categories.default')}</span>
-                              <span>({categorizedCategories.general.length})</span>
+                              <span>({Object.values(organizedCategories.themes).reduce((acc, theme) => acc + theme.categories.length, 0)})</span>
                             </div>
                           </button>
                           <button
@@ -716,7 +829,7 @@ const AddTransactions = ({
                               {React.createElement(getIconComponent('tag'), { className: 'w-4 h-4' })}
                               <span className="hidden sm:inline">{t('categories.userCategoriesDesc')}</span>
                               <span className="sm:hidden">{t('categories.custom')}</span>
-                              <span>({categorizedCategories.customized.length})</span>
+                              <span>({organizedCategories.userCategories.length})</span>
                             </div>
                           </button>
                         </div>
@@ -730,79 +843,162 @@ const AddTransactions = ({
                           </div>
                         )}
 
-                        {/* Category Grid */}
-                        {currentTabCategories.length === 0 ? (
-                          <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                              {categoryTab === 'general' ? (
-                                <Crown className="w-8 h-8 text-gray-400" />
-                              ) : (
-                                <Plus className="w-8 h-8 text-gray-400" />
-                              )}
-                            </div>
-                            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
-                              {categoryTab === 'general' ? t('categories.noGeneralCategories') : t('categories.noCustomCategories')}
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-4">
-                              {categoryTab === 'general' 
-                                ? t('categories.defaultCategoriesWillAppear')
-                                : t('categories.createCategoriesInSettings')
-                              }
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                            {currentTabCategories.map((cat) => {
-                              const IconComponent = cat.iconComponent;
-                              const isSelected = formData.category_id === cat.id;
-                              
-                              return (
-                                <motion.button
-                                  key={cat.id}
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                                  className={`group p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 text-center min-h-[100px] relative ${
-                                    isSelected
-                                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105'
-                                      : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'
-                                  }`}
-                                  whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  title={cat.name}
-                                >
-                                  <div className={`p-3 rounded-xl transition-colors ${
-                                    isSelected 
-                                      ? 'bg-indigo-100 dark:bg-indigo-800' 
-                                      : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
-                                  }`}>
-                                    <IconComponent className={`w-6 h-6 transition-colors ${
-                                      isSelected 
-                                        ? 'text-indigo-600 dark:text-indigo-400' 
-                                        : 'text-gray-500 group-hover:text-indigo-500'
-                                    }`} />
+                        {/* Category Selection - Organized by Themes */}
+                        {categoryTab === 'general' ? (
+                          // ✅ NEW: Organized themes display
+                          <div className="space-y-6">
+                            {Object.keys(organizedCategories.themes).length === 0 ? (
+                              <div className="text-center py-8">
+                                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <Crown className="w-8 h-8 text-gray-400" />
+                                </div>
+                                <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                                  {t('categories.noGeneralCategories')}
+                                </h3>
+                                <p className="text-sm text-gray-500 mb-4">
+                                  {t('categories.defaultCategoriesWillAppear')}
+                                </p>
+                              </div>
+                            ) : (
+                              Object.entries(organizedCategories.themes)
+                                .filter(([_, theme]) => theme.type === activeType?.type || !theme.type)
+                                .map(([themeKey, theme]) => (
+                                <div key={themeKey} className="space-y-3">
+                                  {/* Theme Header */}
+                                  <div className="flex items-center gap-2 px-2">
+                                    <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                                      <theme.icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{theme.name}</h4>
+                                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+                                    <span className="text-xs text-gray-500">({theme.categories.length})</span>
                                   </div>
                                   
-                                  <span className={`text-sm font-medium leading-tight text-center w-full transition-colors ${
-                                    isSelected 
-                                      ? 'text-indigo-700 dark:text-indigo-300' 
-                                      : 'text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
-                                  }`}>
-                                    {cat.name}
-                                  </span>
-                                  
-                                  {isSelected && (
-                                    <motion.div
-                                      initial={{ scale: 0 }}
-                                      animate={{ scale: 1 }}
-                                      className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
-                                    >
-                                      <Check className="w-3 h-3 text-white" />
-                                    </motion.div>
-                                  )}
-                                </motion.button>
-                              );
-                            })}
+                                  {/* Theme Categories */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {theme.categories.map((cat) => {
+                                      const IconComponent = cat.iconComponent;
+                                      const isSelected = formData.category_id === cat.id;
+                                      
+                                      return (
+                                        <motion.button
+                                          key={cat.id}
+                                          type="button"
+                                          onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
+                                          className={`group p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-2 text-center min-h-[80px] relative ${
+                                            isSelected
+                                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105'
+                                              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'
+                                          }`}
+                                          whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                          title={cat.name}
+                                        >
+                                          <div className={`p-2 rounded-lg transition-colors ${
+                                            isSelected 
+                                              ? 'bg-indigo-100 dark:bg-indigo-800' 
+                                              : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
+                                          }`}>
+                                            <IconComponent className={`w-5 h-5 transition-colors ${
+                                              isSelected 
+                                                ? 'text-indigo-600 dark:text-indigo-400' 
+                                                : 'text-gray-500 group-hover:text-indigo-500'
+                                            }`} />
+                                          </div>
+                                          
+                                          <span className={`text-xs font-medium leading-tight text-center w-full transition-colors ${
+                                            isSelected 
+                                              ? 'text-indigo-700 dark:text-indigo-300' 
+                                              : 'text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                                          }`}>
+                                            {cat.name}
+                                          </span>
+                                          
+                                          {isSelected && (
+                                            <motion.div
+                                              initial={{ scale: 0 }}
+                                              animate={{ scale: 1 }}
+                                              className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
+                                            >
+                                              <Check className="w-2.5 h-2.5 text-white" />
+                                            </motion.div>
+                                          )}
+                                        </motion.button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))
+                            )}
                           </div>
+                        ) : (
+                          // ✅ USER CATEGORIES: Keep original grid layout
+                          organizedCategories.userCategories.length === 0 ? (
+                            <div className="text-center py-8">
+                              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Plus className="w-8 h-8 text-gray-400" />
+                              </div>
+                              <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                                {t('categories.noCustomCategories')}
+                              </h3>
+                              <p className="text-sm text-gray-500 mb-4">
+                                {t('categories.createCategoriesInSettings')}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                              {organizedCategories.userCategories.map((cat) => {
+                                const IconComponent = cat.iconComponent;
+                                const isSelected = formData.category_id === cat.id;
+                                
+                                return (
+                                  <motion.button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
+                                    className={`group p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 text-center min-h-[100px] relative ${
+                                      isSelected
+                                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'
+                                    }`}
+                                    whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    title={cat.name}
+                                  >
+                                    <div className={`p-3 rounded-xl transition-colors ${
+                                      isSelected 
+                                        ? 'bg-indigo-100 dark:bg-indigo-800' 
+                                        : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
+                                    }`}>
+                                      <IconComponent className={`w-6 h-6 transition-colors ${
+                                        isSelected 
+                                          ? 'text-indigo-600 dark:text-indigo-400' 
+                                          : 'text-gray-500 group-hover:text-indigo-500'
+                                      }`} />
+                                    </div>
+                                    
+                                    <span className={`text-sm font-medium leading-tight text-center w-full transition-colors ${
+                                      isSelected 
+                                        ? 'text-indigo-700 dark:text-indigo-300' 
+                                        : 'text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                                    }`}>
+                                      {cat.name}
+                                    </span>
+                                    
+                                    {isSelected && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
+                                      >
+                                        <Check className="w-3 h-3 text-white" />
+                                      </motion.div>
+                                    )}
+                                  </motion.button>
+                                );
+                              })}
+                            </div>
+                          )
                         )}
                       </>
                     )}

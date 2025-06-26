@@ -12,8 +12,6 @@ import {
   ArrowRight, 
   AlertCircle,
   Languages,
-  Eye,
-  EyeOff,
   ShieldCheck,
   CheckCircle,
   XCircle,
@@ -189,7 +187,6 @@ const Login = () => {
     password: ''
   });
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
   // Email verification state
@@ -396,22 +393,13 @@ const Login = () => {
 
                 <Input
                   label={t('auth.password')}
-                  type={showPassword ? 'text' : 'password'}
+                  type="password"
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   placeholder={t('auth.passwordPlaceholder')}
                   icon={Lock}
                   error={errors.password}
                   required
-                  rightElement={
-                    <button
-                      type="button"
-                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  }
                 />
 
                 {/* Resend verification email link */}

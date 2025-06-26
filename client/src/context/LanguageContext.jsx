@@ -187,6 +187,32 @@ const translations = {
       }
   },
 
+  // Root-level error messages (for app.jsx and other components)
+  errors: {
+    connectionIssues: 'Connection Issues',
+    unableToVerifyLogin: 'Unable to verify your login. This might be temporary.',
+    serverStarting: 'Server is starting up, please wait...',
+    serverReady: 'Server is ready!',
+    somethingWentWrong: 'Something Went Wrong',
+    pleaseTryAgain: 'Please refresh the page or contact support if the problem persists.',
+    noInternetConnection: 'No Internet Connection',
+    checkConnectionAndRetry: 'Please check your internet connection and try again.',
+    unableToConnectServer: 'Unable to connect to server. Please check your internet connection.',
+    tooManyRequestsSlowDown: 'Too many requests. Please slow down.',
+    serverErrorTryLater: 'Server error. Please try again later.',
+    pageNotFound: 'Page Not Found',
+    applicationError: 'Application Error',
+    refresh: 'Refresh',
+    generic: 'Something went wrong. Please try again.',
+    network: 'Network error. Please check your connection.',
+    validation: 'Please check the form for errors.',
+    unauthorized: 'You are not authorized to perform this action.',
+    notFound: 'The requested item was not found.',
+    server: 'Server error. Please try again later.',
+    timeout: 'Request timed out. Please try again.',
+    unknown: 'An unknown error occurred.',
+  },
+
   // Common/Shared
   common: {
     comingSoon: "Coming soon",
@@ -299,7 +325,7 @@ const translations = {
     create: 'Create',
     advanced: ' Advanced Filters',
     customRange: "Custom range",
-
+    change: 'Change',
   },
 
 
@@ -595,6 +621,71 @@ const translations = {
       income: 'Income',
       expenses: 'Expenses',
       ofTotal: 'of total',
+      
+      // Enhanced StatsChart specific translations
+      error: 'Error loading statistics',
+      noTrendData: 'No trend data available',
+      financialHealthScore: 'Financial Health Score',
+      dailyBurn: 'Daily Burn',
+      frequency: 'Frequency',
+      volatility: 'Volatility',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      transactionsPerDay: 'Transactions/day',
+      perDaySpending: 'Per day spending',
+      incomeVsExpenses: 'Income vs Expenses',
+      balanceTrends: 'Balance Trends',
+      smartInsights: 'Smart Insights',
+      
+      // Levels and status
+      fair: 'Fair',
+      
+      // Financial health insights
+      insights: 'insights',
+      excellentSavingsRate: 'Excellent savings rate',
+      goodSavingsRate: 'Good savings rate',
+      lowSavingsRate: 'Low savings rate',
+      spendingExceedsIncome: 'Spending exceeds income this period',
+      healthyExpenseRatio: 'Healthy expense-to-income ratio',
+      highExpenseRatio: 'High expense-to-income ratio',
+      strongRecurringIncome: 'Strong recurring income foundation',
+      moderateRecurringIncome: 'Moderate recurring income stability',
+      limitedRecurringIncome: 'Limited recurring income stability',
+      consistentSpending: 'Consistent spending patterns',
+      irregularSpending: 'Irregular spending patterns detected',
+      positiveBalance: 'Positive balance for this period',
+      negativeBalance: 'Negative balance for this period',
+      
+      // Impact levels
+      criticalImpact: 'critical impact',
+      highImpact: 'high impact',
+      mediumImpact: 'medium impact',
+      lowImpact: 'low impact',
+      
+      // Recommendations
+      recommendations: 'Recommendations',
+      increaseSavingsRate: 'Increase Savings Rate',
+      currentSavingsRateAim: 'Current savings rate is {{rate}}%. Aim for at least 10-20%.',
+      reviewExpenses: 'Review expenses and identify areas to cut spending',
+      stabilizeSpending: 'Stabilize Spending',
+      highSpendingVolatility: 'High spending volatility detected. More consistent spending helps with budgeting.',
+      createBudget: 'Create a monthly budget and track spending categories',
+      buildRecurringIncome: 'Build Recurring Income',
+      onlyRecurringIncome: 'Only {{percent}}% of income is recurring. More predictable income improves financial stability.',
+      considerRecurringIncome: 'Consider subscriptions, retainers, or passive income sources',
+      highBurnRate: 'High Burn Rate',
+      dailySpendingHigh: 'Daily spending rate is high relative to income.',
+      reduceExpenses: 'Review and reduce daily discretionary expenses',
+      
+      // Priority levels
+      highPriority: 'high',
+      mediumPriority: 'medium',
+      
+      // Chart types
+      pieChart: 'Pie',
+      barsChart: 'Bars',
+      
       trend: {
         positive: 'Positive',
         negative: 'Negative',
@@ -706,6 +797,7 @@ const translations = {
     // Actions
     addTransaction: 'Add Transaction',
     addNew: 'Add New',
+    addMore: 'Add More',
     editTransaction: 'Edit Transaction',
     editSingleOccurrence: 'Edit Single Occurrence',
     editRecurringTemplate: 'Edit Recurring Template',
@@ -842,6 +934,7 @@ const translations = {
       permanentDelete: 'This will permanently delete this {{type}}.',
       permanentStop: 'This will permanently stop the recurring {{type}} and remove all future occurrences.',
       summaryOfChanges: 'Summary of changes:',
+      summaryDeleteAll: 'This will delete all transactions from this template',
       deleteItem: 'Delete {{description}} ({{amount}})',
       cancelFutureOccurrences: 'Cancel all future occurrences',
       alsoCancel: 'This will also cancel the next occurrence on {{date}}',
@@ -888,6 +981,9 @@ const translations = {
 
     },
 
+    // Transaction details
+    transactionDetails: 'Transaction Details',
+
     // Errors & Messages
     fetchError: 'Failed to load transactions',
     deleteError: 'Failed to delete transaction',
@@ -899,7 +995,35 @@ const translations = {
     emptyStateTip: 'Use the + button or quick actions to add your first transaction',
     totalItems: 'Total: {{count}} items',
     monthlyTotal: 'monthly total',
-    active: 'active'
+    active: 'active',
+
+    // EditTransactionPanel translations
+    saveTransaction: 'Save Transaction',
+    editSingleDesc: 'Edit only this occurrence without affecting future recurring transactions',
+    saveSingle: 'Save This Only',
+    editAllFuture: 'Edit All Future',
+    editSeriesDesc: 'Edit this transaction and all future occurrences in the recurring series',
+    saveSeries: 'Save Series',
+    editTemplateDesc: 'Edit the recurring template - this will affect all future transactions',
+    saveTemplate: 'Save Template',
+          singleEditExplanation: 'This change will only affect this specific transaction occurrence',
+      descriptionOptional: 'Description (Optional)',
+
+      // Additional transaction states and actions
+      oneTime: 'One-time',
+      singleEdit: 'Single Edit',
+      seriesEdit: 'Series Edit',
+      template: 'Template',
+      editingTransaction: 'Editing Transaction',
+      editingSingleOccurrence: 'Editing Single Occurrence',
+      editingAllFuture: 'Editing All Future',
+      editingTemplate: 'Editing Template',
+      oneTimeEditExplanation: 'Edit this transaction only',
+      seriesEditExplanation: 'Edit this and all future transactions',
+      templateEditExplanation: 'Edit template - affects all future transactions',
+      expense: 'Expense',
+      income: 'Income',
+      recurring: 'Recurring'
   },
 
   // Transaction Card
@@ -1032,8 +1156,75 @@ const translations = {
       updatingTransaction: 'Failed to update transaction',
     },
 
-    // New keys
-    new: 'New'
+          // New keys
+      new: 'New',
+      
+      // Additional example keys that might be called from components
+      'e.g., Salary, Bonus, Gift': 'e.g., Salary, Bonus, Gift',
+      'e.g., Salary, Dividend, Rental Income': 'e.g., Salary, Dividend, Rental Income',
+      'e.g., Groceries, Gas, Shopping': 'e.g., Groceries, Gas, Shopping',
+      'e.g., Rent, Insurance, Subscription': 'e.g., Rent, Insurance, Subscription',
+
+      // Missing keys for AddTransactions
+      expense: 'Expense',
+      willUseDefault: 'Will use default category',
+      defaultToday: 'Defaults to today',
+      monthlyIncome: 'Monthly Income',
+      income: 'Income',
+      monthlyExpense: 'Monthly Expense',
+      willUseFirstCategory: 'Will use first category',
+      automaticPayments: 'Automatic payments',
+      createRecurring: 'Create Recurring',
+      amountRequired: 'Amount is required',
+      descriptionPlaceholder: 'Enter description...',
+      dayOfMonth: 'Day of Month',
+      updateSuccess: 'Update Success',
+
+      // Error messages
+      errors: {
+        amountRequired: 'Amount is required',
+        categoryRequired: 'Please select a category',
+        formErrors: 'Please correct the form errors',
+        addingTransaction: 'Error adding transaction',
+        updatingTransaction: 'Error updating transaction'
+      }
+  },
+
+  // Common UI elements
+  common: {
+    amount: 'Amount',
+    description: 'Description',
+    category: 'Category',
+    date: 'Date',
+    optional: 'Optional',
+    required: 'Required',
+    back: 'Back',
+    cancel: 'Cancel',
+    save: 'Save',
+    creating: 'Creating...',
+    saving: 'Saving...',
+    updating: 'Updating...',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    loading: 'Loading...',
+    switchToDark: 'Switch to Dark Mode',
+    toggleLanguage: 'Toggle Language',
+    openUserMenu: 'Open User Menu',
+    openMenu: 'Open Menu',
+    retry: 'Retry'
+  },
+
+  // Days of the week
+  days: {
+    sunday: 'Sunday',
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday'
   },
 
   // Categories
@@ -1074,6 +1265,11 @@ const translations = {
     required: 'Required',
     searchCategories: "Search categories",
     addCategory: "Add category",
+    custom: 'Custom',
+    noGeneralCategories: 'No general categories available',
+    defaultCategoriesWillAppear: 'Default categories will appear here when loaded',
+    noCustomCategories: 'No custom categories available',
+    createCategoriesInSettings: 'Create custom categories in Settings',
 
 
     // Filter options
@@ -1090,22 +1286,120 @@ const translations = {
       default: 'Default'
     },
 
-    // Default category names
-    General: 'General',
-    Salary: 'Salary',
-    Freelance: 'Freelance',
-    Investments: 'Investments',
-    Rent: 'Rent',
-    Groceries: 'Groceries',
-    Transportation: 'Transportation',
-    Utilities: 'Utilities',
-    Entertainment: 'Entertainment',
-    Food: 'Food',
-    Shopping: 'Shopping',
-    Health: 'Health',
-    Education: 'Education',
-    Travel: 'Travel',
-    Other: 'Other'
+          // ✅ NEW: Category themes for better organization
+      themes: {
+        // Expense themes
+        dailyExpenses: 'Daily Expenses',
+        billsAndUtilities: 'Bills & Utilities',
+        lifestyle: 'Lifestyle',
+        professional: 'Professional',
+        
+        // Income themes
+        workIncome: 'Work Income',
+        investments: 'Investments',
+        otherIncome: 'Other Income',
+        other: 'Other'
+      },
+
+      // Default category names - organized by groups
+      
+      // === INCOME CATEGORIES ===
+      General: 'General',
+      Salary: 'Salary',
+      Freelance: 'Freelance',
+      'Business Income': 'Business Income',
+      Investments: 'Investments',
+      'Side Hustle': 'Side Hustle',
+      Bonus: 'Bonus',
+      Gift: 'Gift',
+      
+      // === BASIC NEEDS ===
+      Rent: 'Rent',
+      Groceries: 'Groceries',
+      Utilities: 'Utilities',
+      'Phone Bill': 'Phone Bill',
+      Insurance: 'Insurance',
+      
+      // === TRANSPORTATION ===
+      Transportation: 'Transportation',
+      'בנזין/תחבורה': 'Gas/Transportation',
+      'Car Payment': 'Car Payment',
+      'Public Transport': 'Public Transport',
+      
+      // === FOOD & DINING ===
+      Food: 'Food',
+      'Dining Out': 'Dining Out',
+      'Coffee & Drinks': 'Coffee & Drinks',
+      
+      // === ENTERTAINMENT & LIFESTYLE ===
+      Entertainment: 'Entertainment',
+      בידור: 'Entertainment',
+      'Streaming Services': 'Streaming Services',
+      Movies: 'Movies',
+      Gaming: 'Gaming',
+      
+      // === SHOPPING & PERSONAL ===
+      Shopping: 'Shopping',
+      'Personal Care': 'Personal Care',
+      Clothing: 'Clothing',
+      Beauty: 'Beauty',
+      
+      // === HEALTH & FITNESS ===
+      Health: 'Health',
+      Medical: 'Medical',
+      Pharmacy: 'Pharmacy',
+      Fitness: 'Fitness',
+      
+      // === EDUCATION & DEVELOPMENT ===
+      Education: 'Education',
+      Books: 'Books',
+      'Online Courses': 'Online Courses',
+      
+      // === TRAVEL & VACATION ===
+      Travel: 'Travel',
+      Hotel: 'Hotel',
+      Flight: 'Flight',
+      
+      // === FINANCIAL & TAXES ===
+      Taxes: 'Taxes',
+      'Bank Fees': 'Bank Fees',
+      'Credit Card': 'Credit Card',
+      Savings: 'Savings',
+      
+      // === OTHER ===
+      Other: 'Other',
+      אחר: 'Other',
+      'Other Expense': 'Other Expense',
+      'Other Income': 'Other Income',
+      
+      // === ADDITIONAL CATEGORIES (English names for Hebrew categories) ===
+      Rental: 'Rental',
+      השקעות: 'Investments',
+      מתנות: 'Gifts',
+      פריים: 'Premium',
+      משפחה: 'Family',
+      עסקים: 'Business',
+      בריאות: 'Health',
+      חינוך: 'Education', 
+      חשבונות: 'Bills',
+      טיפוח: 'Personal Care',
+      מזון: 'Food',
+      מסעדות: 'Restaurants',
+      נסיעות: 'Travel',
+      ספורט: 'Sports',
+      צדקה: 'Charity',
+      קניות: 'Shopping',
+      
+      // === ADDITIONAL ENGLISH CATEGORIES ===
+      'Bills & Utilities': 'Bills & Utilities',
+      Business: 'Business',
+      'Food & Dining': 'Food & Dining',
+      'Gifts & Donations': 'Gifts & Donations',
+      Healthcare: 'Healthcare',
+      'Home & Garden': 'Home & Garden',
+      Gifts: 'Gifts',
+      Government: 'Government',
+      Investment: 'Investment'
   },
 
   // Profile
@@ -1793,6 +2087,46 @@ const translations = {
     saving: 'Saving...'
   },
 
+  // Exchange Calculator
+  exchange: {
+    title: 'Exchange Calculator',
+    subtitle: 'Convert between currencies',
+    loading: 'Loading exchange rates...',
+    error: {
+      title: 'Failed to Load Exchange Rates',
+      message: 'Unable to fetch current exchange rates. Please check your connection.',
+      tryAgain: 'Try Again'
+    },
+    form: {
+      amountLabel: 'Amount to Convert',
+      amountPlaceholder: '100',
+      fromLabel: 'From',
+      toLabel: 'To'
+    },
+    result: {
+      rate: '1 {{from}} = {{rate}} {{to}}'
+    },
+    popular: {
+      title: 'Popular Conversions'
+    },
+    footer: {
+      liveRates: 'Live rates • Updated every 5 minutes',
+      liveRatesMobile: 'Live rates • 5 min updates',
+      availableCurrencies: '{{count}} currencies',
+      possiblePairs: '{{count}} currencies • {{pairs}} pairs'
+    },
+    currencies: {
+      USD: 'US Dollar',
+      ILS: 'Israeli Shekel',
+      EUR: 'Euro',
+      GBP: 'British Pound',
+      JPY: 'Japanese Yen',
+      CAD: 'Canadian Dollar',
+      AUD: 'Australian Dollar',
+      CHF: 'Swiss Franc'
+    }
+  },
+
   // === HEBREW TRANSLATIONS ===
   he: {
     // Toast messages in Hebrew
@@ -1993,6 +2327,25 @@ const translations = {
       warning: 'אזהרה',
       info: 'מידע',
       continue: 'המשך',
+      amount: 'סכום',
+      description: 'תיאור',
+      category: 'קטגוריה',
+      date: 'תאריך',
+      optional: 'אופציונלי',
+      required: 'נדרש',
+      creating: 'יוצר...',
+      saving: 'שומר...',
+      updating: 'מעדכן...',
+            daily: 'יומי',
+      weekly: 'שבועי',
+      monthly: 'חודשי',
+      yearly: 'שנתי',
+      loading: 'טוען...',
+      switchToDark: 'עבור למצב כהה',
+      toggleLanguage: 'החלף שפה',
+      openUserMenu: 'פתח תפריט משתמש',
+      openMenu: 'פתח תפריט',
+      retry: 'נסה שוב',
       active: 'פעיל',
       balance: 'יתרה',
       amount: 'סכום',
@@ -2279,6 +2632,17 @@ const translations = {
       clickToResendMessage: 'לחצו כאן לשלוח מחדש',
     },
 
+    // Days of the week
+    days: {
+      sunday: 'ראשון',
+      monday: 'שני',
+      tuesday: 'שלישי',
+      wednesday: 'רביעי',
+      thursday: 'חמישי',
+      friday: 'שישי',
+      saturday: 'שבת'
+    },
+
     // Dashboard
     dashboard: {
       title: 'לוח בקרה',
@@ -2382,6 +2746,71 @@ const translations = {
         income: 'הכנסות',
         expenses: 'הוצאות',
         ofTotal: 'מהסכום הכולל',
+        
+        // Enhanced StatsChart specific translations
+        error: 'שגיאה בטעינת הסטטיסטיקות',
+        noTrendData: 'אין נתוני מגמה זמינים',
+        financialHealthScore: 'ציון בריאות פיננסית',
+        dailyBurn: 'שריפה יומית',
+        frequency: 'תדירות',
+        volatility: 'תנודתיות',
+        high: 'גבוה',
+        medium: 'בינוני',
+        low: 'נמוך',
+        transactionsPerDay: 'עסקאות/יום',
+        perDaySpending: 'הוצאה ליום',
+        incomeVsExpenses: 'הכנסות מול הוצאות',
+        balanceTrends: 'מגמות יתרה',
+        smartInsights: 'תובנות חכמות',
+        
+        // Levels and status
+        fair: 'סביר',
+        
+        // Financial health insights
+        insights: 'תובנות',
+        excellentSavingsRate: 'שיעור חיסכון מעולה',
+        goodSavingsRate: 'שיעור חיסכון טוב',
+        lowSavingsRate: 'שיעור חיסכון נמוך',
+        spendingExceedsIncome: 'ההוצאות עולות על ההכנסות בתקופה זו',
+        healthyExpenseRatio: 'יחס הוצאות בריא להכנסות',
+        highExpenseRatio: 'יחס הוצאות גבוה להכנסות',
+        strongRecurringIncome: 'יסוד הכנסה קבועה חזק',
+        moderateRecurringIncome: 'יציבות הכנסה קבועה בינונית',
+        limitedRecurringIncome: 'יציבות הכנסה קבועה מוגבלת',
+        consistentSpending: 'דפוסי הוצאה עקביים',
+        irregularSpending: 'זוהו דפוסי הוצאה לא סדירים',
+        positiveBalance: 'יתרה חיובית לתקופה זו',
+        negativeBalance: 'יתרה שלילית לתקופה זו',
+        
+        // Impact levels
+        criticalImpact: 'השפעה קריטית',
+        highImpact: 'השפעה גבוהה',
+        mediumImpact: 'השפעה בינונית',
+        lowImpact: 'השפעה נמוכה',
+        
+        // Recommendations
+        recommendations: 'המלצות',
+        increaseSavingsRate: 'הגדל שיעור חיסכון',
+        currentSavingsRateAim: 'שיעור החיסכון הנוכחי הוא {{rate}}%. שאף ל-10-20% לפחות.',
+        reviewExpenses: 'בדוק הוצאות וזהה תחומים לקיצוץ הוצאות',
+        stabilizeSpending: 'יצב הוצאות',
+        highSpendingVolatility: 'זוהתה תנודתיות הוצאות גבוהה. הוצאות עקביות יותר מסייעות בתקצוב.',
+        createBudget: 'צור תקציב חודשי ועקוב אחר קטגוריות הוצאות',
+        buildRecurringIncome: 'בנה הכנסה קבועה',
+        onlyRecurringIncome: 'רק {{percent}}% מההכנסה היא קבועה. הכנסה צפויה יותר משפרת יציבות פיננסית.',
+        considerRecurringIncome: 'שקול מנויים, שמירה או מקורות הכנסה פסיביים',
+        highBurnRate: 'קצב שריפה גבוה',
+        dailySpendingHigh: 'קצב ההוצאות היומי גבוה יחסית להכנסה.',
+        reduceExpenses: 'בדוק והפחת הוצאות יומיות שיקוליות',
+        
+        // Priority levels
+        highPriority: 'גבוה',
+        mediumPriority: 'בינוני',
+        
+        // Chart types
+        pieChart: 'עוגה',
+        barsChart: 'עמודות',
+        
         trend: {
           positive: 'חיובי',
           negative: 'שלילי',
@@ -2497,6 +2926,7 @@ single: "עסקה רגילה",
       // Actions
       addTransaction: 'הוסף עסקה',
       addNew: 'הוסף חדש',
+      addMore: 'הוסף עוד',
       editTransaction: 'ערוך עסקה',
       editSingleOccurrence: 'ערוך מופע יחיד',
       editRecurringTemplate: 'ערוך תבנית חוזרת',
@@ -2679,8 +3109,39 @@ single: "עסקה רגילה",
       emptyStateTip: 'השתמש בכפתור + או בפעולות מהירות להוספת העסקה הראשונה שלך',
       totalItems: 'סה״כ: {{count}} פריטים',
       monthlyTotal: 'סך חודשי',
-      active: 'פעיל'
+      active: 'פעיל',
+
+      // תרגומי EditTransactionPanel
+      saveTransaction: 'שמור עסקה',
+      editSingleDesc: 'ערוך רק את המופע הזה מבלי להשפיע על עסקאות חוזרות עתידיות',
+      saveSingle: 'שמור רק זו',
+      editAllFuture: 'ערוך את כל העתידיות',
+      editSeriesDesc: 'ערוך את העסקה הזו ואת כל המופעים העתידיים בסדרה החוזרת',
+      saveSeries: 'שמור סדרה',
+      editTemplateDesc: 'ערוך את התבנית החוזרת - זה ישפיע על כל העסקאות העתידיות',
+      saveTemplate: 'שמור תבנית',
+      singleEditExplanation: 'השינוי הזה ישפיע רק על המופע הספציפי הזה של העסקה',
+      descriptionOptional: 'תיאור (אופציונלי)',
+
+      // מצבי עסקה ופעולות נוספים
+      oneTime: 'חד פעמי',
+      singleEdit: 'עריכה יחידה',
+      seriesEdit: 'עריכת סדרה',
+      template: 'תבנית',
+      editingTransaction: 'עורך עסקה',
+      editingSingleOccurrence: 'עורך מופע יחיד',
+      editingAllFuture: 'עורך את כל העתידיות',
+      editingTemplate: 'עורך תבנית',
+      oneTimeEditExplanation: 'ערוך רק את העסקה הזו',
+      seriesEditExplanation: 'ערוך את זו ואת כל העסקאות העתידיות',
+      templateEditExplanation: 'ערוך תבנית - משפיע על כל העסקאות העתידיות',
+      expense: 'הוצאה',
+      income: 'הכנסה',
+      recurring: 'חוזר'
     },
+
+    // Transaction details
+    transactionDetails: 'פרטי עסקה',
 
     // Transaction Card
     transactionCard: {
@@ -2800,7 +3261,37 @@ single: "עסקה רגילה",
       },
 
       // New keys
-      new: 'חדש'
+      new: 'חדש',
+      
+      // Additional example keys that might be called from components
+      'e.g., Salary, Bonus, Gift': 'לדוגמה: משכורת, בונוס, מתנה',
+      'e.g., Salary, Dividend, Rental Income': 'לדוגמה: משכורת, דיבידנד, הכנסה משכירות',
+      'e.g., Groceries, Gas, Shopping': 'לדוגמה: קניות מזון, דלק, קניות',
+      'e.g., Rent, Insurance, Subscription': 'לדוגמה: שכר דירה, ביטוח, מנוי',
+
+      // מפתחות חסרים עבור AddTransactions
+      expense: 'הוצאה',
+      willUseDefault: 'יעשה שימוש בקטגוריית ברירת המחדל',
+      defaultToday: 'ברירת מחדל להיום',
+      monthlyIncome: 'הכנסה חודשית',
+      income: 'הכנסה',
+      monthlyExpense: 'הוצאה חודשית',
+      willUseFirstCategory: 'יעשה שימוש בקטגוריה הראשונה',
+      automaticPayments: 'תשלומים אוטומטיים',
+      createRecurring: 'צור חוזר',
+      amountRequired: 'סכום נדרש',
+      descriptionPlaceholder: 'הזן תיאור...',
+      dayOfMonth: 'יום בחודש',
+      updateSuccess: 'עודכן בהצלחה',
+
+      // הודעות שגיאה
+      errors: {
+        amountRequired: 'סכום נדרש',
+        categoryRequired: 'אנא בחר קטגוריה',
+        formErrors: 'אנא תקן את שגיאות הטופס',
+        addingTransaction: 'שגיאה בהוספת עסקה',
+        updatingTransaction: 'שגיאה בעדכון עסקה'
+      }
     },
 
     // Categories
@@ -2841,6 +3332,11 @@ single: "עסקה רגילה",
       required: 'חובה',
       searchCategories: "חפש קטגוריות",
       addCategory: "הוסף קטגוריה",
+      custom: 'מותאם אישית',
+      noGeneralCategories: 'אין קטגוריות כלליות זמינות',
+      defaultCategoriesWillAppear: 'קטגוריות ברירת המחדל יופיעו כאן כשייטענו',
+      noCustomCategories: 'אין קטגוריות מותאמות אישית זמינות',
+      createCategoriesInSettings: 'צור קטגוריות מותאמות אישית בהגדרות',
 
 
       // Filter options
@@ -2857,22 +3353,120 @@ single: "עסקה רגילה",
         default: 'ברירת מחדל'
       },
 
-      // Default category names
+      // ✅ NEW: Category themes for better organization
+      themes: {
+        // Expense themes
+        dailyExpenses: 'הוצאות יומיומיות',
+        billsAndUtilities: 'חשבונות ושירותים',
+        lifestyle: 'אורח חיים',
+        professional: 'מקצועי',
+        
+        // Income themes
+        workIncome: 'הכנסות מעבודה',
+        investments: 'השקעות',
+        otherIncome: 'הכנסות אחרות',
+        other: 'אחר'
+      },
+
+      // Default category names - organized by groups
+      
+      // === קטגוריות הכנסה ===
       General: 'כללי',
       Salary: 'משכורת',
       Freelance: 'עבודה עצמאית',
+      'Business Income': 'הכנסה עסקית',
       Investments: 'השקעות',
+      'Side Hustle': 'עבודה צדדית',
+      Bonus: 'בונוס',
+      Gift: 'מתנה',
+      
+      // === צרכים בסיסיים ===
       Rent: 'שכירות',
       Groceries: 'קניות מזון',
-      Transportation: 'תחבורה',
       Utilities: 'חשבונות',
-      Entertainment: 'בילויים',
+      'Phone Bill': 'חשבון טלפון',
+      Insurance: 'ביטוח',
+      
+      // === תחבורה ===
+      Transportation: 'תחבורה',
+      'בנזין/תחבורה': 'בנזין/תחבורה',
+      'Car Payment': 'תשלום רכב',
+      'Public Transport': 'תחבורה ציבורית',
+      
+      // === אוכל ומסעדות ===
       Food: 'אוכל',
+      'Dining Out': 'אוכל בחוץ',
+      'Coffee & Drinks': 'קפה ומשקאות',
+      
+      // === בידור ואורח חיים ===
+      Entertainment: 'בילויים',
+      בידור: 'בידור',
+      'Streaming Services': 'שירותי סטרימינג',
+      Movies: 'סרטים',
+      Gaming: 'גיימינג',
+      
+      // === קניות ואישי ===
       Shopping: 'קניות',
+      'Personal Care': 'טיפוח אישי',
+      Clothing: 'ביגוד',
+      Beauty: 'יופי',
+      
+      // === בריאות וכושר ===
       Health: 'בריאות',
+      Medical: 'רפואה',
+      Pharmacy: 'בית מרקחת',
+      Fitness: 'כושר',
+      
+      // === חינוך והתפתחות ===
       Education: 'חינוך',
+      Books: 'ספרים',
+      'Online Courses': 'קורסים מקוונים',
+      
+      // === נסיעות וחופשות ===
       Travel: 'נסיעות',
-      Other: 'אחר'
+      Hotel: 'מלון',
+      Flight: 'טיסה',
+      
+      // === כספים ומיסים ===
+      Taxes: 'מיסים',
+      'Bank Fees': 'עמלות בנק',
+      'Credit Card': 'כרטיס אשראי',
+      Savings: 'חיסכון',
+      
+      // === אחר ===
+      Other: 'אחר',
+      אחר: 'אחר',
+      'Other Expense': 'הוצאה אחרת',
+      'Other Income': 'הכנסה אחרת',
+      
+      // === קטגוריות נוספות (תרגומי שמות אנגלים לעברית) ===
+      'Bills & Utilities': 'חשבונות ושירותים',
+      Business: 'עסקים',
+      'Food & Dining': 'מזון ומסעדות',
+      'Gifts & Donations': 'מתנות ותרומות',
+      Healthcare: 'בריאות',
+      'Home & Garden': 'בית וגינה',
+      Gifts: 'מתנות',
+      Government: 'ממשלה',
+      Investment: 'השקעות',
+      Rental: 'שכירות',
+      
+      // === קטגוריות עבריות נוספות ===
+      בריאות: 'בריאות',
+      חינוך: 'חינוך',
+      חשבונות: 'חשבונות',
+      טיפוח: 'טיפוח',
+      מזון: 'מזון',
+      מסעדות: 'מסעדות',
+      נסיעות: 'נסיעות',
+      ספורט: 'ספורט',
+      צדקה: 'צדקה',
+      קניות: 'קניות',
+      השקעות: 'השקעות',
+      מתנות: 'מתנות',
+      פריים: 'פרימיום',
+      משפחה: 'משפחה',
+      עסקים: 'עסקים'
     },
 
     // Profile
@@ -3558,6 +4152,46 @@ single: "עסקה רגילה",
       enterAmount: 'הכניסו סכום תקציב',
       optional: 'אופציונלי',
       saving: 'שומר...'
+    },
+
+    // Exchange Calculator in Hebrew
+    exchange: {
+      title: 'מחשבון המרות',
+      subtitle: 'המרה בין מטבעות',
+      loading: 'טוען שערי חליפין...',
+      error: {
+        title: 'נכשל בטעינת שערי חליפין',
+        message: 'לא ניתן לטעון את שערי החליפין העדכניים. אנא בדקו את החיבור.',
+        tryAgain: 'נסו שוב'
+      },
+      form: {
+        amountLabel: 'סכום להמרה',
+        amountPlaceholder: '100',
+        fromLabel: 'מ',
+        toLabel: 'אל'
+      },
+      result: {
+        rate: '1 {{from}} = {{rate}} {{to}}'
+      },
+      popular: {
+        title: 'המרות פופולריות'
+      },
+      footer: {
+        liveRates: 'שערים חיים • מתעדכן כל 5 דקות',
+        liveRatesMobile: 'שערים חיים • עדכון כל 5 דק',
+        availableCurrencies: '{{count}} מטבעות',
+        possiblePairs: '{{count}} מטבעות • {{pairs}} צמדים'
+      },
+      currencies: {
+        USD: 'דולר אמריקאי',
+        ILS: 'שקל ישראלי',
+        EUR: 'יורו',
+        GBP: 'פאונד בריטי',
+        JPY: 'יֵן יפני',
+        CAD: 'דולר קנדי',
+        AUD: 'דולר אוסטרלי',
+        CHF: 'פרנק שוויצרי'
+      }
     }
   }
 };
@@ -3631,15 +4265,19 @@ export const LanguageProvider = ({ children }) => {
   // ✅ FIX: Sync with user preferences via event system
   useEffect(() => {
     const handleUserPreferencesSync = (event) => {
-      const { user } = event.detail;
-      if (user?.preferences?.language) {
-        const userLang = user.preferences.language;
-        if (userLang !== language) {
-          console.log(`🌐 [LANGUAGE] Syncing with user preference: ${language} → ${userLang}`);
-          setLanguage(userLang);
-          setSessionLanguage(null); // Clear any session override
-          localStorage.setItem('preferredLanguage', userLang);
+      try {
+        const { user } = event.detail;
+        if (user?.preferences?.language) {
+          const userLang = user.preferences.language;
+          if (userLang !== language) {
+            console.log(`🌐 [LANGUAGE] Syncing with user preference: ${language} → ${userLang}`);
+            setLanguage(userLang);
+            setSessionLanguage(null); // Clear any session override
+            localStorage.setItem('preferredLanguage', userLang);
+          }
         }
+      } catch (error) {
+        console.warn('🌐 [LANGUAGE] Error syncing user preferences:', error);
       }
     };
 
@@ -3650,10 +4288,14 @@ export const LanguageProvider = ({ children }) => {
   // ✅ ADD: Effect to sync language changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'preferredLanguage' && e.newValue !== language) {
-        console.log(`🌐 [LANGUAGE] Storage change detected: ${language} → ${e.newValue}`);
-        setLanguage(e.newValue);
-        setSessionLanguage(null); // Clear session override when permanent preference changes
+      try {
+        if (e.key === 'preferredLanguage' && e.newValue !== language) {
+          console.log(`🌐 [LANGUAGE] Storage change detected: ${language} → ${e.newValue}`);
+          setLanguage(e.newValue);
+          setSessionLanguage(null); // Clear session override when permanent preference changes
+        }
+      } catch (error) {
+        console.warn('🌐 [LANGUAGE] Error handling storage change:', error);
       }
     };
 
@@ -3663,26 +4305,38 @@ export const LanguageProvider = ({ children }) => {
 
   // ✅ ADD: Debug log for language changes
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🌐 [LANGUAGE] State update:`, {
-        saved: language,
-        session: sessionLanguage,
-        effective: effectiveLanguage,
-        isSessionOverride: !!sessionLanguage
-      });
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🌐 [LANGUAGE] State update:`, {
+          saved: language,
+          session: sessionLanguage,
+          effective: effectiveLanguage,
+          isSessionOverride: !!sessionLanguage
+        });
+      }
+    } catch (error) {
+      // Silently handle debug errors
     }
   }, [effectiveLanguage, language, sessionLanguage]);
 
   // ✅ ADD: Listen for session reset events (logout)
   useEffect(() => {
     const handleSessionReset = () => {
-      console.log(`🌐 [LANGUAGE] Session reset detected - clearing session overrides`);
-      resetToSavedLanguage();
+      try {
+        console.log(`🌐 [LANGUAGE] Session reset detected - clearing session overrides`);
+        resetToSavedLanguage();
+      } catch (error) {
+        console.warn('🌐 [LANGUAGE] Error handling session reset:', error);
+      }
     };
 
     const handleLanguageReset = () => {
-      console.log(`🌐 [LANGUAGE] Language-specific reset detected`);
-      resetToSavedLanguage();
+      try {
+        console.log(`🌐 [LANGUAGE] Language-specific reset detected`);
+        resetToSavedLanguage();
+      } catch (error) {
+        console.warn('🌐 [LANGUAGE] Error handling language reset:', error);
+      }
     };
 
     window.addEventListener('auth-logout', handleSessionReset);
@@ -3696,38 +4350,51 @@ export const LanguageProvider = ({ children }) => {
 
   // ✅ FIX: Use effectiveLanguage for translations
   const t = (key, params = {}) => {
-    const keys = key.split('.');
-    let translation = effectiveLanguage === 'he' ? translations.he : translations;
+    try {
+      const keys = key.split('.');
+      let translation = effectiveLanguage === 'he' ? translations.he : translations;
 
-    for (const k of keys) {
-      if (translation && typeof translation === 'object') {
-        translation = translation[k];
-      } else {
-        translation = null;
-        break;
+      for (const k of keys) {
+        if (translation && typeof translation === 'object') {
+          translation = translation[k];
+        } else {
+          translation = null;
+          break;
+        }
       }
-    }
 
-    if (!translation) {
-      console.warn(`Missing translation for key: ${key} in language: ${effectiveLanguage}`);
-      return key;
-    }
+      if (!translation) {
+        console.warn(`Missing translation for key: ${key} in language: ${effectiveLanguage}`);
+        return key;
+      }
 
-    if (typeof translation === 'string' && params) {
-      return translation.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
-        return params[paramKey] || match;
-      });
-    }
+      if (typeof translation === 'string' && params) {
+        return translation.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
+          return params[paramKey] || match;
+        });
+      }
 
-    return translation;
+      return translation;
+    } catch (error) {
+      console.warn('🌐 [LANGUAGE] Translation error for key:', key, error);
+      return key; // Fallback to key
+    }
   };
 
   // ✅ ADD: Make translation function globally available for API error messages
   useEffect(() => {
-    window.getTranslation = t;
-    return () => {
-      delete window.getTranslation;
-    };
+    try {
+      window.getTranslation = t;
+      return () => {
+        try {
+          delete window.getTranslation;
+        } catch (error) {
+          // Silently handle cleanup errors
+        }
+      };
+    } catch (error) {
+      console.warn('🌐 [LANGUAGE] Error setting global translation function:', error);
+    }
   }, [effectiveLanguage]);
 
   const formatDate = (date, lang = null) => {

@@ -21,7 +21,8 @@ import { useToast } from '../../../hooks/useToast';
 import {
   iconCategories,
   getIconComponent,
-  getGradientForCategory
+  getGradientForCategory,
+  categoryConfig
 } from '../../../config/categoryIcons';
 
 /**
@@ -437,26 +438,107 @@ const CategoryManager = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Default Categories Section - Compact Single Row */}
+          {/* Default Categories Section - Organized by Theme */}
           {defaultCategories.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-50/50 to-yellow-50/50 dark:from-amber-900/10 dark:to-yellow-900/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-amber-200/50 dark:border-amber-800/50">
-              <h4 className="text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-300 mb-3 sm:mb-4 flex items-center gap-2">
-                <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
-                {t('categories.defaultCategories')} ({defaultCategories.length})
-              </h4>
-              
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                <AnimatePresence>
-                  {defaultCategories.map((category, index) => (
-                    <CompactCategoryChip
-                      key={`default-${category.id}`}
-                      category={category}
-                      index={index}
-                      t={t}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                  <Crown className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <span className="text-base sm:text-xl">{t('categories.defaultCategories')} ({defaultCategories.length})</span>
+              </h3>
+
+              {/* Organize default categories by theme */}
+              {(() => {
+                // Group categories by theme
+                const themes = categoryConfig.themes;
+                const organizedCategories = {};
+                
+                // Initialize themes
+                Object.keys(themes).forEach(themeKey => {
+                  organizedCategories[themeKey] = [];
+                });
+                
+                // Categorize defaults into themes
+                defaultCategories.forEach(category => {
+                  const categoryName = category.name.toLowerCase();
+                  let categoryTheme = 'miscellaneous';
+                  
+                  // Check which theme this category belongs to
+                  Object.entries(themes).forEach(([themeKey, theme]) => {
+                    if (theme.categories && theme.categories.some(cat => 
+                      cat.toLowerCase() === categoryName ||
+                      categoryName.includes(cat.toLowerCase()) ||
+                      cat.toLowerCase().includes(categoryName)
+                    )) {
+                      categoryTheme = themeKey;
+                    }
+                  });
+                  
+                  organizedCategories[categoryTheme].push(category);
+                });
+
+                return Object.entries(organizedCategories)
+                  .filter(([_, categories]) => categories.length > 0)
+                  .map(([themeKey, categories]) => {
+                    const theme = themes[themeKey];
+                    if (!theme) return null;
+                    
+                    return (
+                      <motion.div
+                        key={themeKey}
+                        className="mb-6"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {/* Theme Header */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className={`p-1.5 rounded-lg ${theme.color || 'bg-gray-500'}`}>
+                            {React.createElement(getIconComponent(theme.icon || 'tag'), { 
+                              className: 'w-3 h-3 text-white' 
+                            })}
+                          </div>
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            {language === 'he' ? theme.name_he : theme.name} ({categories.length})
+                          </h4>
+                        </div>
+                        
+                        {/* Theme Categories */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                          {categories.map((category, index) => (
+                            <motion.div
+                              key={`default-${themeKey}-${category.id}`}
+                              className="group relative p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-all"
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: index * 0.05 }}
+                              whileHover={{ scale: 1.02 }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 flex items-center justify-center">
+                                  {React.createElement(getIconComponent(category.icon || 'tag'), { 
+                                    className: 'w-3 h-3 text-gray-600 dark:text-gray-400' 
+                                  })}
+                                </div>
+                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                                  {category.name}
+                                </span>
+                              </div>
+                              
+                              {/* Type indicator */}
+                              <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
+                                category.type === 'income' 
+                                  ? 'bg-green-500' 
+                                  : 'bg-red-500'
+                              }`}></div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  });
+              })()}
             </div>
           )}
 

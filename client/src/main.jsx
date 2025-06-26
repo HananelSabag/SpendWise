@@ -72,8 +72,20 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Render the app
-ReactDOM.createRoot(document.getElementById('root')).render(
+// ✅ FIX: Ensure single React root creation to prevent multiple createRoot() calls
+const rootElement = document.getElementById('root');
+
+// Check if root is already created (for hot module replacement)
+let root = rootElement._reactRoot;
+
+if (!root) {
+  // Create root only if it doesn't exist
+  root = ReactDOM.createRoot(rootElement);
+  rootElement._reactRoot = root; // Store reference to prevent recreation
+}
+
+// Render the app (this can be called multiple times safely)
+root.render(
   <ErrorBoundary>
     <PersistQueryClientProvider 
       client={queryClient}

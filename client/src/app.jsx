@@ -141,10 +141,10 @@ const ProtectedRoute = ({ children }) => {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.connectionIssues')}
+            {"errors connection Issues"}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('errors.unableToVerifyLogin')}
+            {"errors unable To Verify Login"}
           </p>
           <div className="flex gap-3 justify-center">
             <Button 

@@ -18,6 +18,7 @@ import {
 
 // ✅ PRESERVED: All existing imports
 import { useTransactions, useRecurringTransactions, useTransactionSearch } from '../hooks/useTransactions';
+import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useCategories } from '../hooks/useCategory';
 import { useDate } from '../context/DateContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -153,6 +154,9 @@ const Transactions = () => {
     isLoading: loadingRecurring,
     refresh: refreshRecurring
   } = useRecurringTransactions();
+
+  // ✅ FIX: Add missing useTransactionActions hook to get deleteTransaction
+  const { deleteTransaction } = useTransactionActions();
 
   const {
     results: searchResults,
@@ -730,33 +734,35 @@ const Transactions = () => {
         />
       </Modal>
 
-      {/* ✅ FIXED: Proper DeleteTransaction Modal Integration */}
-      <DeleteTransaction
-        transaction={selectedTransaction}
-        isOpen={showActionsPanel}
-        onClose={() => {
-          setShowActionsPanel(false);
-          setSelectedTransaction(null);
-        }}
-        onConfirm={async (transaction, options) => {
-          try {
-            // ✅ FIX: Pass options object to deleteTransaction
-            await deleteTransaction(transaction.id, options);
-            
-            refreshAll();
+      {/* ✅ FIXED: Only render DeleteTransaction when we have a transaction */}
+      {selectedTransaction && (
+        <DeleteTransaction
+          transaction={selectedTransaction}
+          isOpen={showActionsPanel}
+          onClose={() => {
             setShowActionsPanel(false);
             setSelectedTransaction(null);
-          } catch (error) {
-            console.error('Delete failed:', error);
-            throw error; // Re-throw to let DeleteTransaction handle the error display
-          }
-        }}
-        onOpenSkipDates={(transaction) => {
-          // Handle skip dates functionality
-          setSelectedTransaction(transaction);
-          setShowRecurringModal(true);
-        }}
-      />
+          }}
+          onConfirm={async (transaction, options) => {
+            try {
+              // ✅ FIX: Pass options object to deleteTransaction
+              await deleteTransaction(transaction.id, options);
+              
+              refreshAll();
+              setShowActionsPanel(false);
+              setSelectedTransaction(null);
+            } catch (error) {
+              console.error('Delete failed:', error);
+              throw error; // Re-throw to let DeleteTransaction handle the error display
+            }
+          }}
+          onOpenSkipDates={(transaction) => {
+            // Handle skip dates functionality
+            setSelectedTransaction(transaction);
+            setShowRecurringModal(true);
+          }}
+        />
+      )}
 
       {/* ✅ PRESERVED: Success animation exactly as before */}
       <AnimatePresence>

@@ -256,7 +256,7 @@ const MiniBarChart = ({ data, formatAmount, t }) => {
 /**
  * Smart Financial Health Score Calculator
  */
-const calculateFinancialHealth = (dashboardData, selectedPeriod) => {
+const calculateFinancialHealth = (dashboardData, selectedPeriod, t) => {
   if (!dashboardData?.balances) {
     return { score: 0, insights: [], level: 'poor' };
   }
@@ -279,78 +279,78 @@ const calculateFinancialHealth = (dashboardData, selectedPeriod) => {
   const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
   if (savingsRate > 20) {
     score += 25;
-    insights.push({
-      type: 'positive',
-      message: `Excellent savings rate of ${savingsRate.toFixed(1)}%`,
-      impact: 'high'
-    });
-  } else if (savingsRate > 10) {
-    score += 15;
-    insights.push({
-      type: 'neutral', 
-      message: `Good savings rate of ${savingsRate.toFixed(1)}%`,
-      impact: 'medium'
-    });
-  } else if (savingsRate > 0) {
-    score += 5;
-    insights.push({
-      type: 'warning',
-      message: `Low savings rate of ${savingsRate.toFixed(1)}%`,
-      impact: 'high'
-    });
-  } else {
-    score -= 10;
-    insights.push({
-      type: 'negative',
-      message: 'Spending exceeds income this period',
-      impact: 'critical'
-    });
+          insights.push({
+        type: 'positive',
+        message: `${t('dashboard.stats.excellentSavingsRate')} ${savingsRate.toFixed(1)}%`,
+        impact: 'high'
+      });
+    } else if (savingsRate > 10) {
+      score += 15;
+      insights.push({
+        type: 'neutral', 
+        message: `${t('dashboard.stats.goodSavingsRate')} ${savingsRate.toFixed(1)}%`,
+        impact: 'medium'
+      });
+    } else if (savingsRate > 0) {
+      score += 5;
+      insights.push({
+        type: 'warning',
+        message: `${t('dashboard.stats.lowSavingsRate')} ${savingsRate.toFixed(1)}%`,
+        impact: 'high'
+      });
+    } else {
+      score -= 10;
+      insights.push({
+        type: 'negative',
+        message: t('dashboard.stats.spendingExceedsIncome'),
+        impact: 'critical'
+      });
   }
   
   // 2. Expense Ratio Analysis (20 points)
   const expenseRatio = income > 0 ? (expenses / income) * 100 : 100;
-  if (expenseRatio < 70) {
-    score += 20;
-    insights.push({
-      type: 'positive',
-      message: 'Healthy expense-to-income ratio',
-      impact: 'medium'
-    });
-  } else if (expenseRatio < 90) {
-    score += 10;
-  } else {
-    score -= 5;
-    insights.push({
-      type: 'warning',
-      message: 'High expense-to-income ratio',
-      impact: 'high'
-    });
-  }
+      if (expenseRatio < 70) {
+      score += 20;
+      insights.push({
+        type: 'positive',
+        message: t('dashboard.stats.healthyExpenseRatio'),
+        impact: 'medium'
+      });
+    } else if (expenseRatio < 90) {
+      score += 10;
+    } else {
+      score -= 5;
+      insights.push({
+        type: 'warning',
+        message: t('dashboard.stats.highExpenseRatio'),
+        impact: 'high'
+      });
+    }
   
   // 3. Recurring Income Stability (15 points)
   const recurringIncomeRatio = income > 0 ? (recurringIncome / income) * 100 : 0;
-  if (recurringIncomeRatio > 70) {
-    score += 15;
-    insights.push({
-      type: 'positive',
-      message: 'Strong recurring income foundation',
-      impact: 'medium'
-    });
-  } else if (recurringIncomeRatio > 40) {
-    score += 8;
-    insights.push({
-      type: 'neutral',
-      message: 'Moderate recurring income stability',
-      impact: 'medium'
-    });
-  } else if (recurringIncomeRatio > 0) {
-    score += 3;
-    insights.push({
-      type: 'warning',
-      message: 'Limited recurring income stability',
-      impact: 'medium'
-    });
-  }
+      if (recurringIncomeRatio > 70) {
+      score += 15;
+      insights.push({
+        type: 'positive',
+        message: t('dashboard.stats.strongRecurringIncome'),
+        impact: 'medium'
+      });
+    } else if (recurringIncomeRatio > 40) {
+      score += 8;
+      insights.push({
+        type: 'neutral',
+        message: t('dashboard.stats.moderateRecurringIncome'),
+        impact: 'medium'
+      });
+    } else if (recurringIncomeRatio > 0) {
+      score += 3;
+      insights.push({
+        type: 'warning',
+        message: t('dashboard.stats.limitedRecurringIncome'),
+        impact: 'medium'
+      });
+    }
   
   // 4. Transaction Activity Analysis (10 points)
   const transactionCount = recentTransactions.length;
@@ -360,39 +360,39 @@ const calculateFinancialHealth = (dashboardData, selectedPeriod) => {
       Math.abs(parseFloat(t.amount)) > avgTransactionSize * 2
     ).length;
     
-    if (largeTransactions / transactionCount < 0.2) {
-      score += 10;
-      insights.push({
-        type: 'positive',
-        message: 'Consistent spending patterns',
-        impact: 'low'
-      });
-    } else if (largeTransactions / transactionCount > 0.5) {
-      score -= 5;
-      insights.push({
-        type: 'warning',
-        message: 'Irregular spending patterns detected',
-        impact: 'medium'
-      });
-    }
+          if (largeTransactions / transactionCount < 0.2) {
+        score += 10;
+        insights.push({
+          type: 'positive',
+          message: t('dashboard.stats.consistentSpending'),
+          impact: 'low'
+        });
+      } else if (largeTransactions / transactionCount > 0.5) {
+        score -= 5;
+        insights.push({
+          type: 'warning',
+          message: t('dashboard.stats.irregularSpending'),
+          impact: 'medium'
+        });
+      }
   }
   
   // 5. Balance Trend (10 points)
-  if (netBalance > 0) {
-    score += 10;
-    insights.push({
-      type: 'positive',
-      message: 'Positive balance for this period',
-      impact: 'medium'
-    });
-  } else if (netBalance < 0) {
-    score -= 5;
-    insights.push({
-      type: 'negative',
-      message: 'Negative balance for this period',
-      impact: 'high'
-    });
-  }
+      if (netBalance > 0) {
+      score += 10;
+      insights.push({
+        type: 'positive',
+        message: t('dashboard.stats.positiveBalance'),
+        impact: 'medium'
+      });
+    } else if (netBalance < 0) {
+      score -= 5;
+      insights.push({
+        type: 'negative',
+        message: t('dashboard.stats.negativeBalance'),
+        impact: 'high'
+      });
+    }
   
   // Determine level
   let level = 'poor';
@@ -459,16 +459,16 @@ const StatsChart = ({ className = '' }) => {
     return Math.sqrt(variance) / mean * 100; // Coefficient of variation as percentage
   }, []);
 
-  const generateRecommendations = useCallback((metrics, health, income, expenses) => {
+  const generateRecommendations = useCallback((metrics, health, income, expenses, t) => {
     const recommendations = [];
     
     if (metrics.savingsRate < 10) {
       recommendations.push({
         type: 'savings',
         priority: 'high',
-        title: 'Increase Savings Rate',
-        description: `Current savings rate is ${metrics.savingsRate.toFixed(1)}%. Aim for at least 10-20%.`,
-        action: 'Review expenses and identify areas to cut spending'
+        title: t('dashboard.stats.increaseSavingsRate'),
+        description: t('dashboard.stats.currentSavingsRateAim', { rate: metrics.savingsRate.toFixed(1) }),
+        action: t('dashboard.stats.reviewExpenses')
       });
     }
     
@@ -476,9 +476,9 @@ const StatsChart = ({ className = '' }) => {
       recommendations.push({
         type: 'consistency',
         priority: 'medium',
-        title: 'Stabilize Spending',
-        description: 'High spending volatility detected. More consistent spending helps with budgeting.',
-        action: 'Create a monthly budget and track spending categories'
+        title: t('dashboard.stats.stabilizeSpending'),
+        description: t('dashboard.stats.highSpendingVolatility'),
+        action: t('dashboard.stats.createBudget')
       });
     }
     
@@ -486,9 +486,9 @@ const StatsChart = ({ className = '' }) => {
       recommendations.push({
         type: 'income',
         priority: 'medium',
-        title: 'Build Recurring Income',
-        description: `Only ${metrics.recurringCoverage.toFixed(1)}% of income is recurring. More predictable income improves financial stability.`,
-        action: 'Consider subscriptions, retainers, or passive income sources'
+        title: t('dashboard.stats.buildRecurringIncome'),
+        description: t('dashboard.stats.onlyRecurringIncome', { percent: metrics.recurringCoverage.toFixed(1) }),
+        action: t('dashboard.stats.considerRecurringIncome')
       });
     }
     
@@ -496,9 +496,9 @@ const StatsChart = ({ className = '' }) => {
       recommendations.push({
         type: 'expenses',
         priority: 'high',
-        title: 'High Burn Rate',
-        description: 'Daily spending rate is high relative to income.',
-        action: 'Review and reduce daily discretionary expenses'
+        title: t('dashboard.stats.highBurnRate'),
+        description: t('dashboard.stats.dailySpendingHigh'),
+        action: t('dashboard.stats.reduceExpenses')
       });
     }
     
@@ -522,8 +522,8 @@ const StatsChart = ({ className = '' }) => {
     const totalExpenses = Math.abs(parseFloat(currentBalance.expenses) || 0);
     const netBalance = parseFloat(currentBalance.balance) || 0;
     
-    // Calculate financial health
-    const financialHealth = calculateFinancialHealth(dashboardData, selectedRange);
+          // Calculate financial health
+      const financialHealth = calculateFinancialHealth(dashboardData, selectedRange, t);
     
     // Generate trend data for mini chart
     const allPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
@@ -564,7 +564,7 @@ const StatsChart = ({ className = '' }) => {
     };
     
     // Generate smart recommendations
-    const recommendations = generateRecommendations(keyMetrics, financialHealth, totalIncome, totalExpenses);
+    const recommendations = generateRecommendations(keyMetrics, financialHealth, totalIncome, totalExpenses, t);
     
     return {
       currentPeriod: { income: totalIncome, expenses: totalExpenses, balance: netBalance },
@@ -573,7 +573,7 @@ const StatsChart = ({ className = '' }) => {
       keyMetrics,
       recommendations
     };
-  }, [dashboardData, selectedRange, ranges, getDaysInPeriod, calculateExpenseVolatility, generateRecommendations]);
+  }, [dashboardData, selectedRange, ranges, getDaysInPeriod, calculateExpenseVolatility, generateRecommendations, t]);
 
   // Event handlers
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -631,7 +631,7 @@ const StatsChart = ({ className = '' }) => {
               onClick={() => window.location.reload()}
               className="text-sm text-primary-600 hover:text-primary-700"
             >
-              {t('common.retry')}
+              {t('common.retry') || 'Retry'}
             </button>
           </div>
         </Card>
@@ -719,7 +719,7 @@ const StatsChart = ({ className = '' }) => {
                       />
                     )}
                     <PieChart className="relative z-10 w-3 h-3" />
-                    <span className="relative z-10 hidden sm:inline">Pie</span>
+                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.pieChart') || 'Pie'}</span>
                   </motion.button>
                   
                   <motion.button
@@ -740,7 +740,7 @@ const StatsChart = ({ className = '' }) => {
                       />
                     )}
                     <BarChart3 className="relative z-10 w-3 h-3" />
-                    <span className="relative z-10 hidden sm:inline">Bars</span>
+                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.barsChart') || 'Bars'}</span>
                   </motion.button>
                 </div>
                 
@@ -810,14 +810,14 @@ const StatsChart = ({ className = '' }) => {
                     {analytics.financialHealth.score}
                   </motion.div>
                   
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white">
-                      Financial Health Score
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                      {analytics.financialHealth.level} • {analytics.financialHealth.insights.length} insights
-                    </p>
-                  </div>
+                                  <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white">
+                    {t('dashboard.stats.financialHealthScore')}
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                    {t(`dashboard.stats.${analytics.financialHealth.level}`)} • {analytics.financialHealth.insights.length} {t('dashboard.stats.insights')}
+                  </p>
+                </div>
                 </div>
                 
                 <div className="flex items-center gap-1">
@@ -841,14 +841,14 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">Savings Rate</span>
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.savingsRate')}</span>
                     <Target className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
                     {analytics.keyMetrics.savingsRate.toFixed(1)}%
                   </div>
                   <div className="text-xs opacity-75">
-                    {analytics.keyMetrics.savingsRate > 15 ? 'Excellent' : analytics.keyMetrics.savingsRate > 5 ? 'Good' : 'Improve'}
+                    {analytics.keyMetrics.savingsRate > 15 ? t('dashboard.stats.excellent') : analytics.keyMetrics.savingsRate > 5 ? t('dashboard.stats.good') : t('dashboard.stats.improve')}
                   </div>
                 </div>
               </motion.div>
@@ -864,13 +864,13 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">Daily Burn</span>
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.dailyBurn')}</span>
                     <Clock className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
                     {formatAmount(analytics.keyMetrics.burnRate)}
                   </div>
-                  <div className="text-xs opacity-75">Per day spending</div>
+                  <div className="text-xs opacity-75">{t('dashboard.stats.perDaySpending')}</div>
                 </div>
               </motion.div>
 
@@ -885,13 +885,13 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">Frequency</span>
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.frequency')}</span>
                     <Activity className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
                     {analytics.keyMetrics.transactionFrequency.toFixed(1)}
                   </div>
-                  <div className="text-xs opacity-75">Transactions/day</div>
+                  <div className="text-xs opacity-75">{t('dashboard.stats.transactionsPerDay')}</div>
                 </div>
               </motion.div>
 
@@ -918,14 +918,14 @@ const StatsChart = ({ className = '' }) => {
                 
                 <div className="relative z-10 text-white">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium opacity-90">Volatility</span>
+                    <span className="text-xs font-medium opacity-90">{t('dashboard.stats.volatility')}</span>
                     <Zap className="w-3 h-3" />
                   </div>
                   <div className="text-lg sm:text-xl font-bold">
                     {analytics.keyMetrics.expenseVolatility.toFixed(0)}%
                   </div>
                   <div className="text-xs opacity-75">
-                    {analytics.keyMetrics.expenseVolatility > 50 ? 'High' : analytics.keyMetrics.expenseVolatility > 25 ? 'Medium' : 'Low'}
+                    {analytics.keyMetrics.expenseVolatility > 50 ? t('dashboard.stats.high') : analytics.keyMetrics.expenseVolatility > 25 ? t('dashboard.stats.medium') : t('dashboard.stats.low')}
                   </div>
                 </div>
               </motion.div>
@@ -951,12 +951,12 @@ const StatsChart = ({ className = '' }) => {
                       {chartType === 'pie' ? (
                         <>
                           <PieChart className="w-4 h-4" />
-                          Income vs Expenses
+                          {t('dashboard.stats.incomeVsExpenses')}
                         </>
                       ) : (
                         <>
                           <BarChart3 className="w-4 h-4" />
-                          Balance Trends
+                          {t('dashboard.stats.balanceTrends')}
                         </>
                       )}
                     </h4>
@@ -999,7 +999,7 @@ const StatsChart = ({ className = '' }) => {
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                       <Sparkles className="w-4 h-4" />
-                      Smart Insights
+                      {t('dashboard.stats.smartInsights')}
                     </h4>
                     
                     {/* Financial Health Insights */}
@@ -1043,7 +1043,7 @@ const StatsChart = ({ className = '' }) => {
                                   variant={insight.impact === 'critical' ? 'destructive' : insight.impact === 'high' ? 'default' : 'secondary'}
                                   className="mt-1 text-xs"
                                 >
-                                  {insight.impact} impact
+                                  {t(`dashboard.stats.${insight.impact}Impact`)}
                                 </Badge>
                               )}
                             </div>
@@ -1056,7 +1056,7 @@ const StatsChart = ({ className = '' }) => {
                     {analytics.recommendations.length > 0 && (
                       <div className="space-y-3">
                         <h5 className="font-semibold text-gray-900 dark:text-white text-sm">
-                          Recommendations
+                          {t('dashboard.stats.recommendations')}
                         </h5>
                         {analytics.recommendations.map((rec, index) => (
                           <motion.div
@@ -1068,7 +1068,7 @@ const StatsChart = ({ className = '' }) => {
                           >
                             <div className="flex items-start gap-2">
                               <Badge variant={rec.priority === 'high' ? 'destructive' : 'default'} className="text-xs mt-0.5">
-                                {rec.priority}
+                                {t(`dashboard.stats.${rec.priority}Priority`)}
                               </Badge>
                               <div className="flex-1">
                                 <h6 className="font-medium text-gray-900 dark:text-white text-sm">

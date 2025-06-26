@@ -198,16 +198,19 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                   </div>
                   <div>
                     <h1 className="text-base sm:text-lg lg:text-xl font-bold flex items-center gap-1 sm:gap-2">
-                      Exchange Calculator
+                      {t('exchange.title')}
                       <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                     </h1>
                     <div className="flex items-center gap-1 sm:gap-2 text-white/90 text-xs sm:text-sm">
                       <Globe className="w-2 h-2 sm:w-3 sm:h-3" />
                       <span className="hidden sm:inline">
-                        {conversionStats.availableCurrencies} currencies • {conversionStats.possiblePairs} pairs
+                        {t('exchange.footer.possiblePairs', { 
+                          count: conversionStats.availableCurrencies, 
+                          pairs: conversionStats.possiblePairs 
+                        })}
                       </span>
                       <span className="sm:hidden">
-                        {conversionStats.availableCurrencies} currencies
+                        {t('exchange.footer.availableCurrencies', { count: conversionStats.availableCurrencies })}
                       </span>
                     </div>
                   </div>
@@ -245,21 +248,21 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   />
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Loading exchange rates...</p>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{t('exchange.loading')}</p>
                 </div>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
                 <RefreshCw className="w-8 h-8 sm:w-12 sm:h-12 text-red-400 mb-3 sm:mb-4" />
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Failed to Load Exchange Rates
+                  {t('exchange.error.title')}
                 </h3>
                 <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 text-center max-w-sm mb-3 sm:mb-4">
-                  Unable to fetch current exchange rates. Please check your connection.
+                  {t('exchange.error.message')}
                 </p>
                 <Button onClick={() => refetch()} variant="outline" size="small">
                   <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  Try Again
+                  {t('exchange.error.tryAgain')}
                 </Button>
               </div>
             ) : (
@@ -273,13 +276,13 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     transition={{ delay: 0.1 }}
                   >
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Amount to Convert
+                      {t('exchange.form.amountLabel')}
                     </label>
                     <Input
                       type="number"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      placeholder="100"
+                      placeholder={t('exchange.form.amountPlaceholder')}
                       className="text-center text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-700 h-12 sm:h-14"
                       min="0"
                       step="0.01"
@@ -296,7 +299,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     {/* From Currency */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        From
+                        {t('exchange.form.fromLabel')}
                       </label>
                       <div className={`bg-gradient-to-r ${SUPPORTED_CURRENCIES[fromCurrency].color} p-[2px] rounded-xl`}>
                         <select
@@ -306,7 +309,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                         >
                           {Object.values(SUPPORTED_CURRENCIES).map((currency) => (
                             <option key={currency.code} value={currency.code}>
-                              {currency.flag} {currency.name} ({currency.symbol})
+                              {currency.flag} {t(`exchange.currencies.${currency.code}`)} ({currency.symbol})
                             </option>
                           ))}
                         </select>
@@ -328,7 +331,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     {/* To Currency */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        To
+                        {t('exchange.form.toLabel')}
                       </label>
                       <div className={`bg-gradient-to-r ${SUPPORTED_CURRENCIES[toCurrency].color} p-[2px] rounded-xl`}>
                         <select
@@ -338,7 +341,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                         >
                           {Object.values(SUPPORTED_CURRENCIES).map((currency) => (
                             <option key={currency.code} value={currency.code}>
-                              {currency.flag} {currency.name} ({currency.symbol})
+                              {currency.flag} {t(`exchange.currencies.${currency.code}`)} ({currency.symbol})
                             </option>
                           ))}
                         </select>
@@ -364,7 +367,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                         {formatAmount(convertedAmount, toCurrency)}
                       </div>
                       <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-800/70 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 inline-block">
-                        1 {fromCurrency} = {getExchangeRate().toFixed(4)} {toCurrency}
+                        {t('exchange.result.rate', { from: fromCurrency, rate: getExchangeRate().toFixed(4), to: toCurrency })}
                       </div>
                     </div>
                   </motion.div>
@@ -377,7 +380,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                   >
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
-                      Popular Conversions
+                      {t('exchange.popular.title')}
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                       {POPULAR_CONVERSIONS.map((conversion, index) => (
@@ -415,8 +418,8 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                   >
                     <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="text-center">
-                      <span className="hidden sm:inline">Live rates • Updated every 5 minutes</span>
-                      <span className="sm:hidden">Live rates • 5 min updates</span>
+                      <span className="hidden sm:inline">{t('exchange.footer.liveRates')}</span>
+                      <span className="sm:hidden">{t('exchange.footer.liveRatesMobile')}</span>
                     </span>
                     <Globe className="w-3 h-3 sm:w-4 sm:h-4" />
                   </motion.div>
