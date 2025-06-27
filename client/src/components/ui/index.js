@@ -9,6 +9,7 @@ export { default as Avatar } from './Avatar'; // Add Avatar export
 export { default as Modal } from './Modal';
 export { default as Alert } from './Alert';
 export { default as Dropdown } from './Dropdown';
+export { default as Tooltip } from './Tooltip';
 
 // 🚀 PHASE 16: Advanced Loading & Skeleton Components
 export { 

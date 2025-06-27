@@ -357,7 +357,7 @@ const Dashboard = () => {
 
           {/* 🚀 UNIFIED RESPONSIVE LAYOUT - Single render, all screen sizes */}
           <div className="adaptive-section">
-            {/* 🚀 PHASE 16: Balance Panel - Critical Priority Progressive Loading */}
+            {/* 🚀 PHASE 17: OPTIMIZED DASHBOARD LAYOUT - No more cramped containers */}
             <motion.div variants={itemVariants}>
               <ProgressiveLoader 
                 isLoading={isDashboardLoading && !dashboardData}
@@ -378,32 +378,37 @@ const Dashboard = () => {
               </ProgressiveLoader>
             </motion.div>
 
-            {/* 🚀 PHASE 16: Actions + Transactions - High Priority Progressive Loading */}
+            {/* 🚀 PHASE 17: NEW 3-COLUMN OPTIMIZED LAYOUT */}
             <motion.div variants={itemVariants}>
               <ProgressiveLoader 
                 isLoading={isDashboardLoading && !dashboardData}
                 priority="high"
                 className="loading-progressive-delay-200"
               >
-                <div className="mobile-grid">
-                  <div className="min-h-[280px] lg:min-h-[320px]">
+                <div className="dashboard-optimized-grid">
+                  {/* Quick Actions - 1/3 width on desktop, full width on mobile */}
+                  <div className="dashboard-quick-actions">
                     <MemoizedQuickActionsBar />
                   </div>
-                  <div className="min-h-[280px] lg:min-h-[320px]">
+                  
+                  {/* Recent Transactions - 2/3 width on desktop, full width on mobile */}
+                  <div className="dashboard-recent-transactions">
                     <MemoizedRecentTransactions />
                   </div>
                 </div>
               </ProgressiveLoader>
             </motion.div>
 
-            {/* 🚀 PHASE 16: Stats Chart - Medium Priority Progressive Loading */}
+            {/* 🚀 PHASE 17: Stats Chart - Full width, no constraints */}
             <motion.div variants={itemVariants}>
               <ProgressiveLoader 
                 isLoading={isDashboardLoading && !dashboardData}
                 priority="medium"
                 className="loading-progressive-delay-300"
               >
-                <MemoizedStatsChart />
+                <div className="dashboard-stats-section">
+                  <MemoizedStatsChart />
+                </div>
               </ProgressiveLoader>
             </motion.div>
 

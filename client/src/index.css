@@ -597,7 +597,10 @@
   
   .smart-grid-cards {
     @apply grid gap-3 lg:gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* 🚀 PHASE 17: Wider cards, fewer per row, better visibility */
+    grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
+    max-width: 100%;
+    justify-items: stretch; /* Make cards fill available width */
   }
   
   .smart-grid-compact {
@@ -664,6 +667,23 @@
   
   .mobile-grid {
     @apply grid grid-cols-1 lg:grid-cols-2 gap-adaptive;
+  }
+
+  /* 🚀 PHASE 17: DASHBOARD LAYOUT OPTIMIZATION */
+  .dashboard-optimized-grid {
+    @apply grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6;
+  }
+
+  .dashboard-quick-actions {
+    @apply col-span-1 xl:col-span-1;
+  }
+
+  .dashboard-recent-transactions {
+    @apply col-span-1 xl:col-span-2;
+  }
+
+  .dashboard-stats-section {
+    @apply w-full;
   }
   
   /* Performance Optimizations */
@@ -2491,4 +2511,4 @@
 
 /* ============================================== */
 /* 🚀 END PHASE 16: ADVANCED LOADING & SKELETON */
-/* ============================================== */
+  /* ============================================== */

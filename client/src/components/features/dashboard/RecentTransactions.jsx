@@ -54,14 +54,14 @@ const RecentTransactions = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative h-full"
+        className="relative"
         data-component="RecentTransactions"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 opacity-100 rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl"></div>
         </div>
 
-        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl h-full">
+        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl">
           <div className="p-4">
             {/* Header Skeleton */}
             <div className="flex items-center justify-between mb-4">
@@ -90,10 +90,10 @@ const RecentTransactions = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative h-full"
+        className="relative"
         data-component="RecentTransactions"
       >
-        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl h-full flex items-center justify-center">
+        <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl flex items-center justify-center">
           <div className="text-center py-8">
             <div className="text-red-600 dark:text-red-400 mb-4">
               {t('dashboard.transactions.error')}
@@ -114,7 +114,7 @@ const RecentTransactions = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative h-full"
+      className="relative"
       data-component="RecentTransactions"
     >
       {/* Animated Background Gradient */}
@@ -140,7 +140,7 @@ const RecentTransactions = ({
         />
       </div>
 
-      <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl h-full flex flex-col">
+      <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl flex flex-col">
         {/* COMPACT Header - reduced padding */}
         <div className="relative p-3 pb-1">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-xl"></div>
@@ -179,8 +179,8 @@ const RecentTransactions = ({
           </div>
         </div>
         
-        {/* COMPACT Content - reduced spacing and height */}
-        <div className="flex-1 px-3 pb-3 overflow-hidden">
+        {/* COMPACT Content - natural height, no overflow constraints */}
+        <div className="px-3 pb-3">
           {filteredTransactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-4">
               <motion.div 
@@ -198,8 +198,33 @@ const RecentTransactions = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-1.5 h-full flex flex-col">
-              {filteredTransactions.slice(0, 4).map((transaction, index) => {
+            <div className="space-y-1.5">
+              {/* Always show exactly 5 transaction slots */}
+              {Array.from({ length: 5 }, (_, index) => {
+                const transaction = filteredTransactions[index];
+                
+                if (!transaction) {
+                  // Empty placeholder slot
+                  return (
+                    <motion.div 
+                      key={`placeholder-${index}`}
+                      className="flex items-center justify-between py-2 px-2.5 rounded-lg bg-gray-50/60 dark:bg-gray-800/40 border border-dashed border-gray-200 dark:border-gray-600 opacity-40"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 0.4, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">
+                          No more transactions
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-300 dark:text-gray-600">---</div>
+                    </motion.div>
+                  );
+                }
+                
+                // Render actual transaction
                 const amount = parseFloat(transaction.amount) || 0;
                 const isIncome = transaction.transaction_type === 'income' || 
                                 transaction.type === 'income';
@@ -286,19 +311,6 @@ const RecentTransactions = ({
                   </motion.div>
                 );
               })}
-              
-              {/* Fill remaining space if less than 4 transactions */}
-              {filteredTransactions.length < 4 && filteredTransactions.length > 0 && (
-                <div className="flex-1 flex items-center justify-center py-2">
-                  <Link 
-                    to="/transactions/add"
-                    className={`text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs flex items-center gap-1 px-3 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-400 dark:hover:border-primary-500 transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
-                  >
-                    <TrendingUp className="w-3 h-3" />
-                    <span>{t('transactions.addMore')}</span>
-                  </Link>
-                </div>
-              )}
             </div>
           )}
         </div>

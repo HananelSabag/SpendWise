@@ -32,7 +32,8 @@ import {
   Edit2, Trash2, Calendar, Clock, Pause, Play, Settings,
   ChevronDown, ChevronUp, MoreHorizontal, Zap, CalendarX,
   ArrowUpRight, ArrowDownRight, Copy, Eye, EyeOff, Check,
-  AlertCircle, Repeat, Target, Activity, Sparkles, AlertTriangle
+  AlertCircle, Repeat, Target, Activity, Sparkles, AlertTriangle,
+  SkipForward, XCircle, EditIcon
 } from 'lucide-react';
 
 // ✅ PRESERVED: Centralized icon system integration
@@ -41,7 +42,7 @@ import { useTransactions, useTransactionTemplates } from '../../../hooks/useTran
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
-import { Badge, Button, OptimisticFeedback } from '../../ui';
+import { Badge, Button, OptimisticFeedback, Tooltip } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
 import useToast from '../../../hooks/useToast';
 
@@ -379,18 +380,19 @@ const TransactionCard = ({
     }
   }, [t]);
 
-  // ✅ ENHANCED: Contextual action buttons with smart template status handling
+  // 🚀 PHASE 17: Enhanced contextual action buttons with detailed tooltips and better visual differentiation
   const actionButtons = useMemo(() => {
     const buttons = [];
 
-    // ✅ PRESERVED: Edit buttons logic but with template status awareness
+    // ✅ PRESERVED: Edit buttons logic but with enhanced template status awareness and tooltips
     if (showActions) {
       if (isRecurring && shouldShowRecurringOptions) {
-        // Template exists and is active - show full recurring options
+        // Template exists and is active - show full recurring options with clear differentiation
         buttons.push({
           key: 'editSingle',
           label: t('transactions.editThis'),
-          description: t('transactions.editThisDesc'),
+          description: t('transactions.editThisOnlyTooltip') || 'Edit only this occurrence without affecting future transactions',
+          tooltip: t('transactions.editThisOnlyTooltip') || 'Edit only this occurrence',
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -400,9 +402,10 @@ const TransactionCard = ({
 
         buttons.push({
           key: 'editTemplate',
-          label: t('transactions.editAll'),
-          description: t('transactions.editAllDesc'),
-          icon: Zap,
+          label: t('transactions.editSeries'),
+          description: t('transactions.editSeriesDesc') || 'Edit this and all future transactions in this series',
+          tooltip: t('transactions.editSeriesDesc') || 'Edit entire recurring series',
+          icon: Calendar, // Different icon for series editing
           onClick: handleEditTemplate,
           variant: 'secondary',
           className: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700',
@@ -413,7 +416,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'editSingle',
           label: t('common.edit'),
-          description: t('transactions.editTransactionDesc'),
+          description: t('transactions.editTransactionDesc') || 'Edit this transaction',
+          tooltip: t('transactions.editTransactionTooltip') || 'Edit transaction details',
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -425,7 +429,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'edit',
           label: t('common.edit'),
-          description: t('transactions.editTransactionDesc'),
+          description: t('transactions.editTransactionDesc') || 'Edit this transaction',
+          tooltip: t('transactions.editTransactionTooltip') || 'Edit transaction details',
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -435,13 +440,14 @@ const TransactionCard = ({
       }
     }
 
-    // ✅ ENHANCED: Recurring management buttons only for active templates
+    // 🚀 PHASE 17: Enhanced recurring management buttons with unique icons and clear tooltips
     if (shouldShowRecurringOptions && templateId) {
       if (isActive) {
         buttons.push({
           key: 'pause',
           label: t('transactions.pause'),
-          description: t('transactions.pauseDesc'),
+          description: t('transactions.pauseDesc') || 'Temporarily pause this recurring transaction',
+          tooltip: t('transactions.pauseTooltip') || 'Pause recurring payments',
           icon: Pause,
           onClick: handleToggleActive,
           variant: 'warning',
@@ -452,7 +458,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'resume',
           label: t('transactions.resume'),
-          description: t('transactions.resumeDesc'),
+          description: t('transactions.resumeDesc') || 'Resume this recurring transaction',
+          tooltip: t('transactions.resumeTooltip') || 'Resume recurring payments',
           icon: Play,
           onClick: handleToggleActive,
           variant: 'success',
@@ -463,9 +470,10 @@ const TransactionCard = ({
 
       buttons.push({
         key: 'skip',
-        label: t('transactions.skipNext'),
-        description: t('transactions.skipNextDesc'),
-        icon: CalendarX,
+        label: t('transactions.skipOnce'),
+        description: t('transactions.skipOnceDesc') || 'Skip the next occurrence of this recurring transaction',
+        tooltip: t('transactions.skipOnceTooltip') || 'Skip next payment only',
+        icon: SkipForward, // More specific icon for skipping
         onClick: handleQuickSkip,
         variant: 'secondary',
         className: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
@@ -474,12 +482,17 @@ const TransactionCard = ({
       });
     }
 
-    // ✅ ENHANCED: Contextual delete action with better styling
+    // 🚀 PHASE 17: Enhanced delete action with contextual tooltip and icon
     const deleteAction = {
       key: 'delete',
-      label: shouldShowRecurringOptions ? t('transactions.deleteTemplate') : t('common.delete'),
-      description: shouldShowRecurringOptions ? t('transactions.deleteTemplateDesc') : t('transactions.deleteTransactionDesc'),
-      icon: Trash2,
+      label: shouldShowRecurringOptions ? t('transactions.deleteSeries') : t('common.delete'),
+      description: shouldShowRecurringOptions 
+        ? (t('transactions.deleteSeriesDesc') || 'Delete this entire recurring transaction series')
+        : (t('transactions.deleteTransactionDesc') || 'Delete this transaction'),
+      tooltip: shouldShowRecurringOptions 
+        ? (t('transactions.deleteSeriesTooltip') || 'Delete entire recurring series')
+        : (t('transactions.deleteTransactionTooltip') || 'Delete transaction'),
+      icon: shouldShowRecurringOptions ? XCircle : Trash2, // Different icon for series deletion
       onClick: handleDelete,
       variant: 'danger',
       className: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
@@ -509,7 +522,10 @@ const TransactionCard = ({
         whileHover="hover"
         className={cn(
           // ✅ ENHANCED: Base card styling with systematic polish
-          'relative surface-elevated overflow-hidden transition-polish cursor-pointer group card-polish-interactive',
+          'relative surface-elevated transition-polish cursor-pointer group card-polish-interactive',
+          
+          // 🚀 PHASE 17: Full width responsive layout - let grid control sizing
+          'w-full', // Full width to fill grid container
           
           // 🚀 PHASE 16: Optimistic state styling
           optimisticState === 'updating' && 'optimistic-updating',
@@ -554,190 +570,154 @@ const TransactionCard = ({
           </div>
         )}
         
-        {/* ✅ ENHANCED: Main content with systematic spacing */}
-        <div className="spacing-card-content">
-          <div className="flex items-start spacing-element relative z-10">
+        {/* 🚀 PHASE 17: More compact main content */}
+        <div className="p-3 lg:p-4">
+          <div className="flex items-center justify-between gap-4 relative z-10">
             
-            {/* ✅ ENHANCED: Category icon with better visual indicators */}
-            <div className="relative flex-shrink-0">
-              <div className={cn(
-                'relative radius-moderate shadow-interactive transition-polish',
-                'spacing-form',
-                // ✅ ENHANCED: Special styling for recurring transactions
-                (isRecurring || isTemplate) 
-                  ? 'bg-gradient-to-br from-purple-100 via-indigo-100 to-blue-100 dark:from-purple-900/40 dark:via-indigo-900/40 dark:to-blue-900/40 ring-2 ring-purple-200 dark:ring-purple-700'
-                  : getColorForCategory(transaction.transaction_type || transaction.type)
-              )}>
-                <CategoryIcon className={cn(
-                  'icon-adaptive-base',
-                  (isRecurring || isTemplate) && 'text-purple-600 dark:text-purple-300'
-                )} />
-                
-                {/* ✅ ENHANCED: Better status indicators for recurring */}
-                {(isRecurring || isTemplate) && (
-                  <div className="absolute -top-1 -right-1 flex items-center gap-0.5">
-                    {/* Animated recurring indicator */}
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.2, 1],
-                        opacity: [0.7, 1, 0.7]
-                      }}
-                      transition={{ 
-                        duration: 2, 
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                      className="w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full border-2 border-white dark:border-gray-800 shadow-lg"
-                    />
-                    
-                    {/* Active/Inactive indicator */}
-                    <div className={cn(
-                      'w-2 h-2 rounded-full border border-white dark:border-gray-800 shadow-sm',
-                      isActive ? 'bg-green-400' : 'bg-yellow-400'
-                    )} />
-                  </div>
-                )}
-                
-                {/* ✅ ENHANCED: Recurring pattern overlay */}
-                {(isRecurring || isTemplate) && (
-                  <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                    <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400 opacity-60" />
-                    <div className="absolute bottom-0 right-0 w-0.5 h-full bg-gradient-to-t from-purple-400 via-indigo-400 to-blue-400 opacity-60" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ✅ ENHANCED: Transaction details with better typography */}
-                          <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between spacing-element">
-                
-                <div className="flex-1 min-w-0">
-                  {/* ✅ ENHANCED: Title with better contrast and truncation */}
-                  <h3 className={cn(
-                    'font-semibold text-gray-900 dark:text-white truncate mb-2',
-                    'text-adaptive-sm',
-                    'group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors'
-                  )}>
-                    {transaction.description}
-                  </h3>
+            {/* 🚀 PHASE 17: Left side - Make more compact on desktop */}
+            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-2/3">
+              {/* ✅ ENHANCED: Category icon with better visual indicators */}
+              <div className="relative flex-shrink-0">
+                <div className={cn(
+                  'relative radius-moderate shadow-interactive transition-polish',
+                  'w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center', // Responsive sizing
+                  // ✅ ENHANCED: Special styling for recurring transactions
+                  (isRecurring || isTemplate) 
+                    ? 'bg-gradient-to-br from-purple-100 via-indigo-100 to-blue-100 dark:from-purple-900/40 dark:via-indigo-900/40 dark:to-blue-900/40 ring-2 ring-purple-200 dark:ring-purple-700'
+                    : getColorForCategory(transaction.transaction_type || transaction.type)
+                )}>
+                  <CategoryIcon className={cn(
+                    'w-5 h-5 lg:w-6 lg:h-6', // Responsive icon sizing
+                    (isRecurring || isTemplate) && 'text-purple-600 dark:text-purple-300'
+                  )} />
                   
-                  {/* ✅ ENHANCED: Metadata with systematic spacing */}
-                  <div className="flex flex-wrap items-center spacing-element-tight mb-1">
-                    
-                    {/* Date badge - enhanced styling */}
-                    <div className={cn(
-                      'flex items-center spacing-element-tight spacing-form-tight radius-soft transition-polish',
-                      'surface-elevated text-gray-700 dark:text-gray-300',
-                      'group-hover:bg-gray-200 dark:group-hover:bg-gray-600',
-                      'text-adaptive-xs'
-                    )}>
-                      <Calendar className="w-3 h-3" />
-                      <span className="font-medium">
-                        {dateHelpers.format(transaction.date, 'MMM dd', language)}
-                      </span>
-                    </div>
-                    
-                    {/* ✅ PRESERVED: Category Badge */}
-                    <Badge variant="secondary" size="small" className="shrink-0">
-                      <CategoryIcon className={`w-3 h-3 mr-1 ${transactionConfig.iconColor}`} />
-                      {transaction.category_name || t('common.uncategorized')}
-                    </Badge>
-                    
-                    {/* ✅ ENHANCED: Smart recurring indicator based on template status */}
-                    {isRecurring && shouldShowRecurringOptions && (
-                      <Badge variant="primary" size="small" className="shrink-0">
-                        <Repeat className="w-3 h-3 mr-1" />
-                        {formatFrequency(transaction.interval_type || transaction.recurring_interval)}
-                      </Badge>
-                    )}
-                    
-                                         {/* ✅ TEMPORARILY DISABLED: Orphaned transaction indicator */}
-                     {/* {isOrphaned && (
-                       <Badge variant="warning" size="small" className="shrink-0">
-                         <AlertTriangle className="w-3 h-3 mr-1" />
-                         {t('transactions.orphaned')}
-                       </Badge>
-                     )} */}
-                    
-                    {/* ✅ ENHANCED: Template inactive indicator */}
-                    {isRecurring && !shouldShowRecurringOptions && !isOrphaned && (
-                      <Badge variant="secondary" size="small" className="shrink-0">
-                        <Pause className="w-3 h-3 mr-1" />
-                        {t('transactions.paused')}
-                      </Badge>
-                    )}
-                    
-                    {/* ✅ PRESERVED: Future transaction indicator */}
-                    {isFuture && (
-                      <Badge variant="info" size="small" className="shrink-0">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {t('transactions.scheduled')}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* ✅ ENHANCED: Amount display with better visual hierarchy */}
-                <div className="text-right flex-shrink-0">
-                  <div className={cn(
-                    'font-bold tracking-tight transition-colors relative',
-                    'text-adaptive-base',
-                    transactionConfig.textColor,
-                    'group-hover:scale-105 transition-transform duration-200'
-                  )}>
-                    <span className="text-sm opacity-75">{isExpense ? '-' : '+'}</span>
-                    {formatAmount(Math.abs(transaction.amount))}
-                    
-                    {/* ✅ ENHANCED: Special indicator for recurring income */}
-                    {!isExpense && (isRecurring || isTemplate) && (
+                  {/* ✅ ENHANCED: Better status indicators for recurring */}
+                  {(isRecurring || isTemplate) && (
+                    <div className="absolute -top-1 -right-1 flex items-center gap-0.5">
+                      {/* Animated recurring indicator */}
                       <motion.div
-                        animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full shadow-sm"
+                        animate={{ 
+                          scale: [1, 1.2, 1],
+                          opacity: [0.7, 1, 0.7]
+                        }}
+                        transition={{ 
+                          duration: 2, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className="w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full border-2 border-white dark:border-gray-800 shadow-lg"
                       />
-                    )}
-                  </div>
-                  
-                  {/* ✅ ENHANCED: Transaction type icon with animation */}
-                  <div className="flex justify-end mt-1">
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      className="relative"
-                    >
-                      <transactionConfig.icon className={cn('w-4 h-4', transactionConfig.iconColor)} />
                       
-                      {/* ✅ ENHANCED: Recurring income gets extra sparkle */}
-                      {!isExpense && (isRecurring || isTemplate) && (
-                        <motion.div
-                          animate={{ 
-                            scale: [0.8, 1.2, 0.8],
-                            rotate: [0, 180, 360] 
-                          }}
-                          transition={{ 
-                            duration: 3, 
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                          className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"
-                        />
-                      )}
-                    </motion.div>
-                  </div>
+                      {/* Active/Inactive indicator */}
+                      <div className={cn(
+                        'w-2 h-2 rounded-full border border-white dark:border-gray-800 shadow-sm',
+                        isActive ? 'bg-green-400' : 'bg-yellow-400'
+                      )} />
+                    </div>
+                  )}
+                  
+                  {/* ✅ ENHANCED: Recurring pattern overlay */}
+                  {(isRecurring || isTemplate) && (
+                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                      <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400 opacity-60" />
+                      <div className="absolute bottom-0 right-0 w-0.5 h-full bg-gradient-to-t from-purple-400 via-indigo-400 to-blue-400 opacity-60" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 🚀 PHASE 17: Compact transaction details with visible names */}
+              <div className="min-w-0 flex-1">
+                {/* 🚀 PHASE 17: More prominent title, less vertical space */}
+                <h3 className={cn(
+                  'font-semibold text-gray-900 dark:text-white truncate',
+                  'text-base lg:text-lg', // Larger, more visible text
+                  'group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors',
+                  'mb-1' // Minimal bottom margin
+                )}>
+                  {transaction.description}
+                </h3>
+                
+                {/* 🚀 PHASE 17: Compact metadata in single line */}
+                <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-500 dark:text-gray-400">
+                  
+                  <Calendar className="w-3 h-3" />
+                  <span className="font-medium">
+                    {dateHelpers.format(transaction.date, 'MMM dd', language)}
+                  </span>
+                  <span>•</span>
+                  <span className="truncate max-w-[120px]">{transaction.category_name || t('common.uncategorized')}</span>
+                  
+                  {/* 🚀 PHASE 17: Compact status indicators */}
+                  {isRecurring && shouldShowRecurringOptions && (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                        <Repeat className="w-3 h-3" />
+                        <span className="text-xs font-medium">
+                          {formatFrequency(transaction.interval_type || transaction.recurring_interval)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {isRecurring && !shouldShowRecurringOptions && !isOrphaned && (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Pause className="w-3 h-3" />
+                        <span className="text-xs">{t('transactions.paused')}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {isFuture && (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                        <Clock className="w-3 h-3" />
+                        <span className="text-xs">{t('transactions.scheduled')}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* ✅ ENHANCED: Expand indicator with better animation */}
-            <div className="flex-shrink-0 self-center">
-              <motion.div
-                animate={{ rotate: showQuickActions ? 180 : 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
-              </motion.div>
+            {/* 🚀 PHASE 17: Right side - Compact amount display */}
+            <div className="flex items-center gap-2">
+              {/* 🚀 PHASE 17: Larger, more prominent amount display */}
+              <div className="text-right">
+                <div className={cn(
+                  'font-bold tracking-tight transition-colors relative',
+                  'text-lg lg:text-xl whitespace-nowrap', // Larger, more prominent
+                  transactionConfig.textColor,
+                  'group-hover:scale-105 transition-transform duration-200'
+                )}>
+                  <span className="text-sm opacity-75">{isExpense ? '-' : '+'}</span>
+                  {formatAmount(Math.abs(transaction.amount))}
+                  
+                  {/* ✅ ENHANCED: Special indicator for recurring income */}
+                  {!isExpense && (isRecurring || isTemplate) && (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full shadow-sm"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* ✅ ENHANCED: Expand indicator with better animation */}
+              <div className="flex-shrink-0">
+                <motion.div
+                  animate={{ rotate: showQuickActions ? 180 : 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -751,33 +731,66 @@ const TransactionCard = ({
               animate="visible"
               exit="hidden"
               className={cn(
-                'border-t border-gray-100 dark:border-gray-700 p-4 relative z-20 pointer-events-auto',
+                'border-t border-gray-100 dark:border-gray-700 p-3 relative z-20 pointer-events-auto',
                 'bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50'
               )}
               onClick={(e) => e.stopPropagation()} // Prevent card click when clicking actions
             >
               
-              {/* 🎯 COMPACT ACTIONS - קטן ומסודר */}
+              {/* 🚀 PHASE 17: Enhanced action buttons with tooltips and better visual differentiation */}
               <div className="flex items-center gap-2 flex-wrap">
                 {actionButtons.map((button, index) => (
-                  <button
+                  <Tooltip
                     key={button.key}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      button.onClick();
-                    }}
-                    disabled={button.disabled || isUpdating || isDeleting}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200',
-                      'hover:shadow-sm hover:scale-105 active:scale-95',
-                      button.className,
-                      (button.disabled || isUpdating || isDeleting) && 'opacity-50 cursor-not-allowed'
-                    )}
-                    title={button.description}
+                    content={button.tooltip || button.description}
+                    delay={300}
+                    position="top"
                   >
-                    <button.icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{button.label}</span>
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        button.onClick();
+                      }}
+                      disabled={button.disabled || isUpdating || isDeleting}
+                      className={cn(
+                        'flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200',
+                        'hover:shadow-md hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                        // 🚀 PHASE 17: Enhanced visual differentiation based on action type
+                        button.key === 'editSingle' && 'ring-1 ring-blue-300 dark:ring-blue-600',
+                        button.key === 'editTemplate' && 'ring-1 ring-purple-300 dark:ring-purple-600',
+                        button.key === 'skip' && 'ring-1 ring-yellow-300 dark:ring-yellow-600',
+                        button.key === 'pause' && 'ring-1 ring-orange-300 dark:ring-orange-600',
+                        button.key === 'resume' && 'ring-1 ring-green-300 dark:ring-green-600',
+                        button.key === 'delete' && 'ring-1 ring-red-300 dark:ring-red-600',
+                        button.className,
+                        (button.disabled || isUpdating || isDeleting) && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      <button.icon className={cn(
+                        'w-4 h-4 transition-colors',
+                        button.iconClassName
+                      )} />
+                      <span className="whitespace-nowrap">{button.label}</span>
+                      
+                      {/* 🚀 PHASE 17: Action type indicator for recurring transactions */}
+                      {shouldShowRecurringOptions && (
+                        <div className="hidden lg:flex ml-1">
+                          {button.key === 'editSingle' && (
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                          )}
+                          {button.key === 'editTemplate' && (
+                            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                          )}
+                          {button.key === 'skip' && (
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+                          )}
+                          {button.key === 'delete' && (
+                            <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
 
@@ -849,7 +862,6 @@ const TransactionCard = ({
 };
 
 export default TransactionCard;
-
 /**
  * COMPARISON WITH ORIGINAL VERSION:
  * 

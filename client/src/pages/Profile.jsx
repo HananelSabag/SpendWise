@@ -97,14 +97,12 @@ const Profile = () => {
       id: 'profile',
       label: t('profile.tabs.security') || 'Profile & Security',
       icon: User,
-      gradient: 'from-blue-500 to-purple-600',
       description: t('profile.personalInformation') || 'Personal info & password'
     },
     {
       id: 'preferences',
       label: t('profile.preferences') || 'Preferences',
       icon: Settings,
-      gradient: 'from-green-500 to-teal-600',
       description: t('profile.appPreferences') || 'App settings'
     }
   ];
@@ -325,18 +323,14 @@ const Profile = () => {
         className="space-y-4"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* ✅ COMPACT: Optimized Profile Header */}
-        <motion.div
+        <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm p-6 space-y-6">
+          {/* ✅ COMPACT: Optimized Profile Header */}
+          <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl"
         >
-          {/* Animated Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20"></div>
-          </div>
-
-          <div className="relative p-4">
+          <Card variant="kpi" className="p-4 overflow-hidden shadow-lg">
             {/* Desktop Layout */}
             <div className="hidden lg:flex items-center gap-4">
               {/* Enhanced Profile Picture - Smaller */}
@@ -346,8 +340,6 @@ const Profile = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white via-yellow-200 to-white rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity p-1"></div>
-                
                 <Avatar
                   key={`avatar-${user?.id}-${avatarKey}-${user?.preferences?.profilePicture || 'default'}`}
                   size="lg"
@@ -468,8 +460,6 @@ const Profile = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white via-yellow-200 to-white rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity p-1"></div>
-                    
                     <Avatar
                       key={`avatar-${user?.id}-${avatarKey}-mobile`}
                       size="md"
@@ -569,7 +559,7 @@ const Profile = () => {
                 </div>
               </motion.div>
             </div>
-          </div>
+          </Card>
 
           <input
             type="file"
@@ -597,18 +587,18 @@ const Profile = () => {
                 className={cn(
                   'relative flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-300',
                   activeTab === tab.id
-                    ? 'text-white shadow-lg scale-105'
-                    : 'text-gray-600 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 hover:scale-105'
+                    ? 'text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700'
                 )}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * index }}
               >
                 {activeTab === tab.id && (
                   <motion.div
-                    className={`absolute inset-0 bg-gradient-to-r ${tab.gradient} rounded-xl`}
+                    className="absolute inset-0 bg-blue-500 rounded-xl"
                     layoutId="activeTab"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
@@ -680,6 +670,7 @@ const Profile = () => {
             </motion.div>
           </AnimatePresence>
         </motion.div>
+        </div>
       </motion.div>
 
       {/* Export Modal */}
@@ -697,7 +688,7 @@ const Profile = () => {
       >
         <div className="space-y-6">
           <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <LogOut className="w-8 h-8 text-white" />
             </div>
             <p className="text-gray-600 dark:text-gray-400">
@@ -751,18 +742,18 @@ const ProfileSecurityTab = ({
   isUpdating,
   t
 }) => (
-  <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-0 shadow-lg rounded-2xl">
+  <Card variant="clean" className="p-6">
     <div className="space-y-6">
       {/* Profile Information Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+            <div className="p-3 bg-blue-500 rounded-xl shadow-md">
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('profile.personalInformation') || 'Personal Information'}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('profile.subtitle') || 'Manage your account details'}</p>
+              <h2 className="text-xl font-bold text-primary-hierarchy">{t('profile.personalInformation') || 'Personal Information'}</h2>
+              <p className="text-sm text-secondary-hierarchy">{t('profile.subtitle') || 'Manage your account details'}</p>
             </div>
           </div>
           
@@ -835,7 +826,7 @@ const ProfileSecurityTab = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div className="p-3 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <User className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">{t('profile.username') || 'Username'}</span>
@@ -843,7 +834,7 @@ const ProfileSecurityTab = ({
               <p className="text-sm font-bold text-blue-900 dark:text-blue-100">{user?.username}</p>
             </div>
             
-            <div className="p-3 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
+                          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Mail className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                 <span className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">{t('profile.email') || 'Email'}</span>
@@ -858,7 +849,7 @@ const ProfileSecurityTab = ({
       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg shadow-md">
+            <div className="p-2 bg-blue-500 rounded-lg shadow-md">
               <KeyRound className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -990,7 +981,7 @@ const ProfileSecurityTab = ({
                 loading={isUpdating}
                 disabled={isUpdating || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                 icon={Check}
-                className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-xs px-2 py-1"
+                className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1"
               >
                 Update
               </Button>
@@ -998,7 +989,7 @@ const ProfileSecurityTab = ({
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <CheckCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
                 <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Password Security</span>
@@ -1032,14 +1023,14 @@ const PreferencesTab = ({
   t
 }) => {
   return (
-    <Card className="p-4 bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-0 shadow-lg rounded-xl">
+    <Card variant="clean" className="p-4">
       <div className="flex items-center gap-2 mb-4">
-        <div className="p-2 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-md">
+        <div className="p-2 bg-blue-500 rounded-lg shadow-md">
           <Settings className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.appPreferences') || 'App Preferences'}</h2>
-          <p className="text-xs text-gray-600 dark:text-gray-400">{t('profile.subtitle') || 'Customize your experience (saved to database)'}</p>
+          <h2 className="text-lg font-bold text-primary-hierarchy">{t('profile.appPreferences') || 'App Preferences'}</h2>
+          <p className="text-xs text-secondary-hierarchy">{t('profile.subtitle') || 'Customize your experience (saved to database)'}</p>
         </div>
       </div>
 
@@ -1048,7 +1039,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Languages className="w-4 h-4 text-blue-500" />
-            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('profile.language') || 'Language'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.language') || 'Language'}</h3>
           </div>
           
           <div className="grid grid-cols-2 gap-2">
@@ -1060,13 +1051,13 @@ const PreferencesTab = ({
                 key={langOption.value}
                 onClick={() => handleLanguageChange(langOption.value)}
                 className={cn(
-                  'relative p-3 rounded-lg text-left transition-all duration-300 hover:scale-105',
+                  'relative p-3 rounded-lg text-left transition-all duration-300',
                   language === langOption.value
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md transform scale-105'
+                    ? 'bg-blue-500 text-white shadow-md'
                     : 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
                 )}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{langOption.flag}</span>
@@ -1098,7 +1089,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Coins className="w-4 h-4 text-green-500" />
-            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('profile.currency') || 'Currency'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.currency') || 'Currency'}</h3>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
@@ -1111,13 +1102,13 @@ const PreferencesTab = ({
                 key={currencyOption.value}
                 onClick={() => handleCurrencyChange(currencyOption.value)}
                 className={cn(
-                  'relative p-3 rounded-lg text-left transition-all duration-300 hover:scale-105',
+                  'relative p-3 rounded-lg text-left transition-all duration-300',
                   currency === currencyOption.value
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md transform scale-105'
+                    ? 'bg-blue-500 text-white shadow-md'
                     : 'bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
                 )}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{currencyOption.flag}</span>
@@ -1149,7 +1140,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Palette className="w-4 h-4 text-purple-500" />
-            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('profile.theme') || 'Theme'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.theme') || 'Theme'}</h3>
             {isSessionOverride && (
               <motion.div
                 className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/20 rounded-full"
@@ -1171,16 +1162,16 @@ const PreferencesTab = ({
                 key={themeOption.value}
                 onClick={() => handleThemeChange(themeOption.value)}
                 className={cn(
-                  'relative p-3 rounded-lg text-left transition-all duration-300 hover:scale-105 overflow-hidden',
+                  'relative p-3 rounded-lg text-left transition-all duration-300 overflow-hidden',
                   theme === themeOption.value
-                    ? 'text-white shadow-md transform scale-105'
-                    : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
+                    ? 'text-white shadow-md'
+                    : 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
                 )}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
               >
                 {theme === themeOption.value && (
-                  <div className={`absolute inset-0 bg-gradient-to-r ${themeOption.gradient}`}></div>
+                  <div className="absolute inset-0 bg-blue-500"></div>
                 )}
                 <div className="relative flex items-center gap-2">
                   <themeOption.icon className="w-4 h-4" />

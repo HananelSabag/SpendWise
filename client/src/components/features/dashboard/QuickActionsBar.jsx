@@ -429,22 +429,22 @@ const QuickActionsBar = () => {
               </AnimatePresence>
             </motion.button>
             
-            {/* Desktop: Dual buttons */}
+            {/* Desktop: Dual buttons - Fixed sizing */}
             <motion.button
               onClick={() => handleSubmit('expense')}
               disabled={isCreating || !amount}
-              className="hidden sm:block adaptive-card rounded-xl bg-gradient-to-r from-red-400 via-red-500 to-red-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden sm:block py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-400 via-red-500 to-red-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="flex items-center justify-center gap-2">
-                <TrendingDown className="icon-adaptive-sm" />
-                <span className="text-adaptive-sm">{t('actions.quickExpense')}</span>
+                <TrendingDown className="w-4 h-4" />
+                <span className="text-sm">{t('actions.quickExpense')}</span>
                 {isCreating && (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="icon-adaptive-sm border-2 border-white/30 border-t-white rounded-full"
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                   />
                 )}
               </div>
@@ -453,18 +453,18 @@ const QuickActionsBar = () => {
             <motion.button
               onClick={() => handleSubmit('income')}
               disabled={isCreating || !amount}
-              className="hidden sm:block adaptive-card rounded-xl bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden sm:block py-2.5 px-4 rounded-xl bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="flex items-center justify-center gap-2">
-                <TrendingUp className="icon-adaptive-sm" />
-                <span className="text-adaptive-sm">{t('actions.quickIncome')}</span>
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm">{t('actions.quickIncome')}</span>
                 {isCreating && (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="icon-adaptive-sm border-2 border-white/30 border-t-white rounded-full"
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                   />
                 )}
               </div>
