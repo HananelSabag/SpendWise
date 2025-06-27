@@ -18,7 +18,7 @@ const config = {
   DEBUG_MODE: import.meta.env.VITE_DEBUG_MODE === 'true',
   REQUEST_TIMEOUT: parseInt(import.meta.env.VITE_REQUEST_TIMEOUT) || 15000,
   RETRY_ATTEMPTS: parseInt(import.meta.env.VITE_RETRY_ATTEMPTS) || 3,
-  MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 5242880,
+  MAX_FILE_SIZE: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 10485760,
   ENVIRONMENT: import.meta.env.VITE_ENVIRONMENT || 'development',
   // ✅ NEW: Server health monitoring
   COLD_START_THRESHOLD: 10000, // 10 seconds
@@ -290,44 +290,17 @@ export const authAPI = {
   updateProfile: (data) => api.put('/users/profile', data),
   updatePreferences: (preferences) => api.put('/users/preferences', preferences),
   
-  // Profile picture with progress tracking + DEBUG
-  uploadProfilePicture: async (file, onProgress) => {
-    console.log('🔄 [CLIENT] Starting profile picture upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      apiUrl: import.meta.env.VITE_API_URL
-    });
-
+  // Profile picture with progress tracking
+  uploadProfilePicture: (file, onProgress) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
-    
-    try {
-      const response = await api.post('/users/profile/picture', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: onProgress ? (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`📊 [CLIENT] Upload progress: ${percentCompleted}%`);
-          onProgress(percentCompleted);
-        } : undefined
-      });
-      
-      console.log('✅ [CLIENT] Upload successful:', response.data);
-      return response;
-    } catch (error) {
-      console.error('❌ [CLIENT] Upload failed:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
-      });
-      throw error;
-    }
+    return api.post('/users/profile/picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress ? (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percentCompleted);
+      } : undefined
+    });
   },
   
   // ✅ ADD: Preference-specific update that bypasses profile validation

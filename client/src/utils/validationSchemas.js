@@ -59,7 +59,7 @@ export const userSchemas = {
     profilePicture: {
       required: false,
       fileTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
-      maxSize: 5 * 1024 * 1024, // 5MB
+      maxSize: 10 * 1024 * 1024, // 10MB
       message: 'Invalid image file'
     },
     
@@ -332,9 +332,9 @@ export const imageValidation = {
       return { valid: false, error: 'Invalid file type. Only JPEG, PNG and WebP are allowed' };
     }
     
-    // Check file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      return { valid: false, error: 'File size must be less than 5MB' };
+      // Check file size (10MB max)
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: 'File size must be less than 10MB' };
     }
     
     return { valid: true };
