@@ -136,12 +136,12 @@ const Dashboard = () => {
   const debouncedDebugLog = useMemo(
     () => debounce((data, loading) => {
       if (debugQueries) {
-        console.log('🎯 [DASHBOARD] Compact Layout:', {
+        console.log('🎯 [DASHBOARD] New Optimized Layout:', {
           hasData: !!data,
           isLoading: loading,
           isFetching,
           timestamp: new Date().toISOString(),
-          layout: 'Compact 3-column desktop + optimized mobile'
+          layout: 'Unified red-based design - Full width balance, 3-column stats, full width transactions'
         });
       }
     }, 1000),
@@ -321,176 +321,132 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-polish selection-polish" data-component="Dashboard">
-      <div className="max-w-7xl mx-auto spacing-container-tight">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="spacing-section"
-          dir={isRTL ? 'rtl' : 'ltr'}
-        >
-          {/* Welcome Banner */}
-          <AnimatePresence mode="wait">
-            {showWelcomeBanner ? (
-              <CompactWelcomeBanner 
-                key="full-welcome"
-                user={user}
-                greeting={greeting}
-                selectedDate={selectedDate}
-                language={language}
-                isRTL={isRTL}
-                variants={welcomeVariants}
-                t={t}
-              />
-            ) : (
-              <MiniWelcome 
-                key="compact-welcome"
-                user={user}
-                greeting={greeting}
-                language={language}
-                variants={compactWelcomeVariants}
-                t={t}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* 🚀 UNIFIED RESPONSIVE LAYOUT - Single render, all screen sizes */}
-          <div className="adaptive-section">
-            {/* 🚀 PHASE 17: OPTIMIZED DASHBOARD LAYOUT - No more cramped containers */}
-            <motion.div variants={itemVariants}>
-              <ProgressiveLoader 
-                isLoading={isDashboardLoading && !dashboardData}
-                priority="critical"
-                className="loading-progressive-delay-100"
-              >
-                <div className="relative">
-                  {!showWelcomeBanner && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 1.02 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
-                      className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
-                    />
-                  )}
-                  <MemoizedBalancePanel />
-                </div>
-              </ProgressiveLoader>
-            </motion.div>
-
-            {/* 🚀 PHASE 17: NEW 3-COLUMN OPTIMIZED LAYOUT */}
-            <motion.div variants={itemVariants}>
-              <ProgressiveLoader 
-                isLoading={isDashboardLoading && !dashboardData}
-                priority="high"
-                className="loading-progressive-delay-200"
-              >
-                <div className="dashboard-optimized-grid">
-                  {/* Quick Actions - 1/3 width on desktop, full width on mobile */}
-                  <div className="dashboard-quick-actions">
-                    <MemoizedQuickActionsBar />
-                  </div>
-                  
-                  {/* Recent Transactions - 2/3 width on desktop, full width on mobile */}
-                  <div className="dashboard-recent-transactions">
-                    <MemoizedRecentTransactions />
-                  </div>
-                </div>
-              </ProgressiveLoader>
-            </motion.div>
-
-            {/* 🚀 PHASE 17: Stats Chart - Full width, no constraints */}
-            <motion.div variants={itemVariants}>
-              <ProgressiveLoader 
-                isLoading={isDashboardLoading && !dashboardData}
-                priority="medium"
-                className="loading-progressive-delay-300"
-              >
-                <div className="dashboard-stats-section">
-                  <MemoizedStatsChart />
-                </div>
-              </ProgressiveLoader>
-            </motion.div>
-
-            {/* 🚀 PHASE 16: Tips - Low Priority Progressive Loading */}
-            <motion.div variants={itemVariants}>
-              <ProgressiveLoader 
-                isLoading={false} // Tips load immediately since they're static
-                priority="low"
-                className="loading-progressive-delay-400"
-              >
-                <CompactTipsSection t={t} />
-              </ProgressiveLoader>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Floating Action Button */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, duration: 0.3 }}
-          className="fixed left-4 bottom-4 z-50"
-        >
-          <motion.button
-            onClick={() => setShowAddTransactions(true)}
-            className="w-12 h-12 gradient-hero-primary text-white radius-full shadow-interactive fab-premium flex items-center justify-center group transition-polish"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            title={t('actions.quickAdd')}
-          >
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Welcome Banner */}
+        <AnimatePresence>
+          {!loading && !isDashboardLoading && showWelcomeBanner && (
             <motion.div
-              className="relative z-10"
-              animate={{ rotate: [0, 0, 90, 90, 0] }}
-              transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+              variants={welcomeVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="mb-6 overflow-hidden"
             >
-              <Plus className="w-6 h-6" />
+              <Card 
+                variant="gradient" 
+                padding="large"
+                className="text-center shadow-lg"
+              >
+                <motion.div variants={compactWelcomeVariants}>
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <Sparkles className="w-6 h-6" />
+                    <h1 className="text-2xl font-bold">
+                      {t('dashboard.welcome.title', { name: user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] })}
+                    </h1>
+                  </div>
+                  <p className="text-lg opacity-90">
+                    {t('dashboard.welcome.subtitle')}
+                  </p>
+                </motion.div>
+              </Card>
             </motion.div>
-            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
-          </motion.button>
-        </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Modals */}
+        {/* Loading State */}
+        {loading || isDashboardLoading ? (
+          <div className="space-y-6">
+            <div className="w-full h-48 bg-white dark:bg-gray-800 rounded-xl animate-pulse"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 h-64 bg-white dark:bg-gray-800 rounded-xl animate-pulse"></div>
+              <div className="h-64 bg-white dark:bg-gray-800 rounded-xl animate-pulse"></div>
+            </div>
+            <div className="w-full h-64 bg-white dark:bg-gray-800 rounded-xl animate-pulse"></div>
+          </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+          >
+            {/* Row 1: Full-width Balance Panel - Most Important */}
+            <motion.div variants={itemVariants} className="w-full">
+              <MemoizedBalancePanel />
+            </motion.div>
+            
+            {/* Row 2: 3-column layout for desktop, stack for mobile */}
+            <motion.div 
+              variants={itemVariants} 
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            >
+              {/* Stats Chart - 2 columns on desktop, show second on mobile */}
+              <div className="lg:col-span-2 order-2 lg:order-1">
+                <MemoizedStatsChart />
+              </div>
+              
+              {/* Quick Actions - 1 column on desktop, show first on mobile */}
+              <div className="lg:col-span-1 order-1 lg:order-2">
+                <MemoizedQuickActionsBar />
+              </div>
+            </motion.div>
+            
+            {/* Row 3: Full-width Recent Transactions - Better space utilization */}
+            <motion.div variants={itemVariants} className="w-full">
+              <MemoizedRecentTransactions />
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Onboarding Modals */}
+        <AnimatePresence>
+          {showOnboarding && (
+            <OnboardingModal
+              isOpen={showOnboarding}
+              onClose={() => setShowOnboarding(false)}
+              onComplete={() => {
+                setShowOnboarding(false);
+                refreshDashboard();
+              }}
+            />
+          )}
+          
+          {showOnboardingPrompt && (
+            <OnboardingPromptDialog
+              isOpen={showOnboardingPrompt}
+              onClose={() => setShowOnboardingPrompt(false)}
+              onStart={() => {
+                setShowOnboardingPrompt(false);
+                setShowOnboarding(true);
+              }}
+              onSkip={() => {
+                setShowOnboardingPrompt(false);
+                localStorage.setItem('spendwise-onboarding-skipped', 'true');
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Add Transaction Modal */}
         <AnimatePresence>
           {showAddTransactions && (
             <Modal
               isOpen={showAddTransactions}
               onClose={() => setShowAddTransactions(false)}
+              title={t('transactions.add.title')}
               size="large"
-              className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto"
-              hideHeader={true}
             >
               <AddTransactions 
-                onClose={() => setShowAddTransactions(false)}
-                context="dashboard"
+                onSuccess={() => {
+                  setShowAddTransactions(false);
+                  refreshDashboard();
+                }}
+                onCancel={() => setShowAddTransactions(false)}
               />
             </Modal>
           )}
         </AnimatePresence>
-
-        {/* Onboarding Modal */}
-        <OnboardingModal
-          isOpen={showOnboarding}
-          onClose={() => setShowOnboarding(false)}
-          onComplete={() => {
-            setShowOnboarding(false);
-            refreshDashboard();
-          }}
-        />
-
-        {/* ✅ NEW: Onboarding Prompt Dialog */}
-        <OnboardingPromptDialog
-          isOpen={showOnboardingPrompt}
-          onClose={() => setShowOnboardingPrompt(false)}
-          onContinueOnboarding={() => {
-            setShowOnboardingPrompt(false);
-            setShowOnboarding(true);
-          }}
-          onSkipOnboarding={() => {
-            setShowOnboardingPrompt(false);
-            refreshDashboard();
-          }}
-        />
       </div>
     </div>
   );

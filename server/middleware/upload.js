@@ -1,56 +1,14 @@
 /**
- * File Upload Middleware
- * Handles profile pictures and receipt uploads
+ * File Upload Middleware - UPDATED FOR SUPABASE STORAGE
+ * Handles profile pictures and receipt uploads using Supabase Storage
  * @module middleware/upload
  */
 
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
-const db = require('../config/db');
-const crypto = require('crypto'); // Added for secure filename generation
+const supabaseStorage = require('../services/supabaseStorage');
 
-// Create upload directories if they don't exist
-const createUploadDirs = async () => {
-  const dirs = ['uploads/profiles', 'uploads/receipts'];
-  for (const dir of dirs) {
-    try {
-      await fs.mkdir(dir, { recursive: true });
-    } catch (error) {
-      console.error(`Error creating directory ${dir}:`, error);
-    }
-  }
-};
-
-createUploadDirs();
-
-// Configure storage for different file types
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    let folder = 'uploads/';
-    
-    if (file.fieldname === 'profilePicture') {
-      folder += 'profiles';
-    } else if (file.fieldname === 'receipt') {
-      folder += 'receipts';
-    }
-    
-    cb(null, folder);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = crypto.randomBytes(16).toString('hex'); // More secure than timestamp + random
-    const ext = path.extname(file.originalname).toLowerCase(); // Normalize extension
-    
-    // Sanitize filename to prevent path traversal
-    const safeFieldname = file.fieldname.replace(/[^a-zA-Z0-9]/g, '');
-    
-    if (file.fieldname === 'profilePicture') {
-      cb(null, `profile-${req.user.id}-${uniqueSuffix}${ext}`);
-    } else {
-      cb(null, `${safeFieldname}-${uniqueSuffix}${ext}`);
-    }
-  }
-});
+// Use memory storage instead of disk storage (for Supabase upload)
+const storage = multer.memoryStorage();
 
 // File filter for different upload types
 const fileFilter = (req, file, cb) => {
@@ -60,8 +18,8 @@ const fileFilter = (req, file, cb) => {
     
     if (allowedTypes.includes(file.mimetype)) {
       // Additional check for file extension
-      const ext = path.extname(file.originalname).toLowerCase();
-      if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+      const ext = file.originalname.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
         cb(null, true);
       } else {
         cb(new Error('Invalid file extension'), false);
@@ -74,8 +32,8 @@ const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
     
     if (allowedTypes.includes(file.mimetype)) {
-      const ext = path.extname(file.originalname).toLowerCase();
-      if (['.jpg', '.jpeg', '.png', '.pdf'].includes(ext)) {
+      const ext = file.originalname.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'pdf'].includes(ext)) {
         cb(null, true);
       } else {
         cb(new Error('Invalid file extension'), false);
@@ -93,16 +51,17 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.UPLOAD_SIZE_LIMIT) || 5 * 1024 * 1024, // Use env variable
+    fileSize: parseInt(process.env.UPLOAD_SIZE_LIMIT) || 5 * 1024 * 1024, // 5MB
     files: 1 // Only 1 file at a time
   }
 });
 
-// Middleware to delete old profile picture
+// Middleware to delete old profile picture from Supabase
 const deleteOldProfilePicture = async (req, res, next) => {
   if (req.file && req.file.fieldname === 'profilePicture') {
     try {
       // Get user's current profile picture from DB
+      const db = require('../config/db');
       const user = await db.query(
         'SELECT preferences FROM users WHERE id = $1',
         [req.user.id]
@@ -111,51 +70,54 @@ const deleteOldProfilePicture = async (req, res, next) => {
       const preferences = user.rows[0]?.preferences || {};
       
       if (preferences.profilePicture) {
-        let oldPath;
+        // Extract filename from Supabase URL
+        const fileName = supabaseStorage.extractFileNameFromUrl(preferences.profilePicture);
         
-        // Handle both full URLs and relative paths
-        if (preferences.profilePicture.includes('/uploads/')) {
-          // Extract just the filename from URL or path
-          const urlParts = preferences.profilePicture.split('/uploads/');
-          if (urlParts.length > 1) {
-            const relativePath = urlParts[1];
-            oldPath = path.join(__dirname, '..', 'uploads', relativePath);
-          }
-        } else if (!preferences.profilePicture.startsWith('http')) {
-          // Handle relative paths without /uploads/ prefix
-          oldPath = path.join(__dirname, '..', 'uploads', 'profiles', preferences.profilePicture);
-        }
-        
-        if (oldPath) {
-          // Verify the path is within uploads directory (security check)
-          const uploadsDir = path.join(__dirname, '..', 'uploads');
-          const normalizedOldPath = path.normalize(oldPath);
-          
-          if (normalizedOldPath.startsWith(uploadsDir)) {
-            try {
-              await fs.access(normalizedOldPath);
-              await fs.unlink(normalizedOldPath);
-              console.log(`✅ [UPLOAD] Deleted old profile picture`);
-            } catch (deleteError) {
-              console.log(`ℹ️ [UPLOAD] Previous profile picture not found or already deleted`);
-            }
-          } else {
-            console.error('❌ [UPLOAD] Invalid file path detected');
-          }
+        if (fileName) {
+          await supabaseStorage.deleteProfilePicture(fileName);
+          console.log(`✅ [SUPABASE STORAGE] Deleted old profile picture: ${fileName}`);
         }
       }
     } catch (error) {
-      console.error('❌ [UPLOAD] Error in deleteOldProfilePicture middleware:', error.message);
+      console.error('❌ [SUPABASE STORAGE] Error in deleteOldProfilePicture middleware:', error.message);
     }
   }
   next();
+};
+
+// Upload to Supabase Storage middleware
+const uploadToSupabase = async (req, res, next) => {
+  if (req.file && req.file.fieldname === 'profilePicture') {
+    try {
+      const uploadResult = await supabaseStorage.uploadProfilePicture(req.file, req.user.id);
+      
+      // Add Supabase result to request for route handler
+      req.supabaseUpload = uploadResult;
+      
+      console.log('✅ [SUPABASE STORAGE] File uploaded successfully:', uploadResult);
+      next();
+    } catch (error) {
+      console.error('❌ [SUPABASE STORAGE] Upload failed:', error);
+      return res.status(500).json({
+        error: {
+          code: 'UPLOAD_FAILED',
+          message: 'Failed to upload file to storage',
+          details: error.message,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  } else {
+    next();
+  }
 };
 
 // Export configured middleware
 module.exports = {
   uploadProfilePicture: [
     upload.single('profilePicture'),
-    deleteOldProfilePicture
+    deleteOldProfilePicture,
+    uploadToSupabase
   ],
   uploadReceipt: upload.single('receipt'),
   upload // Raw multer instance if needed

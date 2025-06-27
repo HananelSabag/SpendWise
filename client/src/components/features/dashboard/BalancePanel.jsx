@@ -253,42 +253,38 @@ const BalancePanel = () => {
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="relative"
-      data-component="BalancePanel"
+      className="w-full"
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* 🚀 COMPLETELY UNIFIED BALANCE PANEL - NO MOBILE/DESKTOP SPLIT */}
-      <Card variant="clean" padding="adaptive" className="relative overflow-hidden card-polish-interactive">
-        {/* Floating Orb Decorations */}
-        <div className="floating-orb-primary absolute -top-10 -right-10 w-32 h-32" />
-        <div className="floating-orb-secondary absolute -bottom-8 -left-8 w-24 h-24" />
-        
-        <div className="spacing-section-relaxed relative z-10">
-          {/* Header Section - Responsive */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center spacing-element">
+      {/* ✅ UNIFIED: Clean Card with kpi variant for hero section */}
+      <Card variant="kpi" className="relative">
+        <div className="relative z-10 p-6">
+          {/* Header Section */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
             {/* Title with Icon */}
-            <div className={`flex items-center spacing-element ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className="spacing-form radius-moderate bg-primary-500 shadow-soft">
-                <Activity className="icon-adaptive-base text-white" />
+            <div className={`flex items-center gap-3 mb-4 lg:mb-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="p-3 bg-white/20 rounded-xl">
+                <Activity className="w-6 h-6 text-white" />
               </div>
               <div className={isRTL ? 'text-right' : 'text-left'}>
-                <h2 className="typo-title-large text-primary-hierarchy">
+                <h2 className="text-2xl font-bold text-white">
                   {t('dashboard.balance.title')}
                 </h2>
-                <p className="typo-caption text-tertiary-hierarchy">
+                <p className="text-white/80">
                   {t('dashboard.balance.subtitle')}
                 </p>
               </div>
             </div>
             
-            {/* Date Navigation - Responsive */}
-            <div className={`flex items-center spacing-element-tight surface-elevated p-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {/* Date Navigation */}
+            <div className={`flex items-center gap-2 bg-white/20 rounded-lg p-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={goToPreviousDay}
-                className="button-polish spacing-form-tight hover:bg-gray-200 dark:hover:bg-gray-700 radius-soft"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <ChevronLeft className="icon-adaptive-sm text-gray-700 dark:text-gray-300" />
+                <ChevronLeft className="w-4 h-4 text-white" />
               </motion.button>
               
               <div className="relative">
@@ -296,9 +292,9 @@ const BalancePanel = () => {
                   ref={calendarRef}
                   whileHover={{ scale: 1.02 }}
                   onClick={() => setShowCalendar(!showCalendar)}
-                  className="min-w-[120px] sm:min-w-[140px] spacing-form radius-soft font-medium transition-polish bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-subtle"
+                  className="min-w-[120px] sm:min-w-[140px] px-3 py-2 rounded-lg font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
                 >
-                  <Calendar className={`icon-adaptive-sm inline ${isRTL ? 'ml-1.5' : 'mr-1.5'}`} />
+                  <Calendar className={`w-4 h-4 inline ${isRTL ? 'ml-1.5' : 'mr-1.5'}`} />
                   {(() => {
                     const date = selectedDate || new Date();
                     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -324,13 +320,13 @@ const BalancePanel = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={goToNextDay}
                 disabled={!canGoNext}
-                className={`button-polish spacing-form-tight radius-soft transition-polish ${
+                className={`p-2 rounded-lg transition-colors ${
                   canGoNext
-                    ? 'hover:bg-gray-200 dark:hover:bg-gray-700' 
+                    ? 'hover:bg-white/20' 
                     : 'opacity-50 cursor-not-allowed'
                 }`}
               >
-                <ChevronRight className="icon-adaptive-sm text-gray-700 dark:text-gray-300" />
+                <ChevronRight className="w-4 h-4 text-white" />
               </motion.button>
               
               <AnimatePresence>
@@ -342,48 +338,41 @@ const BalancePanel = () => {
                     whileHover={{ scale: 1.1, rotate: 180 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={resetToToday}
-                    className="p-2 bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-lg transition-colors"
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                     title={t('dashboard.balance.backToToday')}
                   >
-                    <RotateCcw className="icon-adaptive-sm text-blue-700 dark:text-blue-300" />
+                    <RotateCcw className="w-4 h-4 text-white" />
                   </motion.button>
                 )}
               </AnimatePresence>
             </div>
           </div>
           
-          {/* Period Tabs - Responsive */}
-          <div className="flex spacing-element-tight surface-elevated p-1 overflow-x-auto">
+          {/* Period Tabs */}
+          <div className="flex bg-white/20 rounded-lg p-1 overflow-x-auto mb-6">
             {periods.map((p) => (
               <motion.button
                 key={p.id}
-                whileHover={{ scale: 1.02, y: -1 }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handlePeriodChange(p.id)}
-                className={`relative flex-shrink-0 min-w-[60px] sm:flex-1 spacing-form-tight radius-soft font-medium transition-polish text-xs sm:text-sm text-center ${
+                className={`relative flex-shrink-0 min-w-[60px] sm:flex-1 px-3 py-2 rounded-lg font-medium transition-colors text-sm text-center ${
                   period === p.id 
-                    ? 'text-white shadow-moderate' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
+                    ? 'bg-white text-primary-600 shadow-sm' 
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
               >
-                {period === p.id && (
-                  <motion.div 
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-primary-500 radius-soft shadow-primary"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
                 <span className="relative z-10">{p.label}</span>
               </motion.button>
             ))}
           </div>
           
-          {/* Balance Cards Grid - Responsive */}
-          <div className="smart-grid-balance">
+          {/* ✅ ENHANCED: Balance grid with shadows and subtle gradients */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Income Card */}
-            <Card variant="kpiSuccess" padding="compact" className="text-center">
-              <ArrowUpRight className="icon-adaptive-base mx-auto mb-2" />
-              <div className="typo-field-label text-tertiary-hierarchy opacity-90 mb-1">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 p-4 rounded-lg text-center shadow-md hover:shadow-lg transition-all duration-300 border border-green-200/50 dark:border-green-700/50">
+              <ArrowUpRight className="w-6 h-6 text-green-600 mx-auto mb-2" />
+              <div className="text-sm text-green-600 font-medium mb-1">
                 {t('dashboard.balance.income')}
               </div>
               <motion.div
@@ -391,16 +380,16 @@ const BalancePanel = () => {
                 initial="initial"
                 animate="animate"
                 key={`${period}-income-${isAnimating}`}
-                className="typo-kpi"
+                className="text-2xl font-bold text-green-600"
               >
                 {formatValue(currentBalance.income)}
               </motion.div>
-            </Card>
+            </div>
             
             {/* Expenses Card */}
-            <Card variant="kpiError" padding="compact" className="text-center">
-              <ArrowDownRight className="icon-adaptive-base mx-auto mb-2" />
-              <div className="typo-field-label text-tertiary-hierarchy opacity-90 mb-1">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/30 p-4 rounded-lg text-center shadow-md hover:shadow-lg transition-all duration-300 border border-red-200/50 dark:border-red-700/50">
+              <ArrowDownRight className="w-6 h-6 text-red-600 mx-auto mb-2" />
+              <div className="text-sm text-red-600 font-medium mb-1">
                 {t('dashboard.balance.expenses')}
               </div>
               <motion.div
@@ -408,20 +397,20 @@ const BalancePanel = () => {
                 initial="initial"
                 animate="animate"
                 key={`${period}-expenses-${isAnimating}`}
-                className="typo-kpi"
+                className="text-2xl font-bold text-red-600"
               >
                 {formatValue(currentBalance.expenses)}
               </motion.div>
-            </Card>
+            </div>
             
             {/* Balance Card */}
-            <Card variant="kpi" padding="compact" className="text-center">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-4 rounded-lg text-center shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200/50 dark:border-gray-600/50">
               {currentBalance.balance >= 0 ? (
-                <TrendingUp className="icon-adaptive-base mx-auto mb-2" />
+                <TrendingUp className="w-6 h-6 text-gray-700 dark:text-gray-300 mx-auto mb-2" />
               ) : (
-                <TrendingDown className="icon-adaptive-base mx-auto mb-2" />
+                <TrendingDown className="w-6 h-6 text-gray-700 dark:text-gray-300 mx-auto mb-2" />
               )}
-              <div className="typo-field-label text-tertiary-hierarchy opacity-90 mb-1">
+              <div className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-1">
                 {t('dashboard.balance.total')}
               </div>
               <motion.div
@@ -429,11 +418,11 @@ const BalancePanel = () => {
                 initial="initial"
                 animate="animate"
                 key={`${period}-balance-${isAnimating}`}
-                className="typo-kpi"
+                className="text-2xl font-bold text-gray-900 dark:text-white"
               >
                 {formatValue(currentBalance.balance)}
               </motion.div>
-            </Card>
+            </div>
           </div>
         </div>
              </Card>

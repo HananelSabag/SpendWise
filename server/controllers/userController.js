@@ -179,22 +179,8 @@ const getProfile = asyncHandler(async (req, res) => {
     throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
   }
 
-  // Ensure profile picture URL is complete
-  if (user.preferences && user.preferences.profilePicture) {
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
-      : 'http://localhost:5000';
-    
-    // Always construct full URL from relative path
-    if (user.preferences.profilePicture.startsWith('/uploads/')) {
-      user.preferences.profilePicture = `${baseUrl}${user.preferences.profilePicture}`;
-    } else if (user.preferences.profilePicture.startsWith('uploads/')) {
-      user.preferences.profilePicture = `${baseUrl}/${user.preferences.profilePicture}`;
-    } else if (!user.preferences.profilePicture.startsWith('http')) {
-      // Handle any other relative path format
-      user.preferences.profilePicture = `${baseUrl}/${user.preferences.profilePicture}`;
-    }
-  }
+  // Profile picture URL is now stored as complete Supabase Storage URL
+  // No URL manipulation needed
 
   res.json({
     success: true,

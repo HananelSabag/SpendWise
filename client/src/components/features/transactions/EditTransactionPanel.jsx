@@ -441,18 +441,18 @@ const EditTransactionPanel = ({
 
       await updateTransaction(transactionType, transaction.id, submitData);
       
-      // ✅ ENHANCED: Beautiful success animation with auto-close
+      // ✅ ENHANCED: Beautiful success animation with quick auto-close
       setSuccess(true);
       
       // Success callback
       onSuccess?.(submitData);
       
-      // Auto-close after success animation
+      // Quick auto-close after success animation
       setTimeout(() => {
         if (onClose) {
           onClose();
         }
-      }, 2000);
+      }, 800);
       
     } catch (err) {
       console.error('Transaction update failed:', err);
@@ -1110,7 +1110,7 @@ const EditTransactionPanel = ({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
                       >
-                        החלון יסגר אוטומטית...
+                        {t('actions.autoClosing', 'Closing automatically...')}
                       </motion.p>
                     </div>
                   </div>

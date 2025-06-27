@@ -248,45 +248,34 @@ router.post('/profile/picture',
   uploadProfilePicture, 
   async (req, res, next) => {
     try {
-      if (!req.file) {
+      if (!req.file || !req.supabaseUpload) {
         return res.status(400).json({
           error: {
             code: 'MISSING_FILE',
-            message: 'No file uploaded',
+            message: 'No file uploaded or upload failed',
             timestamp: new Date().toISOString()
           }
         });
       }
 
-      const relativePath = `/uploads/profiles/${req.file.filename}`;
-      // Store only relative path in database for better flexibility
+      // Store Supabase public URL in database
       const User = require('../models/User');
       await User.updatePreferences(req.user.id, {
-        profilePicture: relativePath  // Store relative path only
+        profilePicture: req.supabaseUpload.publicUrl
       });
-
-      // But return full URL in response
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.API_URL || `${req.protocol}://${req.get('host')}`
-        : 'http://localhost:5000';
-      const fullUrl = `${baseUrl}${relativePath}`;
 
       res.json({
         success: true,
         data: {
-          filename: req.file.filename,
-          path: relativePath,
-          url: fullUrl,
-          size: req.file.size
+          filename: req.supabaseUpload.fileName,
+          url: req.supabaseUpload.publicUrl,
+          size: req.supabaseUpload.size,
+          storage: 'supabase'
         },
         timestamp: new Date().toISOString()
       });
     } catch (err) {
-      // Delete uploaded file on error
-      if (req.file) {
-        const fs = require('fs').promises;
-        await fs.unlink(req.file.path).catch(() => {});
-      }
+      console.error('❌ [PROFILE PICTURE] Route error:', err);
       next(err);
     }
   }

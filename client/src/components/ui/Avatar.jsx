@@ -93,11 +93,20 @@ const Avatar = ({
       fullUrl = `${apiUrl}/${src}`;
     }
     
-    // Add cache busting parameter if requested
-    if (addTimestamp) {
+    // Add cache busting parameter if requested (only for non-Supabase URLs to avoid breaking signed URLs)
+    if (addTimestamp && !fullUrl.includes('supabase.co')) {
       const separator = fullUrl.includes('?') ? '&' : '?';
       fullUrl += `${separator}t=${Date.now()}`;
     }
+    
+    console.log('🔗 Avatar URL constructed:', {
+      originalSrc: src,
+      apiUrl: import.meta.env.VITE_API_URL,
+      fullUrl,
+      addTimestamp,
+      isFullUrl: src.startsWith('http'),
+      isSupabase: fullUrl.includes('supabase.co')
+    });
     
     return fullUrl;
   };
