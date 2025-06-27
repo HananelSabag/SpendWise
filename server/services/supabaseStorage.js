@@ -23,11 +23,23 @@ const getSupabaseUrl = () => {
   throw new Error('SUPABASE_URL or DATABASE_URL with Supabase host required');
 };
 
-// Create Supabase client
-const supabase = createClient(
-  getSupabaseUrl(),
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-);
+// Lazy Supabase client initialization
+let supabase = null;
+const getSupabaseClient = () => {
+  if (!supabase) {
+    const url = getSupabaseUrl();
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    
+    if (!key) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY required');
+    }
+    
+    supabase = createClient(url, key);
+    console.log('✅ [SUPABASE STORAGE] Client initialized');
+  }
+  
+  return supabase;
+};
 
 /**
  * Upload profile picture to Supabase Storage
@@ -43,7 +55,8 @@ const uploadProfilePicture = async (file, userId) => {
     const fileName = `profile-${userId}-${uniqueSuffix}.${fileExtension}`;
     
     // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
+    const supabaseClient = getSupabaseClient();
+    const { data, error } = await supabaseClient.storage
       .from('profiles')
       .upload(fileName, file.buffer, {
         contentType: file.mimetype,
@@ -56,7 +69,7 @@ const uploadProfilePicture = async (file, userId) => {
     }
 
     // Get public URL
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = supabaseClient.storage
       .from('profiles')
       .getPublicUrl(fileName);
 
@@ -86,7 +99,8 @@ const uploadProfilePicture = async (file, userId) => {
  */
 const deleteProfilePicture = async (fileName) => {
   try {
-    const { error } = await supabase.storage
+    const supabaseClient = getSupabaseClient();
+    const { error } = await supabaseClient.storage
       .from('profiles')
       .remove([fileName]);
 
