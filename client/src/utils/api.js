@@ -290,17 +290,44 @@ export const authAPI = {
   updateProfile: (data) => api.put('/users/profile', data),
   updatePreferences: (preferences) => api.put('/users/preferences', preferences),
   
-  // Profile picture with progress tracking
-  uploadProfilePicture: (file, onProgress) => {
+  // Profile picture with progress tracking + DEBUG
+  uploadProfilePicture: async (file, onProgress) => {
+    console.log('🔄 [CLIENT] Starting profile picture upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      apiUrl: import.meta.env.VITE_API_URL
+    });
+
     const formData = new FormData();
     formData.append('profilePicture', file);
-    return api.post('/users/profile/picture', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: onProgress ? (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        onProgress(percentCompleted);
-      } : undefined
-    });
+    
+    try {
+      const response = await api.post('/users/profile/picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: onProgress ? (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`📊 [CLIENT] Upload progress: ${percentCompleted}%`);
+          onProgress(percentCompleted);
+        } : undefined
+      });
+      
+      console.log('✅ [CLIENT] Upload successful:', response.data);
+      return response;
+    } catch (error) {
+      console.error('❌ [CLIENT] Upload failed:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        }
+      });
+      throw error;
+    }
   },
   
   // ✅ ADD: Preference-specific update that bypasses profile validation

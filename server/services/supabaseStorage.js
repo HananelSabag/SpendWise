@@ -14,9 +14,15 @@ const getSupabaseUrl = () => {
   
   // Extract from DATABASE_URL: postgres://postgres:[YOUR-PASSWORD]@db.obsycususrdabscpuhmt.supabase.co:5432/postgres
   if (process.env.DATABASE_URL) {
-    const match = process.env.DATABASE_URL.match(/db\.([a-z]+)\.supabase\.co/);
+    console.log('🔍 [SUPABASE STORAGE] Parsing DATABASE_URL:', process.env.DATABASE_URL.replace(/:[^@]*@/, ':***@'));
+    const match = process.env.DATABASE_URL.match(/db\.([a-z0-9]+)\.supabase\.co/);
     if (match) {
-      return `https://${match[1]}.supabase.co`;
+      const projectId = match[1];
+      const supabaseUrl = `https://${projectId}.supabase.co`;
+      console.log('✅ [SUPABASE STORAGE] Extracted Supabase URL:', supabaseUrl);
+      return supabaseUrl;
+    } else {
+      console.error('❌ [SUPABASE STORAGE] Could not parse Supabase URL from DATABASE_URL');
     }
   }
   
@@ -48,14 +54,35 @@ const getSupabaseClient = () => {
  * @returns {Promise<Object>} Upload result with public URL
  */
 const uploadProfilePicture = async (file, userId) => {
+  console.log('🚀 [SUPABASE STORAGE] Starting upload:', {
+    userId,
+    fileInfo: {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      bufferLength: file.buffer?.length
+    },
+    envCheck: {
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasAnonKey: !!process.env.SUPABASE_ANON_KEY
+    }
+  });
+
   try {
     // Generate unique filename
     const uniqueSuffix = crypto.randomBytes(16).toString('hex');
     const fileExtension = file.originalname.split('.').pop().toLowerCase();
     const fileName = `profile-${userId}-${uniqueSuffix}.${fileExtension}`;
     
+    console.log('📝 [SUPABASE STORAGE] Generated filename:', fileName);
+    
     // Upload file to Supabase Storage
+    console.log('🔄 [SUPABASE STORAGE] Initializing client...');
     const supabaseClient = getSupabaseClient();
+    
+    console.log('📤 [SUPABASE STORAGE] Starting upload to bucket...');
     const { data, error } = await supabaseClient.storage
       .from('profiles')
       .upload(fileName, file.buffer, {
@@ -65,18 +92,26 @@ const uploadProfilePicture = async (file, userId) => {
       });
 
     if (error) {
+      console.error('❌ [SUPABASE STORAGE] Upload error details:', {
+        error: error.message,
+        statusCode: error.statusCode,
+        details: error
+      });
       throw new Error(`Supabase upload failed: ${error.message}`);
     }
+
+    console.log('✅ [SUPABASE STORAGE] Upload successful, getting public URL...');
 
     // Get public URL
     const { data: publicUrlData } = supabaseClient.storage
       .from('profiles')
       .getPublicUrl(fileName);
 
-    console.log('✅ [SUPABASE STORAGE] Profile picture uploaded:', {
+    console.log('✅ [SUPABASE STORAGE] Profile picture uploaded successfully:', {
       fileName,
       publicUrl: publicUrlData.publicUrl,
-      userId
+      userId,
+      uploadPath: data.path
     });
 
     return {
@@ -87,7 +122,12 @@ const uploadProfilePicture = async (file, userId) => {
     };
 
   } catch (error) {
-    console.error('❌ [SUPABASE STORAGE] Upload failed:', error);
+    console.error('❌ [SUPABASE STORAGE] Upload failed:', {
+      message: error.message,
+      stack: error.stack,
+      userId,
+      fileName: file.originalname
+    });
     throw error;
   }
 };

@@ -247,8 +247,25 @@ router.put('/preferences',
 router.post('/profile/picture', 
   uploadProfilePicture, 
   async (req, res, next) => {
+    console.log('📸 [SERVER] Profile picture upload request:', {
+      userId: req.user?.id,
+      hasFile: !!req.file,
+      hasSupabaseUpload: !!req.supabaseUpload,
+      fileInfo: req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      } : null,
+      supabaseUpload: req.supabaseUpload || null
+    });
+
     try {
       if (!req.file || !req.supabaseUpload) {
+        console.error('❌ [SERVER] Missing file or Supabase upload:', {
+          hasFile: !!req.file,
+          hasSupabaseUpload: !!req.supabaseUpload
+        });
+        
         return res.status(400).json({
           error: {
             code: 'MISSING_FILE',
@@ -258,10 +275,18 @@ router.post('/profile/picture',
         });
       }
 
+      console.log('💾 [SERVER] Updating user preferences with profile picture URL...');
+      
       // Store Supabase public URL in database
       const User = require('../models/User');
       await User.updatePreferences(req.user.id, {
         profilePicture: req.supabaseUpload.publicUrl
+      });
+
+      console.log('✅ [SERVER] Profile picture uploaded successfully:', {
+        userId: req.user.id,
+        url: req.supabaseUpload.publicUrl,
+        fileName: req.supabaseUpload.fileName
       });
 
       res.json({
@@ -275,7 +300,13 @@ router.post('/profile/picture',
         timestamp: new Date().toISOString()
       });
     } catch (err) {
-      console.error('❌ [PROFILE PICTURE] Route error:', err);
+      console.error('❌ [PROFILE PICTURE] Route error:', {
+        error: err.message,
+        stack: err.stack,
+        userId: req.user?.id,
+        hasFile: !!req.file,
+        hasSupabaseUpload: !!req.supabaseUpload
+      });
       next(err);
     }
   }
