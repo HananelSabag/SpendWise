@@ -33,7 +33,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 max-w-md sm:max-w-lg lg:max-w-2xl w-full max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl adaptive-card max-w-md sm:max-w-lg lg:max-w-2xl w-full max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
@@ -41,7 +41,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2 sm:space-x-3 rtl:space-x-reverse">
             <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+              <Eye className="icon-adaptive-sm text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
@@ -57,7 +57,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
             className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label={t('common.close')}
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+            <X className="icon-adaptive-sm text-gray-500" />
           </button>
         </div>
 

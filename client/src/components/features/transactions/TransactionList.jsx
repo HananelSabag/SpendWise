@@ -375,18 +375,18 @@ const TransactionList = ({
 
       {/* ✅ ENHANCED: Main transaction groups with beautiful day headers */}
       {groupedPastTransactions.length > 0 && (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="spacing-section">
           {groupedPastTransactions.map(({ date, dateKey, transactions: dayTransactions, totalIncome, totalExpenses, netBalance }) => (
             <motion.div
               key={dateKey}
               variants={groupVariants}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200"
+              className="surface-elevated-strong overflow-hidden transition-polish card-polish-interactive"
             >
               {/* ✅ CLEAN: Simple date header */}
-              <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-3">
+              <div className="sticky top-0 z-10 surface-glass border-b border-gray-200 dark:border-gray-700 spacing-card-header">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center spacing-element">
+                    <div className="spacing-form-tight surface-elevated radius-soft">
                       <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
@@ -403,15 +403,15 @@ const TransactionList = ({
                   </div>
                   
                   {/* ✅ SIMPLIFIED: Clean balance summary */}
-                  <div className="flex items-center gap-2 text-xs lg:text-sm">
+                  <div className="flex items-center spacing-element-tight text-xs lg:text-sm">
                     {totalIncome > 0 && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                      <div className="flex items-center spacing-element-tight spacing-form-tight bg-green-100 dark:bg-green-900/30 radius-soft shadow-subtle">
                         <ArrowUpRight className="w-3 h-3 text-green-600 dark:text-green-400" />
                         <span className="font-medium text-green-700 dark:text-green-300">{formatAmount(totalIncome)}</span>
                       </div>
                     )}
                     {totalExpenses > 0 && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                      <div className="flex items-center spacing-element-tight spacing-form-tight bg-red-100 dark:bg-red-900/30 radius-soft shadow-subtle">
                         <ArrowDownRight className="w-3 h-3 text-red-600 dark:text-red-400" />
                         <span className="font-medium text-red-700 dark:text-red-300">{formatAmount(totalExpenses)}</span>
                       </div>
@@ -430,15 +430,16 @@ const TransactionList = ({
                 </div>
               </div>
 
-              {/* 📱 MOBILE: Enhanced transaction list */}
-              <div className="lg:hidden p-4">
-                <div className="space-y-3">
+              {/* 🚀 UNIFIED RESPONSIVE TRANSACTION GRID */}
+              <div className="spacing-container">
+                <div className="smart-grid-cards spacing-element">
                   {dayTransactions.map((transaction, index) => (
                     <motion.div
-                      key={`mobile-${transaction.id}-${transaction.date}-${index}`}
+                      key={`${transaction.id}-${transaction.date}-${index}`}
                       variants={cardVariants}
                       initial="hidden"
                       animate="visible"
+                      className="interaction-optimized"
                     >
                       <TransactionCard
                         transaction={transaction}
@@ -447,31 +448,6 @@ const TransactionList = ({
                         onEditTemplate={onEditTemplate}
                         onDelete={onDelete}
                         onOpenRecurringManager={onOpenRecurringManager}
-                        variant="mobile"
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 💻 DESKTOP: Enhanced 2-column grid */}
-              <div className="hidden lg:block p-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {dayTransactions.map((transaction, index) => (
-                    <motion.div
-                      key={`desktop-${transaction.id}-${transaction.date}-${index}`}
-                      variants={cardVariants}
-                      initial="hidden"
-                      animate="visible"
-                    >
-                      <TransactionCard
-                        transaction={transaction}
-                        onEdit={onEdit}
-                        onEditSingle={onEditSingle}
-                        onEditTemplate={onEditTemplate}
-                        onDelete={onDelete}
-                        onOpenRecurringManager={onOpenRecurringManager}
-                        variant="compact"
                       />
                     </motion.div>
                   ))}

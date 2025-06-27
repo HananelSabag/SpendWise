@@ -41,7 +41,7 @@ import { useTransactions, useTransactionTemplates } from '../../../hooks/useTran
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { dateHelpers, cn } from '../../../utils/helpers';
-import { Badge, Button } from '../../ui';
+import { Badge, Button, OptimisticFeedback } from '../../ui';
 import DeleteTransaction from './DeleteTransaction';
 import useToast from '../../../hooks/useToast';
 
@@ -203,8 +203,7 @@ const TransactionCard = ({
   const isActive = recurringStatus.templateActive;
   const shouldShowRecurringOptions = recurringStatus.shouldShowRecurringOptions;
   const isOrphaned = false; // ✅ TEMPORARILY DISABLED
-  const isMobile = variant === 'mobile';
-  const isCompact = variant === 'compact';
+  // ✅ SIMPLIFIED: Remove variant complexity - use adaptive responsive design
 
   // ✅ PRESERVED: Category icon logic
   const categoryIcon = transaction.category_icon || 'tag';
@@ -493,42 +492,13 @@ const TransactionCard = ({
   }, [isRecurring, isTemplate, isActive, isSkipping, shouldShowRecurringOptions, isOrphaned, templateId, t, handleEditSingle, handleEditTemplate, handleToggleActive, handleQuickSkip, handleDelete]);
 
   // ✅ ENHANCED: Responsive layout configuration
-  const layoutConfig = useMemo(() => {
-    if (isMobile) {
-      return {
-        cardPadding: 'p-4',
-        iconSize: 'w-5 h-5',
-        iconPadding: 'p-2.5',
-        titleSize: 'text-base',
-        amountSize: 'text-lg',
-        metadataSize: 'text-xs',
-        actionsLayout: 'flex flex-col gap-2',
-        buttonSize: 'py-3 px-4 text-sm'
-      };
-    } else if (isCompact) {
-      return {
-        cardPadding: 'p-3',
-        iconSize: 'w-4 h-4',
-        iconPadding: 'p-2',
-        titleSize: 'text-sm',
-        amountSize: 'text-base',
-        metadataSize: 'text-xs',
-        actionsLayout: 'grid grid-cols-2 gap-2',
-        buttonSize: 'py-2 px-3 text-xs'
-      };
-    } else {
-      return {
-        cardPadding: 'p-4',
-        iconSize: 'w-5 h-5',
-        iconPadding: 'p-3',
-        titleSize: 'text-base',
-        amountSize: 'text-lg',
-        metadataSize: 'text-sm',
-        actionsLayout: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2',
-        buttonSize: 'py-2.5 px-3 text-sm'
-      };
-    }
-  }, [isMobile, isCompact]);
+  // ✅ SIMPLIFIED: Use adaptive responsive classes instead of complex layoutConfig
+
+  // 🚀 PHASE 16: Determine optimistic state for visual feedback
+  const optimisticState = useMemo(() => {
+    if (isUpdating || isDeleting || isSkipping) return 'updating';
+    return null;
+  }, [isUpdating, isDeleting, isSkipping]);
 
   return (
     <>
@@ -538,9 +508,11 @@ const TransactionCard = ({
         animate="visible"
         whileHover="hover"
         className={cn(
-          // ✅ ENHANCED: Base card styling with subtle gradients
-          'relative bg-white dark:bg-gray-800 rounded-2xl border overflow-hidden transition-all duration-300 cursor-pointer group',
-          'shadow-sm hover:shadow-lg',
+          // ✅ ENHANCED: Base card styling with systematic polish
+          'relative surface-elevated overflow-hidden transition-polish cursor-pointer group card-polish-interactive',
+          
+          // 🚀 PHASE 16: Optimistic state styling
+          optimisticState === 'updating' && 'optimistic-updating',
           
           // ✅ ENHANCED: Contextual styling based on transaction type and state
           isFuture && 'bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 border-blue-200 dark:border-blue-800',
@@ -582,22 +554,22 @@ const TransactionCard = ({
           </div>
         )}
         
-        {/* ✅ ENHANCED: Main content with improved spacing and hierarchy */}
-        <div className={layoutConfig.cardPadding}>
-          <div className="flex items-start gap-3 relative z-10">
+        {/* ✅ ENHANCED: Main content with systematic spacing */}
+        <div className="spacing-card-content">
+          <div className="flex items-start spacing-element relative z-10">
             
             {/* ✅ ENHANCED: Category icon with better visual indicators */}
             <div className="relative flex-shrink-0">
               <div className={cn(
-                'relative rounded-xl shadow-sm transition-all duration-200 group-hover:shadow-md',
-                layoutConfig.iconPadding,
+                'relative radius-moderate shadow-interactive transition-polish',
+                'spacing-form',
                 // ✅ ENHANCED: Special styling for recurring transactions
                 (isRecurring || isTemplate) 
                   ? 'bg-gradient-to-br from-purple-100 via-indigo-100 to-blue-100 dark:from-purple-900/40 dark:via-indigo-900/40 dark:to-blue-900/40 ring-2 ring-purple-200 dark:ring-purple-700'
                   : getColorForCategory(transaction.transaction_type || transaction.type)
               )}>
                 <CategoryIcon className={cn(
-                  layoutConfig.iconSize,
+                  'icon-adaptive-base',
                   (isRecurring || isTemplate) && 'text-purple-600 dark:text-purple-300'
                 )} />
                 
@@ -637,28 +609,28 @@ const TransactionCard = ({
             </div>
 
             {/* ✅ ENHANCED: Transaction details with better typography */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between spacing-element">
                 
                 <div className="flex-1 min-w-0">
                   {/* ✅ ENHANCED: Title with better contrast and truncation */}
                   <h3 className={cn(
                     'font-semibold text-gray-900 dark:text-white truncate mb-2',
-                    layoutConfig.titleSize,
+                    'text-adaptive-sm',
                     'group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors'
                   )}>
                     {transaction.description}
                   </h3>
                   
-                  {/* ✅ ENHANCED: Metadata with better organization and visual hierarchy */}
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                  {/* ✅ ENHANCED: Metadata with systematic spacing */}
+                  <div className="flex flex-wrap items-center spacing-element-tight mb-1">
                     
                     {/* Date badge - enhanced styling */}
                     <div className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors',
-                      'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+                      'flex items-center spacing-element-tight spacing-form-tight radius-soft transition-polish',
+                      'surface-elevated text-gray-700 dark:text-gray-300',
                       'group-hover:bg-gray-200 dark:group-hover:bg-gray-600',
-                      layoutConfig.metadataSize
+                      'text-adaptive-xs'
                     )}>
                       <Calendar className="w-3 h-3" />
                       <span className="font-medium">
@@ -710,7 +682,7 @@ const TransactionCard = ({
                 <div className="text-right flex-shrink-0">
                   <div className={cn(
                     'font-bold tracking-tight transition-colors relative',
-                    layoutConfig.amountSize,
+                    'text-adaptive-base',
                     transactionConfig.textColor,
                     'group-hover:scale-105 transition-transform duration-200'
                   )}>
@@ -785,83 +757,28 @@ const TransactionCard = ({
               onClick={(e) => e.stopPropagation()} // Prevent card click when clicking actions
             >
               
-              {/* 📱 MOBILE: Enhanced vertical layout for better touch interaction */}
-              <div className="lg:hidden">
-                <motion.div 
-                  className="space-y-3"
-                  variants={actionsVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {actionButtons.map((button, index) => (
-                    <motion.div
-                      key={button.key}
-                      variants={actionItemVariants}
-                      custom={index}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          button.onClick();
-                        }}
-                        disabled={button.disabled || isUpdating || isDeleting}
-                        className={cn(
-                          'w-full flex items-start gap-3 p-4 rounded-xl border-2 transition-all duration-200',
-                          'hover:shadow-md active:scale-98',
-                          button.className,
-                          (button.disabled || isUpdating || isDeleting) && 'opacity-50 cursor-not-allowed'
-                        )}
-                      >
-                        <div className={cn('p-2 rounded-lg', button.className.split(' ')[0])}>
-                          <button.icon className={cn('w-5 h-5', button.iconClassName)} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="font-semibold text-sm">{button.label}</div>
-                          {button.description && (
-                            <div className="text-xs opacity-75 mt-1">{button.description}</div>
-                          )}
-                        </div>
-                      </button>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </div>
-
-              {/* 💻 DESKTOP: Enhanced grid layout with contextual grouping */}
-              <div className="hidden lg:block">
-                <motion.div 
-                  className={layoutConfig.actionsLayout}
-                  variants={actionsVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {actionButtons.map((button, index) => (
-                    <motion.div
-                      key={button.key}
-                      variants={actionItemVariants}
-                      custom={index}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          button.onClick();
-                        }}
-                        disabled={button.disabled || isUpdating || isDeleting}
-                        className={cn(
-                          'w-full flex items-center gap-2 rounded-xl border-2 transition-all duration-200',
-                          'hover:shadow-md hover:scale-102 active:scale-98',
-                          layoutConfig.buttonSize,
-                          button.className,
-                          (button.disabled || isUpdating || isDeleting) && 'opacity-50 cursor-not-allowed'
-                        )}
-                        title={button.description}
-                      >
-                        <button.icon className={cn('w-4 h-4 flex-shrink-0', button.iconClassName)} />
-                        <span className="font-medium truncate">{button.label}</span>
-                      </button>
-                    </motion.div>
-                  ))}
-                </motion.div>
+              {/* 🎯 COMPACT ACTIONS - קטן ומסודר */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {actionButtons.map((button, index) => (
+                  <button
+                    key={button.key}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      button.onClick();
+                    }}
+                    disabled={button.disabled || isUpdating || isDeleting}
+                    className={cn(
+                      'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200',
+                      'hover:shadow-sm hover:scale-105 active:scale-95',
+                      button.className,
+                      (button.disabled || isUpdating || isDeleting) && 'opacity-50 cursor-not-allowed'
+                    )}
+                    title={button.description}
+                  >
+                    <button.icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{button.label}</span>
+                  </button>
+                ))}
               </div>
 
               {/* ✅ ENHANCED: Loading states with better visual feedback */}
@@ -890,6 +807,21 @@ const TransactionCard = ({
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* 🚀 PHASE 16: Optimistic feedback for user actions */}
+      <AnimatePresence>
+        {optimisticState && (
+          <OptimisticFeedback
+            state={optimisticState}
+            message={
+              isUpdating ? t('transactions.updating') :
+              isDeleting ? t('transactions.deleting') :
+              isSkipping ? t('transactions.skipping') :
+              t('common.processing')
+            }
+          />
+        )}
+      </AnimatePresence>
 
       {/* ✅ FIXED: Delete modal with proper onConfirm handler */}
       {showDeleteModal && (

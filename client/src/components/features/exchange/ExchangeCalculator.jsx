@@ -194,12 +194,12 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
               <div className="flex items-center justify-between mb-2 sm:mb-3">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <Calculator className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Calculator className="icon-adaptive-sm" />
                   </div>
                   <div>
                     <h1 className="text-base sm:text-lg lg:text-xl font-bold flex items-center gap-1 sm:gap-2">
                       {t('exchange.title')}
-                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <Sparkles className="icon-adaptive-sm" />
                     </h1>
                     <div className="flex items-center gap-1 sm:gap-2 text-white/90 text-xs sm:text-sm">
                       <Globe className="w-2 h-2 sm:w-3 sm:h-3" />
@@ -225,13 +225,13 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     size="small"
                     className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm p-1.5 sm:p-2"
                   >
-                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <RefreshCw className="icon-adaptive-sm" />
                   </Button>
                   <button
                     onClick={onClose}
                     className="p-1.5 sm:p-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-200"
                   >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <X className="icon-adaptive-sm" />
                   </button>
                 </div>
               </div>
@@ -261,7 +261,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                   {t('exchange.error.message')}
                 </p>
                 <Button onClick={() => refetch()} variant="outline" size="small">
-                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  <RefreshCw className="icon-adaptive-sm mr-2" />
                   {t('exchange.error.tryAgain')}
                 </Button>
               </div>
@@ -324,7 +324,7 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                         whileHover={{ scale: 1.1, rotate: 180 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        <ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <ArrowUpDown className="icon-adaptive-sm" />
                       </motion.button>
                     </div>
 
@@ -354,13 +354,13 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="p-4 sm:p-6 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 rounded-xl sm:rounded-2xl border-2 border-green-200 dark:border-green-700"
+                    className="adaptive-card bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 rounded-xl sm:rounded-2xl border-2 border-green-200 dark:border-green-700"
                   >
                     <div className="text-center space-y-2 sm:space-y-3">
                       <div className="flex items-center justify-center gap-2 sm:gap-3 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-lg sm:text-2xl">{SUPPORTED_CURRENCIES[fromCurrency].flag}</span>
                         <span className="font-semibold text-base sm:text-lg">{formatAmount(parseFloat(amount) || 0, fromCurrency)}</span>
-                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                        <Zap className="icon-adaptive-sm text-yellow-500" />
                       </div>
                       <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
                         <span className="text-lg sm:text-2xl mr-2">{SUPPORTED_CURRENCIES[toCurrency].flag}</span>
@@ -416,12 +416,12 @@ const ExchangeCalculator = ({ isOpen, onClose }) => {
                     transition={{ delay: 0.5 }}
                     className="flex items-center justify-center gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-400 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700"
                   >
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Clock className="icon-adaptive-sm" />
                     <span className="text-center">
                       <span className="hidden sm:inline">{t('exchange.footer.liveRates')}</span>
                       <span className="sm:hidden">{t('exchange.footer.liveRatesMobile')}</span>
                     </span>
-                    <Globe className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Globe className="icon-adaptive-sm" />
                   </motion.div>
 
                 </div>

@@ -6,7 +6,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { useDate } from '../../../context/DateContext';
 import { useCurrency } from '../../../context/CurrencyContext';
 import { useDashboard } from '../../../hooks/useDashboard';
-import { Card } from '../../../components/ui';
+import { Card, TransactionCardSkeleton } from '../../../components/ui';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
 /**
@@ -48,6 +48,7 @@ const RecentTransactions = ({
   const { formatDate } = useDate();
   const { formatAmount } = useCurrency();
   
+  // 🚀 PHASE 16: Enhanced loading with sophisticated skeleton
   if (isLoading) {
     return (
       <motion.div
@@ -61,11 +62,23 @@ const RecentTransactions = ({
         </div>
 
         <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl h-full">
-          <div className="p-4 animate-pulse space-y-3">
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
+          <div className="p-4">
+            {/* Header Skeleton */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="skeleton-title w-1/2"></div>
+              <div className="skeleton-button w-16"></div>
+            </div>
+            
+            {/* Transaction Skeletons */}
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <TransactionCardSkeleton 
+                  key={i} 
+                  delay={i}
+                  className="bg-white/50 dark:bg-gray-800/50"
+                />
+              ))}
+            </div>
           </div>
         </Card>
       </motion.div>

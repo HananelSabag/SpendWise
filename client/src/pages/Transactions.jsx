@@ -303,16 +303,17 @@ const Transactions = () => {
         
         {/* ✅ ENHANCED: Beautiful header with ALL filters integrated */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white border-0 shadow-2xl relative overflow-hidden">
-            {/* ✅ PRESERVED: Animated background decoration exactly as before */}
-            <div className="absolute inset-0">
-              <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
-              <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
-              <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
-              
-              {/* ✅ PRESERVED: Floating animated particles exactly as before */}
-              {[...Array(8)].map((_, i) => (
+          <Card className="gradient-hero-primary text-white border-0 shadow-premium relative overflow-hidden">
+            {/* 🎨 UNIFIED: Systematic floating orb pattern */}
+            <div className="floating-orb-primary floating-orb-top-right animate-float-gentle"></div>
+            <div className="floating-orb-secondary floating-orb-bottom-left animate-float-gentle"></div>
+            <div className="floating-orb-accent floating-orb-center animate-float-gentle"></div>
+            
+            {/* 💫 UNIFIED: Professional decoration pattern */}
+            <div className="modal-decoration-sparkles"></div>
+            
+            {/* 🔄 PRESERVED: Keep existing animation logic but commented out for unified approach
+            {[...Array(8)].map((_, i) => (
                 <motion.div
                   key={i}
                   className="absolute w-2 h-2 bg-white/30 rounded-full"
@@ -333,7 +334,7 @@ const Transactions = () => {
                   }}
                 />
               ))}
-            </div>
+            */}
             
             <div className="relative z-10 p-4 lg:p-5">
               {/* ✅ COMPACT: Header with period buttons on right */}
@@ -358,7 +359,7 @@ const Transactions = () => {
                     </motion.div>
                     <div>
                       <motion.h1 
-                        className="text-xl lg:text-2xl font-bold mb-1 flex items-center gap-2"
+                        className="typo-headline mb-1 flex items-center gap-2"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
@@ -671,7 +672,7 @@ const Transactions = () => {
       >
         <motion.button
           onClick={() => setShowAddTransactions(true)}
-          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+                      className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center fab-premium group"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           title={t('transactions.addTransaction')}

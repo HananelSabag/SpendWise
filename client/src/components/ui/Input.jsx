@@ -1,6 +1,6 @@
 // components/ui/Input.jsx
 import React, { forwardRef, useState } from 'react';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '../../utils/helpers';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -10,6 +10,7 @@ const Input = forwardRef(({
   error,
   helper,
   icon: Icon,
+  state = null, // NEW: success, warning, info
   required = false,
   disabled = false,
   fullWidth = true,
@@ -39,6 +40,48 @@ const Input = forwardRef(({
     onBlur?.(e);
   };
 
+  // 🎯 PHASE 15: Enhanced state system
+  const getStateStyles = () => {
+    if (error) return 'input-state-error';
+    if (state === 'success') return 'input-state-success';
+    if (state === 'warning') return 'input-state-warning';
+    if (state === 'info') return 'input-state-info';
+    return 'input-state-default';
+  };
+
+  const getStateIcon = () => {
+    if (error) return AlertCircle;
+    if (state === 'success') return CheckCircle;
+    if (state === 'warning') return AlertTriangle;
+    if (state === 'info') return Info;
+    return null;
+  };
+
+  const getStateMessage = () => {
+    if (error) return error;
+    if (state === 'success' && helper) return helper;
+    if (state === 'warning' && helper) return helper;
+    if (state === 'info' && helper) return helper;
+    return helper;
+  };
+
+  const getStateColor = () => {
+    if (error) return 'text-red-500';
+    if (state === 'success') return 'text-green-600';
+    if (state === 'warning') return 'text-amber-600';
+    if (state === 'info') return 'text-blue-600';
+    return 'text-gray-500 dark:text-gray-400';
+  };
+
+  const getIconColor = () => {
+    if (error) return 'text-red-500';
+    if (state === 'success') return 'text-green-500';
+    if (state === 'warning') return 'text-amber-500';
+    if (state === 'info') return 'text-blue-500';
+    if (isFocused) return 'text-primary-500';
+    return 'text-gray-400';
+  };
+
   const baseInputStyles = `
     w-full px-4 py-3 rounded-xl border bg-white
     transition-all duration-200
@@ -49,13 +92,15 @@ const Input = forwardRef(({
 
   const inputStyles = cn(
     baseInputStyles,
-    error 
-      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' 
-      : 'border-gray-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-gray-700',
+    getStateStyles(),
     Icon && (isRTL ? 'pr-11' : 'pl-11'),
     isPassword && (isRTL ? 'pl-11' : 'pr-11'),
     className
   );
+
+  const StateIcon = getStateIcon();
+  const stateMessage = getStateMessage();
+  const stateColor = getStateColor();
 
   return (
     <div className={cn('space-y-1', fullWidth && 'w-full', containerClassName)}>
@@ -76,7 +121,7 @@ const Input = forwardRef(({
         {Icon && (
           <Icon className={cn(
             'absolute top-1/2 transform -translate-y-1/2 w-5 h-5 pointer-events-none',
-            error ? 'text-red-500' : isFocused ? 'text-primary-500' : 'text-gray-400',
+            getIconColor(),
             isRTL ? 'right-3' : 'left-3'
           )} />
         )}
@@ -106,14 +151,17 @@ const Input = forwardRef(({
         )}
       </div>
       
-      {error && (
-        <div className="flex items-center gap-1.5 text-sm text-red-500" dir={isRTL ? 'rtl' : 'ltr'}>
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+      {(stateMessage && (error || state)) && (
+        <div className={cn(
+          "flex items-center gap-1.5 text-sm transition-all duration-200",
+          stateColor
+        )} dir={isRTL ? 'rtl' : 'ltr'}>
+          {StateIcon && <StateIcon className="w-4 h-4 flex-shrink-0" />}
+          <span>{stateMessage}</span>
         </div>
       )}
       
-      {helper && !error && (
+      {helper && !error && !state && (
         <p className="text-sm text-gray-500 dark:text-gray-400" dir={isRTL ? 'rtl' : 'ltr'}>
           {helper}
         </p>

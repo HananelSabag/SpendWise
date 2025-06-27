@@ -348,38 +348,15 @@ const RecurringModal = ({
           dir={isRTL ? 'rtl' : 'ltr'}
         >
           
-          {/* ✅ NEW: Beautiful gradient header with animations */}
-          <div className="flex-none bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white relative overflow-hidden">
-            {/* ✅ NEW: Animated background decoration */}
-            <div className="absolute inset-0">
-              <div className="absolute top-0 -right-4 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
-              <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-500" />
-              <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-white/20 rounded-full blur-xl animate-ping" style={{ animationDuration: '3s' }} />
-              
-              {/* ✅ NEW: Floating animated particles */}
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-2 h-2 bg-white/30 rounded-full"
-                  style={{
-                    top: `${10 + i * 15}%`,
-                    left: `${5 + i * 15}%`,
-                  }}
-                  animate={{
-                    y: [0, -20, 0],
-                    opacity: [0.3, 0.8, 0.3],
-                    scale: [1, 1.2, 1],
-                  }}
-                  transition={{
-                    duration: 3 + i * 0.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: i * 0.5,
-                  }}
-                />
-              ))}
-            </div>
+          {/* 🎨 UNIFIED DESIGN SYSTEM: Enterprise modal header */}
+          <div className="flex-none modal-header-primary">
+            {/* ✨ UNIFIED: Systematic floating orb pattern */}
+            <div className="floating-orb-primary floating-orb-top-right animate-float-gentle"></div>
+            <div className="floating-orb-secondary floating-orb-bottom-left animate-float-gentle"></div>
+            <div className="floating-orb-accent floating-orb-center animate-float-gentle"></div>
+            
+            {/* 💫 UNIFIED: Professional decoration pattern */}
+            <div className="modal-decoration-sparkles"></div>
             
             <div className="relative z-10 p-4">
               {/* ✅ REDUCED: Compact header with title and close button */}
@@ -744,9 +721,8 @@ const TemplateCard = ({
             className="border-t border-gray-100 dark:border-gray-700 overflow-hidden"
           >
             <div className="p-4 bg-gray-50 dark:bg-gray-800/50">
-              
-              {/* 📱 MOBILE: Vertical layout */}
-              <div className="lg:hidden space-y-3">
+              {/* 🚀 UNIFIED RESPONSIVE ACTION BUTTONS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                 <Button
                   variant="outline"
                   size="small"
@@ -754,7 +730,10 @@ const TemplateCard = ({
                   className="w-full justify-start bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                 >
                   <Edit2 className="w-4 h-4 mr-2" />
-                  {t('transactions.editTemplate')}
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.editTemplate')}</div>
+                    <div className="text-xs opacity-75 hidden sm:block">{t('transactions.editTemplateDesc')}</div>
+                  </div>
                 </Button>
 
                 <Button
@@ -770,7 +749,14 @@ const TemplateCard = ({
                   )}
                 >
                   {template.isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                  {template.isActive ? t('transactions.pauseTemplate') : t('transactions.resumeTemplate')}
+                  <div className="text-left">
+                    <div className="font-medium">
+                      {template.isActive ? t('transactions.pauseTemplate') : t('transactions.resumeTemplate')}
+                    </div>
+                    <div className="text-xs opacity-75 hidden sm:block">
+                      {template.isActive ? t('transactions.pauseDesc') : t('transactions.resumeDesc')}
+                    </div>
+                  </div>
                 </Button>
 
                 <Button
@@ -782,7 +768,10 @@ const TemplateCard = ({
                   className="w-full justify-start bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
                 >
                   <CalendarX className="w-4 h-4 mr-2" />
-                  {t('transactions.skipNext')}
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.skipNext')}</div>
+                    <div className="text-xs opacity-75 hidden sm:block">{t('transactions.skipNextDesc')}</div>
+                  </div>
                 </Button>
 
                 <Button
@@ -792,100 +781,24 @@ const TemplateCard = ({
                   className="w-full justify-start bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
                 >
                   <Settings className="w-4 h-4 mr-2" />
-                  {t('transactions.manageDates')}
+                  <div className="text-left">
+                    <div className="font-medium">{t('transactions.manageDates')}</div>
+                    <div className="text-xs opacity-75 hidden sm:block">{t('transactions.manageDatesDesc')}</div>
+                  </div>
                 </Button>
-                
+              </div>
+              
+              {/* Delete Button - Separate row */}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
                 <Button
                   variant="ghost"
                   size="small"
                   onClick={onDelete}
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   {t('transactions.deleteTemplate')}
                 </Button>
-              </div>
-
-              {/* 💻 DESKTOP: Grid layout */}
-              <div className="hidden lg:block">
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <Button
-                    variant="outline"
-                    size="small"
-                    onClick={onEdit}
-                    className="justify-start bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    <div className="text-left">
-                      <div className="font-medium">{t('transactions.editTemplate')}</div>
-                      <div className="text-xs opacity-75">{t('transactions.editTemplateDesc')}</div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="small"
-                    onClick={onToggleActive}
-                    loading={isUpdating}
-                    className={cn(
-                      "justify-start",
-                      template.isActive 
-                        ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
-                        : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    )}
-                  >
-                    {template.isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                    <div className="text-left">
-                      <div className="font-medium">
-                        {template.isActive ? t('transactions.pauseTemplate') : t('transactions.resumeTemplate')}
-                      </div>
-                      <div className="text-xs opacity-75">
-                        {template.isActive ? t('transactions.pauseDesc') : t('transactions.resumeDesc')}
-                      </div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="small"
-                    onClick={onQuickSkip}
-                    loading={isSkipping}
-                    disabled={!template.isActive || !template.nextPayment}
-                    className="justify-start bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
-                  >
-                    <CalendarX className="w-4 h-4 mr-2" />
-                    <div className="text-left">
-                      <div className="font-medium">{t('transactions.skipNext')}</div>
-                      <div className="text-xs opacity-75">{t('transactions.skipNextDesc')}</div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="small"
-                    onClick={onShowSkipModal}
-                    className="justify-start bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    <div className="text-left">
-                      <div className="font-medium">{t('transactions.manageDates')}</div>
-                      <div className="text-xs opacity-75">{t('transactions.manageDatesDesc')}</div>
-                    </div>
-                  </Button>
-                </div>
-                
-                {/* Delete Button - Separate row */}
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    onClick={onDelete}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {t('transactions.deleteTemplate')}
-                  </Button>
-                </div>
               </div>
             </div>
           </motion.div>
@@ -928,8 +841,10 @@ const SkipDatesModal = ({
         exit={{ opacity: 0, scale: 0.95 }}
         className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden"
       >
-        {/* ✅ NEW: Beautiful header for skip modal too */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4">
+        {/* 🎨 UNIFIED: Secondary modal header with consistent design */}
+        <div className="modal-header-secondary p-4">
+          <div className="floating-orb-secondary floating-orb-top-right animate-float-gentle"></div>
+          <div className="modal-decoration-waves"></div>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">

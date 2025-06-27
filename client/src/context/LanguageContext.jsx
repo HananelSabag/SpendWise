@@ -634,7 +634,6 @@ const translations = {
       low: 'Low',
       transactionsPerDay: 'Transactions/day',
       perDaySpending: 'Per day spending',
-      incomeVsExpenses: 'Income vs Expenses',
       balanceTrends: 'Balance Trends',
       smartInsights: 'Smart Insights',
       
@@ -1011,19 +1010,14 @@ const translations = {
 
       // Additional transaction states and actions
       oneTime: 'One-time',
-      singleEdit: 'Single Edit',
       seriesEdit: 'Series Edit',
       template: 'Template',
       editingTransaction: 'Editing Transaction',
-      editingSingleOccurrence: 'Editing Single Occurrence',
       editingAllFuture: 'Editing All Future',
       editingTemplate: 'Editing Template',
       oneTimeEditExplanation: 'Edit this transaction only',
       seriesEditExplanation: 'Edit this and all future transactions',
-      templateEditExplanation: 'Edit template - affects all future transactions',
-      expense: 'Expense',
-      income: 'Income',
-      recurring: 'Recurring'
+      templateEditExplanation: 'Edit template - affects all future transactions'
   },
 
   // Transaction Card
@@ -2759,7 +2753,6 @@ const translations = {
         low: 'נמוך',
         transactionsPerDay: 'עסקאות/יום',
         perDaySpending: 'הוצאה ליום',
-        incomeVsExpenses: 'הכנסות מול הוצאות',
         balanceTrends: 'מגמות יתרה',
         smartInsights: 'תובנות חכמות',
         
@@ -3125,19 +3118,14 @@ single: "עסקה רגילה",
 
       // מצבי עסקה ופעולות נוספים
       oneTime: 'חד פעמי',
-      singleEdit: 'עריכה יחידה',
       seriesEdit: 'עריכת סדרה',
       template: 'תבנית',
       editingTransaction: 'עורך עסקה',
-      editingSingleOccurrence: 'עורך מופע יחיד',
       editingAllFuture: 'עורך את כל העתידיות',
       editingTemplate: 'עורך תבנית',
       oneTimeEditExplanation: 'ערוך רק את העסקה הזו',
       seriesEditExplanation: 'ערוך את זו ואת כל העסקאות העתידיות',
-      templateEditExplanation: 'ערוך תבנית - משפיע על כל העסקאות העתידיות',
-      expense: 'הוצאה',
-      income: 'הכנסה',
-      recurring: 'חוזר'
+      templateEditExplanation: 'ערוך תבנית - משפיע על כל העסקאות העתידיות'
     },
 
     // Transaction details

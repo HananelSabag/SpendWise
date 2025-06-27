@@ -1,4 +1,4 @@
-// components/layout/Header.jsx
+// components/layout/Header.jsx - MINIMAL RTL FIXES ONLY
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -255,7 +255,8 @@ const Header = () => {
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       className={cn(
                         "absolute top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
-                        isHebrew ? "left-0" : "right-0"
+                        // 🚀 ONLY FIX: Proper RTL positioning for panels dropdown
+                        isHebrew ? "right-0" : "left-0"
                       )}
                     >
                       {panelOptions.map((option) => (
@@ -347,6 +348,7 @@ const Header = () => {
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       className={cn(
                         "absolute top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
+                        // 🚀 ONLY FIX: User dropdown positioning stays as original
                         isHebrew ? 'left-0' : 'right-0'
                       )}
                     >

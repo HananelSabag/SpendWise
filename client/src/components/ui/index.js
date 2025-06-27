@@ -9,3 +9,15 @@ export { default as Avatar } from './Avatar'; // Add Avatar export
 export { default as Modal } from './Modal';
 export { default as Alert } from './Alert';
 export { default as Dropdown } from './Dropdown';
+
+// 🚀 PHASE 16: Advanced Loading & Skeleton Components
+export { 
+  default as Skeleton,
+  BalancePanelSkeleton,
+  TransactionCardSkeleton, 
+  TransactionListSkeleton,
+  DashboardSkeleton,
+  LoadingOverlay,
+  OptimisticFeedback,
+  ProgressiveLoader
+} from './Skeleton';

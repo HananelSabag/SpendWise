@@ -212,49 +212,85 @@ const CategoryManager = ({ isOpen, onClose }) => {
       className="max-w-4xl max-h-[90vh] overflow-hidden"
     >
       <div className="space-y-4 sm:space-y-6 p-6">
-        {/* Mobile Header */}
-        <div className="flex items-center justify-between sm:hidden">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {t('categories.title')}
-          </h2>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="p-2"
-            >
-              {viewMode === 'grid' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
-            </Button>
-            <Button
-              onClick={handleCreateNew}
-              size="small"
-              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
+        {/* Header & Controls - Unified Responsive */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-adaptive-lg font-bold text-gray-900 dark:text-white">
+              {t('categories.title')}
+            </h2>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                className="p-2 sm:hidden"
+              >
+                {viewMode === 'grid' ? <List className="icon-adaptive-sm" /> : <Grid className="icon-adaptive-sm" />}
+              </Button>
+              <Button
+                onClick={handleCreateNew}
+                size="small"
+                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+              >
+                <Plus className="icon-adaptive-sm" />
+                <span className="hidden sm:inline ml-2">{t('categories.addCategory')}</span>
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {/* Search and Filter Controls */}
-        <div className="space-y-3 sm:space-y-0">
-          {/* Mobile Search */}
-          <div className="relative sm:hidden">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder={t('categories.searchCategories')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-12"
-            />
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => setShowFilters(!showFilters)}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
-            >
-              <Filter className="w-4 h-4" />
-            </Button>
+          {/* Search and Filter Controls - Unified */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 icon-adaptive-sm text-gray-400" />
+              <Input
+                placeholder={t('categories.searchCategories')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-12 sm:pr-4"
+              />
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setShowFilters(!showFilters)}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 sm:hidden"
+              >
+                <Filter className="icon-adaptive-sm" />
+              </Button>
+            </div>
+
+            {/* Type Filter */}
+            <div className="mobile-stack sm:flex gap-2">
+              {['all', 'expense', 'income'].map(type => (
+                <Button
+                  key={type}
+                  variant={filterType === type ? "primary" : "outline"}
+                  size="small"
+                  onClick={() => {
+                    setFilterType(type);
+                    setShowFilters(false);
+                  }}
+                  className="text-adaptive-xs whitespace-nowrap"
+                >
+                  {type === 'all' ? (
+                    <>
+                      <Filter className="icon-adaptive-sm mr-1 sm:mr-2" />
+                      {t('common.all')}
+                    </>
+                  ) : type === 'expense' ? (
+                    <>
+                      <TrendingDown className="icon-adaptive-sm mr-1 sm:mr-2" />
+                      {t('transactions.expense')}
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="icon-adaptive-sm mr-1 sm:mr-2" />
+                      {t('transactions.income')}
+                    </>
+                  )}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Mobile Filter Dropdown */}
@@ -266,7 +302,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden sm:hidden"
               >
-                <div className="grid grid-cols-3 gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="mobile-grid gap-2 adaptive-card">
                   {['all', 'expense', 'income'].map(type => (
                     <Button
                       key={type}
@@ -280,17 +316,17 @@ const CategoryManager = ({ isOpen, onClose }) => {
                     >
                       {type === 'all' ? (
                         <>
-                          <Filter className="w-3 h-3 mr-1" />
+                          <Filter className="icon-adaptive-sm mr-1" />
                           {t('common.all')}
                         </>
                       ) : type === 'expense' ? (
                         <>
-                          <TrendingDown className="w-3 h-3 mr-1" />
+                          <TrendingDown className="icon-adaptive-sm mr-1" />
                           {t('transactions.expense')}
                         </>
                       ) : (
                         <>
-                          <TrendingUp className="w-3 h-3 mr-1" />
+                          <TrendingUp className="icon-adaptive-sm mr-1" />
                           {t('transactions.income')}
                         </>
                       )}
@@ -300,58 +336,6 @@ const CategoryManager = ({ isOpen, onClose }) => {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Desktop Controls */}
-          <div className="hidden sm:flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder={t('categories.searchCategories')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <div className="flex gap-2">
-              {['all', 'expense', 'income'].map(type => (
-                <Button
-                  key={type}
-                  variant={filterType === type ? "primary" : "outline"}
-                  size="small"
-                  onClick={() => setFilterType(type)}
-                  className="whitespace-nowrap"
-                >
-                  {type === 'all' ? (
-                    <>
-                      <Filter className="w-4 h-4 mr-2" />
-                      {t('common.all')}
-                    </>
-                  ) : type === 'expense' ? (
-                    <>
-                      <TrendingDown className="w-4 h-4 mr-2" />
-                      {t('transactions.expense')}
-                    </>
-                  ) : (
-                    <>
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      {t('transactions.income')}
-                    </>
-                  )}
-                </Button>
-              ))}
-            </div>
-            
-            <Button
-              onClick={handleCreateNew}
-              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('categories.addCategory')}
-            </Button>
-          </div>
         </div>
 
         {/* Categories Display */}
@@ -395,7 +379,6 @@ const CategoryManager = ({ isOpen, onClose }) => {
                         deleting={isDeleting}
                         isDefault={false}
                         t={t}
-                        isMobile={true}
                       />
                     ) : (
                       <CategoryListItem
@@ -583,7 +566,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
           title={
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                {React.createElement(getIconComponent('tag'), { className: 'w-4 h-4 sm:w-5 sm:h-5 text-white' })}
+                {React.createElement(getIconComponent('tag'), { className: 'icon-adaptive-sm text-white' })}
               </div>
               <span className="text-base sm:text-lg">
                 {editingCategory ? t('categories.edit') : t('categories.create')}
@@ -624,12 +607,12 @@ const CategoryManager = ({ isOpen, onClose }) => {
                     >
                       {type === 'expense' ? (
                         <>
-                          <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <TrendingDown className="icon-adaptive-sm mr-1 sm:mr-2" />
                           {t('transactions.expense')}
                         </>
                       ) : (
                         <>
-                          <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <TrendingUp className="icon-adaptive-sm mr-1 sm:mr-2" />
                           {t('transactions.income')}
                         </>
                       )}
@@ -704,7 +687,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-primary-500 rounded-full flex items-center justify-center"
+                        className="absolute -top-1 -right-1 icon-adaptive-sm bg-primary-500 rounded-full flex items-center justify-center"
                       >
                         <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                       </motion.div>
@@ -754,8 +737,7 @@ const CategoryCard = ({
   onDelete, 
   deleting, 
   isDefault, 
-  t,
-  isMobile = false
+  t
 }) => {
   const IconComponent = getIconComponent(category.icon || 'tag');
   const displayName = category.is_default 
@@ -778,11 +760,11 @@ const CategoryCard = ({
           }
         }
       }}
-      whileHover={{ scale: isMobile ? 1.02 : 1.03, y: -2 }}
+      whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       layout
     >
-      <Card className="p-4 sm:p-6 cursor-pointer transition-all duration-300 relative overflow-hidden group hover:shadow-lg sm:hover:shadow-xl border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 touch-manipulation">
+      <Card className="adaptive-card cursor-pointer transition-all duration-300 relative overflow-hidden group hover:shadow-lg border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 touch-manipulation">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 opacity-10">
           <div className={cn(
@@ -798,7 +780,7 @@ const CategoryCard = ({
               "p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br shadow-lg",
               getGradientForCategory(category.type)
             )}>
-              <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <IconComponent className="icon-adaptive-base text-white" />
             </div>
             
             <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -811,7 +793,7 @@ const CategoryCard = ({
                 }}
                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 touch-manipulation"
               >
-                <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                <Edit2 className="icon-adaptive-sm text-blue-600" />
               </Button>
               <Button
                 variant="ghost"
@@ -827,10 +809,10 @@ const CategoryCard = ({
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-red-500 border-t-transparent rounded-full"
+                    className="icon-adaptive-sm border-2 border-red-500 border-t-transparent rounded-full"
                   />
                 ) : (
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                  <Trash2 className="icon-adaptive-sm text-red-600" />
                 )}
               </Button>
             </div>
@@ -838,12 +820,12 @@ const CategoryCard = ({
           
           {/* Content */}
           <div>
-            <h4 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white mb-2 truncate">
+            <h4 className="font-bold text-adaptive-base text-gray-900 dark:text-white mb-2 truncate">
               {displayName}
             </h4>
             
             {category.description && (
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 line-clamp-2">
+              <p className="text-adaptive-xs text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 line-clamp-2">
                 {category.description}
               </p>
             )}
@@ -855,12 +837,12 @@ const CategoryCard = ({
             >
               {category.type === 'income' ? (
                 <>
-                  <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                  <TrendingUp className="icon-adaptive-sm mr-1" />
                   {t('transactions.income')}
                 </>
               ) : (
                 <>
-                  <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                  <TrendingDown className="icon-adaptive-sm mr-1" />
                   {t('transactions.expense')}
                 </>
               )}

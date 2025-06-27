@@ -527,31 +527,15 @@ const AddTransactions = ({
       className="h-full flex flex-col max-h-[85vh] overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* ✅ ENHANCED: Header with better visual design but all original translations */}
-      <div className="flex-none bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 text-white relative overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0">
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-white/20 rounded-full"
-              style={{
-                top: `${20 + i * 15}%`,
-                left: `${10 + i * 20}%`,
-              }}
-              animate={{
-                y: [0, -20, 0],
-                opacity: [0.2, 0.5, 0.2],
-              }}
-              transition={{
-                duration: 3 + i,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 0.5,
-              }}
-            />
-          ))}
-        </div>
+      {/* 🎨 UNIFIED DESIGN SYSTEM: Consistent modal header */}
+      <div className="flex-none modal-header-primary">
+        {/* ✨ UNIFIED: Systematic floating orb pattern */}
+        <div className="floating-orb-primary floating-orb-top-right animate-float-gentle"></div>
+        <div className="floating-orb-secondary floating-orb-bottom-left animate-float-gentle"></div>
+        <div className="floating-orb-accent floating-orb-center animate-float-gentle"></div>
+        
+        {/* 💫 UNIFIED: Professional decoration pattern */}
+        <div className="modal-decoration-sparkles"></div>
         
         <div className="relative z-10 p-3 sm:p-4">
           {/* ✅ NEW: Historical date warning */}
@@ -751,7 +735,7 @@ const AddTransactions = ({
                           amount: amountValidation.formatAmountInput(e.target.value) 
                         }))}
                         placeholder="150.00"
-                        className="w-full text-lg font-bold py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        className="w-full text-lg font-bold py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 input-premium"
                         required
                         autoFocus
                       />
@@ -771,7 +755,7 @@ const AddTransactions = ({
                         value={formData.description}
                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         placeholder={getSmartDefaultDescription()}
-                        className="w-full py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        className="w-full py-3 px-4 pr-12 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 input-premium"
                       />
                       <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
@@ -885,7 +869,7 @@ const AddTransactions = ({
                                           key={cat.id}
                                           type="button"
                                           onClick={() => setFormData(prev => ({ ...prev, category_id: cat.id }))}
-                                          className={`group p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-2 text-center min-h-[80px] relative ${
+                                          className={`group p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-2 text-center min-h-[80px] relative micro-bounce ${
                                             isSelected
                                               ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-lg scale-105'
                                               : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-gray-800 hover:scale-102 hover:shadow-md'

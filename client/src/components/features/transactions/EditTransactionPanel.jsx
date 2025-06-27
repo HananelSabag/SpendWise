@@ -504,7 +504,7 @@ const EditTransactionPanel = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-2 bg-white/20 rounded-xl">
-                <scopeConfig.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <scopeConfig.icon className="icon-adaptive-sm" />
               </div>
               
               <div className="min-w-0">
@@ -543,7 +543,7 @@ const EditTransactionPanel = ({
                   whileHover={{ scale: 1.05, rotate: 90 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="icon-adaptive-sm" />
                 </motion.button>
               )}
             </div>
@@ -565,7 +565,7 @@ const EditTransactionPanel = ({
             scope === 'series' ? 'bg-green-100 dark:bg-green-900/50' :
             'bg-purple-100 dark:bg-purple-900/50'
           }`}>
-            <Info className={`w-3 h-3 sm:w-4 sm:h-4 ${
+            <Info className={`icon-adaptive-sm ${
               scope === 'oneTime' ? 'text-blue-600 dark:text-blue-400' :
               scope === 'single' ? 'text-blue-600 dark:text-blue-400' :
               scope === 'series' ? 'text-green-600 dark:text-green-400' :
@@ -679,7 +679,7 @@ const EditTransactionPanel = ({
                         }`}
                       >
                         <div className="flex items-center justify-center gap-1 sm:gap-2">
-                          <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <Crown className="icon-adaptive-sm" />
                           <span className="hidden sm:inline">{t('categories.defaultCategories')}</span>
                           <span className="sm:hidden">Default</span>
                                                         <span>({Object.values(organizedCategories.themes).reduce((acc, theme) => acc + theme.categories.length, 0)})</span>
@@ -695,7 +695,7 @@ const EditTransactionPanel = ({
                         }`}
                       >
                         <div className="flex items-center justify-center gap-1 sm:gap-2">
-                          {React.createElement(getIconComponent('tag'), { className: 'w-3 h-3 sm:w-4 sm:h-4' })}
+                          {React.createElement(getIconComponent('tag'), { className: 'icon-adaptive-sm' })}
                           <span className="hidden sm:inline">{t('categories.userCategoriesDesc')}</span>
                           <span className="sm:hidden">Custom</span>
                                                       <span>({organizedCategories.userCategories.length})</span>
@@ -759,7 +759,7 @@ const EditTransactionPanel = ({
                                           ? 'bg-indigo-100 dark:bg-indigo-800' 
                                           : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
                                       }`}>
-                                        <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                                        <IconComponent className={`icon-adaptive-sm transition-colors ${
                                           isSelected 
                                             ? 'text-indigo-600 dark:text-indigo-400' 
                                             : 'text-gray-500 group-hover:text-indigo-500'
@@ -778,7 +778,7 @@ const EditTransactionPanel = ({
                                         <motion.div
                                           initial={{ scale: 0 }}
                                           animate={{ scale: 1 }}
-                                          className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
+                                          className="absolute -top-1 -right-1 icon-adaptive-sm bg-indigo-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-lg"
                                         >
                                           <Check className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
                                         </motion.div>
@@ -919,7 +919,7 @@ const EditTransactionPanel = ({
                 <Card className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
                   <div className="flex items-center gap-2 mb-3 sm:mb-4">
                     <div className="p-2 bg-green-500 rounded-md">
-                      <Repeat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      <Repeat className="icon-adaptive-sm text-white" />
                     </div>
                     <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
                       {t('actions.recurringOptions')}
@@ -1042,7 +1042,7 @@ const EditTransactionPanel = ({
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 0.5 }}
                       >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                        <X className="icon-adaptive-sm text-white" />
                       </motion.div>
                       <div className="flex-1">
                         <h4 className="font-bold text-xs sm:text-sm">שגיאת עדכון</h4>
@@ -1153,7 +1153,7 @@ const EditTransactionPanel = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2 justify-center">
-                  <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Save className="icon-adaptive-sm" />
                   <span className="font-medium">
                     {scopeConfig.saveText}
                   </span>

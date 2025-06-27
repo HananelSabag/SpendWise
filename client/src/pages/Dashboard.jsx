@@ -41,7 +41,7 @@ import StatsChart from '../components/features/dashboard/StatsChart';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import OnboardingModal from '../components/features/onboarding/OnboardingModal';
 import OnboardingPromptDialog from '../components/features/onboarding/OnboardingPromptDialog';
-import { Card, Badge, LoadingSpinner, Button, Modal } from '../components/ui';
+import { Card, Badge, LoadingSpinner, Button, Modal, DashboardSkeleton, ProgressiveLoader } from '../components/ui';
 import { Link } from 'react-router-dom';
 
 // Memoized components for performance
@@ -293,10 +293,16 @@ const Dashboard = () => {
     }
   }, [refreshDashboard]);
   
+  // 🚀 PHASE 16: Enhanced loading with progressive dashboard skeleton
   if (loading || isDashboardLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <LoadingSpinner size="large" text={t('common.loading')} />
+      <div className="min-h-screen adaptive-section">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-900/20 dark:via-indigo-900/20 dark:to-blue-900/20" />
+        
+        <div className="relative z-10 adaptive-section">
+          <DashboardSkeleton />
+        </div>
       </div>
     );
   }
@@ -315,13 +321,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-component="Dashboard">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-polish selection-polish" data-component="Dashboard">
+      <div className="max-w-7xl mx-auto spacing-container-tight">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-3"
+          className="spacing-section"
           dir={isRTL ? 'rtl' : 'ltr'}
         >
           {/* Welcome Banner */}
@@ -349,67 +355,67 @@ const Dashboard = () => {
             )}
           </AnimatePresence>
 
-          {/* Mobile Layout */}
-          <div className="lg:hidden space-y-3">
+          {/* 🚀 UNIFIED RESPONSIVE LAYOUT - Single render, all screen sizes */}
+          <div className="adaptive-section">
+            {/* 🚀 PHASE 16: Balance Panel - Critical Priority Progressive Loading */}
             <motion.div variants={itemVariants}>
-              <MemoizedBalancePanel />
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <MemoizedQuickActionsBar />
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <div className="h-[280px]">
-                <MemoizedRecentTransactions limit={4} />
-              </div>
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <div className="h-[250px]">
-                <MemoizedStatsChart />
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden lg:block">
-            {/* Balance Panel */}
-            <motion.div variants={itemVariants} className="mb-4">
-              <div className="relative">
-                {!showWelcomeBanner && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 1.02 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
-                    className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
-                  />
-                )}
+              <ProgressiveLoader 
+                isLoading={isDashboardLoading && !dashboardData}
+                priority="critical"
+                className="loading-progressive-delay-100"
+              >
                 <div className="relative">
+                  {!showWelcomeBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 1.02 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      className="absolute -inset-1 bg-gradient-to-r from-primary-500/5 to-purple-500/5 rounded-xl blur-sm"
+                    />
+                  )}
                   <MemoizedBalancePanel />
                 </div>
-              </div>
+              </ProgressiveLoader>
             </motion.div>
 
-            {/* Quick Actions + Recent Transactions */}
-            <motion.div variants={itemVariants} className="mb-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="relative h-[320px]">
-                  <MemoizedQuickActionsBar />
-                </div>
-                <div className="relative h-[320px]">
-                  <MemoizedRecentTransactions />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Stats Chart */}
-            <motion.div variants={itemVariants} className="mb-4">
-              <div className="relative">
-                <MemoizedStatsChart />
-              </div>
-            </motion.div>
-
-            {/* Tips Section */}
+            {/* 🚀 PHASE 16: Actions + Transactions - High Priority Progressive Loading */}
             <motion.div variants={itemVariants}>
-              <CompactTipsSection t={t} />
+              <ProgressiveLoader 
+                isLoading={isDashboardLoading && !dashboardData}
+                priority="high"
+                className="loading-progressive-delay-200"
+              >
+                <div className="mobile-grid">
+                  <div className="min-h-[280px] lg:min-h-[320px]">
+                    <MemoizedQuickActionsBar />
+                  </div>
+                  <div className="min-h-[280px] lg:min-h-[320px]">
+                    <MemoizedRecentTransactions />
+                  </div>
+                </div>
+              </ProgressiveLoader>
+            </motion.div>
+
+            {/* 🚀 PHASE 16: Stats Chart - Medium Priority Progressive Loading */}
+            <motion.div variants={itemVariants}>
+              <ProgressiveLoader 
+                isLoading={isDashboardLoading && !dashboardData}
+                priority="medium"
+                className="loading-progressive-delay-300"
+              >
+                <MemoizedStatsChart />
+              </ProgressiveLoader>
+            </motion.div>
+
+            {/* 🚀 PHASE 16: Tips - Low Priority Progressive Loading */}
+            <motion.div variants={itemVariants}>
+              <ProgressiveLoader 
+                isLoading={false} // Tips load immediately since they're static
+                priority="low"
+                className="loading-progressive-delay-400"
+              >
+                <CompactTipsSection t={t} />
+              </ProgressiveLoader>
             </motion.div>
           </div>
         </motion.div>
@@ -423,7 +429,7 @@ const Dashboard = () => {
         >
           <motion.button
             onClick={() => setShowAddTransactions(true)}
-            className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
+            className="w-12 h-12 gradient-hero-primary text-white radius-full shadow-interactive fab-premium flex items-center justify-center group transition-polish"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             title={t('actions.quickAdd')}
@@ -494,15 +500,15 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
     exit="exit"
     className="relative overflow-hidden mb-3"
   >
-    <Card className="bg-gradient-to-r from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 border-0 text-white p-3 sm:p-4 shadow-lg">
+    <Card className="gradient-hero-primary border-0 text-white spacing-card-content shadow-interactive">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 -right-4 w-20 h-20 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse" />
-        <div className="absolute -bottom-4 -left-4 w-16 h-16 lg:w-32 lg:h-32 bg-white/10 rounded-full blur-2xl animate-pulse delay-1000" />
+        <div className="floating-orb-secondary absolute top-0 -right-4 w-20 h-20 lg:w-32 lg:h-32" />
+        <div className="floating-orb-accent absolute -bottom-4 -left-4 w-16 h-16 lg:w-32 lg:h-32" />
       </div>
       
       <div className="relative z-10">
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex items-start sm:items-center gap-3">
+        <div className="flex flex-col spacing-element sm:flex-row sm:justify-between sm:items-center">
+          <div className="flex items-start sm:items-center spacing-element">
             <div className="relative flex-shrink-0">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-white/30">
                 {user?.preferences?.profilePicture ? (
@@ -522,11 +528,11 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
             
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 mb-1">
-                <h1 className="text-sm sm:text-base lg:text-xl font-bold text-white">
+                <h1 className="typo-title-large text-white">
                   <span dir="ltr" className="text-white">SpendWise</span>
                 </h1>
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <span className="text-sm sm:text-base lg:text-xl font-bold text-white">
+                  <span className="typo-title-large text-white">
                     {greeting}
                   </span>
                   <motion.div
@@ -534,12 +540,12 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
                     transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
                     className="flex-shrink-0"
                   >
-                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Sparkles className="icon-adaptive-sm" />
                   </motion.div>
                 </div>
               </div>
               
-              <p className="text-white/90 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <p className="text-white/90 flex items-center gap-1 sm:gap-2 typo-caption">
                 <Calendar className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">
                   {(() => {
@@ -573,8 +579,8 @@ const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
     animate="animate"
     className="mb-3"
   >
-    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary-500/10 to-primary-600/10 dark:from-primary-600/20 dark:to-primary-700/20 rounded-lg border border-primary-200 dark:border-primary-800">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between spacing-form surface-glass border border-primary-200 dark:border-primary-800 radius-soft shadow-subtle">
+      <div className="flex items-center spacing-element-tight">
         <div className="relative">
           <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
             {user?.preferences?.profilePicture ? (
@@ -618,11 +624,13 @@ const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
 ));
 
 const CompactTipsSection = React.memo(({ t }) => (
-  <Card className="bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 text-white p-4 border-0 shadow-lg relative overflow-hidden">
-    <div className="absolute inset-0">
-      <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-      <div className="absolute bottom-0 left-0 w-12 h-12 bg-white/10 rounded-full blur-lg animate-pulse delay-1000"></div>
-    </div>
+  <Card variant="gradient" className="p-4 relative overflow-hidden">
+    {/* 🎨 UNIFIED: Systematic floating orb pattern */}
+    <div className="floating-orb-secondary floating-orb-top-right animate-float-gentle"></div>
+    <div className="floating-orb-accent floating-orb-bottom-left animate-float-gentle"></div>
+    
+    {/* 💫 UNIFIED: Professional decoration */}
+    <div className="modal-decoration-sparkles"></div>
     
     <div className="relative z-10 flex items-center gap-3">
       <div className="p-2 bg-white/20 rounded-lg">
