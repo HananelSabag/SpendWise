@@ -151,7 +151,7 @@ const QuickActionsBar = () => {
               exit={{ opacity: 0, height: 0 }}
               className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
             >
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <div className="flex flex-wrap items-center gap-2 text-amber-800 dark:text-amber-200">
                 <Clock className="w-4 h-4" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">
@@ -162,6 +162,7 @@ const QuickActionsBar = () => {
                   </p>
                 </div>
                 <button
+                  style={{ flexShrink: 0 }}
                   onClick={resetToToday}
                   className="text-xs bg-amber-200 dark:bg-amber-800 px-2 py-1 rounded hover:bg-amber-300 dark:hover:bg-amber-700 transition-colors"
                 >
