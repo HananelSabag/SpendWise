@@ -56,6 +56,11 @@ const categoryController = {
       throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
     }
     
+    // Check if user can access this category (default or owns it)
+    if (!category.is_default && category.user_id !== userId) {
+      throw { ...errorCodes.UNAUTHORIZED, message: 'Access denied to this category' };
+    }
+    
     res.json({
       success: true,
       data: category,
@@ -89,7 +94,7 @@ const categoryController = {
       description: description?.trim() || null,
       icon: icon?.trim() || 'tag',
       type
-    });
+    }, userId);
     
     logger.info('Category created', { 
       userId, 
@@ -137,7 +142,7 @@ const categoryController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'No valid updates provided' };
     }
     
-    const category = await Category.update(parseInt(id), updateData);
+    const category = await Category.update(parseInt(id), updateData, userId);
     
     if (!category) {
       throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
@@ -170,7 +175,7 @@ const categoryController = {
     
     const categoryId = parseInt(id);
     
-    // Check if category exists and is not default
+    // Check if category exists and user owns it
     const category = await Category.getById(categoryId);
     
     if (!category) {
@@ -184,7 +189,14 @@ const categoryController = {
       };
     }
     
-    await Category.delete(categoryId);
+    if (category.user_id !== userId) {
+      throw { 
+        ...errorCodes.UNAUTHORIZED, 
+        details: 'You can only delete your own categories' 
+      };
+    }
+    
+    await Category.delete(categoryId, userId);
     
     logger.info('Category deleted', { 
       userId, 

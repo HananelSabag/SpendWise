@@ -12,7 +12,7 @@ import {
   Dumbbell, Pill, Baby, PawPrint,
   DollarSign, CreditCard, Banknote, PiggyBank, TrendingUp, TrendingDown,
   Music, Gamepad2, Tv, Film,
-  Wallet, Award, Building, FileText, MoreHorizontal, Circle
+  Wallet, Award, Building, FileText, MoreHorizontal, Circle, User
 } from 'lucide-react';
 
 /**
@@ -57,6 +57,7 @@ export const iconCategories = {
   ],
   work: [
     { name: 'briefcase', icon: Briefcase, label: 'Work' },
+    { name: 'user', icon: User, label: 'Freelance' },
     { name: 'book', icon: Book, label: 'Education' },
     { name: 'graduation-cap', icon: GraduationCap, label: 'Learning' },
     { name: 'building', icon: Building, label: 'Business' },
@@ -102,19 +103,40 @@ export const iconMap = Object.values(iconCategories)
  * Maps common category names to appropriate icons
  */
 export const categoryIconMap = {
-  // Income categories
-  salary: 'wallet',
-  freelance: 'briefcase',
+  // Income categories  
+  salary: 'dollar-sign',
+  freelance: 'user',
   investment: 'trending-up',
+  investments: 'trending-up',
+  'quick income': 'zap',
   gift: 'gift',
   bonus: 'award',
   rental: 'home',
   business: 'building',
   
+  // Hebrew income categories
+  'משכורת': 'dollar-sign',
+  'עבודה עצמאית': 'user', 
+  'השקעות': 'trending-up',
+  'הכנסה מהירה': 'zap',
+  
   // Expense categories
+  groceries: 'shopping-cart',
+  transportation: 'car',
+  entertainment: 'film',
+  'quick expense': 'zap',
+  general: 'circle',
+  
+  // Hebrew expense categories
+  'מכולת': 'shopping-cart',
+  'תחבורה': 'car',
+  'בידור': 'film',
+  'הוצאה מהירה': 'zap', 
+  'כללי': 'circle',
+  
+  // Additional expense categories
   food: 'utensils',
   restaurant: 'utensils',
-  groceries: 'shopping-cart',
   transport: 'car',
   car: 'car',
   gas: 'fuel',
@@ -129,7 +151,6 @@ export const categoryIconMap = {
   water: 'zap',
   internet: 'phone',
   phone: 'smartphone',
-  entertainment: 'tv',
   movies: 'film',
   music: 'music',
   games: 'gamepad2',

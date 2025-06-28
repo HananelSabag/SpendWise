@@ -1393,7 +1393,18 @@ const translations = {
       'Home & Garden': 'Home & Garden',
       Gifts: 'Gifts',
       Government: 'Government',
-      Investment: 'Investment'
+      Investment: 'Investment',
+      
+      // === ORGANIZED 18 CATEGORIES (English) ===
+      'Salary': 'Salary',
+      'Freelance': 'Freelance', 
+      'Investments': 'Investments',
+      'Quick Income': 'Quick Income',
+      'Groceries': 'Groceries',
+      'Transportation': 'Transportation',
+      'Entertainment': 'Entertainment',
+      'Quick Expense': 'Quick Expense',
+      'General': 'General'
   },
 
   // Profile
@@ -3454,7 +3465,29 @@ single: "עסקה רגילה",
       מתנות: 'מתנות',
       פריים: 'פרימיום',
       משפחה: 'משפחה',
-      עסקים: 'עסקים'
+      עסקים: 'עסקים',
+      
+      // === 18 קטגוריות מאורגנות (עברית) ===
+      'משכורת': 'משכורת',
+      'עבודה עצמאית': 'עבודה עצמאית',
+      'השקעות': 'השקעות', 
+      'הכנסה מהירה': 'הכנסה מהירה',
+      'מכולת': 'מכולת',
+      'תחבורה': 'תחבורה',
+      'בידור': 'בידור',
+      'הוצאה מהירה': 'הוצאה מהירה',
+      'כללי': 'כללי',
+      
+      // === תרגומים אנגלית לעברית ===
+      'Salary': 'משכורת',
+      'Freelance': 'עבודה עצמאית',
+      'Investments': 'השקעות',
+      'Quick Income': 'הכנסה מהירה',
+      'Groceries': 'מכולת',
+      'Transportation': 'תחבורה',
+      'Entertainment': 'בידור',
+      'Quick Expense': 'הוצאה מהירה',
+      'General': 'כללי'
     },
 
     // Profile

@@ -146,8 +146,8 @@ const Profile = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toastService.error(t('profile.imageTooLarge') || 'File too large. Please use an image under 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      toastService.error(t('profile.imageTooLarge') || 'File too large. Please use an image under 10MB.');
       return;
     }
 

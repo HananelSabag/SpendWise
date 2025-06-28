@@ -32,6 +32,17 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       events.forEach(event => window.removeEventListener(event, handleRefresh));
     };
   }, [queryClient, queryKey]);
+
+  // ✅ CRITICAL FIX: Add effect to track selectedDate changes and invalidate queries
+  useEffect(() => {
+    console.log('[useDashboard] Date changed to:', formattedDate, 'selectedDate:', selectedDate);
+    
+    // Invalidate queries when date changes to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    
+    // Force refetch of current date's data
+    queryClient.refetchQueries({ queryKey });
+  }, [selectedDate, formattedDate, queryClient, queryKey]);
   
   // ✅ SIMPLIFY: Data selector without excessive memoization
   const selectData = useCallback((response) => {
@@ -62,8 +73,8 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       }
     };
   }, [formattedDate]);
-  
-  return useQuery({
+
+  const queryResult = useQuery({
     queryKey,
     queryFn: () => transactionAPI.getDashboard(targetDate),
     enabled: !!targetDate && !!localStorage.getItem('accessToken'),
@@ -77,6 +88,18 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     },
     select: selectData
   });
+
+  // ✅ Add manual refresh function for date navigation
+  const refresh = useCallback(() => {
+    console.log('[useDashboard] Manual refresh triggered for date:', formattedDate);
+    queryClient.invalidateQueries({ queryKey });
+    return queryResult.refetch();
+  }, [queryClient, queryKey, queryResult.refetch, formattedDate]);
+
+  return {
+    ...queryResult,
+    refresh
+  };
 };
 
 // Helper hooks that use the main dashboard data

@@ -41,7 +41,7 @@ BEGIN
     END IF;
 END $$;
 
--- Categories table
+-- Categories table - Updated with user_id for security
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS categories (
     icon VARCHAR(50),
     type VARCHAR(50) CHECK (type IN ('income', 'expense', NULL)),
     is_default BOOLEAN DEFAULT false,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -137,6 +138,8 @@ CREATE INDEX IF NOT EXISTS idx_users_language ON users(language_preference);
 CREATE INDEX IF NOT EXISTS idx_users_theme ON users(theme_preference);
 CREATE INDEX IF NOT EXISTS idx_users_onboarding ON users(onboarding_completed) WHERE onboarding_completed = false;
 CREATE INDEX IF NOT EXISTS idx_recurring_templates_user_active ON recurring_templates(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user_type ON categories(user_id, type) WHERE user_id IS NOT NULL;
 
 -- ===============================
 -- ESSENTIAL VIEWS - TESTED AND WORKING

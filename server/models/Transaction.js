@@ -87,6 +87,9 @@ class Transaction {
       }
 
       if (error.code === '23503') {
+        if (error.constraint && error.constraint.includes('category')) {
+          throw { ...errorCodes.VALIDATION_ERROR, details: 'Category not found or not accessible to user' };
+        }
         throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category or user reference' };
       }
 

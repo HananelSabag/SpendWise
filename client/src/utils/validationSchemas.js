@@ -119,8 +119,7 @@ export const transactionSchemas = {
     description: z.string()
       .min(1, 'Description required')
       .max(255, 'Description too long'),
-    date: z.date()
-      .max(new Date(), 'Date cannot be in the future'),
+    date: z.date(),
     category_id: z.number().optional().nullable(),
     is_recurring: z.boolean().default(false),
     recurring_interval: z.enum(['daily', 'weekly', 'monthly']).optional(),
@@ -149,7 +148,6 @@ export const transactionSchemas = {
       .max(255, 'Description too long')
       .optional(),
     date: z.date()
-      .max(new Date(), 'Date cannot be in the future')
       .optional(),
     category_id: z.number().optional().nullable(),
     updateFuture: z.boolean().optional()

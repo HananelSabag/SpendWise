@@ -90,7 +90,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         const name = category.is_default 
-          ? t(`categories.${category.name}`) 
+          ? (t(`categories.${category.name}`, category.name) || category.name) 
           : category.name;
         return name.toLowerCase().includes(searchLower) ||
                (category.description || '').toLowerCase().includes(searchLower);
@@ -741,7 +741,7 @@ const CategoryCard = ({
 }) => {
   const IconComponent = getIconComponent(category.icon || 'tag');
   const displayName = category.is_default 
-    ? t(`categories.${category.name}`) 
+    ? (t(`categories.${category.name}`, category.name) || category.name) 
     : category.name;
 
   return (
@@ -867,7 +867,7 @@ const CategoryListItem = ({
   const [showActions, setShowActions] = useState(false);
   const IconComponent = getIconComponent(category.icon || 'tag');
   const displayName = category.is_default 
-    ? t(`categories.${category.name}`) 
+    ? (t(`categories.${category.name}`, category.name) || category.name) 
     : category.name;
 
   return (
@@ -958,7 +958,7 @@ const CategoryListItem = ({
 const CompactCategoryChip = ({ category, index, t }) => {
   const IconComponent = getIconComponent(category.icon || 'tag');
   const displayName = category.is_default 
-    ? t(`categories.${category.name}`) 
+    ? (t(`categories.${category.name}`, category.name) || category.name) 
     : category.name;
 
   return (

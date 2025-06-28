@@ -138,3 +138,40 @@ The SpendWise database is now fully functional with a working dashboard and perf
 - The `get_period_balance` function in the database is correctly implemented
 - The issue was in the client-side query date range logic, not the database functions
 - All balance periods now show different values based on their actual date ranges 
+
+## Applied Migrations
+
+### ✅ Migration 001: Categories User Association
+- **File**: `001_add_user_id_to_categories.sql`
+- **Applied**: 2024-12-19
+- **Status**: COMPLETED ✅
+- **Issue**: Critical security fix - categories were global instead of user-specific
+- **Changes**:
+  - Added `user_id` column to `categories` table
+  - Added indexes for performance (`idx_categories_user_id`, `idx_categories_user_type`)
+  - Updated all Category model methods for user isolation
+  - Updated controllers for ownership validation
+  - Added security checks throughout the stack
+
+### 🏗️ Migration 002: Organized Hebrew-English Categories
+- **File**: `002_balanced_categories_he_en.sql`
+- **Created**: 2025-01-27  
+- **Status**: READY TO APPLY 🏗️
+- **Purpose**: Create organized 18-category set with perfect Hebrew-English translation pairs
+- **Structure**:
+  - **Hebrew (9)**: 4 income + 4 expense + 1 general
+  - **English (9)**: 4 income + 4 expense + 1 general
+  - **Total**: 18 default categories (clean and organized)
+- **Categories**:
+  - Income: משכורת/Salary, עבודה עצמאית/Freelance, השקעות/Investments, הכנסה מהירה/Quick Income
+  - Expense: מכולת/Groceries, תחבורה/Transportation, בידור/Entertainment, הוצאה מהירה/Quick Expense  
+  - General: כללי/General
+- **Next Step**: Apply to Supabase database
+
+### Migration Queue
+- `002_balanced_categories_he_en.sql` - Ready to apply
+
+## Current Schema Version
+- **Version**: 001
+- **Last Updated**: 2024-12-19
+- **Supabase Sync**: ✅ Up to date 

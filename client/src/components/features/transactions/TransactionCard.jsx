@@ -198,7 +198,9 @@ const TransactionCard = ({
   
   // ✅ ENHANCED: Better transaction type detection with template status awareness
   const templateId = getTemplateId(transaction);
-  const isExpense = transaction.type === 'expense' || parseFloat(transaction.amount) < 0;
+  // ✅ FIX: Simple and clear expense detection
+  const isExpense = transaction.type === 'expense' || 
+                   transaction.transaction_type === 'expense';
   const isRecurring = recurringStatus.isRecurring;
   const isTemplate = Boolean(transaction.interval_type && !transaction.template_id);
   const isActive = recurringStatus.templateActive;

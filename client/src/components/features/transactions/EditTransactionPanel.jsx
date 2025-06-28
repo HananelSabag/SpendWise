@@ -164,7 +164,7 @@ const EditTransactionPanel = ({
       .filter(cat => cat.is_active !== false)
       .map(cat => ({
         id: cat.id,
-        name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
+        name: cat.is_default ? (t(`categories.${cat.name}`, cat.name) || cat.name) : cat.name,
         iconComponent: getIconComponent(cat.icon || 'tag'),
         isDefault: cat.is_default,
         type: cat.type || 'expense'
@@ -185,7 +185,7 @@ const EditTransactionPanel = ({
       .filter(cat => cat.is_active !== false) // Show all categories, not just filtered by type
       .map(cat => ({
         id: cat.id,
-        name: cat.is_default ? t(`categories.${cat.name}`) : cat.name,
+        name: cat.is_default ? (t(`categories.${cat.name}`, cat.name) || cat.name) : cat.name,
         originalName: cat.name,
         iconComponent: getIconComponent(cat.icon || 'tag'),
         isDefault: cat.is_default,
@@ -368,7 +368,7 @@ const EditTransactionPanel = ({
     if (!finalDescription) {
       const selectedCategory = allCategories.find(cat => cat.id === formData.category_id);
       const categoryName = selectedCategory ? 
-        (selectedCategory.is_default ? t(`categories.${selectedCategory.name}`) : selectedCategory.name) : 
+        (selectedCategory.is_default ? (t(`categories.${selectedCategory.name}`, selectedCategory.name) || selectedCategory.name) : selectedCategory.name) : 
         'General';
       
       finalDescription = generateDefaultDescription(
@@ -735,7 +735,7 @@ const EditTransactionPanel = ({
                               </div>
                               
                               {/* Theme Categories */}
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                                 {theme.categories.map((cat) => {
                                   const IconComponent = cat.iconComponent;
                                   const isSelected = formData.category_id === cat.id;
@@ -806,7 +806,7 @@ const EditTransactionPanel = ({
                           </p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3">
                           {organizedCategories.userCategories.map((cat) => {
                             const IconComponent = cat.iconComponent;
                             const isSelected = formData.category_id === cat.id;

@@ -131,17 +131,17 @@ const Avatar = ({
     console.error('Avatar image failed to load:', e.target.src);
     setIsLoading(false);
     
-    // Try to retry with a cache buster
-    if (retryCount < 2) {
+    // Try to retry with a cache buster (only once to prevent infinite loading)
+    if (retryCount < 1) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
         const newSrc = getImageSrc(true); // Use cache busting
         console.log('Retrying avatar image load:', newSrc);
         e.target.src = newSrc;
         setIsLoading(true);
-      }, 1000 * (retryCount + 1)); // Increasing delay
+      }, 2000); // Fixed 2 second delay
     } else {
-      console.warn('Avatar image failed to load after retries, showing fallback');
+      console.warn('Avatar image failed to load after retry, showing fallback');
       setImageError(true);
     }
   };

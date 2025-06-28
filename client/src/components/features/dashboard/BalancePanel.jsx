@@ -59,6 +59,20 @@ const BalancePanel = () => {
     }
   }, [isLoading]);
 
+  // ✅ CRITICAL FIX: Add effect to handle date changes with manual refresh
+  useEffect(() => {
+    console.log('[BalancePanel] Date changed, forcing refresh if needed');
+    
+    // Force dashboard refresh when date changes
+    if (refresh && selectedDate) {
+      const timeoutId = setTimeout(() => {
+        refresh();
+      }, 100); // Small delay to ensure date context is updated
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedDate, refresh]);
+
   const balanceData = dashboardData?.balances || {
     daily: { income: 0, expenses: 0, balance: 0 },
     weekly: { income: 0, expenses: 0, balance: 0 },
@@ -131,10 +145,45 @@ const BalancePanel = () => {
     }
   }, [dateWarning]);
   
-  // חיזוק פונקציית איפוס התאריך
+  // ✅ ENHANCED: Reset to today with manual refresh
   const handleResetToday = () => {
-    resetToToday();
     console.log('[BalancePanel] Reset to today triggered');
+    resetToToday();
+    
+    // Force refresh after reset
+    if (refresh) {
+      setTimeout(() => {
+        refresh();
+      }, 200);
+    }
+  };
+
+  // ✅ ENHANCED: Date navigation with manual refresh
+  const handleDateChange = (newDate) => {
+    console.log('[BalancePanel] Date change triggered:', newDate);
+    updateSelectedDate(newDate);
+    
+    // Force dashboard refresh if React Query doesn't auto-refresh
+    if (refresh) {
+      setTimeout(() => {
+        refresh();
+      }, 100);
+    }
+  };
+
+  // ✅ ENHANCED: Previous/Next day navigation with refresh
+  const handlePreviousDay = () => {
+    goToPreviousDay();
+    if (refresh) {
+      setTimeout(() => refresh(), 100);
+    }
+  };
+
+  const handleNextDay = () => {
+    goToNextDay();
+    if (refresh) {
+      setTimeout(() => refresh(), 100);
+    }
   };
 
   // Debug log - הפחתת דיבאגים מיותרים
@@ -281,7 +330,7 @@ const BalancePanel = () => {
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={goToPreviousDay}
+                onClick={handlePreviousDay}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
                 <ChevronLeft className="w-4 h-4 text-white" />
@@ -303,22 +352,22 @@ const BalancePanel = () => {
                 </motion.button>
                 
                 {showCalendar && (
-                  <CalendarWidget
-                    triggerRef={calendarRef}
-                    selectedDate={selectedDate}
-                    onDateSelect={(date) => {
-                      updateSelectedDate(new Date(date));
-                      setShowCalendar(false);
-                    }}
-                    onClose={() => setShowCalendar(false)}
-                  />
+                                  <CalendarWidget
+                  triggerRef={calendarRef}
+                  selectedDate={selectedDate}
+                  onDateSelect={(date) => {
+                    handleDateChange(new Date(date));
+                    setShowCalendar(false);
+                  }}
+                  onClose={() => setShowCalendar(false)}
+                />
                 )}
               </div>
               
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={goToNextDay}
+                onClick={handleNextDay}
                 disabled={!canGoNext}
                 className={`p-2 rounded-lg transition-colors ${
                   canGoNext
@@ -337,7 +386,7 @@ const BalancePanel = () => {
                     exit={{ opacity: 0, scale: 0.8 }}
                     whileHover={{ scale: 1.1, rotate: 180 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={resetToToday}
+                    onClick={handleResetToday}
                     className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                     title={t('dashboard.balance.backToToday')}
                   >

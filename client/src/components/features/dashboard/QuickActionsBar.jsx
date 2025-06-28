@@ -73,10 +73,22 @@ const QuickActionsBar = () => {
         }
       };
       
+      // ✅ FIX: Use correct general categories based on transaction type
+      const getCategoryId = (transactionType) => {
+        switch (transactionType) {
+          case 'expense':
+            return 59; // "הוצאה מהירה" Hebrew Quick Expense with zap icon
+          case 'income':
+            return 55; // "הכנסה מהירה" Hebrew Quick Income with zap icon
+          default:
+            return 59; // Default to Hebrew quick expense category
+        }
+      };
+      
       await createTransaction(type, {
         amount: parseFloat(amount),
         description: getDescription(type),
-        category_id: 8, // Default category
+        category_id: getCategoryId(type), // ✅ FIX: Use correct category based on type
         date: getDateForServer(selectedDate),
         is_recurring: false
       });

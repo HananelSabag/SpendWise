@@ -33,6 +33,7 @@ import RecurringModal from '../components/features/transactions/RecurringModal';
 import EditTransactionPanel from '../components/features/transactions/EditTransactionPanel';
 
 import { Card, Button, Badge, Modal } from '../components/ui';
+import { getIconComponent } from '../config/categoryIcons';
 
 /**
  * ✅ PRESERVED: All existing animation configurations
@@ -557,9 +558,9 @@ const Transactions = () => {
                                   <div className="space-y-1">
                                     {filteredCategories.map((category) => {
                                       const isSelected = filters.categories?.includes(category.id);
-                                      const categoryName = category.is_default 
-                                        ? t(`categories.${category.icon}`) 
-                                        : category.name;
+                                                            const categoryName = category.is_default 
+                        ? (t(`categories.${category.name}`, category.name) || category.name) 
+                        : category.name;
 
                                       return (
                                         <button
@@ -571,7 +572,7 @@ const Transactions = () => {
                                               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                                           }`}
                                         >
-                                          <span className="text-lg">{category.icon}</span>
+                                          {React.createElement(getIconComponent(category.icon), { className: 'w-5 h-5' })}
                                           <span className="flex-1 truncate">{categoryName}</span>
                                           {isSelected && (
                                             <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
@@ -672,10 +673,10 @@ const Transactions = () => {
       >
         <motion.button
           onClick={() => setShowAddTransactions(true)}
-                      className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center fab-premium group"
+          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          title={t('transactions.addTransaction')}
+          title={t('actions.quickAdd')}
         >
           <motion.div
             className="relative z-10"
@@ -688,24 +689,29 @@ const Transactions = () => {
         </motion.button>
       </motion.div>
 
-      {/* ✅ PRESERVED: ALL existing modals exactly as before */}
-      <Modal
-        isOpen={showAddTransactions}
-        onClose={() => setShowAddTransactions(false)}
-        title=""
-        className="max-w-4xl w-full"
-      >
-        <AddTransactions
-          onSuccess={handleTransactionSuccess}
-          onClose={() => setShowAddTransactions(false)}
-        />
-      </Modal>
+      {/* Modal for AddTransactions - match Dashboard exactly */}
+      <AnimatePresence>
+        {showAddTransactions && (
+          <Modal
+            isOpen={showAddTransactions}
+            onClose={() => setShowAddTransactions(false)}
+            size="large"
+            className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto"
+            hideHeader={true}
+          >
+            <AddTransactions
+              onClose={() => setShowAddTransactions(false)}
+              context="transactions"
+            />
+          </Modal>
+        )}
+      </AnimatePresence>
 
       {/* ✅ FIXED: EditTransactionPanel with perfect responsive container */}
       {showEditModal && selectedTransaction && (
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
           {/* ✅ FIXED: Perfect responsive container that adapts to all screen sizes */}
-          <div className="w-full max-w-xs sm:max-w-sm md:max-w-lg lg:max-w-3xl xl:max-w-4xl mt-2 sm:mt-4 mb-4 sm:mb-8 bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden min-h-0 max-h-[98vh] sm:max-h-[95vh]">
+          <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-7xl mt-2 sm:mt-4 mb-4 sm:mb-8 bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden min-h-0 max-h-[98vh] sm:max-h-[95vh]">
             <EditTransactionPanel
               transaction={selectedTransaction}
               editingSingle={editingSingle}

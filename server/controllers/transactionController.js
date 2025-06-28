@@ -422,12 +422,34 @@ const transactionController = {
       amount,
       description,
       date,
-      category_id = 8, // Default to General category (ID 8) if not provided
+      category_id, // Will be resolved dynamically if not provided
       is_recurring,
       recurring_interval,
       day_of_month,
       recurring_end_date
     } = req.body;
+
+    // ✅ FIX: Get valid category for user if not provided
+    let finalCategoryId = category_id;
+    if (!finalCategoryId) {
+      try {
+        const Category = require('../models/Category');
+        const userCategories = await Category.getAll(userId);
+        const validCategory = userCategories.find(cat => 
+          cat.type === type || 
+          (cat.name && (cat.name.toLowerCase().includes('general') || cat.name.toLowerCase().includes('כללי')))
+        ) || userCategories[0];
+        
+        if (!validCategory) {
+          throw { ...errorCodes.VALIDATION_ERROR, details: 'No valid category found for user' };
+        }
+        
+        finalCategoryId = validCategory.id;
+      } catch (error) {
+        logger.error('Error finding default category', { userId, type, error: error.message });
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'Unable to determine category for transaction' };
+      }
+    }
 
     if (!amount || amount <= 0) {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Amount must be positive' };
@@ -485,7 +507,7 @@ const transactionController = {
         type,
         amount,
         description,
-        category_id,
+        category_id: finalCategoryId,
         interval_type: recurring_interval,
         day_of_month: recurring_interval === 'monthly' ? finalDayOfMonth : null,
         day_of_week: recurring_interval === 'weekly' ? finalDayOfWeek : null,
@@ -506,7 +528,7 @@ const transactionController = {
         amount,
         description,
         date: TimeManager.formatForDB(date || new Date()),
-        category_id
+        category_id: finalCategoryId
       });
 
       res.status(201).json({
