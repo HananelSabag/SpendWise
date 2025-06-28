@@ -34,15 +34,16 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   }, [queryClient, queryKey]);
 
   // ✅ CRITICAL FIX: Add effect to track selectedDate changes and invalidate queries
+  // React Query will automatically refetch active queries once they are invalidated
+  // so an explicit refetch here is redundant and may cause double-fetch loops.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     console.log('[useDashboard] Date changed to:', formattedDate, 'selectedDate:', selectedDate);
     
-    // Invalidate queries when date changes to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    
-    // Force refetch of current date's data
-    queryClient.refetchQueries({ queryKey });
-  }, [selectedDate, formattedDate, queryClient, queryKey]);
+    // Invalidate the current dashboard query for the active date
+    // This triggers a refetch only for that specific date and prevents reuse of stale data.
+    queryClient.invalidateQueries({ queryKey, exact: true });
+  }, [formattedDate]);
   
   // ✅ SIMPLIFY: Data selector without excessive memoization
   const selectData = useCallback((response) => {

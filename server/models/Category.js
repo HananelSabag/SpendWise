@@ -186,15 +186,17 @@ class Category {
           c.is_default,
           c.user_id,
           COUNT(DISTINCT e.id) as expense_count,
-          COUNT(DISTINCT i.id) as income_count
+          COUNT(DISTINCT i.id) as income_count,
+          COUNT(DISTINCT rt.id) as recurring_count
         FROM categories c
         LEFT JOIN expenses e ON c.id = e.category_id AND e.deleted_at IS NULL
         LEFT JOIN income i ON c.id = i.category_id AND i.deleted_at IS NULL
+        LEFT JOIN recurring_templates rt ON c.id = rt.category_id AND rt.is_active = true AND rt.user_id = $2
         WHERE c.id = $1
         GROUP BY c.id, c.is_default, c.user_id;
       `;
       
-      const checkResult = await client.query(checkQuery, [id]);
+      const checkResult = await client.query(checkQuery, [id, userId]);
       const category = checkResult.rows[0];
       
       if (!category) {
@@ -216,10 +218,10 @@ class Category {
         };
       }
       
-      if (parseInt(category.expense_count) > 0 || parseInt(category.income_count) > 0) {
+      if (parseInt(category.expense_count) > 0 || parseInt(category.income_count) > 0 || parseInt(category.recurring_count) > 0) {
         throw {
-          ...errorCodes.VALIDATION_ERROR,
-          details: 'Category is in use. Update transactions first.'
+          ...errorCodes.CATEGORY_IN_USE,
+          details: 'Category is linked to existing transactions or recurring templates.'
         };
       }
       

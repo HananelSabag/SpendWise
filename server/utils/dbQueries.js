@@ -34,33 +34,22 @@ class DBQueries {
         dateStr = TimeManager.formatForDB(new Date());
       }
       
-      // ✅ CRITICAL FIX: Find the best date to use based on actual data
-      const dataCheckResult = await client.query(`
+      // Use the requested target date directly for calculations to avoid stale fallback.
+      const effectiveDate = dateStr;
+      
+      // For metadata purposes, fetch range of available data but do not override effectiveDate
+      const metaRes = await client.query(`
         SELECT 
-          COALESCE(
-            CASE 
-              WHEN EXISTS (
-                SELECT 1 FROM daily_balances 
-                WHERE user_id = $1 AND date = $2::date
-              ) THEN $2::date
-              ELSE COALESCE(
-                (SELECT MAX(date) 
-                 FROM daily_balances 
-                 WHERE user_id = $1),
-                $2::date
-              )
-            END,
-            $2::date
-          ) as effective_date,
-          (SELECT MAX(date) FROM daily_balances WHERE user_id = $1) as latest_data_date,
-          (SELECT MIN(date) FROM daily_balances WHERE user_id = $1) as earliest_data_date
-      `, [userId, dateStr]);
+          MAX(date) as latest_data_date,
+          MIN(date) as earliest_data_date
+        FROM daily_balances
+        WHERE user_id = $1
+      `, [userId]);
+
+      const latestDataDate = metaRes.rows[0]?.latest_data_date || null;
+      const earliestDataDate = metaRes.rows[0]?.earliest_data_date || null;
       
-      const effectiveDate = dataCheckResult.rows[0].effective_date;
-      const latestDataDate = dataCheckResult.rows[0].latest_data_date;
-      const earliestDataDate = dataCheckResult.rows[0].earliest_data_date;
-      
-      console.log(`📊 [DASHBOARD] User ${userId}: requested=${dateStr}, effective=${effectiveDate}, latest=${latestDataDate}`);
+      console.log(`📊 [DASHBOARD] User ${userId}: requested=${dateStr}`);
       
       const result = await client.query(`
       WITH date_params AS (

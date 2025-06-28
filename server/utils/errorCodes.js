@@ -155,5 +155,11 @@ module.exports = {
     code: 'UNKNOWN_ERROR',
     message: 'An unexpected error occurred',
     status: 500
+  },
+
+  CATEGORY_IN_USE: {
+    code: 'CATEGORY_IN_USE',
+    message: 'Category is currently in use by transactions or templates',
+    status: 400
   }
 };

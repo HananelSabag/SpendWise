@@ -262,6 +262,17 @@ export const DateProvider = ({ children }) => {
     isSelectedDateToday
   ]);
 
+  // Ensure browser refresh (F5 / hard reload) starts with today's date
+  // by clearing the persisted selectedDate right before the page unloads.
+  React.useEffect(() => {
+    const handleBeforeUnload = () => {
+      localStorage.removeItem('selectedDate');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   return (
     <DateContext.Provider value={value}>
       {children}

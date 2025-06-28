@@ -59,20 +59,6 @@ const BalancePanel = () => {
     }
   }, [isLoading]);
 
-  // ✅ CRITICAL FIX: Add effect to handle date changes with manual refresh
-  useEffect(() => {
-    console.log('[BalancePanel] Date changed, forcing refresh if needed');
-    
-    // Force dashboard refresh when date changes
-    if (refresh && selectedDate) {
-      const timeoutId = setTimeout(() => {
-        refresh();
-      }, 100); // Small delay to ensure date context is updated
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedDate, refresh]);
-
   const balanceData = dashboardData?.balances || {
     daily: { income: 0, expenses: 0, balance: 0 },
     weekly: { income: 0, expenses: 0, balance: 0 },
@@ -149,41 +135,25 @@ const BalancePanel = () => {
   const handleResetToday = () => {
     console.log('[BalancePanel] Reset to today triggered');
     resetToToday();
-    
-    // Force refresh after reset
-    if (refresh) {
-      setTimeout(() => {
-        refresh();
-      }, 200);
-    }
+    if (refresh) refresh();
   };
 
   // ✅ ENHANCED: Date navigation with manual refresh
   const handleDateChange = (newDate) => {
     console.log('[BalancePanel] Date change triggered:', newDate);
     updateSelectedDate(newDate);
-    
-    // Force dashboard refresh if React Query doesn't auto-refresh
-    if (refresh) {
-      setTimeout(() => {
-        refresh();
-      }, 100);
-    }
+    if (refresh) refresh();
   };
 
   // ✅ ENHANCED: Previous/Next day navigation with refresh
   const handlePreviousDay = () => {
     goToPreviousDay();
-    if (refresh) {
-      setTimeout(() => refresh(), 100);
-    }
+    if (refresh) refresh();
   };
 
   const handleNextDay = () => {
     goToNextDay();
-    if (refresh) {
-      setTimeout(() => refresh(), 100);
-    }
+    if (refresh) refresh();
   };
 
   // Debug log - הפחתת דיבאגים מיותרים

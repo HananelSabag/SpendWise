@@ -6,34 +6,41 @@
 -- ESSENTIAL DEFAULT CATEGORIES - TESTED AND WORKING
 -- ===============================
 
--- Insert default categories that the application expects and that work with the dashboard
-INSERT INTO categories (name, description, icon, type, is_default) VALUES
--- Expense Categories (15 categories)
-('Food & Dining', 'Restaurants, groceries, snacks', 'utensils', 'expense', true),
-('Transportation', 'Gas, public transport, taxi', 'car', 'expense', true),
-('Shopping', 'Clothing, electronics, general purchases', 'shopping-bag', 'expense', true),
-('Entertainment', 'Movies, games, subscriptions', 'music', 'expense', true),
-('Bills & Utilities', 'Electricity, water, internet, phone', 'file-text', 'expense', true),
-('Healthcare', 'Medical, dental, pharmacy', 'heart', 'expense', true),
-('Education', 'Books, courses, tuition', 'book', 'expense', true),
-('Travel', 'Hotels, flights, vacation', 'plane', 'expense', true),
-('Personal Care', 'Beauty, haircuts, gym', 'user', 'expense', true),
-('Home & Garden', 'Furniture, repairs, gardening', 'home', 'expense', true),
-('Insurance', 'Car, health, life insurance', 'shield', 'expense', true),
-('Taxes', 'Income tax, property tax', 'calculator', 'expense', true),
-('Gifts & Donations', 'Charity, gifts for others', 'gift', 'expense', true),
-('Business', 'Work-related expenses', 'briefcase', 'expense', true),
-('Other Expense', 'Miscellaneous expenses', 'tag', 'expense', true),
+-- Clean existing default categories before seeding
+DELETE FROM categories WHERE is_default = true;
 
--- Income Categories (8 categories)
-('Salary', 'Regular employment income', 'dollar-sign', 'income', true),
-('Freelance', 'Contract work, consulting', 'laptop', 'income', true),
-('Investment', 'Dividends, capital gains', 'trending-up', 'income', true),
-('Business Income', 'Business income, profits', 'briefcase', 'income', true),
-('Rental', 'Property rental income', 'home', 'income', true),
-('Government', 'Tax refunds, benefits', 'bank', 'income', true),
-('Gifts', 'Money received as gifts', 'gift', 'income', true),
-('Other Income', 'Miscellaneous income', 'tag', 'income', true);
+-- Insert organized Hebrew-English default categories (18 total: 9 Hebrew, 9 English)
+INSERT INTO categories (name, icon, type, is_default) VALUES
+
+-- Hebrew Income (4)
+('משכורת', 'dollar-sign', 'income', true),
+('עבודה עצמאית', 'user', 'income', true),
+('השקעות', 'trending-up', 'income', true),
+('הכנסה מהירה', 'zap', 'income', true),
+
+-- Hebrew Expenses (4)
+('מכולת', 'shopping-cart', 'expense', true),
+('תחבורה', 'car', 'expense', true),
+('בידור', 'film', 'expense', true),
+('הוצאה מהירה', 'zap', 'expense', true),
+
+-- Hebrew General (1)
+('כללי', 'circle', 'expense', true),
+
+-- English Income (4)
+('Salary', 'dollar-sign', 'income', true),
+('Freelance', 'user', 'income', true),
+('Investments', 'trending-up', 'income', true),
+('Quick Income', 'zap', 'income', true),
+
+-- English Expenses (4)
+('Groceries', 'shopping-cart', 'expense', true),
+('Transportation', 'car', 'expense', true),
+('Entertainment', 'film', 'expense', true),
+('Quick Expense', 'zap', 'expense', true),
+
+-- English General (1)
+('General', 'circle', 'expense', true);
 
 -- ===============================
 -- AUTOMATIC TRIGGERS - DATABASE AUTOMATION
@@ -156,7 +163,7 @@ BEGIN
     SELECT 
         'Categories'::VARCHAR(50) as component,
         CASE 
-            WHEN (SELECT COUNT(*) FROM categories WHERE is_default = true) >= 20 THEN 'OK'::VARCHAR(20)
+            WHEN (SELECT COUNT(*) FROM categories WHERE is_default = true) >= 18 THEN 'OK'::VARCHAR(20)
             ELSE 'WARNING'::VARCHAR(20)
         END as status,
         'Default categories: ' || (SELECT COUNT(*) FROM categories WHERE is_default = true)::TEXT as details;
