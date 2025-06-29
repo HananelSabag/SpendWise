@@ -177,7 +177,7 @@ const DeleteTransaction = ({
     } catch (error) {
       console.error('Error in handleActionSelect:', error);
       if (toastService?.error) {
-        toastService.error('Failed to process action. Please try again.');
+        toastService.error('toast.error.operationFailed');
       }
     }
   }, [transaction, onOpenSkipDates, onClose, toastService]);
@@ -225,7 +225,7 @@ const DeleteTransaction = ({
       
       // Success feedback
       if (toastService?.success) {
-        toastService.success('Transaction deleted successfully');
+        toastService.success('toast.success.transactionDeleted');
       }
       onClose();
       
@@ -233,7 +233,7 @@ const DeleteTransaction = ({
       console.error('🗑️ Delete failed in DeleteTransaction:', error);
       
       // Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to delete transaction';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.deleteError');
       
       if (toastService?.error) {
         toastService.error(errorMessage);

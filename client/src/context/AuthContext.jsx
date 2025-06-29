@@ -84,13 +84,17 @@ export const AuthProvider = ({ children }) => {
     
     // Validate required user data fields
     if (!userData.email || !userData.username) {
-      console.error('Profile data missing required fields');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Profile data missing required fields');
+      }
       return null;
     }
     
     // Prevent cached placeholder data
     if (userData.email === 'user@example.com') {
-      console.error('Detected cached placeholder data, clearing cache');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Detected cached placeholder data, clearing cache');
+      }
       return null;
     }
     
@@ -186,18 +190,22 @@ export const AuthProvider = ({ children }) => {
       navigate('/');
     },
     onError: (error) => {
-      console.error('Login error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Login error:', error);
+      }
       clearTokens();
       
       // Don't show toast for EMAIL_NOT_VERIFIED - let component handle modal
       const errorCode = error.response?.data?.error?.code;
       if (errorCode === 'EMAIL_NOT_VERIFIED') {
         // Don't throw error here - let the login helper function handle it
-        console.log('EMAIL_NOT_VERIFIED caught in mutation, will be handled by component');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('EMAIL_NOT_VERIFIED caught in mutation, will be handled by component');
+        }
         return;
       }
       
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.response?.data?.message || toastService.translateFallback('auth.loginFailed');
       toastService.error(message);
     }
   });
@@ -215,7 +223,9 @@ export const AuthProvider = ({ children }) => {
       toastService.registerSuccess();
     },
     onError: (error) => {
-      console.error('Registration error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Registration error:', error);
+      }
       // Let the error propagate to the form
       throw error;
     }
@@ -239,7 +249,9 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('language-session-reset'));
       window.dispatchEvent(new CustomEvent('theme-session-reset'));
       
-      console.log('🔄 [AUTH] Complete session cleanup (language + theme + preferences)');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 [AUTH] Complete session cleanup (language + theme + preferences)');
+      }
       
       toastService.logoutSuccess();
       
@@ -361,11 +373,15 @@ export const AuthProvider = ({ children }) => {
     mutationKey: mutationKeys.resendVerification,
     onSuccess: () => {
       // Don't show toast here - let modal handle success feedback
-      console.log('Verification email sent successfully');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Verification email sent successfully');
+      }
     },
     onError: (error) => {
       // Let modal handle error display
-      console.error('Failed to send verification email:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to send verification email:', error);
+      }
     }
   });
   
@@ -457,7 +473,9 @@ export const AuthProvider = ({ children }) => {
       
       return response.data;
     } catch (error) {
-      console.error('Failed to mark onboarding complete:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to mark onboarding complete:', error);
+      }
       throw error;
     }
   }, [queryClient]);

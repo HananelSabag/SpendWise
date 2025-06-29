@@ -611,7 +611,7 @@ const Transactions = () => {
                       <div className="mt-3">
                         <label className="block text-xs font-medium text-white/80 mb-2 flex items-center gap-2">
                           <Calendar className="w-3 h-3" />
-                          {t('common.customRange') || 'Custom Date Range'}
+                          {t('common.customRange')}
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           <input

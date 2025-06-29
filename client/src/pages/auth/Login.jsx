@@ -80,11 +80,11 @@ const ResendVerificationModal = ({ email, onClose }) => {
           </div>
           
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('auth.emailNotVerifiedModalTitle') || 'Email Not Verified'}
+            {t('auth.emailNotVerifiedModalTitle')}
           </h3>
           
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('auth.emailNotVerifiedModalMessage') || 'You haven\'t verified your email address yet.'}
+            {t('auth.emailNotVerifiedModalMessage')}
           </p>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
@@ -92,7 +92,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
               <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                  {t('auth.checkEmailSpamMessage') || 'Please check your inbox and spam folder. Sometimes verification emails end up there.'}
+                  {t('auth.checkEmailSpamMessage')}
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400">
                   <strong>{email}</strong>
@@ -110,7 +110,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
           {!sent ? (
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('auth.stillNoEmailMessage') || 'Still don\'t see the email?'}
+                {t('auth.stillNoEmailMessage')}
               </p>
               
               <div className="flex gap-3">
@@ -135,7 +135,7 @@ const ResendVerificationModal = ({ email, onClose }) => {
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      {t('auth.clickToResendMessage') || 'Click here to resend'}
+                      {t('auth.clickToResendMessage')}
                     </>
                   )}
                 </Button>
@@ -150,10 +150,10 @@ const ResendVerificationModal = ({ email, onClose }) => {
               >
                 <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
                 <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
-                  {t('auth.resendVerificationSuccess') || 'Verification email sent successfully!'}
+                  {t('auth.resendVerificationSuccess')}
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-400">
-                  {t('auth.checkEmailAgainMessage') || 'Please check your inbox again (including spam folder)'}
+                  {t('auth.checkEmailAgainMessage')}
                 </p>
               </motion.div>
               

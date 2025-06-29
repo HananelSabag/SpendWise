@@ -107,18 +107,12 @@ const OnboardingPromptDialog = ({
 
             {/* Title */}
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {isRTL 
-                ? "נראה שלא סיימת את חווית האונבורד"
-                : "Looks like you didn't finish the onboarding experience"
-              }
+              {t('onboarding.prompt.title')}
             </h3>
 
             {/* Description */}
             <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-              {isRTL 
-                ? "האם תרצה להמשיך ולסיים את ההדרכה, או שאתה מעדיף לדלג ולהתחיל להשתמש באפליקציה?"
-                : "Would you like to continue and finish the setup, or skip it and start using the app?"
-              }
+              {t('onboarding.prompt.description')}
             </p>
           </div>
 
@@ -143,9 +137,7 @@ const OnboardingPromptDialog = ({
               ) : (
                 <SkipForward className="w-4 h-4" />
               )}
-              <span>
-                {isRTL ? "דלג ותתחיל" : "Skip & Start"}
-              </span>
+              <span>{t('onboarding.prompt.skipStart')}</span>
             </Button>
 
             {/* Continue Button */}
@@ -159,18 +151,13 @@ const OnboardingPromptDialog = ({
               )}
             >
               <ArrowRight className="w-4 h-4" />
-              <span>
-                {isRTL ? "המשך הדרכה" : "Continue Setup"}
-              </span>
+              <span>{t('onboarding.prompt.continue')}</span>
             </Button>
           </div>
 
           {/* Help Text */}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-            {isRTL 
-              ? "תמיד תוכל לחזור להדרכה דרך תפריט העזרה"
-              : "You can always access the setup later from the Help menu"
-            }
+            {t('onboarding.prompt.help')}
           </p>
         </motion.div>
       </motion.div>

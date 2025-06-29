@@ -156,7 +156,7 @@ export const useAuth = () => {
         
         // ✅ FIX: Let contexts handle their own preference loading
         // Removed direct localStorage setting and events
-        if (data.user) {
+        if (data.user && process.env.NODE_ENV === 'development') {
           console.log('🔑 [AUTH] Login successful, user preferences will be loaded by contexts');
         }
         
@@ -168,7 +168,9 @@ export const useAuth = () => {
         
         // ✅ For EMAIL_NOT_VERIFIED, don't show toast - let component handle modal
         if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-          console.log('🔑 [AUTH] Email not verified, letting component handle modal');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔑 [AUTH] Email not verified, letting component handle modal');
+          }
           return; // Don't show toast, let error propagate to component
         }
         
@@ -210,7 +212,9 @@ export const useAuth = () => {
         window.dispatchEvent(new CustomEvent('language-session-reset'));
         window.dispatchEvent(new CustomEvent('theme-session-reset'));
         
-        console.log('🔄 [AUTH] Session reset triggered for contexts');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 [AUTH] Session reset triggered for contexts');
+        }
         
         toastService.logoutSuccess();
         navigate('/login');
@@ -228,7 +232,7 @@ export const useAuth = () => {
       showSuccessToast: false,
       onSuccess: (response) => {
         const updatedUser = response.data?.data;
-        if (updatedUser) {
+        if (updatedUser && process.env.NODE_ENV === 'development') {
           // ✅ FIX: Let contexts handle their own updates
           // Don't apply preferences here - contexts will pick up changes
           console.log('🔄 [AUTH] Profile updated, contexts will sync automatically');
@@ -240,13 +244,16 @@ export const useAuth = () => {
   // Update preferences mutation  
   const updatePreferencesMutation = useApiMutation(
     (data) => {
-      console.log('Sending preferences data:', data);
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Sending preferences data:', data);
+      }
       return authAPI.updatePreferences(data.preferences);
     },
     {
       mutationKey: mutationKeys.updatePreferences,
       invalidateKeys: [queryKeys.profile],
-      successMessage: 'Preferences updated successfully',
+      showSuccessToast: false, // Use toastService directly
       optimisticUpdate: {
         queryKey: queryKeys.profile,
         updater: (old, variables) => {
@@ -266,7 +273,10 @@ export const useAuth = () => {
       },
       onSuccess: (response) => {
         // ✅ FIX: Let contexts handle preference updates
-        console.log('🔄 [AUTH] Preferences updated in database');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 [AUTH] Preferences updated in database');
+        }
+        toastService.success('toast.success.preferencesUpdated');
       }
     }
   );
@@ -277,7 +287,7 @@ export const useAuth = () => {
     {
       mutationKey: mutationKeys.uploadProfilePicture,
       invalidateKeys: [queryKeys.profile],
-      successMessage: 'Profile picture uploaded successfully',
+      showSuccessToast: false, // Use toastService directly
       onSuccess: (response) => {
         const pictureUrl = response.data?.data?.url;
         if (pictureUrl) {
@@ -299,6 +309,7 @@ export const useAuth = () => {
           // Force a profile refetch to ensure fresh data
           queryClient.invalidateQueries(queryKeys.profile);
         }
+        toastService.success('toast.success.profilePictureUploaded');
       }
     }
   );
@@ -327,7 +338,10 @@ export const useAuth = () => {
     (email) => authAPI.resendVerificationEmail(email),
     {
       mutationKey: mutationKeys.resendVerification,
-      successMessage: 'Verification email sent!'
+      showSuccessToast: false, // Use toastService directly
+      onSuccess: () => {
+        toastService.success('toast.success.verificationSent');
+      }
     }
   );
   
@@ -345,8 +359,9 @@ export const useAuth = () => {
     ({ token, newPassword }) => authAPI.resetPassword(token, newPassword),
     {
       mutationKey: mutationKeys.resetPassword,
-      successMessage: 'Password reset successfully',
+      showSuccessToast: false, // Use toastService directly
       onSuccess: () => {
+        toastService.success('toast.success.passwordReset');
         navigate('/login');
       }
     }
@@ -398,9 +413,13 @@ export const useAuth = () => {
   // Mark onboarding as complete
   const markOnboardingComplete = useCallback(async () => {
     try {
-      console.log('🚀 About to call authAPI.completeOnboarding()');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 About to call authAPI.completeOnboarding()');
+      }
       const response = await authAPI.completeOnboarding();
-      console.log('✅ Response received:', response);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Response received:', response);
+      }
       
       // Update the user data locally
       queryClient.setQueryData(queryKeys.profile, (old) => {
@@ -417,9 +436,12 @@ export const useAuth = () => {
       
       return response.data;
     } catch (error) {
+      // Keep error logging in both development and production for debugging
       console.error('❌ Failed to mark onboarding complete:', error);
-      console.error('❌ Error details:', error.response?.data);
-      console.error('❌ Full error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Error details:', error.response?.data);
+        console.error('❌ Full error:', error);
+      }
       throw error;
     }
   }, [queryClient]);

@@ -222,7 +222,7 @@ const AccessibilityMenu = () => {
                       {t('accessibility.accessibilityStatement')}
                     </span>
                     <span className="text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
-                      Required
+                      {t('common.required')}
                     </span>
                   </button>
                 </div>

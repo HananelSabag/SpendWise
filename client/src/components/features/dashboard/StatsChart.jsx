@@ -429,10 +429,10 @@ const StatsChart = ({ className = '' }) => {
   
   // Enhanced range configurations
   const ranges = [
-    { key: 'daily', label: t('dashboard.balance.periods.daily') || 'Today', days: 1, icon: '1D', shortLabel: 'Day' },
-    { key: 'weekly', label: t('dashboard.balance.periods.weekly') || 'Week', days: 7, icon: '7D', shortLabel: 'Week' },
-    { key: 'monthly', label: t('dashboard.balance.periods.monthly') || 'Month', days: 30, icon: '1M', shortLabel: 'Month' },
-    { key: 'yearly', label: t('dashboard.balance.periods.yearly') || 'Year', days: 365, icon: '1Y', shortLabel: 'Year' }
+    { key: 'daily', label: t('dashboard.balance.periods.daily'), days: 1, icon: '1D', shortLabel: 'Day' },
+    { key: 'weekly', label: t('dashboard.balance.periods.weekly'), days: 7, icon: '7D', shortLabel: 'Week' },
+    { key: 'monthly', label: t('dashboard.balance.periods.monthly'), days: 30, icon: '1M', shortLabel: 'Month' },
+    { key: 'yearly', label: t('dashboard.balance.periods.yearly'), days: 365, icon: '1Y', shortLabel: 'Year' }
   ];
 
   // Get dashboard data
@@ -631,7 +631,7 @@ const StatsChart = ({ className = '' }) => {
               onClick={() => window.location.reload()}
               className="text-sm text-primary-600 hover:text-primary-700"
             >
-              {t('common.retry') || 'Retry'}
+              {t('common.retry')}
             </button>
           </div>
         </Card>
@@ -719,7 +719,7 @@ const StatsChart = ({ className = '' }) => {
                       />
                     )}
                     <PieChart className="relative z-10 w-3 h-3" />
-                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.pieChart') || 'Pie'}</span>
+                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.pieChart')}</span>
                   </motion.button>
                   
                   <motion.button
@@ -740,7 +740,7 @@ const StatsChart = ({ className = '' }) => {
                       />
                     )}
                     <BarChart3 className="relative z-10 w-3 h-3" />
-                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.barsChart') || 'Bars'}</span>
+                    <span className="relative z-10 hidden sm:inline">{t('dashboard.stats.barsChart')}</span>
                   </motion.button>
                 </div>
                 

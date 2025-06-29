@@ -137,10 +137,10 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
   // ✅ DEMO TRANSACTION DATA for visual demonstration
   const recurringTransaction = {
     id: 'demo-recurring-1',
-    description: isRTL ? "משכורת חודשית" : "Monthly Salary",
+    description: t('onboarding.recurring.examples.salary'),
     amount: 12000,
     type: 'income',
-    category_name: isRTL ? "שכר" : "Salary",
+    category_name: t('onboarding.recurring.examples.salaryCat'),
     date: new Date().toISOString().split('T')[0],
     is_recurring: true,
     recurring_interval: 'monthly'
@@ -148,10 +148,10 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
 
   const oneTimeTransaction = {
     id: 'demo-onetime-1',
-    description: isRTL ? "קפה בוקר" : "Morning Coffee",
+    description: t('onboarding.recurring.examples.coffee'),
     amount: -5,
     type: 'expense',
-    category_name: isRTL ? "אוכל ושתייה" : "Food & Drinks",
+    category_name: t('onboarding.recurring.examples.coffeeCat'),
     date: new Date().toISOString().split('T')[0],
     is_recurring: false
   };
@@ -160,29 +160,29 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
   const keyFeatures = [
     {
       icon: RefreshCw,
-      title: isRTL ? "מנהל עסקאות חוזרות" : "Recurring Manager",
-      description: isRTL ? "ניהול מרכזי של כל העסקאות החוזרות" : "Central management of all recurring transactions",
+      title: t('onboarding.recurring.features.manager.title'),
+      description: t('onboarding.recurring.features.manager.description'),
       color: 'text-purple-600',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
     },
     {
       icon: Plus,
-      title: isRTL ? "הוספה מהירה" : "Quick Add",
-      description: isRTL ? "הוסף עסקאות מהדשבורד בקליק אחד" : "Add transactions from dashboard with one click",
+      title: t('onboarding.recurring.features.quickAdd.title'),
+      description: t('onboarding.recurring.features.quickAdd.description'),
       color: 'text-green-600',
       bgColor: 'bg-green-100 dark:bg-green-900/20'
     },
     {
       icon: Layers,
-      title: isRTL ? "מנהל קטגוריות" : "Categories Manager",
-      description: isRTL ? t('nav.categoryManagerDesc') || "צור קטגוריות אישיות בהתאמה אישית" : t('nav.categoryManagerDesc') || "Manage your personal and system categories",
+      title: t('onboarding.recurring.features.categories.title'),
+      description: t('onboarding.recurring.features.categories.description'),
       color: 'text-blue-600',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20'
     },
     {
       icon: BarChart3,
-      title: isRTL ? "דף עסקאות מתקדם" : "Advanced Transactions",
-      description: isRTL ? "סינון וחיפוש מתקדם עם תובנות" : "Advanced filtering & search with insights",
+      title: t('onboarding.recurring.features.advanced.title'),
+      description: t('onboarding.recurring.features.advanced.description'),
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-100 dark:bg-indigo-900/20'
     }
@@ -205,7 +205,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
             <RefreshCw className="w-5 h-5 text-purple-600" />
           </motion.div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isRTL ? "עסקאות חוזרות" : "Recurring Transactions"}
+            {t('onboarding.recurring.title')}
           </h2>
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
@@ -218,10 +218,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
           "text-xs text-gray-600 dark:text-gray-300",
           isRTL && "text-right"
         )}>
-          {isRTL 
-            ? "אוטומציה חכמה למעקב פיננסי - הגדר פעם, עקוב תמיד" 
-            : "Smart automation for financial tracking - set once, track forever"
-          }
+          {t('onboarding.recurring.tagline')}
         </p>
       </motion.div>
 
@@ -241,7 +238,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               isRTL && "flex-row-reverse"
             )}>
               <Crown className="w-4 h-4 text-purple-600" />
-              {isRTL ? "השוואה: חוזר לעומת חד-פעמי" : "Compare: Recurring vs One-time"}
+              {t('onboarding.recurring.compareTitle')}
             </h3>
             
             {/* ✅ ENHANCED: Demo transaction cards with edit options always visible */}
@@ -250,7 +247,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               <div>
                 <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1 flex items-center gap-2">
                   <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  {isRTL ? "עסקה חוזרת (עם תג סגול)" : "Recurring Transaction (with purple badge)"}
+                  {t('onboarding.recurring.recurringLabel')}
                 </div>
                 <DemoTransactionCard
                   transaction={recurringTransaction}
@@ -264,7 +261,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               <div className="pb-6">
                 <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2">
                   <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  {isRTL ? "עסקה חד-פעמית (ללא תג)" : "One-time Transaction (no badge)"}
+                  {t('onboarding.recurring.oneTimeLabel')}
                 </div>
                 <DemoTransactionCard
                   transaction={oneTimeTransaction}
@@ -284,14 +281,14 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
             >
               <h4 className="text-xs font-bold text-purple-700 dark:text-purple-300 mb-1 flex items-center gap-1">
                 <Star className="w-3 h-3" />
-                {isRTL ? "הבדלים מרכזיים:" : "Key Differences:"}
+                {t('onboarding.recurring.keyDiffTitle')}
               </h4>
               <ul className={cn(
                 "text-xs text-purple-600 dark:text-purple-300 space-y-0.5",
                 isRTL && "text-right"
               )}>
-                <li>• {isRTL ? "עסקאות חוזרות יש להן תג סגול ואפשרויות עריכה נוספות" : "Recurring transactions have purple badge and more edit options"}</li>
-                <li>• {isRTL ? "יש להן אפשרות 'השהיה' ו'דילוג' ייחודיות" : "They have unique 'Pause' and 'Skip' options"}</li>
+                <li>• {t('onboarding.recurring.keyDiff.point1')}</li>
+                <li>• {t('onboarding.recurring.keyDiff.point2')}</li>
               </ul>
             </motion.div>
           </div>
@@ -311,7 +308,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               isRTL && "flex-row-reverse"
             )}>
               <Zap className="w-4 h-4 text-blue-600" />
-              {isRTL ? "איך זה עובד?" : "How It Works?"}
+              {t('onboarding.recurring.howWorks.title')}
             </h3>
             
                         <div className="space-y-2">
@@ -319,16 +316,13 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <h4 className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {isRTL ? "איך זה עובד?" : "How It Works?"}
+                  {t('onboarding.recurring.howWorks.title')}
                 </h4>
                 <p className={cn(
                   "text-xs text-blue-600 dark:text-blue-300",
                   isRTL && "text-right"
                 )}>
-                  {isRTL 
-                    ? "אתה קובע תאריך - זה מתווסף לרשימה ולמאזנים בתאריך הזה, אבל מפורס על כל החודש מתחילתו"
-                    : "You set the date - it's added to the list and balances on that date, but distributed throughout the month from the beginning"
-                  }
+                  {t('onboarding.recurring.howWorks.desc1')}
                 </p>
               </div>
 
@@ -336,16 +330,13 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800">
                 <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1 flex items-center gap-1">
                   <Heart className="w-3 h-3 text-red-500" />
-                  {isRTL ? "תהיה רגוע!" : "Be at Peace!"}
+                  {t('onboarding.recurring.howWorks.peace')}
                 </h4>
                 <p className={cn(
                   "text-xs text-emerald-600 dark:text-emerald-300",
                   isRTL && "text-right"
                 )}>
-                  {isRTL 
-                    ? "הכל מאוזן מתחילת החודש - אין הפתעות!"
-                    : "Everything is balanced from the start of the month - no surprises!"
-                  }
+                  {t('onboarding.recurring.howWorks.desc2')}
                 </p>
               </div>
             </div>
@@ -358,7 +349,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
               isRTL && "flex-row-reverse"
             )}>
               <Activity className="w-4 h-4 text-indigo-600" />
-              {isRTL ? "כלים זמינים" : "Available Tools"}
+              {t('onboarding.recurring.toolsTitle')}
             </h3>
             
             <div className="space-y-2">
@@ -412,7 +403,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
           size="md"
           className="px-6 py-2.5 rounded-lg border-2 text-sm font-medium"
         >
-          {isRTL ? "חזור" : "Back"}
+          {t('onboarding.common.previous')}
         </Button>
         
         <Button
@@ -420,7 +411,7 @@ const RecurringExplanationStep = ({ onNext, onPrevious, onSkip }) => {
           size="md"
           className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg text-sm"
         >
-          {isRTL ? "בואו נגדיר!" : "Let's Set Up!"}
+          <span>{t('onboarding.templates.cta.button') || t('onboarding.common.next')}</span>
         </Button>
       </motion.div>
     </div>

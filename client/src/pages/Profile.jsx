@@ -95,15 +95,15 @@ const Profile = () => {
   const tabs = [
     {
       id: 'profile',
-      label: t('profile.tabs.security') || 'Profile & Security',
+      label: t('profile.tabs.security'),
       icon: User,
-      description: t('profile.personalInformation') || 'Personal info & password'
+      description: t('profile.personalInformation')
     },
     {
       id: 'preferences',
-      label: t('profile.preferences') || 'Preferences',
+      label: t('profile.preferences'),
       icon: Settings,
-      description: t('profile.appPreferences') || 'App settings'
+      description: t('profile.appPreferences')
     }
   ];
 
@@ -119,10 +119,10 @@ const Profile = () => {
     if (/[0-9]/.test(password)) score += 15;
     if (/[^A-Za-z0-9]/.test(password)) score += 15;
     
-    if (score < 30) return { score, label: t('common.weak') || 'Weak', color: 'red' };
-    if (score < 60) return { score, label: t('common.fair') || 'Fair', color: 'orange' };
-    if (score < 80) return { score, label: t('common.good') || 'Good', color: 'yellow' };
-    return { score, label: t('common.strong') || 'Strong', color: 'green' };
+    if (score < 30) return { score, label: t('common.weak'), color: 'red' };
+    if (score < 60) return { score, label: t('common.fair'), color: 'orange' };
+    if (score < 80) return { score, label: t('common.good'), color: 'yellow' };
+    return { score, label: t('common.strong'), color: 'green' };
   };
 
   const passwordStrength = calculatePasswordStrength(passwordData.newPassword);
@@ -142,25 +142,25 @@ const Profile = () => {
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      toastService.error(t('profile.invalidImageType') || 'Invalid file type. Please use JPEG, PNG, or WebP.');
+      toastService.error(t('profile.invalidImageType'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toastService.error(t('profile.imageTooLarge') || 'File too large. Please use an image under 10MB.');
+      toastService.error(t('profile.imageTooLarge'));
       return;
     }
 
     try {
       await uploadProfilePicture(file);
       setAvatarKey(Date.now());
-      toastService.success(t('profile.photoUploaded') || 'Profile picture updated successfully! 🎉');
+      toastService.success(t('profile.photoUploaded'));
       
       const fileInput = document.getElementById('profile-picture-upload');
       if (fileInput) fileInput.value = '';
     } catch (error) {
       console.error('Upload failed:', error);
-      toastService.error(t('common.uploadFailed') || 'Upload failed. Please try again.');
+      toastService.error(t('common.uploadFailed'));
     }
   };
 
@@ -168,7 +168,7 @@ const Profile = () => {
   const handleProfileSave = async () => {
     const newErrors = {};
     if (!formData.username.trim()) {
-      newErrors.username = t('common.usernameRequired') || 'Username is required';
+      newErrors.username = t('common.usernameRequired');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -180,10 +180,10 @@ const Profile = () => {
       await updateProfile(formData);
       setIsEditingProfile(false);
       setErrors({});
-      toastService.success(t('profile.updateSuccess') || 'Profile updated successfully! ✨');
+      toastService.success(t('profile.updateSuccess'));
     } catch (error) {
       console.error('Failed to update profile:', error);
-      toastService.error(t('profile.updateError') || 'Failed to update profile. Please try again.');
+      toastService.error(t('profile.updateError'));
     }
   };
 
@@ -192,15 +192,15 @@ const Profile = () => {
     const newErrors = {};
     
     if (!passwordData.currentPassword) {
-      newErrors.currentPassword = t('profile.currentPassword') || 'Current password is required';
+      newErrors.currentPassword = t('profile.currentPassword');
     }
     if (!passwordData.newPassword) {
-      newErrors.newPassword = t('profile.newPassword') || 'New password is required';
+      newErrors.newPassword = t('profile.newPassword');
     } else if (passwordData.newPassword.length < 8) {
-      newErrors.newPassword = t('common.passwordMinLength') || 'Password must be at least 8 characters';
+      newErrors.newPassword = t('common.passwordMinLength');
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = t('common.passwordsDoNotMatch') || 'Passwords do not match';
+      newErrors.confirmPassword = t('common.passwordsDoNotMatch');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -222,10 +222,10 @@ const Profile = () => {
       setPasswordErrors({});
       setShowPasswords({ current: false, new: false, confirm: false });
       setIsEditingPassword(false);
-      toastService.success(t('profile.passwordChanged') || 'Password changed successfully! 🔒');
+      toastService.success(t('profile.passwordChanged'));
     } catch (error) {
       console.error('Password change failed:', error);
-      toastService.error(t('profile.passwordChangeError') || 'Password change failed. Please check your current password.');
+      toastService.error(t('profile.passwordChangeError'));
     }
   };
 
@@ -386,7 +386,7 @@ const Profile = () => {
                       
                       <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/30 backdrop-blur-sm rounded-full text-xs">
                         <CheckCircle className="w-3 h-3" />
-                        <span>{t('profile.verified') || 'Verified'}</span>
+                        <span>{t('profile.verified')}</span>
                       </div>
                     </motion.div>
                   </div>
@@ -491,7 +491,7 @@ const Profile = () => {
                     
                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/30 backdrop-blur-sm rounded-full text-xs">
                       <CheckCircle className="w-2.5 h-2.5" />
-                      <span>{t('profile.verified') || 'Verified'}</span>
+                      <span>{t('profile.verified')}</span>
                     </div>
                   </div>
                 </div>

@@ -304,8 +304,7 @@ const TransactionCard = ({
       await refresh();
     } catch (error) {
       console.error('Skip failed:', error);
-      // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip next payment';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.skipError.general');
       toastService.error(errorMessage);
     }
   }, [templateId, skipDates, refresh, t]);
@@ -327,8 +326,7 @@ const TransactionCard = ({
       await refresh();
     } catch (error) {
       console.error('Toggle failed:', error);
-      // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to toggle template';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.toggleTemplateError');
       toastService.error(errorMessage);
     }
   }, [templateId, isActive, updateTemplate, refresh, t]);
@@ -393,8 +391,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'editSingle',
           label: t('transactions.editThis'),
-          description: t('transactions.editThisOnlyTooltip') || 'Edit only this occurrence without affecting future transactions',
-          tooltip: t('transactions.editThisOnlyTooltip') || 'Edit only this occurrence',
+          description: t('transactions.editThisOnlyTooltip'),
+          tooltip: t('transactions.editThisOnlyTooltip'),
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -405,8 +403,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'editTemplate',
           label: t('transactions.editSeries'),
-          description: t('transactions.editSeriesDesc') || 'Edit this and all future transactions in this series',
-          tooltip: t('transactions.editSeriesDesc') || 'Edit entire recurring series',
+          description: t('transactions.editSeriesDesc'),
+          tooltip: t('transactions.editSeriesDesc'),
           icon: Calendar, // Different icon for series editing
           onClick: handleEditTemplate,
           variant: 'secondary',
@@ -418,8 +416,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'editSingle',
           label: t('common.edit'),
-          description: t('transactions.editTransactionDesc') || 'Edit this transaction',
-          tooltip: t('transactions.editTransactionTooltip') || 'Edit transaction details',
+          description: t('transactions.editTransactionDesc'),
+          tooltip: t('transactions.editTransactionTooltip'),
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -431,8 +429,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'edit',
           label: t('common.edit'),
-          description: t('transactions.editTransactionDesc') || 'Edit this transaction',
-          tooltip: t('transactions.editTransactionTooltip') || 'Edit transaction details',
+          description: t('transactions.editTransactionDesc'),
+          tooltip: t('transactions.editTransactionTooltip'),
           icon: Edit2,
           onClick: handleEditSingle,
           variant: 'primary',
@@ -448,8 +446,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'pause',
           label: t('transactions.pause'),
-          description: t('transactions.pauseDesc') || 'Temporarily pause this recurring transaction',
-          tooltip: t('transactions.pauseTooltip') || 'Pause recurring payments',
+          description: t('transactions.pauseDesc'),
+          tooltip: t('transactions.pauseTooltip'),
           icon: Pause,
           onClick: handleToggleActive,
           variant: 'warning',
@@ -460,8 +458,8 @@ const TransactionCard = ({
         buttons.push({
           key: 'resume',
           label: t('transactions.resume'),
-          description: t('transactions.resumeDesc') || 'Resume this recurring transaction',
-          tooltip: t('transactions.resumeTooltip') || 'Resume recurring payments',
+          description: t('transactions.resumeDesc'),
+          tooltip: t('transactions.resumeTooltip'),
           icon: Play,
           onClick: handleToggleActive,
           variant: 'success',
@@ -473,8 +471,8 @@ const TransactionCard = ({
       buttons.push({
         key: 'skip',
         label: t('transactions.skipOnce'),
-        description: t('transactions.skipOnceDesc') || 'Skip the next occurrence of this recurring transaction',
-        tooltip: t('transactions.skipOnceTooltip') || 'Skip next payment only',
+        description: t('transactions.skipOnceDesc'),
+        tooltip: t('transactions.skipOnceTooltip'),
         icon: SkipForward, // More specific icon for skipping
         onClick: handleQuickSkip,
         variant: 'secondary',
@@ -488,12 +486,8 @@ const TransactionCard = ({
     const deleteAction = {
       key: 'delete',
       label: shouldShowRecurringOptions ? t('transactions.deleteSeries') : t('common.delete'),
-      description: shouldShowRecurringOptions 
-        ? (t('transactions.deleteSeriesDesc') || 'Delete this entire recurring transaction series')
-        : (t('transactions.deleteTransactionDesc') || 'Delete this transaction'),
-      tooltip: shouldShowRecurringOptions 
-        ? (t('transactions.deleteSeriesTooltip') || 'Delete entire recurring series')
-        : (t('transactions.deleteTransactionTooltip') || 'Delete transaction'),
+      description: shouldShowRecurringOptions ? t('transactions.deleteSeriesDesc') : t('transactions.deleteTransactionDesc'),
+      tooltip: shouldShowRecurringOptions ? t('transactions.deleteSeriesTooltip') : t('transactions.deleteTransactionTooltip'),
       icon: shouldShowRecurringOptions ? XCircle : Trash2, // Different icon for series deletion
       onClick: handleDelete,
       variant: 'danger',

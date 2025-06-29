@@ -12,14 +12,17 @@ const Select = forwardRef(({
   required = false,
   disabled = false,
   fullWidth = true,
-  placeholder = 'Select an option',
+  placeholder,
   className = '',
   containerClassName = '',
   labelClassName = '',
   ...props
 }, ref) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isRTL = language === 'he';
+  
+  // Use translation for default placeholder
+  const defaultPlaceholder = placeholder || t('common.select');
 
   const baseSelectStyles = `
     w-full px-4 py-3 pr-10 rounded-xl border bg-white
@@ -61,9 +64,9 @@ const Select = forwardRef(({
           dir={isRTL ? 'rtl' : 'ltr'}
           {...props}
         >
-          {placeholder && (
+          {defaultPlaceholder && (
             <option value="" disabled>
-              {placeholder}
+              {defaultPlaceholder}
             </option>
           )}
           {options.map((option) => (

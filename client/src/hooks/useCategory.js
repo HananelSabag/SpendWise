@@ -36,70 +36,94 @@ export const useCategories = (type = null) => {
     }
   );
   
-  // ✅ ADD: Debug logging to see what API returns
-  console.log('🔍 [CATEGORIES-DEBUG] Raw API response:', categoriesQuery.data);
+  // ✅ ADD: Debug logging to see what API returns (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [CATEGORIES-DEBUG] Raw API response:', categoriesQuery.data);
+  }
   
   // ✅ FIXED: Process categories with proper data structure handling and initial state
   const processedCategories = useMemo(() => {
     // ✅ FIXED: Handle initial loading state properly
     if (!categoriesQuery.data) {
-      console.log('🔍 [CATEGORIES] No data yet - returning empty state');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 [CATEGORIES] No data yet - returning empty state');
+      }
       return { all: [], user: [], system: [] };
     }
     
-    // ✅ Add detailed logging for debugging
-    console.log('🔍 [CATEGORIES-DEBUG] Processing categories:', {
-      hasData: !!categoriesQuery.data,
-      dataType: typeof categoriesQuery.data,
-      dataKeys: categoriesQuery.data ? Object.keys(categoriesQuery.data) : null,
-      isArray: Array.isArray(categoriesQuery.data),
-      dataContent: categoriesQuery.data
-    });
+    // ✅ Add detailed logging for debugging (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [CATEGORIES-DEBUG] Processing categories:', {
+        hasData: !!categoriesQuery.data,
+        dataType: typeof categoriesQuery.data,
+        dataKeys: categoriesQuery.data ? Object.keys(categoriesQuery.data) : null,
+        isArray: Array.isArray(categoriesQuery.data),
+        dataContent: categoriesQuery.data
+      });
+    }
     
     // ✅ FIXED: Handle axios response structure properly
     let categoriesData = null;
     
     // First check if this is an axios response (has data, status, headers etc.)
     if (categoriesQuery.data.data && typeof categoriesQuery.data.status === 'number') {
-      console.log('🔍 [CATEGORIES] Detected axios response structure');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 [CATEGORIES] Detected axios response structure');
+      }
       
       // Check if the inner data has the expected API response structure
       if (categoriesQuery.data.data.data && Array.isArray(categoriesQuery.data.data.data)) {
         // Case: axios.data.data.data (API wraps in { success, data, timestamp })
         categoriesData = categoriesQuery.data.data.data;
-        console.log('✅ [CATEGORIES] Found axios.data.data.data array with', categoriesData.length, 'items');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ [CATEGORIES] Found axios.data.data.data array with', categoriesData.length, 'items');
+        }
       } else if (Array.isArray(categoriesQuery.data.data)) {
         // Case: axios.data.data (direct array)
         categoriesData = categoriesQuery.data.data;
-        console.log('✅ [CATEGORIES] Found axios.data.data array with', categoriesData.length, 'items');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ [CATEGORIES] Found axios.data.data array with', categoriesData.length, 'items');
+        }
       } else {
-        console.warn('❌ [CATEGORIES] Axios response data is not in expected format:', categoriesQuery.data.data);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('❌ [CATEGORIES] Axios response data is not in expected format:', categoriesQuery.data.data);
+        }
         categoriesData = [];
       }
     }
     // Handle direct API response (if axios interceptor already extracted data)
     else if (categoriesQuery.data.data && Array.isArray(categoriesQuery.data.data)) {
       categoriesData = categoriesQuery.data.data;
-      console.log('✅ [CATEGORIES] Found response.data.data array');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [CATEGORIES] Found response.data.data array');
+      }
     } 
     // Direct array (shouldn't happen with current setup)
     else if (Array.isArray(categoriesQuery.data)) {
       categoriesData = categoriesQuery.data;
-      console.log('✅ [CATEGORIES] Found direct array');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [CATEGORIES] Found direct array');
+      }
     } 
     // Other possible structures
     else if (categoriesQuery.data.categories && Array.isArray(categoriesQuery.data.categories)) {
       categoriesData = categoriesQuery.data.categories;
-      console.log('✅ [CATEGORIES] Found data.categories array');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [CATEGORIES] Found data.categories array');
+      }
     } else {
-      console.warn('❌ [CATEGORIES] Unexpected data structure:', categoriesQuery.data);
-      console.log('❌ [CATEGORIES] Available keys:', Object.keys(categoriesQuery.data));
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('❌ [CATEGORIES] Unexpected data structure:', categoriesQuery.data);
+        console.log('❌ [CATEGORIES] Available keys:', Object.keys(categoriesQuery.data));
+      }
       
       // Try to find any array in the response
       const allValues = Object.values(categoriesQuery.data);
       const arrayValue = allValues.find(val => Array.isArray(val));
       if (arrayValue) {
-        console.log('✅ [CATEGORIES] Found array in response values:', arrayValue.length, 'items');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ [CATEGORIES] Found array in response values:', arrayValue.length, 'items');
+        }
         categoriesData = arrayValue;
       } else {
         categoriesData = [];
@@ -108,14 +132,20 @@ export const useCategories = (type = null) => {
     
     // ✅ FIXED: Ensure we always have an array
     if (!Array.isArray(categoriesData)) {
-      console.warn('❌ [CATEGORIES] Categories data is not an array:', typeof categoriesData, categoriesData);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('❌ [CATEGORIES] Categories data is not an array:', typeof categoriesData, categoriesData);
+      }
       return { all: [], user: [], system: [] };
     }
     
-    console.log('✅ [CATEGORIES] Processing array with', categoriesData.length, 'items:', categoriesData);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ [CATEGORIES] Processing array with', categoriesData.length, 'items:', categoriesData);
+    }
     
     const categories = categoriesData.map(category => {
-      console.log('🔍 [CATEGORIES] Processing category:', category);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 [CATEGORIES] Processing category:', category);
+      }
       return {
         ...category,
         // ✅ Ensure icon is properly mapped from server data
@@ -138,12 +168,14 @@ export const useCategories = (type = null) => {
       }
     };
     
-    console.log('✅ [CATEGORIES] Final processed result:', {
-      allCount: result.all.length,
-      userCount: result.user.length,
-      systemCount: result.system.length,
-      categories: result.all
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ [CATEGORIES] Final processed result:', {
+        allCount: result.all.length,
+        userCount: result.user.length,
+        systemCount: result.system.length,
+        categories: result.all
+      });
+    }
     
     return result;
   }, [categoriesQuery.data]);
@@ -161,7 +193,7 @@ export const useCategories = (type = null) => {
     {
       mutationKey: mutationKeys.createCategory,
       invalidateKeys: [queryKeys.categories()],
-      successMessage: 'Category created successfully',
+      showSuccessToast: false, // Use toastService directly
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
@@ -192,6 +224,9 @@ export const useCategories = (type = null) => {
           
           return old;
         }
+      },
+      onSuccess: () => {
+        toastService.success('toast.success.categoryCreated');
       }
     }
   ); // ✅ FIX: Added missing closing parenthesis and semicolon
@@ -208,7 +243,7 @@ export const useCategories = (type = null) => {
     {
       mutationKey: mutationKeys.updateCategory,
       invalidateKeys: [queryKeys.categories()],
-      successMessage: 'Category updated successfully',
+      showSuccessToast: false, // Use toastService directly
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
@@ -242,6 +277,9 @@ export const useCategories = (type = null) => {
           
           return old;
         }
+      },
+      onSuccess: () => {
+        toastService.success('toast.success.categoryUpdated');
       }
     }
   ); // ✅ FIX: Added missing closing parenthesis and semicolon
@@ -252,7 +290,7 @@ export const useCategories = (type = null) => {
     {
       mutationKey: mutationKeys.deleteCategory,
       invalidateKeys: [queryKeys.categories()],
-      successMessage: 'Category deleted successfully',
+      showSuccessToast: false, // Use toastService directly
       optimisticUpdate: {
         queryKey: queryKeys.categories(type),
         updater: (old, variables) => {
@@ -278,6 +316,9 @@ export const useCategories = (type = null) => {
           
           return old;
         }
+      },
+      onSuccess: () => {
+        toastService.success('toast.success.categoryDeleted');
       },
       onError: (error) => {
         if (error.response?.data?.error?.code === 'CATEGORY_IN_USE') {

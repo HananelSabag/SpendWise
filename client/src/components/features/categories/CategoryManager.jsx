@@ -216,7 +216,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-adaptive-lg font-bold text-gray-900 dark:text-white">
-              {t('categories.title')}
+              {t('categories.manager')}
             </h2>
             <div className="flex items-center gap-2">
               <Button
@@ -529,7 +529,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
           {isLoading && (
             <div className="text-center py-8 sm:py-12">
               <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Loading categories...</p>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{t('categories.loading')}</p>
             </div>
           )}
 
@@ -540,17 +540,17 @@ const CategoryManager = ({ isOpen, onClose }) => {
                 <X className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
               </div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Error loading categories
+                {t('categories.errorLoading')}
               </h3>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
-                {error.message || 'Something went wrong'}
+                {error.message || t('categories.errorGeneric')}
               </p>
               <Button
                 onClick={refresh}
                 variant="outline"
                 size="small"
               >
-                Try Again
+                {t('common.retry')}
               </Button>
             </div>
           )}
@@ -585,7 +585,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 error={errors.name}
                 required
-                placeholder="למשל: קפה וארוחות"
+                placeholder={t('categories.namePlaceholder')}
                 className="text-base sm:text-sm"
               />
               
@@ -654,7 +654,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
                     onClick={() => setSelectedIconCategory(categoryKey)}
                     className="whitespace-nowrap text-xs sm:text-sm flex-shrink-0"
                   >
-                    {categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)}
+                    {t(`categories.iconCategories.${categoryKey}`)}
                   </Button>
                 ))}
               </div>

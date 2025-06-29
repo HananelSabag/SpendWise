@@ -112,11 +112,11 @@ const ExportModal = ({ isOpen, onClose }) => {
       bgColor: 'bg-green-50 dark:bg-green-900/20',
       borderColor: 'border-green-200 dark:border-green-800',
       hoverColor: 'hover:border-green-400 dark:hover:border-green-600',
-      description: t('profile.export.csvDescription') || 'Compatible with Excel and spreadsheet applications',
+      description: t('profile.export.csvDescription'),
       mimeType: 'text/csv',
       fileExtension: '.csv',
       estimatedSize: '~5-50 KB',
-      useCase: t('profile.export.csvUseCase') || 'Perfect for data analysis and reporting'
+      useCase: t('profile.export.csvUseCase')
     },
     {
       id: 'json',
@@ -127,11 +127,11 @@ const ExportModal = ({ isOpen, onClose }) => {
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       borderColor: 'border-blue-200 dark:border-blue-800',
       hoverColor: 'hover:border-blue-400 dark:hover:border-blue-600',
-      description: t('profile.export.jsonDescription') || 'Machine-readable format with complete data structure',
+      description: t('profile.export.jsonDescription'),
       mimeType: 'application/json',
       fileExtension: '.json',
       estimatedSize: '~10-100 KB',
-      useCase: t('profile.export.jsonUseCase') || 'Ideal for developers and technical users'
+      useCase: t('profile.export.jsonUseCase')
     }
   ];
 
@@ -146,10 +146,10 @@ const ExportModal = ({ isOpen, onClose }) => {
           </div>
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              {t('profile.export.title') || 'Export Your Data'}
+              {t('profile.export.title')}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t('profile.export.subtitle') || 'Choose your preferred format'}
+              {t('profile.export.subtitle')}
             </p>
           </div>
         </div>
@@ -170,14 +170,14 @@ const ExportModal = ({ isOpen, onClose }) => {
             <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                {t('profile.export.dataIncluded') || 'What\'s included in your export'}
+                {t('profile.export.dataIncluded')}
               </h4>
               <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-0.5">
                 {(exportOptions.dataIncluded || [
-                  'All transactions (income and expenses)',
-                  'Categories and descriptions', 
-                  'Account summary and statistics',
-                  'User preferences and settings'
+                  t('profile.export.transactionsIncluded'),
+                  t('profile.export.categoriesIncluded'),
+                  t('profile.export.summaryIncluded'),
+                  t('profile.export.preferencesIncluded')
                 ]).map((item, index) => (
                   <li key={index} className="flex items-center gap-1">
                     <CheckCircle className="w-2.5 h-2.5 flex-shrink-0" />
@@ -194,7 +194,7 @@ const ExportModal = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-center py-8">
             <LoadingSpinner 
               size="medium" 
-              text={t('profile.export.loadingOptions') || 'Loading export options...'} 
+              text={t('profile.export.loadingOptions')} 
             />
           </div>
         ) : (
@@ -202,10 +202,10 @@ const ExportModal = ({ isOpen, onClose }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                {t('profile.export.selectFormat') || 'Select export format:'}
+                {t('profile.export.selectFormat')}
               </h4>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                {exportFormats.length} {t('profile.export.formatsAvailable') || 'formats available'}
+                {exportFormats.length} {t('profile.export.formatsAvailable')}
               </span>
             </div>
             
@@ -274,12 +274,12 @@ const ExportModal = ({ isOpen, onClose }) => {
                       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
-                          {t('profile.export.estimatedSize') || 'Size'}: {format.estimatedSize}
+                          {t('profile.export.estimatedSize')}: {format.estimatedSize}
                         </span>
                         
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {t('profile.export.instant') || 'Instant'}
+                          {t('profile.export.instant')}
                         </span>
                       </div>
                     </div>
@@ -319,15 +319,15 @@ const ExportModal = ({ isOpen, onClose }) => {
               </div>
               <div>
                 <h5 className="text-xs font-medium text-gray-900 dark:text-white mb-1">
-                  {t('profile.export.security') || 'Security & Privacy'}
+                  {t('profile.export.security')}
                 </h5>
                 <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-1">
                   {exportOptions.privacyNote}
                 </p>
                 {/* Security features badges */}
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span>🔒 {t('profile.export.httpsEncrypted') || 'HTTPS Encrypted'}</span>
-                  <span>🚫 {t('profile.export.notStored') || 'Not Stored'}</span>
+                  <span>🔒 {t('profile.export.httpsEncrypted')}</span>
+                  <span>🚫 {t('profile.export.notStored')}</span>
                 </div>
               </div>
             </div>
@@ -341,15 +341,14 @@ const ExportModal = ({ isOpen, onClose }) => {
               <Loader2 className="w-4 h-4 text-primary-600 dark:text-primary-400 animate-spin" />
               <div>
                 <h5 className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                  {t('profile.export.processing') || 'Processing your export...'}
+                  {t('profile.export.processing')}
                 </h5>
                 <p className="text-xs text-primary-700 dark:text-primary-300">
                   {exportProgress.format && (
                     t('profile.export.progressStatus', { 
                       format: exportProgress.format, 
                       progress: exportProgress.progress 
-                    }) || 
-                    `${exportProgress.format} export: ${exportProgress.progress}% complete`
+                    })
                   )}
                 </p>
               </div>

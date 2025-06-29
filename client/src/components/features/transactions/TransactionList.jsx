@@ -478,7 +478,7 @@ const TransactionList = ({
                   animate={{ opacity: [0.3, 0.7, 0.3] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  Scroll for more...
+                  {t('common.scrollForMore')}
                 </motion.div>
               )}
             </div>
@@ -517,7 +517,7 @@ const TransactionList = ({
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-white dark:text-gray-900" />
               <span className="text-xs text-white dark:text-gray-900">
-                Refreshing...
+                {t('common.refreshing')}
               </span>
             </div>
           </motion.div>

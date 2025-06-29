@@ -24,22 +24,22 @@ const Footer = () => {
     ],
     legal: [
       { 
-        name: isRTL ? 'מדיניות פרטיות' : 'Privacy Policy', 
+        name: t('footer.privacyPolicy'), 
         href: '#', 
         onClick: () => setShowPrivacyPolicy(true)
       },
       { 
-        name: isRTL ? 'תקנון השימוש' : 'Terms of Service', 
+        name: t('footer.termsOfService'), 
         href: '#', 
         onClick: () => setShowTermsOfService(true)
       },
       { 
-        name: isRTL ? 'הצהרת נגישות' : 'Accessibility Statement', 
+        name: t('footer.accessibilityStatement'), 
         href: '#', 
         onClick: () => setShowAccessibilityStatement(true) 
       },
       { 
-        name: isRTL ? 'חוק הגנת הפרטיות' : 'Privacy Protection Law', 
+        name: t('footer.privacyProtectionLaw'), 
         href: 'https://www.gov.il/he/departments/legalInfo/cpifp_law',
         external: true
       },
@@ -60,10 +60,7 @@ const Footer = () => {
                 <span className={`${isRTL ? 'mr-2' : 'ml-2'} text-lg font-bold text-gray-800 dark:text-white`}>SpendWise</span>
               </div>
               <p className={`mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs ${isRTL ? 'text-right' : 'text-left'}`}>
-                {isRTL 
-                  ? 'פלטפורמה חכמה לניהול כספים אישיים. עקוב אחר ההוצאות, חסוך כסף והשג יעדים פיננסיים.'
-                  : 'Smart personal finance management platform. Track expenses, save money, and achieve your financial goals.'
-                }
+                {t('footer.missionStatement')}
               </p>
             </div>
 
@@ -72,7 +69,7 @@ const Footer = () => {
               {/* Pages */}
               <div className={isRTL ? 'order-2' : 'order-1'}>
                 <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                  {isRTL ? 'ניווט' : 'Navigation'}
+                  {t('footer.navigation')}
                 </h3>
                 <ul className="space-y-2">
                   {navigation.main.map((item) => (
@@ -91,7 +88,7 @@ const Footer = () => {
               {/* Legal */}
               <div className={isRTL ? 'order-1' : 'order-2'}>
                 <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                  {isRTL ? 'משפטי' : 'Legal'}
+                  {t('footer.legal')}
                 </h3>
                 <ul className="space-y-2">
                   {navigation.legal.map((item) => (
@@ -127,13 +124,10 @@ const Footer = () => {
             {/* Contact */}
             <div>
               <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                {isRTL ? 'תמיכה' : 'Support'}
+                {t('footer.support')}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {isRTL 
-                  ? 'יש לך שאלות? אנחנו כאן לעזור'
-                  : 'Have questions? We are here to help'
-                }
+                {t('footer.supportMessage')}
               </p>
               <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <Mail className="flex-shrink-0 w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -151,16 +145,13 @@ const Footer = () => {
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
             <div className={`flex flex-col md:flex-row justify-between items-center ${isRTL ? 'md:flex-row-reverse' : ''}`}>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {isRTL 
-                  ? `© ${currentYear} SpendWise. כל הזכויות שמורות.`
-                  : `© ${currentYear} SpendWise. All rights reserved.`
-                }
+                {t('footer.copyright', { year: currentYear })}
               </p>
               <div className={`flex items-center mt-4 md:mt-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                  <span>{isRTL ? 'נוצר עם' : 'Made with'}</span>
+                  <span>{t('footer.madeWith')}</span>
                   <Heart className="h-3 w-3 mx-1 text-red-500" />
-                  <span>{isRTL ? 'בישראל' : 'in Israel'}</span>
+                  <span>{t('footer.inIsrael')}</span>
                 </div>
               </div>
             </div>
@@ -168,10 +159,7 @@ const Footer = () => {
             {/* Legal Compliance Note */}
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-                {isRTL 
-                  ? 'האתר פועל בהתאם לחוק הגנת הפרטיות התשמ"א-1981 ולתקנותיו'
-                  : 'This website operates in accordance with Israeli Privacy Protection Law 1981'
-                }
+                {t('footer.legalCompliance')}
               </p>
             </div>
           </div>

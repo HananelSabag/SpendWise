@@ -201,7 +201,7 @@ const RecurringModal = ({
     } catch (error) {
       console.error('Toggle active failed:', error);
       // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to toggle template status';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.toggleTemplateError');
       toastService.error(errorMessage);
     }
   };
@@ -220,7 +220,7 @@ const RecurringModal = ({
     } catch (error) {
       console.error('Quick skip failed:', error);
       // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip next payment';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.skipError.general');
       toastService.error(errorMessage);
     }
   };
@@ -241,7 +241,7 @@ const RecurringModal = ({
     } catch (error) {
       console.error('Bulk skip failed:', error);
       // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to skip selected dates';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.skipError.general');
       toastService.error(errorMessage);
     }
   };
@@ -255,7 +255,7 @@ const RecurringModal = ({
     } catch (error) {
       console.error('Generate recurring failed:', error);
       // ✅ FIX: Better error handling
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to generate recurring transactions';
+      const errorMessage = error?.message || error?.response?.data?.message || t('transactions.generateError');
       toastService.error(errorMessage);
     }
   };
@@ -367,13 +367,13 @@ const RecurringModal = ({
                   </div>
                   <div>
                     <h1 className="text-lg lg:text-xl font-bold flex items-center gap-2">
-                      {t('nav.recurringManager') || 'Recurring Manager'}
+                      {t('nav.recurringManager')}
                       <Sparkles className="w-4 h-4" />
                     </h1>
                     <div className="flex items-center gap-2 text-white/90 text-sm">
                       <Clock className="w-3 h-3" />
                       <span>
-                        {templateStats.total} {t('transactions.templates')} • {templateStats.active} {t('transactions.active')}
+                        {templateStats.total} {t('transactions.templates')} • {templateStats.active} {t('common.active')}
                       </span>
                     </div>
                   </div>
@@ -400,7 +400,7 @@ const RecurringModal = ({
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
                   <input
                     type="text"
-                    placeholder={t('transactions.searchTemplates') || 'Search recurring templates...'}
+                    placeholder={t('transactions.searchTemplates')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm text-sm"
@@ -412,9 +412,9 @@ const RecurringModal = ({
                   {/* Filter Buttons */}
                   <div className="flex gap-1.5">
                     {[
-                      { key: 'all', label: t('common.all') || 'All', icon: Package },
-                      { key: 'active', label: t('transactions.activeOnly') || 'Active', icon: Play },
-                      { key: 'paused', label: t('transactions.pausedOnly') || 'Paused', icon: Pause }
+                      { key: 'all', label: t('common.all'), icon: Package },
+                      { key: 'active', label: t('transactions.activeOnly'), icon: Play },
+                      { key: 'paused', label: t('transactions.pausedOnly'), icon: Pause }
                     ].map(({ key, label, icon: Icon }) => (
                       <button
                         key={key}
@@ -468,21 +468,21 @@ const RecurringModal = ({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   />
-                  <p className="text-gray-600 dark:text-gray-400">{t('transactions.loadingTemplates') || 'Loading templates...'}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{t('transactions.loadingTemplates')}</p>
                 </div>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('common.error') || 'Error Loading Templates'}
+                  {t('common.error')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm mb-4">
-                  {error.message || t('common.errorDescription') || 'An error occurred while loading templates'}
+                  {error.message || t('common.errorDescription')}
                 </p>
                 <Button onClick={refreshAll} variant="outline">
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  {t('common.retry') || 'Retry'}
+                  {t('common.retry')}
                 </Button>
               </div>
             ) : filteredTemplates.length === 0 ? (
@@ -496,12 +496,12 @@ const RecurringModal = ({
                 </motion.div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   {searchTerm || filterType !== 'all' 
-                    ? (t('transactions.noMatchingTemplates') || 'No Matching Templates')
-                    : (t('transactions.noRecurringTemplates') || 'No Recurring Templates')
+                    ? t('transactions.noMatchingTemplates')
+                    : t('transactions.noRecurringTemplates')
                   }
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm">
-                  {t('transactions.createRecurringNote') || 'Create recurring templates to automate your transactions'}
+                  {t('transactions.createRecurringNote')}
                 </p>
               </div>
             ) : (
@@ -603,7 +603,7 @@ const RecurringModal = ({
             } catch (error) {
               console.error('❌ [RECURRING-MODAL] Delete failed:', error);
               // ✅ FIX: Better error handling - use error message or fallback
-              const errorMessage = error?.message || error?.response?.data?.message || 'Failed to delete template';
+              const errorMessage = error?.message || error?.response?.data?.message || t('transactions.templateDeleteFailed');
               toastService.error(errorMessage);
             }
           }}
@@ -681,11 +681,11 @@ const TemplateCard = ({
               <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-2">
                 <span>{template.categoryName}</span>
                 <span>•</span>
-                <span>{template.intervalType}</span>
+                <span>{t(`common.${template.intervalType}`) || template.intervalType}</span>
                 {template.nextPayment && (
                   <>
                     <span>•</span>
-                    <span>{t('transactions.next')}: {dateHelpers.format(new Date(template.nextPayment), 'MMM dd', language)}</span>
+                    <span>{t('common.next')}: {dateHelpers.format(new Date(template.nextPayment), 'MMM dd', language)}</span>
                   </>
                 )}
               </div>
@@ -849,7 +849,7 @@ const SkipDatesModal = ({
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <CalendarX className="w-5 h-5" />
-                {t('transactions.skipDates.title') || 'Skip Dates'}
+                {t('transactions.skipDates.title')}
               </h3>
               <p className="text-purple-100 text-sm mt-1">
                 {template.displayName}
@@ -867,7 +867,7 @@ const SkipDatesModal = ({
         <div className="p-6">
           <div className="mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('transactions.skipDates.description') || 'Select dates to skip'}
+              {t('transactions.skipDates.description')}
             </p>
           </div>
           
@@ -897,7 +897,7 @@ const SkipDatesModal = ({
           
           <div className="flex justify-end space-x-3">
             <Button variant="outline" onClick={onClose}>
-              {t('common.cancel') || 'Cancel'}
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => onConfirm(selectedDates)}
@@ -905,7 +905,7 @@ const SkipDatesModal = ({
               disabled={selectedDates.length === 0}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {t('transactions.skipSelected') || 'Skip Selected'} ({selectedDates.length})
+              {t('transactions.skipSelected')} ({selectedDates.length})
             </Button>
           </div>
         </div>

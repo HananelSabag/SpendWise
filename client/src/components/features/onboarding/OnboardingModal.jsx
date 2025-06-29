@@ -241,10 +241,8 @@ const OnboardingModal = ({
   // Close handler with confirmation if in progress
   const handleClose = () => {
     if (currentStep > 0 && !forceShow) {
-      const confirmMessage = isRTL 
-        ? `האם אתה בטוח שברצונך לצאת מתהליך האונבורדינג?\n\nההתקדמות שלך תישמר ותוכל להמשיך מאוחר יותר.`
-        : `Are you sure you want to exit the onboarding process?\n\nYour progress will be saved and you can continue later.`;
-        
+      const confirmMessage = t('onboarding.exitConfirm');
+      
       if (window.confirm(confirmMessage)) {
         saveProgress(currentStep);
         onClose();
@@ -327,7 +325,7 @@ const OnboardingModal = ({
                 "shadow-sm hover:shadow-md backdrop-blur-sm bg-white/80 dark:bg-gray-800/80",
                 isRTL ? "left-3" : "right-3"
               )}
-              title={isRTL ? "סגור ויציאה" : "Close and exit"}
+              title={t('onboarding.closeExit')}
             >
               <X size={20} className="stroke-2" />
             </button>

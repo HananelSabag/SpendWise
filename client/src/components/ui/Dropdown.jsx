@@ -15,7 +15,7 @@ const Dropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isRTL = language === 'he';
 
   useEffect(() => {
@@ -43,7 +43,7 @@ const Dropdown = ({
       >
         {trigger || (
           <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-            Options
+            {t('common.options')}
             <ChevronDown className={cn('w-4 h-4 transition-transform', isOpen && 'rotate-180')} />
           </button>
         )}

@@ -998,7 +998,7 @@ const EditTransactionPanel = ({
                   {formData.recurring_interval === 'monthly' && (
                     <div className="mt-3 sm:mt-4">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('actions.dayOfMonth', 'Day of Month')}
+                        {t('actions.dayOfMonth')}
                       </label>
                       <select
                         value={formData.day_of_month || new Date().getDate()}
@@ -1010,15 +1010,12 @@ const EditTransactionPanel = ({
                       >
                         {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                           <option key={day} value={day}>
-                            {day}{day === 1 ? (isRTL ? ' ראשון' : 'st') : 
-                                day === 2 ? (isRTL ? ' שני' : 'nd') : 
-                                day === 3 ? (isRTL ? ' שלישי' : 'rd') : 
-                                (isRTL ? ` ה-${day}` : 'th')}
+                            {day}
                           </option>
                         ))}
                       </select>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isRTL ? 'עבור חודשים עם פחות ימים, יבוא ביום האחרון של החודש' : 'For months with fewer days, will occur on the last day of the month'}
+                        {t('actions.dayOfMonthNote')}
                       </p>
                     </div>
                   )}
@@ -1045,7 +1042,7 @@ const EditTransactionPanel = ({
                         <X className="icon-adaptive-sm text-white" />
                       </motion.div>
                       <div className="flex-1">
-                        <h4 className="font-bold text-xs sm:text-sm">שגיאת עדכון</h4>
+                        <h4 className="font-bold text-xs sm:text-sm">{t('common.error')}</h4>
                         <p className="font-medium text-xs sm:text-sm">{error}</p>
                       </div>
                       <button
@@ -1102,7 +1099,7 @@ const EditTransactionPanel = ({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
                       >
-                        {t('actions.updateSuccess') || 'עודכן בהצלחה!'}
+                        {t('actions.updateSuccess')}
                       </motion.h3>
                       <motion.p 
                         className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium"
@@ -1110,7 +1107,7 @@ const EditTransactionPanel = ({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
                       >
-                        {t('actions.autoClosing', 'Closing automatically...')}
+                        {t('actions.autoClosing')}
                       </motion.p>
                     </div>
                   </div>

@@ -71,7 +71,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     // Income Templates
     {
       id: 'salary',
-      title: isRTL ? "משכורת חודשית" : "Monthly Salary",
+      title: t('onboarding.templates.examples.salary'),
       amount: getDefaultAmount('income', 'salary'),
       type: 'income',
       frequency: 'monthly',
@@ -84,7 +84,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     // Essential Expenses
     {
       id: 'rent',
-      title: isRTL ? "שכר דירה" : "Rent Payment",
+      title: t('onboarding.templates.examples.rent'),
       amount: getDefaultAmount('expense', 'rent'),
       type: 'expense',
       frequency: 'monthly',
@@ -95,7 +95,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'phone',
-      title: isRTL ? "חשבון טלפון" : "Phone Bill",
+      title: t('onboarding.templates.examples.phone'),
       amount: getDefaultAmount('expense', 'phone'),
       type: 'expense',
       frequency: 'monthly',
@@ -106,7 +106,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'internet',
-      title: isRTL ? "אינטרנט" : "Internet",
+      title: t('onboarding.templates.examples.internet'),
       amount: getDefaultAmount('expense', 'internet'),
       type: 'expense',
       frequency: 'monthly',
@@ -117,7 +117,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'groceries',
-      title: isRTL ? "קניות חודשיות" : "Monthly Groceries",
+      title: t('onboarding.templates.examples.groceries'),
       amount: getDefaultAmount('expense', 'groceries'),
       type: 'expense',
       frequency: 'monthly',
@@ -128,7 +128,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'car',
-      title: isRTL ? "ביטוח רכב" : "Car Insurance",
+      title: t('onboarding.templates.examples.carInsurance'),
       amount: getDefaultAmount('expense', 'insurance'),
       type: 'expense',
       frequency: 'monthly',
@@ -141,7 +141,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     // Lifestyle Templates
     {
       id: 'gym',
-      title: isRTL ? "מנוי חדר כושר" : "Gym Membership",
+      title: t('onboarding.templates.examples.gym'),
       amount: getDefaultAmount('expense', 'gym'),
       type: 'expense',
       frequency: 'monthly',
@@ -152,7 +152,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'subscription',
-      title: isRTL ? "מנוי נטפליקס" : "Netflix Subscription",
+      title: t('onboarding.templates.examples.netflix'),
       amount: getDefaultAmount('expense', 'subscription'),
       type: 'expense',
       frequency: 'monthly',
@@ -163,7 +163,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
     },
     {
       id: 'coffee',
-      title: isRTL ? "קפה יומי" : "Daily Coffee",
+      title: t('onboarding.templates.examples.coffee'),
       amount: getDefaultAmount('expense', 'coffee'),
       type: 'expense',
       frequency: 'daily',
@@ -215,7 +215,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
 
   const handleAddTransactionSuccess = (transactionData) => {
     // Optionally add the created transaction as a template
-    toastService.success(isRTL ? 'עסקה נוספה בהצלחה!' : 'Transaction added successfully!');
+    toastService.success(t('toast.success.transactionAdded'));
     setShowAddTransactions(false);
   };
 
@@ -250,7 +250,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       }
 
       if (templates.length > 0) {
-        toastService.success(`${templates.length} ${isRTL ? 'עסקאות חוזרות נוצרו בהצלחה!' : 'recurring transactions created successfully!'} 🎉`);
+        toastService.success(t('onboarding.templates.created', { count: templates.length }));
       }
 
       // Clear any saved progress to prevent going back
@@ -266,7 +266,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       }
     } catch (error) {
       console.error('Failed to create templates:', error);
-      toastService.error(isRTL ? 'שגיאה ביצירת התבניות' : 'Failed to create some templates. Please try again.');
+      toastService.error(t('toast.error.templateCreationFailed'));
     } finally {
       setIsCreating(false);
     }
@@ -294,7 +294,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
             <Star className="w-6 h-6 text-yellow-500" />
           </motion.div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {isRTL ? "בחר תבניות ראשונות" : "Choose Your First Templates"}
+            {t('onboarding.templates.title')}
           </h2>
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
@@ -308,10 +308,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
           "text-sm text-gray-600 dark:text-gray-300",
           isRTL && "text-right"
         )}>
-          {isRTL 
-            ? "בחר תבניות נפוצות או הוסף עסקה מותאמת אישית"
-            : "Choose common templates or add a custom transaction"
-          }
+          {t('onboarding.templates.subtitle')}
         </p>
       </motion.div>
 
@@ -331,7 +328,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
             )}>
               <Crown className="w-5 h-5 text-green-600" />
               <h3 className="font-bold text-green-800 dark:text-green-300">
-                {isRTL ? `נבחרו ${templates.length} תבניות` : `${templates.length} Templates Selected`}
+                {t('onboarding.templates.selected', { count: templates.length })}
               </h3>
             </div>
             
@@ -370,9 +367,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
                             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         )}>
-                          {template.frequency === 'monthly' && (isRTL ? "חודשי" : "Monthly")}
-                          {template.frequency === 'daily' && (isRTL ? "יומי" : "Daily")}
-                          {template.frequency === 'weekly' && (isRTL ? "שבועי" : "Weekly")}
+                          {t(`common.${template.frequency}`)}
                         </span>
                       </div>
                     </div>
@@ -435,16 +430,11 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
                           ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
                           : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                       )}>
-                        {suggestion.type === 'income' 
-                          ? (isRTL ? "הכנסה" : "Income")
-                          : (isRTL ? "הוצאה" : "Expense")
-                        }
+                        {suggestion.type === 'income' ? t('transactions.income') : t('transactions.expense')}
                       </span>
                       <span>•</span>
                       <span>
-                        {suggestion.frequency === 'monthly' && (isRTL ? "חודשי" : "Monthly")}
-                        {suggestion.frequency === 'daily' && (isRTL ? "יומי" : "Daily")}
-                        {suggestion.frequency === 'weekly' && (isRTL ? "שבועי" : "Weekly")}
+                        {t(`common.${suggestion.frequency}`)}
                       </span>
                     </div>
                     
@@ -494,13 +484,10 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
             </div>
             <div className={cn("flex-1", isRTL && "text-right")}>
               <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                {isRTL ? "הוסף עסקה מותאמת אישית" : "Add Custom Transaction"}
+                {t('onboarding.templates.addCustom')}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                {isRTL 
-                  ? "צור עסקה חדשה עם הפרטים המדויקים שלך"
-                  : "Create a new transaction with your exact details"
-                }
+                {t('onboarding.templates.addCustomDesc')}
               </p>
             </div>
             <div className="text-blue-600 dark:text-blue-400">
@@ -527,7 +514,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
           )}
         >
           <ChevronDown className={cn("w-4 h-4", isRTL ? "ml-2 rotate-90" : "mr-2 -rotate-90")} />
-          {isRTL ? "חזור" : "Back"}
+          {t('onboarding.common.previous')}
         </Button>
 
         <Button
@@ -539,7 +526,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
           size="lg"
           className="px-6 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
-          {isRTL ? "דלג ונגמר" : "Skip & Finish"}
+          {t('onboarding.common.skip')}
         </Button>
         
         <Button
@@ -558,12 +545,12 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
               isRTL && "flex-row-reverse"
             )}>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{isRTL ? "יוצר..." : "Creating..."}</span>
+              <span>{t('onboarding.common.completing')}</span>
             </span>
           ) : (
             <>
               <CheckCircle className="w-4 h-4" />
-              <span>{isRTL ? "נסיים!" : "Finish!"}</span>
+              <span>{t('onboarding.common.complete')}</span>
             </>
           )}
         </Button>

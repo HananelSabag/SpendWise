@@ -155,7 +155,7 @@ const QuickActionsBar = () => {
                 <Clock className="w-4 h-4" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    {t('dashboard.quickActions.historicalDateWarning', 'Adding to historical date')}
+                    {t('dashboard.quickActions.historicalDateWarning')}
                   </p>
                   <p className="text-xs opacity-80">
                     {new Date(selectedDate).toLocaleDateString()}
@@ -166,7 +166,7 @@ const QuickActionsBar = () => {
                   onClick={resetToToday}
                   className="text-xs bg-amber-200 dark:bg-amber-800 px-2 py-1 rounded hover:bg-amber-300 dark:hover:bg-amber-700 transition-colors"
                 >
-                  {t('dashboard.quickActions.goToToday', 'Today')}
+                  {t('dashboard.quickActions.goToToday')}
                 </button>
               </div>
             </motion.div>
@@ -176,7 +176,7 @@ const QuickActionsBar = () => {
         {/* Amount Input Section */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('dashboard.quickActions.amount', 'Amount')}
+            {t('dashboard.quickActions.amount')}
           </label>
           
           {/* Quick Amount Buttons */}
@@ -221,7 +221,7 @@ const QuickActionsBar = () => {
             whileTap={{ scale: isCreating ? 1 : 0.98 }}
           >
             <TrendingDown className="w-4 h-4" />
-            <span>{t('actions.quickExpense', 'Expense')}</span>
+            <span>{t('actions.quickExpense')}</span>
             {isCreating && (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -239,7 +239,7 @@ const QuickActionsBar = () => {
             whileTap={{ scale: isCreating ? 1 : 0.98 }}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>{t('actions.quickIncome', 'Income')}</span>
+            <span>{t('actions.quickIncome')}</span>
             {isCreating && (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -285,8 +285,8 @@ const QuickActionsBar = () => {
                   <Check className="w-3 h-3 text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-sm font-medium">{t('actions.success', 'Success!')}</p>
-                  <p className="text-xs text-green-700 dark:text-green-400">{t('actions.transactionAdded', 'Transaction added')}</p>
+                  <p className="text-sm font-medium">{t('actions.success')}</p>
+                  <p className="text-xs text-green-700 dark:text-green-400">{t('actions.transactionAdded')}</p>
                 </div>
               </div>
             </motion.div>

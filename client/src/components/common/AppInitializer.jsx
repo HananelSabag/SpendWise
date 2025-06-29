@@ -41,6 +41,8 @@ const AppInitializer = ({ children }) => {
 
 // Cold start screen with helpful messaging
 const ColdStartScreen = ({ serverStatus }) => {
+  const { t } = useLanguage();
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -58,18 +60,18 @@ const ColdStartScreen = ({ serverStatus }) => {
         </motion.div>
         
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          Server Starting Up
+          {t('app.initializer.serverStartingUp')}
         </h2>
         
         <p className="text-gray-600 dark:text-gray-300 mb-4">
-          Our server is waking up from sleep mode. This takes about 30-60 seconds.
+          {t('app.initializer.serverWakingMessage')}
         </p>
         
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             <Coffee className="w-4 h-4" />
             <span className="text-sm font-medium">
-              Free hosting wakes up slowly - hang tight!
+              {t('app.initializer.freeHostingMessage')}
             </span>
           </div>
         </div>
@@ -82,11 +84,13 @@ const ColdStartScreen = ({ serverStatus }) => {
 
 // Regular initialization screen
 const InitializingScreen = ({ step }) => {
+  const { t } = useLanguage();
+  
   const steps = {
-    auth: { icon: CheckCircle, label: 'Authenticating...', progress: 25 },
-    server: { icon: Server, label: 'Connecting to server...', progress: 50 },
-    data: { icon: Wifi, label: 'Loading your data...', progress: 75 },
-    complete: { icon: CheckCircle, label: 'Almost ready!', progress: 100 }
+    auth: { icon: CheckCircle, label: t('app.initializer.authenticating'), progress: 25 },
+    server: { icon: Server, label: t('app.initializer.connectingToServer'), progress: 50 },
+    data: { icon: Wifi, label: t('app.initializer.loadingData'), progress: 75 },
+    complete: { icon: CheckCircle, label: t('app.initializer.almostReady'), progress: 100 }
   };
 
   const currentStep = steps[step] || steps.auth;
@@ -107,7 +111,7 @@ const InitializingScreen = ({ step }) => {
       </motion.div>
       
       <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-        Loading SpendWise
+        {t('app.initializer.loadingSpendWise')}
       </h2>
       
       <p className="text-gray-600 dark:text-gray-300 mb-6">
@@ -129,6 +133,8 @@ const InitializingScreen = ({ step }) => {
 
 // Error screen with retry option
 const ErrorScreen = () => {
+  const { t } = useLanguage();
+  
   const handleRetry = () => {
     window.location.reload();
   };
@@ -145,18 +151,18 @@ const ErrorScreen = () => {
       </div>
       
       <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-        Something went wrong
+        {t('app.initializer.somethingWentWrong')}
       </h2>
       
       <p className="text-gray-600 dark:text-gray-300 mb-6">
-        Failed to initialize the app. Please try refreshing.
+        {t('app.initializer.initializationFailed')}
       </p>
       
       <button
         onClick={handleRetry}
         className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
-        Retry
+        {t('common.retry')}
       </button>
     </motion.div>
   );
@@ -164,11 +170,13 @@ const ErrorScreen = () => {
 
 // Server status indicator
 const ServerStatusIndicator = ({ status }) => {
+  const { t } = useLanguage();
+  
   const statusConfig = {
-    checking: { color: 'yellow', label: 'Checking server...', pulse: true },
-    cold: { color: 'red', label: 'Server sleeping', pulse: false },
-    warming: { color: 'orange', label: 'Server warming up...', pulse: true },
-    ready: { color: 'green', label: 'Server ready!', pulse: false }
+    checking: { color: 'yellow', label: t('app.initializer.checkingServer'), pulse: true },
+    cold: { color: 'red', label: t('app.initializer.serverSleeping'), pulse: false },
+    warming: { color: 'orange', label: t('app.initializer.serverWarmingUp'), pulse: true },
+    ready: { color: 'green', label: t('app.initializer.serverReady'), pulse: false }
   };
 
   const config = statusConfig[status] || statusConfig.checking;

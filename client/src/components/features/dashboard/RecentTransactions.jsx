@@ -216,7 +216,7 @@ const RecentTransactions = ({
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600"></div>
                         <div className="text-xs text-gray-400 dark:text-gray-500">
-                          No more transactions
+                          {t('dashboard.transactions.noMore')}
                         </div>
                       </div>
                       <div className="text-xs text-gray-300 dark:text-gray-600">---</div>
@@ -271,7 +271,7 @@ const RecentTransactions = ({
                                 try {
                                   const date = new Date(transaction.date);
                                   if (isNaN(date.getTime())) {
-                                    return 'Invalid date';
+                                    return t('common.invalidDate');
                                   }
                                   
                                   return date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', {
@@ -281,7 +281,7 @@ const RecentTransactions = ({
                                   });
                                 } catch (error) {
                                   console.warn('Date formatting error:', error);
-                                  return transaction.date || 'No date';
+                                  return transaction.date || t('common.notSet');
                                 }
                               })()}
                             </span>

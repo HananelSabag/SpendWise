@@ -106,7 +106,7 @@ const AccessibilityStatement = ({ isOpen, onClose }) => {
               <div className="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg">
                 <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                   <p className="text-gray-700 dark:text-gray-300 break-all sm:break-normal">
-                    <strong>Email:</strong> spendwise.verification@gmail.com
+                    <strong>{t('common.email')}:</strong> spendwise.verification@gmail.com
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">
                     <strong>{t('accessibility.statement.phone')}:</strong> 03-9876543

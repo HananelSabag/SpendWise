@@ -73,22 +73,22 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
   const features = [
     {
       icon: Zap,
-      title: isRTL ? "ניהול פיננסי חכם" : "Smart Financial Management",
-      description: isRTL ? "עקוב אחר הוצאות והכנסות בקלות" : "Track expenses and income effortlessly",
+      title: t('onboarding.welcome.features.analytics.title'),
+      description: t('onboarding.welcome.features.analytics.description'),
       color: 'text-blue-600',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20'
     },
     {
       icon: BarChart3,
-      title: isRTL ? "תובנות מתקדמות" : "Advanced Insights",
-      description: isRTL ? "הבן את ההרגלים הפיננסיים שלך" : "Understand your financial habits",
+      title: t('onboarding.welcome.features.recurring.title'),
+      description: t('onboarding.welcome.features.recurring.description'),
       color: 'text-purple-600',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
     },
     {
       icon: Shield,
-      title: isRTL ? "אבטחה מלאה" : "Complete Security",
-      description: isRTL ? "הנתונים שלך מוגנים ומוצפנים" : "Your data is protected and encrypted",
+      title: t('onboarding.welcome.features.security.title'),
+      description: t('onboarding.welcome.features.security.description'),
       color: 'text-green-600',
       bgColor: 'bg-green-100 dark:bg-green-900/20'
     }
@@ -181,7 +181,9 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
       console.error('❌ [ONBOARDING] Failed to save preferences:', error);
       
       // Still allow user to continue but show warning
-      if (window.confirm(`שגיאה בשמירת ההעדפות: ${error?.message || 'Unknown error'}\n\nהאם להמשיך בכל זאת?`)) {
+      if (window.confirm(isRTL
+        ? `שגיאה בשמירת ההעדפות: ${error?.message || t('common.unknownError')}\n\nהאם להמשיך בכל זאת?`
+        : `Failed to save preferences: ${error?.message || t('common.unknownError')}\n\nDo you want to continue anyway?`)) {
         onNext();
       }
     } finally {
@@ -206,7 +208,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
             <Sparkles className="w-6 h-6 text-yellow-500" />
           </motion.div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isRTL ? `ברוך הבא ${user?.name ? user.name.split(' ')[0] : ''}! ` : `Welcome ${user?.name ? user.name.split(' ')[0] : ''}!`}
+            {t('onboarding.welcome.greeting', { name: user?.name ? user.name.split(' ')[0] : '' })}
           </h1>
           <motion.div
             animate={{ rotate: [0, 10, -10, 0] }}
@@ -219,10 +221,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
           "text-gray-600 dark:text-gray-300 max-w-xl mx-auto text-xs",
           isRTL && "text-right"
         )}>
-          {isRTL 
-            ? "בואו נגדיר את חוויית הניהול הפיננסי שלך."
-            : "Let's set up your financial management experience."
-          }
+          {t('onboarding.welcome.description')}
         </p>
       </motion.div>
 
@@ -243,7 +242,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
                 <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
               <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                Personal Profile
+                {t('onboarding.welcome.profileTitle')}
               </h3>
             </div>
             
@@ -278,7 +277,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingPicture}
                   className="absolute -bottom-0.5 -right-0.5 p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-colors disabled:opacity-50"
-                  title={isRTL ? "הוסף תמונה" : "Add Profile Picture"}
+                  title={t('onboarding.welcome.profile.addPhoto')}
                 >
                   {isUploadingPicture ? (
                     <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -288,7 +287,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
                 </button>
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
-                {isRTL ? "לחץ להוספת תמונת פרופיל" : "Click to upload profile picture"}
+                {t('onboarding.welcome.profile.uploadPrompt')}
               </p>
             </div>
             
@@ -316,7 +315,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
               {/* Language Selection - COMPACT */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {isRTL ? "שפה" : "Language"}
+                  {t('onboarding.preferences.language')}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {languages.map((lang) => (
@@ -340,7 +339,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
               {/* Currency Selection - COMPACT */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {isRTL ? "מטבע" : "Currency"}
+                  {t('onboarding.preferences.currency')}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {currencies.map((curr) => (
@@ -364,7 +363,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
               {/* Theme Selection - COMPACT */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {isRTL ? "ערכת נושא" : "Theme"}
+                  {t('onboarding.preferences.theme')}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {themes.map((thm) => {
@@ -454,17 +453,14 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
               )}>
                 <Star className="w-3 h-3 text-yellow-600" />
                 <h4 className="font-bold text-yellow-700 dark:text-yellow-300 text-xs">
-                  {isRTL ? "מוכן לצעד הבא?" : "Ready for the next step?"}
+                  {t('onboarding.welcome.nextPrompt.title')}
                 </h4>
               </div>
               <p className={cn(
                 "text-xs text-yellow-600 dark:text-yellow-300",
                 isRTL && "text-right"
               )}>
-                {isRTL 
-                  ? "בואו נלמד על העוצמה של עסקאות חוזרות ואיך הן יכולות לעזור לך לנהל את הכספים בצורה חכמה יותר!"
-                  : "Let's learn about the power of recurring transactions and how they can help you manage your finances smarter!"
-                }
+                {t('onboarding.welcome.nextPrompt.description')}
               </p>
             </motion.div>
           </div>
@@ -481,17 +477,14 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
                 <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                {isRTL ? "דרך מהירה" : "Quick Setup"}
+                {t('templates.quickSetup')}
               </h3>
             </div>
             <p className={cn(
               "text-xs text-gray-600 dark:text-gray-300 mb-3",
               isRTL && "text-right"
             )}>
-              {isRTL 
-                ? "ההגדרות שלך נשמרות אוטומטית ואתה יכול לשנות אותן בכל עת מהדף הפרופיל"
-                : "Your settings are saved automatically and you can change them anytime from your profile"
-              }
+              {t('onboarding.welcome.quickSetup.description')}
             </p>
                          <div className="flex items-center gap-2">
                {[Shield, Target, Heart].map((Icon, i) => (
@@ -532,14 +525,14 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
               isRTL && "flex-row-reverse"
             )}>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{isRTL ? "שומר..." : "Saving..."}</span>
+              <span>{t('onboarding.preferences.saving')}</span>
             </span>
           ) : (
             <span className={cn(
               "flex items-center gap-2",
               isRTL && "flex-row-reverse"
             )}>
-              <span>{isRTL ? "בואו נתחיל!" : "Let's Begin!"}</span>
+              <span>{t('onboarding.welcome.cta.button')}</span>
               <ArrowRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
             </span>
           )}

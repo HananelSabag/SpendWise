@@ -89,7 +89,7 @@ const VerifyEmail = () => {
     } else {
       console.error('🔍 [TOKEN] No valid token found');
       setStatus('error');
-      setErrorMessage(t('auth.invalidVerificationLink') || 'Invalid verification link');
+      setErrorMessage(t('auth.invalidVerificationLink'));
     }
   }, [paramsToken, location.pathname, location.search]);
 
@@ -105,7 +105,7 @@ const VerifyEmail = () => {
       const result = await verifyEmail(token);
       
       setStatus('success');
-      setUserEmail(result.user?.email || 'your email');
+      setUserEmail(result.user?.email);
       
       // Navigate to dashboard after successful verification
       setTimeout(() => {
@@ -123,7 +123,7 @@ const VerifyEmail = () => {
         setStatus('already-used');
       } else if (errorMsg?.includes('invalid') || errorData?.code === 'INVALID_TOKEN') {
         setStatus('error');
-        setErrorMessage(t('auth.invalidVerificationLink') || 'Invalid verification link');
+        setErrorMessage(t('auth.invalidVerificationLink'));
       } else {
         setStatus('error');
         setErrorMessage(errorMsg || t('auth.verificationFailed'));
@@ -276,7 +276,7 @@ const VerifyEmail = () => {
                 <p><strong>Extracted Token:</strong> {extractedToken ? `${extractedToken.substring(0, 20)}...` : 'None'}</p>
                 <p><strong>Params Token:</strong> {paramsToken ? `${paramsToken.substring(0, 20)}...` : 'None'}</p>
                 <p><strong>Pathname:</strong> {location.pathname}</p>
-                <p><strong>Search:</strong> {location.search || 'None'}</p>
+                <p><strong>Search:</strong> {location.search}</p>
                 <p><strong>User Agent:</strong> {navigator.userAgent.substring(0, 50)}...</p>
               </div>
             </motion.div>

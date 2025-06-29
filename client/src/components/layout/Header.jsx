@@ -139,10 +139,10 @@ const Header = () => {
       description: t('nav.recurringManagerDesc')
     },
     {
-      name: 'Exchange Calculator',
+      name: t('nav.exchangeCalculator'),
       icon: DollarSign,
       onClick: handleOpenExchangeCalculator,
-      description: 'Convert currencies with live rates'
+      description: t('nav.exchangeCalculatorDesc')
     }
   ];
 

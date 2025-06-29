@@ -18,7 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/helpers';
 
 const GuestPreferences = ({ className = '' }) => {
-  const { isRTL, toggleLanguage, language } = useLanguage();
+  const { isRTL, toggleLanguage, language, t } = useLanguage();
   const { toggleTheme, isDark } = useTheme();
 
   // Language display names
@@ -84,7 +84,7 @@ const GuestPreferences = ({ className = '' }) => {
           <Moon className="w-4 h-4" />
         )}
         <span className="text-sm font-medium hidden sm:inline">
-          {isDark ? (isRTL ? 'בהיר' : 'Light') : (isRTL ? 'כהה' : 'Dark')}
+          {isDark ? t('theme.light') : t('theme.dark')}
         </span>
       </motion.button>
     </div>

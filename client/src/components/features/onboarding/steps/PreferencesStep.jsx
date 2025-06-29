@@ -56,11 +56,11 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
     { code: 'JPY', name: 'Japanese Yen', symbol: '¥' }
   ];
 
-  // Theme options
+  // Theme options – translation-driven names
   const themes = [
-    { code: 'light', name: 'בהיר', icon: Sun },
-    { code: 'dark', name: 'כהה', icon: Moon },
-    { code: 'system', name: 'מערכת', icon: Monitor }
+    { code: 'light', icon: Sun },
+    { code: 'dark', icon: Moon },
+    { code: 'system', icon: Monitor }
   ];
 
   // Handle preference changes
@@ -217,7 +217,7 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
               >
                 {currencies.map((currency) => (
                   <option key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.name}
+                    {currency.symbol} {t(`exchange.currencies.${currency.code}`)}
                   </option>
                 ))}
               </select>
@@ -259,7 +259,7 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
                     )}
                   >
                     <themeOption.icon className="w-3 h-3 mx-auto mb-0.5" />
-                    <span className="text-xs font-medium">{themeOption.name}</span>
+                    <span className="text-xs font-medium">{t(`onboarding.preferences.themes.${themeOption.code}`)}</span>
                   </button>
                 ))}
               </div>
@@ -268,7 +268,7 @@ const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
             {/* Future Features Placeholder - Budget will be added later */}
             <div className="text-center py-4">
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                {isRTL ? "תכונות נוספות יתווספו בקרוב" : "More features coming soon"}
+                {t('onboarding.preferences.comingSoon')}
               </div>
             </div>
           </div>

@@ -5,8 +5,8 @@
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useEffect } from 'react';
-import toast from 'react-hot-toast';
 import { queryKeys, mutationKeys } from '../utils/api';
+import { useToast } from './useToast';
 
 // Query configurations for different data types
 const queryConfigs = {
@@ -78,6 +78,7 @@ export const useApiQuery = (key, queryFn, options = {}) => {
  */
 export const useApiMutation = (mutationFn, options = {}) => {
   const queryClient = useQueryClient();
+  const { toastService } = useToast();
   const {
     onSuccess,
     onError,
@@ -123,7 +124,7 @@ export const useApiMutation = (mutationFn, options = {}) => {
       
       // Show success toast
       if (showSuccessToast && successMessage) {
-        toast.success(successMessage);
+        toastService.success(successMessage);
       }
       
       // Call custom success handler
@@ -137,8 +138,8 @@ export const useApiMutation = (mutationFn, options = {}) => {
       
       // Show error toast
       if (showErrorToast) {
-        const message = error.response?.data?.error?.message || error.message || 'Operation failed';
-        toast.error(message);
+        // Use toastService which has proper translation fallbacks
+        toastService.error(error);
       }
       
       // Call custom error handler
@@ -306,7 +307,10 @@ export const useQueryPerformance = (queryKey) => {
           JSON.stringify(event.query.queryKey) === JSON.stringify(queryKey)) {
         if (startTimeRef.current) {
           const duration = Date.now() - startTimeRef.current;
-          console.log(`[Query Performance] ${JSON.stringify(queryKey)}: ${duration}ms`);
+          // Only log performance in development
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[Query Performance] ${JSON.stringify(queryKey)}: ${duration}ms`);
+          }
           startTimeRef.current = null;
         }
       }
