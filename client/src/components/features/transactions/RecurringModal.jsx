@@ -195,7 +195,7 @@ const RecurringModal = ({
         is_active: !template.isActive
       });
       
-      toastService.success(template.isActive ? 'toast.success.nextPaymentSkipped' : 'toast.success.transactionGenerated');
+      // Success toast handled in useTransactionTemplates/useTransactions hook
       refreshTemplates();
       refreshRecurring();
     } catch (error) {
@@ -214,7 +214,9 @@ const RecurringModal = ({
     
     try {
       await skipDates(template.id, [getNextPaymentDate(template)]);
-      toastService.success('toast.success.skipDatesSuccess');
+      // Success toast handled in skipDates mutation
+      setSelectedSkipDates([]);
+      setShowSkipModal(null);
       refreshTemplates();
       refreshRecurring();
     } catch (error) {
@@ -233,7 +235,7 @@ const RecurringModal = ({
     
     try {
       await skipDates(templateId, dates);
-      toastService.success('toast.success.skipDatesSuccess');
+      // Success toast handled in skipDates mutation
       setSelectedSkipDates([]);
       setShowSkipModal(null);
       refreshTemplates();
@@ -249,7 +251,7 @@ const RecurringModal = ({
   const handleGenerateRecurring = async () => {
     try {
       await generateRecurring();
-      toastService.success('toast.success.transactionGenerated');
+      // Success toast handled in generateRecurring mutation
       refreshTemplates();
       refreshRecurring();
     } catch (error) {
@@ -594,8 +596,7 @@ const RecurringModal = ({
               console.log('🗑️ [RECURRING-MODAL] Final deleteFuture:', deleteFuture);
               await deleteTemplate(template.id, deleteFuture);
               
-              toastService.success('toast.success.templateDeleted');
-              
+              // Success toast handled in deleteTemplate mutation
               setShowDeleteModal(false);
               setSelectedTemplate(null);
               refreshAll();

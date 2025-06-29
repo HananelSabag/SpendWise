@@ -225,6 +225,7 @@ export const useToast = () => {
       : messageKey;
 
     return toast.success(message, {
+      id: options.id || message,
       ...defaultOptions,
       duration: options.duration || 3000,
       ...options
@@ -249,6 +250,7 @@ export const useToast = () => {
     }
 
     return toast.error(message, {
+      id: options.id || message,
       ...defaultOptions,
       duration: options.duration || 5000,
       ...options
@@ -262,6 +264,7 @@ export const useToast = () => {
       : messageKey;
 
     return toast(message, {
+      id: options.id || message,
       ...defaultOptions,
       duration: options.duration || 4000,
       ...options
@@ -275,6 +278,7 @@ export const useToast = () => {
       : messageKey;
 
     return toast(message, {
+      id: options.id || message,
       ...defaultOptions,
       duration: options.duration || 4000,
       ...options

@@ -154,8 +154,6 @@ const Profile = () => {
     try {
       await uploadProfilePicture(file);
       setAvatarKey(Date.now());
-      toastService.success(t('profile.photoUploaded'));
-      
       const fileInput = document.getElementById('profile-picture-upload');
       if (fileInput) fileInput.value = '';
     } catch (error) {

@@ -12,7 +12,8 @@
     "seed": "node scripts/seed.js",
     "db:reset": "node scripts/reset-db.js",
     "audit:translations": "node scripts/translationAudit.js",
-    "sync:translations": "node scripts/syncTranslations.js"
+    "sync:translations": "node scripts/syncTranslations.js",
+    "check:toasts": "node scripts/checkDuplicateToasts.js"
   },
   "keywords": [
     "expenses",
