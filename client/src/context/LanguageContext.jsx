@@ -1,7 +1,6 @@
 // client/src/context/LanguageContext.jsx
 // Enhanced language context with complete organized translations
 
-import { ca } from 'date-fns/locale';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
@@ -13,6 +12,13 @@ export const useLanguage = () => {
   }
   return context;
 };
+
+// Development only logger (hoisted)
+function debugLog(...args) {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+}
 
 // Complete organized translations object
 const translations = {
@@ -85,7 +91,7 @@ const translations = {
       "exportLimitReached": "Too many export requests. Please wait a moment.",
       "bulkOperationFailed": "Bulk {{operation}} failed",
       "bulkOperationPartialFail": "{{failed}} transactions failed to {{operation}}",
-      "fileTooLarge": "File size must be less than 5MB",
+      "fileTooLarge": "File size must be less than 10MB",
       "invalidFileType": "Please select a valid file type",
       "uploadFailed": "Upload failed. Please try again.",
       "databaseError": "Database error occurred",
@@ -187,9 +193,12 @@ const translations = {
     "retry": "Retry",
     "comingSoon": "Coming soon",
     "refresh": "Refresh",
+    "cache_cleared": "Cache cleared",
     "delete": "Delete",
     "edit": "Edit",
     "available": "Available",
+    "avatar": "Avatar",
+    "operation_failed": "Operation failed",
     "close": "Close",
     "next": "Next",
     "previous": "Previous",
@@ -1191,11 +1200,11 @@ const translations = {
     "confirmPassword": "Confirm New Password",
     "changePhoto": "Change Photo",
     "uploadPhoto": "Upload Photo",
-    "photoHelper": "JPG, PNG or GIF. Max size 5MB",
+    "photoHelper": "JPG, PNG or GIF. Max size 10MB",
     "uploading": "Uploading...",
     "photoUploaded": "Photo uploaded successfully",
     "invalidImageType": "Please select a valid image file (JPG, PNG, or GIF)",
-    "imageTooLarge": "Image size must be less than 5MB",
+    "imageTooLarge": "Image size must be less than 10MB",
     "active": "Active",
     "subtitle": "Manage your account details and preferences",
     "status": "Status",
@@ -1401,7 +1410,7 @@ const translations = {
       "keyExists": "Setting name already exists",
       "invalidJson": "Invalid JSON format",
       "invalidFileType": "Please select an image file",
-      "fileTooLarge": "File size must be less than 5MB",
+      "fileTooLarge": "File size must be less than 10MB",
       "uploadFailed": "Failed to upload image"
     }
   },
@@ -1495,9 +1504,9 @@ const translations = {
   },
 
   "calendar": {
-    "weekDays": "['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']",
-    "months": "['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']",
-    "monthsShort": "['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']",
+    "weekDays": ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    "months": ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    "monthsShort": ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     "today": "Today",
     "previousMonth": "Previous Month",
     "nextMonth": "Next Month",
@@ -2065,7 +2074,7 @@ const translations = {
         "exportLimitReached": "יותר מדי בקשות יצוא. אנא המתן רגע.",
         "bulkOperationFailed": "פעולה קבוצתית {{operation}} נכשלה",
         "bulkOperationPartialFail": "{{failed}} עסקאות נכשלו ב{{operation}}",
-        "fileTooLarge": "גודל הקובץ חייב להיות פחות מ-5MB",
+        "fileTooLarge": "גודל הקובץ חייב להיות פחות מ-10MB",
         "invalidFileType": "אנא בחר סוג קובץ תקין",
         "uploadFailed": "ההעלאה נכשלה. אנא נסה שוב.",
         "databaseError": "אירעה שגיאת מסד נתונים",
@@ -2172,6 +2181,7 @@ const translations = {
       "retry": "נסה שוב",
       "comingSoon": "בקרוב",
       "refresh": "רענן",
+      "cache_cleared": "המטמון נוקה",
       "delete": "מחק",
       "edit": "ערוך",
       "available": "זמין",
@@ -2283,7 +2293,9 @@ const translations = {
       "processing": "מעבד...",
       "errorDescription": "תיאור שגיאה",
       "unknownError": "שגיאה לא ידועה",
-      "email": "דואר אלקטרוני"
+      "email": "דואר אלקטרוני",
+      "avatar": "אוואטר",
+      "operation_failed": "הפעולה נכשלה"
     },
 
     "days": {
@@ -3096,7 +3108,7 @@ const translations = {
         "professional": "מקצועי",
         "workIncome": "הכנסות עבודה",
         "investments": "השקעות",
-        "otherIncome": "הכנסות אחרות",
+        "otherIncome": "הכנסה אחרת",
         "other": "אחר"
       },
 
@@ -3176,11 +3188,11 @@ const translations = {
       "confirmPassword": "אשר סיסמה חדשה",
       "changePhoto": "שנה תמונה",
       "uploadPhoto": "העלה תמונה",
-      "photoHelper": "JPG, PNG או GIF. גודל מקסימלי 5MB",
+      "photoHelper": "JPG, PNG או GIF. גודל מקסימלי 10MB",
       "uploading": "מעלה...",
       "photoUploaded": "תמונה הועלתה בהצלחה",
       "invalidImageType": "אנא בחר קובץ תמונה תקין (JPG, PNG, או GIF)",
-      "imageTooLarge": "גודל התמונה חייב להיות פחות מ-5MB",
+      "imageTooLarge": "גודל התמונה חייב להיות פחות מ-10MB",
       "active": "פעיל",
       "subtitle": "נהל את פרטי החשבון וההעדפות שלך",
       "status": "סטטוס",
@@ -3276,7 +3288,7 @@ const translations = {
         "benefits": {
           "title": "למה להשתמש בעסקאות חוזרות?",
           "timeTitle": "חוסך זמן",
-          "timeDesc": "הגדר פעם אחת, עקוב אוטומטית לתמיד",
+          "timeDesc": "הגדר פעם אחת, עקוב אוטומטית תמיד",
           "insightsTitle": "תובנות טובות יותר",
           "insightsDesc": "ראה את דפוסי ההוצאות והמגמות האמיתיים שלך",
           "accuracyTitle": "הישאר מדויק",
@@ -3386,7 +3398,7 @@ const translations = {
         "keyExists": "שם הגדרה כבר קיים",
         "invalidJson": "פורמט JSON לא תקין",
         "invalidFileType": "אנא בחר קובץ תמונה",
-        "fileTooLarge": "גודל הקובץ חייב להיות פחות מ-5MB",
+        "fileTooLarge": "גודל הקובץ חייב להיות פחות מ-10MB",
         "uploadFailed": "נכשל להעלות תמונה"
       }
     },
@@ -3480,9 +3492,9 @@ const translations = {
     },
 
     "calendar": {
-      "weekDays": "['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']",
-      "months": "['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']",
-      "monthsShort": "['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']",
+      "weekDays": ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
+      "months": ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+      "monthsShort": ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'],
       "today": "היום",
       "previousMonth": "חודש קודם",
       "nextMonth": "חודש הבא",
@@ -3870,7 +3882,7 @@ const translations = {
       "benefits": {
         "title": "למה להשתמש בעסקאות חוזרות?",
         "timeTitle": "חוסך זמן",
-        "timeDesc": "הגדר פעם אחת, עקוב אוטומטית לתמיד",
+        "timeDesc": "הגדר פעם אחת, עקוב אוטומטית תמיד",
         "insightsTitle": "תובנות טובות יותר",
         "insightsDesc": "ראה את דפוסי ההוצאות והמגמות האמיתיים שלך",
         "accuracyTitle": "הישאר מדויק",
@@ -3978,9 +3990,6 @@ const translations = {
 };
 
 export const LanguageProvider = ({ children }) => {
-  // ✅ FIX: Don't use useAuth directly to avoid circular dependency
-  // We'll sync with auth state via events instead
-  
   // ✅ FIX: Initialize language from localStorage first, then fallback to browser/default
   const [language, setLanguage] = useState(() => {
     // Check localStorage first
@@ -4012,7 +4021,7 @@ export const LanguageProvider = ({ children }) => {
       return;
     }
 
-    console.log(`🌐 [LANGUAGE] Permanent change: ${language} → ${newLanguage}`);
+    debugLog(`🌐 [LANGUAGE] Permanent change: ${language} → ${newLanguage}`);
 
     setLanguage(newLanguage);
     setSessionLanguage(null); // Clear session override
@@ -4026,7 +4035,7 @@ export const LanguageProvider = ({ children }) => {
       return;
     }
 
-    console.log(`🌐 [LANGUAGE] Session change: ${effectiveLanguage} → ${newLanguage}`);
+    debugLog(`🌐 [LANGUAGE] Session change: ${effectiveLanguage} → ${newLanguage}`);
 
     setSessionLanguage(newLanguage);
     // Note: Don't save to localStorage for session changes
@@ -4040,7 +4049,7 @@ export const LanguageProvider = ({ children }) => {
 
   // ✅ ADD: Reset to saved preference (called on logout)
   const resetToSavedLanguage = () => {
-    console.log(`🌐 [LANGUAGE] Resetting to saved preference: ${language}`);
+    debugLog(`🌐 [LANGUAGE] Resetting to saved preference: ${language}`);
     setSessionLanguage(null);
   };
 
@@ -4052,7 +4061,7 @@ export const LanguageProvider = ({ children }) => {
         if (user?.preferences?.language) {
           const userLang = user.preferences.language;
           if (userLang !== language) {
-            console.log(`🌐 [LANGUAGE] Syncing with user preference: ${language} → ${userLang}`);
+            debugLog(`🌐 [LANGUAGE] Syncing with user preference: ${language} → ${userLang}`);
             setLanguage(userLang);
             setSessionLanguage(null); // Clear any session override
             localStorage.setItem('preferredLanguage', userLang);
@@ -4072,7 +4081,7 @@ export const LanguageProvider = ({ children }) => {
     const handleStorageChange = (e) => {
       try {
         if (e.key === 'preferredLanguage' && e.newValue !== language) {
-          console.log(`🌐 [LANGUAGE] Storage change detected: ${language} → ${e.newValue}`);
+          debugLog(`🌐 [LANGUAGE] Storage change detected: ${language} → ${e.newValue}`);
           setLanguage(e.newValue);
           setSessionLanguage(null); // Clear session override when permanent preference changes
         }
@@ -4089,7 +4098,7 @@ export const LanguageProvider = ({ children }) => {
   useEffect(() => {
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🌐 [LANGUAGE] State update:`, {
+        debugLog(`🌐 [LANGUAGE] State update:`, {
           saved: language,
           session: sessionLanguage,
           effective: effectiveLanguage,
@@ -4105,7 +4114,7 @@ export const LanguageProvider = ({ children }) => {
   useEffect(() => {
     const handleSessionReset = () => {
       try {
-        console.log(`🌐 [LANGUAGE] Session reset detected - clearing session overrides`);
+        debugLog(`🌐 [LANGUAGE] Session reset detected - clearing session overrides`);
         resetToSavedLanguage();
       } catch (error) {
         console.warn('🌐 [LANGUAGE] Error handling session reset:', error);
@@ -4114,7 +4123,7 @@ export const LanguageProvider = ({ children }) => {
 
     const handleLanguageReset = () => {
       try {
-        console.log(`🌐 [LANGUAGE] Language-specific reset detected`);
+        debugLog(`🌐 [LANGUAGE] Language-specific reset detected`);
         resetToSavedLanguage();
       } catch (error) {
         console.warn('🌐 [LANGUAGE] Error handling language reset:', error);
@@ -4199,6 +4208,8 @@ export const LanguageProvider = ({ children }) => {
       currency: 'ILS'
     }).format(amount);
   };
+
+  // (debugLog defined globally above)
 
   return (
     <LanguageContext.Provider value={{

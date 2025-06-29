@@ -2,6 +2,7 @@
 import React from 'react';
 import { User } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * Avatar Component
@@ -16,6 +17,8 @@ const Avatar = ({
   showStatus = false,
   status = 'online' // online, offline, away
 }) => {
+  const { t } = useLanguage();
+
   const sizeClasses = {
     xs: 'w-8 h-8 text-xs',
     sm: 'w-10 h-10 text-sm',
@@ -157,7 +160,7 @@ const Avatar = ({
         <div className="relative">
           <img
             src={getImageSrc(retryCount > 0)}
-            alt={name || 'Avatar'}
+            alt={name || t('common.avatar')}
             className={cn(
               'rounded-full object-cover',
               sizeClasses[size],

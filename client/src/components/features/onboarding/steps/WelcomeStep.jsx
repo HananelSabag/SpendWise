@@ -105,9 +105,9 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toastService.error('File too large. Please use an image under 5MB.');
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toastService.error('File too large. Please use an image under 10MB.');
       return;
     }
 

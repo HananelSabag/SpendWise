@@ -111,6 +111,47 @@ LANGUAGE CONTEXT: ✅ PERFECTED
 - Added 113+ English translations systematically
 - Achieved perfect translation synchronization
 
+### Codebase Translation Cleanup – Blueprint Phase
+1. **Audit Script Verification & Enhancement**
+   - Review `scripts/TranslationNewCheck.js` coverage (missing keys, duplicate keys, hard-coded UI text, fallback patterns, `isRTL` ternaries, dynamic keys).
+   - Extend script to also:
+     • Flag translation keys present in English but missing in Hebrew (and vice-versa).
+     • Detect duplicate key definitions across locales.
+     • Identify unused translation keys for potential pruning.
+   - Validate enhancements by running the script and confirming new checks function correctly.
+
+2. **Dynamic Translation Keys Validation (18 keys)**
+   - For each dynamic key pattern listed in `smart-translation-audit-report.json`, ensure the **base path** exists in `LanguageContext.jsx` (e.g., `privacy.sections.*`).
+   - Add placeholder values ("__DYNAMIC__") where necessary to maintain key tree integrity.
+
+3. **Hard-coded UI Text Removal (46 occurrences)**
+   - Follow the report's `hardcodedStrings` list.
+   - For each entry:
+     • Add a meaningful key under `common` (or a more specific namespace if appropriate).
+     • Replace the raw string with `t('new.key')`.
+   - Commit in logical batches (per component/page) to keep diffs manageable.
+
+4. **Fallback Pattern Elimination (≈30 occurrences)**
+   - Remove all `|| 'fallback'` patterns noted in the report.
+   - Guarantee that a valid translation key is always provided so no runtime fallback is needed.
+
+5. **`isRTL` Ternary Refactors (≈60 occurrences)**
+   - Replace each `isRTL ? 'he' : 'en'` style ternary with a single `t()` lookup using new utility keys (e.g., `common.textleft`).
+   - Add concise keys for recurring utility classes / words to avoid bloat.
+
+6. **LanguageContext Final Fixes**
+   - Convert `calendar.weekDays`, `months`, `monthsShort` to real arrays (carry-over from previous plan).
+   - Remove unused `import { ca } from 'date-fns/locale';`.
+   - Introduce `debugLog` helper and swap direct `console.log` calls.
+
+7. **Regeneration & Verification**
+   - Re-run `node scripts/TranslationNewCheck.js`; expect **0** `missingTKeys`, **0** `hardcodedStrings`, **0** `fallbackPatterns`, **0** `isRTLTernaries`, and **0** `filesWithIssues`.
+   - Confirm `dynamicTKeys` count unchanged (informational only).
+
+8. **Documentation & Log Update**
+   - Update the `## Log` section with a new sub-entry summarising fixes and attach fresh statistics.
+   - Mark Context Folder phase as complete; move focus to **Services Folder** phase.
+
 ---
 
 ## 📝 Notes
@@ -118,3 +159,24 @@ LANGUAGE CONTEXT: ✅ PERFECTED
 - **Method**: Proven 4-point translation audit methodology  
 - **Goal**: Clean up remaining 484 hard-coded strings
 - **Standard**: Production-ready i18n compliance
+
+## Plan
+### Context Folder – LanguageContext Quick Fixes (Blueprint Phase)
+1. **Calendar Array Format Correction**
+   - Locate both English and Hebrew `calendar` objects in `client/src/context/LanguageContext.jsx`.
+   - Replace string representations of arrays with real JavaScript arrays for `weekDays`, `months`, and `monthsShort` keys.
+
+2. **Remove Unused Import**
+   - Delete the unused `import { ca } from 'date-fns/locale';` statement to eliminate dead code.
+
+3. **Development-Scoped Logging**
+   - Create a `debugLog` helper inside `LanguageProvider` that logs only when `process.env.NODE_ENV === 'development'`.
+   - Replace all direct `console.log` statements in `LanguageContext.jsx` with `debugLog`.
+
+4. **Verification & Linting**
+   - Ensure the modified file passes linting and the application compiles without warnings or errors.
+
+5. **Workflow Update**
+   - Upon completion, document the successful fixes in the `## Log` section under a new sub-entry.
+
+---

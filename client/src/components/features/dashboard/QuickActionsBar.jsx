@@ -65,11 +65,11 @@ const QuickActionsBar = () => {
       const getDescription = (transactionType) => {
         switch (transactionType) {
           case 'expense':
-            return t('dashboard.quickActions.quickExpense') || 'Quick Expense';
+            return t('dashboard.quickActions.quickExpense');
           case 'income':
-            return t('dashboard.quickActions.quickIncome') || 'Quick Income';
+            return t('dashboard.quickActions.quickIncome');
           default:
-            return t('dashboard.quickActions.defaultDescription') || 'Quick Transaction';
+            return t('dashboard.quickActions.defaultDescription');
         }
       };
       
@@ -134,10 +134,10 @@ const QuickActionsBar = () => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('dashboard.quickActions.title') || 'Quick Actions'}
+              {t('dashboard.quickActions.title')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('dashboard.quickActions.subtitle') || 'Add transactions quickly'}
+              {t('dashboard.quickActions.subtitle')}
             </p>
           </div>
         </div>

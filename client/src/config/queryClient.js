@@ -217,7 +217,8 @@ export const queryClient = new QueryClient({
         }
         
         // Show user-friendly error message
-        const message = error?.response?.data?.error?.message || 'Operation failed';
+        const _t = (window?.getTranslation) ? window.getTranslation : (k)=>k;
+        const message = error?.response?.data?.error?.message || _t('common.operation_failed');
         toast.error(message);
         
         if (isDevelopment) {
@@ -267,7 +268,8 @@ export const cacheUtils = {
   // Clear all cache
   clearAllCache: () => {
     queryClient.clear();
-    toast.success('Cache cleared');
+    const _t = (window?.getTranslation) ? window.getTranslation : (k)=>k;
+    toast.success(_t('common.cache_cleared'));
   },
   
   // Get cache statistics
