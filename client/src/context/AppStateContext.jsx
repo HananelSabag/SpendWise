@@ -103,7 +103,9 @@ export const AppStateProvider = ({ children }) => {
       retries++;
     }
     
-    throw new Error('Server failed to respond after cold start period');
+    throw new Error(typeof window !== 'undefined' && window.localStorage?.getItem('app_language') === 'he' 
+      ? 'השרת נכשל להגיב לאחר תקופת התחלה קרה' 
+      : 'Server failed to respond after cold start period');
   };
 
   // Preload critical data to avoid loading states later

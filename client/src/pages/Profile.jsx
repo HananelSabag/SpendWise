@@ -348,7 +348,7 @@ const Profile = () => {
                 
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
                   <Upload className="w-3 h-3 text-white mb-0.5" />
-                  <span className="text-[8px] text-white font-medium">Edit</span>
+                  <span className="text-[8px] text-white font-medium">{t('common.edit')}</span>
                 </div>
                 
                 {isUploadingPicture && (
@@ -403,7 +403,7 @@ const Profile = () => {
                       icon={Download}
                       className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 text-xs px-2 py-1.5"
                     >
-                      {t('profile.exportData') || 'Export'}
+                      {t('profile.exportData')}
                     </Button>
                     
                     <Button
@@ -413,7 +413,7 @@ const Profile = () => {
                       icon={LogOut}
                       className="bg-red-500/20 backdrop-blur-sm border-red-300/30 text-red-100 hover:bg-red-500/30 text-xs px-2 py-1.5"
                     >
-                      {t('common.logout') || 'Logout'}
+                      {t('common.logout')}
                     </Button>
                   </motion.div>
                 </div>
@@ -427,21 +427,21 @@ const Profile = () => {
                 >
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                     <div className="text-sm font-bold text-white">{currency}</div>
-                    <div className="text-[10px] text-white/70">{t('profile.currency') || 'Currency'}</div>
+                    <div className="text-[10px] text-white/70">{t('profile.currency')}</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                     <div className="text-sm font-bold text-white">{language.toUpperCase()}</div>
-                    <div className="text-[10px] text-white/70">{t('profile.language') || 'Language'}</div>
+                    <div className="text-[10px] text-white/70">{t('profile.language')}</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                     <div className="text-sm font-bold text-white capitalize">{theme}</div>
-                    <div className="text-[10px] text-white/70">{t('profile.theme') || 'Theme'}</div>
+                    <div className="text-[10px] text-white/70">{t('profile.theme')}</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                     <div className="text-sm font-bold text-white">
                       {user?.created_at ? Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}
                     </div>
-                    <div className="text-[10px] text-white/70">{t('profile.stats.days') || 'Days'}</div>
+                    <div className="text-[10px] text-white/70">{t('profile.stats.days')}</div>
                   </div>
                 </motion.div>
               </div>
@@ -539,21 +539,21 @@ const Profile = () => {
               >
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
                   <div className="text-xs font-bold text-white">{currency}</div>
-                  <div className="text-[8px] text-white/70">Currency</div>
+                  <div className="text-[8px] text-white/70">{t('common.currency')}</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
                   <div className="text-xs font-bold text-white">{language.toUpperCase()}</div>
-                  <div className="text-[8px] text-white/70">Language</div>
+                  <div className="text-[8px] text-white/70">{t('common.language')}</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
                   <div className="text-xs font-bold text-white capitalize">{theme}</div>
-                  <div className="text-[8px] text-white/70">Theme</div>
+                  <div className="text-[8px] text-white/70">{t('common.theme')}</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1.5 text-center">
                   <div className="text-xs font-bold text-white">
                     {user?.created_at ? Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0}
                   </div>
-                  <div className="text-[8px] text-white/70">Days</div>
+                  <div className="text-[8px] text-white/70">{t('common.days')}</div>
                 </div>
               </motion.div>
             </div>
@@ -750,8 +750,8 @@ const ProfileSecurityTab = ({
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-primary-hierarchy">{t('profile.personalInformation') || 'Personal Information'}</h2>
-              <p className="text-sm text-secondary-hierarchy">{t('profile.subtitle') || 'Manage your account details'}</p>
+                      <h2 className="text-xl font-bold text-primary-hierarchy">{t('profile.personalInformation')}</h2>
+        <p className="text-sm text-secondary-hierarchy">{t('profile.subtitle')}</p>
             </div>
           </div>
           
@@ -763,7 +763,7 @@ const ProfileSecurityTab = ({
               icon={Edit2}
               className="bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 text-xs px-2 py-1"
             >
-              {t('profile.edit') || 'Edit'}
+                              {t('profile.edit')}
             </Button>
           )}
         </div>
@@ -771,7 +771,7 @@ const ProfileSecurityTab = ({
         {isEditingProfile ? (
           <div className="space-y-3">
             <Input
-              label={t('profile.username') || "Username"}
+                              label={t('profile.username')}
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               error={errors.username}
@@ -783,17 +783,17 @@ const ProfileSecurityTab = ({
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
                 <Mail className="w-3 h-3" />
-                {t('profile.email') || 'Email Address'}
+                {t('profile.email')}
                 <div className="flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
                   <Lock className="w-2.5 h-2.5 text-gray-500" />
-                  <span className="text-[10px] text-gray-500 font-medium">{t('common.protected') || 'Protected'}</span>
+                                      <span className="text-[10px] text-gray-500 font-medium">{t('common.protected')}</span>
                 </div>
               </label>
               <div className="p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
                 <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2 text-xs">
                   <Mail className="w-3 h-3" />
                   {user?.email}
-                  <span className="text-[10px] text-gray-500 ml-auto">{t('profile.emailNotEditable') || 'Cannot be changed'}</span>
+                  <span className="text-[10px] text-gray-500 ml-auto">{t('profile.emailNotEditable')}</span>
                 </p>
               </div>
             </div>
@@ -807,7 +807,7 @@ const ProfileSecurityTab = ({
                 icon={X}
                 className="text-xs px-2 py-1"
               >
-                {t('common.cancel') || 'Cancel'}
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -818,7 +818,7 @@ const ProfileSecurityTab = ({
                 icon={Save}
                 className="text-xs px-2 py-1"
               >
-                {t('common.save') || 'Save'}
+                {t('common.save')}
               </Button>
             </div>
           </div>
@@ -827,7 +827,7 @@ const ProfileSecurityTab = ({
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <User className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">{t('profile.username') || 'Username'}</span>
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">{t('profile.username')}</span>
               </div>
               <p className="text-sm font-bold text-blue-900 dark:text-blue-100">{user?.username}</p>
             </div>
@@ -835,7 +835,7 @@ const ProfileSecurityTab = ({
                           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Mail className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">{t('profile.email') || 'Email'}</span>
+                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide">{t('profile.email')}</span>
               </div>
               <p className="text-sm font-bold text-purple-900 dark:text-purple-100">{user?.email}</p>
             </div>
@@ -851,8 +851,8 @@ const ProfileSecurityTab = ({
               <KeyRound className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.changePassword') || 'Password & Security'}</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">{t('profile.security') || 'Keep your account secure'}</p>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.changePassword')}</h2>
+        <p className="text-xs text-gray-600 dark:text-gray-400">{t('profile.security')}</p>
             </div>
           </div>
           
@@ -864,7 +864,7 @@ const ProfileSecurityTab = ({
               icon={Edit2}
               className="bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 text-xs px-2 py-1"
             >
-              {t('common.change') || 'Change'}
+              {t('common.change')}
             </Button>
           )}
         </div>
@@ -873,7 +873,7 @@ const ProfileSecurityTab = ({
           <div className="max-w-md space-y-3">
             <div className="relative">
               <Input
-                label="Current Password"
+                label={t('common.currentPassword')}
                 type={showPasswords.current ? "text" : "password"}
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
@@ -893,7 +893,7 @@ const ProfileSecurityTab = ({
             
             <div className="relative">
               <Input
-                label="New Password"
+                label={t('common.newPassword')}
                 type={showPasswords.new ? "text" : "password"}
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
@@ -914,7 +914,7 @@ const ProfileSecurityTab = ({
               {passwordData.newPassword && (
                 <div className="mt-1.5">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-gray-600 dark:text-gray-400">Password Strength</span>
+                    <span className="text-[10px] text-gray-600 dark:text-gray-400">{t('common.passwordStrength')}</span>
                     <span className={cn(
                       "text-[10px] font-medium",
                       passwordStrength.color === 'red' && "text-red-600",
@@ -943,7 +943,7 @@ const ProfileSecurityTab = ({
             
             <div className="relative">
               <Input
-                label="Confirm New Password"
+                label={t('common.confirmNewPassword')}
                 type={showPasswords.confirm ? "text" : "password"}
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
@@ -970,7 +970,7 @@ const ProfileSecurityTab = ({
                 icon={X}
                 className="text-xs px-2 py-1"
               >
-                Cancel
+                                  {t('common.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -990,15 +990,15 @@ const ProfileSecurityTab = ({
             <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <CheckCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
-                <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Password Security</span>
+                <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">{t('common.passwordSecurity')}</span>
               </div>
-              <p className="text-xs text-green-800 dark:text-green-200">Your password is secure and up to date</p>
+                              <p className="text-xs text-green-800 dark:text-green-200">{t('common.yourPasswordIsSecure')}</p>
             </div>
             
             <Alert type="info" className="text-[10px]">
               <Lock className="w-3 h-3" />
               <div>
-                <strong>Security Tips:</strong> Use a strong password with mixed case letters, numbers, and special characters. Consider using a password manager.
+                <strong>{t('common.securityTips')}</strong> Use a strong password with mixed case letters, numbers, and special characters. Consider using a password manager.
               </div>
             </Alert>
           </div>
@@ -1027,8 +1027,8 @@ const PreferencesTab = ({
           <Settings className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-primary-hierarchy">{t('profile.appPreferences') || 'App Preferences'}</h2>
-          <p className="text-xs text-secondary-hierarchy">{t('profile.subtitle') || 'Customize your experience (saved to database)'}</p>
+          <h2 className="text-lg font-bold text-primary-hierarchy">{t('profile.appPreferences')}</h2>
+          <p className="text-xs text-secondary-hierarchy">{t('profile.subtitle')}</p>
         </div>
       </div>
 
@@ -1037,7 +1037,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Languages className="w-4 h-4 text-blue-500" />
-            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.language') || 'Language'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.language')}</h3>
           </div>
           
           <div className="grid grid-cols-2 gap-2">
@@ -1087,7 +1087,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Coins className="w-4 h-4 text-green-500" />
-            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.currency') || 'Currency'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.currency')}</h3>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
@@ -1138,7 +1138,7 @@ const PreferencesTab = ({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Palette className="w-4 h-4 text-purple-500" />
-            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.theme') || 'Theme'}</h3>
+            <h3 className="text-sm font-bold text-secondary-hierarchy">{t('profile.theme')}</h3>
             {isSessionOverride && (
               <motion.div
                 className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/20 rounded-full"
@@ -1146,7 +1146,7 @@ const PreferencesTab = ({
                 title="Theme has been temporarily changed. Save changes to make it permanent."
               >
                 <Clock className="w-2.5 h-2.5 text-orange-500" />
-                <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">Session</span>
+                <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">{t('common.session')}</span>
               </motion.div>
             )}
           </div>

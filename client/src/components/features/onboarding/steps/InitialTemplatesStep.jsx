@@ -77,7 +77,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Target,
       color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20',
-      categoryId: 1,
+      categoryId: 61,
       category: 'income'
     },
     
@@ -90,7 +90,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Home,
       color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/20',
-      categoryId: 8,
+      categoryId: 69,
       category: 'housing'
     },
     {
@@ -101,7 +101,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Smartphone,
       color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/20',
-      categoryId: 6,
+      categoryId: 66,
       category: 'utilities'
     },
     {
@@ -112,7 +112,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Wifi,
       color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/20',
-      categoryId: 6,
+      categoryId: 66,
       category: 'utilities'
     },
     {
@@ -123,7 +123,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: ShoppingCart,
       color: 'text-green-600 bg-green-100 dark:bg-green-900/20',
-      categoryId: 4,
+      categoryId: 65,
       category: 'food'
     },
     {
@@ -134,7 +134,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Car,
       color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/20',
-      categoryId: 7,
+      categoryId: 66,
       category: 'transport'
     },
     
@@ -147,7 +147,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Dumbbell,
       color: 'text-red-600 bg-red-100 dark:bg-red-900/20',
-      categoryId: 5,
+      categoryId: 67,
       category: 'entertainment'
     },
     {
@@ -158,7 +158,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'monthly',
       icon: Music,
       color: 'text-pink-600 bg-pink-100 dark:bg-pink-900/20',
-      categoryId: 5,
+      categoryId: 67,
       category: 'entertainment'
     },
     {
@@ -169,7 +169,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       frequency: 'daily',
       icon: Coffee,
       color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/20',
-      categoryId: 4,
+      categoryId: 65,
       category: 'food'
     }
   ];
@@ -273,7 +273,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex flex-col bg-gradient-to-br from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10">
+    <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 bg-gradient-to-br from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10">
       {/* ✅ CLEAN: Simple header without unnecessary icons */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -313,7 +313,7 @@ const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStep
       </motion.div>
 
       {/* ✅ ENHANCED: Templates grid with better organization - Made scrollable for mobile */}
-      <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+      <div className="flex-1 px-6 py-2 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
         
         {/* ✅ MOVED TO TOP: Selected Templates Summary */}
         {templates.length > 0 && (

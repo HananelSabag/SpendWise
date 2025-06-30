@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ArrowRight, Package, Eye, Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Calendar, ArrowRight, Package, Eye, Activity, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useDate } from '../../../context/DateContext';
 import { useCurrency } from '../../../context/CurrencyContext';
@@ -154,7 +154,7 @@ const RecentTransactions = ({
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl blur-lg opacity-70"></div>
-                  <Activity className="relative w-4 h-4 text-white" />
+                  <Clock className="relative w-4 h-4 text-white" />
                 </motion.div>
                 
                 <div className={isRTL ? 'text-right' : 'text-left'}>

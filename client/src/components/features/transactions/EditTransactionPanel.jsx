@@ -681,7 +681,7 @@ const EditTransactionPanel = ({
                         <div className="flex items-center justify-center gap-1 sm:gap-2">
                           <Crown className="icon-adaptive-sm" />
                           <span className="hidden sm:inline">{t('categories.defaultCategories')}</span>
-                          <span className="sm:hidden">Default</span>
+                          <span className="sm:hidden">{t('common.default')}</span>
                                                         <span>({Object.values(organizedCategories.themes).reduce((acc, theme) => acc + theme.categories.length, 0)})</span>
                         </div>
                       </button>
@@ -697,7 +697,7 @@ const EditTransactionPanel = ({
                         <div className="flex items-center justify-center gap-1 sm:gap-2">
                           {React.createElement(getIconComponent('tag'), { className: 'icon-adaptive-sm' })}
                           <span className="hidden sm:inline">{t('categories.userCategoriesDesc')}</span>
-                          <span className="sm:hidden">Custom</span>
+                          <span className="sm:hidden">{t('common.custom')}</span>
                                                       <span>({organizedCategories.userCategories.length})</span>
                         </div>
                       </button>

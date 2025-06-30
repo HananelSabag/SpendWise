@@ -208,7 +208,7 @@ const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
             <Sparkles className="w-6 h-6 text-yellow-500" />
           </motion.div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-            {t('onboarding.welcome.greeting', { name: user?.name ? user.name.split(' ')[0] : '' })}
+            {t('onboarding.welcome.greeting', { name: user?.username ? user.username.split(' ')[0] : '' })}
           </h1>
           <motion.div
             animate={{ rotate: [0, 10, -10, 0] }}

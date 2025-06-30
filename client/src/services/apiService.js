@@ -71,7 +71,9 @@ class ApiService {
     const currentRetries = this.coldStartRetries.get(requestId) || 0;
     
     if (currentRetries >= maxRetries) {
-      throw new Error('Server failed to respond after multiple retries');
+      throw new Error(typeof window !== 'undefined' && window.localStorage?.getItem('app_language') === 'he' 
+      ? 'השרת נכשל להגיב לאחר מספר ניסיונות' 
+      : 'Server failed to respond after multiple retries');
     }
     
     // Exponential backoff: 5s, 10s, 20s

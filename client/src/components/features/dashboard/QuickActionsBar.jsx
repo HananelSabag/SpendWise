@@ -18,7 +18,7 @@ import { useDate } from '../../../context/DateContext';
 import { Card, Button } from '../../ui';
 import { amountValidation } from '../../../utils/validationSchemas';
 
-const QuickActionsBar = () => {
+const QuickActionsBar = ({ isHistoricalDate, ...rest }) => {
   const { t, language } = useLanguage();
   const { createTransaction, isCreating } = useTransactionActions();
   const { formatAmount, currency } = useCurrency();
@@ -30,13 +30,6 @@ const QuickActionsBar = () => {
   const inputRef = useRef(null);
   
   const isRTL = language === 'he';
-
-  // Check if selected date is not today
-  const isHistoricalDate = React.useMemo(() => {
-    const today = new Date();
-    const selected = new Date(selectedDate);
-    return today.toDateString() !== selected.toDateString();
-  }, [selectedDate]);
 
   // ✅ UNIFIED: Simple gray quick amounts - no color chaos
   const quickAmounts = [
@@ -124,21 +117,53 @@ const QuickActionsBar = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="h-full"
+      className="relative h-full"
     >
-      <Card variant="clean" className="h-full">
-        {/* ✅ UNIFIED: Clean header with simple icon */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-            <Zap className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('dashboard.quickActions.title')}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('dashboard.quickActions.subtitle')}
-            </p>
+      {/* Blue Glow Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 opacity-100 rounded-2xl pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl"></div>
+        {/* Floating Orbs */}
+        <motion.div 
+          className="absolute top-2 right-2 w-8 h-8 bg-white/10 rounded-full blur-xl"
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3]
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div 
+          className="absolute bottom-2 left-2 w-6 h-6 bg-purple-300/20 rounded-full blur-lg"
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            opacity: [0.4, 0.7, 0.4]
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+      </div>
+      {/* Main Card */}
+      <Card variant="clean" className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl rounded-2xl h-full overflow-hidden">
+        {/* Unified Header Section */}
+        <div className="relative p-3 pb-1">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 blur-xl"></div>
+          <div className={`relative z-10 flex items-center justify-between mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+              <motion.div 
+                className="relative p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg"
+                whileHover={{ scale: 1.05, rotate: isRTL ? -5 : 5 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl blur-lg opacity-70"></div>
+                <Zap className="relative w-5 h-5 text-white" />
+              </motion.div>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <h3 className="text-base font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
+                  {t('dashboard.quickActions.title')}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {t('dashboard.quickActions.subtitle')}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
         

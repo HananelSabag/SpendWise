@@ -246,15 +246,15 @@ const VerifyEmail = () => {
               <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
                 <p>This verification link might not work properly when opened from the Gmail app on iPhone/iOS. Try these solutions:</p>
                 <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>Long-press the verification link in your email</li>
-                  <li>Select "Copy" to copy the link</li>
+                  <li>{t('common.longPressVerificationLink')}</li>
+                  <li>{t('common.selectCopyToLink')}</li>
                   <li>Open Safari browser (not the Gmail app)</li>
-                  <li>Paste the link in Safari's address bar and tap Go</li>
-                  <li>Alternatively, try opening the email on a computer</li>
+                  <li>{t('common.pasteLinkSafari')}</li>
+                  <li>{t('common.alternativelyTryComputer')}</li>
                 </ol>
                 <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800 rounded">
                   <p className="text-xs text-blue-600 dark:text-blue-300">
-                    <strong>Why this happens:</strong> Gmail's built-in browser on iOS sometimes modifies links, causing verification to fail.
+                    <strong>{t('common.whyThisHappens')}</strong> Gmail's built-in browser on iOS sometimes modifies links, causing verification to fail.
                   </p>
                 </div>
               </div>
@@ -273,11 +273,11 @@ const VerifyEmail = () => {
                 🔧 Debug Info (Development Only)
               </h4>
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                <p><strong>Extracted Token:</strong> {extractedToken ? `${extractedToken.substring(0, 20)}...` : 'None'}</p>
-                <p><strong>Params Token:</strong> {paramsToken ? `${paramsToken.substring(0, 20)}...` : 'None'}</p>
+                <p><strong>{t('common.extractedToken')}</strong> {extractedToken ? `${extractedToken.substring(0, 20)}...` : 'None'}</p>
+                <p><strong>{t('common.paramsToken')}</strong> {paramsToken ? `${paramsToken.substring(0, 20)}...` : 'None'}</p>
                 <p><strong>Pathname:</strong> {location.pathname}</p>
                 <p><strong>Search:</strong> {location.search}</p>
-                <p><strong>User Agent:</strong> {navigator.userAgent.substring(0, 50)}...</p>
+                <p><strong>{t('common.userAgent')}</strong> {navigator.userAgent.substring(0, 50)}...</p>
               </div>
             </motion.div>
           )}

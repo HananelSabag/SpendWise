@@ -282,6 +282,9 @@ const OnboardingModal = ({
     totalSteps: steps.length
   });
 
+  // Assuming the user's name is available in the 'user' object from useAuth
+  const userName = user?.username ? user.username.split(' ')[0] : t('onboarding.defaultName');
+
   return (
     <AnimatePresence>
       <motion.div
@@ -303,11 +306,10 @@ const OnboardingModal = ({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className={cn(
-            "relative w-full h-full max-w-7xl mx-auto bg-white dark:bg-gray-900",
+            "relative w-full max-w-7xl mx-auto bg-white dark:bg-gray-900",
             "shadow-2xl border border-gray-200 dark:border-gray-700",
-            "overflow-hidden lg:overflow-hidden", // Mobile: allow scroll, Desktop: hidden
-            "lg:my-4 lg:h-[95vh] lg:max-h-[1000px] lg:rounded-2xl",
-            "flex flex-col"
+            "overflow-hidden flex flex-col",
+            "my-4 h-[95vh] max-h-[1000px] rounded-2xl"
           )}
         >
           {/* Progress Bar ONLY - No Header */}
@@ -342,7 +344,7 @@ const OnboardingModal = ({
           </div>
 
           {/* Step Content - FULL HEIGHT with no footer */}
-          <div className="flex-1 overflow-y-auto lg:overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`step-${currentStep}`}

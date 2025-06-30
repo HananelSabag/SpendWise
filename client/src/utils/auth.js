@@ -83,7 +83,9 @@ export const auth = {
       const response = await authAPI.register(userData);
       return {
         success: true,
-        message: response.data.message || 'Registration successful'
+        message: response.data.message || (typeof window !== 'undefined' && window.localStorage?.getItem('app_language') === 'he' 
+          ? 'הרשמה הצליחה' 
+          : 'Registration successful')
       };
     } catch (error) {
       return {

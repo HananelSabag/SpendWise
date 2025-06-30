@@ -89,7 +89,7 @@ const AddTransactions = ({
       .filter(cat => cat.is_active !== false)
       .map(cat => ({
         id: cat.id,
-        name: cat.is_default ? (t(`categories.${cat.name}`, cat.name) || cat.name) : cat.name,
+        name: cat.is_default ? (t(`categories.${cat.originalName}`, cat.originalName) || cat.originalName) : cat.name,
         iconComponent: getIconComponent(cat.icon || 'tag'),
         isDefault: cat.is_default,
         type: cat.type || 'expense'
@@ -110,7 +110,7 @@ const AddTransactions = ({
       .filter(cat => cat.is_active !== false) // Show all categories, not just filtered by type
       .map(cat => ({
         id: cat.id,
-        name: cat.is_default ? (t(`categories.${cat.name}`, cat.name) || cat.name) : cat.name,
+        name: cat.is_default ? (t(`categories.${cat.originalName}`, cat.originalName) || cat.originalName) : cat.name,
         originalName: cat.name,
         iconComponent: getIconComponent(cat.icon || 'tag'),
         isDefault: cat.is_default,

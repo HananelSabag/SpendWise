@@ -1757,10 +1757,10 @@ const translations = {
       "subtitle": "Set your preferences to personalize SpendWise",
       "description": "Configure these settings to personalize your SpendWise experience. You can change these anytime in your profile.",
       "localization": "Language & Region",
-      "language": "Language",
+    "language": "Language",
       "currency": "Currency",
       "appearance": "Appearance",
-      "theme": "Theme",
+    "theme": "Theme",
 
       "themes": {
         "light": "Light",

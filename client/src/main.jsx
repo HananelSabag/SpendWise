@@ -43,7 +43,11 @@ class ErrorBoundary extends React.Component {
                 </svg>
               </div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Application Error
+                {/* Basic fallback translations */}
+                {typeof window !== 'undefined' && window.localStorage?.getItem('app_language') === 'he' 
+                  ? 'שגיאת יישום' 
+                  : 'Application Error'
+                }
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Something went wrong. Please refresh the page or contact support if the problem persists.

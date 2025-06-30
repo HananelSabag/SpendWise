@@ -264,6 +264,10 @@ const Dashboard = () => {
     }
   }, [refreshDashboard]);
   
+  const today = new Date();
+  const selected = new Date(selectedDate);
+  const isHistoricalDate = today.toDateString() !== selected.toDateString();
+  
   if (loading || isDashboardLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -373,12 +377,12 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 
                 {/* Quick Actions - Left side - COMPACT HEIGHT */}
-                <div className="relative h-[320px]">
-                  <MemoizedQuickActionsBar />
+                <div className={`relative transition-all duration-300 ${isHistoricalDate ? 'h-[380px]' : 'h-[320px]'}`}>
+                  <MemoizedQuickActionsBar isHistoricalDate={isHistoricalDate} />
                 </div>
 
                 {/* Recent Transactions - Right side - SAME COMPACT HEIGHT */}
-                <div className="relative h-[320px]">
+                <div className={`relative transition-all duration-300 ${isHistoricalDate ? 'h-[380px]' : 'h-[320px]'}`}>
                   <MemoizedRecentTransactions />
                 </div>
               </div>
@@ -525,7 +529,7 @@ const CompactWelcomeBanner = React.memo(({ user, greeting, selectedDate, languag
           <div className="flex justify-end sm:justify-start">
             <Badge variant="default" className="bg-white/20 text-white border-white/30 px-2 sm:px-3 py-1 text-xs flex-shrink-0">
               <Activity className="w-3 h-3 mr-1" />
-              <span>Active</span>
+              <span>{t('common.active')}</span>
             </Badge>
           </div>
         </div>
@@ -580,7 +584,7 @@ const MiniWelcome = React.memo(({ user, greeting, language, variants, t }) => (
       
       <Badge variant="default" className="bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 px-2 py-1 text-xs">
         <Activity className="w-3 h-3 mr-1" />
-        Active
+        {t('common.active')}
       </Badge>
     </div>
   </motion.div>

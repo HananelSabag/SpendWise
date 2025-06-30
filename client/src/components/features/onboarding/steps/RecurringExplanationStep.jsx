@@ -82,7 +82,7 @@ const DemoTransactionCard = ({ transaction, isRTL, formatAmount, t }) => {
                 </div>
                 {isRecurring && (
                   <div className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 rounded text-xs text-purple-700 dark:text-purple-300 font-medium">
-                    Monthly
+                    {t('common.monthly')}
                   </div>
                 )}
               </div>
@@ -112,7 +112,7 @@ const DemoTransactionCard = ({ transaction, isRTL, formatAmount, t }) => {
                 action.color === 'yellow' && 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
                 action.color === 'red' && 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
               )}
-              title="Demo only - no functionality"
+              title={t('common.demoOnlyNoFunctionality')}
               disabled
             >
               <action.icon className="w-3 h-3" />
