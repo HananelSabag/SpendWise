@@ -1,11 +1,11 @@
 // components/common/CalendarWidget.jsx
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom'; // ✅ ADD: Portal for escaping parent constraints
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/helpers';
 
-const CalendarWidget = ({ 
+const CalendarWidget = React.memo(({ 
   selectedDate,
   onDateSelect,
   onClose,
@@ -310,6 +310,6 @@ const CalendarWidget = ({
 
   // ✅ Render calendar in portal to escape parent constraints
   return position.show ? createPortal(calendarContent, document.body) : null;
-};
+});
 
 export default CalendarWidget;

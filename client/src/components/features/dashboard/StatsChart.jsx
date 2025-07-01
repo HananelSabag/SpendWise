@@ -417,7 +417,7 @@ const calculateFinancialHealth = (dashboardData, selectedPeriod, t) => {
 /**
  * Main Enhanced StatsChart Component
  */
-const StatsChart = ({ className = '' }) => {
+const StatsChart = React.memo(({ className = '' }) => {
   const { t, language } = useLanguage();
   const { formatAmount } = useCurrency();
   const isRTL = language === 'he';
@@ -1095,6 +1095,6 @@ const StatsChart = ({ className = '' }) => {
       </Card>
     </motion.div>
   );
-};
+});
 
 export default StatsChart;

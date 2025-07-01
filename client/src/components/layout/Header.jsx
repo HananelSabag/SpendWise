@@ -1,5 +1,5 @@
 // components/layout/Header.jsx - MINIMAL RTL FIXES ONLY
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, Save, X, Star, Tag, Package,
   TrendingUp, TrendingDown, Crown, Search, Filter,
@@ -294,48 +293,37 @@ const CategoryManager = ({ isOpen, onClose }) => {
           </div>
 
           {/* Mobile Filter Dropdown */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden sm:hidden"
+          <div className={`${showFilters ? 'block' : 'hidden'} mobile-grid gap-2 adaptive-card`}>
+            {['all', 'expense', 'income'].map(type => (
+              <Button
+                key={type}
+                variant={filterType === type ? "primary" : "outline"}
+                size="small"
+                onClick={() => {
+                  setFilterType(type);
+                  setShowFilters(false);
+                }}
+                className="text-xs"
               >
-                <div className="mobile-grid gap-2 adaptive-card">
-                  {['all', 'expense', 'income'].map(type => (
-                    <Button
-                      key={type}
-                      variant={filterType === type ? "primary" : "outline"}
-                      size="small"
-                      onClick={() => {
-                        setFilterType(type);
-                        setShowFilters(false);
-                      }}
-                      className="text-xs"
-                    >
-                      {type === 'all' ? (
-                        <>
-                          <Filter className="icon-adaptive-sm mr-1" />
-                          {t('common.all')}
-                        </>
-                      ) : type === 'expense' ? (
-                        <>
-                          <TrendingDown className="icon-adaptive-sm mr-1" />
-                          {t('transactions.expense')}
-                        </>
-                      ) : (
-                        <>
-                          <TrendingUp className="icon-adaptive-sm mr-1" />
-                          {t('transactions.income')}
-                        </>
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {type === 'all' ? (
+                  <>
+                    <Filter className="icon-adaptive-sm mr-1" />
+                    {t('common.all')}
+                  </>
+                ) : type === 'expense' ? (
+                  <>
+                    <TrendingDown className="icon-adaptive-sm mr-1" />
+                    {t('transactions.expense')}
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="icon-adaptive-sm mr-1" />
+                    {t('transactions.income')}
+                  </>
+                )}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Categories Display */}
@@ -350,51 +338,38 @@ const CategoryManager = ({ isOpen, onClose }) => {
             </h3>
 
             {userCategories.length > 0 ? (
-              <motion.div
-                className={cn(
-                  "grid gap-3 sm:gap-6",
-                  viewMode === 'grid' 
-                    ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" 
-                    : "grid-cols-1"
-                )}
-                variants={{
-                  visible: {
-                    transition: {
-                      staggerChildren: 0.05
-                    }
-                  }
-                }}
-                initial="hidden"
-                animate="visible"
-              >
-                <AnimatePresence>
-                  {userCategories.map((category, index) => (
-                    viewMode === 'grid' ? (
-                      <CategoryCard
-                        key={`user-${category.id}`}
-                        category={category}
-                        index={index}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        deleting={isDeleting}
-                        isDefault={false}
-                        t={t}
-                      />
-                    ) : (
-                      <CategoryListItem
-                        key={`user-list-${category.id}`}
-                        category={category}
-                        index={index}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        deleting={isDeleting}
-                        isDefault={false}
-                        t={t}
-                      />
-                    )
-                  ))}
-                </AnimatePresence>
-              </motion.div>
+              <div className={cn(
+                "grid gap-3 sm:gap-6",
+                viewMode === 'grid' 
+                  ? "grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" 
+                  : "grid-cols-1"
+              )}>
+                {userCategories.map((category, index) => (
+                  viewMode === 'grid' ? (
+                    <CategoryCard
+                      key={`user-${category.id}`}
+                      category={category}
+                      index={index}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      deleting={isDeleting}
+                      isDefault={false}
+                      t={t}
+                    />
+                  ) : (
+                    <CategoryListItem
+                      key={`user-list-${category.id}`}
+                      category={category}
+                      index={index}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      deleting={isDeleting}
+                      isDefault={false}
+                      t={t}
+                    />
+                  )
+                ))}
+              </div>
             ) : (
               <div className="text-center py-8 sm:py-12 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl sm:rounded-2xl border-2 border-dashed border-purple-200 dark:border-purple-800">
                 {React.createElement(getIconComponent('tag'), { className: 'w-12 h-12 sm:w-16 sm:h-16 text-purple-400 mx-auto mb-3 sm:mb-4' })}
@@ -468,12 +443,9 @@ const CategoryManager = ({ isOpen, onClose }) => {
                     if (!theme) return null;
                     
                     return (
-                      <motion.div
+                      <div
                         key={themeKey}
                         className="mb-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
                       >
                         {/* Theme Header */}
                         <div className="flex items-center gap-2 mb-3">
@@ -490,13 +462,9 @@ const CategoryManager = ({ isOpen, onClose }) => {
                         {/* Theme Categories */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                           {categories.map((category, index) => (
-                            <motion.div
+                            <div
                               key={`default-${themeKey}-${category.id}`}
                               className="group relative p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-all"
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: index * 0.05 }}
-                              whileHover={{ scale: 1.02 }}
                             >
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 flex items-center justify-center">
@@ -515,10 +483,10 @@ const CategoryManager = ({ isOpen, onClose }) => {
                                   ? 'bg-green-500' 
                                   : 'bg-red-500'
                               }`}></div>
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   });
               })()}
@@ -662,7 +630,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
               {/* Icon Grid - Mobile Optimized */}
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 sm:gap-3 max-h-40 sm:max-h-48 overflow-y-auto p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
                 {iconCategories[selectedIconCategory].map(({ name, icon: IconComponent, label }) => (
-                  <motion.button
+                  <button
                     key={name}
                     type="button"
                     onClick={() => setFormData({ ...formData, icon: name })}
@@ -672,7 +640,6 @@ const CategoryManager = ({ isOpen, onClose }) => {
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-110'
                         : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 active:scale-95'
                     )}
-                    whileTap={{ scale: 0.9 }}
                     title={label}
                   >
                     <IconComponent className={cn(
@@ -681,18 +648,7 @@ const CategoryManager = ({ isOpen, onClose }) => {
                         ? 'text-primary-600 dark:text-primary-400' 
                         : 'text-gray-500 group-hover:text-primary-500'
                     )} />
-                    
-                    {/* Selection indicator */}
-                    {formData.icon === name && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 icon-adaptive-sm bg-primary-500 rounded-full flex items-center justify-center"
-                      >
-                        <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                      </motion.div>
-                    )}
-                  </motion.button>
+                  </button>
                 ))}
               </div>
             </div>
@@ -745,112 +701,84 @@ const CategoryCard = ({
     : category.name;
 
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, scale: 0.8, y: 10 },
-        visible: { 
-          opacity: 1, 
-          scale: 1, 
-          y: 0,
-          transition: {
-            delay: index * 0.05,
-            type: "spring",
-            stiffness: 300,
-            damping: 25
-          }
-        }
-      }}
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      layout
-    >
-      <Card className="adaptive-card cursor-pointer transition-all duration-300 relative overflow-hidden group hover:shadow-lg border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 touch-manipulation">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 opacity-10">
+    <div className="relative overflow-hidden group hover:shadow-lg border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 touch-manipulation">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 opacity-10">
+        <div className={cn(
+          "w-full h-full rounded-full bg-gradient-to-br",
+          getGradientForCategory(category.type)
+        )} />
+      </div>
+      
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
           <div className={cn(
-            "w-full h-full rounded-full bg-gradient-to-br",
+            "p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br shadow-lg",
             getGradientForCategory(category.type)
-          )} />
-        </div>
-        
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-3 sm:mb-4">
-            <div className={cn(
-              "p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br shadow-lg",
-              getGradientForCategory(category.type)
-            )}>
-              <IconComponent className="icon-adaptive-base text-white" />
-            </div>
-            
-            <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit?.(category);
-                }}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 touch-manipulation"
-              >
-                <Edit2 className="icon-adaptive-sm text-blue-600" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.(category.id);
-                }}
-                disabled={deleting}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900 touch-manipulation"
-              >
-                {deleting ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="icon-adaptive-sm border-2 border-red-500 border-t-transparent rounded-full"
-                  />
-                ) : (
-                  <Trash2 className="icon-adaptive-sm text-red-600" />
-                )}
-              </Button>
-            </div>
+          )}>
+            <IconComponent className="icon-adaptive-base text-white" />
           </div>
           
-          {/* Content */}
-          <div>
-            <h4 className="font-bold text-adaptive-base text-gray-900 dark:text-white mb-2 truncate">
-              {displayName}
-            </h4>
-            
-            {category.description && (
-              <p className="text-adaptive-xs text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 line-clamp-2">
-                {category.description}
-              </p>
-            )}
-            
-            <Badge 
-              variant={category.type === 'income' ? 'success' : 'danger'}
-              size="small"
-              className="text-xs"
+          <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 touch-manipulation"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(category);
+              }}
             >
-              {category.type === 'income' ? (
-                <>
-                  <TrendingUp className="icon-adaptive-sm mr-1" />
-                  {t('transactions.income')}
-                </>
+              <Edit2 className="icon-adaptive-sm text-blue-600" />
+            </button>
+            <button
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900 touch-manipulation"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.(category.id);
+              }}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <div className="animate-spin rounded-full border-2 border-red-500 border-t-transparent h-7 w-7 sm:h-8 sm:w-8"></div>
               ) : (
-                <>
-                  <TrendingDown className="icon-adaptive-sm mr-1" />
-                  {t('transactions.expense')}
-                </>
+                <Trash2 className="icon-adaptive-sm text-red-600" />
               )}
-            </Badge>
+            </button>
           </div>
         </div>
-      </Card>
-    </motion.div>
+        
+        {/* Content */}
+        <div>
+          <h4 className="font-bold text-adaptive-base text-gray-900 dark:text-white mb-2 truncate">
+            {displayName}
+          </h4>
+          
+          {category.description && (
+            <p className="text-adaptive-xs text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 line-clamp-2">
+              {category.description}
+            </p>
+          )}
+          
+          <Badge 
+            variant={category.type === 'income' ? 'success' : 'danger'}
+            size="small"
+            className="text-xs"
+          >
+            {category.type === 'income' ? (
+              <>
+                <TrendingUp className="icon-adaptive-sm mr-1" />
+                {t('transactions.income')}
+              </>
+            ) : (
+              <>
+                <TrendingDown className="icon-adaptive-sm mr-1" />
+                {t('transactions.expense')}
+              </>
+            )}
+          </Badge>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -871,86 +799,61 @@ const CategoryListItem = ({
     : category.name;
 
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, x: -20 },
-        visible: { 
-          opacity: 1, 
-          x: 0,
-          transition: {
-            delay: index * 0.05,
-            type: "spring",
-            stiffness: 300,
-            damping: 25
-          }
-        }
-      }}
-      layout
-    >
-      <Card className="p-4 transition-all duration-200 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className={cn(
-              "p-2 rounded-lg bg-gradient-to-br shadow-sm flex-shrink-0",
-              getGradientForCategory(category.type)
-            )}>
-              <IconComponent className="w-4 h-4 text-white" />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-gray-900 dark:text-white truncate">
-                {displayName}
-              </h4>
-              {category.description && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                  {category.description}
-                </p>
-              )}
-            </div>
-            
-            <Badge 
-              variant={category.type === 'income' ? 'success' : 'danger'}
-              size="small"
-              className="text-xs flex-shrink-0"
-            >
-              {category.type === 'income' ? (
-                <TrendingUp className="w-2.5 h-2.5" />
-              ) : (
-                <TrendingDown className="w-2.5 h-2.5" />
-              )}
-            </Badge>
+    <div className="p-4 transition-all duration-200 border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={cn(
+            "p-2 rounded-lg bg-gradient-to-br shadow-sm flex-shrink-0",
+            getGradientForCategory(category.type)
+          )}>
+            <IconComponent className="w-4 h-4 text-white" />
           </div>
           
-          <div className="flex items-center gap-1 ml-2">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => onEdit?.(category)}
-              className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
-            >
-              <Edit2 className="w-3 h-3 text-blue-600" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => onDelete?.(category.id)}
-              disabled={deleting}
-              className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900"
-            >
-              {deleting ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-full"
-                />
-              ) : (
-                <Trash2 className="w-3 h-3 text-red-600" />
-              )}
-            </Button>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-gray-900 dark:text-white truncate">
+              {displayName}
+            </h4>
+            {category.description && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                {category.description}
+              </p>
+            )}
           </div>
+          
+          <Badge 
+            variant={category.type === 'income' ? 'success' : 'danger'}
+            size="small"
+            className="text-xs flex-shrink-0"
+          >
+            {category.type === 'income' ? (
+              <TrendingUp className="w-2.5 h-2.5" />
+            ) : (
+              <TrendingDown className="w-2.5 h-2.5" />
+            )}
+          </Badge>
         </div>
-      </Card>
-    </motion.div>
+        
+        <div className="flex items-center gap-1 ml-2">
+          <button
+            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+            onClick={() => onEdit?.(category)}
+          >
+            <Edit2 className="w-3 h-3 text-blue-600" />
+          </button>
+          <button
+            className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900"
+            onClick={() => onDelete?.(category.id)}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <div className="animate-spin rounded-full border-2 border-red-500 border-t-transparent h-3 w-3"></div>
+            ) : (
+              <Trash2 className="w-3 h-3 text-red-600" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -962,45 +865,27 @@ const CompactCategoryChip = ({ category, index, t }) => {
     : category.name;
 
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, scale: 0.8 },
-        visible: { 
-          opacity: 1, 
-          scale: 1,
-          transition: {
-            delay: index * 0.02,
-            type: "spring",
-            stiffness: 400,
-            damping: 25
-          }
-        }
-      }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-white/60 dark:bg-gray-800/60 rounded-full border border-amber-200 dark:border-amber-800 hover:shadow-sm transition-all duration-200 touch-manipulation">
-        {/* Icon */}
-        <div className={cn(
-          "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br shadow-sm flex items-center justify-center flex-shrink-0",
-          getGradientForCategory(category.type)
-        )}>
-          <IconComponent className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
-        </div>
-        
-        {/* Name */}
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-16 sm:max-w-20" title={displayName}>
-          {displayName}
-        </span>
-        
-        {/* Type indicator dot */}
-        <div className={cn(
-          "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0",
-          category.type === 'income' ? 'bg-green-400' : 'bg-red-400'
-        )} />
+    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-white/60 dark:bg-gray-800/60 rounded-full border border-amber-200 dark:border-amber-800 hover:shadow-sm transition-all duration-200 touch-manipulation">
+      {/* Icon */}
+      <div className={cn(
+        "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br shadow-sm flex items-center justify-center flex-shrink-0",
+        getGradientForCategory(category.type)
+      )}>
+        <IconComponent className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
       </div>
-    </motion.div>
+      
+      {/* Name */}
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-16 sm:max-w-20" title={displayName}>
+        {displayName}
+      </span>
+      
+      {/* Type indicator dot */}
+      <div className={cn(
+        "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0",
+        category.type === 'income' ? 'bg-green-400' : 'bg-red-400'
+      )} />
+    </div>
   );
 };
 
-export default CategoryManager;
+export default React.memo(CategoryManager);

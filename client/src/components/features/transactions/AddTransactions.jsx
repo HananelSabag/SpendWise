@@ -34,7 +34,7 @@ import { dateHelpers } from '../../../utils/helpers';
 /**
  * ✅ PRESERVED: Exact same component signature and props as original
  */
-const AddTransactions = ({ 
+const AddTransactions = React.memo(({ 
   onClose, 
   context = 'dashboard', 
   initialActionType = null,
@@ -1287,6 +1287,6 @@ const AddTransactions = ({
       )}
     </motion.div>
   );
-};
+});
 
 export default AddTransactions;

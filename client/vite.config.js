@@ -39,6 +39,9 @@ export default defineConfig(({ command, mode }) => {
               type: 'image/png'
             }
           ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         }
       })
     ],
@@ -113,7 +116,7 @@ export default defineConfig(({ command, mode }) => {
           }
         }
       },
-      reportCompressedSize: false,
+      reportCompressedSize: true,
       chunkSizeWarningLimit: 1000,
       sourcemap: mode === 'production' ? 'hidden' : true
     },
