@@ -59,7 +59,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     queryKey,
     queryFn: async () => {
       // Use unified API for dashboard data
-      const result = await api.analytics.getDashboard({ date: formattedDate });
+      const result = await api.transactions.getDashboard(formattedDate);
       
       if (result.success) {
         return { data: result.data };

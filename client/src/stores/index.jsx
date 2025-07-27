@@ -331,7 +331,7 @@ export default {
 }; 
 
 // ✅ Additional hook exports for compatibility
-export { useCategory } from '../hooks/useCategory';
+// useCategory removed to prevent circular dependency - import directly from hooks
 
 // ✅ Security and session management hooks (compatibility exports)
 export const useSecurityMetrics = () => {

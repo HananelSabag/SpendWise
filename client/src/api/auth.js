@@ -287,9 +287,12 @@ export const authAPI = {
       // Get Google credential
       const credential = await googleOAuth.signIn();
       
-      // Send credential to our backend
+      // Send credential to our backend  
       const response = await api.client.post('/users/auth/google', {
-        token: credential
+        idToken: credential,
+        email: '', // Will be extracted from token on server
+        name: '',  // Will be extracted from token on server  
+        picture: '' // Will be extracted from token on server
       });
 
       const { user, token } = response.data;

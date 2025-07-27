@@ -91,7 +91,7 @@ export const useAuth = () => {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id || !isAuthenticated) return null;
-      const response = await api.auth.getProfile();
+      const response = await api.users.getProfile();
       return response.success ? response.user : null;
     },
     enabled: !!user?.id && isAuthenticated,

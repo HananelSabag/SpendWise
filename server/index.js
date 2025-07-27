@@ -1,65 +1,32 @@
 /**
- * SpendWise Server - SYSTEMATIC TESTING v2
- * Adding modules step by step to find the exact crash point
+ * SpendWise Server - Production Ready
+ * Complete financial management API with Supabase integration
  */
 
-console.log('=== SPENDWISE SYSTEMATIC TEST v2 ===');
-
-console.log('1. Loading basic modules...');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const dotenv = require('dotenv');
 
-console.log('2. Loading environment...');
+// Load environment configuration
 dotenv.config();
 
-console.log('3. Loading custom modules safely...');
-let logger, apiLimiter, requestId, scheduler, db, keepAlive;
+// Load core modules
+const logger = require('./utils/logger');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const requestId = require('./middleware/requestId');
+const scheduler = require('./utils/scheduler');
+const db = require('./config/db');
+const keepAlive = require('./utils/keepAlive');
 
-try {
-  console.log('3a. Loading logger...');
-  logger = require('./utils/logger');
-  console.log('✅ Logger loaded');
-
-  console.log('3b. Loading rateLimiter...');
-  const rateLimiter = require('./middleware/rateLimiter');
-  apiLimiter = rateLimiter.apiLimiter;
-  console.log('✅ RateLimiter loaded');
-
-  console.log('3c. Loading requestId...');
-  requestId = require('./middleware/requestId');
-  console.log('✅ RequestId loaded');
-
-  console.log('3d. Loading scheduler...');
-  scheduler = require('./utils/scheduler');
-  console.log('✅ Scheduler loaded');
-
-  console.log('3e. Loading database...');
-  db = require('./config/db');
-  console.log('✅ Database loaded');
-
-  console.log('3f. Loading keepAlive...');
-  keepAlive = require('./utils/keepAlive');
-  console.log('✅ KeepAlive loaded');
-
-  console.log('✅ ALL CUSTOM MODULES LOADED');
-} catch (error) {
-  console.error('❌ MODULE LOADING FAILED:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
-
-console.log('4. Initializing Express app...');
+// Initialize Express app
 const app = express();
-console.log('✅ Express app created');
 
-console.log('5a. Setting up trust proxy...');
+// Trust proxy for production
 app.set('trust proxy', 1);
-console.log('✅ Trust proxy set');
 
-console.log('5b. Setting up helmet security...');
+// Set up helmet security
 try {
   app.use(helmet({
   contentSecurityPolicy: {
@@ -78,17 +45,15 @@ try {
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-  console.log('✅ Helmet configured');
 } catch (error) {
   console.error('❌ Helmet setup failed:', error.message);
   process.exit(1);
 }
 
-console.log('5c. Setting up compression...');
+// Set up compression
 app.use(compression());
-console.log('✅ Compression set');
 
-console.log('5d. Setting up CORS...');
+// Set up CORS
 // Enhanced CORS for mobile and network support
 const isLocalNetworkIP = (origin) => {
   if (!origin) return false;
@@ -147,19 +112,17 @@ try {
     maxAge: 86400,
     exposedHeaders: ['Content-Disposition']
   }));
-  console.log('✅ CORS configured');
 } catch (error) {
   console.error('❌ CORS setup failed:', error.message);
   process.exit(1);
 }
 
-console.log('5e. Setting up body parser...');
+// Set up body parser
 // Body parser with size limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-console.log('✅ Body parser set');
 
-console.log('5f. Setting up static files...');
+// Set up static files
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
@@ -168,19 +131,16 @@ app.use('/uploads', express.static('uploads', {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
-console.log('✅ Static files configured');
 
-console.log('5g. Setting up request middleware...');
+// Set up request middleware
 // Request ID middleware
 app.use(requestId);
-console.log('✅ RequestId middleware set');
 
-console.log('5h. Setting up API rate limiter...');
+// Set up API rate limiter
 // API rate limiter
 app.use('/api', apiLimiter);
-console.log('✅ API rate limiter set');
 
-console.log('5i. Setting up request logging...');
+// Set up request logging
 // Request logging (production-safe)
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
@@ -193,10 +153,8 @@ if (process.env.NODE_ENV !== 'production') {
     next();
   });
 }
-console.log('✅ Request logging configured');
 
-console.log('6. Setting up routes...');
-console.log('6a. Setting up health check...');
+// Set up routes
 // Enhanced health check endpoint
 app.get('/health', async (req, res) => {
   try {
@@ -234,9 +192,7 @@ app.get('/health', async (req, res) => {
     });
   }
   });
-console.log('✅ Health check configured');
 
-console.log('6b. Setting up API routes...');
 // API routes with versioning
 const API_VERSION = '/api/v1';
 try {
@@ -261,7 +217,6 @@ try {
   process.exit(1);
 }
 
-console.log('6c. Setting up onboarding routes...');
 // Safe onboarding routes with error handling
 try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
@@ -274,8 +229,6 @@ try {
   });
   console.log('✅ Onboarding fallback routes added');
 }
-
-console.log('6d. Setting up response handlers...');
 
 // 404 handler - Fixed to prevent hanging requests
 app.use((req, res, next) => {
@@ -293,7 +246,6 @@ app.use((req, res, next) => {
     res.status(404).end('Not Found');
   }
 });
-console.log('✅ 404 handler configured');
 
 // FIXED: Simple, working global response handler (replaces problematic ./middleware/errorHandler.js)
 app.use((err, req, res, next) => {
@@ -332,9 +284,6 @@ app.use((err, req, res, next) => {
     });
   }
 });
-console.log('✅ Global response handler configured');
-
-console.log('✅ Response handlers setup completed');
 
 const PORT = process.env.PORT || 5000;
 

@@ -11,9 +11,12 @@ import { ExternalLink, Mail, Heart, Info, Github, Twitter, Shield } from 'lucide
 // ✅ NEW: Import Zustand stores (replaces Context API!)
 import { useTranslation, useAuth } from '../../stores';
 
-import AccessibilityStatement from '../common/AccessibilityStatement';
-import PrivacyPolicyModal from '../common/PrivacyPolicyModal';
-import TermsOfServiceModal from '../common/TermsOfServiceModal';
+// Dynamic imports to prevent chunk conflicts with LazyComponents
+import { lazy, Suspense } from 'react';
+
+const AccessibilityStatement = lazy(() => import('../common/AccessibilityStatement'));
+const PrivacyPolicyModal = lazy(() => import('../common/PrivacyPolicyModal'));
+const TermsOfServiceModal = lazy(() => import('../common/TermsOfServiceModal'));
 
 const Footer = () => {
   // ✅ NEW: Zustand stores (replacing Context API)
@@ -269,21 +272,23 @@ const Footer = () => {
         </div>
       </footer>
 
-      {/* ✅ Modals */}
-      <AccessibilityStatement
-        isOpen={showAccessibilityStatement}
-        onClose={() => setShowAccessibilityStatement(false)}
-      />
-      
-      <PrivacyPolicyModal
-        isOpen={showPrivacyPolicy}
-        onClose={() => setShowPrivacyPolicy(false)}
-      />
-      
-      <TermsOfServiceModal
-        isOpen={showTermsOfService}
-        onClose={() => setShowTermsOfService(false)}
-      />
+      {/* ✅ Modals with Suspense for lazy loading */}
+      <Suspense fallback={null}>
+        <AccessibilityStatement
+          isOpen={showAccessibilityStatement}
+          onClose={() => setShowAccessibilityStatement(false)}
+        />
+        
+        <PrivacyPolicyModal
+          isOpen={showPrivacyPolicy}
+          onClose={() => setShowPrivacyPolicy(false)}
+        />
+        
+        <TermsOfServiceModal
+          isOpen={showTermsOfService}
+          onClose={() => setShowTermsOfService(false)}
+        />
+      </Suspense>
     </>
   );
 };

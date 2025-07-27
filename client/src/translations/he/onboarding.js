@@ -1,310 +1,337 @@
 /**
- * 🎯 ONBOARDING TRANSLATIONS - HEBREW
- * Complete translations for the new mobile-first onboarding experience
- * @version 2.0.0
+ * 🇮🇱 Hebrew Onboarding Translations
+ * Complete RTL translation keys for onboarding system
+ * @version 3.0.0 - COMPLETE HEBREW TRANSLATION COVERAGE
  */
 
 export default {
-  // Main onboarding modal
-  modal: {
-    title: "ברוכים הבאים ל-SpendWise!",
-    subtitle: "בואו נגדיר את ניהול הכספים האישי שלכם בכמה צעדים פשוטים",
-    skip: "דלג לעת עתה",
-    skipConfirm: "לדלג על ההתקנה?",
-    skipMessage: "תמיד תוכלו להשלים את ההגדרה מאוחר יותר מהגדרות הפרופיל.",
-    yes: "כן, דלג",
-    no: "המשך התקנה",
-    next: "הבא",
-    back: "חזרה",
-    finish: "בואו נתחיל",
-    completing: "מגדיר את החשבון שלך...",
-    error: "משהו השתבש. אנא נסה שוב.",
-    close: "סגור"
-  },
-
-  // Progress indicator
+  // ✅ התקדמות וניווט
   progress: {
-    step: "שלב {{current}} מתוך {{total}}",
-    welcome: "ברוכים הבאים",
-    preferences: "העדפות", 
-    categories: "קטגוריות",
-    templates: "תבניות",
-    ready: "מוכן!"
+    welcome: 'ברוכים הבאים',
+    preferences: 'העדפות',
+    categories: 'קטגוריות',
+    templates: 'תבניות',
+    ready: 'מוכן',
+    step: 'שלב {{current}} מתוך {{total}}',
+    stepDescription: 'השלימו את ההתקנה כדי להפיק את המקסימום מ-SpendWise',
+    complete: 'הושלם',
+    timeRemaining: 'נותרו {{minutes}} דקות'
   },
 
-  // Welcome step
-  welcome: {
-    title: "ברוכים הבאים ל-SpendWise! 💰",
-    subtitle: "המסע שלכם לניהול כספי טוב יותר מתחיל כאן",
-    description: "SpendWise עוזר לכם לעקוב אחר הוצאות, לנהל הכנסות ולהשיג יעדים פיננסיים עם תובנות יפות ואינטליגנטיות.",
-    features: {
-      title: "מה תקבלו:",
-      tracking: {
-        title: "מעקב הוצאות חכם",
-        description: "עקבו אחר ההוצאות שלכם בקלות עם קטגוריות ותובנות חכמות"
-      },
-      analytics: {
-        title: "אנליטיקה פיננסית", 
-        description: "גרפים יפים ותובנות להבנת הרגלי הכסף שלכם"
-      },
-      goals: {
-        title: "תקציב ויעדים",
-        description: "הגדירו יעדי חיסכון ותקציבים כדי להישאר על המסלול"
-      },
-      mobile: {
-        title: "עיצוב ידידותי לנייד",
-        description: "חוויה מושלמת בכל המכשירים שלכם"
-      }
-    },
-    cta: "בואו נתחיל!",
-    timeEstimate: "לוקח בערך 2 דקות"
+  // ✅ ניווט בחלון
+  modal: {
+    back: 'חזור',
+    next: 'הבא',
+    skip: 'דלג',
+    finish: 'סיים',
+    close: 'סגור',
+    completing: 'משלים...',
+    unsavedChanges: 'יש לכם שינויים שלא נשמרו. האם אתם בטוחים שאתם רוצים לעזוב?',
+    keyboardHint: 'השתמשו בקיצורי מקלדת',
+    nextShortcut: 'הבא',
+    backShortcut: 'חזור',
+    skipShortcut: 'דלג',
+    readyToComplete: 'מוכן להשלמת ההתקנה!'
   },
 
-  // Preferences step
-  preferences: {
-    title: "התאמה אישית של החוויה 🎨",
-    subtitle: "הגדירו את ההעדפות שלכם לחוויה הטובה ביותר",
-    
-    language: {
-      title: "שפה",
-      description: "בחרו בשפה המועדפת עליכם",
-      options: {
-        en: "אנגלית",
-        he: "עברית",
-        es: "ספרדית",
-        fr: "צרפתית",
-        de: "גרמנית",
-        ar: "ערבית"
-      }
-    },
-    
-    currency: {
-      title: "מטבע עיקרי",
-      description: "המטבע הראשי שלכם למעקב פיננסי",
-      options: {
-        USD: "דולר אמריקני ($)",
-        EUR: "יורו (€)",
-        ILS: "שקל ישראלי (₪)",
-        GBP: "לירה בריטית (£)",
-        JPY: "ין יפני (¥)",
-        CNY: "יואן סיני (¥)",
-        CAD: "דולר קנדי ($)",
-        AUD: "דולר אוסטרלי ($)"
-      }
-    },
-    
-    theme: {
-      title: "ערכת עיצוב",
-      description: "בחרו איך SpendWise ייראה",
-      options: {
-        light: "ערכת בהיר",
-        dark: "ערכת כהה", 
-        auto: "ברירת מחדל של המערכת"
-      }
-    },
+  // ✅ תוכן הטמעה ראשי
+  title: 'ברוכים הבאים ל-SpendWise!',
+  subtitle: 'בואו נגדיר את החשבון שלכם בכמה שלבים פשוטים',
 
-    dateFormat: {
-      title: "פורמט תאריך",
-      description: "איך תאריכים יוצגו",
-      options: {
-        "DD/MM/YYYY": "יום/חודש/שנה",
-        "MM/DD/YYYY": "חודש/יום/שנה (אמריקני)",
-        "YYYY-MM-DD": "שנה-חודש-יום (ISO)",
-        "DD.MM.YYYY": "יום.חודש.שנה (אירופאי)"
-      }
-    },
-
-    notifications: {
-      title: "התראות",
-      description: "הישארו מעודכנים על הכספים שלכם",
-      email: "התראות במייל",
-      push: "התראות דחיפה", 
-      sms: "הודעות SMS",
-      recurring: "תזכורות עסקאות חוזרות",
-      budgetAlerts: "התראות תקציב"
-    }
-  },
-
-  // Categories step
-  categories: {
-    title: "בחרו את הקטגוריות שלכם 📂",
-    subtitle: "בחרו את קטגוריות ההוצאות וההכנסות שתשתמשו בהן הכי הרבה",
-    description: "אל תדאגו - תמיד תוכלו להוסיף, להסיר או להתאים קטגוריות מאוחר יותר.",
-    
-    tabs: {
-      expense: "קטגוריות הוצאות",
-      income: "קטגוריות הכנסות",
-      both: "כל הקטגוריות"
-    },
-    
-    defaultCategories: {
-      title: "קטגוריות מומלצות",
-      description: "קטגוריות פופולריות בהתבסס על ההעדפות שלכם"
-    },
-    
-    customCategories: {
-      title: "צור קטגוריה מותאמת",
-      name: "שם הקטגוריה",
-      namePlaceholder: "הכניסו שם קטגוריה...",
-      description: "תיאור (רשות)",
-      descriptionPlaceholder: "מה הקטגוריה הזו כוללת...",
-      icon: "בחרו איקון",
-      color: "בחרו צבע",
-      type: "סוג קטגוריה",
-      add: "הוסף קטגוריה",
-      creating: "יוצר..."
-    },
-    
-    selectedCount: "{{count}} קטגוריות נבחרו",
-    minRequired: "בחרו לפחות 3 קטגוריות כדי להמשיך",
-    
-    popular: {
-      title: "קטגוריות פופולריות",
-      subtitle: "הכי נפוצות בקרב משתמשי SpendWise"
-    }
-  },
-
-  // Templates step (recurring transactions)
+  // ✅ מערכת תבניות
   templates: {
-    title: "הגדירו עסקאות חוזרות 🔄",
-    subtitle: "בצעו אוטומציה של ההכנסות וההוצאות הקבועות שלכם",
-    description: "חסכו זמן על ידי הגדרת עסקאות שקורות באופן קבוע - כמו משכורת, שכר דירה או מנויים.",
-    
-    skip: "דלג על השלב הזה",
-    skipMessage: "אגדיר עסקאות חוזרות מאוחר יותר",
-    
-    add: "הוסף עסקה חוזרת",
-    edit: "ערוך תבנית",
-    delete: "מחק תבנית",
-    
+    title: 'הגדירו את התבניות שלכם',
+    subtitle: 'צרו עסקאות חוזרות כדי לאתמת את מעקב ההוצאות שלכם',
+    selected: '{{count}} תבניות נבחרו',
+    setupComplete: 'הגדרת התבניות הושלמה!',
+    templatesAdded: '{{count}} תבניות נוספו בהצלחה',
+    setupFailed: 'הגדרת התבניות נכשלה',
+    customCreated: 'תבנית מותאמת אישית נוצרה בהצלחה',
+    createFailed: 'יצירת תבנית מותאמת אישית נכשלה',
+    setting: 'מגדיר תבניות...',
+    continue: 'המשך עם {{count}} תבניות',
+    creating: 'יוצר...',
+    create: 'צור תבנית',
+    createCustom: 'צור תבנית מותאמת אישית',
+    createFirst: 'צרו את התבנית הראשונה שלכם',
+    addCustom: 'הוסף מותאם אישית',
+    custom: 'מותאם אישית',
+    loadMore: 'טען עוד תבניות',
+
+    // קטגוריות תבניות
+    categories: {
+      popular: 'פופולרי',
+      income: 'הכנסות',
+      essential: 'חיוני',
+      lifestyle: 'אורח חיים',
+      custom: 'מותאם אישית',
+      popularDescription: 'התבניות הנפוצות ביותר',
+      incomeDescription: 'משכורת, עבודה עצמאית והכנסות אחרות',
+      essentialDescription: 'שכר דירה, חשמל והוצאות הכרחיות',
+      lifestyleDescription: 'בידור, אוכל והוצאות אישיות',
+      customDescription: 'התבניות המותאמות אישית שלכם'
+    },
+
+    // תבניות פופולריות
+    popular: {
+      salary: 'משכורת חודשית',
+      rent: 'שכר דירה חודשי',
+      groceries: 'קניות מזון',
+      streaming: 'שירותי סטרימינג',
+      carPayment: 'תשלום רכב'
+    },
+
+    // תבניות הכנסות
+    income: {
+      primarySalary: 'משכורת עיקרית',
+      freelance: 'הכנסה עצמאית',
+      investments: 'תשואות השקעות',
+      bonus: 'בונוס רבעוני'
+    },
+
+    // תבניות חיוניות
+    essential: {
+      utilities: 'שירותים',
+      phone: 'חשבון טלפון',
+      insurance: 'ביטוח',
+      internet: 'אינטרנט'
+    },
+
+    // תבניות אורח חיים
+    lifestyle: {
+      gym: 'מנוי חדר כושר',
+      coffee: 'קפה ומשקאות',
+      travel: 'קרן נסיעות',
+      diningOut: 'אוכל במסעדות'
+    },
+
+    // טופס תבנית
     form: {
-      type: "סוג עסקה",
-      typeOptions: {
-        income: "הכנסה",
-        expense: "הוצאה"
-      },
-      
-      amount: "סכום",
-      amountPlaceholder: "0.00",
-      
-      description: "תיאור",
-      descriptionPlaceholder: "למשל: משכורת חודשית, תשלום שכר דירה...",
-      
-      category: "קטגוריה", 
-      categoryPlaceholder: "בחרו קטגוריה...",
-      
-      frequency: "תדירות",
-      frequencyOptions: {
-        daily: "יומי",
-        weekly: "שבועי", 
-        monthly: "חודשי"
-      },
-      
-      startDate: "תאריך התחלה",
-      endDate: "תאריך סיום (רשות)",
-      
-      dayOfWeek: "יום בשבוע",
-      dayOfMonth: "יום בחודש",
-      
-      preview: "תצוגה מקדימה של העסקאות הבאות",
-      save: "שמור תבנית",
-      saving: "שומר..."
+      description: 'תיאור',
+      descriptionPlaceholder: 'הזינו תיאור תבנית...',
+      amount: 'סכום',
+      type: 'סוג',
+      category: 'קטגוריה',
+      frequency: 'תדירות',
+      selectCategory: 'בחרו קטגוריה',
+      selectFrequency: 'בחרו תדירות',
+      preview: 'תצוגה מקדימה'
     },
-    
-    examples: {
-      title: "דוגמאות נפוצות",
-      salary: {
-        title: "משכורת חודשית",
-        description: "הכנסה חוזרת מהעבודה שלכם"
-      },
-      rent: {
-        title: "תשלום שכר דירה", 
-        description: "הוצאת דיור חודשית"
-      },
-      subscription: {
-        title: "שירותי מנוי",
-        description: "נטפליקס, ספוטיפיי וכו'"
-      },
-      utilities: {
-        title: "חשבונות שירותים",
-        description: "חשמל, מים, אינטרנט"
-      }
-    },
-    
-    templateCount: "{{count}} תבניות נוצרו",
-    recommended: "אנו ממליצים להגדיר 2-4 עסקאות קבועות"
-  },
 
-  // Success/completion step
-  completion: {
-    title: "הכל מוכן! 🎉",
-    subtitle: "החשבון שלכם ב-SpendWise מוכן לעזור לכם לנהל את הכספים",
-    
+    // אימות תבנית
+    validation: {
+      required: 'אנא מלאו את כל השדות הנדרשים',
+      descriptionRequired: 'תיאור נדרש',
+      descriptionTooShort: 'התיאור חייב להיות לפחות 3 תווים',
+      descriptionTooLong: 'התיאור חייב להיות פחות מ-50 תווים',
+      amountRequired: 'הסכום חייב להיות גדול מ-0',
+      amountTooLarge: 'הסכום לא יכול לעלות על $1,000,000'
+    },
+
+    // חיפוש תבניות
+    search: {
+      placeholder: 'חפשו תבניות...',
+      noResults: 'לא נמצאו תבניות',
+      noResultsDescription: 'לא נמצאו תבניות שתואמות ל"{{query}}". נסו מילת חיפוש אחרת.',
+      results: '{{count}} תוצאות עבור "{{query}}"'
+    },
+
+    // סיכום תבניות
     summary: {
-      title: "סיכום הגדרות",
-      language: "שפה: {{language}}",
-      currency: "מטבע: {{currency}}", 
-      theme: "ערכת עיצוב: {{theme}}",
-      categories: "קטגוריות: {{count}} נבחרו",
-      templates: "חוזרות: {{count}} תבניות"
+      title: 'סיכום תבניות',
+      description: 'בחרתם {{count}} תבניות לאוטומציה',
+      templates: 'תבניות'
     },
-    
-    nextSteps: {
-      title: "הצעדים הבאים",
-      addTransaction: {
-        title: "הוסיפו את העסקה הראשונה",
-        description: "התחילו במעקב על ידי הוספת הוצאה או הכנסה"
+
+    // פעולות תבנית
+    edit: 'ערוך תבנית',
+    delete: 'מחק תבנית',
+    duplicate: 'שכפל תבנית',
+    activate: 'הפעל',
+    deactivate: 'כבה'
+  },
+
+  // ✅ מערכת העדפות
+  preferences: {
+    title: 'ההעדפות שלכם',
+    subtitle: 'התאימו את חוויית SpendWise שלכם',
+    sectionDesc: 'הגדירו את ההעדפות שלכם כדי לתת אופי אישי לחוויה שלכם',
+    stepProgress: 'סעיף {{current}} מתוך {{total}}',
+    saved: 'ההעדפות נשמרו בהצלחה',
+    savedDescription: 'ההעדפות שלכם הוחלו',
+    saveFailed: 'שמירת ההעדפות נכשלה',
+    saving: 'שומר העדפות...',
+    complete: 'השלם הגדרה',
+    nextSection: 'סעיף הבא',
+    previousSection: 'קודם',
+    completed: '{{count}} סעיפים הושלמו',
+    required: 'נדרש',
+    quickComplete: 'דלג להשלמה',
+
+    // העדפות שפה
+    language: {
+      title: 'שפה ואיזור',
+      description: 'בחרו את השפה המועדפת עליכם',
+      sectionDesc: 'בחרו את השפה וההעדפות האזוריות שלכם',
+      current: 'נוכחי',
+      rtl: 'טקסט מימין לשמאל',
+      preview: 'תצוגה מקדימה',
+      sampleText: 'כך ייראה הטקסט בשפה שבחרתם',
+      help: 'תוכלו לשנות את זה מאוחר יותר בהגדרות'
+    },
+
+    // העדפות נושא
+    theme: {
+      title: 'מראה',
+      description: 'בחרו את הנושא המועדף עליכם',
+      sectionDesc: 'התאימו את המראה החזותי של SpendWise',
+      light: 'בהיר',
+      dark: 'כהה',
+      auto: 'אוטומטי',
+      lightDescription: 'ממשק בהיר לשימוש ביום',
+      darkDescription: 'ממשק כהה לסביבות עם תאורה נמוכה',
+      autoDescription: 'תואם את העדפת המערכת שלכם',
+      current: 'נוכחי',
+      preview: 'תצוגה מקדימה',
+      currentlyUsing: 'משתמש כרגע בנושא {{theme}}',
+      systemDetected: 'העדפת מערכת זוהתה: {{theme}}',
+      help: 'הנושא יוחל מיד'
+    },
+
+    // העדפות מטבע
+    currency: {
+      title: 'מטבע',
+      description: 'בחרו את המטבע העיקרי שלכם',
+      sectionDesc: 'הגדירו את מטבע ברירת המחדל שלכם לעסקאות',
+      popular: 'פופולרי',
+      popularTitle: 'מטבעות פופולריים',
+      selected: 'נבחר',
+      searchPlaceholder: 'חפשו מטבעות...',
+      searchResults: '{{count}} תוצאות עבור "{{query}}"',
+      noResults: 'לא נמצאו מטבעות עבור "{{query}}"',
+      sample: 'דוגמה',
+      preview: 'תצוגה מקדימה של מטבע',
+      help: 'כל הסכומים יוצגו במטבע זה'
+    },
+
+    // העדפות התראות
+    notifications: {
+      title: 'התראות',
+      description: 'נהלו את העדפות ההתראות שלכם',
+      sectionDesc: 'בחרו איך אתם רוצים לקבל התראות',
+      enablePush: 'הפעלת התראות דחיפה',
+      enablePushDesc: 'קבלו התראות מיידיות במכשיר שלכם לעדכונים חשובים',
+      allowNotifications: 'אפשר התראות',
+      permissionGranted: 'התראות הופעלו בהצלחה',
+      permissionDenied: 'התראות נדחו. תוכלו להפעיל אותן מאוחר יותר בהגדרות.',
+      permissionError: 'בקשת הרשאת התראות נכשלה',
+      permissionRequired: 'נדרשת הרשאת דפדפן',
+      notSupported: 'התראות אינן נתמכות בדפדפן זה',
+      recommended: 'מומלץ',
+      help: 'תוכלו לשנות את ההגדרות האלו בכל זמן',
+
+      // ערוצי התראות
+      channels: {
+        title: 'ערוצי התראות',
+        push: 'התראות דחיפה',
+        email: 'אימייל',
+        sms: 'SMS',
+        pushDesc: 'התראות מיידיות בדפדפן',
+        emailDesc: 'התראות אימייל לתיבת הדואר שלכם',
+        smsDesc: 'הודעות טקסט לטלפון שלכם'
       },
-      exploreAnalytics: {
-        title: "חקרו את האנליטיקה",
-        description: "צפו בתובנות על דפוסי ההוצאות שלכם"
+
+      // קטגוריות התראות
+      categories: {
+        essential: 'חיוני',
+        activity: 'פעילות',
+        reports: 'דוחות',
+        marketing: 'שיווק',
+        essentialDesc: 'התראות ביטחון ותקציב קריטיות',
+        activityDesc: 'פעילות עסקאות וחשבון',
+        reportsDesc: 'סיכומים שבועיים וחודשיים',
+        marketingDesc: 'עדכוני מוצר וקידום מכירות'
       },
-      setGoals: {
-        title: "הגדירו יעדים פיננסיים", 
-        description: "צרו תקציבים ויעדי חיסכון"
+
+      // התראות ספציפיות
+      security: {
+        title: 'התראות ביטחון',
+        description: 'התראות ביטחון חשובות'
       },
-      inviteFriends: {
-        title: "שתפו עם חברים",
-        description: "עזרו לאחרים לקחת שליטה על הכספים שלהם"
+      budget: {
+        title: 'התראות תקציב',
+        description: 'כשאתם מתקרבים למגבלות הוצאה'
+      },
+      transactions: {
+        title: 'התראות עסקאות',
+        description: 'התראות עסקאות חדשות'
+      },
+      recurring: {
+        title: 'תזכורות חוזרות',
+        description: 'עסקאות חוזרות קרובות'
+      },
+      weekly: {
+        title: 'דוחות שבועיים',
+        description: 'סיכום ההוצאות השבועי שלכם'
+      },
+      monthly: {
+        title: 'דוחות חודשיים',
+        description: 'סקירת הכספים החודשית שלכם'
+      },
+      marketing: {
+        title: 'עדכוני מוצר',
+        description: 'תכונות חדשות והודעות'
+      },
+
+      // הגדרות התראות
+      settings: {
+        title: 'הגדרות התראות'
+      },
+
+      // סיכום התראות
+      summary: {
+        title: 'סיכום התראות',
+        enabled: 'מופעל',
+        channels: 'ערוצים פעילים'
       }
-    },
-    
-    cta: "התחילו להשתמש ב-SpendWise",
-    processing: "מסיימים את ההגדרה שלכם..."
+    }
   },
 
-  // Error messages
-  errors: {
-    loadingFailed: "טעינת נתוני ההתקנה נכשלה",
-    savingFailed: "שמירת ההעדפות שלכם נכשלה", 
-    completionFailed: "השלמת הגדרת ההתקנה נכשלה",
-    networkError: "שגיאת רשת - אנא בדקו את החיבור שלכם",
-    serverError: "שגיאת שרת - אנא נסו שוב מאוחר יותר",
-    validationError: "אנא מלאו את כל השדות הנדרשים",
-    categoryCreateFailed: "יצירת קטגוריה מותאמת נכשלה",
-    templateCreateFailed: "יצירת תבנית חוזרת נכשלה"
+  // ✅ מערכת השלמה
+  completion: {
+    title: 'ההגדרה הושלמה!',
+    subtitle: 'ברוכים הבאים ל-SpendWise',
+    success: 'ההטמעה הושלמה בהצלחה!',
+    failed: 'השלמת ההטמעה נכשלה. אנא נסו שוב.',
+    description: 'החשבון שלכם מוכן כעת לשימוש. התחילו לעקוב אחר ההוצאות שלכם והגיעו ליעדים הפיננסיים שלכם!'
   },
 
-  // Success messages
-  success: {
-    preferencesSaved: "ההעדפות נשמרו בהצלחה!",
-    categoriesSelected: "הקטגוריות הוגדרו!",
-    templateCreated: "תבנית חוזרת נוצרה!",
-    templateUpdated: "תבנית חוזרת עודכנה!",
-    templateDeleted: "תבנית חוזרת נמחקה!",
-    onboardingComplete: "ברוכים הבאים ל-SpendWise! החשבון שלכם מוכן."
+  // ✅ תוויות סוג
+  templateTypes: {
+    income: 'הכנסה',
+    expense: 'הוצאה'
   },
 
-  // Tooltips and help
-  help: {
-    language: "בחרו בשפה לממשק SpendWise",
-    currency: "זה יהיה המטבע הראשי שלכם לכל העסקאות",
-    theme: "ערכת אוטומטית עוברת בין בהיר לכהה בהתבסס על המערכת שלכם",
-    dateFormat: "זה משפיע על איך תאריכים מוצגים בכל האפליקציה",
-    categories: "קטגוריות עוזרות לארגן את העסקאות שלכם לתובנות טובות יותר",
-    recurring: "עסקאות חוזרות נוצרות אוטומטית בהתבסס על הלוח הזמנים שלכם",
-    frequency: "כמה פעמים העסקה הזו אמורה לחזור על עצמה",
-    dayOfMonth: "באיזה יום בחודש (1-31) לעסקאות חודשיות",
-    dayOfWeek: "באיזה יום בשבוע לעסקאות שבועיות"
+  // ✅ תוויות תדירות
+  frequencies: {
+    weekly: 'שבועי',
+    monthly: 'חודשי',
+    quarterly: 'רבעוני',
+    yearly: 'שנתי'
+  },
+
+  // ✅ פעולות נפוצות
+  common: {
+    cancel: 'ביטול',
+    save: 'שמור',
+    enabled: 'מופעל',
+    disabled: 'מכובה',
+    back: 'חזור',
+    continue: 'המשך',
+    complete: 'השלם',
+    skip: 'דלג',
+    next: 'הבא',
+    previous: 'קודם',
+    close: 'סגור'
   }
 }; 

@@ -14,6 +14,7 @@ import errors from './errors.js';
 import onboarding from './onboarding.js';
 import transactions from './transactions.js';
 import dashboard from './dashboard.js';
+import categories from './categories.js';
 
 // Export all translations
 export default {
@@ -23,5 +24,6 @@ export default {
   errors,
   onboarding,
   transactions,
-  dashboard
+  dashboard,
+  categories
 }; 

@@ -1,6 +1,6 @@
 /**
  * 🌍 HEBREW TRANSLATIONS - MASTER INDEX
- * Comprehensive translation system for SpendWise
+ * מערכת תרגום מקיפה עבור SpendWise
  * @version 2.0.0
  */
 
@@ -13,6 +13,8 @@ import errors from './errors.js';
 // Feature translations
 import onboarding from './onboarding.js';
 import transactions from './transactions.js';
+import dashboard from './dashboard.js';
+import categories from './categories.js';
 
 // Export all translations
 export default {
@@ -21,5 +23,7 @@ export default {
   nav,
   errors,
   onboarding,
-  transactions
+  transactions,
+  dashboard,
+  categories
 }; 

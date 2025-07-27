@@ -1,310 +1,337 @@
 /**
- * 🎯 ONBOARDING TRANSLATIONS - ENGLISH
- * Complete translations for the new mobile-first onboarding experience
- * @version 2.0.0
+ * 🎯 English Onboarding Translations
+ * Complete translation keys for onboarding system
+ * @version 3.0.0 - COMPLETE TRANSLATION COVERAGE
  */
 
 export default {
-  // Main onboarding modal
-  modal: {
-    title: "Welcome to SpendWise!",
-    subtitle: "Let's set up your personal finance management in just a few steps",
-    skip: "Skip for now",
-    skipConfirm: "Skip onboarding?",
-    skipMessage: "You can always complete this setup later from your profile settings.",
-    yes: "Yes, skip",
-    no: "Continue setup",
-    next: "Next",
-    back: "Back",
-    finish: "Get Started",
-    completing: "Setting up your account...",
-    error: "Something went wrong. Please try again.",
-    close: "Close"
-  },
-
-  // Progress indicator
+  // ✅ Progress and Navigation
   progress: {
-    step: "Step {{current}} of {{total}}",
-    welcome: "Welcome",
-    preferences: "Preferences", 
-    categories: "Categories",
-    templates: "Templates",
-    ready: "Ready!"
+    welcome: 'Welcome',
+    preferences: 'Preferences',
+    categories: 'Categories',
+    templates: 'Templates',
+    ready: 'Ready',
+    step: 'Step {{current}} of {{total}}',
+    stepDescription: 'Complete your setup to get the most out of SpendWise',
+    complete: 'Complete',
+    timeRemaining: '{{minutes}} min remaining'
   },
 
-  // Welcome step
-  welcome: {
-    title: "Welcome to SpendWise! 💰",
-    subtitle: "Your journey to better financial management starts here",
-    description: "SpendWise helps you track expenses, manage income, and achieve your financial goals with beautiful, intelligent insights.",
-    features: {
-      title: "What you'll get:",
-      tracking: {
-        title: "Smart Expense Tracking",
-        description: "Effortlessly track your spending with categories and smart insights"
-      },
-      analytics: {
-        title: "Financial Analytics", 
-        description: "Beautiful charts and insights to understand your money habits"
-      },
-      goals: {
-        title: "Budget & Goals",
-        description: "Set savings goals and budgets to stay on track"
-      },
-      mobile: {
-        title: "Mobile-First Design",
-        description: "Perfect experience on all your devices"
-      }
-    },
-    cta: "Let's get started!",
-    timeEstimate: "Takes about 2 minutes"
+  // ✅ Modal Navigation
+  modal: {
+    back: 'Back',
+    next: 'Next',
+    skip: 'Skip',
+    finish: 'Finish',
+    close: 'Close',
+    completing: 'Completing...',
+    unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?',
+    keyboardHint: 'Use keyboard shortcuts',
+    nextShortcut: 'Next',
+    backShortcut: 'Back',
+    skipShortcut: 'Skip',
+    readyToComplete: 'Ready to complete setup!'
   },
 
-  // Preferences step
-  preferences: {
-    title: "Personalize Your Experience 🎨",
-    subtitle: "Set up your preferences for the best experience",
-    
-    language: {
-      title: "Language",
-      description: "Choose your preferred language",
-      options: {
-        en: "English",
-        he: "עברית (Hebrew)",
-        es: "Español",
-        fr: "Français",
-        de: "Deutsch",
-        ar: "العربية"
-      }
-    },
-    
-    currency: {
-      title: "Primary Currency",
-      description: "Your main currency for tracking finances",
-      options: {
-        USD: "US Dollar ($)",
-        EUR: "Euro (€)",
-        ILS: "Israeli Shekel (₪)",
-        GBP: "British Pound (£)",
-        JPY: "Japanese Yen (¥)",
-        CNY: "Chinese Yuan (¥)",
-        CAD: "Canadian Dollar ($)",
-        AUD: "Australian Dollar ($)"
-      }
-    },
-    
-    theme: {
-      title: "Appearance Theme",
-      description: "Choose how SpendWise looks",
-      options: {
-        light: "Light Theme",
-        dark: "Dark Theme", 
-        auto: "System Default"
-      }
-    },
+  // ✅ Main Onboarding Content
+  title: 'Welcome to SpendWise!',
+  subtitle: 'Let\'s set up your account in just a few steps',
 
-    dateFormat: {
-      title: "Date Format",
-      description: "How dates should be displayed",
-      options: {
-        "MM/DD/YYYY": "MM/DD/YYYY (US)",
-        "DD/MM/YYYY": "DD/MM/YYYY (International)",
-        "YYYY-MM-DD": "YYYY-MM-DD (ISO)",
-        "DD.MM.YYYY": "DD.MM.YYYY (European)"
-      }
-    },
-
-    notifications: {
-      title: "Notifications",
-      description: "Stay informed about your finances",
-      email: "Email notifications",
-      push: "Push notifications", 
-      sms: "SMS notifications",
-      recurring: "Recurring transaction reminders",
-      budgetAlerts: "Budget alerts"
-    }
-  },
-
-  // Categories step
-  categories: {
-    title: "Choose Your Categories 📂",
-    subtitle: "Select the expense and income categories you'll use most",
-    description: "Don't worry - you can always add, remove, or customize categories later.",
-    
-    tabs: {
-      expense: "Expense Categories",
-      income: "Income Categories",
-      both: "All Categories"
-    },
-    
-    defaultCategories: {
-      title: "Recommended Categories",
-      description: "Popular categories based on your preferences"
-    },
-    
-    customCategories: {
-      title: "Create Custom Category",
-      name: "Category Name",
-      namePlaceholder: "Enter category name...",
-      description: "Description (optional)",
-      descriptionPlaceholder: "What this category covers...",
-      icon: "Choose Icon",
-      color: "Choose Color",
-      type: "Category Type",
-      add: "Add Category",
-      creating: "Creating..."
-    },
-    
-    selectedCount: "{{count}} categories selected",
-    minRequired: "Select at least 3 categories to continue",
-    
-    popular: {
-      title: "Popular Categories",
-      subtitle: "Most used by SpendWise users"
-    }
-  },
-
-  // Templates step (recurring transactions)
+  // ✅ Template System
   templates: {
-    title: "Set Up Recurring Transactions 🔄",
-    subtitle: "Automate your regular income and expenses",
-    description: "Save time by setting up transactions that happen regularly - like salary, rent, or subscriptions.",
-    
-    skip: "Skip this step",
-    skipMessage: "I'll set up recurring transactions later",
-    
-    add: "Add Recurring Transaction",
-    edit: "Edit Template",
-    delete: "Delete Template",
-    
+    title: 'Set Up Your Templates',
+    subtitle: 'Create recurring transactions to automate your expense tracking',
+    selected: '{{count}} template(s) selected',
+    setupComplete: 'Templates setup completed!',
+    templatesAdded: '{{count}} templates added successfully',
+    setupFailed: 'Failed to setup templates',
+    customCreated: 'Custom template created successfully',
+    createFailed: 'Failed to create custom template',
+    setting: 'Setting up templates...',
+    continue: 'Continue with {{count}} template(s)',
+    creating: 'Creating...',
+    create: 'Create Template',
+    createCustom: 'Create Custom Template',
+    createFirst: 'Create your first template',
+    addCustom: 'Add Custom',
+    custom: 'Custom',
+    loadMore: 'Load More Templates',
+
+    // Template Categories
+    categories: {
+      popular: 'Popular',
+      income: 'Income',
+      essential: 'Essential',
+      lifestyle: 'Lifestyle',
+      custom: 'Custom',
+      popularDescription: 'Most commonly used templates',
+      incomeDescription: 'Salary, freelance, and other income',
+      essentialDescription: 'Rent, utilities, and necessary expenses',
+      lifestyleDescription: 'Entertainment, dining, and personal expenses',
+      customDescription: 'Your own custom templates'
+    },
+
+    // Popular Templates
+    popular: {
+      salary: 'Monthly Salary',
+      rent: 'Monthly Rent',
+      groceries: 'Groceries',
+      streaming: 'Streaming Services',
+      carPayment: 'Car Payment'
+    },
+
+    // Income Templates
+    income: {
+      primarySalary: 'Primary Salary',
+      freelance: 'Freelance Income',
+      investments: 'Investment Returns',
+      bonus: 'Quarterly Bonus'
+    },
+
+    // Essential Templates
+    essential: {
+      utilities: 'Utilities',
+      phone: 'Phone Bill',
+      insurance: 'Insurance',
+      internet: 'Internet'
+    },
+
+    // Lifestyle Templates
+    lifestyle: {
+      gym: 'Gym Membership',
+      coffee: 'Coffee & Drinks',
+      travel: 'Travel Fund',
+      diningOut: 'Dining Out'
+    },
+
+    // Template Form
     form: {
-      type: "Transaction Type",
-      typeOptions: {
-        income: "Income",
-        expense: "Expense"
-      },
-      
-      amount: "Amount",
-      amountPlaceholder: "0.00",
-      
-      description: "Description",
-      descriptionPlaceholder: "e.g., Monthly Salary, Rent Payment...",
-      
-      category: "Category", 
-      categoryPlaceholder: "Select category...",
-      
-      frequency: "Frequency",
-      frequencyOptions: {
-        daily: "Daily",
-        weekly: "Weekly", 
-        monthly: "Monthly"
-      },
-      
-      startDate: "Start Date",
-      endDate: "End Date (optional)",
-      
-      dayOfWeek: "Day of Week",
-      dayOfMonth: "Day of Month",
-      
-      preview: "Preview Next Transactions",
-      save: "Save Template",
-      saving: "Saving..."
+      description: 'Description',
+      descriptionPlaceholder: 'Enter template description...',
+      amount: 'Amount',
+      type: 'Type',
+      category: 'Category',
+      frequency: 'Frequency',
+      selectCategory: 'Select category',
+      selectFrequency: 'Select frequency',
+      preview: 'Preview'
     },
-    
-    examples: {
-      title: "Common Examples",
-      salary: {
-        title: "Monthly Salary",
-        description: "Recurring income from your job"
-      },
-      rent: {
-        title: "Rent Payment", 
-        description: "Monthly housing expense"
-      },
-      subscription: {
-        title: "Subscription Services",
-        description: "Netflix, Spotify, etc."
-      },
-      utilities: {
-        title: "Utility Bills",
-        description: "Electricity, water, internet"
-      }
-    },
-    
-    templateCount: "{{count}} templates created",
-    recommended: "We recommend setting up 2-4 regular transactions"
-  },
 
-  // Success/completion step
-  completion: {
-    title: "You're All Set! 🎉",
-    subtitle: "Your SpendWise account is ready to help you manage your finances",
-    
+    // Template Validation
+    validation: {
+      required: 'Please fill in all required fields',
+      descriptionRequired: 'Description is required',
+      descriptionTooShort: 'Description must be at least 3 characters',
+      descriptionTooLong: 'Description must be less than 50 characters',
+      amountRequired: 'Amount must be greater than 0',
+      amountTooLarge: 'Amount cannot exceed $1,000,000'
+    },
+
+    // Template Search
+    search: {
+      placeholder: 'Search templates...',
+      noResults: 'No templates found',
+      noResultsDescription: 'No templates match "{{query}}". Try a different search term.',
+      results: '{{count}} result(s) for "{{query}}"'
+    },
+
+    // Template Summary
     summary: {
-      title: "Setup Summary",
-      language: "Language: {{language}}",
-      currency: "Currency: {{currency}}", 
-      theme: "Theme: {{theme}}",
-      categories: "Categories: {{count}} selected",
-      templates: "Recurring: {{count}} templates"
+      title: 'Templates Summary',
+      description: 'You have selected {{count}} template(s) for automation',
+      templates: 'templates'
     },
-    
-    nextSteps: {
-      title: "Next Steps",
-      addTransaction: {
-        title: "Add Your First Transaction",
-        description: "Start tracking by adding an expense or income"
+
+    // Template Actions
+    edit: 'Edit Template',
+    delete: 'Delete Template',
+    duplicate: 'Duplicate Template',
+    activate: 'Activate',
+    deactivate: 'Deactivate'
+  },
+
+  // ✅ Preferences System
+  preferences: {
+    title: 'Your Preferences',
+    subtitle: 'Customize your SpendWise experience',
+    sectionDesc: 'Set up your preferences to personalize your experience',
+    stepProgress: 'Section {{current}} of {{total}}',
+    saved: 'Preferences saved successfully',
+    savedDescription: 'Your preferences have been applied',
+    saveFailed: 'Failed to save preferences',
+    saving: 'Saving preferences...',
+    complete: 'Complete Setup',
+    nextSection: 'Next Section',
+    previousSection: 'Previous',
+    completed: '{{count}} section(s) completed',
+    required: 'Required',
+    quickComplete: 'Skip to completion',
+
+    // Language Preferences
+    language: {
+      title: 'Language & Region',
+      description: 'Choose your preferred language',
+      sectionDesc: 'Select your language and regional preferences',
+      current: 'Current',
+      rtl: 'Right-to-left text',
+      preview: 'Preview',
+      sampleText: 'This is how text will appear in your selected language',
+      help: 'You can change this later in settings'
+    },
+
+    // Theme Preferences
+    theme: {
+      title: 'Appearance',
+      description: 'Choose your preferred theme',
+      sectionDesc: 'Customize the visual appearance of SpendWise',
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto',
+      lightDescription: 'Bright interface for day use',
+      darkDescription: 'Dark interface for low-light environments',
+      autoDescription: 'Matches your system preference',
+      current: 'Current',
+      preview: 'Preview',
+      currentlyUsing: 'Currently using {{theme}} theme',
+      systemDetected: 'System preference detected: {{theme}}',
+      help: 'Theme will be applied immediately'
+    },
+
+    // Currency Preferences
+    currency: {
+      title: 'Currency',
+      description: 'Choose your primary currency',
+      sectionDesc: 'Set your default currency for transactions',
+      popular: 'Popular',
+      popularTitle: 'Popular Currencies',
+      selected: 'Selected',
+      searchPlaceholder: 'Search currencies...',
+      searchResults: '{{count}} result(s) for "{{query}}"',
+      noResults: 'No currencies found for "{{query}}"',
+      sample: 'Sample',
+      preview: 'Currency Preview',
+      help: 'All amounts will be displayed in this currency'
+    },
+
+    // Notification Preferences
+    notifications: {
+      title: 'Notifications',
+      description: 'Manage your notification preferences',
+      sectionDesc: 'Choose how you want to receive notifications',
+      enablePush: 'Enable Push Notifications',
+      enablePushDesc: 'Get instant notifications on your device for important updates',
+      allowNotifications: 'Allow Notifications',
+      permissionGranted: 'Notifications enabled successfully',
+      permissionDenied: 'Notifications were denied. You can enable them later in settings.',
+      permissionError: 'Failed to request notification permission',
+      permissionRequired: 'Browser permission required',
+      notSupported: 'Notifications are not supported in this browser',
+      recommended: 'Recommended',
+      help: 'You can change these settings anytime',
+
+      // Notification Channels
+      channels: {
+        title: 'Notification Channels',
+        push: 'Push Notifications',
+        email: 'Email',
+        sms: 'SMS',
+        pushDesc: 'Instant browser notifications',
+        emailDesc: 'Email notifications to your inbox',
+        smsDesc: 'Text messages to your phone'
       },
-      exploreAnalytics: {
-        title: "Explore Analytics",
-        description: "View insights about your spending patterns"
+
+      // Notification Categories
+      categories: {
+        essential: 'Essential',
+        activity: 'Activity',
+        reports: 'Reports',
+        marketing: 'Marketing',
+        essentialDesc: 'Critical security and budget alerts',
+        activityDesc: 'Transaction and account activity',
+        reportsDesc: 'Weekly and monthly summaries',
+        marketingDesc: 'Product updates and promotions'
       },
-      setGoals: {
-        title: "Set Financial Goals", 
-        description: "Create budgets and savings targets"
+
+      // Specific Notifications
+      security: {
+        title: 'Security Alerts',
+        description: 'Important security notifications'
       },
-      inviteFriends: {
-        title: "Share with Friends",
-        description: "Help others take control of their finances"
+      budget: {
+        title: 'Budget Alerts',
+        description: 'When you approach spending limits'
+      },
+      transactions: {
+        title: 'Transaction Alerts',
+        description: 'New transaction notifications'
+      },
+      recurring: {
+        title: 'Recurring Reminders',
+        description: 'Upcoming recurring transactions'
+      },
+      weekly: {
+        title: 'Weekly Reports',
+        description: 'Your weekly spending summary'
+      },
+      monthly: {
+        title: 'Monthly Reports',
+        description: 'Your monthly financial overview'
+      },
+      marketing: {
+        title: 'Product Updates',
+        description: 'New features and announcements'
+      },
+
+      // Notification Settings
+      settings: {
+        title: 'Notification Settings'
+      },
+
+      // Notification Summary
+      summary: {
+        title: 'Notification Summary',
+        enabled: 'Enabled',
+        channels: 'Active channels'
       }
-    },
-    
-    cta: "Start Using SpendWise",
-    processing: "Finalizing your setup..."
+    }
   },
 
-  // Error messages
-  errors: {
-    loadingFailed: "Failed to load onboarding data",
-    savingFailed: "Failed to save your preferences", 
-    completionFailed: "Failed to complete onboarding setup",
-    networkError: "Network error - please check your connection",
-    serverError: "Server error - please try again later",
-    validationError: "Please fill in all required fields",
-    categoryCreateFailed: "Failed to create custom category",
-    templateCreateFailed: "Failed to create recurring template"
+  // ✅ Completion System
+  completion: {
+    title: 'Setup Complete!',
+    subtitle: 'Welcome to SpendWise',
+    success: 'Onboarding completed successfully!',
+    failed: 'Onboarding completion failed. Please try again.',
+    description: 'Your account is now ready to use. Start tracking your expenses and reach your financial goals!'
   },
 
-  // Success messages
-  success: {
-    preferencesSaved: "Preferences saved successfully!",
-    categoriesSelected: "Categories configured!",
-    templateCreated: "Recurring template created!",
-    templateUpdated: "Recurring template updated!",
-    templateDeleted: "Recurring template deleted!",
-    onboardingComplete: "Welcome to SpendWise! Your account is ready."
+  // ✅ Type Labels
+  templateTypes: {
+    income: 'Income',
+    expense: 'Expense'
   },
 
-  // Tooltips and help
-  help: {
-    language: "Choose the language for SpendWise interface",
-    currency: "This will be your primary currency for all transactions",
-    theme: "Auto theme switches between light and dark based on your system",
-    dateFormat: "This affects how dates are displayed throughout the app",
-    categories: "Categories help organize your transactions for better insights",
-    recurring: "Recurring transactions are automatically created based on your schedule",
-    frequency: "How often this transaction should repeat",
-    dayOfMonth: "Which day of the month (1-31) for monthly transactions",
-    dayOfWeek: "Which day of the week for weekly transactions"
+  // ✅ Frequency Labels
+  frequencies: {
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    quarterly: 'Quarterly',
+    yearly: 'Yearly'
+  },
+
+  // ✅ Common Actions
+  common: {
+    cancel: 'Cancel',
+    save: 'Save',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    back: 'Back',
+    continue: 'Continue',
+    complete: 'Complete',
+    skip: 'Skip',
+    next: 'Next',
+    previous: 'Previous',
+    close: 'Close'
   }
 }; 

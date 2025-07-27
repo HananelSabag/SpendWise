@@ -12,9 +12,83 @@ import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
 import performanceAPI from './performance.js';
 
-// ✅ Transactions API Module
+// ✅ Transactions API Module - ALIGNED WITH SERVER ROUTES
 const transactionsAPI = {
-  // Get all transactions with filters
+  // 🏠 DASHBOARD ROUTES
+  // Get complete dashboard data (matches: GET /transactions/dashboard)
+  async getDashboard(date = null) {
+    try {
+      const endpoint = date ? `/transactions/dashboard?date=${date}` : '/transactions/dashboard';
+      const response = await apiClient.client.get(endpoint);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get recent transactions (matches: GET /transactions/recent)
+  async getRecent(limit = 10) {
+    try {
+      const response = await apiClient.client.get(`/transactions/recent?limit=${limit}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get statistics (matches: GET /transactions/stats)
+  async getStats(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/stats', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get category breakdown (matches: GET /transactions/categories/breakdown)
+  async getCategoryBreakdown(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/categories/breakdown', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get summary (matches: GET /transactions/summary)
+  async getSummary(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/summary', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // 💰 BALANCE ROUTES
+  // Get balance details (matches: GET /transactions/balance/details)
+  async getBalanceDetails(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/balance/details', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get balance history (matches: GET /transactions/balance/history/:period)
+  async getBalanceHistory(period, params = {}) {
+    try {
+      const response = await apiClient.client.get(`/transactions/balance/history/${period}`, { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // 🔍 QUERY ROUTES
+  // Get all transactions with filters (matches: GET /transactions)
   async getAll(params = {}) {
     try {
       const response = await apiClient.client.get('/transactions', { params });
@@ -24,10 +98,53 @@ const transactionsAPI = {
     }
   },
 
-  // Create single transaction
-  async create(transactionData) {
+  // Search transactions (matches: GET /transactions/search)
+  async search(query, params = {}) {
     try {
-      const response = await apiClient.client.post('/transactions', transactionData);
+      const response = await apiClient.client.get('/transactions/search', { 
+        params: { q: query, ...params } 
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get by period (matches: GET /transactions/period/:period)
+  async getByPeriod(period, params = {}) {
+    try {
+      const response = await apiClient.client.get(`/transactions/period/${period}`, { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // 🔄 RECURRING ROUTES
+  // Get recurring transactions (matches: GET /transactions/recurring)
+  async getRecurring(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/recurring', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get templates (matches: GET /transactions/templates)
+  async getTemplates(params = {}) {
+    try {
+      const response = await apiClient.client.get('/transactions/templates', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Generate recurring (matches: POST /transactions/generate-recurring)
+  async generateRecurring() {
+    try {
+      const response = await apiClient.client.post('/transactions/generate-recurring');
       apiClient.clearCache('transactions');
       apiClient.clearCache('dashboard');
       return { success: true, data: response.data };
@@ -36,10 +153,11 @@ const transactionsAPI = {
     }
   },
 
-  // Create multiple transactions (batch)
-  async createBatch(transactions) {
+  // ✏️ CRUD ROUTES
+  // Create transaction with type (matches: POST /transactions/:type)
+  async create(type, transactionData) {
     try {
-      const response = await apiClient.client.post('/transactions/batch', { transactions });
+      const response = await apiClient.client.post(`/transactions/${type}`, transactionData);
       apiClient.clearCache('transactions');
       apiClient.clearCache('dashboard');
       return { success: true, data: response.data };
@@ -48,10 +166,10 @@ const transactionsAPI = {
     }
   },
 
-  // Update transaction
-  async update(id, updates) {
+  // Create expense directly (matches: POST /transactions/expense)
+  async createExpense(transactionData) {
     try {
-      const response = await apiClient.client.put(`/transactions/${id}`, updates);
+      const response = await apiClient.client.post('/transactions/expense', transactionData);
       apiClient.clearCache('transactions');
       apiClient.clearCache('dashboard');
       return { success: true, data: response.data };
@@ -60,10 +178,34 @@ const transactionsAPI = {
     }
   },
 
-  // Delete transaction
-  async delete(id) {
+  // Create income directly (matches: POST /transactions/income)
+  async createIncome(transactionData) {
     try {
-      await apiClient.client.delete(`/transactions/${id}`);
+      const response = await apiClient.client.post('/transactions/income', transactionData);
+      apiClient.clearCache('transactions');
+      apiClient.clearCache('dashboard');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Update transaction with type (matches: PUT /transactions/:type/:id)
+  async update(type, id, updates) {
+    try {
+      const response = await apiClient.client.put(`/transactions/${type}/${id}`, updates);
+      apiClient.clearCache('transactions');
+      apiClient.clearCache('dashboard');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Delete transaction with type (matches: DELETE /transactions/:type/:id)
+  async delete(type, id) {
+    try {
+      await apiClient.client.delete(`/transactions/${type}/${id}`);
       apiClient.clearCache('transactions');
       apiClient.clearCache('dashboard');
       return { success: true };
@@ -72,30 +214,59 @@ const transactionsAPI = {
     }
   },
 
-  // Get recent transactions
-  async getRecent(limit = 10) {
+  // Skip transaction occurrence (matches: POST /transactions/:type/:id/skip)
+  async skipOccurrence(type, id, skipData) {
     try {
-      const response = await apiClient.client.get(`/transactions?limit=${limit}&sort=date&order=desc`);
+      const response = await apiClient.client.post(`/transactions/${type}/${id}/skip`, skipData);
+      apiClient.clearCache('transactions');
+      apiClient.clearCache('dashboard');
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
   },
 
-  // Get analytics for transactions
-  async getAnalytics(params = {}) {
-    try {
-      const response = await apiClient.cachedRequest('/transactions/analytics', {
-        method: 'GET',
-        params
-      }, `transaction-analytics-${JSON.stringify(params)}`, 5 * 60 * 1000);
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError(error) };
+  // 🔄 TEMPLATE MANAGEMENT
+  templates: {
+    // Update template (matches: PUT /transactions/templates/:id)
+    async update(id, updates) {
+      try {
+        const response = await apiClient.client.put(`/transactions/templates/${id}`, updates);
+        apiClient.clearCache('transactions');
+        apiClient.clearCache('templates');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError(error) };
+      }
+    },
+
+    // Delete template (matches: DELETE /transactions/templates/:id)
+    async delete(id) {
+      try {
+        await apiClient.client.delete(`/transactions/templates/${id}`);
+        apiClient.clearCache('transactions');
+        apiClient.clearCache('templates');
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError(error) };
+      }
+    },
+
+    // Skip dates for template (matches: POST /transactions/templates/:id/skip)
+    async skip(id, skipDates) {
+      try {
+        const response = await apiClient.client.post(`/transactions/templates/${id}/skip`, { skipDates });
+        apiClient.clearCache('transactions');
+        apiClient.clearCache('templates');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError(error) };
+      }
     }
   },
 
-  // Recurring templates
+  // 📊 LEGACY COMPATIBILITY (remove old functions)
+  // Recurring templates (DEPRECATED - use getTemplates() instead)
   recurring: {
     async getTemplates() {
       try {
@@ -149,21 +320,49 @@ const transactionsAPI = {
   }
 };
 
-// ✅ Categories API Module
+// ✅ Categories API Module - ALIGNED WITH SERVER ROUTES
 const categoriesAPI = {
-  // Get all categories
-  async getAll() {
+  // Get all categories (matches: GET /categories)
+  async getAll(params = {}) {
     try {
-      const response = await apiClient.cachedRequest('/categories', {
-        method: 'GET'
-      }, 'categories', 30 * 60 * 1000); // 30 minute cache
+      const response = await apiClient.client.get('/categories', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
   },
 
-  // Create category
+  // Get single category (matches: GET /categories/:id)
+  async getById(id) {
+    try {
+      const response = await apiClient.client.get(`/categories/${id}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get categories with transaction counts (matches: GET /categories/with-counts)
+  async getWithCounts(params = {}) {
+    try {
+      const response = await apiClient.client.get('/categories/with-counts', { params });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get category statistics (matches: GET /categories/:id/stats)
+  async getStats(id) {
+    try {
+      const response = await apiClient.client.get(`/categories/${id}/stats`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Create category (matches: POST /categories)
   async create(categoryData) {
     try {
       const response = await apiClient.client.post('/categories', categoryData);
@@ -174,7 +373,7 @@ const categoriesAPI = {
     }
   },
 
-  // Update category
+  // Update category (matches: PUT /categories/:id)
   async update(id, updates) {
     try {
       const response = await apiClient.client.put(`/categories/${id}`, updates);
@@ -185,7 +384,7 @@ const categoriesAPI = {
     }
   },
 
-  // Delete category
+  // Delete category (matches: DELETE /categories/:id)
   async delete(id) {
     try {
       await apiClient.client.delete(`/categories/${id}`);
@@ -194,70 +393,175 @@ const categoriesAPI = {
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
+  }
+};
+
+// ✅ Users API Module - ALIGNED WITH SERVER ROUTES  
+const usersAPI = {
+  // Register user (matches: POST /users/register)
+  async register(userData) {
+    try {
+      const response = await apiClient.client.post('/users/register', userData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
   },
 
-  // Get smart category suggestions (mock implementation for now)
-  async getSmartSuggestions(userId) {
+  // Login user (matches: POST /users/login)
+  async login(email, password) {
     try {
-      // TODO: Replace with actual smart suggestions API when available
-      // For now, return default categories as suggestions
-      const defaultSuggestions = [
-        { name: 'Food & Dining', icon: 'utensils', color: '#e74c3c' },
-        { name: 'Transportation', icon: 'car', color: '#3498db' },
-        { name: 'Shopping', icon: 'shopping-bag', color: '#9b59b6' },
-        { name: 'Entertainment', icon: 'film', color: '#f39c12' },
-        { name: 'Health', icon: 'heart', color: '#27ae60' }
-      ];
-      
-      return { success: true, data: defaultSuggestions };
+      const response = await apiClient.client.post('/users/login', { email, password });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Google OAuth (matches: POST /users/auth/google)
+  async googleAuth(authData) {
+    try {
+      const response = await apiClient.client.post('/users/auth/google', authData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Verify email (matches: POST /users/verify-email)
+  async verifyEmail(token) {
+    try {
+      const response = await apiClient.client.post('/users/verify-email', { token });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Verify email via link (matches: GET /users/verify-email/:token)
+  async verifyEmailLink(token) {
+    try {
+      const response = await apiClient.client.get(`/users/verify-email/${token}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get profile (matches: GET /users/profile)
+  async getProfile() {
+    try {
+      const response = await apiClient.cachedRequest('/users/profile', {
+        method: 'GET'
+      }, 'user-profile', 5 * 60 * 1000);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Update profile (matches: PUT /users/profile)
+  async updateProfile(updates) {
+    try {
+      const response = await apiClient.client.put('/users/profile', updates);
+      apiClient.clearCache('user-profile');
+      apiClient.clearCache('users');
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
   }
 };
 
-// ✅ Enhanced Export API Module
+// ✅ Export API Module - ALIGNED WITH SERVER ROUTES
 const exportAPI = {
-  // Export data with analytics
-  async exportData(format = 'json', options = {}) {
-    const {
-      includeAnalytics = true,
-      dateRange = null,
-      categories = null
-    } = options;
-
+  // Get export options (matches: GET /export/options)
+  async getOptions() {
     try {
-      const params = {
-        includeAnalytics,
-        ...dateRange,
-        ...(categories && { categories: categories.join(',') })
-      };
+      const response = await apiClient.client.get('/export/options');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
 
-      const response = await apiClient.client.get(`/export/${format}`, {
+  // Export as CSV (matches: GET /export/csv)
+  async exportCSV(params = {}) {
+    try {
+      const response = await apiClient.client.get('/export/csv', {
         params,
-        responseType: format === 'csv' ? 'blob' : 'json'
+        responseType: 'blob'
       });
-
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
   },
 
-  // Get export history
-  async getHistory() {
+  // Export as JSON (matches: GET /export/json)
+  async exportJSON(params = {}) {
     try {
-      const response = await apiClient.client.get('/export/history');
+      const response = await apiClient.client.get('/export/json', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
     }
   },
 
-  // Get export quota status
-  async getQuota() {
+  // Export as PDF (matches: GET /export/pdf)
+  async exportPDF(params = {}) {
     try {
-      const response = await apiClient.client.get('/export/quota');
+      const response = await apiClient.client.get('/export/pdf', {
+        params,
+        responseType: 'blob'
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  }
+};
+
+// ✅ Onboarding API Module - ALIGNED WITH SERVER ROUTES
+const onboardingAPI = {
+  // Test onboarding routes (matches: GET /onboarding/test)
+  async test() {
+    try {
+      const response = await apiClient.client.get('/onboarding/test');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Get onboarding status (matches: GET /onboarding/status)
+  async getStatus() {
+    try {
+      const response = await apiClient.client.get('/onboarding/status');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Complete onboarding (matches: POST /onboarding/complete)
+  async complete(data = {}) {
+    try {
+      const response = await apiClient.client.post('/onboarding/complete', data);
+      apiClient.clearCache('user-profile');
+      apiClient.clearCache('users');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError(error) };
+    }
+  },
+
+  // Update preferences (matches: POST /onboarding/preferences)
+  async updatePreferences(preferences) {
+    try {
+      const response = await apiClient.client.post('/onboarding/preferences', preferences);
+      apiClient.clearCache('user-profile');
+      apiClient.clearCache('users');
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError(error) };
@@ -279,6 +583,7 @@ const spendWiseAPI = {
   transactions: transactionsAPI,
   categories: categoriesAPI,
   export: exportAPI,
+  onboarding: onboardingAPI,
 
   // ✅ Utility methods
   utils: {
@@ -368,8 +673,55 @@ export {
   performanceAPI,
   transactionsAPI,
   categoriesAPI,
-  exportAPI
+  exportAPI,
+  onboardingAPI
 };
 
 // ✅ Legacy compatibility (gradually remove these)
-export const api = spendWiseAPI; 
+export const api = {
+  // Core API client
+  client: apiClient.client,
+  config: apiConfig,
+  
+  // Clear cache methods
+  clearCache: apiClient.clearCache.bind(apiClient),
+  clearAllCache: apiClient.clearAllCache.bind(apiClient),
+  
+  // 🔐 Authentication & Users (matches server/routes/userRoutes.js)
+  auth: authAPI,
+  users: usersAPI,
+  
+  // 💰 Transactions (matches server/routes/transactionRoutes.js) 
+  transactions: transactionsAPI,
+  
+  // 🏷️ Categories (matches server/routes/categoryRoutes.js)
+  categories: categoriesAPI,
+  
+  // 🛡️ Admin (matches server/routes/adminRoutes.js)
+  admin: adminAPI,
+  
+  // 📊 Analytics (matches server/routes/analyticsRoutes.js)
+  analytics: analyticsAPI,
+  
+  // 📤 Export (matches server/routes/exportRoutes.js)
+  export: exportAPI,
+  
+  // 🚀 Onboarding (matches server/routes/onboarding.js)
+  onboarding: onboardingAPI,
+  
+  // ⚡ Performance (matches server/routes/performance.js)
+  performance: performanceAPI
+};
+
+// ✅ Individual module exports for backwards compatibility
+export { 
+  authAPI as auth,
+  usersAPI as users, 
+  transactionsAPI as transactions,
+  categoriesAPI as categories,
+  adminAPI as admin,
+  analyticsAPI as analytics,
+  exportAPI as exportModule,
+  onboardingAPI as onboarding,
+  performanceAPI as performance
+}; 

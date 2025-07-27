@@ -6,14 +6,54 @@
 
 import { api } from './client.js';
 
-// ✅ Analytics API Module
+// ✅ Analytics API Module - ALIGNED WITH SERVER ROUTES
 export const analyticsAPI = {
-  // ✅ User Analytics APIs
+  // Dashboard analytics summary (matches: GET /analytics/dashboard/summary)
+  async getDashboardSummary(params = {}) {
+    try {
+      const response = await api.cachedRequest('/analytics/dashboard/summary', {
+        method: 'GET',
+        params
+      }, `analytics-dashboard-${JSON.stringify(params)}`, 5 * 60 * 1000); // 5 minute cache
+
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
+  // User analytics (matches: GET /analytics/user)
+  async getUserAnalytics(params = {}) {
+    try {
+      const response = await api.cachedRequest('/analytics/user', {
+        method: 'GET',
+        params
+      }, `analytics-user-${JSON.stringify(params)}`, 10 * 60 * 1000); // 10 minute cache
+
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
+  // ✅ LEGACY COMPATIBILITY (remove these when components are updated)
   user: {
-    // Get comprehensive user analytics
+    // Get comprehensive user analytics (DEPRECATED - use getUserAnalytics() instead)
     async getAnalytics(months = 12) {
       try {
-        const response = await api.cachedRequest(`/users/analytics?months=${months}`, {
+        const response = await api.cachedRequest(`/analytics/user?months=${months}`, {
           method: 'GET'
         }, `user-analytics-${months}`, 10 * 60 * 1000); // 10 minute cache
 

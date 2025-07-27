@@ -174,7 +174,8 @@ class CategoryAIEngine {
   static async analyzeUserPattern(text, amount, userId) {
     try {
       // This would call the backend API to get user patterns
-      const response = await api.categories.getUserPatterns(userId);
+      // TODO: Implement user patterns with analytics API  
+      const response = await api.analytics.getUserAnalytics({ userId });
       const patterns = response.data;
 
       let bestMatch = null;
@@ -236,7 +237,8 @@ class CategoryAIEngine {
 
   static async generateSmartCategories(userId) {
     try {
-      const response = await api.categories.getSmartSuggestions(userId);
+      // TODO: Implement smart suggestions or use categories directly
+      const response = await api.categories.getAll();
       return response.data;
     } catch (error) {
       console.warn('Failed to generate smart categories:', error);
@@ -389,7 +391,7 @@ export const useCategory = (type = null) => {
   const analyticsQuery = useQuery({
     queryKey: ['category-analytics', user?.id],
     queryFn: async () => {
-      const response = await api.categories.getAnalytics();
+      const response = await api.analytics.getUserAnalytics();
       return response.data;
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
@@ -480,7 +482,16 @@ export const useCategory = (type = null) => {
   // ✅ Bulk operations mutation
   const bulkOperationMutation = useMutation({
     mutationFn: async ({ operation, categoryIds, data = {} }) => {
-      const response = await api.categories.bulkOperation(operation, categoryIds, data);
+      // TODO: Implement bulk operations with new API structure
+      // For now, handle operations individually
+      const results = [];
+      for (const id of categoryIds) {
+        if (operation === 'delete') {
+          const result = await api.categories.delete(id);
+          results.push(result);
+        }
+      }
+      return { data: results };
       return response.data;
     },
     onSuccess: (result, variables) => {

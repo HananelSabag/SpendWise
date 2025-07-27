@@ -749,7 +749,7 @@ export const useTransactions = (options = {}) => {
   const analyticsQuery = useQuery({
     queryKey: ['transaction-analytics', user?.id, filters.dateRange],
     queryFn: async () => {
-      const response = await api.transactions.getAnalytics({
+      const response = await api.analytics.getUserAnalytics({
         dateRange: filters.dateRange
       });
       return response.data;
@@ -782,18 +782,14 @@ export const useTransactions = (options = {}) => {
       
       // AI pre-processing
       if (enableAI && transactionData.description) {
-        const categorySuggestion = await api.categories.suggestForTransaction({
-          description: transactionData.description,
-          amount: transactionData.amount,
-          merchant: transactionData.merchantName
-        });
+        // TODO: Add category suggestion logic or remove AI categorization
+        // const categorySuggestion = await api.categories.getAll();
+        // For now, skip AI categorization
 
-        if (categorySuggestion.confidence > 0.7 && !transactionData.categoryId) {
-          transactionData.categoryId = categorySuggestion.suggestions[0]?.categoryId;
-        }
+        // Skip AI categorization for now
       }
 
-      const response = await api.transactions.create(transactionData);
+      const response = await api.transactions.createExpense(transactionData);
       return response.data;
     },
     onSuccess: (newTransaction) => {
@@ -825,7 +821,8 @@ export const useTransactions = (options = {}) => {
     mutationFn: async (transactionsData) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.createBatch(transactionsData);
+      // Note: createBatch method needs to be updated to match server structure
+      const response = await api.transactions.createExpense(transactionsData);
       return response.data;
     },
     onSuccess: (result) => {
@@ -855,7 +852,7 @@ export const useTransactions = (options = {}) => {
     mutationFn: async ({ transactionId, updates }) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.update(transactionId, updates);
+      const response = await api.transactions.update('expense', transactionId, updates);
       return response.data;
     },
     onSuccess: (updatedTransaction) => {
@@ -876,7 +873,7 @@ export const useTransactions = (options = {}) => {
     mutationFn: async (transactionId) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.delete(transactionId);
+      const response = await api.transactions.delete('expense', transactionId);
       return response.data;
     },
     onSuccess: () => {
@@ -897,8 +894,16 @@ export const useTransactions = (options = {}) => {
     mutationFn: async ({ operation, transactionIds, data = {} }) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.bulkOperation(operation, transactionIds, data);
-      return response.data;
+             // TODO: Implement bulk operations with new API structure
+       // For now, handle operations individually
+       const results = [];
+       for (const id of transactionIds) {
+         if (operation === 'delete') {
+           const result = await api.transactions.delete('expense', id);
+           results.push(result);
+         }
+       }
+       return { data: results };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries(['transactions']);
@@ -920,7 +925,7 @@ export const useTransactions = (options = {}) => {
   // ✅ Enhanced helper methods
   const getUserContext = useCallback(async () => {
     try {
-      const response = await api.users.getContext();
+      const response = await api.users.getProfile();
       return response.data;
     } catch (error) {
       console.warn('Failed to get user context:', error);

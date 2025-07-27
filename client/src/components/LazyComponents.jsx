@@ -82,17 +82,6 @@ export const Analytics = createLazyComponent(
   'Analytics'
 );
 
-// ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
-// export const FinancialHealth = createLazyComponent(
-//   () => import('../pages/analytics/FinancialHealth'),
-//   'FinancialHealth'
-// );
-
-// export const Insights = createLazyComponent(
-//   () => import('../pages/analytics/Insights'),
-//   'Insights'
-// );
-
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
   () => import('../pages/NotFound.jsx'),
@@ -100,26 +89,6 @@ export const NotFound = createLazyComponent(
 );
 
 // ✅ Feature Components - Conditional Loading
-export const AddTransactions = createLazyComponent(
-  () => import('../components/features/transactions/AddTransactions'),
-  'AddTransactions'
-);
-
-export const EditTransactionPanel = createLazyComponent(
-  () => import('../components/features/transactions/EditTransactionPanel'),
-  'EditTransactionPanel'
-);
-
-export const RecurringModal = createLazyComponent(
-  () => import('../components/features/transactions/RecurringModal'),
-  'RecurringModal'
-);
-
-export const ExportModal = createLazyComponent(
-  () => import('../components/features/profile/ExportModal'),
-  'ExportModal'
-);
-
 export const CategoryManager = createLazyComponent(
   () => import('../components/features/categories/CategoryManager'),
   'CategoryManager'
@@ -133,6 +102,11 @@ export const OnboardingModal = createLazyComponent(
 export const ExchangeCalculator = createLazyComponent(
   () => import('../components/features/exchange/ExchangeCalculator'),
   'ExchangeCalculator'
+);
+
+export const ExportModal = createLazyComponent(
+  () => import('../components/features/profile/ExportModal'),
+  'ExportModal'
 );
 
 // ✅ Utility Components - Rarely Used
@@ -152,14 +126,10 @@ export const PrivacyPolicyModal = createLazyComponent(
 );
 
 // ✅ Performance Stats
-if (import.meta.env.MODE === 'development') {
-  console.log('🚀 Lazy Components System Initialized');
-  console.log('📦 Components split into:', {
-    pages: 9,
-    admin: 5,
-    analytics: 2,
-    features: 7,
-    utilities: 3,
-    total: 26
-  });
-} 
+console.log('🚀 Lazy Components System Initialized');
+console.log('📦 Components split into:', {
+  pages: 11,
+  features: 4,
+  utilities: 3,
+  total: 18
+}); 

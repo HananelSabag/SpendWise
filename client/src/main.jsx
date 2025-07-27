@@ -57,10 +57,7 @@ class PerformanceMonitor {
     // Setup API performance tracking
     this.setupAPITracking();
     
-    // Log initial performance if debug mode
-    if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-      console.log('🚀 Performance monitoring initialized');
-    }
+    // Performance monitoring initialized
   }
 
   // Collect Web Vitals metrics
@@ -70,10 +67,7 @@ class PerformanceMonitor {
       if (vitals.success) {
         this.vitalsCollected = true;
         
-        // Log vitals in debug mode
-        if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-          console.log('📊 Web Vitals collected:', vitals.data);
-        }
+
         
         // Store vitals for dashboard
         sessionStorage.setItem('web-vitals', JSON.stringify(vitals.data));
@@ -118,9 +112,7 @@ class PerformanceMonitor {
       // Store app load time
       sessionStorage.setItem('app-load-time', JSON.stringify(result));
       
-      if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-        console.log(`🏁 App loaded in ${result.duration}ms`);
-      }
+
       
       return result;
     }
@@ -316,13 +308,6 @@ const SpendWiseApp = () => {
     
     // Initialize app features
     initializeApp();
-    
-    return () => {
-      // Cleanup on unmount
-      if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-        console.log('🧹 App cleanup');
-      }
-    };
   }, []);
 
   const AppContent = () => (
