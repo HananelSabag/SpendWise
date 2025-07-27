@@ -48,9 +48,43 @@ try {
   };
 }
 
+console.log('4d. Testing middleware modules...');
+let errorHandler, apiLimiter, requestId;
+try {
+  console.log('Loading errorHandler...');
+  const errorMiddleware = require('./middleware/errorHandler');
+  errorHandler = errorMiddleware.errorHandler;
+  console.log('✅ ErrorHandler loaded');
+  
+  console.log('Loading rateLimiter...');
+  const rateLimiter = require('./middleware/rateLimiter');
+  apiLimiter = rateLimiter.apiLimiter;
+  console.log('✅ RateLimiter loaded');
+  
+  console.log('Loading requestId...');
+  requestId = require('./middleware/requestId');
+  console.log('✅ RequestId loaded');
+  
+  console.log('✅ All middleware modules loaded successfully');
+} catch (error) {
+  console.error('❌ Middleware module failed:', error.message);
+  console.error('Stack:', error.stack);
+  // Create fallback middleware
+  errorHandler = (err, req, res, next) => {
+    res.status(500).json({ error: 'Internal server error' });
+  };
+  apiLimiter = (req, res, next) => next();
+  requestId = (req, res, next) => next();
+}
+
 console.log('5. Setting up middleware...');
 app.use(express.json());
 app.use(cors());
+
+console.log('5b. Adding custom middleware...');
+app.use(requestId);
+app.use('/api', apiLimiter);
+console.log('✅ Custom middleware added');
 
 console.log('6. Creating basic routes...');
 app.get('/', (req, res) => {
@@ -100,6 +134,9 @@ app.listen(PORT, async () => {
   }
 });
 
-console.log('9. Server setup complete');
+console.log('9. Adding error handler...');
+app.use(errorHandler);
+
+console.log('10. Server setup complete');
 
 module.exports = app;
