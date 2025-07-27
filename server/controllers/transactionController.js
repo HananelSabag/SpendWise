@@ -21,7 +21,25 @@ const transactionController = {
   getDashboardData: asyncHandler(async (req, res) => {
     const start = Date.now();
     const userId = req.user.id;
-    const targetDate = req.query?.date ? new Date(req.query.date) : new Date();
+    
+    // Parse date parameter more carefully to avoid NaN-NaN-NaN
+    let targetDate = new Date();
+    if (req.query?.date) {
+      const dateParam = req.query.date;
+      // If it's a number (days back), calculate from today
+      if (!isNaN(dateParam) && !isNaN(parseFloat(dateParam))) {
+        const daysBack = parseInt(dateParam);
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() - daysBack);
+      } else {
+        // Try to parse as regular date
+        const parsedDate = new Date(dateParam);
+        if (!isNaN(parsedDate.getTime())) {
+          targetDate = parsedDate;
+        }
+        // If invalid, use current date (already set)
+      }
+    }
 
     try {
       // Use optimized dashboard query with caching

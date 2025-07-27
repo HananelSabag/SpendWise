@@ -165,7 +165,7 @@ export default defineConfig(({ command, mode }) => {
             'admin-vendor': ['react-table', 'react-window', 'react-virtualized-auto-sizer'],
             
             // ✅ NEW: OAuth and auth chunks
-            'auth-vendor': ['@google-cloud/oauth2'],
+                            // 'auth-vendor': ['@google-cloud/oauth2'], // Removed - not used in client
             
             // ✅ NEW: Performance and utilities chunks
             'utils-vendor': ['react-error-boundary', 'use-debounce', 'react-intersection-observer', 'web-vitals'],

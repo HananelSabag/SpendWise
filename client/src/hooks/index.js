@@ -42,3 +42,6 @@ export {
 // Other hooks
 export { default as useDashboard } from './useDashboard';
 export { default as useProfile } from './useProfile';
+
+// Translation hook (re-export from stores for convenience)
+export { useTranslation } from '../stores/translationStore';

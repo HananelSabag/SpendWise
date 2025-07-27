@@ -6,7 +6,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Sparkles, ArrowRight } from 'lucide-react';
-import { useTranslation } from '../../../hooks';
+import { useTranslation } from '../../../../stores';
 import { Button, Card } from '../../../ui';
 
 const CompletionStep = ({ data, onDataChange, onNext, onPrev }) => {
