@@ -184,12 +184,11 @@ class RecurringEngine {
    */
   static async generateTransactionsForTemplate(template, endDate) {
     // Find the last generated transaction for this template
-    const table = template.type === 'expense' ? 'expenses' : 'income';
     const lastResult = await db.query(`
       SELECT MAX(date) as last_date
-      FROM ${table}
-      WHERE template_id = $1 AND deleted_at IS NULL
-    `, [template.id], 'get_last_generated');
+      FROM transactions
+      WHERE template_id = $1 AND deleted_at IS NULL AND type = $2
+    `, [template.id, template.type], 'get_last_generated');
     
     const lastGeneratedDate = lastResult.rows[0]?.last_date;
     
@@ -242,7 +241,13 @@ class RecurringEngine {
     
     // Batch create transactions if any
     if (transactions.length > 0) {
-      await Transaction.createBatch(template.type, transactions);
+      // Add type to each transaction
+      const transactionsWithType = transactions.map(t => ({
+        ...t,
+        type: template.type
+      }));
+      
+      await Transaction.createBatch(transactionsWithType, template.user_id);
       logger.info('✅ Batch transactions created', {
         templateId: template.id,
         type: template.type,

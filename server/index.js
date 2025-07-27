@@ -276,38 +276,60 @@ try {
 }
 
 console.log('6d. Setting up error handlers...');
-// 404 handler
+// 404 handler - Fixed to prevent hanging requests
 app.use((req, res, next) => {
-  res.status(404).json({ 
-    error: {
-      code: 'ROUTE_NOT_FOUND',
-      message: `Cannot ${req.method} ${req.path}`,
-      timestamp: new Date().toISOString()
-    }
-  });
+  try {
+    res.status(404).json({ 
+      error: {
+        code: 'ROUTE_NOT_FOUND',
+        message: `Cannot ${req.method} ${req.path}`,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    // Fallback if 404 handler fails
+    console.error('404 handler error:', error.message);
+    res.status(404).end('Not Found');
+  }
 });
 console.log('✅ 404 handler configured');
 
 // FIXED: Simple, working error handler (replaces problematic ./middleware/errorHandler.js)
 app.use((err, req, res, next) => {
-  logger.error('Error caught by handler:', {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method
-  });
-
-  // Handle specific error types
-  const status = err.status || err.statusCode || 500;
-  const code = err.code || 'INTERNAL_ERROR';
-  
-  res.status(status).json({
-    error: {
-      code,
-      message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-      timestamp: new Date().toISOString()
+  try {
+    // Safe logging
+    console.error('Error caught by handler:', err.message);
+    if (logger && typeof logger.error === 'function') {
+      logger.error('Error caught by handler:', {
+        message: err.message,
+        stack: err.stack,
+        url: req.url,
+        method: req.method
+      });
     }
-  });
+
+    // Handle specific error types
+    const status = err.status || err.statusCode || 500;
+    const code = err.code || 'INTERNAL_ERROR';
+    
+    res.status(status).json({
+      error: {
+        code,
+        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (handlerError) {
+    // Fallback if error handler itself fails
+    console.error('Error handler failed:', handlerError.message);
+    res.status(500).json({
+      error: {
+        code: 'HANDLER_ERROR',
+        message: 'Internal server error',
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
 });
 console.log('✅ Global error handler configured');
 
