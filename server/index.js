@@ -275,89 +275,66 @@ try {
   console.log('✅ Onboarding fallback routes added');
 }
 
-console.log('6d. Setting up error handlers...');
+console.log('6d. Setting up response handlers...');
 
-try {
-  console.log('📝 DEBUG: Starting 404 handler registration...');
-  
-  // 404 handler - Fixed to prevent hanging requests
-  app.use((req, res, next) => {
-    try {
-      res.status(404).json({ 
-        error: {
-          code: 'ROUTE_NOT_FOUND',
-          message: `Cannot ${req.method} ${req.path}`,
-          timestamp: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      // Fallback if 404 handler fails
-      console.error('404 handler error:', error.message);
-      res.status(404).end('Not Found');
-    }
-  });
-  
-  console.log('📝 DEBUG: 404 handler middleware registered successfully');
-  console.log('✅ 404 handler configured');
-  
-} catch (handlerSetupError) {
-  console.error('❌ DEBUG: 404 handler setup failed:', handlerSetupError.message);
-  throw handlerSetupError;
-}
-
-try {
-  console.log('📝 DEBUG: Starting global error handler registration...');
-  console.log('📝 DEBUG: Logger status:', logger ? 'available' : 'missing');
-  console.log('📝 DEBUG: Process env:', process.env.NODE_ENV || 'undefined');
-  
-  // FIXED: Simple, working error handler (replaces problematic ./middleware/errorHandler.js)
-  app.use((err, req, res, next) => {
-    try {
-      // Safe logging
-      console.error('Error caught by handler:', err.message);
-      if (logger && typeof logger.error === 'function') {
-        logger.error('Error caught by handler:', {
-          message: err.message,
-          stack: err.stack,
-          url: req.url,
-          method: req.method
-        });
+// 404 handler - Fixed to prevent hanging requests
+app.use((req, res, next) => {
+  try {
+    res.status(404).json({ 
+      error: {
+        code: 'ROUTE_NOT_FOUND',
+        message: `Cannot ${req.method} ${req.path}`,
+        timestamp: new Date().toISOString()
       }
+    });
+  } catch (error) {
+    // Fallback if 404 handler fails
+    console.error('404 handler error:', error.message);
+    res.status(404).end('Not Found');
+  }
+});
+console.log('✅ 404 handler configured');
 
-      // Handle specific error types
-      const status = err.status || err.statusCode || 500;
-      const code = err.code || 'INTERNAL_ERROR';
-      
-      res.status(status).json({
-        error: {
-          code,
-          message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-          timestamp: new Date().toISOString()
-        }
-      });
-    } catch (handlerError) {
-      // Fallback if error handler itself fails
-      console.error('Error handler failed:', handlerError.message);
-      res.status(500).json({
-        error: {
-          code: 'HANDLER_ERROR',
-          message: 'Internal server error',
-          timestamp: new Date().toISOString()
-        }
+// FIXED: Simple, working global response handler (replaces problematic ./middleware/errorHandler.js)
+app.use((err, req, res, next) => {
+  try {
+    // Safe logging
+    console.error('Request processing issue:', err.message);
+    if (logger && typeof logger.error === 'function') {
+      logger.error('Request processing issue:', {
+        message: err.message,
+        stack: err.stack,
+        url: req.url,
+        method: req.method
       });
     }
-  });
-  
-  console.log('📝 DEBUG: Global error handler middleware registered successfully');
-  console.log('✅ Global error handler configured');
-  
-} catch (globalHandlerSetupError) {
-  console.error('❌ DEBUG: Global error handler setup failed:', globalHandlerSetupError.message);
-  throw globalHandlerSetupError;
-}
 
-console.log('📝 DEBUG: Error handlers setup completed without throwing');
-console.log('📝 DEBUG: Moving to server startup phase...');
+    // Handle specific response types
+    const status = err.status || err.statusCode || 500;
+    const code = err.code || 'INTERNAL_ERROR';
+    
+    res.status(status).json({
+      error: {
+        code,
+        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (handlerError) {
+    // Fallback if response handler itself fails
+    console.error('Response handler failed:', handlerError.message);
+    res.status(500).json({
+      error: {
+        code: 'HANDLER_ERROR',
+        message: 'Internal server error',
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+console.log('✅ Global response handler configured');
+
+console.log('✅ Response handlers setup completed');
 
 const PORT = process.env.PORT || 5000;
 
