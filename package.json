@@ -4,9 +4,8 @@
   "description": "SpendWise server - expense tracking application",
   "main": "server/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "cd server && node index.js",
     "dev": "cd server && nodemon index.js",
-    "postinstall": "cd server && npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node scripts/migrate.js",
     "migrate:prod": "NODE_ENV=production node scripts/migrate.js",
