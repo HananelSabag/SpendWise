@@ -373,7 +373,13 @@ const startServer = async () => {
   }
 };
 
+// Add startup logging for debugging
+console.log('🔧 Server configuration loaded');
+console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+console.log('🌐 Port:', process.env.PORT || 3000);
+
 // Start server
+console.log('⚡ Calling startServer()...');
 startServer();
 
 module.exports = app;
