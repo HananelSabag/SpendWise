@@ -2,10 +2,10 @@
   "name": "server",
   "version": "1.0.0",
   "description": "SpendWise server - expense tracking application",
-  "main": "index.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "cd server && node index.js",
+    "dev": "cd server && nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node scripts/migrate.js",
     "migrate:prod": "NODE_ENV=production node scripts/migrate.js",
