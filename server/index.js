@@ -18,6 +18,21 @@ const app = express();
 console.log('4. Loading safe modules...');
 const cors = require('cors');
 
+console.log('4b. Testing logger module...');
+let logger;
+try {
+  logger = require('./utils/logger');
+  console.log('✅ Logger loaded successfully');
+} catch (error) {
+  console.error('❌ Logger failed:', error.message);
+  // Create fallback logger
+  logger = {
+    info: console.log,
+    error: console.error,
+    warn: console.warn
+  };
+}
+
 console.log('5. Setting up middleware...');
 app.use(express.json());
 app.use(cors());
@@ -41,6 +56,7 @@ const PORT = process.env.PORT || 3000;
 console.log('8. Starting server...');
 app.listen(PORT, () => {
   console.log(`✅ MINIMAL SERVER RUNNING ON PORT ${PORT}`);
+  logger.info(`🚀 Server started successfully on port ${PORT}`);
 });
 
 console.log('9. Server setup complete');
