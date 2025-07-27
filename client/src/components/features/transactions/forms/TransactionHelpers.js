@@ -283,13 +283,4 @@ export const filterTransactionsByText = (transactions, searchText) => {
     transaction.category?.name?.toLowerCase().includes(search) ||
     transaction.tags?.some(tag => tag.toLowerCase().includes(search))
   );
-};
-
-/**
- * 📋 Export all utilities
- */
-export {
-  TRANSACTION_TYPES,
-  TRANSACTION_TYPE_OPTIONS,
-  RECURRING_FREQUENCIES
 }; 

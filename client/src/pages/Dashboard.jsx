@@ -26,7 +26,7 @@ import RecentTransactions from '../components/features/dashboard/RecentTransacti
 import StatsChart from '../components/features/dashboard/StatsChart';
 
 // ✅ Import modal components
-import AddTransactions from '../components/features/transactions/AddTransactions';
+import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 
 // ✅ Import UI components
 import { Button, Card, LoadingSpinner } from '../components/ui';
@@ -376,7 +376,7 @@ const Dashboard = () => {
       </div>
 
       {/* Add Transaction Modal */}
-      <AddTransactions
+      <AddTransactionModal
         isOpen={showAddTransaction}
         onClose={handleCloseAddTransaction}
         onSuccess={handleTransactionSuccess}

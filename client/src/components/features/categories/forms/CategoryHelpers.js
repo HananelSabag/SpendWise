@@ -331,14 +331,4 @@ export const generateCategorySummary = (category, analytics = null) => {
   };
 
   return summary;
-};
-
-/**
- * 📋 Export all utilities
- */
-export {
-  CATEGORY_TYPES,
-  CATEGORY_TYPE_OPTIONS,
-  COLOR_PALETTE,
-  ICON_CATEGORIES
 }; 
