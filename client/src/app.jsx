@@ -51,8 +51,9 @@ const AdminStats = LazyComponents.AdminStats;
 
 // ✅ Lazy-loaded analytics pages  
 const Analytics = LazyComponents.Analytics;
-const FinancialHealth = LazyComponents.FinancialHealth;
-const Insights = LazyComponents.Insights;
+// ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
+// const FinancialHealth = LazyComponents.FinancialHealth;
+// const Insights = LazyComponents.Insights;
 
 // ✅ Utility pages
 const NotFound = LazyComponents.NotFound;
@@ -542,6 +543,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          {/* ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
           <Route path="/analytics/health" element={
             <ProtectedRoute>
               <RouteErrorBoundary routeName="FinancialHealth">
@@ -551,7 +553,9 @@ const AppContent = () => {
               </RouteErrorBoundary>
             </ProtectedRoute>
           } />
+          */}
           
+          {/* ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
           <Route path="/analytics/insights" element={
             <ProtectedRoute>
               <RouteErrorBoundary routeName="Insights">
@@ -561,6 +565,7 @@ const AppContent = () => {
               </RouteErrorBoundary>
             </ProtectedRoute>
           } />
+          */}
           
           {/* ✅ Admin Routes (Admin Access Required) */}
           <Route path="/admin" element={

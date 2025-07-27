@@ -15,86 +15,87 @@ const createLazyComponent = (importFn, componentName) => {
 
 // ✅ Core Pages - Critical Route Components
 export const Dashboard = createLazyComponent(
-  () => import('../pages/Dashboard'),
+  () => import('../pages/Dashboard.jsx'),
   'Dashboard'
 );
 
 export const Profile = createLazyComponent(
-  () => import('../pages/Profile'),
+  () => import('../pages/Profile.jsx'),
   'Profile'
 );
 
 export const Transactions = createLazyComponent(
-  () => import('../pages/Transactions'),
+  () => import('../pages/Transactions.jsx'),
   'Transactions'
 );
 
 // ✅ Authentication Pages
 export const Login = createLazyComponent(
-  () => import('../pages/auth/Login'),
+  () => import('../pages/auth/Login.jsx'),
   'Login'
 );
 
 export const Register = createLazyComponent(
-  () => import('../pages/auth/Register'),
+  () => import('../pages/auth/Register.jsx'),
   'Register'
 );
 
 export const PasswordReset = createLazyComponent(
-  () => import('../pages/auth/PasswordReset'),
+  () => import('../pages/auth/PasswordReset.jsx'),
   'PasswordReset'
 );
 
 export const VerifyEmail = createLazyComponent(
-  () => import('../pages/auth/VerifyEmail'),
+  () => import('../pages/auth/VerifyEmail.jsx'),
   'VerifyEmail'
 );
 
 // ✅ Admin Pages - Heavy Components
 export const AdminDashboard = createLazyComponent(
-  () => import('../pages/admin/AdminDashboard'),
+  () => import('../pages/admin/AdminDashboard.jsx'),
   'AdminDashboard'
 );
 
 export const AdminUsers = createLazyComponent(
-  () => import('../pages/admin/AdminUsers'),
+  () => import('../pages/admin/AdminUsers.jsx'),
   'AdminUsers'
 );
 
 export const AdminSettings = createLazyComponent(
-  () => import('../pages/admin/AdminSettings'),
+  () => import('../pages/admin/AdminSettings.jsx'),
   'AdminSettings'
 );
 
 export const AdminActivity = createLazyComponent(
-  () => import('../pages/admin/AdminActivity'),
+  () => import('../pages/admin/AdminActivity.jsx'),
   'AdminActivity'
 );
 
 export const AdminStats = createLazyComponent(
-  () => import('../pages/admin/AdminStats'),
+  () => import('../pages/admin/AdminStats.jsx'),
   'AdminStats'
 );
 
 // ✅ Analytics Pages - Data-Heavy Components
 export const Analytics = createLazyComponent(
-  () => import('../pages/Analytics'),
+  () => import('../pages/Analytics.jsx'),
   'Analytics'
 );
 
-export const FinancialHealth = createLazyComponent(
-  () => import('../pages/analytics/FinancialHealth'),
-  'FinancialHealth'
-);
+// ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
+// export const FinancialHealth = createLazyComponent(
+//   () => import('../pages/analytics/FinancialHealth'),
+//   'FinancialHealth'
+// );
 
-export const Insights = createLazyComponent(
-  () => import('../pages/analytics/Insights'),
-  'Insights'
-);
+// export const Insights = createLazyComponent(
+//   () => import('../pages/analytics/Insights'),
+//   'Insights'
+// );
 
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
-  () => import('../pages/NotFound'),
+  () => import('../pages/NotFound.jsx'),
   'NotFound'
 );
 
