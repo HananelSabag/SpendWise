@@ -4,8 +4,9 @@
   "description": "SpendWise server - expense tracking application",
   "main": "server/index.js",
   "scripts": {
-    "start": "cd server && node index.js",
+    "start": "node index.js",
     "dev": "cd server && nodemon index.js",
+    "postinstall": "cd server && npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "node scripts/migrate.js",
     "migrate:prod": "NODE_ENV=production node scripts/migrate.js",
@@ -23,6 +24,7 @@
   "author": "Hananel Sabag",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.2",
     "bcrypt": "^5.1.1",
     "cli-table3": "^0.6.5",
     "compression": "^1.7.4",
@@ -39,6 +41,7 @@
     "nodemailer": "^7.0.3",
     "ora": "^8.2.0",
     "pg": "^8.13.1",
+    "postgres": "^3.4.7",
     "prettier": "^3.6.2",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
