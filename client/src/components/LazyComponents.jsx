@@ -82,15 +82,16 @@ export const Analytics = createLazyComponent(
   'Analytics'
 );
 
-export const FinancialHealth = createLazyComponent(
-  () => import('../pages/analytics/FinancialHealth'),
-  'FinancialHealth'
-);
+// ⚠️ TEMPORARILY DISABLED - BUILD ISSUES
+// export const FinancialHealth = createLazyComponent(
+//   () => import('../pages/analytics/FinancialHealth'),
+//   'FinancialHealth'
+// );
 
-export const Insights = createLazyComponent(
-  () => import('../pages/analytics/Insights'),
-  'Insights'
-);
+// export const Insights = createLazyComponent(
+//   () => import('../pages/analytics/Insights'),
+//   'Insights'
+// );
 
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
