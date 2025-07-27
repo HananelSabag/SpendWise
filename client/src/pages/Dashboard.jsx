@@ -333,8 +333,8 @@ const Dashboard = () => {
       
       try {
         const [dashboard, analytics, insights] = await Promise.allSettled([
-          // ✅ Real API calls for dashboard data with fallbacks
-          api.analytics.dashboard.getSummary(selectedPeriod),
+          // ✅ Real API calls for dashboard data with fallbacks (don't pass selectedPeriod as date)
+          api.analytics.dashboard.getSummary(), // Let server handle default period
           api.analytics.user.getAnalytics(parseInt(selectedPeriod) / 30), // Convert days to months
           api.transactions.getRecent(10) // Get recent transactions for insights
         ]);
