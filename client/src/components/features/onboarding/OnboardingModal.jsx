@@ -29,7 +29,7 @@ import { Button } from '../../ui';
 import WelcomeStep from './steps/WelcomeStep';
 import PreferencesStep from './steps/PreferencesStep';
 import CategoriesStep from './steps/CategoriesStep';
-import TemplatesStep from './steps/TemplatesStep';
+import TemplatesStep from './steps/InitialTemplatesStep';
 import CompletionStep from './steps/CompletionStep';
 
 /**
