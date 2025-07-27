@@ -55,11 +55,13 @@ console.log('4. Initializing Express app...');
 const app = express();
 console.log('✅ Express app created');
 
-// Trust proxy for Render deployment
+console.log('5a. Setting up trust proxy...');
 app.set('trust proxy', 1);
+console.log('✅ Trust proxy set');
 
-// Security middleware
-app.use(helmet({
+console.log('5b. Setting up helmet security...');
+try {
+  app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -74,11 +76,19 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+  console.log('✅ Helmet configured');
+} catch (error) {
+  console.error('❌ Helmet setup failed:', error.message);
+  process.exit(1);
+}
 
+console.log('5c. Setting up compression...');
 app.use(compression());
+console.log('✅ Compression set');
 
+console.log('5d. Setting up CORS...');
 // Enhanced CORS for mobile and network support
 const isLocalNetworkIP = (origin) => {
   if (!origin) return false;
@@ -103,44 +113,53 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   ? (process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || []) 
   : ['http://localhost:3000', 'http://localhost:5173'];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests without origin (mobile apps, Postman)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Check allowed origins
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Allow local network in development
-    if (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) {
-      logger.info(`🌐 Allowing local network origin: ${origin}`);
-      return callback(null, true);
-    }
-    
-    // Allow dev servers
-    if (origin.includes(':5173') || origin.includes(':3000')) {
-      logger.info(`🌐 Allowing dev server origin: ${origin}`);
-      return callback(null, true);
-    }
-    
-    logger.warn(`🚫 CORS blocked origin: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-  maxAge: 86400,
-  exposedHeaders: ['Content-Disposition']
-}));
+try {
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests without origin (mobile apps, Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Check allowed origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Allow local network in development
+      if (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) {
+        logger.info(`🌐 Allowing local network origin: ${origin}`);
+        return callback(null, true);
+      }
+      
+      // Allow dev servers
+      if (origin.includes(':5173') || origin.includes(':3000')) {
+        logger.info(`🌐 Allowing dev server origin: ${origin}`);
+        return callback(null, true);
+      }
+      
+      logger.warn(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    maxAge: 86400,
+    exposedHeaders: ['Content-Disposition']
+  }));
+  console.log('✅ CORS configured');
+} catch (error) {
+  console.error('❌ CORS setup failed:', error.message);
+  process.exit(1);
+}
 
+console.log('5e. Setting up body parser...');
 // Body parser with size limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+console.log('✅ Body parser set');
 
+console.log('5f. Setting up static files...');
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads', {
   setHeaders: (res, path) => {
@@ -149,13 +168,19 @@ app.use('/uploads', express.static('uploads', {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
+console.log('✅ Static files configured');
 
+console.log('5g. Setting up request middleware...');
 // Request ID middleware
 app.use(requestId);
+console.log('✅ RequestId middleware set');
 
+console.log('5h. Setting up API rate limiter...');
 // API rate limiter
 app.use('/api', apiLimiter);
+console.log('✅ API rate limiter set');
 
+console.log('5i. Setting up request logging...');
 // Request logging (production-safe)
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
@@ -168,7 +193,10 @@ if (process.env.NODE_ENV !== 'production') {
     next();
   });
 }
+console.log('✅ Request logging configured');
 
+console.log('6. Setting up routes...');
+console.log('6a. Setting up health check...');
 // Enhanced health check endpoint
 app.get('/health', async (req, res) => {
   try {
@@ -205,27 +233,49 @@ app.get('/health', async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
     });
   }
-});
+  });
+console.log('✅ Health check configured');
 
+console.log('6b. Setting up API routes...');
 // API routes with versioning
 const API_VERSION = '/api/v1';
-app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
-app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
-app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
-app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
+try {
+  console.log('Loading user routes...');
+  app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
+  console.log('✅ User routes loaded');
+  
+  console.log('Loading transaction routes...');
+  app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
+  console.log('✅ Transaction routes loaded');
+  
+  console.log('Loading category routes...');
+  app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
+  console.log('✅ Category routes loaded');
+  
+  console.log('Loading export routes...');
+  app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
+  console.log('✅ Export routes loaded');
+} catch (error) {
+  console.error('❌ API routes loading failed:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
+console.log('6c. Setting up onboarding routes...');
 // Safe onboarding routes with error handling
 try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
-  logger.info('✅ Onboarding routes loaded successfully');
+  console.log('✅ Onboarding routes loaded');
 } catch (error) {
-  logger.error('⚠️ Failed to load onboarding routes:', error.message);
+  console.error('⚠️ Failed to load onboarding routes:', error.message);
   // Add fallback onboarding endpoint
   app.post(`${API_VERSION}/onboarding/complete`, (req, res) => {
     res.json({ success: true, message: 'Onboarding completed (fallback mode)' });
   });
+  console.log('✅ Onboarding fallback routes added');
 }
 
+console.log('6d. Setting up error handlers...');
 // 404 handler
 app.use((req, res, next) => {
   res.status(404).json({ 
@@ -236,6 +286,7 @@ app.use((req, res, next) => {
     }
   });
 });
+console.log('✅ 404 handler configured');
 
 // FIXED: Simple, working error handler (replaces problematic ./middleware/errorHandler.js)
 app.use((err, req, res, next) => {
@@ -258,6 +309,7 @@ app.use((err, req, res, next) => {
     }
   });
 });
+console.log('✅ Global error handler configured');
 
 const PORT = process.env.PORT || 5000;
 
