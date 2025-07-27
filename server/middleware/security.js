@@ -190,15 +190,8 @@ const enhancedRateLimiting = {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => process.env.NODE_ENV === 'development' && req.ip === '127.0.0.1',
-    onLimitReached: (req) => {
-      logger.warn('🚨 SECURITY ALERT: Rate limit exceeded', {
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
-        endpoint: req.path,
-        timestamp: new Date().toISOString()
-      });
-    }
+    skip: (req) => process.env.NODE_ENV === 'development' && req.ip === '127.0.0.1'
+    // Note: onLimitReached removed - deprecated in express-rate-limit v7
   }),
   
   // Ultra-strict auth limiter
@@ -212,16 +205,8 @@ const enhancedRateLimiting = {
         message: 'Too many authentication attempts. Try again in 1 hour.',
         retryAfter: '1 hour'
       }
-    },
-    onLimitReached: (req) => {
-      logger.error('🚨 SECURITY ALERT: Authentication rate limit reached', {
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
-        endpoint: req.path,
-        timestamp: new Date().toISOString(),
-        severity: 'HIGH'
-      });
     }
+    // Note: onLimitReached removed - deprecated in express-rate-limit v7
   }),
   
   // Export protection limiter
@@ -235,14 +220,8 @@ const enhancedRateLimiting = {
         retryAfter: '24 hours'
       }
     },
-    keyGenerator: (req) => `export_${req.user?.id || req.ip}`,
-    onLimitReached: (req) => {
-      logger.warn('📊 Export limit reached', {
-        userId: req.user?.id,
-        ip: req.ip,
-        timestamp: new Date().toISOString()
-      });
-    }
+    keyGenerator: (req) => `export_${req.user?.id || req.ip}`
+    // Note: onLimitReached removed - deprecated in express-rate-limit v7
   }),
   
   // Suspicious activity detector
@@ -256,16 +235,8 @@ const enhancedRateLimiting = {
         message: 'Suspicious activity detected. Access temporarily restricted.',
         retryAfter: '1 minute'
       }
-    },
-    onLimitReached: (req) => {
-      logger.error('🚨 SECURITY ALERT: Suspicious activity detected', {
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
-        endpoint: req.path,
-        timestamp: new Date().toISOString(),
-        severity: 'CRITICAL'
-      });
     }
+    // Note: onLimitReached removed - deprecated in express-rate-limit v7
   })
 };
 
