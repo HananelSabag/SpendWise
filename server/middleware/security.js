@@ -334,40 +334,45 @@ const requestFingerprinting = (req, res, next) => {
  * 🛠️ SECURITY MIDDLEWARE COMPOSER
  * Combines all security measures into easy-to-use middleware
  */
+
+// First, define the basic security array
+const basicSecurity = [
+  advancedSecurityHeaders,
+  bufferOverflowProtection.jsonLimiter,
+  bufferOverflowProtection.complexityLimiter,
+  requestFingerprinting,
+  inputSanitization.xssProtection,
+  inputSanitization.sqlInjectionProtection,
+  inputSanitization.noSQLInjectionProtection
+];
+
+// Then create the security middleware object without circular references
 const securityMiddleware = {
   // Basic security for all routes
-  basic: [
-    advancedSecurityHeaders,
-    bufferOverflowProtection.jsonLimiter,
-    bufferOverflowProtection.complexityLimiter,
-    requestFingerprinting,
-    inputSanitization.xssProtection,
-    inputSanitization.sqlInjectionProtection,
-    inputSanitization.noSQLInjectionProtection
-  ],
+  basic: basicSecurity,
   
   // Enhanced security for API routes
   api: [
-    ...securityMiddleware.basic,
+    ...basicSecurity,
     enhancedRateLimiting.strictApiLimiter
   ],
   
   // Maximum security for auth routes
   auth: [
-    ...securityMiddleware.basic,
+    ...basicSecurity,
     enhancedRateLimiting.ultraStrictAuthLimiter,
     enhancedRateLimiting.suspiciousActivityLimiter
   ],
   
   // Special protection for export routes
   export: [
-    ...securityMiddleware.basic,
+    ...basicSecurity,
     enhancedRateLimiting.exportLimiter
   ],
   
   // Critical endpoint protection
   critical: [
-    ...securityMiddleware.basic,
+    ...basicSecurity,
     enhancedRateLimiting.suspiciousActivityLimiter
   ]
 };
