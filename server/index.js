@@ -1,27 +1,59 @@
 /**
- * SpendWise Server - Production Ready + Mobile Support
- * Main server entry point - FIXED VERSION
+ * SpendWise Server - SYSTEMATIC TESTING v2
+ * Adding modules step by step to find the exact crash point
  */
 
+console.log('=== SPENDWISE SYSTEMATIC TEST v2 ===');
+
+console.log('1. Loading basic modules...');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const dotenv = require('dotenv');
 
-// Load environment variables first
+console.log('2. Loading environment...');
 dotenv.config();
 
-// Load custom modules
-const logger = require('./utils/logger');
-const { apiLimiter } = require('./middleware/rateLimiter');
-const requestId = require('./middleware/requestId');
-const scheduler = require('./utils/scheduler');
-const db = require('./config/db');
-const keepAlive = require('./utils/keepAlive');
+console.log('3. Loading custom modules safely...');
+let logger, apiLimiter, requestId, scheduler, db, keepAlive;
 
-// Initialize Express app
+try {
+  console.log('3a. Loading logger...');
+  logger = require('./utils/logger');
+  console.log('✅ Logger loaded');
+
+  console.log('3b. Loading rateLimiter...');
+  const rateLimiter = require('./middleware/rateLimiter');
+  apiLimiter = rateLimiter.apiLimiter;
+  console.log('✅ RateLimiter loaded');
+
+  console.log('3c. Loading requestId...');
+  requestId = require('./middleware/requestId');
+  console.log('✅ RequestId loaded');
+
+  console.log('3d. Loading scheduler...');
+  scheduler = require('./utils/scheduler');
+  console.log('✅ Scheduler loaded');
+
+  console.log('3e. Loading database...');
+  db = require('./config/db');
+  console.log('✅ Database loaded');
+
+  console.log('3f. Loading keepAlive...');
+  keepAlive = require('./utils/keepAlive');
+  console.log('✅ KeepAlive loaded');
+
+  console.log('✅ ALL CUSTOM MODULES LOADED');
+} catch (error) {
+  console.error('❌ MODULE LOADING FAILED:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
+
+console.log('4. Initializing Express app...');
 const app = express();
+console.log('✅ Express app created');
 
 // Trust proxy for Render deployment
 app.set('trust proxy', 1);
@@ -311,7 +343,7 @@ const startServer = async () => {
   }
 };
 
-// Start server
+console.log('STARTING SERVER...');
 startServer();
 
 module.exports = app;
