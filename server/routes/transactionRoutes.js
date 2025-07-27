@@ -30,6 +30,12 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
+// ✅ NEW: Get recent transactions - What client is calling
+router.get('/recent',
+  getTransactionsLimiter,
+  transactionController.getRecentTransactions
+);
+
 // Get user statistics
 router.get('/stats',
   getSummaryLimiter,

@@ -1,35 +1,39 @@
 /**
- * OnboardingModal Component - Beautiful Full-Screen Onboarding Experience
- * 
- * ✅ FEATURES:
- * - Multi-step wizard with smooth animations
- * - Beautiful gradient design matching app theme
- * - Mobile responsive and RTL support
- * - Progress indicator
- * - Skip options at every step
- * - Local storage for progress
+ * 🎯 ONBOARDING MODAL - MOBILE-FIRST REVOLUTION!
+ * Complete rewrite with Zustand, perfect mobile design, new translations
+ * NOW WITH ZUSTAND STORES! 🎉
+ * @version 2.0.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ChevronRight, ChevronLeft, Check, Sparkles, 
-  Heart, Zap, Shield, Target, ArrowRight, Play
+  Heart, Zap, Shield, Target, ArrowRight, Play,
+  Smartphone, TrendingUp, PieChart, Wallet
 } from 'lucide-react';
 
-import { useLanguage } from '../../../context/LanguageContext';
-import { useAuth } from '../../../context/AuthContext';
+// ✅ NEW: Import from Zustand stores instead of Context
+import {
+  useAuth,
+  useTranslation,
+  useTheme,
+  useCurrency,
+  useNotifications
+} from '../../../stores';
+
 import { cn } from '../../../utils/helpers';
 import { Button } from '../../ui';
 
-// Import onboarding steps
+// Import enhanced onboarding steps
 import WelcomeStep from './steps/WelcomeStep';
 import PreferencesStep from './steps/PreferencesStep';
-import RecurringExplanationStep from './steps/RecurringExplanationStep';
-import InitialTemplatesStep from './steps/InitialTemplatesStep';
+import CategoriesStep from './steps/CategoriesStep';
+import TemplatesStep from './steps/TemplatesStep';
+import CompletionStep from './steps/CompletionStep';
 
 /**
- * OnboardingModal - Beautiful Multi-Step Onboarding Experience
+ * 🚀 OnboardingModal - MOBILE-FIRST PERFECTION!
  */
 const OnboardingModal = ({ 
   isOpen, 
@@ -37,344 +41,446 @@ const OnboardingModal = ({
   onComplete,
   forceShow = false // For re-showing onboarding from help menu
 }) => {
-  const { t, language } = useLanguage();
-  const { user, markOnboardingComplete, refreshProfile } = useAuth();
-  const isRTL = language === 'he';
+  // ✅ NEW: Use Zustand stores
+  const { user, actions: authActions } = useAuth();
+  const { t, currentLanguage, isRTL } = useTranslation('onboarding');
+  const { isDark } = useTheme();
+  const { addNotification } = useNotifications();
   
-  // State management
+  // Enhanced state management
   const [currentStep, setCurrentStep] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [stepData, setStepData] = useState({
-    preferences: {},
+    preferences: {
+      language: currentLanguage,
+      currency: 'USD',
+      theme: 'auto',
+      dateFormat: 'MM/DD/YYYY',
+      notifications: {
+        email: true,
+        push: true,
+        sms: false,
+        recurring: true,
+        budgetAlerts: true
+      }
+    },
+    categories: {
+      selected: [],
+      custom: []
+    },
     templates: []
   });
 
-  // Onboarding steps configuration
+  // Enhanced step configuration
   const steps = [
     {
       id: 'welcome',
-      title: t('onboarding.welcome.title'),
       component: WelcomeStep,
-      skippable: false
+      title: t('progress.welcome'),
+      icon: Sparkles,
+      canSkip: false,
+      required: false
     },
     {
-      id: 'recurring',
-      title: t('onboarding.recurring.title'),
-      component: RecurringExplanationStep,
-      skippable: true
+      id: 'preferences', 
+      component: PreferencesStep,
+      title: t('progress.preferences'),
+      icon: Heart,
+      canSkip: true,
+      required: false
+    },
+    {
+      id: 'categories',
+      component: CategoriesStep, 
+      title: t('progress.categories'),
+      icon: PieChart,
+      canSkip: true,
+      required: false
     },
     {
       id: 'templates',
-      title: t('onboarding.templates.title'),
-      component: InitialTemplatesStep,
-      skippable: true
+      component: TemplatesStep,
+      title: t('progress.templates'),
+      icon: Target,
+      canSkip: true,
+      required: false
+    },
+    {
+      id: 'completion',
+      component: CompletionStep,
+      title: t('progress.ready'),
+      icon: Check,
+      canSkip: false,
+      required: false
     }
   ];
 
-  // Debug current step changes
-  useEffect(() => {
-    console.log(`🚀 [ONBOARDING] Current step changed to: ${currentStep} (${steps[currentStep]?.id || 'undefined'})`);
-    console.log(`🚀 [ONBOARDING] Steps array:`, steps.map(s => s.id));
-  }, [currentStep, steps]);
+  // Enhanced step data update handler
+  const handleStepDataUpdate = useCallback((stepId, data, merge = true) => {
+    setStepData(prev => ({
+      ...prev,
+      [stepId]: merge ? { ...prev[stepId], ...data } : data
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
 
-  // Load saved progress from localStorage
-  useEffect(() => {
-    if (isOpen) {
-      const savedProgress = localStorage.getItem('spendwise-onboarding-progress');
-      console.log(`🚀 [ONBOARDING] Loading saved progress:`, savedProgress);
-      
-      if (savedProgress) {
-        try {
-          const { step, data } = JSON.parse(savedProgress);
-          console.log(`🚀 [ONBOARDING] Parsed progress:`, { step, data, forceShow });
-          
-          if (!forceShow) {
-            setCurrentStep(step || 0);
-            setStepData(data || { preferences: {}, templates: [] });
-            console.log(`🚀 [ONBOARDING] Restored to step ${step || 0}`);
-          }
-        } catch (error) {
-          console.warn('Failed to load onboarding progress:', error);
-        }
-      }
-    }
-  }, [isOpen, forceShow]);
-
-  // Save progress to localStorage
-  const saveProgress = (stepOverride = null) => {
-    const progress = {
-      step: stepOverride !== null ? stepOverride : currentStep,
-      data: stepData,
-      timestamp: Date.now()
-    };
-    console.log(`🚀 [ONBOARDING] Saving progress:`, progress);
-    localStorage.setItem('spendwise-onboarding-progress', JSON.stringify(progress));
-  };
-
-  // Navigation handlers
-  const goToNextStep = () => {
-    console.log(`🚀 [ONBOARDING] goToNextStep called. Current: ${currentStep}, Total: ${steps.length}`);
-    
-    if (currentStep < steps.length - 1) {
-      const nextStep = currentStep + 1;
-      console.log(`🚀 [ONBOARDING] Moving to step ${nextStep}`);
-      setCurrentStep(nextStep);
-      console.log(`🚀 [ONBOARDING] setCurrentStep(${nextStep}) called`);
-      
-      // ✅ FIX: Save progress with the new step immediately
-      saveProgress(nextStep);
-    } else {
-      console.log(`🚀 [ONBOARDING] Last step reached, completing onboarding`);
-      handleComplete();
-    }
-  };
-
-  const goToPreviousStep = () => {
-    if (currentStep > 0) {
-      const prevStep = currentStep - 1;
-      setCurrentStep(prevStep);
-      saveProgress(prevStep);
-    }
-  };
-
-  const goToStep = (stepIndex) => {
+  // Enhanced navigation
+  const goToStep = useCallback((stepIndex) => {
     if (stepIndex >= 0 && stepIndex < steps.length) {
       setCurrentStep(stepIndex);
-      saveProgress(stepIndex);
     }
-  };
+  }, [steps.length]);
 
-  // Skip current step
-  const skipStep = () => {
-    console.log(`🚀 [ONBOARDING] skipStep called from step ${currentStep}`);
-    goToNextStep();
-  };
+  const goNext = useCallback(() => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  }, [currentStep, steps.length]);
 
-  // Update step data
-  const updateStepData = (key, value) => {
-    console.log(`🚀 [ONBOARDING] updateStepData called:`, { key, value });
-    setStepData(prev => {
-      const newData = { ...prev, [key]: value };
-      console.log(`🚀 [ONBOARDING] stepData updated:`, newData);
-      return newData;
-    });
-  };
+  const goBack = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  }, [currentStep]);
 
-  // Complete onboarding
-  const handleComplete = async () => {
-    console.log(`🚀 [ONBOARDING] handleComplete called, isCompleting: ${isCompleting}`);
-    
-    if (isCompleting) return;
-    
+  // Enhanced completion handler
+  const handleComplete = useCallback(async () => {
     setIsCompleting(true);
     
     try {
-      console.log(`🚀 [ONBOARDING] Marking onboarding as complete... User ID: ${user?.id}`);
-      // Mark onboarding as complete in the backend
-      const result = await markOnboardingComplete();
-      console.log(`🚀 [ONBOARDING] API response:`, result);
-      
-      // Clear saved progress
-      localStorage.removeItem('spendwise-onboarding-progress');
-      
-      // ✅ FIX: Clear the onboarding-skipped flag if it exists
-      localStorage.removeItem('spendwise-onboarding-skipped');
-      
-      console.log(`🚀 [ONBOARDING] Progress cleared, calling completion callback`);
-      
-      // ✅ FIX: Force refresh user data to ensure onboarding_completed is updated
-      if (refreshProfile) {
-        console.log(`🚀 [ONBOARDING] Refreshing profile...`);
-        await refreshProfile();
-        console.log(`🚀 [ONBOARDING] Profile refreshed`);
+      // Save user preferences from onboarding
+      if (stepData.preferences) {
+        // Apply language preference
+        if (stepData.preferences.language !== currentLanguage) {
+          // Language will be applied automatically by the translation store
+        }
+        
+        // Apply other preferences through auth store
+        await authActions.updateProfile({
+          language_preference: stepData.preferences.language,
+          currency_preference: stepData.preferences.currency,
+          theme_preference: stepData.preferences.theme,
+          preferences: {
+            ...user?.preferences,
+            notifications: stepData.preferences.notifications,
+            dateFormat: stepData.preferences.dateFormat
+          }
+        });
       }
+
+      // Create custom categories if any
+      if (stepData.categories.custom.length > 0) {
+        for (const category of stepData.categories.custom) {
+          try {
+            // Use category API to create categories
+            await fetch('/api/v1/categories', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              },
+              body: JSON.stringify(category)
+            });
+          } catch (error) {
+            console.error('Failed to create category:', error);
+          }
+        }
+      }
+
+      // Create recurring templates if any
+      if (stepData.templates.length > 0) {
+        for (const template of stepData.templates) {
+          try {
+            await fetch('/api/v1/transactions/recurring/templates', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              },
+              body: JSON.stringify(template)
+            });
+          } catch (error) {
+            console.error('Failed to create template:', error);
+          }
+        }
+      }
+
+      // Mark onboarding as complete
+      await authActions.markOnboardingComplete();
       
-      // Call completion callback
-      onComplete?.();
+      // Show success notification
+      addNotification({
+        type: 'success',
+        title: t('success.onboardingComplete'),
+        duration: 5000
+      });
+      
+      // Trigger completion callback
+      onComplete?.(stepData);
       
       // Close modal
       onClose();
-      console.log(`🚀 [ONBOARDING] Onboarding completed successfully`);
+      
     } catch (error) {
-      console.error('❌ [ONBOARDING] Failed to complete onboarding:', error);
-      console.error('❌ [ONBOARDING] Error details:', error.response?.data || error.message);
-      // Still close modal to avoid user being stuck
-      onClose();
+      console.error('Onboarding completion failed:', error);
+      
+      addNotification({
+        type: 'error',
+        title: t('errors.completionFailed'),
+        description: error.message || t('errors.serverError'),
+        duration: 8000
+      });
     } finally {
       setIsCompleting(false);
     }
-  };
+  }, [stepData, currentLanguage, authActions, user, t, addNotification, onComplete, onClose]);
 
-  // ✅ NEW: Handle onboarding skip
-  const handleSkipOnboarding = async () => {
-    try {
-      console.log(`🚀 [ONBOARDING] Skipping onboarding... User ID: ${user?.id}`);
+  // Enhanced skip handler
+  const handleSkip = useCallback(() => {
+    if (hasUnsavedChanges) {
+      // Show confirmation dialog
+      const confirmSkip = window.confirm(
+        `${t('modal.skipConfirm')}\n\n${t('modal.skipMessage')}`
+      );
       
-      // Mark onboarding as complete in backend
-      const result = await markOnboardingComplete();
-      console.log(`🚀 [ONBOARDING] Skip API response:`, result);
-      
-      // Clear progress and mark as skipped
-      localStorage.removeItem('spendwise-onboarding-progress');
-      localStorage.setItem('spendwise-onboarding-skipped', 'true');
-      
-      // Force refresh user data
-      if (refreshProfile) {
-        console.log(`🚀 [ONBOARDING] Refreshing profile after skip...`);
-        await refreshProfile();
-        console.log(`🚀 [ONBOARDING] Profile refreshed after skip`);
-      }
-      
-      // Call completion callback and close
-      onComplete?.();
-      onClose();
-      
-      console.log(`🚀 [ONBOARDING] Onboarding skipped successfully`);
-    } catch (error) {
-      console.error('❌ [ONBOARDING] Failed to skip onboarding:', error);
-      console.error('❌ [ONBOARDING] Skip error details:', error.response?.data || error.message);
-      // Still close to avoid user being stuck
-      onClose();
-    }
-  };
-
-  // Close handler with confirmation if in progress
-  const handleClose = () => {
-    if (currentStep > 0 && !forceShow) {
-      const confirmMessage = t('onboarding.exitConfirm');
-      
-      if (window.confirm(confirmMessage)) {
-        saveProgress(currentStep);
-        onClose();
-      }
-    } else {
-      onClose();
-    }
-  };
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+      if (!confirmSkip) return;
     }
     
-    // Cleanup on unmount
-    return () => {
-      document.body.style.overflow = 'unset';
+    onClose();
+  }, [hasUnsavedChanges, t, onClose]);
+
+  // Enhanced keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isOpen) return;
+      
+      switch (e.key) {
+        case 'Escape':
+          handleSkip();
+          break;
+        case 'ArrowRight':
+          if (!isRTL && currentStep < steps.length - 1) {
+            e.preventDefault();
+            goNext();
+          }
+          break;
+        case 'ArrowLeft':
+          if (!isRTL && currentStep > 0) {
+            e.preventDefault();
+            goBack();
+          }
+          break;
+        case 'Enter':
+          if (currentStep === steps.length - 1) {
+            e.preventDefault();
+            handleComplete();
+          }
+          break;
+      }
     };
-  }, [isOpen]);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, currentStep, steps.length, isRTL, handleSkip, goNext, goBack, handleComplete]);
 
   // Don't render if not open
   if (!isOpen) return null;
 
-  const CurrentStepComponent = steps[currentStep]?.component;
   const currentStepConfig = steps[currentStep];
-  const isLastStep = currentStep === steps.length - 1;
-  const isFirstStep = currentStep === 0;
-
-  console.log(`🚀 [ONBOARDING] Rendering step ${currentStep}:`, {
-    component: CurrentStepComponent?.name,
-    config: currentStepConfig?.id,
-    isLastStep,
-    isFirstStep,
-    totalSteps: steps.length
-  });
-
-  // Assuming the user's name is available in the 'user' object from useAuth
-  const userName = user?.username ? user.username.split(' ')[0] : t('onboarding.defaultName');
+  const StepComponent = currentStepConfig.component;
+  const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
+        key="onboarding-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            console.log(`🚀 [ONBOARDING] Backdrop clicked from step ${currentStep}`);
-            handleClose();
-          }
-        }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center"
+        style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
-        {/* Main Modal */}
+        {/* Enhanced backdrop with blur */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleSkip}
+        />
+
+        {/* Main modal container - Mobile optimized */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className={cn(
-            "relative w-full max-w-7xl mx-auto bg-white dark:bg-gray-900",
-            "shadow-2xl border border-gray-200 dark:border-gray-700",
-            "overflow-hidden flex flex-col",
-            "my-4 h-[95vh] max-h-[1000px] rounded-2xl"
+            "relative w-full h-full max-w-4xl max-h-[95vh]",
+            "bg-white dark:bg-gray-900",
+            "flex flex-col",
+            "md:rounded-2xl md:shadow-2xl md:h-auto md:max-h-[90vh]",
+            "md:border md:border-gray-200 md:dark:border-gray-700"
           )}
         >
-          {/* Progress Bar ONLY - No Header */}
-          <div className="relative bg-white dark:bg-gray-900 flex-shrink-0">
-            {/* Close Button - More prominent */}
-            <button
-              onClick={() => {
-                console.log(`🚀 [ONBOARDING] Close button clicked from step ${currentStep}`);
-                handleClose();
-              }}
+          {/* Enhanced header - Mobile optimized */}
+          <div className={cn(
+            "relative flex-shrink-0",
+            "bg-gradient-to-r from-primary-500 to-primary-600",
+            "dark:from-primary-600 dark:to-primary-700",
+            "px-4 py-6 md:px-8",
+            "text-white"
+          )}>
+            {/* Close button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSkip}
               className={cn(
-                "absolute top-3 z-10 p-2 text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400",
-                "hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200",
-                "border border-gray-300 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500",
-                "shadow-sm hover:shadow-md backdrop-blur-sm bg-white/80 dark:bg-gray-800/80",
-                isRTL ? "left-3" : "right-3"
+                "absolute top-4 text-white/80 hover:text-white",
+                "hover:bg-white/10 border-0",
+                isRTL ? "left-4" : "right-4"
               )}
-              title={t('onboarding.closeExit')}
             >
-              <X size={20} className="stroke-2" />
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
 
-            {/* Progress Bar */}
-            <div className="h-1 bg-gray-200 dark:bg-gray-700">
+            {/* Progress bar */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-white/90">
+                  {t('progress.step', { current: currentStep + 1, total: steps.length })}
+                </p>
+                <p className="text-sm text-white/70">
+                  {Math.round(progress)}%
+                </p>
+              </div>
+              
+              <div className="w-full bg-white/20 rounded-full h-2">
+                <motion.div
+                  className="bg-white rounded-full h-2"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            </div>
+
+            {/* Step title and description */}
+            <div className="text-center">
               <motion.div
-                className="h-full bg-gradient-to-r from-blue-600 to-purple-600"
-                initial={{ width: 0 }}
-                animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              />
+                key={currentStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center mb-2"
+              >
+                <currentStepConfig.icon className="w-6 h-6 mr-2" />
+                <h2 className="text-lg font-semibold">
+                  {currentStepConfig.title}
+                </h2>
+              </motion.div>
             </div>
           </div>
 
-          {/* Step Content - FULL HEIGHT with no footer */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Step content - Mobile optimized scrolling */}
+          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
             <AnimatePresence mode="wait">
               <motion.div
-                key={`step-${currentStep}`}
+                key={currentStep}
                 initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="h-full flex flex-col"
+                transition={{ duration: 0.2 }}
+                className="h-full"
               >
-                {CurrentStepComponent && (
-                  <div className="flex-1 p-2 lg:p-6">
-                    <CurrentStepComponent
-                      onNext={() => {
-                        console.log(`🚀 [ONBOARDING] onNext called from step ${currentStep} (${steps[currentStep]?.id})`);
-                        goToNextStep();
-                      }}
-                      onPrevious={goToPreviousStep}
-                      onSkip={currentStepConfig?.skippable ? skipStep : undefined}
-                      stepData={stepData}
-                      updateStepData={updateStepData}
-                      isLastStep={isLastStep}
-                      isFirstStep={isFirstStep}
-                      onComplete={handleComplete}
-                      isCompleting={isCompleting}
-                      stepConfig={currentStepConfig}
-                    />
-                  </div>
-                )}
+                <StepComponent
+                  data={stepData[currentStepConfig.id] || {}}
+                  onDataUpdate={(data, merge) => handleStepDataUpdate(currentStepConfig.id, data, merge)}
+                  onNext={goNext}
+                  onBack={goBack}
+                  onComplete={handleComplete}
+                  isFirstStep={currentStep === 0}
+                  isLastStep={currentStep === steps.length - 1}
+                  isCompleting={isCompleting}
+                />
               </motion.div>
             </AnimatePresence>
+          </div>
+
+          {/* Enhanced footer navigation - Mobile optimized */}
+          <div className={cn(
+            "flex-shrink-0 px-4 py-4 md:px-8",
+            "bg-gray-50 dark:bg-gray-800/50",
+            "border-t border-gray-200 dark:border-gray-700"
+          )}>
+            <div className="flex items-center justify-between">
+              {/* Back button */}
+              <Button
+                variant="outline"
+                onClick={goBack}
+                disabled={currentStep === 0}
+                className={cn(
+                  "min-w-[100px]",
+                  currentStep === 0 && "invisible"
+                )}
+              >
+                {isRTL ? (
+                  <>
+                    {t('modal.back')}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    {t('modal.back')}
+                  </>
+                )}
+              </Button>
+
+              {/* Skip button (for skippable steps) */}
+              {currentStepConfig.canSkip && currentStep < steps.length - 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={goNext}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  {t('modal.skip')}
+                </Button>
+              )}
+
+              {/* Next/Finish button */}
+              <Button
+                variant="primary"
+                onClick={currentStep === steps.length - 1 ? handleComplete : goNext}
+                disabled={isCompleting}
+                className="min-w-[120px]"
+                loading={isCompleting}
+              >
+                {isCompleting ? (
+                  t('modal.completing')
+                ) : currentStep === steps.length - 1 ? (
+                  <>
+                    {t('modal.finish')}
+                    <Sparkles className={cn("w-4 h-4", isRTL ? "mr-2" : "ml-2")} />
+                  </>
+                ) : (
+                  <>
+                    {isRTL ? (
+                      <>
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        {t('modal.next')}
+                      </>
+                    ) : (
+                      <>
+                        {t('modal.next')}
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </motion.div>
       </motion.div>

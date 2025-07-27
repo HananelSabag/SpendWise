@@ -1,315 +1,369 @@
-// components/common/CalendarWidget.jsx
-import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom'; // ✅ ADD: Portal for escaping parent constraints
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { cn } from '../../utils/helpers';
+/**
+ * 📅 CALENDAR WIDGET - MOBILE-FIRST
+ * Enhanced calendar widget with better navigation and events
+ * NOW WITH ZUSTAND STORES! 🎉
+ * @version 2.0.0
+ */
 
-const CalendarWidget = React.memo(({ 
-  selectedDate,
+import React, { useState, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ChevronLeft, ChevronRight, Calendar, Clock, Plus,
+  TrendingUp, TrendingDown, Circle, CheckCircle
+} from 'lucide-react';
+
+// ✅ NEW: Import from Zustand stores instead of Context
+import {
+  useTranslation,
+  useCurrency,
+  useTheme
+} from '../../stores';
+
+import { Button, Badge, Tooltip } from '../ui';
+import { cn, dateHelpers } from '../../utils/helpers';
+
+const CalendarWidget = ({
+  transactions = [],
   onDateSelect,
-  onClose,
-  minDate,
-  maxDate = new Date(),
-  className = '',
-  showTodayButton = true,
-  triggerRef // ✅ NEW: Add triggerRef prop to position relative to button
+  onAddTransaction,
+  selectedDate,
+  className = ''
 }) => {
-  const { t, language } = useLanguage();
-  const isRTL = language === 'he';
-  const calendarRef = useRef(null);
-  const [position, setPosition] = useState({ top: 0, left: 0, show: false });
-  
-  const [currentMonth, setCurrentMonth] = useState(() => 
-    selectedDate ? new Date(selectedDate) : new Date()
-  );
+  // ✅ NEW: Use Zustand stores
+  const { t, isRTL, currentLanguage } = useTranslation('common');
+  const { formatCurrency } = useCurrency();
+  const { isDark } = useTheme();
 
-  // ✅ NEW: Calculate dynamic position with better overflow handling
-  useEffect(() => {
-    if (triggerRef?.current) {
-      const updatePosition = () => {
-        const triggerRect = triggerRef.current.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const calendarWidth = 320; // Known calendar width
-        const calendarHeight = 400; // Estimated calendar height
-        
-        let top = triggerRect.bottom + 8; // 8px gap below button
-        let left = triggerRef.current.offsetWidth >= calendarWidth 
-          ? triggerRect.left // Align left if trigger is wide enough
-          : triggerRect.left + (triggerRect.width / 2) - (calendarWidth / 2); // Center align
-        
-        // ✅ SMART OVERFLOW HANDLING
-        // Check right edge overflow
-        if (left + calendarWidth > viewportWidth - 16) {
-          left = viewportWidth - calendarWidth - 16;
-        }
-        
-        // Check left edge overflow
-        if (left < 16) {
-          left = 16;
-        }
-        
-        // Check bottom overflow - show above if needed
-        if (top + calendarHeight > viewportHeight - 16) {
-          top = triggerRect.top - calendarHeight - 8;
-          
-          // If still overflows top, position at top with max height
-          if (top < 16) {
-            top = 16;
-          }
-        }
-        
-        setPosition({ top, left, show: true });
-      };
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState('month'); // month, week
 
-      // Calculate position immediately and on scroll/resize
-      updatePosition();
-      
-      const handleResize = () => updatePosition();
-      const handleScroll = () => updatePosition();
-      
-      window.addEventListener('resize', handleResize);
-      window.addEventListener('scroll', handleScroll, true);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        window.removeEventListener('scroll', handleScroll, true);
-      };
-    }
-  }, [triggerRef]);
-
-  // ✅ NEW: Refine position after calendar renders
-  useEffect(() => {
-    if (triggerRef?.current && calendarRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const calendarRect = calendarRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      let top = triggerRect.bottom + 8;
-      let left = triggerRect.left;
-      
-      // Check if calendar would overflow right edge
-      if (left + calendarRect.width > viewportWidth) {
-        left = triggerRect.right - calendarRect.width;
+  // Calendar navigation
+  const navigateMonth = useCallback((direction) => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
       }
-      
-      // Check if calendar would overflow bottom edge
-      if (top + calendarRect.height > viewportHeight) {
-        top = triggerRect.top - calendarRect.height - 8;
-      }
-      
-      // Ensure minimum margins from viewport edges
-      left = Math.max(8, Math.min(left, viewportWidth - calendarRect.width - 8));
-      top = Math.max(8, Math.min(top, viewportHeight - calendarRect.height - 8));
-      
-      setPosition({ top, left });
-    }
-  }, [calendarRef.current, triggerRef]); // Run when calendar mounts
+      return newDate;
+    });
+  }, []);
 
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (calendarRef.current && !calendarRef.current.contains(event.target) && 
-          triggerRef?.current && !triggerRef.current.contains(event.target)) {
-        onClose?.();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose, triggerRef]);
-
-  // Get days in month
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
+  // Get calendar data
+  const calendarData = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Get first day of month and how many days
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // Get starting day of week (0 = Sunday)
+    const startDayOfWeek = firstDay.getDay();
+    
+    // Create calendar grid
     const days = [];
-
-    // Add empty slots for days before first of month
-    const firstDayOfWeek = firstDay.getDay();
-    for (let i = 0; i < firstDayOfWeek; i++) {
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
-
-    // Add all days in month
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(year, month, i));
-    }
-
-    return days;
-  };
-
-  const handlePrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
-  };
-
-  const handleDateSelect = (date) => {
-    if (!date || !isDateSelectable(date)) return;
     
-    const normalizedDate = new Date(date);
-    normalizedDate.setHours(12, 0, 0, 0);
-    onDateSelect(normalizedDate);
-  };
-
-  const isDateSelectable = (date) => {
-    if (!date) return false;
-    
-    // ✅ FIX: Normalize dates to same timezone for proper comparison
-    const dateTime = new Date(date);
-    dateTime.setHours(12, 0, 0, 0); // Normalize to noon
-    
-    if (minDate) {
-      const minDateTime = new Date(minDate);
-      minDateTime.setHours(12, 0, 0, 0);
-      if (dateTime < minDateTime) return false;
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Find transactions for this day
+      const dayTransactions = transactions.filter(transaction => 
+        transaction.date && transaction.date.startsWith(dateStr)
+      );
+      
+      // Calculate day summary
+      const dayIncome = dayTransactions
+        .filter(t => t.type === 'income' || t.amount > 0)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      const dayExpenses = dayTransactions
+        .filter(t => t.type === 'expense' || t.amount < 0)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      days.push({
+        day,
+        date,
+        dateStr,
+        transactions: dayTransactions,
+        income: dayIncome,
+        expenses: dayExpenses,
+        net: dayIncome - dayExpenses,
+        isToday: dateHelpers.isToday(date),
+        isSelected: selectedDate && dateHelpers.isSameDay(date, new Date(selectedDate)),
+        hasTransactions: dayTransactions.length > 0
+      });
     }
     
-    if (maxDate) {
-      const maxDateTime = new Date(maxDate);
-      maxDateTime.setHours(12, 0, 0, 0);
-      if (dateTime > maxDateTime) return false;
+    return {
+      year,
+      month,
+      monthName: date.toLocaleString(currentLanguage === 'he' ? 'he' : 'en', { 
+        month: 'long' 
+      }),
+      days,
+      weekdays: Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(2024, 0, i); // Start from a Sunday
+        return date.toLocaleDateString(currentLanguage === 'he' ? 'he' : 'en', { 
+          weekday: 'short' 
+        });
+      })
+    };
+  }, [currentDate, transactions, selectedDate, currentLanguage]);
+
+  // Handle date click
+  const handleDateClick = useCallback((dayData) => {
+    if (onDateSelect) {
+      onDateSelect(dayData.dateStr);
     }
-    
-    return true;
+  }, [onDateSelect]);
+
+  // Handle add transaction
+  const handleAddTransaction = useCallback((dayData) => {
+    if (onAddTransaction) {
+      onAddTransaction(dayData.dateStr);
+    }
+  }, [onAddTransaction]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.02
+      }
+    }
   };
 
-  const isToday = (date) => {
-    if (!date) return false;
-    const today = new Date();
-    const compareDate = new Date(date);
-    
-    return compareDate.getFullYear() === today.getFullYear() &&
-           compareDate.getMonth() === today.getMonth() &&
-           compareDate.getDate() === today.getDate();
+  const dayVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.2 }
+    }
   };
 
-  const isSelected = (date) => {
-    if (!date || !selectedDate) return false;
-    const compareDate = new Date(date);
-    const selectedDateTime = new Date(selectedDate);
-    
-    return compareDate.getFullYear() === selectedDateTime.getFullYear() &&
-           compareDate.getMonth() === selectedDateTime.getMonth() &&
-           compareDate.getDate() === selectedDateTime.getDate();
-  };
-
-  // ✅ שימוש במפתח הנכון לימי השבוע עם fallback
-  const weekDays = t('calendar.weekDays');
-
-  // נוודא שweekDays הוא תמיד מערך עם fallback מפורש
-  const weekDaysArray = Array.isArray(weekDays) ? weekDays : (
-    language === 'he' ? 
-      ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'] :
-      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  );
-
-  // ✅ NEW: Portal rendering to escape parent constraints
-  const calendarContent = (
-    <div
-      ref={calendarRef}
-      className={cn(
-        'bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 min-w-[320px]',
-        'border border-gray-200 dark:border-gray-700',
-        'fixed z-[99999]', // ✅ Maximum z-index
-        className
-      )}
-      style={{
-        position: 'fixed',
-        zIndex: 99999,
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        maxHeight: 'calc(100vh - 32px)', // ✅ Prevent full viewport overflow
-        maxWidth: 'calc(100vw - 32px)',
-        opacity: position.show ? 1 : 0, // ✅ Hide until positioned
-        pointerEvents: position.show ? 'auto' : 'none'
-      }}
-      dir={isRTL ? 'rtl' : 'ltr'}
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className={cn("bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden", className)}
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={handlePrevMonth}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label={t('calendar.previousMonth')}
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-
-        <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
-          {currentMonth.toLocaleDateString(isRTL ? 'he-IL' : 'en-US', {
-            month: 'long',
-            year: 'numeric',
-          })}
-        </h3>
-
-        <button
-          onClick={handleNextMonth}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label={t('calendar.nextMonth')}
-        >
-          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-      </div>
-
-      {/* Week days */}
-      <div className="grid grid-cols-7 gap-1 mb-3">
-        {weekDaysArray.map((day) => (
-          <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 py-2">
-            {day}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {calendarData.monthName} {calendarData.year}
+            </h3>
+            
+            <div className="flex items-center space-x-1">
+              <Badge variant="secondary" size="xs">
+                {transactions.length} {t('calendar.transactions')}
+              </Badge>
+            </div>
           </div>
-        ))}
+
+          <div className="flex items-center space-x-2">
+            {/* View mode toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'month' ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('month')}
+                className="px-3 py-1 text-xs"
+              >
+                {t('calendar.month')}
+              </Button>
+              <Button
+                variant={viewMode === 'week' ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('week')}
+                className="px-3 py-1 text-xs"
+              >
+                {t('calendar.week')}
+              </Button>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateMonth('prev')}
+                className="p-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-2 text-xs"
+              >
+                {t('calendar.today')}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateMonth('next')}
+                className="p-2"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {getDaysInMonth(currentMonth).map((date, i) => {
-          const selectable = isDateSelectable(date);
-          return (
-            <button
-              key={i}
-              onClick={() => date && handleDateSelect(date)}
-              disabled={!date || !selectable}
-              className={cn(
-                'h-10 w-10 flex items-center justify-center rounded-lg text-sm transition-all font-medium',
-                !date && 'invisible',
-                date && selectable && 'hover:bg-gray-100 dark:hover:bg-gray-700',
-                isToday(date) && 'ring-2 ring-primary-500 ring-offset-1',
-                isSelected(date) && 'bg-primary-500 text-white hover:bg-primary-600',
-                date && !selectable && 'text-gray-300 dark:text-gray-600 cursor-not-allowed',
-                date && selectable && !isSelected(date) && 'text-gray-700 dark:text-gray-300'
-              )}
+      <div className="p-4">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {calendarData.weekdays.map((weekday, index) => (
+            <div
+              key={index}
+              className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-2"
             >
-              {date?.getDate()}
-            </button>
-          );
-        })}
+              {weekday}
+            </div>
+          ))}
+        </div>
+
+        {/* Days grid */}
+        <div className="grid grid-cols-7 gap-1">
+          <AnimatePresence mode="popLayout">
+            {calendarData.days.map((dayData, index) => (
+              <motion.div
+                key={dayData ? `${dayData.dateStr}` : `empty-${index}`}
+                variants={dayVariants}
+                layout
+                className={cn(
+                  "aspect-square relative",
+                  dayData ? "cursor-pointer" : ""
+                )}
+              >
+                {dayData ? (
+                  <div
+                    onClick={() => handleDateClick(dayData)}
+                    className={cn(
+                      "w-full h-full rounded-lg transition-all p-1 group",
+                      "hover:bg-gray-100 dark:hover:bg-gray-700",
+                      dayData.isSelected && "bg-blue-100 dark:bg-blue-900/20 ring-2 ring-blue-500",
+                      dayData.isToday && "bg-blue-50 dark:bg-blue-900/10 border border-blue-300 dark:border-blue-700",
+                      dayData.hasTransactions && "shadow-sm"
+                    )}
+                  >
+                    {/* Day number */}
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        "text-sm font-medium",
+                        dayData.isToday 
+                          ? "text-blue-600 dark:text-blue-400" 
+                          : "text-gray-900 dark:text-white"
+                      )}>
+                        {dayData.day}
+                      </span>
+                      
+                      {/* Transaction count indicator */}
+                      {dayData.hasTransactions && (
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      )}
+                    </div>
+
+                    {/* Transaction summary */}
+                    {dayData.hasTransactions && (
+                      <div className="mt-1 space-y-0.5">
+                        {dayData.income > 0 && (
+                          <div className="flex items-center text-xs">
+                            <TrendingUp className="w-2 h-2 text-green-500 mr-1" />
+                            <span className="text-green-600 dark:text-green-400 truncate">
+                              {formatCurrency(dayData.income, { compact: true })}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {dayData.expenses > 0 && (
+                          <div className="flex items-center text-xs">
+                            <TrendingDown className="w-2 h-2 text-red-500 mr-1" />
+                            <span className="text-red-600 dark:text-red-400 truncate">
+                              {formatCurrency(dayData.expenses, { compact: true })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Add transaction button (on hover) */}
+                    {onAddTransaction && (
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddTransaction(dayData);
+                          }}
+                          className="w-6 h-6 p-0 rounded-full"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Empty cell for days outside current month
+                  <div className="w-full h-full" />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Today button */}
-      {showTodayButton && (
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => handleDateSelect(new Date())}
-            className="w-full px-4 py-3 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors flex items-center justify-center gap-2 font-medium"
-          >
-            <Calendar className="w-4 h-4" />
-            {t('calendar.today')}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+      {/* Summary footer */}
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1">
+              <Circle className="w-3 h-3 text-green-500 fill-current" />
+              <span className="text-gray-600 dark:text-gray-400">
+                {t('calendar.income')}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-1">
+              <Circle className="w-3 h-3 text-red-500 fill-current" />
+              <span className="text-gray-600 dark:text-gray-400">
+                {t('calendar.expenses')}
+              </span>
+            </div>
+          </div>
 
-  // ✅ Render calendar in portal to escape parent constraints
-  return position.show ? createPortal(calendarContent, document.body) : null;
-});
+          <div className="text-gray-500 dark:text-gray-400">
+            {calendarData.days.filter(d => d?.hasTransactions).length} {t('calendar.activeDays')}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 export default CalendarWidget;

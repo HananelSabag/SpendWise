@@ -1,255 +1,465 @@
-// components/common/AccessibilityMenu.jsx
-// Accessibility menu component with full translation support
-// Provides accessibility controls like font size, contrast, and dark mode
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  LifeBuoy, 
-  Moon, 
-  Sun, 
-  ZoomIn, 
-  ZoomOut, 
-  Type, 
-  X,
-  RotateCcw,
-  Eye,
-  ChevronLeft,
-  BookOpen
-} from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAccessibility } from '../../context/AccessibilityContext'; // ✅ Use real context
-import AccessibilityStatement from './AccessibilityStatement';
-
 /**
- * AccessibilityMenu Component
- * Provides accessibility controls including font size, contrast, and theme options
- * Fully translated and RTL-aware interface
+ * ♿ ACCESSIBILITY MENU - MOBILE-FIRST
+ * Enhanced accessibility controls with better UX
+ * NOW WITH ZUSTAND STORES! 🎉
+ * @version 2.0.0
  */
-const AccessibilityMenu = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showStatement, setShowStatement] = useState(false);
-  const menuRef = useRef(null);
-  const { t, language } = useLanguage();
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Settings, X, Eye, Type, Contrast, Volume2, VolumeX,
+  Palette, Sun, Moon, Zap, Shield, RefreshCw, Check,
+  Plus, Minus, RotateCcw, Save
+} from 'lucide-react';
+
+// ✅ NEW: Import from Zustand stores instead of Context
+import { 
+  useTranslation, 
+  useTheme, 
+  useAccessibility, 
+  useNotifications 
+} from '../../stores';
+
+import { Button, Card, Tooltip } from '../ui';
+import { cn } from '../../utils/helpers';
+
+const AccessibilityMenu = ({ 
+  isOpen, 
+  onClose,
+  className = '' 
+}) => {
+  // ✅ NEW: Use Zustand stores
+  const { t, isRTL } = useTranslation('common');
+  const { 
+    theme, 
+    isDark, 
+    setTheme, 
+    contrast, 
+    setContrast 
+  } = useTheme();
   const {
     fontSize,
-    increaseFontSize,
-    decreaseFontSize,
+    setFontSize,
+    motionReduced,
+    setMotionReduced,
+    screenReaderMode,
+    setScreenReaderMode,
     highContrast,
     setHighContrast,
-    darkMode,
-    setDarkMode,
-    isCollapsed,
-    setIsCollapsed,
-    resetSettings,
-    isMinFontSize,
-    isMaxFontSize
-  } = useAccessibility(); // ✅ Now using real context
-  
-  const isHebrew = language === 'he';
+    soundEnabled,
+    setSoundEnabled,
+    focusVisible,
+    setFocusVisible,
+    settings,
+    updateSettings,
+    resetSettings
+  } = useAccessibility();
+  const { addNotification } = useNotifications();
 
-  // Close menu when clicking outside
+  // Local state
+  const [hasChanges, setHasChanges] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  // Track changes
+  const [originalSettings, setOriginalSettings] = useState(null);
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (isOpen && !originalSettings) {
+      setOriginalSettings({
+        fontSize,
+        motionReduced,
+        screenReaderMode,
+        highContrast,
+        soundEnabled,
+        focusVisible,
+        theme,
+        contrast
+      });
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  }, [isOpen, originalSettings, fontSize, motionReduced, screenReaderMode, highContrast, soundEnabled, focusVisible, theme, contrast]);
 
-  // Toggle collapsed state
-  const toggleCollapsed = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  // Font size options
+  const fontSizeOptions = [
+    { value: 'xs', label: t('accessibility.fontSize.extraSmall'), size: '12px' },
+    { value: 'sm', label: t('accessibility.fontSize.small'), size: '14px' },
+    { value: 'base', label: t('accessibility.fontSize.normal'), size: '16px' },
+    { value: 'lg', label: t('accessibility.fontSize.large'), size: '18px' },
+    { value: 'xl', label: t('accessibility.fontSize.extraLarge'), size: '20px' },
+    { value: '2xl', label: t('accessibility.fontSize.huge'), size: '24px' }
+  ];
 
-  // Toggle menu visibility
-  const toggleMenu = () => setIsOpen(!isOpen);
+  // Theme options
+  const themeOptions = [
+    { value: 'light', label: t('accessibility.theme.light'), icon: Sun },
+    { value: 'dark', label: t('accessibility.theme.dark'), icon: Moon },
+    { value: 'auto', label: t('accessibility.theme.auto'), icon: Settings }
+  ];
 
-  // Close menu
-  const closeMenu = () => setIsOpen(false);
+  // Contrast options
+  const contrastOptions = [
+    { value: 'normal', label: t('accessibility.contrast.normal') },
+    { value: 'high', label: t('accessibility.contrast.high') },
+    { value: 'maximum', label: t('accessibility.contrast.maximum') }
+  ];
 
-  // Toggle accessibility statement
-  const toggleStatement = () => {
-    setShowStatement(!showStatement);
-    if (!showStatement) {
-      closeMenu();
+  // Handle setting changes
+  const handleSettingChange = useCallback((setting, value) => {
+    setHasChanges(true);
+    
+    switch (setting) {
+      case 'fontSize':
+        setFontSize(value);
+        break;
+      case 'motionReduced':
+        setMotionReduced(value);
+        break;
+      case 'screenReaderMode':
+        setScreenReaderMode(value);
+        break;
+      case 'highContrast':
+        setHighContrast(value);
+        break;
+      case 'soundEnabled':
+        setSoundEnabled(value);
+        break;
+      case 'focusVisible':
+        setFocusVisible(value);
+        break;
+      case 'theme':
+        setTheme(value);
+        break;
+      case 'contrast':
+        setContrast(value);
+        break;
+      default:
+        break;
     }
-  };
+  }, [setFontSize, setMotionReduced, setScreenReaderMode, setHighContrast, setSoundEnabled, setFocusVisible, setTheme, setContrast]);
+
+  // Save settings
+  const handleSave = useCallback(async () => {
+    try {
+      await updateSettings({
+        fontSize,
+        motionReduced,
+        screenReaderMode,
+        highContrast,
+        soundEnabled,
+        focusVisible,
+        theme,
+        contrast
+      });
+
+      setHasChanges(false);
+      setOriginalSettings(null);
+      
+      addNotification({
+        type: 'success',
+        title: t('accessibility.settings.saved'),
+        duration: 3000
+      });
+
+      onClose();
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: t('accessibility.settings.saveFailed'),
+        description: error.message,
+        duration: 5000
+      });
+    }
+  }, [fontSize, motionReduced, screenReaderMode, highContrast, soundEnabled, focusVisible, theme, contrast, updateSettings, addNotification, t, onClose]);
+
+  // Reset to defaults
+  const handleReset = useCallback(() => {
+    resetSettings();
+    setHasChanges(false);
+    setOriginalSettings(null);
+    
+    addNotification({
+      type: 'info',
+      title: t('accessibility.settings.reset'),
+      duration: 3000
+    });
+  }, [resetSettings, addNotification, t]);
+
+  // Cancel changes
+  const handleCancel = useCallback(() => {
+    if (originalSettings) {
+      setFontSize(originalSettings.fontSize);
+      setMotionReduced(originalSettings.motionReduced);
+      setScreenReaderMode(originalSettings.screenReaderMode);
+      setHighContrast(originalSettings.highContrast);
+      setSoundEnabled(originalSettings.soundEnabled);
+      setFocusVisible(originalSettings.focusVisible);
+      setTheme(originalSettings.theme);
+      setContrast(originalSettings.contrast);
+    }
+    
+    setHasChanges(false);
+    setOriginalSettings(null);
+    onClose();
+  }, [originalSettings, setFontSize, setMotionReduced, setScreenReaderMode, setHighContrast, setSoundEnabled, setFocusVisible, setTheme, setContrast, onClose]);
 
   return (
-    <div 
-      className={`fixed z-50 transition-all duration-300 ${isCollapsed ? 'right-0' : 'right-6'} bottom-24`} 
-      dir={isHebrew ? 'rtl' : 'ltr'} 
-      ref={menuRef}
-    >
-      {/* Collapsed state pull tab */}
-      {isCollapsed ? (
-        <button
-          onClick={toggleCollapsed}
-          className="bg-primary-500 text-white p-2 rounded-l-lg shadow-lg hover:bg-primary-600 transition-colors"
-          aria-label={t('accessibility.openMenu')}
-          title={t('accessibility.openMenu')}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-      ) : (
-        <div className="flex flex-col items-end">
-          {/* Toggle collapsed button */}
-          <button
-            onClick={toggleCollapsed}
-            className="mb-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-1 rounded-full shadow-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            aria-label={t('accessibility.hide')}
-            title={t('accessibility.hide')}
-          >
-            <ChevronLeft className="w-4 h-4 transform rotate-180" />
-          </button>
-          
-          {/* Main accessibility toggle button */}
-          <button
-            onClick={toggleMenu}
-            className="p-3 bg-primary-500 text-white rounded-full shadow-lg hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-            aria-label={t('accessibility.menu')}
-            title={t('accessibility.menu')}
-          >
-            <LifeBuoy className="w-6 h-6" />
-          </button>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleCancel}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+          />
 
-          {/* Menu panel */}
-          {isOpen && (
-            <div className="absolute bottom-14 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 w-64 overflow-hidden animate-fadeIn dark:bg-gray-800 dark:border-gray-700">
-              {/* Menu header */}
-              <div className="bg-primary-100 px-4 py-3 flex items-center justify-between dark:bg-primary-900">
-                <h3 className="font-medium text-primary-700 flex items-center gap-2 dark:text-primary-300">
-                  <LifeBuoy className="w-5 h-5" />
-                  {t('accessibility.title')}
-                </h3>
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none dark:text-gray-400 dark:hover:text-gray-300"
-                  aria-label={t('accessibility.closeMenu')}
-                >
-                  <X className="w-5 h-5" />
-                </button>
+          {/* Menu */}
+          <motion.div
+            initial={{ 
+              opacity: 0, 
+              scale: 0.95,
+              y: isRTL ? -20 : 20 
+            }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1,
+              y: 0 
+            }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.95,
+              y: isRTL ? -20 : 20 
+            }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "fixed z-50 w-full max-w-md bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl",
+              "bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
+              "max-h-[90vh] overflow-hidden",
+              className
+            )}
+            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {t('accessibility.title')}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('accessibility.subtitle')}
+                  </p>
+                </div>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancel}
+                className="p-2"
+                aria-label={t('actions.close')}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* Font Size */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <Type className="w-4 h-4 mr-2" />
+                    {t('accessibility.fontSize.title')}
+                  </label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {fontSizeOptions.find(opt => opt.value === fontSize)?.size}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {fontSizeOptions.map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={fontSize === option.value ? "primary" : "outline"}
+                      size="sm"
+                      onClick={() => handleSettingChange('fontSize', option.value)}
+                      className="text-xs"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
-              {/* Menu options */}
-              <div className="p-4 space-y-4 dark:text-gray-200">
-                {/* Font size controls */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('accessibility.textSize')}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={decreaseFontSize}
-                      className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-                      aria-label={t('accessibility.decreaseFontSize')}
-                      disabled={isMinFontSize} // ✅ Use context values
-                    >
-                      <ZoomOut className="w-5 h-5" />
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <Type className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-sm font-medium">
-                        {Math.round(fontSize * 100)}%
-                      </span>
-                    </div>
-                    <button
-                      onClick={increaseFontSize}
-                      className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-                      aria-label={t('accessibility.increaseFontSize')}
-                      disabled={isMaxFontSize} // ✅ Use context values
-                    >
-                      <ZoomIn className="w-5 h-5" />
-                    </button>
-                  </div>
+              {/* Theme */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                  <Palette className="w-4 h-4 mr-2" />
+                  {t('accessibility.theme.title')}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {themeOptions.map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <Button
+                        key={option.value}
+                        variant={theme === option.value ? "primary" : "outline"}
+                        size="sm"
+                        onClick={() => handleSettingChange('theme', option.value)}
+                        className="flex items-center justify-center"
+                      >
+                        <Icon className="w-4 h-4 mr-1" />
+                        {option.label}
+                      </Button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                {/* High contrast toggle */}
+              {/* Contrast */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                  <Contrast className="w-4 h-4 mr-2" />
+                  {t('accessibility.contrast.title')}
+                </label>
+                <div className="space-y-2">
+                  {contrastOptions.map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={contrast === option.value ? "primary" : "outline"}
+                      size="sm"
+                      onClick={() => handleSettingChange('contrast', option.value)}
+                      className="w-full justify-start"
+                    >
+                      {contrast === option.value && <Check className="w-4 h-4 mr-2" />}
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggle Options */}
+              <div className="space-y-4">
+                {/* Motion Reduced */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <div className="flex items-center">
+                    <Zap className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t('accessibility.highContrast')}
+                      {t('accessibility.motionReduced.title')}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setHighContrast(!highContrast)}
-                    className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${
-                      highContrast ? 'bg-primary-500 justify-end' : 'bg-gray-300 justify-start dark:bg-gray-600'
-                    }`}
-                    aria-pressed={highContrast}
+                  <Button
+                    variant={motionReduced ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => handleSettingChange('motionReduced', !motionReduced)}
                   >
-                    <span className="w-4 h-4 rounded-full bg-white" />
-                  </button>
+                    {motionReduced ? t('common.enabled') : t('common.disabled')}
+                  </Button>
                 </div>
 
-                {/* Dark mode toggle */}
+                {/* Screen Reader Mode */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {darkMode ? 
-                      <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" /> : 
-                      <Sun className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <div className="flex items-center">
+                    <Volume2 className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('accessibility.screenReader.title')}
+                    </span>
+                  </div>
+                  <Button
+                    variant={screenReaderMode ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => handleSettingChange('screenReaderMode', !screenReaderMode)}
+                  >
+                    {screenReaderMode ? t('common.enabled') : t('common.disabled')}
+                  </Button>
+                </div>
+
+                {/* Sound Enabled */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    {soundEnabled ? 
+                      <Volume2 className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" /> :
+                      <VolumeX className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     }
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {darkMode ? t('accessibility.darkMode') : t('accessibility.lightMode')}
+                      {t('accessibility.sound.title')}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setDarkMode(!darkMode)}
-                    className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${
-                      darkMode ? 'bg-primary-500 justify-end' : 'bg-gray-300 justify-start dark:bg-gray-600'
-                    }`}
-                    aria-pressed={darkMode}
+                  <Button
+                    variant={soundEnabled ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => handleSettingChange('soundEnabled', !soundEnabled)}
                   >
-                    <span className="w-4 h-4 rounded-full bg-white" />
-                  </button>
+                    {soundEnabled ? t('common.enabled') : t('common.disabled')}
+                  </Button>
                 </div>
 
-                {/* Accessibility Statement Button - NEW */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={toggleStatement}
-                    className="w-full py-2 px-3 flex items-center justify-between bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-lg transition-colors"
-                  >
-                    <span className="flex items-center">
-                      <BookOpen className="w-5 h-5 mr-2" />
-                      {t('accessibility.accessibilityStatement')}
+                {/* Focus Visible */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Eye className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('accessibility.focusVisible.title')}
                     </span>
-                    <span className="text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
-                      {t('common.required')}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Reset button */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={resetSettings}
-                    className="w-full py-2 px-3 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  </div>
+                  <Button
+                    variant={focusVisible ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => handleSettingChange('focusVisible', !focusVisible)}
                   >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    {t('accessibility.resetSettings')}
-                  </button>
-                </div>
-
-                {/* Legal notice - required for compliance */}
-                <div className="bg-gray-50 p-3 text-xs text-gray-500 border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400">
-                  {t('accessibility.compliance')}
+                    {focusVisible ? t('common.enabled') : t('common.disabled')}
+                  </Button>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              {hasChanges && (
+                <div className="flex items-center justify-center text-xs text-orange-600 dark:text-orange-400 mb-3">
+                  <Shield className="w-4 h-4 mr-1" />
+                  {t('accessibility.settings.unsavedChanges')}
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  className="flex-1"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  {t('accessibility.settings.reset')}
+                </Button>
+                
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                  className="flex-1"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {t('accessibility.settings.save')}
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                className="w-full"
+              >
+                {t('actions.cancel')}
+              </Button>
+            </div>
+          </motion.div>
+        </>
       )}
-      {/* Accessibility Statement Modal */}
-      <AccessibilityStatement isOpen={showStatement} onClose={() => setShowStatement(false)} />
-    </div>
+    </AnimatePresence>
   );
 };
 

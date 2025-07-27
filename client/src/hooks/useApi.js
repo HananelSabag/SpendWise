@@ -1,12 +1,64 @@
 /**
  * Base useApi Hook - Smart Query Management
  * Foundation for all data fetching with caching and optimization
+ * NOW WITH UNIFIED API INTEGRATION! 🚀
+ * @version 2.0.0
  */
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useEffect } from 'react';
-import { queryKeys, mutationKeys } from '../utils/api';
+
+// ✅ NEW: Import unified API instead of old utils/api
+import { api } from '../api';
+
 import { useToast } from './useToast';
+
+// ✅ Query and mutation keys - centralized in unified API
+export const queryKeys = {
+  // Auth
+  profile: ['profile'],
+  
+  // Transactions
+  transactions: (filters = {}) => ['transactions', filters],
+  transaction: (id) => ['transaction', id],
+  dashboard: (date) => ['dashboard', date],
+  
+  // Categories
+  categories: ['categories'],
+  category: (id) => ['category', id],
+  
+  // Admin
+  adminUsers: (filters = {}) => ['admin', 'users', filters],
+  adminStats: ['admin', 'stats'],
+  adminActivity: (filters = {}) => ['admin', 'activity', filters],
+  
+  // Analytics
+  analytics: (type, params = {}) => ['analytics', type, params],
+  
+  // Export
+  export: (type, params = {}) => ['export', type, params]
+};
+
+export const mutationKeys = {
+  // Auth
+  login: ['auth', 'login'],
+  register: ['auth', 'register'],
+  logout: ['auth', 'logout'],
+  
+  // Transactions
+  createTransaction: ['transactions', 'create'],
+  updateTransaction: ['transactions', 'update'],
+  deleteTransaction: ['transactions', 'delete'],
+  
+  // Categories
+  createCategory: ['categories', 'create'],
+  updateCategory: ['categories', 'update'],
+  deleteCategory: ['categories', 'delete'],
+  
+  // Admin
+  adminManageUser: ['admin', 'users', 'manage'],
+  adminUpdateSettings: ['admin', 'settings', 'update']
+};
 
 // Query configurations for different data types
 const queryConfigs = {
@@ -319,9 +371,6 @@ export const useQueryPerformance = (queryKey) => {
     return unsubscribe;
   }, [queryClient, queryKey]);
 };
-
-// Export query and mutation keys for consistency
-export { queryKeys, mutationKeys };
 
 // Export query configs for external use
 export { queryConfigs };

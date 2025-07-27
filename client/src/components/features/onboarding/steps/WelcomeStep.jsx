@@ -1,544 +1,326 @@
 /**
- * WelcomeStep Component - Enhanced First step of onboarding with preferences & avatar
- * 
- * ✅ ENHANCED FEATURES:
- * - Beautiful welcome message with profile picture upload
- * - Clean preferences setup (language, currency, theme) - NO SYSTEM THEME
- * - Simplified feature overview
- * - Avatar upload integration from Profile page
- * - Beautiful responsive design with no scrolling
- * - Better visual hierarchy and spacing
+ * 🎯 WELCOME STEP - MOBILE-FIRST REVOLUTION!
+ * Perfect mobile design with new translations and Zustand integration
+ * @version 2.0.0
  */
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Sparkles, RefreshCw, BarChart3, Shield, 
-  Zap, Target, ArrowRight, Heart,
-  Globe, DollarSign, Palette, Sun, Moon, Camera, Upload, User,
-  CheckCircle, Crown, Star
+import {
+  Sparkles, TrendingUp, PieChart, Target, 
+  Smartphone, Shield, Zap, Heart,
+  ArrowRight, Play, CheckCircle
 } from 'lucide-react';
 
-import { useLanguage } from '../../../../context/LanguageContext';
-import { useAuth } from '../../../../context/AuthContext';
-import { useCurrency } from '../../../../context/CurrencyContext';
-import { useTheme } from '../../../../context/ThemeContext';
-import { useToast } from '../../../../hooks/useToast';
-import { cn } from '../../../../utils/helpers';
+// ✅ NEW: Import from Zustand stores instead of Context
+import { useTranslation, useTheme } from '../../../../stores';
+
 import { Button } from '../../../ui';
+import { cn } from '../../../../utils/helpers';
 
 /**
- * WelcomeStep - Enhanced Introduction to SpendWise with Profile Setup
+ * 🚀 WelcomeStep - MOBILE-FIRST PERFECTION!
  */
-const WelcomeStep = ({ onNext, stepData, updateStepData }) => {
-  const { t, language, changeLanguagePermanent } = useLanguage();
-  const { user, updateProfile, uploadProfilePicture } = useAuth();
-  const { currency } = useCurrency();
-  const { theme, setTheme } = useTheme();
-  const toastService = useToast();
-  const isRTL = language === 'he';
-  const fileInputRef = useRef(null);
+const WelcomeStep = ({ 
+  onNext, 
+  isFirstStep, 
+  isLastStep 
+}) => {
+  // ✅ NEW: Use Zustand stores
+  const { t, isRTL } = useTranslation('onboarding');
+  const { isDark } = useTheme();
 
-  const [preferences, setPreferences] = useState({
-    language: language || 'en',
-    currency: currency || 'USD',
-    theme: theme === 'system' ? 'light' : theme || 'light', // ✅ FIXED: No system theme
-    ...stepData.preferences
-  });
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
-  const [avatarKey, setAvatarKey] = useState(Date.now());
-
-  // Language options
-  const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸', nameLocal: 'English' },
-    { code: 'he', name: 'עברית', flag: '🇮🇱', nameLocal: 'עברית' }
-  ];
-
-  // Currency options
-  const currencies = [
-    { code: 'USD', name: 'US Dollar', symbol: '$', nameLocal: 'Dollar' },
-    { code: 'EUR', name: 'Euro', symbol: '€', nameLocal: 'Euro' },
-    { code: 'ILS', name: 'Israeli Shekel', symbol: '₪', nameLocal: isRTL ? 'שקל' : 'Shekel' }
-  ];
-
-  // ✅ FIXED: Only light and dark themes - NO SYSTEM
-  const themes = [
-    { code: 'light', name: isRTL ? 'בהיר' : 'Light', icon: Sun },
-    { code: 'dark', name: isRTL ? 'כהה' : 'Dark', icon: Moon }
-  ];
-
-  // ✅ SIMPLIFIED: Core features only (no overwhelming details about recurring)
+  // Enhanced features data
   const features = [
     {
-      icon: Zap,
-      title: t('onboarding.welcome.features.analytics.title'),
-      description: t('onboarding.welcome.features.analytics.description'),
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/20'
+      icon: TrendingUp,
+      title: t('welcome.features.tracking.title'),
+      description: t('welcome.features.tracking.description'),
+      color: 'bg-green-500',
+      gradient: 'from-green-400 to-green-600'
     },
     {
-      icon: BarChart3,
-      title: t('onboarding.welcome.features.recurring.title'),
-      description: t('onboarding.welcome.features.recurring.description'),
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/20'
+      icon: PieChart,
+      title: t('welcome.features.analytics.title'),
+      description: t('welcome.features.analytics.description'),
+      color: 'bg-blue-500',
+      gradient: 'from-blue-400 to-blue-600'
     },
     {
-      icon: Shield,
-      title: t('onboarding.welcome.features.security.title'),
-      description: t('onboarding.welcome.features.security.description'),
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/20'
+      icon: Target,
+      title: t('welcome.features.goals.title'),
+      description: t('welcome.features.goals.description'),
+      color: 'bg-purple-500',
+      gradient: 'from-purple-400 to-purple-600'
+    },
+    {
+      icon: Smartphone,
+      title: t('welcome.features.mobile.title'),
+      description: t('welcome.features.mobile.description'),
+      color: 'bg-orange-500',
+      gradient: 'from-orange-400 to-orange-600'
     }
   ];
 
-  // ✅ ENHANCED: Profile picture upload from Profile.jsx
-  const handleProfilePictureChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toastService.error('Please select a valid image file.');
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      toastService.error('File too large. Please use an image under 10MB.');
-      return;
-    }
-
-    setIsUploadingPicture(true);
-    try {
-      await uploadProfilePicture(file);
-      setAvatarKey(Date.now());
-      toastService.success('Profile picture updated! 🎉');
-      
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
       }
-    } catch (error) {
-      console.error('Upload failed:', error);
-      toastService.error('Upload failed. Please try again.');
-    } finally {
-      setIsUploadingPicture(false);
     }
   };
 
-  // Handle preference changes
-  const handleChange = (key, value) => {
-    const newPreferences = { ...preferences, [key]: value };
-    setPreferences(newPreferences);
-    updateStepData({ preferences: newPreferences });
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
   };
 
-  // Handle continue with preferences save
-  const handleContinue = async () => {
-    setIsLoading(true);
-    try {
-      let hasChanges = false;
-      const profileUpdates = {};
-
-      // Check and apply language change
-      if (preferences.language !== language) {
-        console.log('🌐 [ONBOARDING] Language change detected:', language, '→', preferences.language);
-        changeLanguagePermanent(preferences.language);
-        profileUpdates.language_preference = preferences.language;
-        hasChanges = true;
-      }
-      
-      // Check and apply theme change
-      if (preferences.theme !== theme) {
-        console.log('🎨 [ONBOARDING] Theme change detected:', theme, '→', preferences.theme);
-        setTheme(preferences.theme);
-        profileUpdates.theme_preference = preferences.theme;
-        hasChanges = true;
-      }
-
-      // Check and apply currency change
-      if (preferences.currency !== currency) {
-        console.log('💰 [ONBOARDING] Currency change detected:', currency, '→', preferences.currency);
-        profileUpdates.currency_preference = preferences.currency;
-        hasChanges = true;
-      }
-
-      // Save to database if there are changes
-      if (hasChanges) {
-        console.log('💾 [ONBOARDING] Saving profile changes:', profileUpdates);
-        await updateProfile(profileUpdates);
-        console.log('🎉 [ONBOARDING] Preferences saved successfully');
-      } else {
-        console.log('✅ [ONBOARDING] No changes to save, proceeding to next step');
-      }
-      
-      console.log('🚀 [ONBOARDING] Calling onNext() to proceed to next step');
-      onNext();
-    } catch (error) {
-      console.error('❌ [ONBOARDING] Failed to save preferences:', error);
-      
-      // Still allow user to continue but show warning
-      if (window.confirm(isRTL
-        ? `שגיאה בשמירת ההעדפות: ${error?.message || t('common.unknownError')}\n\nהאם להמשיך בכל זאת?`
-        : `Failed to save preferences: ${error?.message || t('common.unknownError')}\n\nDo you want to continue anyway?`)) {
-        onNext();
-      }
-    } finally {
-      setIsLoading(false);
+  const featureVariants = {
+    hidden: { opacity: 0, scale: 0.8, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.4, ease: "easeOut" }
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex flex-col justify-between py-2 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-blue-900/10 dark:via-purple-900/10 dark:to-pink-900/10">
-      {/* ✅ COMPACT: Header with user greeting */}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="min-h-full flex flex-col"
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
+      {/* Hero section - Mobile optimized */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-3"
+        variants={itemVariants}
+        className="text-center mb-8"
       >
-                  <div className="flex items-center justify-center gap-2 mb-2">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Sparkles className="w-6 h-6 text-yellow-500" />
-          </motion.div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-            {t('onboarding.welcome.greeting', { name: user?.username ? user.username.split(' ')[0] : '' })}
-          </h1>
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Heart className="w-5 h-5 text-red-500" />
-          </motion.div>
-        </div>
-        <p className={cn(
-          "text-gray-600 dark:text-gray-300 max-w-xl mx-auto text-xs",
-          isRTL && "text-right"
-        )}>
-          {t('onboarding.welcome.description')}
-        </p>
-      </motion.div>
-
-      {/* ✅ ENHANCED: Two-column responsive layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 items-start">
-        
-        {/* Left Column: Profile & Preferences */}
+        {/* Animated logo/icon */}
         <motion.div
-          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="space-y-3"
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ 
+            delay: 0.3, 
+            duration: 0.8, 
+            type: "spring", 
+            stiffness: 200 
+          }}
+          className="relative mx-auto mb-6 w-24 h-24 md:w-32 md:h-32"
         >
-          {/* Profile Section */}
-          <div className="card p-4 rounded-xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                {t('onboarding.welcome.profileTitle')}
-              </h3>
-            </div>
-            
-            {/* Avatar Upload */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <div 
-                  className="w-16 h-16 bg-gradient-to-br from-purple-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg"
-                >
-                  {user?.profile_picture ? (
-                    <img
-                      key={avatarKey}
-                      src={`${user.profile_picture}?t=${avatarKey}`}
-                      alt="Profile"
-                      className="w-full h-full rounded-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : (
-                    <User className="w-6 h-6" />
-                  )}
-                  {!user?.profile_picture && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-400 to-indigo-600 rounded-full">
-                      <User className="w-6 h-6 text-white" />
-                    </div>
-                  )}
-                </div>
-                
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingPicture}
-                  className="absolute -bottom-0.5 -right-0.5 p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-colors disabled:opacity-50"
-                  title={t('onboarding.welcome.profile.addPhoto')}
-                >
-                  {isUploadingPicture ? (
-                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Camera className="w-3 h-3" />
-                  )}
-                </button>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
-                {t('onboarding.welcome.profile.uploadPrompt')}
-              </p>
-            </div>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleProfilePictureChange}
-              className="hidden"
-            />
-          </div>
-
-          {/* Preferences Section - COMPACT */}
-          <div className="card p-4 rounded-xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                Preferences
-              </h3>
-            </div>
-            
-            <div className="space-y-2">
-              {/* Language Selection - COMPACT */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {t('onboarding.preferences.language')}
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => handleChange('language', lang.code)}
-                      className={cn(
-                        'flex items-center gap-2 p-2 rounded-lg border-2 transition-all text-sm',
-                        preferences.language === lang.code
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'border-gray-200 hover:border-blue-300 dark:border-gray-600'
-                      )}
-                    >
-                      <span className="text-sm">{lang.flag}</span>
-                      <span className="font-medium text-xs">{lang.nameLocal}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Currency Selection - COMPACT */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {t('onboarding.preferences.currency')}
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {currencies.map((curr) => (
-                    <button
-                      key={curr.code}
-                      onClick={() => handleChange('currency', curr.code)}
-                      className={cn(
-                        'flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all',
-                        preferences.currency === curr.code
-                          ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                          : 'border-gray-200 hover:border-green-300 dark:border-gray-600'
-                      )}
-                    >
-                      <span className="text-base font-bold">{curr.symbol}</span>
-                      <span className="text-xs font-medium">{curr.nameLocal}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Theme Selection - COMPACT */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  {t('onboarding.preferences.theme')}
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {themes.map((thm) => {
-                    const Icon = thm.icon;
-                    return (
-                      <button
-                        key={thm.code}
-                        onClick={() => handleChange('theme', thm.code)}
-                        className={cn(
-                          'flex items-center gap-2 p-2 rounded-lg border-2 transition-all text-sm',
-                          preferences.theme === thm.code
-                            ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                            : 'border-gray-200 hover:border-purple-300 dark:border-gray-600'
-                        )}
-                      >
-                        <Icon className="w-3 h-3" />
-                        <span className="font-medium text-xs">{thm.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Right Column: SpendWise Features - COMPACT */}
-        <motion.div
-          initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="space-y-3"
-        >
-          {/* SpendWise Overview */}
-          <div className="card p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Target className="w-4 h-4 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                SpendWise
-                <Sparkles className="w-3 h-3 text-yellow-500" />
-              </h3>
-            </div>
-            
-            <div className="space-y-2">
-              {features.map((feature, index) => {
-                const Icon = feature.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 + index * 0.1, duration: 0.3 }}
-                    className={cn(
-                      "flex items-start gap-2.5 p-2.5 rounded-lg",
-                      feature.bgColor,
-                      isRTL && "flex-row-reverse text-right"
-                    )}
-                  >
-                    <div className="p-1.5 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                      <Icon className={cn("w-3 h-3", feature.color)} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-0.5">
-                        {feature.title}
-                      </h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Next Step Preview - COMPACT */}
+          <div className={cn(
+            "w-full h-full rounded-3xl",
+            "bg-gradient-to-br from-primary-400 to-primary-600",
+            "flex items-center justify-center",
+            "shadow-xl shadow-primary-500/25",
+            "relative overflow-hidden"
+          )}>
+            {/* Animated background pattern */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.2, duration: 0.3 }}
-              className="mt-3 p-2.5 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800"
+              animate={{ 
+                rotate: 360,
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                scale: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+              }}
+              className="absolute inset-0 opacity-20"
             >
-              <div className={cn(
-                "flex items-center gap-1.5 mb-1",
-                isRTL && "flex-row-reverse"
-              )}>
-                <Star className="w-3 h-3 text-yellow-600" />
-                <h4 className="font-bold text-yellow-700 dark:text-yellow-300 text-xs">
-                  {t('onboarding.welcome.nextPrompt.title')}
-                </h4>
-              </div>
-              <p className={cn(
-                "text-xs text-yellow-600 dark:text-yellow-300",
-                isRTL && "text-right"
-              )}>
-                {t('onboarding.welcome.nextPrompt.description')}
-              </p>
+              <div className="w-full h-full bg-gradient-to-br from-white to-transparent" />
             </motion.div>
+            
+            <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-white relative z-10" />
           </div>
-
-          {/* Extra card to balance height */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.4, duration: 0.3 }}
-            className="card p-2 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800"
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                {t('templates.quickSetup')}
-              </h3>
-            </div>
-            <p className={cn(
-              "text-xs text-gray-600 dark:text-gray-300 mb-3",
-              isRTL && "text-right"
-            )}>
-              {t('onboarding.welcome.quickSetup.description')}
-            </p>
-                         <div className="flex items-center gap-2">
-               {[Shield, Target, Heart].map((Icon, i) => (
-                 <motion.div
-                   key={i}
-                   animate={{ scale: [1, 1.1, 1] }}
-                   transition={{ duration: 2, delay: i * 0.3, repeat: Infinity }}
-                   className="p-1.5 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30"
-                 >
-                   <Icon className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                 </motion.div>
-               ))}
-             </div>
-           </motion.div>
         </motion.div>
-      </div>
 
-      {/* ✅ IMPROVED: Fixed bottom buttons with proper alignment and equal spacing */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.5 }}
-        className="flex items-center justify-center mt-2"
-      >
-        <Button
-          onClick={handleContinue}
-          disabled={isLoading}
-          size="lg"
+        {/* Main title */}
+        <motion.h1
+          variants={itemVariants}
+          className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4"
+        >
+          <span className="bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+            {t('welcome.title')}
+          </span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          variants={itemVariants}
+          className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto leading-relaxed"
+        >
+          {t('welcome.subtitle')}
+        </motion.p>
+
+        {/* Description */}
+        <motion.p
+          variants={itemVariants}
+          className="text-gray-500 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed"
+        >
+          {t('welcome.description')}
+        </motion.p>
+
+        {/* Time estimate badge */}
+        <motion.div
+          variants={itemVariants}
           className={cn(
-            "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-12 py-2 flex items-center gap-2 whitespace-nowrap",
-            "transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl",
-            isRTL && "flex-row-reverse"
+            "inline-flex items-center px-4 py-2 rounded-full",
+            "bg-primary-50 dark:bg-primary-900/20",
+            "border border-primary-200 dark:border-primary-700",
+            "text-primary-700 dark:text-primary-300 text-sm font-medium"
           )}
         >
-          {isLoading ? (
-            <span className={cn(
-              "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
-            )}>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{t('onboarding.preferences.saving')}</span>
-            </span>
-          ) : (
-            <span className={cn(
-              "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
-            )}>
-              <span>{t('onboarding.welcome.cta.button')}</span>
-              <ArrowRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
-            </span>
-          )}
-        </Button>
+          <Shield className="w-4 h-4 mr-2" />
+          {t('welcome.timeEstimate')}
+        </motion.div>
       </motion.div>
-    </div>
+
+      {/* Features grid - Mobile optimized */}
+      <motion.div
+        variants={itemVariants}
+        className="flex-1 mb-8"
+      >
+        <motion.h2
+          variants={itemVariants}
+          className="text-xl md:text-2xl font-semibold text-center mb-8 text-gray-900 dark:text-gray-100"
+        >
+          {t('welcome.features.title')}
+        </motion.h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              variants={featureVariants}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ 
+                scale: 1.02,
+                transition: { duration: 0.2 }
+              }}
+              className={cn(
+                "relative p-6 rounded-2xl",
+                "bg-white dark:bg-gray-800",
+                "border border-gray-200 dark:border-gray-700",
+                "shadow-sm hover:shadow-md",
+                "transition-all duration-200",
+                "group cursor-pointer"
+              )}
+            >
+              {/* Feature icon */}
+              <div className={cn(
+                "w-12 h-12 rounded-xl mb-4",
+                "bg-gradient-to-br", feature.gradient,
+                "flex items-center justify-center",
+                "group-hover:scale-110 transition-transform duration-200"
+              )}>
+                <feature.icon className="w-6 h-6 text-white" />
+              </div>
+
+              {/* Feature content */}
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+                {feature.title}
+              </h3>
+              
+              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                {feature.description}
+              </p>
+
+              {/* Hover indicator */}
+              <motion.div
+                className={cn(
+                  "absolute top-4 opacity-0 group-hover:opacity-100",
+                  "transition-opacity duration-200",
+                  isRTL ? "left-4" : "right-4"
+                )}
+              >
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </motion.div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Call to action - Mobile optimized */}
+      <motion.div
+        variants={itemVariants}
+        className="text-center"
+      >
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            size="lg"
+            variant="primary"
+            onClick={onNext}
+            className={cn(
+              "text-lg px-8 py-4 rounded-xl",
+              "bg-gradient-to-r from-primary-500 to-primary-600",
+              "hover:from-primary-600 hover:to-primary-700",
+              "shadow-lg shadow-primary-500/25",
+              "border-0 min-w-[200px]"
+            )}
+          >
+            {isRTL ? (
+              <>
+                <ArrowRight className="w-5 h-5 mr-3 rotate-180" />
+                {t('welcome.cta')}
+              </>
+            ) : (
+              <>
+                {t('welcome.cta')}
+                <ArrowRight className="w-5 h-5 ml-3" />
+              </>
+            )}
+          </Button>
+        </motion.div>
+
+        {/* Additional encouragement */}
+        <motion.p
+          variants={itemVariants}
+          className="text-sm text-gray-500 dark:text-gray-400 mt-4"
+        >
+          {t('welcome.timeEstimate')} • {t('modal.skip')} 
+        </motion.p>
+      </motion.div>
+
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Floating sparkles */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              y: [0, -20, 0],
+              opacity: [0.3, 0.8, 0.3],
+              rotate: [0, 180, 360]
+            }}
+            transition={{
+              duration: 4 + i,
+              repeat: Infinity,
+              delay: i * 0.5,
+              ease: "easeInOut"
+            }}
+            className={cn(
+              "absolute w-2 h-2 rounded-full",
+              "bg-gradient-to-r from-primary-400 to-primary-600",
+              i % 2 === 0 ? "top-1/4" : "top-3/4",
+              `${isRTL ? 'right' : 'left'}-[${10 + i * 15}%]`
+            )}
+          />
+        ))}
+      </div>
+    </motion.div>
   );
 };
 

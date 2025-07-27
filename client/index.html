@@ -5,7 +5,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#3B82F6" />
-    <meta name="description" content="SpendWise - Smart expense tracking with recurring transactions" />
+    <meta name="description" content="SpendWise - Advanced financial management platform with analytics, admin system, and intelligent insights" />
     
     <!-- iPhone/iOS Universal Links Support -->
     <meta name="apple-itunes-app" content="app-argument=spendwise://verify" />
@@ -15,14 +15,16 @@
     <meta name="apple-mobile-web-app-title" content="SpendWise" />
     
     <!-- Open Graph for better link previews -->
-    <meta property="og:title" content="SpendWise - Email Verification" />
-    <meta property="og:description" content="Verify your SpendWise account to start managing your finances" />
+    <meta property="og:title" content="SpendWise - Financial Management Platform" />
+    <meta property="og:description" content="Advanced financial management with analytics, admin dashboard, and Google OAuth integration" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://spendwise-app.vercel.app" />
+    <meta property="og:image" content="https://spendwise-app.vercel.app/og-image.png" />
     
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://accounts.google.com" />
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet" />
@@ -30,7 +32,10 @@
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     
-    <title>SpendWise - Personal Finance Manager</title>
+    <!-- Google Identity Services for OAuth -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <title>SpendWise - Financial Management Platform</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

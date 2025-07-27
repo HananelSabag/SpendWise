@@ -1,814 +1,706 @@
 /**
- * Transactions Page - COMPLETE WITH PROPER EDIT PANEL SIZING
- * 
- * ✅ FIXED: EditTransactionPanel with perfect responsive container sizing
- * ✅ INTEGRATED: All filters moved into the beautiful purple header
- * ✅ STREAMLINED: Search + Type + Category + Period + Recurring all in header
- * ✅ SMART LAYOUT: Responsive design that works on mobile and desktop
- * ✅ NO DUPLICATES: Single beautiful header with everything integrated
- * ✅ PRESERVED: All existing functionality, animations, and infinite loading
+ * 💳 TRANSACTIONS PAGE - Mobile-First Transaction Management
+ * Features: Zustand stores, Advanced filtering, Mobile-responsive, Real-time updates
+ * @version 2.0.0
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, Filter, Plus, Search, RefreshCw, Clock, Sparkles, Activity,
-  ArrowUpRight, ArrowDownRight, Settings, ChevronDown, Tag, Check, X
+  Plus, 
+  Search, 
+  Filter, 
+  Calendar, 
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  Download,
+  Edit,
+  Trash2,
+  ArrowUpDown,
+  X,
+  CheckCircle,
+  AlertCircle,
+  MoreVertical
 } from 'lucide-react';
 
-// ✅ PRESERVED: All existing imports
-import { useTransactions, useRecurringTransactions, useTransactionSearch } from '../hooks/useTransactions';
+// ✅ NEW: Import Zustand stores (replaces Context API!)
+import { 
+  useAuth, 
+  useTranslation, 
+  useCurrency,
+  useNotifications,
+  useTheme 
+} from '../stores';
+
+// API, hooks and components
+import { api } from '../api';
+import { useTransactions } from '../hooks/useTransactions';
 import { useTransactionActions } from '../hooks/useTransactionActions';
-import { useCategories } from '../hooks/useCategory';
-import { useDate } from '../context/DateContext';
-import { useCurrency } from '../context/CurrencyContext';
-import { useLanguage } from '../context/LanguageContext';
-
-import PageContainer from '../components/layout/PageContainer';
-
+import { 
+  Button, 
+  Input, 
+  Card, 
+  LoadingSpinner, 
+  Badge,
+  Avatar 
+} from '../components/ui';
 import TransactionList from '../components/features/transactions/TransactionList';
+import TransactionCard from '../components/features/transactions/TransactionCard';
 import AddTransactions from '../components/features/transactions/AddTransactions';
-import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
-import RecurringModal from '../components/features/transactions/RecurringModal';
 import EditTransactionPanel from '../components/features/transactions/EditTransactionPanel';
+import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 
-import { Card, Button, Badge, Modal } from '../components/ui';
-import { getIconComponent } from '../config/categoryIcons';
+import { cn } from '../utils/helpers';
 
-/**
- * ✅ PRESERVED: All existing animation configurations
- */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 15
-    }
-  }
-};
-
-/**
- * ✅ ENHANCED: Combined filter configurations
- */
-const PERIOD_OPTIONS = [
-  { key: 'today', labelKey: 'common.today', days: 0 },
-  { key: 'week', labelKey: 'common.last7Days', days: 7 },
-  { key: 'month', labelKey: 'common.thisMonth', days: 30 },
-  { key: '3months', labelKey: 'common.last90Days', days: 90 }
-];
-
-const TYPE_FILTERS = [
-  { key: 'all', icon: Activity, labelKey: 'transactions.all' },
-  { key: 'income', icon: ArrowUpRight, labelKey: 'transactions.income' },
-  { key: 'expense', icon: ArrowDownRight, labelKey: 'transactions.expense' }
-];
-
-const RECURRING_OPTIONS = [
-  { key: 'all', labelKey: 'common.all' },
-  { key: 'recurring', labelKey: 'transactions.recurring' },
-  { key: 'single', labelKey: 'transactions.single' }
-];
-
-/**
- * ENHANCED Transactions Page - All filters integrated into header
- */
 const Transactions = () => {
-  const { t, language } = useLanguage();
-  const { formatAmount } = useCurrency();
-  const { categories = [] } = useCategories();
+  // ✅ NEW: Zustand stores (replacing Context API)
+  const { user } = useAuth();
+  const { t, isRTL } = useTranslation();
+  const { formatCurrency } = useCurrency();
+  const { addNotification } = useNotifications();
+  const { isDark } = useTheme();
 
-  // ✅ PRESERVED: All existing state management
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAddTransactions, setShowAddTransactions] = useState(false);
-  const [showRecurringModal, setShowRecurringModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showActionsPanel, setShowActionsPanel] = useState(false);
+  // State management
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [editingSingle, setEditingSingle] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  
-  // ✅ NEW: Enhanced filters state
+  const [viewMode, setViewMode] = useState('list'); // list | grid | cards
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
   const [filters, setFilters] = useState({
-    type: 'all',
-    categories: [],
-    startDate: '',
-    endDate: '',
-    recurring: 'all'
+    dateRange: 'all', // all | week | month | quarter | year | custom
+    category: 'all',
+    type: 'all', // all | income | expense
+    amountMin: '',
+    amountMax: '',
+    sortBy: 'date', // date | amount | category
+    sortOrder: 'desc' // asc | desc
   });
-  
-  // ✅ NEW: UI state for dropdowns
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [categorySearch, setCategorySearch] = useState('');
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
-  const isRTL = language === 'he';
+  // Custom date range
+  const [customDateRange, setCustomDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
 
-  // ✅ ENHANCED: Complete filter options building
-  const filterOptions = useMemo(() => {
-    const options = {
-      type: filters.type !== 'all' ? filters.type : null,
-      searchTerm: searchTerm || '',
-      startDate: filters.startDate || null,
-      endDate: filters.endDate || null,
-      categories: filters.categories.length > 0 ? filters.categories : null
+  // ✅ Enhanced transactions hook with filtering
+  const {
+    data: transactionsData,
+    loading: transactionsLoading,
+    error: transactionsError,
+    refetch: refetchTransactions,
+    hasMore,
+    loadMore
+  } = useTransactions({
+    search: searchQuery,
+    filters: {
+      ...filters,
+      ...(filters.dateRange === 'custom' ? customDateRange : {})
+    },
+    limit: 50
+  });
+
+  // ✅ Transaction actions
+  const {
+    createTransaction,
+    updateTransaction,
+    deleteTransaction,
+    bulkActions,
+    isLoading: actionsLoading
+  } = useTransactionActions();
+
+  // ✅ Derived data
+  const stats = useMemo(() => {
+    if (!transactionsData?.transactions) return null;
+
+    const transactions = transactionsData.transactions;
+    const totalIncome = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    const totalExpenses = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+    const netAmount = totalIncome - totalExpenses;
+
+    return {
+      total: transactions.length,
+      totalIncome,
+      totalExpenses,
+      netAmount,
+      categories: [...new Set(transactions.map(t => t.category))].length
     };
-    
-    // ✅ FIX: Pass recurring filter directly to useTransactions (handled client-side)
-    if (filters.recurring !== 'all') {
-      options.recurring = filters.recurring;
-    }
-    
-    return options;
-  }, [filters, searchTerm]);
+  }, [transactionsData?.transactions]);
 
-  // ✅ NEW: Use optimized useTransactions with integrated filters
-  const {
-    transactions,
-    pagination,
-    summary,
-    isLoading,
-    isLoadingMore,
-    error,
-    loadMore,
-    hasMoreToLoad,
-    progressiveStatus,
-    clearFilters,
-    refreshAll
-  } = useTransactions(filterOptions);
+  // ✅ Filter options
+  const dateRangeOptions = [
+    { value: 'all', label: t('transactions.allTime', { fallback: 'All Time' }) },
+    { value: 'week', label: t('transactions.lastWeek', { fallback: 'Last 7 days' }) },
+    { value: 'month', label: t('transactions.lastMonth', { fallback: 'Last 30 days' }) },
+    { value: 'quarter', label: t('transactions.lastQuarter', { fallback: 'Last 3 months' }) },
+    { value: 'year', label: t('transactions.lastYear', { fallback: 'Last year' }) },
+    { value: 'custom', label: t('transactions.customRange', { fallback: 'Custom Range' }) }
+  ];
 
-  // ✅ PRESERVED: All other hooks exactly as before
-  const {
-    recurringTransactions,
-    isLoading: loadingRecurring,
-    refresh: refreshRecurring
-  } = useRecurringTransactions();
+  const typeOptions = [
+    { value: 'all', label: t('transactions.allTypes', { fallback: 'All Types' }) },
+    { value: 'income', label: t('transactions.income', { fallback: 'Income' }) },
+    { value: 'expense', label: t('transactions.expenses', { fallback: 'Expenses' }) }
+  ];
 
-  // ✅ FIX: Add missing useTransactionActions hook to get deleteTransaction
-  const { deleteTransaction } = useTransactionActions();
+  const sortOptions = [
+    { value: 'date', label: t('transactions.sortByDate', { fallback: 'Date' }) },
+    { value: 'amount', label: t('transactions.sortByAmount', { fallback: 'Amount' }) },
+    { value: 'category', label: t('transactions.sortByCategory', { fallback: 'Category' }) }
+  ];
 
-  const {
-    results: searchResults,
-    isSearching
-  } = useTransactionSearch(searchTerm);
-
-  // ✅ NEW: Filter change handlers
+  // ✅ Handle filter changes
   const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
   }, []);
 
-  const handlePeriodChange = useCallback((period) => {
-    setSelectedPeriod(period.key);
-    
-    if (period.days === 0) {
-      // Today
-      const today = new Date().toISOString().split('T')[0];
-      setFilters(prev => ({ ...prev, startDate: today, endDate: today }));
-    } else {
-      // Last N days
-      const end = new Date();
-      const start = new Date();
-      start.setDate(end.getDate() - period.days);
-      
-      setFilters(prev => ({
-        ...prev,
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0]
-      }));
-    }
-  }, []);
-
-  const handleFilterReset = useCallback(() => {
+  // ✅ Clear all filters
+  const clearFilters = useCallback(() => {
     setFilters({
+      dateRange: 'all',
+      category: 'all',
       type: 'all',
-      categories: [],
-      startDate: '',
-      endDate: '',
-      recurring: 'all'
+      amountMin: '',
+      amountMax: '',
+      sortBy: 'date',
+      sortOrder: 'desc'
     });
-    setSearchTerm('');
-    setSelectedPeriod('month');
-    setCategorySearch('');
-    setShowCategoryDropdown(false);
-    clearFilters();
-  }, [clearFilters]);
+    setCustomDateRange({ startDate: '', endDate: '' });
+    setSearchQuery('');
+  }, []);
 
-  // ✅ NEW: Category handling
-  const filteredCategories = useMemo(() => {
-    if (!categorySearch) return categories.slice(0, 12);
-    
-    return categories.filter(category => {
-      const name = category.is_default 
-        ? t(`categories.${category.icon}`) 
-        : category.name;
-      return name.toLowerCase().includes(categorySearch.toLowerCase());
-    }).slice(0, 12);
-  }, [categories, categorySearch, t]);
+  // ✅ Handle transaction actions
+  const handleEditTransaction = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowEditPanel(true);
+  };
 
-  const handleCategoryToggle = useCallback((categoryId) => {
-    const currentCategories = filters.categories || [];
-    const isSelected = currentCategories.includes(categoryId);
-    
-    const newCategories = isSelected
-      ? currentCategories.filter(id => id !== categoryId)
-      : [...currentCategories, categoryId];
-      
-    handleFilterChange('categories', newCategories);
-  }, [filters.categories, handleFilterChange]);
+  const handleDeleteTransaction = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowDeleteModal(true);
+  };
 
-  // ✅ NEW: Active filter count
-  const getActiveFilterCount = useCallback(() => {
-    let count = 0;
-    if (filters.type !== 'all') count++;
-    if (filters.categories?.length > 0) count++;
-    if (filters.startDate || filters.endDate) count++;
-    if (filters.recurring !== 'all') count++;
-    if (searchTerm) count++;
-    return count;
-  }, [filters, searchTerm]);
-
-  const activeCount = getActiveFilterCount();
-
-  // ✅ PRESERVED: All existing event handlers exactly as before
   const handleTransactionSuccess = useCallback(() => {
-    refreshRecurring();
-    setShowSuccess(true);
-    
-    setTimeout(() => {
-      setShowAddTransactions(false);
-      setShowSuccess(false);
-    }, 2000);
-  }, [refreshRecurring]);
+    refetchTransactions();
+    setShowAddTransaction(false);
+    setShowEditPanel(false);
+    setShowDeleteModal(false);
+    setSelectedTransaction(null);
+  }, [refetchTransactions]);
 
-  // ✅ FIXED: Add missing handleEditTransaction for RecurringModal
-  const handleEditTransaction = useCallback((transaction, single = false) => {
-    setSelectedTransaction(transaction);
-    setEditingSingle(single);
-    setShowRecurringModal(false); // Close recurring modal first
-    setShowEditModal(true);
-  }, []);
+  // ✅ Refresh data
+  const handleRefresh = async () => {
+    try {
+      await refetchTransactions();
+      addNotification({
+        type: 'success',
+        message: t('transactions.refreshed', { fallback: 'Transactions refreshed' })
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        message: t('errors.refreshFailed', { fallback: 'Failed to refresh data' })
+      });
+    }
+  };
 
-  const handleEdit = useCallback((transaction, single = false) => {
-    setSelectedTransaction(transaction);
-    setEditingSingle(single);
-    setShowActionsPanel(false);
-    setShowEditModal(true);
-  }, []);
-  
-  const handleEditSingle = useCallback((transaction) => {
-    setSelectedTransaction(transaction);
-    setEditingSingle(true);
-    setShowEditModal(true);
-  }, []);
-
-  const handleEditTemplate = useCallback((transaction) => {
-    setSelectedTransaction(transaction);
-    setEditingSingle(false);
-    setShowEditModal(true);
-  }, []);
-
-  const handleDelete = useCallback((transaction) => {
-    setSelectedTransaction(transaction);
-    setShowActionsPanel(true);
-  }, []);
-
-  const handleOpenRecurringManager = useCallback(() => {
-    setShowRecurringModal(true);
-  }, []);
+  // ✅ Export transactions
+  const handleExport = async () => {
+    try {
+      addNotification({
+        type: 'info',
+        message: t('transactions.exportStarted', { fallback: 'Export started...' })
+      });
+      
+      const blob = await api.transactions.export({
+        ...filters,
+        search: searchQuery
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      addNotification({
+        type: 'success',
+        message: t('transactions.exportSuccess', { fallback: 'Transactions exported successfully' })
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        message: t('transactions.exportFailed', { fallback: 'Failed to export transactions' })
+      });
+    }
+  };
 
   return (
-    <PageContainer
-      title={t('nav.transactions')}
-      description={t('transactions.description')}
-      className="max-w-7xl"
-    >
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-6"
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
-        
-        {/* ✅ ENHANCED: Beautiful header with ALL filters integrated */}
-        <motion.div variants={itemVariants}>
-          <Card className="gradient-hero-primary text-white border-0 shadow-premium relative overflow-hidden">
-            {/* 🎨 UNIFIED: Systematic floating orb pattern */}
-            <div className="floating-orb-primary floating-orb-top-right animate-float-gentle"></div>
-            <div className="floating-orb-secondary floating-orb-bottom-left animate-float-gentle"></div>
-            <div className="floating-orb-accent floating-orb-center animate-float-gentle"></div>
-            
-            {/* 💫 UNIFIED: Professional decoration pattern */}
-            <div className="modal-decoration-sparkles"></div>
-            
-            {/* 🔄 PRESERVED: Keep existing animation logic but commented out for unified approach
-            {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-2 h-2 bg-white/30 rounded-full"
-                  style={{
-                    top: `${10 + i * 10}%`,
-                    left: `${5 + i * 12}%`,
-                  }}
-                  animate={{
-                    y: [0, -30, 0],
-                    opacity: [0.3, 0.8, 0.3],
-                    scale: [1, 1.2, 1],
-                  }}
-                  transition={{
-                    duration: 4 + i * 0.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: i * 0.7,
-                  }}
-                />
-              ))}
-            */}
-            
-            <div className="relative z-10 p-4 lg:p-5">
-              {/* ✅ COMPACT: Header with period buttons on right */}
-              <div className="space-y-3">
-                
-                {/* Title Row with Periods on Right */}
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
-                      animate={{ 
-                        rotate: [0, 5, -5, 0],
-                        scale: [1, 1.05, 1]
-                      }}
-                      transition={{ 
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <Activity className="w-6 h-6" />
-                    </motion.div>
-                    <div>
-                      <motion.h1 
-                        className="typo-headline mb-1 flex items-center gap-2"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                      >
-                        {t('nav.transactions')}
-                        <motion.div
-                          animate={{ rotate: [0, 15, -15, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                        >
-                          <Sparkles className="w-5 h-5" />
-                        </motion.div>
-                      </motion.h1>
-                      <motion.div 
-                        className="flex items-center gap-2 text-white/90"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                      >
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm">
-                          {PERIOD_OPTIONS.find(p => p.key === selectedPeriod)?.labelKey 
-                            ? t(PERIOD_OPTIONS.find(p => p.key === selectedPeriod).labelKey)
-                            : selectedPeriod}
-                        </span>
-                        <span className="text-white/70">•</span>
-                        <span className="font-medium">
-                          {filters.type === 'all' ? t('transactions.all') : 
-                           filters.type === 'income' ? t('transactions.income') : 
-                           t('transactions.expense')}
-                        </span>
-                        {activeCount > 0 && (
-                          <>
-                            <span className="text-white/70">•</span>
-                            <Badge variant="secondary" className="bg-white/20 text-white border-white/30 px-2 py-1 text-xs">
-                              {activeCount}
-                            </Badge>
-                          </>
-                        )}
-                      </motion.div>
-                    </div>
-                  </div>
-
-                  {/* Period Filters on Right */}
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="flex flex-wrap lg:flex-nowrap gap-2"
-                  >
-                    {PERIOD_OPTIONS.map((period) => (
-                      <button
-                        key={period.key}
-                        onClick={() => handlePeriodChange(period)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-all backdrop-blur-sm ${
-                          selectedPeriod === period.key
-                            ? 'bg-white/30 text-white shadow-sm'
-                            : 'bg-white/10 text-white/80 hover:text-white hover:bg-white/20'
-                        }`}
-                      >
-                        {t(period.labelKey)}
-                      </button>
-                    ))}
-                    {activeCount > 0 && (
-                      <button
-                        onClick={handleFilterReset}
-                        className="px-3 py-2 text-sm font-medium rounded-lg transition-all backdrop-blur-sm bg-white/10 text-white/80 hover:text-white hover:bg-white/20 border border-white/30"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </motion.div>
+    <div className={cn(
+      'min-h-screen bg-gray-50 dark:bg-gray-900 pb-6',
+      isRTL && 'rtl'
+    )}>
+      {/* ✅ Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <div className="flex flex-col gap-4">
+              {/* Title and actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                    {t('nav.transactions', { fallback: 'Transactions' })}
+                  </h1>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    {t('transactions.subtitle', { fallback: 'Manage your financial transactions' })}
+                  </p>
                 </div>
 
-                {/* ✅ COMPACT: Essential Filters Only */}
-                <div className="space-y-3">
-                  
-                  {/* Search Bar */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
-                    <input
-                      type="text"
-                      placeholder={t('transactions.searchPlaceholder')}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm"
-                    />
+                <div className="flex items-center space-x-3">
+                  {/* View mode toggle - Desktop only */}
+                  <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={cn(
+                        'px-3 py-2 text-sm rounded-md transition-colors',
+                        viewMode === 'list'
+                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      )}
+                    >
+                      {t('transactions.listView', { fallback: 'List' })}
+                    </button>
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      className={cn(
+                        'px-3 py-2 text-sm rounded-md transition-colors',
+                        viewMode === 'cards'
+                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      )}
+                    >
+                      {t('transactions.cardView', { fallback: 'Cards' })}
+                    </button>
                   </div>
 
-                  {/* Type Filters + Advanced Toggle */}
-                  <div className="flex items-center gap-3">
-                    
-                    {/* Type Filter */}
-                    <div className="flex-1">
-                      <div className="grid grid-cols-3 bg-white/10 rounded-lg p-1 gap-1">
-                        {TYPE_FILTERS.map(({ key, icon: Icon, labelKey }) => (
-                          <button
-                            key={key}
-                            onClick={() => handleFilterChange('type', key)}
-                            className={`flex items-center justify-center gap-2 py-2 px-3 text-sm font-medium rounded-md transition-all ${
-                              filters.type === key
-                                ? 'bg-white/30 text-white shadow-sm backdrop-blur-sm'
-                                : 'text-white/80 hover:text-white hover:bg-white/20'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span className="hidden sm:inline">{t(labelKey)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* Actions */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    loading={transactionsLoading}
+                    icon={<RefreshCw />}
+                  />
 
-                    {/* Advanced Toggle */}
-                    <button
-                      onClick={() => setShowMoreFilters(!showMoreFilters)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all backdrop-blur-sm ${
-                        showMoreFilters || (filters.categories?.length > 0 || filters.recurring !== 'all')
-                          ? 'bg-white/30 text-white shadow-sm border border-white/40'
-                          : 'bg-white/10 border border-white/30 text-white/80 hover:text-white hover:bg-white/20'
-                      }`}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    icon={<Download />}
+                    className="hidden sm:inline-flex"
+                  >
+                    {t('common.export', { fallback: 'Export' })}
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowAddTransaction(true)}
+                    icon={<Plus />}
+                    className="hidden sm:inline-flex"
+                  >
+                    {t('transactions.addNew', { fallback: 'Add Transaction' })}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search and filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Search */}
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder={t('transactions.searchPlaceholder', { fallback: 'Search transactions...' })}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Filter toggle */}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  icon={<Filter />}
+                  className={cn(
+                    'sm:w-auto w-full',
+                    showFilters && 'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700'
+                  )}
+                >
+                  {t('transactions.filters', { fallback: 'Filters' })}
+                  {Object.values(filters).some(v => v !== 'all' && v !== '' && v !== 'date' && v !== 'desc') && (
+                    <Badge variant="primary" size="xs" className="ml-2">
+                      {Object.values(filters).filter(v => v !== 'all' && v !== '' && v !== 'date' && v !== 'desc').length}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+
+              {/* Statistics */}
+              {stats && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          {t('transactions.total', { fallback: 'Total' })}
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {stats.total}
+                        </p>
+                      </div>
+                      <DollarSign className="w-8 h-8 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">
+                          {t('transactions.income', { fallback: 'Income' })}
+                        </p>
+                        <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                          {formatCurrency(stats.totalIncome)}
+                        </p>
+                      </div>
+                      <TrendingUp className="w-8 h-8 text-green-500" />
+                    </div>
+                  </div>
+
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">
+                          {t('transactions.expenses', { fallback: 'Expenses' })}
+                        </p>
+                        <p className="text-lg font-semibold text-red-700 dark:text-red-300">
+                          {formatCurrency(stats.totalExpenses)}
+                        </p>
+                      </div>
+                      <TrendingDown className="w-8 h-8 text-red-500" />
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    'rounded-lg p-4',
+                    stats.netAmount >= 0 
+                      ? 'bg-blue-50 dark:bg-blue-900/20' 
+                      : 'bg-orange-50 dark:bg-orange-900/20'
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={cn(
+                          'text-xs font-medium uppercase tracking-wider',
+                          stats.netAmount >= 0 
+                            ? 'text-blue-600 dark:text-blue-400' 
+                            : 'text-orange-600 dark:text-orange-400'
+                        )}>
+                          {t('transactions.net', { fallback: 'Net' })}
+                        </p>
+                        <p className={cn(
+                          'text-lg font-semibold',
+                          stats.netAmount >= 0 
+                            ? 'text-blue-700 dark:text-blue-300' 
+                            : 'text-orange-700 dark:text-orange-300'
+                        )}>
+                          {formatCurrency(stats.netAmount)}
+                        </p>
+                      </div>
+                      <ArrowUpDown className={cn(
+                        'w-8 h-8',
+                        stats.netAmount >= 0 ? 'text-blue-500' : 'text-orange-500'
+                      )} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ Filters panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Date Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('transactions.dateRange', { fallback: 'Date Range' })}
+                  </label>
+                  <select
+                    value={filters.dateRange}
+                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {dateRangeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('transactions.type', { fallback: 'Type' })}
+                  </label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) => handleFilterChange('type', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {typeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('transactions.sortBy', { fallback: 'Sort By' })}
+                  </label>
+                  <div className="flex space-x-2">
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <Filter className="w-4 h-4" />
-                      <span className="hidden sm:inline">{t('common.advanced')}</span>
-                      <motion.div
-                        animate={{ rotate: showMoreFilters ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </motion.div>
-                      {(filters.categories?.length > 0 || filters.recurring !== 'all') && (
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      )}
+                      {sortOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <ArrowUpDown className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* ✅ CLEAN: Advanced Filters (Hidden by Default) */}
-                <AnimatePresence>
-                  {showMoreFilters && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="border-t border-white/20 pt-3"
-                    >
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        
-                        {/* Category Filter */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                            className="w-full flex items-center justify-between px-3 py-2 bg-white/10 border border-white/30 rounded-lg text-sm text-white hover:bg-white/20 transition-all backdrop-blur-sm"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Tag className="w-4 h-4" />
-                              <span className="truncate">
-                                {filters.categories?.length > 0 
-                                  ? `${filters.categories.length} ${t('common.selected')} ${t('common.category')}`
-                                  : t('common.category')
-                                }
-                              </span>
-                            </div>
-                            <motion.div
-                              animate={{ rotate: showCategoryDropdown ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronDown className="w-4 h-4 text-white/60" />
-                            </motion.div>
-                          </button>
-
-                          {/* Category Dropdown */}
-                          <AnimatePresence>
-                            {showCategoryDropdown && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                className="absolute top-full left-0 right-0 z-50 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-64 overflow-hidden"
-                              >
-                                {/* Search */}
-                                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                                  <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                      type="text"
-                                      placeholder={t('common.search') + '...'}
-                                      value={categorySearch}
-                                      onChange={(e) => setCategorySearch(e.target.value)}
-                                      className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Categories */}
-                                <div className="max-h-48 overflow-y-auto p-2">
-                                  <div className="space-y-1">
-                                    {filteredCategories.map((category) => {
-                                      const isSelected = filters.categories?.includes(category.id);
-                                                            const categoryName = category.is_default 
-                        ? (t(`categories.${category.name}`, category.name) || category.name) 
-                        : category.name;
-
-                                      return (
-                                        <button
-                                          key={category.id}
-                                          onClick={() => handleCategoryToggle(category.id)}
-                                          className={`flex items-center gap-3 p-2 text-left rounded-lg text-sm transition-all w-full ${
-                                            isSelected
-                                              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                                          }`}
-                                        >
-                                          {React.createElement(getIconComponent(category.icon), { className: 'w-5 h-5' })}
-                                          <span className="flex-1 truncate">{categoryName}</span>
-                                          {isSelected && (
-                                            <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-
-                        {/* Recurring Filter */}
-                        <div>
-                          <div className="grid grid-cols-3 bg-white/10 rounded-lg p-1 gap-1">
-                            {RECURRING_OPTIONS.map(({ key, labelKey }) => (
-                              <button
-                                key={key}
-                                onClick={() => handleFilterChange('recurring', key)}
-                                className={`py-2 px-2 text-sm font-medium rounded-md transition-all truncate ${
-                                  filters.recurring === key
-                                    ? 'bg-white/30 text-white shadow-sm backdrop-blur-sm'
-                                    : 'text-white/80 hover:text-white hover:bg-white/20'
-                                }`}
-                              >
-                                {t(labelKey)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Custom Date Range */}
-                      <div className="mt-3">
-                        <label className="block text-xs font-medium text-white/80 mb-2 flex items-center gap-2">
-                          <Calendar className="w-3 h-3" />
-                          {t('common.customRange')}
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="date"
-                            value={filters.startDate || ''}
-                            onChange={(e) => {
-                              handleFilterChange('startDate', e.target.value);
-                              setSelectedPeriod(null);
-                            }}
-                            className="px-3 py-2 bg-white/20 border border-white/30 rounded-lg text-white text-sm placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm"
-                          />
-                          <input
-                            type="date"
-                            value={filters.endDate || ''}
-                            onChange={(e) => {
-                              handleFilterChange('endDate', e.target.value);
-                              setSelectedPeriod(null);
-                            }}
-                            className="px-3 py-2 bg-white/20 border border-white/30 rounded-lg text-white text-sm placeholder-white/60 focus:bg-white/30 focus:border-white/50 transition-all backdrop-blur-sm"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Clear filters */}
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    fullWidth
+                    icon={<X />}
+                  >
+                    {t('common.clear', { fallback: 'Clear' })}
+                  </Button>
+                </div>
               </div>
+
+              {/* Custom date range */}
+              {filters.dateRange === 'custom' && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    type="date"
+                    label={t('transactions.startDate', { fallback: 'Start Date' })}
+                    value={customDateRange.startDate}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                  />
+                  <Input
+                    type="date"
+                    label={t('transactions.endDate', { fallback: 'End Date' })}
+                    value={customDateRange.endDate}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
-          </Card>
-        </motion.div>
-
-        {/* ✅ FIXED: TransactionList with proper transactions data */}
-        <motion.div variants={itemVariants}>
-          <TransactionList
-            transactions={transactions}
-            pagination={pagination}
-            summary={summary}
-            isLoading={isLoading}
-            isLoadingMore={isLoadingMore}
-            error={error}
-            onLoadMore={loadMore}
-            hasMoreToLoad={hasMoreToLoad}
-            progressiveStatus={progressiveStatus}
-            onEdit={handleEdit}
-            onEditSingle={handleEditSingle}
-            onEditTemplate={handleEditTemplate}
-            onDelete={handleDelete}
-            onOpenRecurringManager={handleOpenRecurringManager}
-            emptyMessage={t('transactions.noTransactions')}
-          />
-        </motion.div>
-      </motion.div>
-
-      {/* ✅ COMPACT: Floating Action Button - Left positioned (copied from Dashboard) */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.8, duration: 0.3 }}
-        className="fixed left-4 bottom-4 z-50"
-      >
-        <motion.button
-          onClick={() => setShowAddTransactions(true)}
-          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 group"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          title={t('actions.quickAdd')}
-        >
-          <motion.div
-            className="relative z-10"
-            animate={{ rotate: [0, 0, 90, 90, 0] }}
-            transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
-          >
-            <Plus className="w-6 h-6" />
           </motion.div>
-          <div className="absolute inset-0 rounded-full bg-white/20 animate-ping opacity-60"></div>
-        </motion.button>
-      </motion.div>
-
-      {/* Modal for AddTransactions - match Dashboard exactly */}
-      <AnimatePresence>
-        {showAddTransactions && (
-          <Modal
-            isOpen={showAddTransactions}
-            onClose={() => setShowAddTransactions(false)}
-            size="large"
-            className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto"
-            hideHeader={true}
-          >
-            <AddTransactions
-              onClose={() => setShowAddTransactions(false)}
-              context="transactions"
-            />
-          </Modal>
         )}
       </AnimatePresence>
 
-      {/* ✅ FIXED: EditTransactionPanel with perfect responsive container */}
-      {showEditModal && selectedTransaction && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-          {/* ✅ FIXED: Perfect responsive container that adapts to all screen sizes */}
-          <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-7xl mt-2 sm:mt-4 mb-4 sm:mb-8 bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden min-h-0 max-h-[98vh] sm:max-h-[95vh]">
-            <EditTransactionPanel
-              transaction={selectedTransaction}
-              editingSingle={editingSingle}
-              onSuccess={() => {
-                refreshAll();
-                setShowEditModal(false);
-              }}
-              onClose={() => setShowEditModal(false)}
+      {/* ✅ Main content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Loading state */}
+        {transactionsLoading && !transactionsData && (
+          <div className="flex items-center justify-center py-12">
+            <LoadingSpinner 
+              size="lg" 
+              text={t('transactions.loading', { fallback: 'Loading transactions...' })} 
             />
           </div>
-        </div>
+        )}
+
+        {/* Error state */}
+        {transactionsError && !transactionsData && (
+          <Card className="p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {t('transactions.loadError', { fallback: 'Failed to Load Transactions' })}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {transactionsError.message || t('errors.genericError', { fallback: 'Something went wrong' })}
+            </p>
+            <Button onClick={handleRefresh} variant="primary">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {t('common.retry', { fallback: 'Try Again' })}
+            </Button>
+          </Card>
+        )}
+
+        {/* Transactions content */}
+        {transactionsData && (
+          <>
+            {transactionsData.transactions?.length === 0 ? (
+              /* Empty state */
+              <Card className="p-8 text-center">
+                <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {searchQuery || Object.values(filters).some(v => v !== 'all' && v !== '' && v !== 'date' && v !== 'desc')
+                    ? t('transactions.noResults', { fallback: 'No transactions found' })
+                    : t('transactions.noTransactions', { fallback: 'No transactions yet' })
+                  }
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  {searchQuery || Object.values(filters).some(v => v !== 'all' && v !== '' && v !== 'date' && v !== 'desc')
+                    ? t('transactions.tryDifferentFilters', { fallback: 'Try adjusting your search or filters' })
+                    : t('transactions.getStarted', { fallback: 'Add your first transaction to get started' })
+                  }
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {(searchQuery || Object.values(filters).some(v => v !== 'all' && v !== '' && v !== 'date' && v !== 'desc')) && (
+                    <Button variant="outline" onClick={clearFilters}>
+                      {t('transactions.clearFilters', { fallback: 'Clear Filters' })}
+                    </Button>
+                  )}
+                  <Button onClick={() => setShowAddTransaction(true)} icon={<Plus />}>
+                    {t('transactions.addFirst', { fallback: 'Add Transaction' })}
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              /* Transactions list/grid */
+              <div className="space-y-6">
+                {viewMode === 'list' ? (
+                  <TransactionList
+                    transactions={transactionsData.transactions}
+                    onEdit={handleEditTransaction}
+                    onDelete={handleDeleteTransaction}
+                    loading={transactionsLoading}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {transactionsData.transactions.map((transaction) => (
+                      <TransactionCard
+                        key={transaction.id}
+                        transaction={transaction}
+                        onEdit={handleEditTransaction}
+                        onDelete={handleDeleteTransaction}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Load more */}
+                {hasMore && (
+                  <div className="text-center">
+                    <Button
+                      variant="outline"
+                      onClick={loadMore}
+                      loading={transactionsLoading}
+                      size="lg"
+                    >
+                      {t('common.loadMore', { fallback: 'Load More' })}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ✅ Mobile floating action button */}
+      <div className="fixed bottom-6 right-6 sm:hidden z-40">
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={() => setShowAddTransaction(true)}
+          className="rounded-full w-14 h-14 shadow-lg"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* ✅ Modals */}
+      {showAddTransaction && (
+        <AddTransactions
+          isOpen={showAddTransaction}
+          onClose={() => setShowAddTransaction(false)}
+          onSuccess={handleTransactionSuccess}
+        />
       )}
 
-      <Modal
-        isOpen={showRecurringModal}
-        onClose={() => setShowRecurringModal(false)}
-        title={t('transactions.recurringActions')}
-        className="max-w-4xl w-full"
-      >
-        <RecurringModal
-          onClose={() => setShowRecurringModal(false)}
-          onEdit={handleEditTransaction}
-          onSuccess={() => {
-            refreshAll();
-            setShowRecurringModal(false);
-          }}
-        />
-      </Modal>
-
-      {/* ✅ FIXED: Only render DeleteTransaction when we have a transaction */}
-      {selectedTransaction && (
-        <DeleteTransaction
+      {showEditPanel && selectedTransaction && (
+        <EditTransactionPanel
+          isOpen={showEditPanel}
           transaction={selectedTransaction}
-          isOpen={showActionsPanel}
           onClose={() => {
-            setShowActionsPanel(false);
+            setShowEditPanel(false);
             setSelectedTransaction(null);
           }}
-          onConfirm={async (transaction, options) => {
-            try {
-              // ✅ FIX: Pass options object to deleteTransaction
-              await deleteTransaction(transaction.id, options);
-              
-              refreshAll();
-              setShowActionsPanel(false);
-              setSelectedTransaction(null);
-            } catch (error) {
-              console.error('Delete failed:', error);
-              throw error; // Re-throw to let DeleteTransaction handle the error display
-            }
-          }}
-          onOpenSkipDates={(transaction) => {
-            // Handle skip dates functionality
-            setSelectedTransaction(transaction);
-            setShowRecurringModal(true);
-          }}
+          onSuccess={handleTransactionSuccess}
         />
       )}
 
-      {/* ✅ PRESERVED: Success animation exactly as before */}
-      <AnimatePresence>
-        {showSuccess && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          >
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl"
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              exit={{ y: 100 }}
-            >
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 0.5, repeat: 2 }}
-                className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4"
-              >
-                <motion.div
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ duration: 0.3, repeat: 2 }}
-                >
-                  ✓
-                </motion.div>
-              </motion.div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                {t('transactions.updateSuccess')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                {t('transactions.transactionUpdated')}
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </PageContainer>
+      {showDeleteModal && selectedTransaction && (
+        <DeleteTransaction
+          isOpen={showDeleteModal}
+          transaction={selectedTransaction}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedTransaction(null);
+          }}
+          onSuccess={handleTransactionSuccess}
+        />
+      )}
+    </div>
   );
 };
 

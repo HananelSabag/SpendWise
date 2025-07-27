@@ -1,569 +1,498 @@
 /**
- * User Model - Production Ready
- * Handles all user-related database operations
- * @module models/User
+ * 👤 USER MODEL - SIMPLIFIED & FUNCTIONAL
+ * Core user management without over-engineering
+ * @version 2.1.0 - SIMPLIFIED FOR STABILITY
  */
 
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
-class User {
-  /**
-   * Create a new user
-   * @param {string} email - User's email
-   * @param {string} username - User's username
-   * @param {string} password - Plain text password
-   * @returns {Promise<Object>} Created user (without password)
-   */
-  static async create(email, username, password) {
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      // Normalize email to lowercase to prevent case sensitivity issues
-      const normalizedEmail = email.toLowerCase().trim();
-      
-      const query = `
-        INSERT INTO users (
-          email, 
-          username, 
-          password_hash, 
-          email_verified,
-          language_preference,
-          theme_preference,
-          currency_preference,
-          onboarding_completed
-        )
-        VALUES ($1, $2, $3, false, 'en', 'light', 'USD', false)
-        RETURNING 
-          id, email, username, created_at, 
-          language_preference, theme_preference, currency_preference,
-          preferences, email_verified, onboarding_completed;
-      `;
-      
-      const result = await db.query(query, [normalizedEmail, username, hashedPassword]);
-      return result.rows[0];
-    } catch (error) {
-      if (error.code === '23505') {
-        throw {
-          ...errorCodes.ALREADY_EXISTS,
-          details: 'Email already registered'
-        };
-      }
-      throw error;
+// ✅ Simple User Cache (no complex LRU)
+class UserCache {
+  static cache = new Map();
+  static TTL = 10 * 60 * 1000; // 10 minutes
+
+  static get(key) {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.TTL) {
+      return cached.data;
     }
+    this.cache.delete(key);
+    return null;
   }
 
-  /**
-   * Find user by email (case-insensitive)
-   * @param {string} email - User's email
-   * @returns {Promise<Object|null>} User object or null
-   */
-  static async findByEmail(email) {
-    // Normalize email to lowercase for case-insensitive lookup
-    const normalizedEmail = email.toLowerCase().trim();
+  static set(key, data) {
+    // Simple size limit
+    if (this.cache.size >= 100) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
     
-    const query = `
-      SELECT 
-        id, email, username, password_hash, 
-        language_preference, theme_preference, currency_preference,
-        preferences, last_login, email_verified, onboarding_completed
-      FROM users 
-      WHERE LOWER(email) = $1;
-    `;
-    
-    const result = await db.query(query, [normalizedEmail]);
-    return result.rows[0] || null;
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
   }
 
-  /**
-   * Find user by ID
-   * @param {number} id - User's ID
-   * @returns {Promise<Object|null>} User object (without password)
-   */
-  static async findById(id) {
-    const query = `
-      SELECT 
-        id, email, username, 
-        language_preference, theme_preference, currency_preference,
-        preferences, created_at, last_login, email_verified, onboarding_completed
-      FROM users 
-      WHERE id = $1;
-    `;
-    
-    const result = await db.query(query, [id]);
-    return result.rows[0] || null;
-  }
-
-  /**
-   * Verify user's password (case-insensitive email lookup)
-   * @param {string} email - User's email
-   * @param {string} password - Password to verify
-   * @returns {Promise<Object|null>} User object if verified
-   */
-  static async verifyPassword(email, password) {
-    try {
-      // Use case-insensitive email lookup
-      const user = await this.findByEmail(email);
-      
-      if (!user) {
-        return null;
+  static invalidate(pattern) {
+    for (const [key] of this.cache) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
       }
-      
-      const valid = await bcrypt.compare(password, user.password_hash);
-      
-      if (!valid) {
-        return null;
-      }
-
-      // Update last login
-      await db.query(
-        'UPDATE users SET last_login = NOW() WHERE id = $1',
-        [user.id]
-      );
-
-      // Return user without password
-      const { password_hash, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    } catch (error) {
-      logger.error('Password verification error:', { error: error.message }); // Don't log email
-      throw error;
     }
   }
 
-  /**
-   * Update user profile
-   * @param {number} userId - User's ID
-   * @param {Object} data - Update data
-   * @returns {Promise<Object>} Updated user
-   */
-  static async updateProfile(userId, data) {
-    const client = await db.pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      const { 
-        username, 
-        currentPassword, 
-        newPassword,
-        language_preference,
-        theme_preference,
-        currency_preference
-      } = data;
-
-      const updates = [];
-      const values = [];
-      let paramCount = 1;
-
-      // Handle username update
-      if (username) {
-        updates.push(`username = $${paramCount}`);
-        values.push(username);
-        paramCount++;
-      }
-
-      // Handle preference updates
-      if (language_preference) {
-        updates.push(`language_preference = $${paramCount}`);
-        values.push(language_preference);
-        paramCount++;
-      }
-
-      if (theme_preference) {
-        updates.push(`theme_preference = $${paramCount}`);
-        values.push(theme_preference);
-        paramCount++;
-      }
-
-      if (currency_preference) {
-        updates.push(`currency_preference = $${paramCount}`);
-        values.push(currency_preference);
-        paramCount++;
-      }
-
-      // Handle password update
-      if (newPassword) {
-        const user = await client.query(
-          'SELECT password_hash FROM users WHERE id = $1',
-          [userId]
-        );
-
-        if (!user.rows[0]) {
-          throw { ...errorCodes.NOT_FOUND };
-        }
-
-        const validPassword = await bcrypt.compare(
-          currentPassword,
-          user.rows[0].password_hash
-        );
-
-        if (!validPassword) {
-          throw {
-            ...errorCodes.VALIDATION_ERROR,
-            details: 'Current password is incorrect'
-          };
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        updates.push(`password_hash = $${paramCount}`);
-        values.push(hashedPassword);
-        paramCount++;
-      }
-
-      if (updates.length === 0) {
-        throw {
-          ...errorCodes.VALIDATION_ERROR,
-          details: 'No valid updates provided'
-        };
-      }
-
-      // Execute update
-      const query = `
-        UPDATE users 
-        SET ${updates.join(', ')}, updated_at = NOW()
-        WHERE id = $${paramCount}
-        RETURNING 
-          id, username, email, 
-          language_preference, theme_preference, currency_preference,
-          preferences, created_at, updated_at
-      `;
-      
-      values.push(userId);
-      
-      const result = await client.query(query, values);
-      
-      await client.query('COMMIT');
-      
-      if (!result.rows[0]) {
-        throw { ...errorCodes.NOT_FOUND };
-      }
-
-      return result.rows[0];
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
-   * Update user preferences (legacy JSONB support)
-   * @param {number} userId - User's ID
-   * @param {Object} preferences - Preferences to merge
-   * @returns {Promise<Object>} Updated preferences
-   */
-  static async updatePreferences(userId, preferences) {
-    try {
-      // Get existing preferences
-      const existingQuery = 'SELECT preferences FROM users WHERE id = $1';
-      const existingResult = await db.query(existingQuery, [userId]);
-      
-      if (existingResult.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
-      }
-      
-      const existingPreferences = existingResult.rows[0].preferences || {};
-      const mergedPreferences = { ...existingPreferences, ...preferences };
-      
-      // Update preferences
-      const updateQuery = `
-        UPDATE users 
-        SET preferences = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING preferences;
-      `;
-      
-      const result = await db.query(updateQuery, [JSON.stringify(mergedPreferences), userId]);
-      return result.rows[0]?.preferences || {};
-    } catch (error) {
-      logger.error('Error updating preferences:', { userId, error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * Create password reset token
-   * @param {string} email - User's email
-   * @returns {Promise<Object>} Reset token info
-   */
-  static async createPasswordResetToken(email) {
-    const user = await this.findByEmail(email);
-    if (!user) {
-      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
-    }
-
-    const crypto = require('crypto');
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
-
-    const query = `
-      INSERT INTO password_reset_tokens (user_id, token, expires_at)
-      VALUES ($1, $2, $3)
-      RETURNING token, expires_at;
-    `;
-
-    const result = await db.query(query, [user.id, token, expiresAt]);
-    return { ...result.rows[0], email: user.email };
-  }
-
-  /**
-   * Reset password with token
-   * @param {string} token - Reset token
-   * @param {string} newPassword - New password
-   * @returns {Promise<boolean>} Success status
-   */
-  static async resetPassword(token, newPassword) {
-    const client = await db.pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-
-      // Validate token
-      const tokenQuery = `
-        SELECT rt.user_id, rt.expires_at, rt.used
-        FROM password_reset_tokens rt
-        WHERE rt.token = $1 AND rt.used = false AND rt.expires_at > NOW()
-      `;
-      
-      const tokenResult = await client.query(tokenQuery, [token]);
-      
-      if (tokenResult.rows.length === 0) {
-        throw { ...errorCodes.INVALID_TOKEN, message: 'Invalid or expired reset token' };
-      }
-
-      const { user_id } = tokenResult.rows[0];
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-      // Update password
-      await client.query(
-        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-        [hashedPassword, user_id]
-      );
-
-      // Mark token as used
-      await client.query(
-        'UPDATE password_reset_tokens SET used = true WHERE token = $1',
-        [token]
-      );
-
-      await client.query('COMMIT');
-      return true;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
-   * Save email verification token
-   * @param {number} userId - User's ID
-   * @param {string} token - Verification token
-   * @param {Date} expiresAt - Token expiration date
-   * @returns {Promise<number>} Token ID
-   */
-  static async saveVerificationToken(userId, token, expiresAt) {
-    try {
-      const query = `
-        INSERT INTO email_verification_tokens (user_id, token, expires_at)
-        VALUES ($1, $2, $3)
-        RETURNING id
-      `;
-      
-      const result = await db.query(query, [userId, token, expiresAt]);
-      return result.rows[0].id;
-    } catch (error) {
-      logger.error('Error saving verification token:', { userId, error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * Find valid email verification token
-   * @param {string} token - Verification token
-   * @returns {Promise<Object|null>} Token data or null
-   */
-  static async findVerificationToken(token) {
-    try {
-      const query = `
-        SELECT * FROM email_verification_tokens 
-        WHERE token = $1 
-        AND used = false 
-        AND expires_at > NOW()
-      `;
-      
-      const result = await db.query(query, [token]);
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error finding verification token:', { error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * Mark email as verified
-   * @param {number} userId - User's ID
-   * @returns {Promise<void>}
-   */
-  static async verifyEmail(userId) {
-    try {
-      const query = `
-        UPDATE users 
-        SET email_verified = true 
-        WHERE id = $1
-      `;
-      
-      await db.query(query, [userId]);
-    } catch (error) {
-      logger.error('Error verifying email:', { userId, error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * Mark verification token as used
-   * @param {string} token - Verification token
-   * @returns {Promise<void>}
-   */
-  static async markVerificationTokenAsUsed(token) {
-    try {
-      const query = `
-        UPDATE email_verification_tokens 
-        SET used = true 
-        WHERE token = $1
-      `;
-      
-      await db.query(query, [token]);
-    } catch (error) {
-      logger.error('Error marking verification token as used:', { error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * Get recent verification token for rate limiting
-   * @param {number} userId - User's ID
-   * @returns {Promise<Object|null>} Recent token or null
-   */
-  static async getRecentVerificationToken(userId) {
-    try {
-      const query = `
-        SELECT * FROM email_verification_tokens 
-        WHERE user_id = $1 
-        AND created_at > NOW() - INTERVAL '5 minutes'
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
-      
-      const result = await db.query(query, [userId]);
-      return result.rows[0];
-    } catch (error) {
-      logger.error('Error getting recent verification token:', { userId, error: error.message });
-      throw error;
-    }
-  }
-
-  /**
- * Get user data for export - FIXED VERSION
- * @param {number} userId - User's ID
- * @returns {Promise<Object>} User data including transactions
- */
-static async getExportData(userId) {
-  const client = await db.pool.connect();
-  
-  try {
-    // Get user info
-    const userQuery = `
-      SELECT 
-        email, username, created_at,
-        language_preference, theme_preference, currency_preference
-      FROM users 
-      WHERE id = $1
-    `;
-    const userResult = await client.query(userQuery, [userId]);
-    
-    if (userResult.rows.length === 0) {
-      throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
-    }
-
-    // Get all transactions - FIXED: Added table aliases to remove ambiguity
-    const transactionsQuery = `
-      SELECT 
-        'expense' as type,
-        e.amount, 
-        e.description, 
-        e.date,
-        COALESCE(c.name, 'Uncategorized') as category,
-        e.created_at
-      FROM expenses e
-      LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.user_id = $1 AND e.deleted_at IS NULL
-      
-      UNION ALL
-      
-      SELECT 
-        'income' as type,
-        i.amount, 
-        i.description, 
-        i.date,
-        COALESCE(c.name, 'Uncategorized') as category,
-        i.created_at
-      FROM income i
-      LEFT JOIN categories c ON i.category_id = c.id
-      WHERE i.user_id = $1 AND i.deleted_at IS NULL
-      
-      ORDER BY date DESC, created_at DESC
-    `;
-    const transactionsResult = await client.query(transactionsQuery, [userId]);
-
-    return {
-      user: userResult.rows[0],
-      transactions: transactionsResult.rows
-    };
-  } catch (error) {
-    logger.error('Error getting export data:', { userId, error: error.message });
-    throw error;
-  } finally {
-    client.release();
+  static clear() {
+    this.cache.clear();
   }
 }
 
-  /**
-   * Mark user onboarding as complete
-   * @param {number} userId - User's ID
-   * @returns {Promise<Object>} Updated user object
-   */
-  static async markOnboardingComplete(userId) {
+// ✅ Simplified User Model - Core Functionality Only
+class User {
+  // Create user with basic validation
+  static async create(email, username, password) {
     try {
-      const query = `
-        UPDATE users 
-        SET onboarding_completed = true, updated_at = NOW()
-        WHERE id = $1
-        RETURNING 
-          id, email, username, 
-          language_preference, theme_preference, currency_preference,
-          preferences, created_at, last_login, email_verified, onboarding_completed
-      `;
+      // Basic password validation
+      if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters');
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 12);
       
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
+      const query = `
+        INSERT INTO users (
+          email, username, password_hash, verification_token,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, NOW(), NOW())
+        RETURNING id, email, username, created_at, updated_at, email_verified
+      `;
+
+      const values = [
+        email.toLowerCase(),
+        username?.toLowerCase(),
+        hashedPassword,
+        verificationToken
+      ];
+
+      const result = await db.query(query, values);
+      const user = result.rows[0];
+
+      // Cache the new user
+      UserCache.set(`user:${user.id}`, user);
+      UserCache.set(`user:email:${user.email}`, user);
+
+      logger.info('User created successfully', { userId: user.id, email: user.email });
+
+      return {
+        ...user,
+        verificationToken // Return for email verification
+      };
+    } catch (error) {
+      logger.error('User creation failed', { error: error.message, email });
+      
+      if (error.code === '23505') { // Unique violation
+        if (error.detail.includes('email')) {
+          throw new Error('Email already exists');
+        }
+        if (error.detail.includes('username')) {
+          throw new Error('Username already exists');
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  // Find user by ID with caching
+  static async findById(userId) {
+    try {
+      // Check cache first
+      const cacheKey = `user:${userId}`;
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
+
+      const query = `
+        SELECT 
+          id, email, username, role, email_verified, is_active,
+          last_login_at, created_at, updated_at,
+          first_name, last_name, avatar, phone, bio, location,
+          website, birthday, preferences
+        FROM users 
+        WHERE id = $1 AND is_active = true
+      `;
+
       const result = await db.query(query, [userId]);
       
       if (result.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'User not found' };
+        return null;
       }
+
+      user = result.rows[0];
       
-      return result.rows[0];
+      // Parse JSON fields safely
+      if (user.preferences) {
+        try {
+          user.preferences = JSON.parse(user.preferences);
+        } catch (e) {
+          user.preferences = {};
+        }
+      }
+
+      // Add computed fields that client expects
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.name = user.username || user.first_name || 'User'; // Fallback for name field
+      
+      // Normalize field names for client compatibility
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.emailVerified = user.email_verified;
+      user.createdAt = user.created_at;
+      user.updatedAt = user.updated_at;
+      user.lastLogin = user.last_login_at;
+
+      // Cache the result
+      UserCache.set(cacheKey, user);
+
+      return user;
     } catch (error) {
-      logger.error('Error marking onboarding complete:', { userId, error: error.message });
+      logger.error('User retrieval failed', { userId, error: error.message });
       throw error;
     }
   }
+
+  // Find user by email
+  static async findByEmail(email) {
+    try {
+      // Check cache first
+      const cacheKey = `user:email:${email.toLowerCase()}`;
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
+
+      const query = `
+        SELECT 
+          id, email, username, password_hash, role, email_verified, is_active,
+          last_login_at, created_at, updated_at,
+          first_name, last_name, avatar, phone, bio, location,
+          website, birthday, preferences, login_attempts, locked_until
+        FROM users 
+        WHERE email = $1
+      `;
+
+      const result = await db.query(query, [email.toLowerCase()]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      user = result.rows[0];
+      
+      // Parse JSON fields safely
+      if (user.preferences) {
+        try {
+          user.preferences = JSON.parse(user.preferences);
+        } catch (e) {
+          user.preferences = {};
+        }
+      }
+
+      // Add computed fields
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.name = user.username || user.first_name || 'User';
+      
+      // Normalize field names
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.emailVerified = user.email_verified;
+      user.createdAt = user.created_at;
+      user.updatedAt = user.updated_at;
+      user.lastLogin = user.last_login_at;
+
+      // Cache the result
+      UserCache.set(cacheKey, user);
+      UserCache.set(`user:${user.id}`, user);
+
+      return user;
+    } catch (error) {
+      logger.error('User retrieval by email failed', { email, error: error.message });
+      throw error;
+    }
+  }
+
+  // Authenticate user
+  static async authenticate(email, password) {
+    try {
+      const user = await this.findByEmail(email);
+      
+      if (!user) {
+        // Constant-time delay to prevent email enumeration
+        await bcrypt.compare('dummy', '$2b$12$dummy.hash.to.prevent.timing');
+        throw new Error('Invalid credentials');
+      }
+
+      // Check if account is locked
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        throw new Error('Account is temporarily locked');
+      }
+
+      // Check if account is active
+      if (!user.is_active) {
+        throw new Error('Account is disabled');
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
+      if (!isValidPassword) {
+        // Increment failed login attempts
+        await this.incrementLoginAttempts(user.id);
+        throw new Error('Invalid credentials');
+      }
+
+      // Reset login attempts on successful login
+      await this.resetLoginAttempts(user.id);
+
+      // Update last login
+      await this.updateLastLogin(user.id);
+
+      // Remove sensitive data
+      delete user.password_hash;
+      delete user.login_attempts;
+      delete user.locked_until;
+
+      logger.info('User authenticated successfully', { userId: user.id, email: user.email });
+
+      return user;
+    } catch (error) {
+      logger.error('Authentication failed', { email, error: error.message });
+      throw error;
+    }
+  }
+
+  // Update user
+  static async update(userId, updateData) {
+    try {
+      const allowedFields = [
+        'first_name', 'last_name', 'username', 'bio', 'location', 
+        'website', 'avatar', 'phone', 'preferences'
+      ];
+
+      const updates = {};
+      const values = [];
+      let paramCount = 1;
+
+      // Build dynamic update query
+      for (const [key, value] of Object.entries(updateData)) {
+        if (allowedFields.includes(key)) {
+          updates[key] = `$${paramCount}`;
+          values.push(key === 'preferences' ? JSON.stringify(value) : value);
+          paramCount++;
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        throw new Error('No valid fields to update');
+      }
+
+      // Add updated_at
+      updates.updated_at = 'NOW()';
+
+      const setClause = Object.entries(updates)
+        .map(([key, placeholder]) => `${key} = ${placeholder}`)
+        .join(', ');
+
+      const query = `
+        UPDATE users 
+        SET ${setClause}
+        WHERE id = $${paramCount} AND is_active = true
+        RETURNING id, email, username, role, email_verified,
+                 first_name, last_name, avatar, phone, bio, location,
+                 website, birthday, preferences, created_at, updated_at
+      `;
+
+      values.push(userId);
+      const result = await db.query(query, values);
+
+      if (result.rows.length === 0) {
+        throw new Error('User not found');
+      }
+
+      const user = result.rows[0];
+
+      // Parse preferences
+      if (user.preferences) {
+        try {
+          user.preferences = JSON.parse(user.preferences);
+        } catch (e) {
+          user.preferences = {};
+        }
+      }
+
+      // Add computed fields
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.name = user.username || user.first_name || 'User';
+      
+      // Normalize field names
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.emailVerified = user.email_verified;
+      user.createdAt = user.created_at;
+      user.updatedAt = user.updated_at;
+
+      // Invalidate cache
+      UserCache.invalidate(userId);
+
+      // Cache updated user
+      UserCache.set(`user:${userId}`, user);
+
+      logger.info('User updated successfully', { userId });
+
+      return user;
+    } catch (error) {
+      logger.error('User update failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  // Security helper methods
+  static async incrementLoginAttempts(userId) {
+    const query = `
+      UPDATE users 
+      SET 
+        login_attempts = COALESCE(login_attempts, 0) + 1,
+        locked_until = CASE 
+          WHEN COALESCE(login_attempts, 0) + 1 >= 5 
+          THEN NOW() + INTERVAL '30 minutes'
+          ELSE locked_until
+        END
+      WHERE id = $1
+    `;
+
+    await db.query(query, [userId]);
+  }
+
+  static async resetLoginAttempts(userId) {
+    const query = `
+      UPDATE users 
+      SET login_attempts = 0, locked_until = NULL
+      WHERE id = $1
+    `;
+
+    await db.query(query, [userId]);
+  }
+
+  static async updateLastLogin(userId) {
+    const query = `
+      UPDATE users 
+      SET last_login_at = NOW()
+      WHERE id = $1
+    `;
+
+    await db.query(query, [userId]);
+  }
+
+  // ✅ CRITICAL: Add the missing getExportData method that exportController.js expects
+  static async getExportData(userId) {
+    try {
+      const user = await this.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Get user's transactions for export
+      const transactionsQuery = `
+        SELECT 
+          t.id, t.type, t.amount, t.description, t.category_id,
+          t.created_at, t.updated_at,
+          c.name as category_name, c.icon as category_icon
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+        ORDER BY t.created_at DESC
+      `;
+
+      const transactionsResult = await db.query(transactionsQuery, [userId]);
+
+      // Get user's categories
+      const categoriesQuery = `
+        SELECT id, name, icon, color, type
+        FROM categories
+        WHERE user_id = $1 OR user_id IS NULL
+        ORDER BY name
+      `;
+
+      const categoriesResult = await db.query(categoriesQuery, [userId]);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          createdAt: user.created_at,
+          preferences: user.preferences
+        },
+        transactions: transactionsResult.rows,
+        categories: categoriesResult.rows,
+        exportDate: new Date().toISOString(),
+        totalTransactions: transactionsResult.rows.length
+      };
+    } catch (error) {
+      logger.error('Export data retrieval failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  // Cache management
+  static clearCache() {
+    UserCache.clear();
+  }
+
+  static getCacheStats() {
+    return {
+      size: UserCache.cache.size
+    };
+  }
+
+  // Soft delete
+  static async delete(userId) {
+    const query = `
+      UPDATE users 
+      SET 
+        is_active = false,
+        deleted_at = NOW(),
+        email = email || '.deleted.' || id,
+        username = username || '.deleted.' || id
+      WHERE id = $1
+      RETURNING id
+    `;
+
+    const result = await db.query(query, [userId]);
+    
+    if (result.rows.length > 0) {
+      UserCache.invalidate(userId);
+      logger.info('User soft deleted', { userId });
+    }
+
+    return result.rows.length > 0;
+  }
 }
 
-module.exports = User;
+module.exports = {
+  User,
+  UserCache
+}; 

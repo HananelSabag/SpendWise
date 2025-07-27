@@ -1,5 +1,5 @@
 // src/utils/auth.js - Updated authentication utilities
-import { authAPI } from './api';
+import { authAPI } from '../api';
 
 /**
  * Token management

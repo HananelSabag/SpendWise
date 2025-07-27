@@ -10,6 +10,7 @@ export { default as Modal } from './Modal';
 export { default as Alert } from './Alert';
 export { default as Dropdown } from './Dropdown';
 export { default as Tooltip } from './Tooltip';
+export { default as Checkbox } from './Checkbox'; // ✅ NEW: Checkbox component
 
 // 🚀 PHASE 16: Advanced Loading & Skeleton Components
 export { 

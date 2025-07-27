@@ -1,320 +1,512 @@
 /**
- * PreferencesStep Component - User preferences setup
- * 
- * ✅ FEATURES:
- * - Language selection
- * - Currency selection 
- * - Theme preference
- * - Budget preferences
+ * ⚙️ ONBOARDING PREFERENCES STEP - MOBILE-FIRST
+ * Enhanced preference setup for new users
+ * NOW WITH ZUSTAND STORES! 🎉
+ * @version 2.0.0
  */
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Globe, Palette, DollarSign, Target, 
-  Check, ChevronDown, Moon, Sun, Heart, Shield, ChevronRight, ChevronLeft, Monitor
+import React, { useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Globe, Palette, DollarSign, Type, Sun, Moon, Settings,
+  Check, ChevronRight, Sparkles, Target, Zap, Shield
 } from 'lucide-react';
 
-import { useLanguage } from '../../../../context/LanguageContext';
-import { useAuth } from '../../../../context/AuthContext';
-import { useCurrency } from '../../../../context/CurrencyContext';
-import { useTheme } from '../../../../context/ThemeContext';
+// ✅ NEW: Import from Zustand stores instead of Context
+import {
+  useTranslation,
+  useTheme, 
+  useCurrency,
+  useAccessibility,
+  useAuth,
+  useNotifications
+} from '../../../../stores';
+
+import { Button, Card } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
-import { Button } from '../../../ui';
 
-/**
- * PreferencesStep - User preferences customization
- */
-const PreferencesStep = ({ onNext, onPrevious, stepData, updateStepData }) => {
-  const { t, language, changeLanguagePermanent } = useLanguage();
-  const { user, updateProfile, updatePreferences } = useAuth();
-  const { currency } = useCurrency();
-  const { theme, setTheme } = useTheme();
-  const isRTL = language === 'he';
+const PreferencesStep = ({
+  onNext,
+  onPrevious,
+  onComplete,
+  className = ''
+}) => {
+  // ✅ NEW: Use Zustand stores
+  const { 
+    currentLanguage,
+    setLanguage,
+    t, 
+    isRTL,
+    availableLanguages 
+  } = useTranslation('onboarding');
+  const {
+    theme,
+    setTheme,
+    isDark
+  } = useTheme();
+  const {
+    currency,
+    setCurrency,
+    availableCurrencies
+  } = useCurrency();
+  const {
+    fontSize,
+    setFontSize
+  } = useAccessibility();
+  const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
+  // Local state for onboarding preferences
   const [preferences, setPreferences] = useState({
-    language: language || 'en',
-    currency: currency || 'USD',
-    theme: theme || 'light',
-    ...stepData.preferences
+    language: currentLanguage,
+    theme: theme,
+    currency: currency,
+    fontSize: fontSize,
+    notifications: true,
+    analytics: true,
+    tips: true
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentSection, setCurrentSection] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
 
-  // Language options
-  const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'he', name: 'עברית', flag: '🇮🇱' }
+  // Update preferences
+  const updatePreference = useCallback((key, value) => {
+    setPreferences(prev => ({ ...prev, [key]: value }));
+    
+    // Apply immediately for preview
+    switch (key) {
+      case 'language':
+        setLanguage(value);
+        break;
+      case 'theme':
+        setTheme(value);
+        break;
+      case 'currency':
+        setCurrency(value);
+        break;
+      case 'fontSize':
+        setFontSize(value);
+        break;
+      default:
+        break;
+    }
+  }, [setLanguage, setTheme, setCurrency, setFontSize]);
+
+  // Check if all essential preferences are set
+  useEffect(() => {
+    const essential = ['language', 'theme', 'currency'];
+    const completed = essential.every(key => preferences[key]);
+    setIsComplete(completed);
+  }, [preferences]);
+
+  // Preference sections configuration
+  const preferenceSections = [
+    {
+      id: 'language',
+      title: t('preferences.language.title'),
+      description: t('preferences.language.description'),
+      icon: Globe,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      options: availableLanguages.map(lang => ({
+        value: lang.code,
+        label: lang.name,
+        flag: lang.flag,
+        description: lang.nativeName
+      }))
+    },
+    {
+      id: 'theme',
+      title: t('preferences.theme.title'),
+      description: t('preferences.theme.description'),
+      icon: Palette,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/20',
+      options: [
+        { 
+          value: 'light', 
+          label: t('preferences.theme.light'), 
+          icon: Sun,
+          description: t('preferences.theme.lightDesc')
+        },
+        { 
+          value: 'dark', 
+          label: t('preferences.theme.dark'), 
+          icon: Moon,
+          description: t('preferences.theme.darkDesc')
+        },
+        { 
+          value: 'auto', 
+          label: t('preferences.theme.auto'), 
+          icon: Settings,
+          description: t('preferences.theme.autoDesc')
+        }
+      ]
+    },
+    {
+      id: 'currency',
+      title: t('preferences.currency.title'),
+      description: t('preferences.currency.description'),
+      icon: DollarSign,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100 dark:bg-green-900/20',
+      options: availableCurrencies.slice(0, 8).map(curr => ({
+        value: curr.code,
+        label: `${curr.symbol} ${curr.code}`,
+        description: curr.name,
+        flag: curr.flag
+      }))
+    },
+    {
+      id: 'fontSize',
+      title: t('preferences.fontSize.title'),
+      description: t('preferences.fontSize.description'),
+      icon: Type,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/20',
+      options: [
+        { 
+          value: 'sm', 
+          label: t('preferences.fontSize.small'), 
+          description: '14px',
+          preview: 'text-sm'
+        },
+        { 
+          value: 'base', 
+          label: t('preferences.fontSize.normal'), 
+          description: '16px',
+          preview: 'text-base'
+        },
+        { 
+          value: 'lg', 
+          label: t('preferences.fontSize.large'), 
+          description: '18px',
+          preview: 'text-lg'
+        },
+        { 
+          value: 'xl', 
+          label: t('preferences.fontSize.extraLarge'), 
+          description: '20px',
+          preview: 'text-xl'
+        }
+      ]
+    }
   ];
 
-  // Currency options
-  const currencies = [
-    { code: 'USD', name: 'US Dollar', symbol: '$' },
-    { code: 'EUR', name: 'Euro', symbol: '€' },
-    { code: 'GBP', name: 'British Pound', symbol: '£' },
-    { code: 'ILS', name: 'Israeli Shekel', symbol: '₪' },
-    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' }
+  // Additional preferences
+  const additionalPreferences = [
+    {
+      key: 'notifications',
+      title: t('preferences.notifications.title'),
+      description: t('preferences.notifications.description'),
+      icon: Shield,
+      enabled: preferences.notifications
+    },
+    {
+      key: 'analytics',
+      title: t('preferences.analytics.title'),
+      description: t('preferences.analytics.description'),
+      icon: Target,
+      enabled: preferences.analytics
+    },
+    {
+      key: 'tips',
+      title: t('preferences.tips.title'),
+      description: t('preferences.tips.description'),
+      icon: Sparkles,
+      enabled: preferences.tips
+    }
   ];
 
-  // Theme options – translation-driven names
-  const themes = [
-    { code: 'light', icon: Sun },
-    { code: 'dark', icon: Moon },
-    { code: 'system', icon: Monitor }
-  ];
+  // Handle next section
+  const handleNext = useCallback(() => {
+    if (currentSection < preferenceSections.length - 1) {
+      setCurrentSection(currentSection + 1);
+    } else {
+      // Complete preferences setup
+      handleComplete();
+    }
+  }, [currentSection, preferenceSections.length]);
 
-  // Handle preference changes
-  const handleChange = (key, value) => {
-    const newPreferences = { ...preferences, [key]: value };
-    setPreferences(newPreferences);
-    updateStepData({ preferences: newPreferences });
-  };
-
-  // Handle continue
-  const handleContinue = async () => {
-    setIsLoading(true);
+  // Handle complete
+  const handleComplete = useCallback(async () => {
     try {
-      // ✅ OPTIMIZATION: Only apply changes if they're different from current values
-      let hasChanges = false;
-      const profileUpdates = {};
-
-      // Check and apply language change
-      if (preferences.language !== language) {
-        console.log('🌐 [ONBOARDING] Language change detected:', language, '→', preferences.language);
-        changeLanguagePermanent(preferences.language);
-        profileUpdates.language_preference = preferences.language;
-        hasChanges = true;
-      }
-      
-      // Check and apply theme change
-      if (preferences.theme !== theme) {
-        console.log('🎨 [ONBOARDING] Theme change detected:', theme, '→', preferences.theme);
-        setTheme(preferences.theme);
-        profileUpdates.theme_preference = preferences.theme;
-        hasChanges = true;
+      // Save preferences to user profile
+      if (onComplete) {
+        await onComplete(preferences);
       }
 
-      // Check and apply currency change
-      if (preferences.currency !== currency) {
-        console.log('💰 [ONBOARDING] Currency change detected:', currency, '→', preferences.currency);
-        profileUpdates.currency_preference = preferences.currency;
-        hasChanges = true;
-      }
+      addNotification({
+        type: 'success',
+        title: t('preferences.saved'),
+        description: t('preferences.savedDescription'),
+        duration: 3000
+      });
 
-      // ✅ OPTIMIZATION: Only save to database if there are actual changes
-      if (hasChanges) {
-        console.log('💾 [ONBOARDING] Saving profile changes:', profileUpdates);
-        await updateProfile(profileUpdates);
-      } else {
-        console.log('✅ [ONBOARDING] No preference changes detected, skipping API call');
-      }
-
-      // ✅ REMOVED: Monthly budget feature not implemented yet
-      // No JSONB preferences to save in onboarding for now
-      console.log('✅ [ONBOARDING] No additional preferences to save, basic settings only');
-
-      // ✅ IMPROVED: Better success message
-      if (hasChanges) {
-        console.log('🎉 [ONBOARDING] Preferences saved successfully');
-      } else {
-        console.log('✅ [ONBOARDING] No changes to save, proceeding to next step');
-      }
-      
-      console.log('🚀 [ONBOARDING] Calling onNext() to proceed to next step');
-      onNext();
-      console.log('✅ [ONBOARDING] onNext() called successfully');
+      onNext?.();
     } catch (error) {
-      console.error('❌ [ONBOARDING] Failed to save preferences:', error);
-      
-      // ✅ IMPROVED: Better error handling - show specific error message
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save preferences';
-      console.error('Full error details:', error);
-      
-      // Still allow user to continue but show warning
-      if (window.confirm(`שגיאה בשמירת ההעדפות: ${errorMessage}\n\nהאם לאפתח להמשיך בכל זאת?`)) {
-        onNext();
+      addNotification({
+        type: 'error',
+        title: t('preferences.saveFailed'),
+        description: error.message,
+        duration: 5000
+      });
+    }
+  }, [preferences, onComplete, addNotification, t, onNext]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        staggerChildren: 0.1
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const itemVariants = {
+    hidden: { opacity: 0, x: isRTL ? -20 : 20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const currentSectionData = preferenceSections[currentSection];
+  const SectionIcon = currentSectionData.icon;
+
   return (
-    <div className="max-w-5xl mx-auto h-full flex flex-col justify-center">
-      {/* ✅ COMPACT: Ultra-Compact Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-4"
-      >
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-          {t('onboarding.preferences.title')}
-        </h2>
-        <p className="text-xs text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-          {t('onboarding.preferences.description')}
-        </p>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
-        {/* Language & Currency - ULTRA-COMPACT */}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className={cn("space-y-6", className)}
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
+      {/* Header */}
+      <div className="text-center space-y-4">
         <motion.div
-          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="card space-y-3 p-4 rounded-xl"
+          variants={itemVariants}
+          className={cn(
+            "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center",
+            currentSectionData.bgColor
+          )}
         >
-          <h3 className={cn(
-            "text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2",
-            isRTL && "flex-row-reverse"
-          )}>
-            <Globe className="w-4 h-4 text-blue-600" />
-            {t('onboarding.preferences.localization')}
-          </h3>
-
-          <div className="space-y-3">
-            {/* Language Selection - ULTRA-COMPACT */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                {t('onboarding.preferences.language')}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => handleChange('language', lang.code)}
-                    className={cn(
-                      "p-2 rounded-lg border transition-all duration-200 text-xs",
-                      preferences.language === lang.code
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                    )}
-                  >
-                    <div className={cn(
-                      "flex items-center gap-2 justify-center",
-                      isRTL && "flex-row-reverse"
-                    )}>
-                      <span className="text-sm">{lang.flag}</span>
-                      <span className="font-medium text-xs">{lang.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Currency Selection - ULTRA-COMPACT */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                {t('onboarding.preferences.currency')}
-              </label>
-              <select
-                value={preferences.currency}
-                onChange={(e) => handleChange('currency', e.target.value)}
-                className={cn(
-                  "input w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs bg-white dark:bg-gray-800",
-                  isRTL && "text-right"
-                )}
-              >
-                {currencies.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.symbol} {t(`exchange.currencies.${currency.code}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <SectionIcon className={cn("w-8 h-8", currentSectionData.color)} />
         </motion.div>
 
-        {/* Theme & Budget - ULTRA-COMPACT */}
-        <motion.div
-          initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="card space-y-3 p-4 rounded-xl"
-        >
-          <h3 className={cn(
-            "text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2",
-            isRTL && "flex-row-reverse"
-          )}>
-            <Palette className="w-4 h-4 text-purple-600" />
-            {t('onboarding.preferences.appearance')}
-          </h3>
+        <motion.div variants={itemVariants}>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {currentSectionData.title}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            {currentSectionData.description}
+          </p>
+        </motion.div>
 
-          <div className="space-y-3">
-            {/* Theme Selection - ULTRA-COMPACT */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                {t('onboarding.preferences.theme')}
-              </label>
-              <div className="grid grid-cols-3 gap-1">
-                {themes.map((themeOption) => (
-                  <button
-                    key={themeOption.code}
-                    onClick={() => handleChange('theme', themeOption.code)}
-                    className={cn(
-                      "p-2 rounded-lg border transition-all duration-200 text-center",
-                      preferences.theme === themeOption.code
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                    )}
-                  >
-                    <themeOption.icon className="w-3 h-3 mx-auto mb-0.5" />
-                    <span className="text-xs font-medium">{t(`onboarding.preferences.themes.${themeOption.code}`)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Future Features Placeholder - Budget will be added later */}
-            <div className="text-center py-4">
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {t('onboarding.preferences.comingSoon')}
-              </div>
-            </div>
-          </div>
+        {/* Progress indicator */}
+        <motion.div variants={itemVariants} className="flex justify-center space-x-2">
+          {preferenceSections.map((_, index) => (
+            <div
+              key={index}
+              className={cn(
+                "w-2 h-2 rounded-full transition-all",
+                index <= currentSection
+                  ? "bg-primary-500"
+                  : "bg-gray-300 dark:bg-gray-600"
+              )}
+            />
+          ))}
         </motion.div>
       </div>
 
-      {/* ✅ COMPACT: Continue Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-        className="text-center mt-4"
+      {/* Current section options */}
+      <motion.div variants={itemVariants} className="space-y-3">
+        {currentSectionData.options.map((option) => {
+          const isSelected = preferences[currentSectionData.id] === option.value;
+          const OptionIcon = option.icon;
+
+          return (
+            <motion.div
+              key={option.value}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card
+                className={cn(
+                  "p-4 cursor-pointer transition-all border-2",
+                  isSelected
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                )}
+                onClick={() => updatePreference(currentSectionData.id, option.value)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {/* Option icon or flag */}
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center",
+                      isSelected 
+                        ? "bg-primary-500 text-white" 
+                        : "bg-gray-100 dark:bg-gray-800"
+                    )}>
+                      {option.flag ? (
+                        <span className="text-lg">{option.flag}</span>
+                      ) : OptionIcon ? (
+                        <OptionIcon className="w-4 h-4" />
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {option.label.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Option details */}
+                    <div className="flex-1">
+                      <h3 className={cn(
+                        "font-medium",
+                        option.preview && option.preview,
+                        isSelected 
+                          ? "text-primary-900 dark:text-primary-100" 
+                          : "text-gray-900 dark:text-white"
+                      )}>
+                        {option.label}
+                      </h3>
+                      {option.description && (
+                        <p className={cn(
+                          "text-sm mt-1",
+                          isSelected 
+                            ? "text-primary-700 dark:text-primary-300" 
+                            : "text-gray-600 dark:text-gray-400"
+                        )}>
+                          {option.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selection indicator */}
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                    isSelected
+                      ? "border-primary-500 bg-primary-500"
+                      : "border-gray-300 dark:border-gray-600"
+                  )}>
+                    {isSelected && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* Additional preferences (shown on last step) */}
+      {currentSection === preferenceSections.length - 1 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="space-y-4"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center">
+            {t('preferences.additional.title')}
+          </h3>
+          
+          <div className="space-y-3">
+            {additionalPreferences.map((pref) => {
+              const PrefIcon = pref.icon;
+              return (
+                <Card
+                  key={pref.key}
+                  className="p-4 border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                        <PrefIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">
+                          {pref.title}
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {pref.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant={pref.enabled ? "primary" : "outline"}
+                      size="sm"
+                      onClick={() => updatePreference(pref.key, !pref.enabled)}
+                    >
+                      {pref.enabled ? t('common.enabled') : t('common.disabled')}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Navigation */}
+      <motion.div 
+        variants={itemVariants}
+        className="flex justify-between items-center pt-6"
       >
         <Button
-          onClick={handleContinue}
-          disabled={isLoading}
-          className={cn(
-            "px-6 py-2 text-sm font-semibold",
-            "bg-gradient-to-r from-purple-600 to-blue-600",
-            "hover:from-purple-700 hover:to-blue-700",
-            "transform hover:scale-105 transition-all duration-200",
-            "shadow-md hover:shadow-lg",
-            isRTL && "flex-row-reverse"
-          )}
+          variant="outline"
+          onClick={onPrevious}
+          disabled={currentSection === 0}
         >
-          {isLoading ? (
-            <span className={cn(
-              "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
-            )}>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{t('onboarding.preferences.saving')}</span>
-            </span>
+          {t('navigation.previous')}
+        </Button>
+
+        <div className="flex items-center space-x-4">
+          {currentSection < preferenceSections.length - 1 ? (
+            <Button
+              variant="primary"
+              onClick={handleNext}
+              disabled={!preferences[currentSectionData.id]}
+              className="min-w-[120px]"
+            >
+              {t('navigation.next')}
+              <ChevronRight className={cn("w-4 h-4", isRTL ? "mr-2" : "ml-2")} />
+            </Button>
           ) : (
-            <span className={cn(
-              "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
-            )}>
-              <Heart className="w-4 h-4" />
-              <span>{t('onboarding.common.next')}</span>
-              {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </span>
+            <Button
+              variant="primary"
+              onClick={handleComplete}
+              disabled={!isComplete}
+              className="min-w-[120px]"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              {t('preferences.complete')}
+            </Button>
           )}
+        </div>
+      </motion.div>
+
+      {/* Skip option */}
+      <motion.div variants={itemVariants} className="text-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onNext?.()}
+          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          {t('preferences.skipForNow')}
         </Button>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

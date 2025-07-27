@@ -1,4 +1,9 @@
-// components/layout/Header.jsx - MINIMAL RTL FIXES ONLY
+/**
+ * 🧭 HEADER COMPONENT - Mobile-First Navigation with Admin Support
+ * Features: Zustand stores, Mobile-responsive, Admin navigation, OAuth integration
+ * @version 2.0.0
+ */
+
 import React, { useState, useCallback, useMemo, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,465 +24,517 @@ import {
   ChevronRight,
   Tag,
   Clock,
-  HelpCircle
+  HelpCircle,
+  Shield,
+  BarChart3,
+  Users,
+  Activity
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
+
+// ✅ NEW: Import Zustand stores (replaces Context API!)
+import { 
+  useAuth, 
+  useTranslation, 
+  useTheme,
+  useCurrency,
+  useNotifications 
+} from '../../stores';
 
 import { cn } from '../../utils/helpers';
 import { Avatar } from '../ui';
-import CategoryManager from '../features/categories/CategoryManager';
-import RecurringModal from '../features/transactions/RecurringModal';
-import ExchangeCalculator from '../features/exchange/ExchangeCalculator';
-import OnboardingModal from '../features/onboarding/OnboardingModal';
+
+// Lazy-loaded modals for performance
+const CategoryManager = React.lazy(() => import('../features/categories/CategoryManager'));
+const RecurringModal = React.lazy(() => import('../features/transactions/RecurringModal'));
+const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
+const OnboardingModal = React.lazy(() => import('../features/onboarding/OnboardingModal'));
 
 const Header = () => {
+  // ✅ Mobile-first state management
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPanelsDropdown, setShowPanelsDropdown] = useState(false);
   const [showMobilePanels, setShowMobilePanels] = useState(false);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [showRecurringModal, setShowRecurringModal] = useState(false);
-  const [showExchangeCalculator, setShowExchangeCalculator] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
   
-  const { user, logout, isAuthenticated, isLoggingOut, isLoading, isInitialized } = useAuth();
-  const { t, language, sessionLanguage, toggleLanguage } = useLanguage();
-  const { toggleTheme, isDark, sessionTheme } = useTheme();
+  // ✅ NEW: Zustand stores (replacing Context API)
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const { t, currentLanguage, isRTL, setLanguage } = useTranslation();
+  const { theme, isDark, setTheme } = useTheme();
+  const { currency, setCurrency, formatCurrency } = useCurrency();
+  const { addNotification } = useNotifications();
 
   const navigate = useNavigate();
   const location = useLocation();
-  const isHebrew = language === 'he';
-  
-  const themeSessionOverride = sessionTheme && sessionTheme !== (user?.preferences?.theme || 'light');
-  const languageSessionOverride = sessionLanguage && sessionLanguage !== (user?.preferences?.language || 'en');
-  
-  const handleThemeToggle = () => {
-    toggleTheme();
-  };
 
-  const handleLanguageToggle = () => {
-    toggleLanguage();
-  };
+  // ✅ Enhanced modal management
+  const openModal = useCallback((modalType) => {
+    setActiveModal(modalType);
+    setIsOpen(false); // Close mobile menu
+  }, []);
 
-  const handleOpenCategoryManager = () => {
-    setShowCategoryManager(true);
-    setShowPanelsDropdown(false);
-    setShowMobilePanels(false);
-    setIsOpen(false);
-  };
+  const closeModal = useCallback(() => {
+    setActiveModal(null);
+  }, []);
 
-  const handleOpenRecurringModal = () => {
-    setShowRecurringModal(true);
-    setShowPanelsDropdown(false);
-    setShowMobilePanels(false);
-    setIsOpen(false);
-  };
-
-  const handleOpenExchangeCalculator = () => {
-    setShowExchangeCalculator(true);
-    setShowPanelsDropdown(false);
-    setShowMobilePanels(false);
-    setIsOpen(false);
-  };
-
-  const handleEditTransaction = (transaction, editSingle = false) => {
-    setShowRecurringModal(false);
-    navigate('/transactions', { 
-      state: { 
-        editTransaction: transaction, 
-        editingSingle: editSingle 
-      } 
-    });
-  };
-
-  const isActivePath = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
-  };
-
-  const menuVariants = {
-    closed: {
-      opacity: 0,
-      y: -20,
-      transition: { duration: 0.2 }
-    },
-    open: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3, staggerChildren: 0.07 }
-    }
-  };
-
-  const itemVariants = {
-    closed: { opacity: 0, x: isHebrew ? 20 : -20 },
-    open: { opacity: 1, x: 0 }
-  };
-
-  // Navigation items - same order for all languages
-  const navigationItems = [
-    { name: t('nav.dashboard'), href: '/', icon: Home },
-    { name: t('nav.transactions'), href: '/transactions', icon: CreditCard },
-    { name: t('nav.profile'), href: '/profile', icon: User }
-  ];
-
-  // Panel options
-  const panelOptions = [
-    {
-      name: t('nav.categoryManager'),
-      icon: Tag,
-      onClick: handleOpenCategoryManager,
-      description: t('nav.categoryManagerDesc')
-    },
-    {
-      name: t('nav.recurringManager'),
-      icon: Clock,
-      onClick: handleOpenRecurringModal,
-      description: t('nav.recurringManagerDesc')
-    },
-    {
-      name: t('nav.exchangeCalculator'),
-      icon: DollarSign,
-      onClick: handleOpenExchangeCalculator,
-      description: t('nav.exchangeCalculatorDesc')
-    }
-  ];
-
-  const handleNavClick = (item, e) => {
-    if (item.onClick) {
-      e.preventDefault();
-      item.onClick();
-      setIsOpen(false);
-    } else {
-      navigate(item.href);
-      setIsOpen(false);
-    }
-  };
-
-  const handleLogout = async () => {
+  // ✅ Mobile-optimized logout
+  const handleLogout = useCallback(async () => {
     try {
-      setIsOpen(false);
-      setShowDropdown(false);
       await logout();
+      addNotification({
+        type: 'success',
+        message: t('auth.logoutSuccess', { fallback: 'Logged out successfully' })
+      });
+      navigate('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
+      addNotification({
+        type: 'error',
+        message: t('errors.logoutFailed', { fallback: 'Logout failed' })
+      });
     }
-  };
+  }, [logout, navigate, t, addNotification]);
 
-  if (!isInitialized || isLoading) {
+  // ✅ Enhanced language toggle with mobile support
+  const handleLanguageToggle = useCallback(() => {
+    const newLanguage = currentLanguage === 'en' ? 'he' : 'en';
+    setLanguage(newLanguage);
+    addNotification({
+      type: 'info',
+      message: t('common.languageChanged', { fallback: 'Language changed' })
+    });
+  }, [currentLanguage, setLanguage, t, addNotification]);
+
+  // ✅ Theme toggle with mobile support
+  const handleThemeToggle = useCallback(() => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setTheme(newTheme);
+    addNotification({
+      type: 'info',
+      message: t('common.themeChanged', { fallback: 'Theme changed' })
+    });
+  }, [isDark, setTheme, t, addNotification]);
+
+  // ✅ Mobile-first navigation configuration
+  const navigationConfig = useMemo(() => {
+    const baseNavigation = [
+      {
+        name: t('nav.dashboard', { fallback: 'Dashboard' }),
+        href: '/',
+        icon: Home,
+        current: location.pathname === '/'
+      },
+      {
+        name: t('nav.transactions', { fallback: 'Transactions' }),
+        href: '/transactions',
+        icon: CreditCard,
+        current: location.pathname === '/transactions'
+      },
+      {
+        name: t('nav.analytics', { fallback: 'Analytics' }),
+        href: '/analytics',
+        icon: BarChart3,
+        current: location.pathname.startsWith('/analytics')
+      },
+      {
+        name: t('nav.profile', { fallback: 'Profile' }),
+        href: '/profile',
+        icon: User,
+        current: location.pathname === '/profile'
+      }
+    ];
+
+    // ✅ Add admin navigation if user has admin access
+    if (user?.isAdmin) {
+      baseNavigation.push({
+        name: t('nav.admin', { fallback: 'Admin' }),
+        href: '/admin',
+        icon: Shield,
+        current: location.pathname.startsWith('/admin'),
+        badge: user?.isSuperAdmin ? 'SUPER' : 'ADMIN'
+      });
+    }
+
+    return baseNavigation;
+  }, [location.pathname, user, t]);
+
+  // ✅ Admin sub-navigation
+  const adminNavigation = useMemo(() => {
+    if (!user?.isAdmin) return [];
+
+    return [
+      {
+        name: t('nav.userManagement', { fallback: 'Users' }),
+        href: '/admin/users',
+        icon: Users,
+        current: location.pathname === '/admin/users'
+      },
+      {
+        name: t('nav.systemStats', { fallback: 'Statistics' }),
+        href: '/admin/stats',
+        icon: BarChart3,
+        current: location.pathname === '/admin/stats'
+      },
+      {
+        name: t('nav.activityLog', { fallback: 'Activity' }),
+        href: '/admin/activity',
+        icon: Activity,
+        current: location.pathname === '/admin/activity'
+      },
+      ...(user?.isSuperAdmin ? [{
+        name: t('nav.systemSettings', { fallback: 'Settings' }),
+        href: '/admin/settings',
+        icon: Settings,
+        current: location.pathname === '/admin/settings'
+      }] : [])
+    ];
+  }, [user, t, location.pathname]);
+
+  // ✅ Quick panels configuration
+  const quickPanels = useMemo(() => [
+    {
+      name: t('common.categories', { fallback: 'Categories' }),
+      description: t('common.manageCategoriesDesc', { fallback: 'Manage your expense categories' }),
+      icon: Tag,
+      onClick: () => openModal('categories'),
+      color: 'blue'
+    },
+    {
+      name: t('common.recurring', { fallback: 'Recurring' }),
+      description: t('common.manageRecurringDesc', { fallback: 'Manage recurring transactions' }),
+      icon: Clock,
+      onClick: () => openModal('recurring'),
+      color: 'green'
+    },
+    {
+      name: t('common.exchange', { fallback: 'Exchange' }),
+      description: t('common.currencyExchangeDesc', { fallback: 'Currency exchange calculator' }),
+      icon: DollarSign,
+      onClick: () => openModal('exchange'),
+      color: 'purple'
+    },
+    {
+      name: t('common.help', { fallback: 'Help' }),
+      description: t('common.onboardingDesc', { fallback: 'Getting started guide' }),
+      icon: HelpCircle,
+      onClick: () => openModal('onboarding'),
+      color: 'orange'
+    }
+  ], [t, openModal]);
+
+  // ✅ Loading state
+  if (isLoading) {
     return (
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                  SpendWise
-                </h1>
-              </div>
-            </div>
-            <div className="animate-pulse">
-              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-            </div>
+            <div className="w-32 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
           </div>
         </div>
       </header>
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+      <header className={cn(
+        "bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40",
+        isRTL && "rtl"
+      )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            
-            {/* Left side in English / Right side in Hebrew - Logo */}
+          <div className="flex justify-between items-center h-16">
+            {/* ✅ Mobile-first logo and hamburger */}
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                aria-expanded="false"
+              >
+                <span className="sr-only">{t('nav.openMenu', { fallback: 'Open main menu' })}</span>
+                {isOpen ? (
+                  <X className="block h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                )}
+              </button>
+
+              {/* Logo */}
+              <div className="flex-shrink-0 flex items-center ml-4 lg:ml-0">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-2xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                >
                   SpendWise
-                </h1>
+                </button>
               </div>
             </div>
 
-            {/* Center section - Navigation */}
-            <div className={cn(
-              "hidden md:flex items-center",
-              isHebrew ? "flex-row-reverse gap-8" : "gap-8"
-            )}>
-              {/* Navigation Items */}
-              {navigationItems.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={(e) => handleNavClick(item, e)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    isHebrew && "flex-row-reverse",
-                    isActivePath(item.href)
-                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
-                  )}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.name}
-                </button>
-              ))}
+            {/* ✅ Desktop navigation */}
+            <nav className="hidden lg:flex lg:space-x-8">
+              {navigationConfig.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    className={cn(
+                      "inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors relative",
+                      item.current
+                        ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    )}
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    {item.name}
+                    {item.badge && (
+                      <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-              {/* Panels Dropdown */}
-              <div className="relative">
+            {/* ✅ Right side actions */}
+            <div className="flex items-center space-x-3">
+              {/* Desktop quick panels */}
+              <div className="hidden lg:block relative">
                 <button
                   onClick={() => setShowPanelsDropdown(!showPanelsDropdown)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors",
-                    isHebrew && "flex-row-reverse"
-                  )}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
                 >
-                  <Layers className="w-4 h-4" />
-                  {t('nav.panels')}
-                  <ChevronDown className={cn(
-                    "w-4 h-4 transition-transform",
-                    showPanelsDropdown && "rotate-180"
-                  )} />
+                  <Layers className="w-4 h-4 mr-2" />
+                  {t('common.quickPanels', { fallback: 'Panels' })}
+                  <ChevronDown className="w-4 h-4 ml-1" />
                 </button>
 
                 <AnimatePresence>
                   {showPanelsDropdown && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className={cn(
-                        "absolute top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
-                        // 🚀 ONLY FIX: Proper RTL positioning for panels dropdown
-                        isHebrew ? "right-0" : "left-0"
-                      )}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
                     >
-                      {panelOptions.map((option) => (
-                        <button
-                          key={option.name}
-                          onClick={option.onClick}
-                          className={cn(
-                            "w-full px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-3 transition-colors",
-                            isHebrew ? "text-right flex-row-reverse" : "text-left"
-                          )}
-                        >
-                          <option.icon className="w-4 h-4 mt-0.5 text-primary-500" />
-                          <div className={isHebrew ? "text-right" : "text-left"}>
-                            <div className="font-medium">{option.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {option.description}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
+                      <div className="p-4 grid grid-cols-2 gap-3">
+                        {quickPanels.map((panel) => {
+                          const Icon = panel.icon;
+                          return (
+                            <button
+                              key={panel.name}
+                              onClick={panel.onClick}
+                              className="p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
+                            >
+                              <div className={cn(
+                                "w-8 h-8 rounded-md flex items-center justify-center mb-2",
+                                panel.color === 'blue' && "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+                                panel.color === 'green' && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+                                panel.color === 'purple' && "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+                                panel.color === 'orange' && "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                              )}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                                {panel.name}
+                              </h3>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {panel.description}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-            </div>
 
-            {/* Controls - same order for mobile, RTL for desktop */}
-            <div className={cn(
-              "flex items-center gap-2",
-              "md:gap-2",
-              isHebrew ? "md:flex-row-reverse" : ""
-            )}>
-              {/* Theme Toggle */}
+              {/* Theme toggle */}
               <button
                 onClick={handleThemeToggle}
-                className={cn(
-                  "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
-                  themeSessionOverride && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
-                )}
-                aria-label={isDark ? t('common.switchToLight') : t('common.switchToDark')}
-                title={themeSessionOverride ? `Session Override: ${sessionTheme} (Saved: ${user?.preferences?.theme || 'light'})` : `Click to switch to ${isDark ? 'light' : 'dark'} mode`}
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                title={t('common.toggleTheme', { fallback: 'Toggle theme' })}
               >
                 {isDark ? (
                   <Sun className="w-5 h-5" />
                 ) : (
                   <Moon className="w-5 h-5" />
                 )}
-                {themeSessionOverride && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
-                )}
               </button>
 
-              {/* Language Toggle */}
+              {/* Language toggle */}
               <button
                 onClick={handleLanguageToggle}
-                className={cn(
-                  "p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative",
-                  languageSessionOverride && "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
-                )}
-                aria-label={t('common.toggleLanguage')}
-                title={languageSessionOverride ? `Session Override: ${sessionLanguage === 'he' ? 'עברית' : 'English'} (Saved: ${user?.preferences?.language === 'he' ? 'עברית' : 'English'})` : undefined}
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
+                title={t('common.toggleLanguage', { fallback: 'Toggle language' })}
               >
                 <Globe className="w-5 h-5" />
-                {languageSessionOverride && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full border-2 border-white dark:border-gray-900"></span>
-                )}
               </button>
 
-              {/* Desktop User Dropdown */}
-              <div className="relative hidden md:block">
+              {/* User menu */}
+              <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  aria-label={t('common.openUserMenu')}
+                  className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <Avatar
+                    src={user?.avatar}
+                    alt={user?.username || user?.email}
                     size="sm"
-                    name={user?.username}
-                    src={user?.preferences?.profilePicture}
+                    fallback={user?.username?.charAt(0) || user?.email?.charAt(0)}
                   />
-                  <ChevronDown className="w-4 h-4" />
+                  <div className="hidden lg:block text-left">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user?.username || t('common.user', { fallback: 'User' })}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user?.email}
+                    </p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
 
                 <AnimatePresence>
                   {showDropdown && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className={cn(
-                        "absolute top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50",
-                        // 🚀 ONLY FIX: User dropdown positioning stays as original
-                        isHebrew ? 'left-0' : 'right-0'
-                      )}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
                     >
-                      <div className={cn(
-                        "px-4 py-2 border-b border-gray-100 dark:border-gray-700",
-                        isHebrew && "text-right"
-                      )}>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user?.username}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {user?.email}
-                        </p>
-                        {(themeSessionOverride || languageSessionOverride) && (
-                          <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                            {t('common.sessionOverrideActive')}
-                          </div>
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            navigate('/profile');
+                            setShowDropdown(false);
+                          }}
+                          className="flex w-full items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          <User className="w-4 h-4 mr-3" />
+                          {t('nav.profile', { fallback: 'Profile' })}
+                        </button>
+                        
+                        {user?.isAdmin && (
+                          <button
+                            onClick={() => {
+                              navigate('/admin');
+                              setShowDropdown(false);
+                            }}
+                            className="flex w-full items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          >
+                            <Shield className="w-4 h-4 mr-3" />
+                            {t('nav.admin', { fallback: 'Admin Panel' })}
+                            {user?.isSuperAdmin && (
+                              <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+                                SUPER
+                              </span>
+                            )}
+                          </button>
                         )}
-                      </div>
-                      
-                      <button
-                        onClick={() => {
-                          navigate('/profile');
-                          setShowDropdown(false);
-                        }}
-                        className={cn(
-                          "w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2",
-                          isHebrew ? "text-right flex-row-reverse" : "text-left"
-                        )}
-                      >
-                        <Settings className="w-4 h-4" />
-                        {t('nav.profile')}
-                      </button>
 
-                      <button
-                        onClick={() => {
-                          setShowDropdown(false);
-                          setShowOnboarding(true);
-                        }}
-                        className={cn(
-                          'w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors',
-                          isHebrew ? "text-right flex-row-reverse" : "text-left"
-                        )}
-                      >
-                        <HelpCircle className="w-4 h-4" />
-                        {t('nav.help')}
-                      </button>
-                      
-                      <button
-                        onClick={handleLogout}
-                        disabled={isLoggingOut}
-                        className={cn(
-                          "w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50",
-                          isHebrew ? "text-right flex-row-reverse" : "text-left"
-                        )}
-                      >
-                        <LogOut className="w-4 h-4" />
-                        {isLoggingOut ? t('common.loading') : t('nav.logout')}
-                      </button>
+                        <hr className="my-1 border-gray-200 dark:border-gray-700" />
+                        
+                        <button
+                          onClick={handleLogout}
+                          className="flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          {t('auth.logout', { fallback: 'Logout' })}
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label={isOpen ? t('common.closeMenu') : t('common.openMenu')}
-              >
-                {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* ✅ Mobile navigation menu */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial="closed"
-              animate="open"
-              exit="closed"
-              variants={menuVariants}
-              className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
             >
-              <div className="px-4 py-4 space-y-2">
-                {/* Navigation Items */}
-                {navigationItems.map((item) => (
-                  <motion.button
-                    key={item.name}
-                    variants={itemVariants}
-                    onClick={(e) => handleNavClick(item, e)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isHebrew && "flex-row-reverse text-right",
-                      isActivePath(item.href)
-                        ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                        : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
-                    )}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.name}
-                  </motion.button>
-                ))}
+              <div className="px-4 pt-2 pb-3 space-y-1">
+                {/* Mobile navigation links */}
+                {navigationConfig.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => {
+                        navigate(item.href);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center w-full px-3 py-2 text-base font-medium rounded-md",
+                        item.current
+                          ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      )}
+                    >
+                      <Icon className="w-5 h-5 mr-3" />
+                      {item.name}
+                      {item.badge && (
+                        <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
-                {/* Mobile Panels */}
-                <motion.div variants={itemVariants}>
+                {/* Mobile admin sub-navigation */}
+                {user?.isAdmin && location.pathname.startsWith('/admin') && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {t('nav.admin', { fallback: 'Admin' })}
+                    </h3>
+                    {adminNavigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.name}
+                          onClick={() => {
+                            navigate(item.href);
+                            setIsOpen(false);
+                          }}
+                          className={cn(
+                            "flex items-center w-full px-6 py-2 text-sm font-medium rounded-md",
+                            item.current
+                              ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          )}
+                        >
+                          <Icon className="w-4 h-4 mr-3" />
+                          {item.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Mobile quick panels */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => setShowMobilePanels(!showMobilePanels)}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors",
-                      isHebrew && "flex-row-reverse"
-                    )}
+                    className="flex items-center justify-between w-full px-3 py-2 text-base font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
                   >
-                    <div className={cn(
-                      "flex items-center gap-3",
-                      isHebrew && "flex-row-reverse"
-                    )}>
-                      <Layers className="w-5 h-5" />
-                      {t('nav.panels')}
+                    <div className="flex items-center">
+                      <Layers className="w-5 h-5 mr-3" />
+                      {t('common.quickPanels', { fallback: 'Quick Panels' })}
                     </div>
-                    <ChevronRight 
-                      className={cn(
-                        'w-4 h-4 transition-transform',
-                        showMobilePanels && 'rotate-90',
-                        isHebrew && !showMobilePanels && 'rotate-180'
-                      )} 
-                    />
+                    <ChevronRight className={cn(
+                      "w-4 h-4 transition-transform",
+                      showMobilePanels && "rotate-90"
+                    )} />
                   </button>
 
                   <AnimatePresence>
@@ -486,88 +543,27 @@ const Header = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className={cn(
-                          "mt-2 space-y-1 overflow-hidden",
-                          isHebrew ? "mr-8" : "ml-8"
-                        )}
+                        className="mt-2 space-y-1"
                       >
-                        {panelOptions.map((option) => (
-                          <button
-                            key={option.name}
-                            onClick={option.onClick}
-                            className={cn(
-                              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
-                              isHebrew && "flex-row-reverse text-right"
-                            )}
-                          >
-                            <option.icon className="w-4 h-4" />
-                            {option.name}
-                          </button>
-                        ))}
+                        {quickPanels.map((panel) => {
+                          const Icon = panel.icon;
+                          return (
+                            <button
+                              key={panel.name}
+                              onClick={() => {
+                                panel.onClick();
+                                setIsOpen(false);
+                              }}
+                              className="flex items-center w-full px-6 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+                            >
+                              <Icon className="w-4 h-4 mr-3" />
+                              {panel.name}
+                            </button>
+                          );
+                        })}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.div>
-
-                {/* Mobile Help */}
-                <motion.button
-                  variants={itemVariants}
-                  onClick={() => {
-                    setIsOpen(false);
-                    setShowOnboarding(true);
-                  }}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors',
-                    isHebrew && "flex-row-reverse text-right"
-                  )}
-                >
-                  <HelpCircle className="w-5 h-5" />
-                  {t('nav.help')}
-                </motion.button>
-
-                {/* Mobile User Section */}
-                <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="px-3 py-2 mb-2">
-                    <div className={cn(
-                      "flex items-center gap-3",
-                      isHebrew && "flex-row-reverse"
-                    )}>
-                      <Avatar
-                        size="sm"
-                        name={user?.username}
-                        src={user?.preferences?.profilePicture}
-                      />
-                      <div className={isHebrew ? "text-right" : "text-left"}>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user?.username}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {user?.email}
-                        </p>
-                      </div>
-                    </div>
-                    {(themeSessionOverride || languageSessionOverride) && (
-                      <div className={cn(
-                        "mt-2 text-xs text-amber-600 dark:text-amber-400",
-                        isHebrew ? "text-right" : "text-left"
-                      )}>
-                        {t('common.sessionOverrideActive')}
-                      </div>
-                    )}
-                  </div>
-
-                  <motion.button
-                    variants={itemVariants}
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50",
-                      isHebrew && "flex-row-reverse text-right"
-                    )}
-                  >
-                    <LogOut className="w-5 h-5" />
-                    {isLoggingOut ? t('common.loading') : t('nav.logout')}
-                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -575,53 +571,48 @@ const Header = () => {
         </AnimatePresence>
       </header>
 
-      {/* Click Outside Handlers */}
-      {showDropdown && (
+      {/* ✅ Click outside to close dropdowns */}
+      {(showDropdown || showPanelsDropdown || isOpen) && (
         <div
           className="fixed inset-0 z-30"
-          onClick={() => setShowDropdown(false)}
-        />
-      )}
-      {showPanelsDropdown && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => setShowPanelsDropdown(false)}
-        />
-      )}
-
-      {/* Modals */}
-      {showCategoryManager && (
-        <CategoryManager
-          isOpen={showCategoryManager}
-          onClose={() => setShowCategoryManager(false)}
-        />
-      )}
-
-      {showRecurringModal && (
-        <RecurringModal
-          isOpen={showRecurringModal}
-          onClose={() => setShowRecurringModal(false)}
-          onEdit={handleEditTransaction}
-          onSuccess={() => {
-            // Optionally refresh data or show success message
+          onClick={() => {
+            setShowDropdown(false);
+            setShowPanelsDropdown(false);
+            setIsOpen(false);
           }}
         />
       )}
 
-      {showExchangeCalculator && (
-        <ExchangeCalculator
-          isOpen={showExchangeCalculator}
-          onClose={() => setShowExchangeCalculator(false)}
-        />
-      )}
-
-      {showOnboarding && (
-        <OnboardingModal
-          isOpen={showOnboarding}
-          onClose={() => setShowOnboarding(false)}
-          forceShow={true}
-        />
-      )}
+      {/* ✅ Lazy-loaded modals */}
+      <Suspense fallback={null}>
+        {activeModal === 'categories' && (
+          <CategoryManager
+            isOpen={true}
+            onClose={closeModal}
+          />
+        )}
+        
+        {activeModal === 'recurring' && (
+          <RecurringModal
+            isOpen={true}
+            onClose={closeModal}
+          />
+        )}
+        
+        {activeModal === 'exchange' && (
+          <ExchangeCalculator
+            isOpen={true}
+            onClose={closeModal}
+          />
+        )}
+        
+        {activeModal === 'onboarding' && (
+          <OnboardingModal
+            isOpen={true}
+            onClose={closeModal}
+          />
+        )}
+      </Suspense>
     </>
   );
 };

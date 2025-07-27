@@ -1,0 +1,69 @@
+---
+alwaysApply: true
+---
+
+projectTitle: DevTogether Platform
+projectType: fullstack
+environment: live
+mode: upgrade
+
+description: |
+  DevTogether is a fully functional production platform connecting junior developers with nonprofits.
+  It uses role-based access, project workflows, approvals, chats and more – built with React, Supabase, and clean separation of concerns.
+  We are now in a stable position to refactor, modernize, or upgrade tools, architecture, or logic – **if it provides real value**.
+
+rules:
+  - name: progressiveUpgrade
+    description: You may upgrade tools, libraries or patterns – if it clearly improves performance, scalability, security, or developer velocity.
+    appliesTo:
+      files: all
+    action:
+      type: allow
+      condition:
+        justificationRequired: true
+        replaceIf: betterAlternativeAvailable
+
+  - name: leanByDefault
+    description: Don’t introduce unnecessary complexity, indirection, or bloat. Keep logic minimal unless it solves real problems.
+    appliesTo:
+      files: all
+    action:
+      type: validate
+      condition: avoidOverEngineering: true
+
+  - name: preserveFunctionality
+    description: All existing working features must be preserved unless explicitly removed.
+    appliesTo:
+      files: all
+    action:
+      type: assert
+      condition: regressions: false
+
+  - name: encourageBestTools
+    description: If there’s a better modern library, pattern or structure (e.g. TanStack Query, Zod, Zustand), suggest it.
+    appliesTo:
+      files: frontend
+    action:
+      type: suggest
+      priority: high
+
+  - name: deepAuthGuard
+    description: Role-based access should be enforced both visually and logically.
+    appliesTo:
+      triggers: [onRouteChange, onServerCall]
+    action:
+      type: validate
+      condition: rbacEnforced: true
+
+guidelines:
+  - "This is a working system. Suggest upgrades only if they bring tangible value."
+  - "Favor composability, clarity and maintainability over buzzwords."
+  - "Avoid bloated abstractions and over-modularization unless warranted."
+  - "If using a new tool – clearly explain why and simplify integration."
+
+notes:
+  - "Use Vite, TanStack, or Zustand only if it simplifies or speeds up the app"
+  - "We welcome code-first design systems if they reduce friction"
+  - "If new architecture is proposed – create a migration plan with clear win"
+  -"make sure every md you create go to doc folder and not into the code folders!"
+

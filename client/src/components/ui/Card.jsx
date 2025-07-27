@@ -1,177 +1,135 @@
-// components/ui/Card.jsx
-import React from 'react';
-import { cn } from '../../utils/helpers';
-import { useLanguage } from '../../context/LanguageContext';
+/**
+ * 🃏 CARD COMPONENT - Mobile-First Content Container
+ * Features: Zustand stores, Multiple variants, Touch-optimized
+ * @version 2.0.0
+ */
 
-const Card = ({
+import React from 'react';
+import { motion } from 'framer-motion';
+
+// ✅ NEW: Import Zustand stores (replaces Context API!)
+import { useTranslation } from '../../stores';
+
+import { cn } from '../../utils/helpers';
+
+const Card = React.forwardRef(({
   children,
-  title,
-  subtitle,
-  actions,
-  footer,
-  variant = 'default',
-  state = null, // NEW: success, warning, error, info
-  padding = 'default',
-  hoverable = false,
-  clickable = false,
   className = '',
-  headerClassName = '',
-  bodyClassName = '',
-  footerClassName = '',
+  variant = 'default',
+  padding = 'default',
+  hover = false,
+  clickable = false,
   onClick,
   ...props
-}) => {
-  const { language } = useLanguage();
-  const isRTL = language === 'he';
-  
+}, ref) => {
+  // ✅ NEW: Zustand stores (replacing Context API)
+  const { isRTL } = useTranslation();
+
+  // ✅ Variant configurations
   const variants = {
-    // 🔄 EXISTING VARIANTS (keep unchanged)
-    default: 'bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700',
-    outlined: 'bg-transparent border-2 border-gray-200 dark:border-gray-700',
-    elevated: 'bg-white shadow-lg dark:bg-gray-800',
-    filled: 'bg-gray-50 dark:bg-gray-900',
-    
-    // 🚀 NEW DESIGN SYSTEM VARIANTS
-    // KPI cards - for key metrics only
-    kpi: 'bg-gradient-to-br from-primary-500 to-primary-700 text-white border-0 shadow-lg',
-    kpiSuccess: 'bg-gradient-to-br from-success to-success-dark text-white border-0 shadow-lg',
-    kpiError: 'bg-gradient-to-br from-error to-error-dark text-white border-0 shadow-lg',
-    
-    // 🎨 UNIFIED DESIGN SYSTEM VARIANTS - Enterprise grade
-    gradient: 'gradient-hero-primary text-white border-0 shadow-premium',
-    gradientSecondary: 'gradient-hero-secondary text-white border-0 shadow-premium',
-    gradientAccent: 'gradient-hero-accent text-white border-0 shadow-premium',
-    
-    // Highlight cards - subtle section emphasis
-    highlight: 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-l-4 border-primary-500',
-    highlightSuccess: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500',
-    highlightError: 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-l-4 border-red-500',
-    
-    // Clean cards - primary content areas
-    clean: 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm',
-    
-    // Modal system
-    modal: 'bg-white dark:bg-gray-800 border-0 shadow-2xl',
-    modalHeader: 'bg-gradient-to-r from-primary-500 to-primary-700 text-white border-0',
-    
-    // 🎨 PHASE 15: NEW STATE VARIANTS
-    'state-success': 'card-state-success interaction-enhanced',
-    'state-warning': 'card-state-warning interaction-enhanced',
-    'state-error': 'card-state-error interaction-enhanced',
-    'state-info': 'card-state-info interaction-enhanced'
+    default: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm',
+    elevated: 'bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700',
+    outlined: 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600',
+    filled: 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
+    glass: 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg',
+    gradient: 'bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm'
   };
 
+  // ✅ Padding configurations
   const paddings = {
     none: '',
-    small: 'p-4',
-    default: 'p-6',
-    large: 'p-8',
-    compact: 'p-3',      // ADD
-    adaptive: 'adaptive-card'  // ADD
+    sm: 'p-3',
+    default: 'p-4',
+    md: 'p-5',
+    lg: 'p-6',
+    xl: 'p-8'
   };
 
-  // 🎯 PHASE 15: State-aware variant selection
-  const getVariant = () => {
-    if (state) {
-      return `state-${state}`;
-    }
-    return variant;
-  };
-
-  const cardStyles = cn(
-    'rounded-xl transition-all duration-200',
-    variants[getVariant()],
-    hoverable && 'hover:shadow-lg hover:-translate-y-0.5 card-interactive',
-    clickable && 'cursor-pointer card-premium micro-scale',
-    className
+  // ✅ Interactive states
+  const interactiveClasses = cn(
+    hover && 'hover:shadow-md transition-shadow duration-200',
+    clickable && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200',
+    onClick && 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900'
   );
 
-  const content = (
-    <>
-      {(title || subtitle || actions) && (
-        <div className={cn(
-          'border-b border-gray-100 dark:border-gray-700',
-          (variant.includes('kpi') || variant.includes('modal') || state) && 'border-none',
-          padding !== 'none' && paddings[padding],
-          headerClassName
-        )}>
-          <div className={cn(
-            "flex items-start justify-between",
-            isRTL && "flex-row-reverse"
-          )}>
-            <div className={cn(
-              "flex-1",
-              isRTL && "text-right"
-            )}>
-              {title && (
-                <h3 className={cn(
-                  "text-lg font-semibold",
-                  state ? "text-inherit" : "text-gray-900 dark:text-white"
-                )}>
-                  {title}
-                </h3>
-              )}
-              {subtitle && (
-                <p className={cn(
-                  "mt-1 text-sm",
-                  state ? "text-inherit opacity-80" : "text-gray-500 dark:text-gray-400"
-                )}>
-                  {subtitle}
-                </p>
-              )}
-            </div>
-            {actions && (
-              <div className={isRTL ? "mr-4" : "ml-4"}>
-                {actions}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      <div className={cn(
-        padding !== 'none' && paddings[padding],
-        bodyClassName
-      )}>
-        {children}
-      </div>
-      
-      {footer && (
-        <div className={cn(
-          'border-t border-gray-100 dark:border-gray-700',
-          (state) && 'border-none',
-          padding !== 'none' && paddings[padding],
-          footerClassName
-        )}>
-          {footer}
-        </div>
-      )}
-    </>
-  );
-
-  if (clickable && onClick) {
-    return (
-      <div
-        onClick={onClick}
-        className={cardStyles}
-        dir={isRTL ? 'rtl' : 'ltr'}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && onClick()}
-        {...props}
-      >
-        {content}
-      </div>
-    );
-  }
+  const CardComponent = clickable || onClick ? motion.button : motion.div;
 
   return (
-    <div 
-      className={cardStyles} 
-      dir={isRTL ? 'rtl' : 'ltr'}
+    <CardComponent
+      ref={ref}
+      onClick={onClick}
+      whileHover={hover ? { y: -2 } : undefined}
+      whileTap={clickable ? { scale: 0.98 } : undefined}
+      className={cn(
+        'rounded-lg overflow-hidden',
+        variants[variant],
+        paddings[padding],
+        interactiveClasses,
+        // RTL support
+        isRTL && 'text-right',
+        // Mobile touch optimization
+        clickable && 'touch-manipulation select-none',
+        className
+      )}
       {...props}
     >
-      {content}
+      {children}
+    </CardComponent>
+  );
+});
+
+Card.displayName = 'Card';
+
+// ✅ Card header component
+export const CardHeader = ({ children, className = '', ...props }) => {
+  const { isRTL } = useTranslation();
+  
+  return (
+    <div
+      className={cn(
+        'px-6 py-4 border-b border-gray-200 dark:border-gray-700',
+        isRTL && 'text-right',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+// ✅ Card body component
+export const CardBody = ({ children, className = '', ...props }) => {
+  const { isRTL } = useTranslation();
+  
+  return (
+    <div
+      className={cn(
+        'p-6',
+        isRTL && 'text-right',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+// ✅ Card footer component
+export const CardFooter = ({ children, className = '', ...props }) => {
+  const { isRTL } = useTranslation();
+  
+  return (
+    <div
+      className={cn(
+        'px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50',
+        isRTL && 'text-right',
+        className
+      )}
+      {...props}
+    >
+      {children}
     </div>
   );
 };

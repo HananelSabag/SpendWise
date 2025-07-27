@@ -1,578 +1,622 @@
 /**
- * InitialTemplatesStep Component - Enhanced template setup with more options
- * 
- * ✅ ENHANCED FEATURES:
- * - More template suggestions to fill the screen
- * - Manual transaction addition option (Plus icon -> AddTransactions)
- * - Clean header without unnecessary icons
- * - Better space utilization with no scrolling
- * - Improved template variety for different user types
- * - Modern responsive design
- * - Editable template amounts
+ * 📋 INITIAL TEMPLATES STEP - MOBILE-FIRST
+ * Enhanced template selection for onboarding
+ * NOW WITH ZUSTAND STORES! 🎉
+ * @version 2.0.0
  */
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Plus, DollarSign, Home, Phone, CheckCircle, Clock,
-  ChevronDown, Trash2, Edit2, Car, Wifi, Coffee, Target, 
-  Smartphone, Zap, Building2, Info, 
-  Sparkles, Star, Heart, Crown, Activity,
-  ShoppingCart, Fuel, Utensils, Book, Dumbbell, Music,
-  Plane, Gift, CreditCard, Calculator, User
+import React, { useState, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Plus, Check, Star, TrendingUp, TrendingDown, Home,
+  Car, Utensils, Heart, Briefcase, GraduationCap,
+  ShoppingBag, Plane, Gift, Coffee, Smartphone,
+  ChevronRight, Sparkles, Target, Filter
 } from 'lucide-react';
 
-import { useLanguage } from '../../../../context/LanguageContext';
-import { useCurrency } from '../../../../context/CurrencyContext'; 
-import { useTransactionActions } from '../../../../hooks/useTransactionActions';
-import { useToast } from '../../../../hooks/useToast';
+// ✅ NEW: Import from Zustand stores instead of Context
+import {
+  useTranslation,
+  useCurrency,
+  useTheme,
+  useNotifications,
+  useAuth
+} from '../../../../stores';
+
+import { Button, Card, Badge, Input } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
-import { Button, Input, Modal } from '../../../ui';
-import AddTransactions from '../../transactions/AddTransactions';
 
-/**
- * InitialTemplatesStep - Enhanced setup with more templates and manual option
- */
-const InitialTemplatesStep = ({ onNext, onPrevious, onSkip, stepData, updateStepData, onComplete, isCompleting }) => {
-  const { t, language } = useLanguage();
-  const { currency, formatAmount, getCurrencySymbol } = useCurrency();
-  const { createTransaction } = useTransactionActions();
-  const toastService = useToast();
-  const isRTL = language === 'he';
-  
-  const [templates, setTemplates] = useState(stepData.templates || []);
-  const [isCreating, setIsCreating] = useState(false);
-  const [showAddTransactions, setShowAddTransactions] = useState(false);
+const InitialTemplatesStep = ({
+  onNext,
+  onPrevious,
+  onComplete,
+  className = ''
+}) => {
+  // ✅ NEW: Use Zustand stores
+  const { t, isRTL } = useTranslation('onboarding');
+  const { formatCurrency } = useCurrency();
+  const { isDark } = useTheme();
+  const { addNotification } = useNotifications();
+  const { user } = useAuth();
 
-  // ✅ ENHANCED: Currency-appropriate default amounts
-  const getDefaultAmount = (type, category) => {
-    const currencyMultiplier = currency === 'ILS' ? 1 : currency === 'USD' ? 0.27 : 0.25;
-    
-    const baseAmounts = {
-      salary: 12000,
-      rent: 3500,
-      phone: 120,
-      car: 800,
-      internet: 150,
-      coffee: 80,
-      groceries: 1200,
-      insurance: 300,
-      gym: 180,
-      subscription: 50,
-      gas: 400,
-      utilities: 200
-    };
-    
-    return Math.round((baseAmounts[category] || 100) * currencyMultiplier);
-  };
+  const [selectedTemplates, setSelectedTemplates] = useState([]);
+  const [currentCategory, setCurrentCategory] = useState('popular');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreatingCustom, setIsCreatingCustom] = useState(false);
+  const [customTemplate, setCustomTemplate] = useState({
+    description: '',
+    amount: '',
+    type: 'expense',
+    category: 'other',
+    frequency: 'monthly'
+  });
 
-  // ✅ EXPANDED: More template suggestions to fill the screen
-  const templateSuggestions = [
-    // Income Templates
-    {
-      id: 'salary',
-      title: t('onboarding.templates.examples.salary'),
-      amount: getDefaultAmount('income', 'salary'),
-      type: 'income',
-      frequency: 'monthly',
-      icon: Target,
-      color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20',
-      categoryId: 61,
-      category: 'income'
-    },
-    
-    // Essential Expenses
-    {
-      id: 'rent',
-      title: t('onboarding.templates.examples.rent'),
-      amount: getDefaultAmount('expense', 'rent'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Home,
-      color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/20',
-      categoryId: 69,
-      category: 'housing'
-    },
-    {
-      id: 'phone',
-      title: t('onboarding.templates.examples.phone'),
-      amount: getDefaultAmount('expense', 'phone'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Smartphone,
-      color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/20',
-      categoryId: 66,
-      category: 'utilities'
-    },
-    {
-      id: 'internet',
-      title: t('onboarding.templates.examples.internet'),
-      amount: getDefaultAmount('expense', 'internet'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Wifi,
-      color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/20',
-      categoryId: 66,
-      category: 'utilities'
-    },
-    {
-      id: 'groceries',
-      title: t('onboarding.templates.examples.groceries'),
-      amount: getDefaultAmount('expense', 'groceries'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: ShoppingCart,
-      color: 'text-green-600 bg-green-100 dark:bg-green-900/20',
-      categoryId: 65,
-      category: 'food'
-    },
-    {
-      id: 'car',
-      title: t('onboarding.templates.examples.carInsurance'),
-      amount: getDefaultAmount('expense', 'insurance'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Car,
-      color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/20',
-      categoryId: 66,
-      category: 'transport'
-    },
-    
-    // Lifestyle Templates
-    {
-      id: 'gym',
-      title: t('onboarding.templates.examples.gym'),
-      amount: getDefaultAmount('expense', 'gym'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Dumbbell,
-      color: 'text-red-600 bg-red-100 dark:bg-red-900/20',
-      categoryId: 67,
-      category: 'entertainment'
-    },
-    {
-      id: 'subscription',
-      title: t('onboarding.templates.examples.netflix'),
-      amount: getDefaultAmount('expense', 'subscription'),
-      type: 'expense',
-      frequency: 'monthly',
-      icon: Music,
-      color: 'text-pink-600 bg-pink-100 dark:bg-pink-900/20',
-      categoryId: 67,
-      category: 'entertainment'
-    },
-    {
-      id: 'coffee',
-      title: t('onboarding.templates.examples.coffee'),
-      amount: getDefaultAmount('expense', 'coffee'),
-      type: 'expense',
-      frequency: 'daily',
-      icon: Coffee,
-      color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/20',
-      categoryId: 65,
-      category: 'food'
-    }
+  // Template categories
+  const categories = [
+    { id: 'popular', label: t('templates.categories.popular'), icon: Star },
+    { id: 'income', label: t('templates.categories.income'), icon: TrendingUp },
+    { id: 'essential', label: t('templates.categories.essential'), icon: Home },
+    { id: 'lifestyle', label: t('templates.categories.lifestyle'), icon: Heart },
+    { id: 'custom', label: t('templates.categories.custom'), icon: Plus }
   ];
 
-  // Add template with editable amount
-  const addFromSuggestion = (suggestion) => {
-    const newTemplate = {
-      id: Date.now().toString() + Math.random(),
-      title: suggestion.title,
-      amount: suggestion.amount,
-      type: suggestion.type,
-      frequency: suggestion.frequency,
-      icon: suggestion.icon,
-      color: suggestion.color,
-      categoryId: suggestion.categoryId,
-      isCustom: false
-    };
+  // Predefined templates
+  const templateLibrary = {
+    popular: [
+      {
+        id: 'salary',
+        description: t('templates.popular.salary'),
+        amount: 4000,
+        type: 'income',
+        frequency: 'monthly',
+        icon: Briefcase,
+        color: 'text-green-600',
+        bgColor: 'bg-green-100 dark:bg-green-900/20',
+        category: 'salary'
+      },
+      {
+        id: 'rent',
+        description: t('templates.popular.rent'),
+        amount: 1200,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Home,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+        category: 'housing'
+      },
+      {
+        id: 'groceries',
+        description: t('templates.popular.groceries'),
+        amount: 300,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: ShoppingBag,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/20',
+        category: 'food'
+      },
+      {
+        id: 'netflix',
+        description: t('templates.popular.streaming'),
+        amount: 15,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Smartphone,
+        color: 'text-red-600',
+        bgColor: 'bg-red-100 dark:bg-red-900/20',
+        category: 'entertainment'
+      }
+    ],
+    income: [
+      {
+        id: 'salary2',
+        description: t('templates.income.primarySalary'),
+        amount: 5000,
+        type: 'income',
+        frequency: 'monthly',
+        icon: Briefcase,
+        color: 'text-green-600',
+        bgColor: 'bg-green-100 dark:bg-green-900/20',
+        category: 'salary'
+      },
+      {
+        id: 'freelance',
+        description: t('templates.income.freelance'),
+        amount: 1500,
+        type: 'income',
+        frequency: 'monthly',
+        icon: GraduationCap,
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/20',
+        category: 'freelance'
+      },
+      {
+        id: 'investment',
+        description: t('templates.income.investments'),
+        amount: 200,
+        type: 'income',
+        frequency: 'monthly',
+        icon: TrendingUp,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+        category: 'investment'
+      }
+    ],
+    essential: [
+      {
+        id: 'utilities',
+        description: t('templates.essential.utilities'),
+        amount: 150,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Home,
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
+        category: 'utilities'
+      },
+      {
+        id: 'phone',
+        description: t('templates.essential.phone'),
+        amount: 50,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Smartphone,
+        color: 'text-indigo-600',
+        bgColor: 'bg-indigo-100 dark:bg-indigo-900/20',
+        category: 'utilities'
+      },
+      {
+        id: 'insurance',
+        description: t('templates.essential.insurance'),
+        amount: 100,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Heart,
+        color: 'text-pink-600',
+        bgColor: 'bg-pink-100 dark:bg-pink-900/20',
+        category: 'healthcare'
+      }
+    ],
+    lifestyle: [
+      {
+        id: 'gym',
+        description: t('templates.lifestyle.gym'),
+        amount: 30,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Heart,
+        color: 'text-red-600',
+        bgColor: 'bg-red-100 dark:bg-red-900/20',
+        category: 'health'
+      },
+      {
+        id: 'coffee',
+        description: t('templates.lifestyle.coffee'),
+        amount: 80,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Coffee,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/20',
+        category: 'food'
+      },
+      {
+        id: 'travel',
+        description: t('templates.lifestyle.travel'),
+        amount: 200,
+        type: 'expense',
+        frequency: 'monthly',
+        icon: Plane,
+        color: 'text-sky-600',
+        bgColor: 'bg-sky-100 dark:bg-sky-900/20',
+        category: 'travel'
+      }
+    ]
+  };
+
+  // Filter templates based on search
+  const filteredTemplates = useMemo(() => {
+    if (currentCategory === 'custom') return [];
     
-    const newTemplates = [...templates, newTemplate];
-    setTemplates(newTemplates);
-    updateStepData({ templates: newTemplates });
-  };
-
-  const removeTemplate = (templateId) => {
-    const newTemplates = templates.filter(t => t.id !== templateId);
-    setTemplates(newTemplates);
-    updateStepData({ templates: newTemplates });
-  };
-
-  // Update template amount inline
-  const updateTemplateAmount = (templateId, newAmount) => {
-    const newTemplates = templates.map(t => 
-      t.id === templateId ? { ...t, amount: parseFloat(newAmount) || 0 } : t
+    const templates = templateLibrary[currentCategory] || [];
+    if (!searchTerm) return templates;
+    
+    return templates.filter(template =>
+      template.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setTemplates(newTemplates);
-    updateStepData({ templates: newTemplates });
-  };
+  }, [currentCategory, searchTerm]);
 
-  // ✅ FIXED: Open AddTransactions modal
-  const handleAddTransactions = () => {
-    setShowAddTransactions(true);
-  };
-
-  const handleAddTransactionSuccess = (transactionData) => {
-    // Optionally add the created transaction as a template
-    toastService.success(t('toast.success.transactionAdded'));
-    setShowAddTransactions(false);
-  };
-
-  const handleContinue = async () => {
-    setIsCreating(true);
-    
-    try {
-      // Create actual recurring transactions for each template
-      for (const template of templates) {
-        const currentDate = new Date();
-        
-        // ✅ FIX: Apply same start date logic - use first of current month for recurring
-        const currentMonth = new Date();
-        currentMonth.setDate(1);
-        currentMonth.setHours(0, 0, 0, 0);
-        const startDate = currentMonth.toISOString().split('T')[0];
-        
-        const transactionData = {
-          amount: Math.abs(template.amount),
-          description: template.title,
-          category_id: template.categoryId || 8,
-          date: startDate, // ✅ FIX: Use first of month, not today
-          is_recurring: true,
-          recurring_interval: template.frequency || 'monthly',
-          // ✅ FIX: Add day_of_month for monthly intervals
-          day_of_month: template.frequency === 'monthly' ? new Date().getDate() : undefined,
-          // ✅ FIX: Add day_of_week for weekly intervals  
-          day_of_week: template.frequency === 'weekly' ? new Date().getDay() : undefined
-        };
-
-        await createTransaction(template.type, transactionData);
-      }
-
-      if (templates.length > 0) {
-        toastService.success(t('onboarding.templates.created', { count: templates.length }));
-      }
-
-      // Clear any saved progress to prevent going back
-      localStorage.removeItem('spendwise-onboarding-progress');
-      
-      updateStepData({ templates, templatesCreated: true });
-      
-      // Call onComplete directly since this is the last step
-      if (onComplete) {
-        onComplete();
+  // Handle template selection
+  const toggleTemplate = useCallback((template) => {
+    setSelectedTemplates(prev => {
+      const isSelected = prev.some(t => t.id === template.id);
+      if (isSelected) {
+        return prev.filter(t => t.id !== template.id);
       } else {
-        onNext();
+        return [...prev, template];
       }
+    });
+  }, []);
+
+  // Handle custom template creation
+  const handleCreateCustom = useCallback(() => {
+    if (!customTemplate.description || !customTemplate.amount) {
+      addNotification({
+        type: 'error',
+        title: t('templates.validation.required'),
+        duration: 3000
+      });
+      return;
+    }
+
+    const newTemplate = {
+      id: `custom_${Date.now()}`,
+      ...customTemplate,
+      amount: parseFloat(customTemplate.amount),
+      icon: customTemplate.type === 'income' ? TrendingUp : TrendingDown,
+      color: customTemplate.type === 'income' ? 'text-green-600' : 'text-red-600',
+      bgColor: customTemplate.type === 'income' 
+        ? 'bg-green-100 dark:bg-green-900/20' 
+        : 'bg-red-100 dark:bg-red-900/20',
+      isCustom: true
+    };
+
+    setSelectedTemplates(prev => [...prev, newTemplate]);
+    setCustomTemplate({
+      description: '',
+      amount: '',
+      type: 'expense',
+      category: 'other',
+      frequency: 'monthly'
+    });
+    setIsCreatingCustom(false);
+
+    addNotification({
+      type: 'success',
+      title: t('templates.customCreated'),
+      duration: 3000
+    });
+  }, [customTemplate, addNotification, t]);
+
+  // Handle completion
+  const handleComplete = useCallback(async () => {
+    try {
+      if (onComplete) {
+        await onComplete(selectedTemplates);
+      }
+
+      addNotification({
+        type: 'success',
+        title: t('templates.setupComplete'),
+        description: t('templates.templatesAdded', { count: selectedTemplates.length }),
+        duration: 4000
+      });
+
+      onNext?.();
     } catch (error) {
-      console.error('Failed to create templates:', error);
-      toastService.error(t('toast.error.templateCreationFailed'));
-    } finally {
-      setIsCreating(false);
+      addNotification({
+        type: 'error',
+        title: t('templates.setupFailed'),
+        description: error.message,
+        duration: 5000
+      });
+    }
+  }, [selectedTemplates, onComplete, addNotification, t, onNext]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.3 }
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 bg-gradient-to-br from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10">
-      {/* ✅ CLEAN: Simple header without unnecessary icons */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex-shrink-0 text-center py-4 px-6"
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex items-center justify-center gap-2 mb-2"
-        >
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          >
-            <Star className="w-6 h-6 text-yellow-500" />
-          </motion.div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {t('onboarding.templates.title')}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className={cn("space-y-6", className)}
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
+      {/* Header */}
+      <motion.div variants={itemVariants} className="text-center space-y-4">
+        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t('templates.title')}
           </h2>
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Heart className="w-5 h-5 text-red-500" />
-          </motion.div>
-        </motion.div>
-        
-        <p className={cn(
-          "text-sm text-gray-600 dark:text-gray-300",
-          isRTL && "text-right"
-        )}>
-          {t('onboarding.templates.subtitle')}
-        </p>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            {t('templates.subtitle')}
+          </p>
+        </div>
+
+        {/* Selected count */}
+        {selectedTemplates.length > 0 && (
+          <Badge variant="primary" className="mx-auto">
+            {t('templates.selected', { count: selectedTemplates.length })}
+          </Badge>
+        )}
       </motion.div>
 
-      {/* ✅ ENHANCED: Templates grid with better organization - Made scrollable for mobile */}
-      <div className="flex-1 px-6 py-2 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-        
-        {/* ✅ MOVED TO TOP: Selected Templates Summary */}
-        {templates.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800"
-          >
-            <div className={cn(
-              "flex items-center gap-2 mb-3",
-              isRTL && "flex-row-reverse"
-            )}>
-              <Crown className="w-5 h-5 text-green-600" />
-              <h3 className="font-bold text-green-800 dark:text-green-300">
-                {t('onboarding.templates.selected', { count: templates.length })}
-              </h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {templates.map((template) => {
-                const Icon = template.icon;
-                return (
-                  <div
-                    key={template.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700",
-                      isRTL && "flex-row-reverse"
-                    )}
-                  >
-                    <div className={cn("p-2 rounded-lg", template.color)}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">
-                        {template.title}
-                      </div>
-                      {/* ✅ EDITABLE AMOUNT */}
-                      <div className="flex items-center gap-2 mt-1">
-                        <input
-                          type="number"
-                          value={template.amount}
-                          onChange={(e) => updateTemplateAmount(template.id, e.target.value)}
-                          className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          min="0"
-                          step="0.01"
-                        />
-                        <span className="text-xs text-gray-500">{getCurrencySymbol()}</span>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full",
-                          template.type === 'income' 
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        )}>
-                          {t(`common.${template.frequency}`)}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeTemplate(template.id)}
-                      className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Template Suggestions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {templateSuggestions.map((suggestion, index) => {
-            const Icon = suggestion.icon;
-            const isSelected = templates.some(t => t.id === suggestion.id);
-            
+      {/* Category tabs */}
+      <motion.div variants={itemVariants}>
+        <div className="flex flex-wrap gap-2 justify-center mb-6">
+          {categories.map((category) => {
+            const CategoryIcon = category.icon;
             return (
-              <motion.div
-                key={suggestion.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.05, duration: 0.3 }}
-                className={cn(
-                  "card p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:shadow-md",
-                  isSelected 
-                    ? "border-green-400 bg-green-50 dark:bg-green-900/20 shadow-md" 
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                )}
-                onClick={() => !isSelected && addFromSuggestion(suggestion)}
+              <Button
+                key={category.id}
+                variant={currentCategory === category.id ? "primary" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setCurrentCategory(category.id);
+                  setSearchTerm('');
+                  setIsCreatingCustom(false);
+                }}
+                className="flex items-center"
               >
-                <div className={cn(
-                  "flex items-start gap-3",
-                  isRTL && "flex-row-reverse"
-                )}>
-                  
-                  {/* Icon */}
-                  <div className={cn(
-                    "p-2.5 rounded-xl shadow-sm transition-all duration-200",
-                    suggestion.color,
-                    isSelected && "scale-110"
-                  )}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  
-                  {/* Content */}
-                  <div className={cn("flex-1 min-w-0", isRTL && "text-right")}>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
-                      {suggestion.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full",
-                        suggestion.type === 'income' 
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      )}>
-                        {suggestion.type === 'income' ? t('transactions.income') : t('transactions.expense')}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {t(`common.${suggestion.frequency}`)}
-                      </span>
-                    </div>
-                    
-                    {/* Amount */}
-                    <div className={cn(
-                      "font-bold text-lg",
-                      suggestion.type === 'income' 
-                        ? "text-green-600 dark:text-green-400" 
-                        : "text-red-600 dark:text-red-400"
-                    )}>
-                      {suggestion.type === 'income' ? '+' : '-'}{formatAmount(suggestion.amount)}
-                    </div>
-                  </div>
-                  
-                  {/* Selection indicator */}
-                  {isSelected && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="p-1 rounded-full bg-green-500 text-white"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
+                <CategoryIcon className="w-4 h-4 mr-2" />
+                {category.label}
+              </Button>
             );
           })}
         </div>
 
-        {/* ✅ MOVED TO BOTTOM: Manual Add Option */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-          className="card p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-200"
-        >
-          <button
-            onClick={handleAddTransactions}
-            className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200",
-              isRTL && "flex-row-reverse"
-            )}
-          >
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md">
-              <Plus className="w-6 h-6 text-white" />
-            </div>
-            <div className={cn("flex-1", isRTL && "text-right")}>
-              <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                {t('onboarding.templates.addCustom')}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {t('onboarding.templates.addCustomDesc')}
-              </p>
-            </div>
-            <div className="text-blue-600 dark:text-blue-400">
-              <ChevronDown className="w-5 h-5" />
-            </div>
-          </button>
-        </motion.div>
-      </div>
-
-      {/* ✅ IMPROVED: Fixed bottom buttons with proper alignment and spacing - Always visible */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.0, duration: 0.5 }}
-        className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700"
-      >
-        <Button
-          onClick={onPrevious}
-          variant="outline"
-          size="lg"
-          className={cn(
-            "flex items-center gap-2 px-6 py-2",
-            isRTL && "flex-row-reverse"
-          )}
-        >
-          <ChevronDown className={cn("w-4 h-4", isRTL ? "ml-2 rotate-90" : "mr-2 -rotate-90")} />
-          {t('onboarding.common.previous')}
-        </Button>
-
-        <Button
-          onClick={() => {
-            localStorage.removeItem('spendwise-onboarding-progress');
-            onComplete?.() || onNext();
-          }}
-          variant="ghost"
-          size="lg"
-          className="px-6 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          {t('onboarding.common.skip')}
-        </Button>
-        
-        <Button
-          onClick={handleContinue}
-          disabled={isCreating}
-          size="lg"
-          className={cn(
-            "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-8 py-2 flex items-center gap-2",
-            templates.length === 0 && "opacity-75",
-            isRTL && "flex-row-reverse"
-          )}
-        >
-          {isCreating ? (
-            <span className={cn(
-              "flex items-center gap-2",
-              isRTL && "flex-row-reverse"
-            )}>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{t('onboarding.common.completing')}</span>
-            </span>
-          ) : (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              <span>{t('onboarding.common.complete')}</span>
-            </>
-          )}
-        </Button>
+        {/* Search (for non-custom categories) */}
+        {currentCategory !== 'custom' && (
+          <Input
+            placeholder={t('templates.searchPlaceholder')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md mx-auto"
+          />
+        )}
       </motion.div>
 
-      {/* ✅ AddTransactions Modal - Fixed for mobile scroll */}
-      <Modal
-        isOpen={showAddTransactions}
-        onClose={() => setShowAddTransactions(false)}
-        size="large"
-        className="max-w-4xl mx-2 sm:mx-4 lg:mx-auto max-h-[85vh] lg:max-h-[90vh]"
-        hideHeader={true}
+      {/* Template grid */}
+      <motion.div variants={itemVariants}>
+        {currentCategory === 'custom' ? (
+          /* Custom template creation */
+          <Card className="p-6 max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
+              {t('templates.createCustom')}
+            </h3>
+
+            <div className="space-y-4">
+              {/* Type selection */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant={customTemplate.type === 'income' ? 'primary' : 'outline'}
+                  onClick={() => setCustomTemplate(prev => ({ ...prev, type: 'income' }))}
+                  className="h-12 flex flex-col items-center justify-center"
+                >
+                  <TrendingUp className="w-5 h-5 mb-1" />
+                  {t('templates.income')}
+                </Button>
+                <Button
+                  variant={customTemplate.type === 'expense' ? 'primary' : 'outline'}
+                  onClick={() => setCustomTemplate(prev => ({ ...prev, type: 'expense' }))}
+                  className="h-12 flex flex-col items-center justify-center"
+                >
+                  <TrendingDown className="w-5 h-5 mb-1" />
+                  {t('templates.expense')}
+                </Button>
+              </div>
+
+              {/* Description */}
+              <Input
+                placeholder={t('templates.customDescriptionPlaceholder')}
+                value={customTemplate.description}
+                onChange={(e) => setCustomTemplate(prev => ({ ...prev, description: e.target.value }))}
+              />
+
+              {/* Amount */}
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={customTemplate.amount}
+                onChange={(e) => setCustomTemplate(prev => ({ ...prev, amount: e.target.value }))}
+              />
+
+              {/* Frequency */}
+              <select
+                value={customTemplate.frequency}
+                onChange={(e) => setCustomTemplate(prev => ({ ...prev, frequency: e.target.value }))}
+                className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="monthly">{t('templates.frequency.monthly')}</option>
+                <option value="weekly">{t('templates.frequency.weekly')}</option>
+                <option value="yearly">{t('templates.frequency.yearly')}</option>
+              </select>
+
+              {/* Actions */}
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreatingCustom(false)}
+                  className="flex-1"
+                >
+                  {t('actions.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateCustom}
+                  className="flex-1"
+                >
+                  {t('templates.create')}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          /* Template selection grid */
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
+            {filteredTemplates.map((template) => {
+              const isSelected = selectedTemplates.some(t => t.id === template.id);
+              const TemplateIcon = template.icon;
+
+              return (
+                <motion.div
+                  key={template.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Card
+                    className={cn(
+                      "p-4 cursor-pointer transition-all border-2",
+                      isSelected
+                        ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                    )}
+                    onClick={() => toggleTemplate(template)}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        template.bgColor
+                      )}>
+                        <TemplateIcon className={cn("w-5 h-5", template.color)} />
+                      </div>
+                      
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                        isSelected
+                          ? "border-primary-500 bg-primary-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      )}>
+                        {isSelected && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2 text-sm">
+                      {template.description}
+                    </h3>
+
+                    <div className="flex items-center justify-between">
+                      <Badge 
+                        variant={template.type === 'income' ? 'success' : 'destructive'}
+                        size="sm"
+                      >
+                        {template.type === 'income' ? '+' : '-'}
+                        {formatCurrency(template.amount)}
+                      </Badge>
+                      
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {t(`templates.frequency.${template.frequency}`)}
+                      </span>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {filteredTemplates.length === 0 && currentCategory !== 'custom' && (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+              <Filter className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 dark:text-gray-400">
+              {searchTerm ? t('templates.noResults') : t('templates.noTemplates')}
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Selected templates preview */}
+      {selectedTemplates.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="max-w-md mx-auto"
+        >
+          <Card className="p-4">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3 text-center">
+              {t('templates.selectedTemplates')}
+            </h4>
+            
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {selectedTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                >
+                  <span className="font-medium">{template.description}</span>
+                  <Badge 
+                    variant={template.type === 'income' ? 'success' : 'destructive'}
+                    size="xs"
+                  >
+                    {template.type === 'income' ? '+' : '-'}
+                    {formatCurrency(template.amount)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Navigation */}
+      <motion.div 
+        variants={itemVariants}
+        className="flex justify-between items-center pt-6"
       >
-        <div className="h-full max-h-[80vh] lg:max-h-[85vh] overflow-hidden">
-          <AddTransactions 
-            onClose={() => setShowAddTransactions(false)}
-            onSuccess={handleAddTransactionSuccess}
-            context="onboarding"
-          />
+        <Button
+          variant="outline"
+          onClick={onPrevious}
+        >
+          {t('navigation.previous')}
+        </Button>
+
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            onClick={() => onNext?.()}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            {t('navigation.skipForNow')}
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleComplete}
+            disabled={selectedTemplates.length === 0}
+            className="min-w-[120px]"
+          >
+            <Target className="w-4 h-4 mr-2" />
+            {selectedTemplates.length > 0 
+              ? t('templates.setupTemplates', { count: selectedTemplates.length })
+              : t('navigation.continue')
+            }
+            <ChevronRight className={cn("w-4 h-4", isRTL ? "mr-2" : "ml-2")} />
+          </Button>
         </div>
-      </Modal>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

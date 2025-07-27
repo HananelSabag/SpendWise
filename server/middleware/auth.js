@@ -1,307 +1,279 @@
 /**
- * Authentication Middleware - Production Ready
- * JWT token validation with enhanced security
+ * 🔐 ENHANCED AUTH MIDDLEWARE - Admin Role Support
+ * JWT authentication with admin role handling
  * @module middleware/auth
  */
 
 const jwt = require('jsonwebtoken');
-const errorCodes = require('../utils/errorCodes');
+const db = require('../config/db');
 const logger = require('../utils/logger');
+const { LRUCache } = require('lru-cache');
+
+// Enhanced user cache with role support
+const userCache = new LRUCache({
+  max: 1000,
+  ttl: 10 * 60 * 1000, // 10 minutes TTL
+  allowStale: false,
+  updateAgeOnGet: false,
+  updateAgeOnHas: false
+});
 
 /**
- * Generate access and refresh tokens
- * @param {Object} user - User object
- * @returns {Object} Token pair
- */
-const generateTokens = (user) => {
-  if (!user?.id || !user?.email) {
-    throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid user data for token generation' };
-  }
-
-  try {
-    const accessToken = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email,
-        iat: Math.floor(Date.now() / 1000)
-      },
-      process.env.JWT_SECRET,
-      { 
-        expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m',
-        issuer: 'spendwise-server',
-        audience: 'spendwise-client'
-      }
-    );
-
-    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-    if (process.env.NODE_ENV === 'production' && !process.env.JWT_REFRESH_SECRET) { // Enforce separate refresh secret in production
-      throw new Error('JWT_REFRESH_SECRET must be set in production');
-    }
-
-    const refreshToken = jwt.sign(
-      { 
-        id: user.id,
-        type: 'refresh',
-        iat: Math.floor(Date.now() / 1000)
-      },
-      refreshSecret,
-      { 
-        expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d',
-        issuer: 'spendwise-server',
-        audience: 'spendwise-client'
-      }
-    );
-
-    logger.info('Tokens generated successfully', { userId: user.id });
-    
-    return { accessToken, refreshToken };
-  } catch (error) {
-    logger.error('Token generation failed', { 
-      userId: user.id, 
-      error: error.message 
-    });
-    throw { ...errorCodes.INTERNAL_ERROR, details: 'Failed to generate tokens' };
-  }
-};
-
-/**
- * Verify and decode JWT token
- * @param {string} token - JWT token
- * @param {string} secret - JWT secret
- * @returns {Object} Decoded token
- */
-const verifyToken = (token, secret) => {
-  return jwt.verify(token, secret, {
-    issuer: 'spendwise-server',
-    audience: 'spendwise-client',
-    maxAge: '30d' // Added max age validation
-  });
-};
-
-/**
- * Authentication middleware
- * Validates JWT tokens and sets req.user
+ * 🔐 Enhanced Authentication Middleware
+ * Verifies JWT token and loads user with role information
  */
 const auth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     
-    // Check for authorization header
-    if (!authHeader) {
-      logger.warn('Missing authorization header', { 
-        ip: req.ip, 
-        userAgent: req.get('user-agent') 
+    if (!token) {
+      logger.debug('🚫 No auth token provided', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        path: req.path
       });
       
-      return res.status(401).json({ 
+      return res.status(401).json({
+        success: false,
         error: {
-          code: 'MISSING_TOKEN',
-          message: 'Authorization header required',
-          timestamp: new Date().toISOString()
+          code: 'NO_TOKEN',
+          message: 'Access denied. No token provided.'
         }
       });
     }
 
-    // Extract token from Bearer format
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      logger.warn('Invalid authorization header format', { 
-        authHeader: authHeader.substring(0, 20) + '...' 
-      });
-      
-      return res.status(401).json({ 
-        error: {
-          code: 'INVALID_TOKEN_FORMAT',
-          message: 'Authorization header must be Bearer token',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
 
-    const token = parts[1];
-    
-    // Verify token
-    const decoded = verifyToken(token, process.env.JWT_SECRET);
-    
-    // Validate decoded token structure
-    if (!decoded.id || !decoded.email) {
-      logger.warn('Invalid token payload', { tokenId: decoded.id });
-      
-      return res.status(401).json({ 
-        error: {
-          code: 'INVALID_TOKEN_PAYLOAD',
-          message: 'Invalid token structure',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
+    // Check cache first
+    const cacheKey = `user_${userId}`;
+    let user = userCache.get(cacheKey);
 
-    // ✅ CRITICAL FIX: Check if user still exists in database
-    // This prevents errors when tokens are valid but users were deleted
-    const db = require('../config/db');
-    try {
-      const userCheckResult = await db.pool.query(
-        'SELECT id FROM users WHERE id = $1',
-        [decoded.id]
+    if (!user) {
+      // Fetch user with role information from database
+      const result = await db.query(
+        `SELECT 
+          id, 
+          email, 
+          username, 
+          role,
+          email_verified, 
+          onboarding_completed,
+          language_preference,
+          currency_preference,
+          theme_preference,
+          last_login
+        FROM users 
+        WHERE id = $1`,
+        [userId],
+        'auth_user_lookup'
       );
-      
-      if (userCheckResult.rows.length === 0) {
-        logger.warn('Token valid but user not found in database', { 
-          userId: decoded.id,
-          email: decoded.email 
+
+      if (result.rows.length === 0) {
+        logger.warn('🚫 Invalid token - user not found', {
+          userId,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
         });
         
-        return res.status(401).json({ 
+        return res.status(401).json({
+          success: false,
           error: {
-            code: 'USER_NOT_FOUND',
-            message: 'User account no longer exists. Please log in again.',
-            timestamp: new Date().toISOString()
+            code: 'INVALID_TOKEN',
+            message: 'Invalid token. User not found.'
           }
         });
       }
-    } catch (dbError) {
-      logger.error('Database error during user verification', { 
-        userId: decoded.id,
-        error: dbError.message 
+
+      user = result.rows[0];
+      
+      // Check for user restrictions (blocks, etc.)
+      const restrictionsResult = await db.query(
+        `SELECT restriction_type, reason, expires_at
+         FROM user_restrictions 
+         WHERE user_id = $1 
+           AND is_active = true 
+           AND (expires_at IS NULL OR expires_at > NOW())`,
+        [userId],
+        'auth_user_restrictions'
+      );
+
+      // Add restrictions to user object
+      user.restrictions = restrictionsResult.rows;
+      user.isBlocked = restrictionsResult.rows.some(r => r.restriction_type === 'blocked');
+      user.isDeleted = restrictionsResult.rows.some(r => r.restriction_type === 'deleted');
+
+      // Cache the user data
+      userCache.set(cacheKey, user);
+    }
+
+    // Check if user is blocked or deleted
+    if (user.isBlocked) {
+      const blockInfo = user.restrictions.find(r => r.restriction_type === 'blocked');
+      
+      logger.warn('🚫 Blocked user attempted access', {
+        userId: user.id,
+        email: user.email,
+        reason: blockInfo?.reason,
+        ip: req.ip
       });
       
-      return res.status(500).json({ 
+      return res.status(403).json({
+        success: false,
         error: {
-          code: 'DATABASE_ERROR',
-          message: 'Unable to verify user account',
-          timestamp: new Date().toISOString()
+          code: 'USER_BLOCKED',
+          message: 'Your account has been temporarily blocked.',
+          reason: blockInfo?.reason,
+          expires_at: blockInfo?.expires_at
         }
       });
     }
 
-    // Set user in request
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      iat: decoded.iat,
-      exp: decoded.exp
-    };
+    if (user.isDeleted) {
+      logger.warn('🚫 Deleted user attempted access', {
+        userId: user.id,
+        email: user.email,
+        ip: req.ip
+      });
+      
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'USER_DELETED',
+          message: 'This account has been deactivated.'
+        }
+      });
+    }
 
-    // Log successful authentication
-    if (req.log) {
-      req.log.debug('User authenticated', { userId: decoded.id });
+    // Update last login time periodically (not on every request for performance)
+    const now = new Date();
+    const lastLogin = new Date(user.last_login);
+    const timeSinceLastUpdate = now - lastLogin;
+    
+    // Update last_login if it's been more than 1 hour
+    if (timeSinceLastUpdate > 60 * 60 * 1000) {
+      // Don't await this to avoid blocking the request
+      db.query(
+        'UPDATE users SET last_login = NOW() WHERE id = $1',
+        [userId],
+        'auth_update_last_login'
+      ).catch(error => {
+        logger.error('Error updating last_login', { userId, error: error.message });
+      });
+      
+      // Update cache
+      user.last_login = now;
+      userCache.set(cacheKey, user);
+    }
+
+    // Add user to request object
+    req.user = user;
+    
+    // Log admin access for security monitoring
+    if (['admin', 'super_admin'].includes(user.role)) {
+      logger.info('🛡️ Admin access', {
+        adminId: user.id,
+        role: user.role,
+        path: req.path,
+        method: req.method,
+        ip: req.ip
+      });
     }
 
     next();
+
   } catch (error) {
-    // Log authentication failure
-    logger.warn('Authentication failed', { 
+    // Clear cache if JWT verification fails
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      logger.debug('🚫 Invalid or expired token', {
+        error: error.message,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid or expired token.'
+        }
+      });
+    }
+
+    logger.error('❌ Auth middleware error', {
       error: error.message,
-      tokenExpired: error.name === 'TokenExpiredError',
+      stack: error.stack,
       ip: req.ip
     });
 
-    // Handle specific JWT errors
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        error: {
-          code: 'TOKEN_EXPIRED',
-          message: 'Authentication token has expired',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ 
-        error: {
-          code: 'INVALID_TOKEN',
-          message: 'Invalid authentication token',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-    
-    if (error.name === 'NotBeforeError') {
-      return res.status(401).json({ 
-        error: {
-          code: 'TOKEN_NOT_ACTIVE',
-          message: 'Token not active yet',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-
-    // Generic auth error
-    return res.status(401).json({ 
+    return res.status(500).json({
+      success: false,
       error: {
-        code: 'AUTHENTICATION_FAILED',
-        message: 'Authentication failed',
-        timestamp: new Date().toISOString()
+        code: 'AUTH_ERROR',
+        message: 'Authentication error occurred.'
       }
     });
   }
 };
 
 /**
- * Optional authentication middleware
- * Sets req.user if token is valid, but doesn't fail if missing
+ * 🔐 Optional Authentication Middleware
+ * Adds user info if token is provided, but doesn't require it
  */
 const optionalAuth = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    return next();
-  }
-
   try {
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token, process.env.JWT_SECRET);
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      iat: decoded.iat,
-      exp: decoded.exp
-    };
+    if (token) {
+      // Use the main auth middleware logic but don't fail if no token
+      await auth(req, res, (error) => {
+        if (error) {
+          // Log the error but continue without user
+          logger.debug('Optional auth failed, continuing without user', {
+            error: error.message,
+            ip: req.ip
+          });
+        }
+        next();
+      });
+    } else {
+      next();
+    }
   } catch (error) {
-    // In optional auth, we don't fail on invalid tokens
-    logger.debug('Optional auth failed', { error: error.message });
+    // Log error but continue without user
+    logger.debug('Optional auth error, continuing without user', {
+      error: error.message,
+      ip: req.ip
+    });
+    next();
   }
-  
-  next();
 };
 
 /**
- * Role-based authorization middleware
- * @param {Array<string>} roles - Required roles
+ * 🧹 Clear user cache (useful for cache invalidation)
  */
-const authorize = (roles = []) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication required for this resource',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
+const clearUserCache = (userId) => {
+  const cacheKey = `user_${userId}`;
+  userCache.delete(cacheKey);
+  logger.debug('🧹 User cache cleared', { userId });
+};
 
-    // For future role implementation
-    if (roles.length > 0 && !req.user.roles?.some(role => roles.includes(role))) {
-      return res.status(403).json({
-        error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
-          message: 'Insufficient permissions for this resource',
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-
-    next();
+/**
+ * 📊 Get auth cache statistics
+ */
+const getAuthCacheStats = () => {
+  return {
+    size: userCache.size,
+    max: userCache.max,
+    ttl: userCache.ttl,
+    calculatedSize: userCache.calculatedSize
   };
 };
 
-module.exports = { 
-  auth, 
-  generateTokens, 
-  verifyToken,
+module.exports = {
+  auth,
   optionalAuth,
-  authorize
+  clearUserCache,
+  getAuthCacheStats
 };
