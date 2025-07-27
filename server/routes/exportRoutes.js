@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const exportController = require('../controllers/exportController');
+const { securityMiddleware } = require('../middleware/security'); // 🛡️ Export protection
 const { apiLimiter } = require('../middleware/rateLimiter');
 const { asyncHandler } = require('../middleware/errorHandler');
 

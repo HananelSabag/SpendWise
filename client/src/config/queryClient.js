@@ -1,10 +1,15 @@
 /**
  * React Query Configuration - Production Optimized
  * Smart caching, deduplication, and performance monitoring
+ * NOW WITH UNIFIED API INTEGRATION! 🚀
+ * @version 2.0.0
  */
 
 import { QueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+
+// ✅ NEW: Import unified API instead of old utils/api
+import { api } from '../api';
 
 // Environment config
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -292,13 +297,16 @@ export const cacheUtils = {
     return stats;
   },
   
-  // Prefetch common queries
+  // ✅ FIXED: Prefetch common queries using unified API
   prefetchCommonQueries: async () => {
     try {
       // Prefetch categories (rarely change)
       await queryClient.prefetchQuery({
         queryKey: ['categories'],
-        queryFn: () => import('../utils/api').then(m => m.categoryAPI.getAll()),
+        queryFn: async () => {
+          const result = await api.categories.getAll();
+          return result.success ? result.data : [];
+        },
         ...queryConfigs.categories
       });
     } catch (error) {

@@ -5,14 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:admin": "vite --mode admin",
+    "dev:analytics": "vite --mode analytics",
     "dev:mobile": "vite --host 0.0.0.0 --port 5173",
     "dev:network": "vite --host --port 5173",
     "dev:open": "vite --host 0.0.0.0 --port 5173 --open",
     "build": "vite build",
+    "build:admin": "vite build --mode admin",
+    "build:analytics": "vite build --mode analytics",
     "preview": "vite preview",
     "preview:mobile": "vite preview --host 0.0.0.0 --port 4173",
+    "analyze": "npm run build && npx webpack-bundle-analyzer dist/stats.json",
+    "performance": "npm run build && npx lighthouse http://localhost:4173 --view",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives",
-    "format": "prettier --write \"src/**/*.{js,jsx,css}\""
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\"",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -21,6 +30,7 @@
     "@tanstack/react-query": "^5.51.1",
     "@tanstack/react-query-devtools": "^5.51.1",
     "@tanstack/react-query-persist-client": "^5.79.0",
+    "@tanstack/react-virtual": "^3.0.0",
     "axios": "^1.7.9",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
@@ -35,7 +45,22 @@
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.4.0",
     "zod": "^3.23.8",
-    "zustand": "^4.5.4"
+    "zustand": "^4.5.4",
+    
+    "jwt-decode": "^4.0.0",
+    "react-chartjs-2": "^5.2.0",
+    "chart.js": "^4.4.0",
+    "react-table": "^7.8.0",
+    "react-window": "^1.8.8",
+    "react-error-boundary": "^4.0.0",
+    "use-debounce": "^9.0.0",
+    "react-hotkeys-hook": "^4.4.1",
+    "react-intersection-observer": "^9.5.3",
+    "web-vitals": "^3.5.0",
+    "@hookform/resolvers": "^3.3.0",
+    "react-virtualized-auto-sizer": "^1.0.20",
+    "immer": "^10.0.2",
+    "react-window-infinite-loader": "^1.0.9"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
@@ -51,7 +76,12 @@
     "tailwindcss": "^3.4.17",
     "vite": "^5.0.8",
     "vite-plugin-pwa": "^0.20.5",
-    "webpack-bundle-analyzer": "^4.10.2"
+    "webpack-bundle-analyzer": "^4.10.2",
+    "vitest": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "typescript": "^5.2.0",
+    "vite-bundle-analyzer": "^0.7.0",
+    "@vitejs/plugin-legacy": "^5.2.0"
   },
   "packageManager": "npm@10.2.0"
 }

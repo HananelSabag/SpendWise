@@ -1,97 +1,131 @@
-// components/ui/Select.jsx
+/**
+ * 📋 SELECT COMPONENT - Mobile-First Dropdown Select
+ * Features: Zustand stores, RTL support, Touch-optimized
+ * @version 2.0.0
+ */
+
 import React, { forwardRef } from 'react';
-import { ChevronDown, AlertCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+
+// ✅ NEW: Import Zustand stores (replaces Context API!)
+import { useTranslation } from '../../stores';
+
 import { cn } from '../../utils/helpers';
-import { useLanguage } from '../../context/LanguageContext';
 
 const Select = forwardRef(({
   label,
   options = [],
+  placeholder,
   error,
-  helper,
+  success,
   required = false,
   disabled = false,
-  fullWidth = true,
-  placeholder,
+  fullWidth = false,
+  size = 'md',
   className = '',
   containerClassName = '',
   labelClassName = '',
   ...props
 }, ref) => {
-  const { language, t } = useLanguage();
-  const isRTL = language === 'he';
-  
-  // Use translation for default placeholder
-  const defaultPlaceholder = placeholder || t('common.select');
+  // ✅ NEW: Zustand stores (replacing Context API)
+  const { t, isRTL } = useTranslation();
 
-  const baseSelectStyles = `
-    w-full px-4 py-3 pr-10 rounded-xl border bg-white
-    appearance-none cursor-pointer
-    transition-all duration-200
-    disabled:bg-gray-50 disabled:cursor-not-allowed
-    dark:bg-gray-800 dark:text-white
-  `;
+  // ✅ Size configurations
+  const sizes = {
+    sm: 'h-9 px-3 text-sm',
+    md: 'h-10 px-4 text-sm',
+    lg: 'h-12 px-4 text-base'
+  };
 
-  const selectStyles = cn(
-    baseSelectStyles,
-    error 
-      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' 
-      : 'border-gray-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:border-gray-700',
-    isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10',
-    className
-  );
+  // ✅ State-based styling
+  const getStateStyles = () => {
+    if (error) {
+      return 'border-red-500 dark:border-red-400 focus:border-red-500 focus:ring-red-500/20';
+    }
+    if (success) {
+      return 'border-green-500 dark:border-green-400 focus:border-green-500 focus:ring-green-500/20';
+    }
+    return 'border-gray-300 dark:border-gray-600 focus:border-primary-500 focus:ring-primary-500/20';
+  };
 
   return (
-    <div className={cn('space-y-1', fullWidth && 'w-full', containerClassName)}>
+    <div className={cn('relative', fullWidth && 'w-full', containerClassName)}>
+      {/* Label */}
       {label && (
-        <label 
+        <label
           className={cn(
-            'block text-sm font-medium text-gray-700 dark:text-gray-300',
+            'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2',
+            disabled && 'opacity-50',
+            isRTL && 'text-right',
             labelClassName
           )}
-          dir={isRTL ? 'rtl' : 'ltr'}
+          htmlFor={props.id}
         >
           {label}
-          {required && <span className="text-red-500 mx-1">*</span>}
+          {required && (
+            <span className="text-red-500 ml-1" aria-label="required">
+              *
+            </span>
+          )}
         </label>
       )}
-      
+
+      {/* Select container */}
       <div className="relative">
         <select
           ref={ref}
           disabled={disabled}
-          className={selectStyles}
-          dir={isRTL ? 'rtl' : 'ltr'}
+          className={cn(
+            // Base styles
+            'block w-full rounded-lg appearance-none transition-all duration-200',
+            'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
+            'border focus:outline-none focus:ring-2',
+            // Mobile optimizations
+            'touch-manipulation',
+            // Size
+            sizes[size],
+            // State styling
+            getStateStyles(),
+            // Disabled state
+            disabled && 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-700',
+            // RTL support
+            isRTL && 'text-right',
+            // Icon padding
+            isRTL ? 'pl-10' : 'pr-10',
+            className
+          )}
           {...props}
         >
-          {defaultPlaceholder && (
+          {placeholder && (
             <option value="" disabled>
-              {defaultPlaceholder}
+              {placeholder}
             </option>
           )}
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
+          {options.map((option, index) => (
+            <option key={option.value || index} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
-        
-        <ChevronDown className={cn(
-          'absolute top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none',
-          isRTL ? 'left-3' : 'right-3'
-        )} />
-      </div>
-      
-      {error && (
-        <div className="flex items-center gap-1.5 text-sm text-red-500" dir={isRTL ? 'rtl' : 'ltr'}>
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+
+        {/* Dropdown icon */}
+        <div className={cn(
+          'absolute inset-y-0 flex items-center pointer-events-none',
+          isRTL ? 'left-0 pl-3' : 'right-0 pr-3'
+        )}>
+          <ChevronDown className="w-5 h-5 text-gray-400" />
         </div>
-      )}
-      
-      {helper && !error && (
-        <p className="text-sm text-gray-500 dark:text-gray-400" dir={isRTL ? 'rtl' : 'ltr'}>
-          {helper}
+      </div>
+
+      {/* Error/Success message */}
+      {(error || success) && (
+        <p className={cn(
+          'mt-2 text-sm',
+          error && 'text-red-600 dark:text-red-400',
+          success && 'text-green-600 dark:text-green-400',
+          isRTL && 'text-right'
+        )}>
+          {error || success}
         </p>
       )}
     </div>

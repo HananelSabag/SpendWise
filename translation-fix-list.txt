@@ -1,0 +1,52 @@
+[Hardcoded] client\src\components\features\onboarding\OnboardingModal.jsx:141  "= 0 && stepIndex"
+[Hardcoded] client\src\components\features\onboarding\steps\WelcomeStep.jsx:259  "Profile"
+[Hardcoded] client\src\components\features\onboarding\steps\WelcomeStep.jsx:309  "Preferences"
+[isRTL]    client\src\components\features\dashboard\BalancePanel.jsx:315  text-right | text-left
+[isRTL]    client\src\components\features\dashboard\BalancePanel.jsx:345  ml-1.5 | mr-1.5
+[isRTL]    client\src\components\features\dashboard\QuickActionsBar.jsx:158  text-right | text-left
+[isRTL]    client\src\components\features\dashboard\RecentTransactions.jsx:160  text-right | text-left
+[isRTL]    client\src\components\features\dashboard\RecentTransactions.jsx:262  text-right | text-left
+[isRTL]    client\src\components\features\dashboard\StatsChart.jsx:690  text-right | text-left
+[isRTL]    client\src\components\features\onboarding\OnboardingModal.jsx:328  left-3 | right-3
+[isRTL]    client\src\components\features\onboarding\OnboardingPromptDialog.jsx:93  left-4 | right-4
+[isRTL]    client\src\components\features\onboarding\OnboardingPromptDialog.jsx:122  flex-row-reverse | flex-row
+[isRTL]    client\src\components\features\onboarding\steps\InitialTemplatesStep.jsx:516  ml-2 rotate-90 | mr-2 -rotate-90
+[isRTL]    client\src\components\features\onboarding\steps\WelcomeStep.jsx:63  שקל | Shekel
+[isRTL]    client\src\components\features\onboarding\steps\WelcomeStep.jsx:68  בהיר | Light
+[isRTL]    client\src\components\features\onboarding\steps\WelcomeStep.jsx:69  כהה | Dark
+[isRTL]    client\src\components\layout\Footer.jsx:53  text-right | text-left
+[isRTL]    client\src\components\layout\Footer.jsx:60  mr-2 | ml-2
+[isRTL]    client\src\components\layout\Footer.jsx:62  text-right | text-left
+[isRTL]    client\src\components\layout\Footer.jsx:68  mr-auto | ml-auto
+[isRTL]    client\src\components\layout\Footer.jsx:70  order-2 | order-1
+[isRTL]    client\src\components\layout\Footer.jsx:89  order-1 | order-2
+[isRTL]    client\src\components\layout\Footer.jsx:136  mr-2 | ml-2
+[isRTL]    client\src\components\ui\Alert.jsx:48  mr-3 text-right | ml-3 text-left
+[isRTL]    client\src\components\ui\Alert.jsx:60  mr-3 -ml-1 | ml-3 -mr-1
+[isRTL]    client\src\components\ui\Badge.jsx:80  ml-1.5 | mr-1.5
+[isRTL]    client\src\components\ui\Button.jsx:131  mr-2 | ml-2
+[isRTL]    client\src\components\ui\Button.jsx:132  ml-2 | mr-2
+[isRTL]    client\src\components\ui\Card.jsx:124  mr-4 | ml-4
+[isRTL]    client\src\components\ui\Dropdown.jsx:33  right-0 | left-0
+[isRTL]    client\src\components\ui\Dropdown.jsx:34  left-0 | right-0
+[isRTL]    client\src\components\ui\Input.jsx:96  pr-11 | pl-11
+[isRTL]    client\src\components\ui\Input.jsx:97  pl-11 | pr-11
+[isRTL]    client\src\components\ui\Input.jsx:125  right-3 | left-3
+[isRTL]    client\src\components\ui\Input.jsx:146  left-3 | right-3
+[isRTL]    client\src\components\ui\Modal.jsx:99  ml-3 | mr-3
+[isRTL]    client\src\components\ui\Select.jsx:40  pr-4 pl-10 | pl-4 pr-10
+[isRTL]    client\src\components\ui\Select.jsx:81  left-3 | right-3
+[isRTL]    client\src\hooks\useToast.jsx:437  top-left | top-right
+[isRTL]    client\src\pages\auth\Login.jsx:324  lg:order-2 | lg:order-1
+[isRTL]    client\src\pages\auth\Login.jsx:536  lg:order-1 | lg:order-2
+[isRTL]    client\src\pages\auth\Login.jsx:594  ml-4 | mr-4
+[isRTL]    client\src\pages\auth\PasswordReset.jsx:412  ml-1 | mr-1
+[isRTL]    client\src\pages\auth\Register.jsx:304  lg:order-2 | lg:order-1
+[isRTL]    client\src\pages\auth\Register.jsx:349  mr-2 | ml-2
+[isRTL]    client\src\pages\auth\Register.jsx:363  mr-2 | ml-2
+[isRTL]    client\src\pages\auth\Register.jsx:521  mr-2 | ml-2
+[isRTL]    client\src\pages\auth\Register.jsx:599  lg:order-1 | lg:order-2
+[isRTL]    client\src\pages\auth\Register.jsx:646  ml-4 | mr-4
+[isRTL]    client\src\pages\NotFound.jsx:69  ml-2 | mr-2
+[isRTL]    client\src\pages\NotFound.jsx:86  ml-2 rotate-180 | mr-2
+[isRTL]    client\src\pages\NotFound.jsx:99  ml-2 | mr-2

@@ -1,34 +1,75 @@
 /**
- * Recurring Template Model - Production Ready
- * Handles all recurring transaction template operations
- * @module models/RecurringTemplate
+ * OPTIMIZED Recurring Template Model - Enhanced Performance Version
+ * Simplified for use with the new RecurringEngine
+ * @module models/RecurringTemplate_optimized
  */
 
 const db = require('../config/db');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
+// 🚀 Smart caching for recurring templates
+class RecurringTemplateCache {
+  static cache = new Map();
+  static TTL = 5 * 60 * 1000; // 5 minutes (templates change more frequently)
+  static maxSize = 500; // Maximum cache entries
+
+  static generateKey(userId, active = true) {
+    return `templates:${userId}:${active ? 'active' : 'all'}`;
+  }
+
+  static get(key) {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.TTL) {
+      return cached.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  static set(key, data) {
+    // LRU eviction
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  static invalidateUser(userId) {
+    for (const [key] of this.cache) {
+      if (key.includes(`:${userId}:`)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  static getStats() {
+    return {
+      size: this.cache.size,
+      maxSize: this.maxSize,
+      utilization: Math.round((this.cache.size / this.maxSize) * 100)
+    };
+  }
+}
+
 class RecurringTemplate {
   /**
-   * Create a new recurring template
-   * @param {Object} data - Template data
-   * @returns {Promise<Object>} Created template
+   * 🚀 OPTIMIZED: Create recurring template with enhanced validation
    */
   static async create(data) {
+    const start = Date.now();
+    
     const {
-      user_id,
-      type,
-      amount,
-      description,
-      category_id,
-      interval_type,
-      day_of_month,
-      day_of_week,
-      start_date,
-      end_date
+      user_id, type, amount, description, category_id, interval_type,
+      day_of_month, day_of_week, start_date, end_date, notes
     } = data;
 
-    // Validation
+    // Enhanced validation
     if (!user_id || !type || !amount || !description || !interval_type || !start_date) {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Missing required fields' };
     }
@@ -45,480 +86,305 @@ class RecurringTemplate {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Amount must be positive' };
     }
 
-    if (interval_type === 'monthly' && day_of_month && (day_of_month < 1 || day_of_month > 31)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Day of month must be between 1 and 31' };
+    // Date validations
+    const startDateObj = new Date(start_date);
+    if (isNaN(startDateObj.getTime())) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid start date' };
     }
 
-    if (interval_type === 'weekly' && day_of_week && (day_of_week < 0 || day_of_week > 6)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Day of week must be between 0 and 6' };
-    }
-
-    if (end_date && new Date(start_date) >= new Date(end_date)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'End date must be after start date' };
+    if (end_date) {
+      const endDateObj = new Date(end_date);
+      if (isNaN(endDateObj.getTime()) || endDateObj <= startDateObj) {
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'End date must be after start date' };
+      }
     }
 
     try {
       const query = `
         INSERT INTO recurring_templates (
-          user_id, type, amount, description, category_id,
-          interval_type, day_of_month, day_of_week,
-          start_date, end_date, is_active
+          user_id, type, amount, description, category_id, interval_type,
+          day_of_month, day_of_week, start_date, end_date, notes,
+          is_active, created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
-        RETURNING *;
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW())
+        RETURNING 
+          id, user_id, type, amount, description, category_id, interval_type,
+          day_of_month, day_of_week, start_date, end_date, notes,
+          is_active, created_at
       `;
 
-      const values = [
-        user_id,
-        type,
-        amount,
-        description,
-        category_id,
-        interval_type,
-        day_of_month,
-        day_of_week,
-        start_date,
-        end_date
-      ];
+      const result = await db.query(query, [
+        user_id, type, amount, description.trim(), category_id,
+        interval_type, day_of_month, day_of_week,
+        start_date, end_date, notes?.trim() || null
+      ], 'create_recurring_template_optimized');
 
-      const result = await db.query(query, values, 'create_recurring_template');
-      
-      logger.info('Recurring template created', {
-        templateId: result.rows[0].id,
+      const template = result.rows[0];
+
+      // Invalidate cache for this user
+      RecurringTemplateCache.invalidateUser(user_id);
+
+      const duration = Date.now() - start;
+      logger.info('✅ Recurring template created', {
+        templateId: template.id,
         userId: user_id,
         type,
+        intervalType: interval_type,
         amount,
-        interval: interval_type
+        duration: `${duration}ms`,
+        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
       });
 
-      // Generate initial transactions
-      await db.query('SELECT generate_recurring_transactions()', [], 'generate_initial_transactions');
-      
-      logger.info('Initial transactions generated for template', {
-        templateId: result.rows[0].id
-      });
-      
-      return result.rows[0];
+      return template;
+
     } catch (error) {
-      logger.error('Error creating recurring template', {
-        userId: user_id,
-        type,
-        error: error.message
-      });
-
-      if (error.code === '23505') {
-        throw { ...errorCodes.ALREADY_EXISTS, details: 'Duplicate template detected' };
-      }
+      const duration = Date.now() - start;
 
       if (error.code === '23503') {
-        throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category or user reference' };
+        logger.warn('Template creation failed - invalid category', {
+          userId: user_id, categoryId: category_id, duration: `${duration}ms`
+        });
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category' };
       }
 
+      logger.error('❌ Recurring template creation failed', {
+        userId: user_id, error: error.message, duration: `${duration}ms`
+      });
       throw { ...errorCodes.SQL_ERROR, details: 'Failed to create recurring template' };
     }
   }
 
   /**
-   * Get all active templates for a user
-   * @param {number} userId - User ID
-   * @returns {Promise<Array>} Active templates
+   * 🚀 OPTIMIZED: Get user templates with smart caching
    */
-  static async getByUser(userId) {
-    if (!userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'User ID is required' };
+  static async getUserTemplates(userId, activeOnly = true) {
+    const cacheKey = RecurringTemplateCache.generateKey(userId, activeOnly);
+    const cached = RecurringTemplateCache.get(cacheKey);
+    if (cached) {
+      logger.debug('✅ Templates cache hit', { userId, activeOnly });
+      return cached;
     }
 
     try {
       const query = `
         SELECT 
-          rt.*,
-          c.name as category_name,
-          c.icon as category_icon,
-          COUNT(CASE WHEN e.deleted_at IS NULL THEN 1 END) as occurrence_count
+          rt.id, rt.user_id, rt.type, rt.amount, rt.description, rt.category_id,
+          rt.interval_type, rt.day_of_month, rt.day_of_week, rt.start_date, rt.end_date,
+          rt.notes, rt.is_active, rt.created_at, rt.updated_at,
+          c.name as category_name, c.icon as category_icon
         FROM recurring_templates rt
         LEFT JOIN categories c ON rt.category_id = c.id
-        LEFT JOIN (
-          SELECT template_id, deleted_at FROM expenses WHERE template_id IS NOT NULL
-          UNION ALL
-          SELECT template_id, deleted_at FROM income WHERE template_id IS NOT NULL
-        ) e ON e.template_id = rt.id
-        WHERE rt.user_id = $1 AND rt.is_active = true
-        GROUP BY rt.id, c.name, c.icon
-        ORDER BY rt.created_at DESC;
+        WHERE rt.user_id = $1 
+          ${activeOnly ? 'AND rt.is_active = true' : ''}
+          AND (rt.end_date IS NULL OR rt.end_date >= CURRENT_DATE)
+        ORDER BY rt.created_at DESC
       `;
 
-      const result = await db.query(query, [userId], 'get_templates_by_user');
-      
-      logger.debug('Templates retrieved for user', {
-        userId,
-        count: result.rows.length
+      const result = await db.query(query, [userId], 'get_user_templates_optimized');
+      const templates = result.rows;
+
+      // Cache the result
+      RecurringTemplateCache.set(cacheKey, templates);
+
+      logger.debug('✅ Templates fetched and cached', {
+        userId, activeOnly, count: templates.length
       });
 
-      return result.rows;
+      return templates;
+
     } catch (error) {
-      logger.error('Error fetching templates', {
-        userId,
-        error: error.message
+      logger.error('❌ Error fetching user templates', {
+        userId, activeOnly, error: error.message
       });
-
-      throw { ...errorCodes.FETCH_FAILED, details: 'Failed to fetch recurring templates' };
+      throw { ...errorCodes.SQL_ERROR, details: 'Failed to fetch templates' };
     }
   }
 
   /**
-   * Get template by ID
-   * @param {number} id - Template ID
-   * @param {number} userId - User ID
-   * @returns {Promise<Object|null>} Template or null
+   * 🚀 OPTIMIZED: Get template by ID
    */
-  static async getById(id, userId) {
-    if (!id || !userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Template ID and User ID are required' };
-    }
-
+  static async getById(id) {
     try {
       const query = `
         SELECT 
-          rt.*,
-          c.name as category_name,
-          c.icon as category_icon
+          rt.*, c.name as category_name, c.icon as category_icon
         FROM recurring_templates rt
         LEFT JOIN categories c ON rt.category_id = c.id
-        WHERE rt.id = $1 AND rt.user_id = $2;
+        WHERE rt.id = $1
       `;
 
-      const result = await db.query(query, [id, userId], 'get_template_by_id');
+      const result = await db.query(query, [id], 'get_template_by_id_optimized');
       return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error fetching template by ID', {
-        templateId: id,
-        userId,
-        error: error.message
-      });
 
-      throw { ...errorCodes.FETCH_FAILED, details: 'Failed to fetch template' };
+    } catch (error) {
+      logger.error('❌ Error fetching template by ID', {
+        templateId: id, error: error.message
+      });
+      throw { ...errorCodes.SQL_ERROR, details: 'Failed to fetch template' };
     }
   }
 
   /**
-   * Update a recurring template
-   * @param {number} id - Template ID
-   * @param {number} userId - User ID
-   * @param {Object} data - Update data
-   * @param {boolean} updateFuture - Update future transactions
-   * @returns {Promise<Object>} Updated template
+   * 🚀 OPTIMIZED: Update template with cache invalidation
    */
-  static async update(id, userId, data, updateFuture = false) {
-    if (!id || !userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Template ID and User ID are required' };
+  static async update(id, updates) {
+    const start = Date.now();
+
+    const allowedFields = [
+      'amount', 'description', 'category_id', 'interval_type',
+      'day_of_month', 'day_of_week', 'end_date', 'notes', 'is_active'
+    ];
+
+    const fields = Object.keys(updates).filter(field => allowedFields.includes(field));
+    if (fields.length === 0) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'No valid fields to update' };
     }
 
-    // Validate update data
-    if (data.amount !== undefined && data.amount <= 0) {
+    // Validate updates
+    if (updates.amount !== undefined && updates.amount <= 0) {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Amount must be positive' };
     }
 
-    if (data.interval_type && !['daily', 'weekly', 'monthly'].includes(data.interval_type)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid interval type' };
-    }
-
-    if (data.day_of_month !== undefined && (data.day_of_month < 1 || data.day_of_month > 31)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Day of month must be between 1 and 31' };
-    }
-
-    if (data.day_of_week !== undefined && (data.day_of_week < 0 || data.day_of_week > 6)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Day of week must be between 0 and 6' };
-    }
-
-    const client = await db.pool.connect();
-    
     try {
-      await client.query('BEGIN');
+      const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
+      const values = [id, ...fields.map(field => updates[field])];
 
-      // Update template
-      const updateQuery = `
-        UPDATE recurring_templates
-        SET 
-          amount = COALESCE($1, amount),
-          description = COALESCE($2, description),
-          category_id = COALESCE($3, category_id),
-          interval_type = COALESCE($4, interval_type),
-          day_of_month = COALESCE($5, day_of_month),
-          day_of_week = COALESCE($6, day_of_week),
-          end_date = COALESCE($7, end_date),
-          updated_at = NOW()
-        WHERE id = $8 AND user_id = $9
-        RETURNING *;
+      const query = `
+        UPDATE recurring_templates 
+        SET ${setClause}, updated_at = NOW()
+        WHERE id = $1
+        RETURNING user_id, type, amount, description, interval_type
       `;
 
-      const values = [
-        data.amount,
-        data.description,
-        data.category_id,
-        data.interval_type,
-        data.day_of_month,
-        data.day_of_week,
-        data.end_date,
-        id,
-        userId
-      ];
-
-      const result = await client.query(updateQuery, values);
-
+      const result = await db.query(query, values, 'update_template_optimized');
+      
       if (result.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'Template not found' };
+        throw { ...errorCodes.NOT_FOUND, details: 'Template not found' };
       }
 
-      // Update future transactions if requested
-      if (updateFuture) {
-        const updateFields = [];
-        if (data.amount !== undefined) updateFields.push('amount');
-        if (data.description !== undefined) updateFields.push('description');
-        if (data.category_id !== undefined) updateFields.push('category');
+      const template = result.rows[0];
 
-        if (updateFields.length > 0) {
-          await client.query(
-            'SELECT update_future_transactions($1, $2, $3, $4, $5)',
-            [id, new Date(), data.amount, data.description, data.category_id]
-          );
+      // Invalidate cache for this user
+      RecurringTemplateCache.invalidateUser(template.user_id);
 
-          logger.info('Future transactions updated', {
-            templateId: id,
-            userId,
-            updatedFields: updateFields
-          });
-        }
-      }
-
-      await client.query('COMMIT');
-      
-      logger.info('Recurring template updated', {
+      const duration = Date.now() - start;
+      logger.info('✅ Template updated', {
         templateId: id,
-        userId,
-        updateFuture,
-        updates: Object.keys(data).filter(key => data[key] !== undefined)
+        userId: template.user_id,
+        fields,
+        duration: `${duration}ms`,
+        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
       });
 
-      return result.rows[0];
+      return await this.getById(id); // Return full updated template
+
     } catch (error) {
-      await client.query('ROLLBACK');
-      
-      if (error.code === 'NOT_FOUND') throw error;
-
-      logger.error('Error updating template', {
-        templateId: id,
-        userId,
-        error: error.message
-      });
-
-      if (error.code === '23503') {
-        throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category reference' };
+      if (error.code && error.message) {
+        throw error;
       }
 
+      const duration = Date.now() - start;
+      logger.error('❌ Template update failed', {
+        templateId: id, error: error.message, duration: `${duration}ms`
+      });
       throw { ...errorCodes.SQL_ERROR, details: 'Failed to update template' };
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Delete (deactivate) a recurring template
-   * @param {number} id - Template ID
-   * @param {number} userId - User ID
-   * @param {boolean} deleteFuture - Delete future transactions
-   * @returns {Promise<boolean>} Success status
+   * 🚀 OPTIMIZED: Delete template with cache invalidation
    */
-  static async delete(id, userId, deleteFuture = false) {
-    if (!id || !userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Template ID and User ID are required' };
-    }
-
-    const client = await db.pool.connect();
-    
+  static async delete(id) {
     try {
-      await client.query('BEGIN');
+      const query = `
+        DELETE FROM recurring_templates 
+        WHERE id = $1
+        RETURNING user_id
+      `;
 
-      // Check if template exists
-      const checkQuery = 'SELECT type FROM recurring_templates WHERE id = $1 AND user_id = $2';
-      const checkResult = await client.query(checkQuery, [id, userId]);
-
-      if (checkResult.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'Template not found' };
-      }
-
-      // Deactivate template
-      const result = await client.query(
-        `UPDATE recurring_templates 
-         SET is_active = false, end_date = CURRENT_DATE, updated_at = NOW()
-         WHERE id = $1 AND user_id = $2
-         RETURNING type;`,
-        [id, userId]
-      );
-
-      // Delete future transactions if requested
-      if (deleteFuture) {
-        await client.query(
-          'SELECT delete_future_transactions($1, $2, $3)',
-          [id, userId, new Date()]
-        );
-
-        logger.info('Future transactions deleted', {
-          templateId: id,
-          userId
-        });
-      }
-
-      await client.query('COMMIT');
+      const result = await db.query(query, [id], 'delete_template_optimized');
       
-      logger.info('Recurring template deleted', {
-        templateId: id,
-        userId,
-        deleteFuture
-      });
+      if (result.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, details: 'Template not found' };
+      }
 
+      const userId = result.rows[0].user_id;
+
+      // Invalidate cache for this user
+      RecurringTemplateCache.invalidateUser(userId);
+
+      logger.info('✅ Template deleted', { templateId: id, userId });
       return true;
+
     } catch (error) {
-      await client.query('ROLLBACK');
-      
-      if (error.code === 'NOT_FOUND') throw error;
+      if (error.code && error.message) {
+        throw error;
+      }
 
-      logger.error('Error deleting template', {
-        templateId: id,
-        userId,
-        error: error.message
+      logger.error('❌ Template deletion failed', {
+        templateId: id, error: error.message
       });
-
       throw { ...errorCodes.SQL_ERROR, details: 'Failed to delete template' };
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Skip specific dates for a template
-   * @param {number} id - Template ID
-   * @param {number} userId - User ID
-   * @param {Array<string>} dates - Dates to skip (YYYY-MM-DD format)
-   * @returns {Promise<boolean>} Success status
+   * 🚀 NEW: Add skip date to template
    */
-  static async skipDates(id, userId, dates) {
-    if (!id || !userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Template ID and User ID are required' };
-    }
-
-    if (!Array.isArray(dates) || dates.length === 0) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Dates array is required and cannot be empty' };
-    }
-
-    // Validate date formats
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    for (const date of dates) {
-      if (!dateRegex.test(date)) {
-        throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid date format. Use YYYY-MM-DD' };
-      }
-    }
-
+  static async addSkipDate(id, skipDate) {
     try {
+      const dateStr = skipDate instanceof Date ? 
+        skipDate.toISOString().split('T')[0] : 
+        new Date(skipDate).toISOString().split('T')[0];
+
       const query = `
-        UPDATE recurring_templates
-        SET skip_dates = array_cat(COALESCE(skip_dates, '{}'), $1::date[]),
+        UPDATE recurring_templates 
+        SET skip_dates = COALESCE(skip_dates, '[]'::jsonb) || $2::jsonb,
             updated_at = NOW()
-        WHERE id = $2 AND user_id = $3
-        RETURNING id, skip_dates;
+        WHERE id = $1
+        RETURNING user_id
       `;
 
-      const result = await db.query(query, [dates, id, userId], 'skip_template_dates');
+      const result = await db.query(query, [id, JSON.stringify([dateStr])], 'add_skip_date_optimized');
       
       if (result.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'Template not found' };
+        throw { ...errorCodes.NOT_FOUND, details: 'Template not found' };
       }
 
-      // Regenerate transactions to apply skip dates
-      await db.query('SELECT generate_recurring_transactions()', [], 'regenerate_after_skip');
-      
-      logger.info('Dates skipped for template', {
-        templateId: id,
-        userId,
-        skippedDates: dates,
-        totalSkippedDates: result.rows[0].skip_dates.length
-      });
-      
+      const userId = result.rows[0].user_id;
+      RecurringTemplateCache.invalidateUser(userId);
+
+      logger.info('✅ Skip date added', { templateId: id, skipDate: dateStr, userId });
       return true;
+
     } catch (error) {
-      if (error.code === 'NOT_FOUND') throw error;
-
-      logger.error('Error skipping dates', {
-        templateId: id,
-        userId,
-        dates,
-        error: error.message
+      logger.error('❌ Add skip date failed', {
+        templateId: id, skipDate, error: error.message
       });
-
-      throw { ...errorCodes.SQL_ERROR, details: 'Failed to skip dates' };
+      throw { ...errorCodes.SQL_ERROR, details: 'Failed to add skip date' };
     }
   }
 
   /**
-   * Get template statistics
-   * @param {number} id - Template ID
-   * @param {number} userId - User ID
-   * @returns {Promise<Object>} Template statistics
+   * 📊 Get performance statistics
    */
-  static async getStats(id, userId) {
-    if (!id || !userId) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Template ID and User ID are required' };
-    }
+  static getPerformanceStats() {
+    return {
+      cache: RecurringTemplateCache.getStats(),
+      database: db.getPerformanceStats()
+    };
+  }
 
-    try {
-      const query = `
-        WITH template_info AS (
-          SELECT type, amount, start_date, created_at
-          FROM recurring_templates
-          WHERE id = $1 AND user_id = $2
-        ),
-        transaction_stats AS (
-          SELECT 
-            COUNT(*) as total_transactions,
-            SUM(amount) as total_amount,
-            MIN(date) as first_transaction,
-            MAX(date) as last_transaction
-          FROM (
-            SELECT amount, date FROM expenses 
-            WHERE template_id = $1 AND deleted_at IS NULL
-            UNION ALL
-            SELECT amount, date FROM income 
-            WHERE template_id = $1 AND deleted_at IS NULL
-          ) t
-        )
-        SELECT 
-          ti.*,
-          COALESCE(ts.total_transactions, 0) as occurrence_count,
-          COALESCE(ts.total_amount, 0) as total_generated,
-          ts.first_transaction,
-          ts.last_transaction
-        FROM template_info ti
-        CROSS JOIN transaction_stats ts;
-      `;
-
-      const result = await db.query(query, [id, userId], 'get_template_stats');
-      
-      if (result.rows.length === 0) {
-        throw { ...errorCodes.NOT_FOUND, message: 'Template not found' };
-      }
-
-      return result.rows[0];
-    } catch (error) {
-      if (error.code === 'NOT_FOUND') throw error;
-
-      logger.error('Error fetching template statistics', {
-        templateId: id,
-        userId,
-        error: error.message
-      });
-
-      throw { ...errorCodes.FETCH_FAILED, details: 'Failed to fetch template statistics' };
-    }
+  /**
+   * 🧹 Clear cache
+   */
+  static clearCache() {
+    RecurringTemplateCache.cache.clear();
+    logger.info('🧹 RecurringTemplate cache cleared');
   }
 }
 
-module.exports = RecurringTemplate;
+module.exports = { 
+  RecurringTemplate,
+  RecurringTemplateCache
+}; 

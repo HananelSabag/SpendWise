@@ -1,8 +1,10 @@
 /**
- * useToast Hook - Beautiful Modern Toast Notification System
+ * 🍞 useToast Hook - ZUSTAND COMPATIBLE VERSION
+ * Beautiful Modern Toast Notification System with i18n support
+ * NOW USES ZUSTAND STORES! 🎉
  * 
  * Features:
- * ✅ Full i18n support (Hebrew/English)
+ * ✅ Full i18n support (Hebrew/English) via Zustand
  * ✅ Modern glassmorphism design with beautiful animations
  * ✅ Custom SVG icons instead of emojis
  * ✅ Enhanced typography with modern font stack
@@ -11,11 +13,14 @@
  * ✅ Beautiful gradients and shadows
  * ✅ Server error handling
  * ✅ Automatic message fallbacks
+ * @version 2.0.0
  */
 
 import React, { useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { useLanguage } from '../context/LanguageContext';
+
+// ✅ NEW: Import from Zustand stores instead of Context
+import { useTranslation } from '../stores';
 
 // Modern SVG Icons Component with dynamic colors
 const ToastIcon = ({ type, size = 20 }) => {
@@ -30,420 +35,319 @@ const ToastIcon = ({ type, size = 20 }) => {
     return colors[iconType] || colors.info;
   };
 
-  const iconProps = {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: getIconColor(type),
-    style: { 
-      flexShrink: 0
-    }
-  };
+  const color = getIconColor(type);
 
   const icons = {
     success: (
-      <svg {...iconProps}>
-        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
+          fill={color}
+          fillOpacity="0.1"
+          stroke={color}
+          strokeWidth="2"
+        />
+        <path
+          d="M13 8L9 12L7 10"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
     error: (
-      <svg {...iconProps}>
-        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
+          fill={color}
+          fillOpacity="0.1"
+          stroke={color}
+          strokeWidth="2"
+        />
+        <path
+          d="M12 8L8 12M8 8L12 12"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
       </svg>
     ),
     warning: (
-      <svg {...iconProps}>
-        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
+          fill={color}
+          fillOpacity="0.1"
+          stroke={color}
+          strokeWidth="2"
+        />
+        <path
+          d="M10 6V10M10 14H10.01"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
       </svg>
     ),
     info: (
-      <svg {...iconProps}>
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
+          fill={color}
+          fillOpacity="0.1"
+          stroke={color}
+          strokeWidth="2"
+        />
+        <path
+          d="M10 10V14M10 6H10.01"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
       </svg>
     ),
     loading: (
-      <svg {...iconProps} className="animate-spin">
-        <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/>
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 2V6M10 14V18M18 10H14M6 10H2M15.657 4.343L12.829 7.171M7.171 12.829L4.343 15.657M15.657 15.657L12.829 12.829M7.171 7.171L4.343 4.343"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          className="animate-spin"
+          style={{ transformOrigin: '50% 50%' }}
+        />
       </svg>
     )
   };
 
+  return icons[type] || icons.info;
+};
+
+// ✅ UPDATED: Toast notification component with Zustand
+const ToastNotification = ({ message, type, icon: customIcon }) => {
+  // ✅ NEW: Use Zustand translation store
+  const { currentLanguage, isRTL } = useTranslation();
+
+  const getTypeStyles = (toastType) => {
+    const styles = {
+      success: {
+        bg: 'from-green-50 via-emerald-50 to-green-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-green-900/20',
+        border: 'border-green-200 dark:border-green-700/50',
+        text: 'text-green-900 dark:text-green-100',
+        shadow: 'shadow-lg shadow-green-100/50 dark:shadow-green-900/20'
+      },
+      error: {
+        bg: 'from-red-50 via-rose-50 to-red-50 dark:from-red-900/20 dark:via-rose-900/20 dark:to-red-900/20',
+        border: 'border-red-200 dark:border-red-700/50',
+        text: 'text-red-900 dark:text-red-100',
+        shadow: 'shadow-lg shadow-red-100/50 dark:shadow-red-900/20'
+      },
+      warning: {
+        bg: 'from-orange-50 via-amber-50 to-orange-50 dark:from-orange-900/20 dark:via-amber-900/20 dark:to-orange-900/20',
+        border: 'border-orange-200 dark:border-orange-700/50',
+        text: 'text-orange-900 dark:text-orange-100',
+        shadow: 'shadow-lg shadow-orange-100/50 dark:shadow-orange-900/20'
+      },
+      info: {
+        bg: 'from-blue-50 via-indigo-50 to-blue-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-blue-900/20',
+        border: 'border-blue-200 dark:border-blue-700/50',
+        text: 'text-blue-900 dark:text-blue-100',
+        shadow: 'shadow-lg shadow-blue-100/50 dark:shadow-blue-900/20'
+      },
+      loading: {
+        bg: 'from-purple-50 via-violet-50 to-purple-50 dark:from-purple-900/20 dark:via-violet-900/20 dark:to-purple-900/20',
+        border: 'border-purple-200 dark:border-purple-700/50',
+        text: 'text-purple-900 dark:text-purple-100',
+        shadow: 'shadow-lg shadow-purple-100/50 dark:shadow-purple-900/20'
+      }
+    };
+    return styles[toastType] || styles.info;
+  };
+
+  const typeStyles = getTypeStyles(type);
+
   return (
-    <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
-      {icons[type] || icons.info}
+    <div
+      className={`
+        relative flex items-center p-4 rounded-xl backdrop-blur-md
+        bg-gradient-to-r ${typeStyles.bg}
+        border ${typeStyles.border}
+        ${typeStyles.shadow}
+        max-w-md w-full
+        ${isRTL ? 'text-right' : 'text-left'}
+        transition-all duration-200 ease-out
+        hover:scale-105 transform
+      `}
+      style={{
+        direction: isRTL ? 'rtl' : 'ltr',
+        fontFamily: currentLanguage === 'he' 
+          ? '"Heebo", "Noto Sans Hebrew", system-ui, -apple-system, sans-serif'
+          : '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif'
+      }}
+    >
+      {/* Icon */}
+      <div className={`flex-shrink-0 ${isRTL ? 'ml-3' : 'mr-3'}`}>
+        {customIcon || <ToastIcon type={type} />}
+      </div>
+
+      {/* Message */}
+      <div className={`flex-1 ${typeStyles.text}`}>
+        <p className="text-sm font-medium leading-5 tracking-tight">
+          {message}
+        </p>
+      </div>
+
+      {/* Gradient border effect */}
+      <div 
+        className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent pointer-events-none"
+        style={{ 
+          background: isRTL 
+            ? 'linear-gradient(to left, rgba(255,255,255,0.1), transparent)'
+            : 'linear-gradient(to right, rgba(255,255,255,0.1), transparent)'
+        }}
+      />
     </div>
   );
 };
 
-// Clean flat toast styling with bubbly font and no 3D effects
-const getToastStyle = (type, isRTL) => {
-  const baseStyle = {
-    borderRadius: '20px',
-    fontFamily: '"Comic Neue", "Nunito", "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", sans-serif',
-    fontSize: '15px',
-    fontWeight: '500',
-    padding: '16px 20px',
-    maxWidth: '420px',
-    minHeight: '56px',
-    borderWidth: '2px',
-    borderStyle: 'solid',
-    direction: isRTL ? 'rtl' : 'ltr',
-    textAlign: isRTL ? 'right' : 'left',
-    position: 'relative',
-    overflow: 'hidden',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    transition: 'all 0.3s ease',
-    background: '#ffffff',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-  };
-
-  const styles = {
-    success: {
-      ...baseStyle,
-      borderColor: '#16a34a', // Less greeny, more balanced green
-      color: '#15803d',
-    },
-    error: {
-      ...baseStyle,
-      borderColor: '#dc2626',
-      color: '#dc2626',
-    },
-    warning: {
-      ...baseStyle,
-      borderColor: '#ea580c',
-      color: '#ea580c',
-    },
-    info: {
-      ...baseStyle,
-      borderColor: '#2563eb',
-      color: '#2563eb',
-    },
-    loading: {
-      ...baseStyle,
-      borderColor: '#7c3aed',
-      color: '#7c3aed',
-    }
-  };
-
-  return styles[type] || styles.info;
-};
-
-// Modern React component for toast icons
-const getToastIcon = (type) => {
-  return <ToastIcon type={type} size={22} />;
-};
-
-// Map server error codes to user-friendly messages
-const mapServerError = (error, t) => {
-  const errorCode = error?.response?.data?.error?.code;
-  const errorMessage = error?.response?.data?.error?.message;
-  const statusCode = error?.response?.status;
-
-  // Map specific error codes
-  const errorMap = {
-    // Authentication errors
-    'INVALID_CREDENTIALS': t('toast.error.invalidCredentials'),
-    'EMAIL_NOT_VERIFIED': t('toast.error.emailNotVerified'),
-    'TOKEN_EXPIRED': t('toast.error.tokenExpired'),
-    'UNAUTHORIZED': t('toast.error.unauthorized'),
-    'FORBIDDEN': t('toast.error.unauthorized'),
-
-    // Validation errors
-    'VALIDATION_ERROR': t('toast.error.formErrors'),
-    'MISSING_REQUIRED': t('toast.error.formErrors'),
-    'INVALID_INPUT': t('toast.error.formErrors'),
-
-    // Category errors
-    'CATEGORY_IN_USE': t('toast.error.categoryInUse'),
-    'ALREADY_EXISTS': t('toast.error.emailAlreadyExists'),
-
-    // Server errors
-    'DB_ERROR': t('toast.error.databaseError'),
-    'SQL_ERROR': t('toast.error.databaseError'),
-    'CREATE_FAILED': t('toast.error.operationFailed'),
-    'UPDATE_FAILED': t('toast.error.operationFailed'),
-    'DELETE_FAILED': t('toast.error.operationFailed'),
-    'FETCH_FAILED': t('toast.error.operationFailed'),
-
-    // Rate limiting
-    'RATE_LIMIT_EXCEEDED': t('toast.error.tooManyRequests'),
-    'AUTH_RATE_LIMIT': t('toast.error.tooManyRequests'),
-    'TRANSACTION_LIMIT': t('toast.error.tooManyRequests'),
-
-    // Network/Status errors
-    'NOT_FOUND': t('toast.error.notFound'),
-    'UNKNOWN_ERROR': t('toast.error.unexpectedError')
-  };
-
-  // Check for specific error code mapping
-  if (errorCode && errorMap[errorCode]) {
-    return errorMap[errorCode];
-  }
-
-  // Check for HTTP status code mapping
-  const statusMap = {
-    400: t('toast.error.formErrors'),
-    401: t('toast.error.unauthorized'),
-    403: t('toast.error.unauthorized'),
-    404: t('toast.error.notFound'),
-    409: t('toast.error.emailAlreadyExists'),
-    429: t('toast.error.tooManyRequests'),
-    500: t('toast.error.serverError'),
-    502: t('toast.error.serverError'),
-    503: t('toast.error.serviceUnavailable'),
-    504: t('toast.error.operationTimeout')
-  };
-
-  if (statusCode && statusMap[statusCode]) {
-    return statusMap[statusCode];
-  }
-
-  // Fallback to provided message or generic error
-  return errorMessage || t('toast.error.generic');
-};
-
 /**
- * Enhanced useToast hook with beautiful design integration
+ * ✅ UPDATED: Main useToast hook with Zustand compatibility
  */
 export const useToast = () => {
-  const { t, isRTL } = useLanguage();
+  // ✅ NEW: Use Zustand translation store
+  const { t } = useTranslation('toast');
 
-  // Toast configuration options
-  const defaultOptions = useMemo(() => ({
-    duration: 4000,
-    position: 'top-center',
-    reverseOrder: false,
-    gutter: 12,
-  }), []);
+  // Toast notification functions
+  const showToast = useCallback((message, type = 'info', options = {}) => {
+    const resolvedMessage = typeof message === 'string' && message.includes('.') 
+      ? t(message) || message 
+      : message;
 
-  // Success toast
-  const success = useCallback((messageKey, options = {}) => {
-    const message = typeof messageKey === 'string' 
-      ? (messageKey.startsWith('toast.') ? t(messageKey, options.params) : messageKey)
-      : messageKey;
+    return toast.custom(
+      (toastData) => (
+        <ToastNotification
+          message={resolvedMessage}
+          type={type}
+          icon={options.icon}
+        />
+      ),
+      {
+        duration: options.duration || (type === 'loading' ? Infinity : 4000),
+        position: options.position || 'top-center',
+        ...options
+      }
+    );
+  }, [t]);
 
-    return toast.success(message, {
-      id: options.id || message,
-      ...defaultOptions,
-      duration: options.duration || 3000,
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
+  const success = useCallback((message, options = {}) => {
+    return showToast(message, 'success', options);
+  }, [showToast]);
 
-  // Error toast with automatic server error mapping
-  const error = useCallback((messageKeyOrError, options = {}) => {
-    let message;
+  const error = useCallback((message, options = {}) => {
+    const errorMessage = typeof message === 'string' 
+      ? (t(message) || message)
+      : (message?.message || t('common.error') || 'An error occurred');
+    
+    return showToast(errorMessage, 'error', { duration: 6000, ...options });
+  }, [showToast, t]);
 
-    // Check if it's an error object (from API calls)
-    if (messageKeyOrError && typeof messageKeyOrError === 'object' && messageKeyOrError.response) {
-      message = mapServerError(messageKeyOrError, t);
-    } else if (typeof messageKeyOrError === 'string') {
-      // It's a translation key or direct message
-      message = messageKeyOrError.startsWith('toast.') 
-        ? t(messageKeyOrError, options.params) 
-        : messageKeyOrError;
-    } else {
-      // Fallback for unknown error types
-      message = messageKeyOrError?.message || t('toast.error.generic');
-    }
+  const warning = useCallback((message, options = {}) => {
+    return showToast(message, 'warning', options);
+  }, [showToast]);
 
-    return toast.error(message, {
-      id: options.id || message,
-      ...defaultOptions,
-      duration: options.duration || 5000,
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
+  const info = useCallback((message, options = {}) => {
+    return showToast(message, 'info', options);
+  }, [showToast]);
 
-  // Warning toast
-  const warning = useCallback((messageKey, options = {}) => {
-    const message = typeof messageKey === 'string' 
-      ? (messageKey.startsWith('toast.') ? t(messageKey, options.params) : messageKey)
-      : messageKey;
+  const loading = useCallback((message, options = {}) => {
+    return showToast(message, 'loading', options);
+  }, [showToast]);
 
-    return toast(message, {
-      id: options.id || message,
-      ...defaultOptions,
-      duration: options.duration || 4000,
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
+  // Promise-based loading toast
+  const promise = useCallback((promise, messages, options = {}) => {
+    const loadingToast = loading(
+      messages.loading || t('common.loading') || 'Loading...', 
+      options
+    );
 
-  // Info toast
-  const info = useCallback((messageKey, options = {}) => {
-    const message = typeof messageKey === 'string' 
-      ? (messageKey.startsWith('toast.') ? t(messageKey, options.params) : messageKey)
-      : messageKey;
+    return promise
+      .then((result) => {
+        toast.dismiss(loadingToast);
+        success(
+          messages.success || t('common.success') || 'Success!',
+          options
+        );
+        return result;
+      })
+      .catch((error) => {
+        toast.dismiss(loadingToast);
+        showToast(
+          messages.error || error?.message || t('common.error') || 'Error occurred',
+          'error',
+          { duration: 6000, ...options }
+        );
+        throw error;
+      });
+  }, [loading, success, showToast, t]);
 
-    return toast(message, {
-      id: options.id || message,
-      ...defaultOptions,
-      duration: options.duration || 4000,
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
-
-  // Loading toast with optional progress
-  const loading = useCallback((messageKey, options = {}) => {
-    const message = typeof messageKey === 'string' 
-      ? (messageKey.startsWith('toast.') ? t(messageKey, options.params) : messageKey)
-      : messageKey;
-
-    return toast.loading(message, {
-      ...defaultOptions,
-      duration: Infinity, // Loading toasts should be dismissed manually
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
-
-  // Promise toast - handles async operations with loading, success, and error states
-  const promise = useCallback((promiseFunction, messages = {}, options = {}) => {
-    const defaultMessages = {
-      loading: t('toast.loading.processingRequest'),
-      success: t('toast.success.operationSuccess'),
-      error: t('toast.error.operationFailed')
-    };
-
-    const finalMessages = {
-      loading: messages.loading || defaultMessages.loading,
-      success: messages.success || defaultMessages.success,
-      error: messages.error || defaultMessages.error
-    };
-
-    return toast.promise(promiseFunction, finalMessages, {
-      ...defaultOptions,
-      loading: {
-        duration: Infinity
-      },
-      success: {
-        duration: 3000
-      },
-      error: {
-        duration: 5000
-      },
-      ...options
-    });
-  }, [t, isRTL, defaultOptions]);
-
-  // Dismiss specific toast
+  // Dismiss functions
   const dismiss = useCallback((toastId) => {
     toast.dismiss(toastId);
   }, []);
 
-  // Dismiss all toasts
   const dismissAll = useCallback(() => {
     toast.dismiss();
   }, []);
 
-  // Custom toast for complex content
-  const custom = useCallback((content, options = {}) => {
-    return toast.custom(content, {
-      ...defaultOptions,
-      ...options
-    });
-  }, [defaultOptions]);
-
-  // Convenience methods for common operations
-  const api = useMemo(() => ({
-    // Authentication
-    loginSuccess: () => success('toast.success.loginSuccess'),
-    logoutSuccess: () => success('toast.success.logoutSuccess'),
-    registerSuccess: () => success('toast.success.registerSuccess'),
-    emailVerified: () => success('toast.success.emailVerified'),
-    passwordChanged: () => success('toast.success.passwordChanged'),
-    passwordReset: () => success('toast.success.passwordReset'),
-    verificationSent: () => success('toast.success.verificationSent'),
-    
-    // Profile
-    profileUpdated: () => success('toast.success.profileUpdated'),
-    profilePictureUploaded: () => success('toast.success.profilePictureUploaded'),
-    preferencesUpdated: () => success('toast.success.preferencesUpdated'),
-    
-    // Transactions
-    transactionCreated: () => success('toast.success.transactionCreated'),
-    transactionUpdated: () => success('toast.success.transactionUpdated'),
-    transactionDeleted: () => success('toast.success.transactionDeleted'),
-    transactionGenerated: () => success('toast.success.transactionGenerated'),
-    templateUpdated: () => success('toast.success.templateUpdated'),
-    skipDatesSuccess: () => success('toast.success.skipDatesSuccess'),
-    dataRefreshed: () => success('toast.success.dataRefreshed'),
-    nextPaymentSkipped: () => success('toast.success.nextPaymentSkipped'),
-    
-    // Categories
-    categoryCreated: () => success('toast.success.categoryCreated'),
-    categoryUpdated: () => success('toast.success.categoryUpdated'),
-    categoryDeleted: () => success('toast.success.categoryDeleted'),
-    
-    // Export
-    csvExportCompleted: () => success('toast.success.csvExportCompleted'),
-    jsonExportCompleted: () => success('toast.success.jsonExportCompleted'),
-    
-    // Errors - Common ones that are used frequently
-    networkError: () => error('toast.error.networkError'),
-    serverError: () => error('toast.error.serverError'),
-    unauthorized: () => error('toast.error.unauthorized'),
-    operationFailed: () => error('toast.error.operationFailed'),
-    formErrors: () => error('toast.error.formErrors'),
-    
-    // Info
-    featureComingSoon: () => info('toast.info.featureComingSoon'),
-    pdfExportComingSoon: () => info('toast.info.pdfExportComingSoon'),
-    dataLoading: () => info('toast.info.dataLoading'),
-    
-    // Loading
-    savingChanges: () => loading('toast.loading.savingChanges'),
-    loadingData: () => loading('toast.loading.loadingData'),
-    processingRequest: () => loading('toast.loading.processingRequest'),
-    preparingExport: (params) => loading('toast.loading.preparingExport', { params })
-  }), [success, error, info, loading]);
-
-  return {
-    // Core methods
+  return useMemo(() => ({
+    // Main functions
     success,
     error,
     warning,
     info,
     loading,
     promise,
-    custom,
+    
+    // Utility functions
     dismiss,
     dismissAll,
     
-    // Convenience API methods
-    ...api,
+    // Raw toast function for custom usage
+    showToast,
     
-    // Advanced usage
-    mapServerError: (err) => mapServerError(err, t),
-    
-    // Toast configuration
-    configure: (config) => {
-      Object.assign(defaultOptions, config);
-    }
-  };
+    // Backward compatibility
+    toast: showToast
+  }), [success, error, warning, info, loading, promise, dismiss, dismissAll, showToast]);
 };
 
-export default useToast;
-
-// Clean ToastProvider component using default react-hot-toast design
+// ✅ Toaster Provider Component
 export const ToastProvider = ({ children }) => {
-  const { isRTL } = useLanguage();
-
+  const { isRTL } = useTranslation();
+  
   return (
     <>
       {children}
       <Toaster
-        position={isRTL ? "top-left" : "top-right"}
+        position="top-center"
         reverseOrder={isRTL}
         gutter={8}
         containerStyle={{
-          top: 80,
+          zIndex: 9999
         }}
         toastOptions={{
           duration: 4000,
+          style: {
+            background: 'transparent',
+            boxShadow: 'none',
+            padding: 0,
+            margin: 0
+          }
         }}
       />
     </>
   );
-}; 
+};
+
+// ✅ Backward compatibility - export as default
+export default useToast; 

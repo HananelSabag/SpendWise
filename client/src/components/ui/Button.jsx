@@ -1,144 +1,182 @@
-// components/ui/Button.jsx
+/**
+ * 🔘 BUTTON COMPONENT - Mobile-First Responsive Button
+ * Features: Zustand stores, RTL support, Touch-optimized, Loading states
+ * @version 2.0.0
+ */
+
 import React from 'react';
-import { Loader } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+
+// ✅ NEW: Import Zustand stores (replaces Context API!)
+import { useTranslation } from '../../stores';
+
 import { cn } from '../../utils/helpers';
-import { useLanguage } from '../../context/LanguageContext';
 
 const Button = React.forwardRef(({ 
-  children,
-  type = 'button',
-  variant = 'primary',
-  state = null,
-  size = 'default',
-  fullWidth = false,
+  children, 
+  variant = 'primary', 
+  size = 'md', 
+  disabled = false, 
   loading = false,
-  disabled = false,
-  icon: Icon,
+  fullWidth = false,
+  icon,
   iconPosition = 'left',
   className = '',
   onClick,
-  ...props
+  type = 'button',
+  ...props 
 }, ref) => {
-  const { language } = useLanguage();
-  const isRTL = language === 'he';
-  
-  const baseStyles = `
-    inline-flex items-center justify-center font-medium
-    transition-all duration-200 rounded-xl
-    focus:outline-none focus:ring-2 focus:ring-offset-2
-    disabled:opacity-50 disabled:cursor-not-allowed
-    interaction-enhanced
-  `;
+  // ✅ NEW: Zustand stores (replacing Context API)
+  const { isRTL } = useTranslation();
 
-  const variants = {
-    primary: `
-      bg-primary-500 text-white hover:bg-primary-600 
-      focus:ring-primary-500 active:bg-primary-700
-      dark:bg-primary-600 dark:hover:bg-primary-700
-      btn-premium micro-bounce
-    `,
-    secondary: `
-      bg-gray-100 text-gray-900 hover:bg-gray-200
-      focus:ring-gray-500 active:bg-gray-300
-      dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700
-      micro-scale transition-spring
-    `,
-    outline: `
-      border-2 border-gray-300 bg-transparent hover:bg-gray-50
-      focus:ring-gray-500 active:bg-gray-100
-      dark:border-gray-600 dark:hover:bg-gray-800
-      micro-lift transition-bounce
-    `,
-    ghost: `
-      bg-transparent hover:bg-gray-100 
-      focus:ring-gray-500 active:bg-gray-200
-      dark:hover:bg-gray-800 dark:active:bg-gray-700
-      micro-scale transition-premium
-    `,
-    danger: `
-      bg-red-500 text-white hover:bg-red-600
-      focus:ring-red-500 active:bg-red-700
-      dark:bg-red-600 dark:hover:bg-red-700
-      btn-premium micro-bounce sparkle-hover
-    `,
-    success: `
-      bg-green-500 text-white hover:bg-green-600
-      focus:ring-green-500 active:bg-green-700
-      dark:bg-green-600 dark:hover:bg-green-700
-      btn-premium micro-bounce
-    `,
-    gradient: `
-      bg-gradient-to-r from-primary-500 to-primary-700 text-white
-      hover:from-primary-600 hover:to-primary-800
-      focus:ring-primary-500
-      btn-gradient-enhanced
-    `,
-    'state-success': 'btn-state-success transition-spring micro-bounce',
-    'state-warning': 'btn-state-warning transition-spring micro-bounce',
-    'state-error': 'btn-state-error transition-spring micro-bounce',
-    'state-info': 'btn-state-info transition-spring micro-bounce',
-    'brand-primary': 'brand-primary brand-element btn-premium micro-lift',
-    'brand-secondary': 'brand-secondary brand-element btn-premium micro-scale'
-  };
-
+  // ✅ Mobile-first size configurations
   const sizes = {
-    small: 'px-3 py-1.5 typo-button-small',
-    default: 'px-4 py-2.5 typo-button',
-    large: 'px-6 py-3 typo-button-large'
+    xs: 'px-2.5 py-1.5 text-xs font-medium min-h-[32px]',
+    sm: 'px-3 py-2 text-sm font-medium min-h-[36px]',
+    md: 'px-4 py-2.5 text-sm font-medium min-h-[40px]',
+    lg: 'px-6 py-3 text-base font-medium min-h-[44px]',
+    xl: 'px-8 py-4 text-lg font-semibold min-h-[48px]'
   };
 
-  const iconSizes = {
-    small: 'w-4 h-4',
-    default: 'w-5 h-5',
-    large: 'w-6 h-6'
+  // ✅ Enhanced variant configurations with mobile touch targets
+  const variants = {
+    primary: 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 text-white shadow-sm hover:shadow-md active:bg-primary-800',
+    secondary: 'bg-gray-100 hover:bg-gray-200 focus:ring-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:focus:ring-gray-500',
+    success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500 text-white shadow-sm hover:shadow-md active:bg-green-800',
+    danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white shadow-sm hover:shadow-md active:bg-red-800',
+    warning: 'bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400 text-white shadow-sm hover:shadow-md active:bg-yellow-700',
+    info: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white shadow-sm hover:shadow-md active:bg-blue-800',
+    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
+    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-300 dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:ring-gray-600',
+    link: 'text-primary-600 hover:text-primary-700 underline-offset-4 hover:underline focus:ring-primary-500 dark:text-primary-400 dark:hover:text-primary-300'
   };
 
-  const getVariant = () => {
-    if (state) {
-      return `state-${state}`;
+  // ✅ Handle click with loading state
+  const handleClick = (e) => {
+    if (disabled || loading) {
+      e.preventDefault();
+      return;
     }
-    return variant;
+    onClick?.(e);
   };
 
-  const LoadingIcon = () => (
-    <Loader className={cn(iconSizes[size], 'animate-spin')} />
-  );
-
-  const renderIcon = () => {
-    if (loading) return <LoadingIcon />;
-    if (Icon) return <Icon className={iconSizes[size]} />;
-    return null;
-  };
+  // ✅ Icon positioning based on RTL
+  const showIconLeft = icon && (iconPosition === 'left' && !isRTL) || (iconPosition === 'right' && isRTL);
+  const showIconRight = icon && (iconPosition === 'right' && !isRTL) || (iconPosition === 'left' && isRTL);
 
   return (
-    <button
+    <motion.button
       ref={ref}
       type={type}
+      onClick={handleClick}
       disabled={disabled || loading}
-      onClick={onClick}
+      whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
       className={cn(
-        baseStyles,
-        variants[getVariant()],
+        // Base styles with mobile-first approach
+        'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200',
+        'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
+        // Mobile touch optimizations
+        'touch-manipulation select-none',
+        'active:transform active:transition-transform',
+        // Enhanced hover and focus states for better UX
+        'hover:transform hover:transition-transform',
+        // RTL support
+        isRTL && 'flex-row-reverse',
+        // Size configuration
         sizes[size],
+        // Variant styling
+        variants[variant],
+        // Full width option
         fullWidth && 'w-full',
         className
       )}
+      // ✅ Enhanced accessibility
+      aria-disabled={disabled || loading}
+      data-loading={loading}
       {...props}
     >
-      {iconPosition === 'left' && renderIcon()}
+      {/* ✅ Loading spinner */}
+      {loading && (
+        <Loader2 className={cn(
+          'animate-spin',
+          size === 'xs' ? 'w-3 h-3' : 
+          size === 'sm' ? 'w-4 h-4' : 
+          size === 'md' ? 'w-4 h-4' : 
+          size === 'lg' ? 'w-5 h-5' : 'w-6 h-6',
+          children && (isRTL ? 'ml-2' : 'mr-2')
+        )} />
+      )}
+
+      {/* ✅ Left icon (respects RTL) */}
+      {!loading && showIconLeft && (
+        <span className={cn(
+          'flex-shrink-0',
+          children && 'mr-2',
+          size === 'xs' ? 'w-3 h-3' : 
+          size === 'sm' ? 'w-4 h-4' : 
+          size === 'md' ? 'w-4 h-4' : 
+          size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+        )}>
+          {React.isValidElement(icon) ? React.cloneElement(icon, {
+            className: cn(
+              size === 'xs' ? 'w-3 h-3' : 
+              size === 'sm' ? 'w-4 h-4' : 
+              size === 'md' ? 'w-4 h-4' : 
+              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+            )
+          }) : icon}
+        </span>
+      )}
+
+      {/* ✅ Button content */}
       {children && (
         <span className={cn(
-          (loading || Icon) && iconPosition === 'left' && (isRTL ? 'mr-2' : 'ml-2'),
-          (loading || Icon) && iconPosition === 'right' && (isRTL ? 'ml-2' : 'mr-2')
+          'truncate',
+          // Ensure text doesn't interfere with loading spinner or icons
+          loading && 'opacity-0',
+          !loading && (showIconLeft || showIconRight) && 'flex-1'
         )}>
           {children}
         </span>
       )}
-      {iconPosition === 'right' && renderIcon()}
-    </button>
+
+      {/* ✅ Right icon (respects RTL) */}
+      {!loading && showIconRight && (
+        <span className={cn(
+          'flex-shrink-0',
+          children && 'ml-2',
+          size === 'xs' ? 'w-3 h-3' : 
+          size === 'sm' ? 'w-4 h-4' : 
+          size === 'md' ? 'w-4 h-4' : 
+          size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+        )}>
+          {React.isValidElement(icon) ? React.cloneElement(icon, {
+            className: cn(
+              size === 'xs' ? 'w-3 h-3' : 
+              size === 'sm' ? 'w-4 h-4' : 
+              size === 'md' ? 'w-4 h-4' : 
+              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+            )
+          }) : icon}
+        </span>
+      )}
+    </motion.button>
   );
 });
 
 Button.displayName = 'Button';
+
+// ✅ Button variants for easy import
+export const PrimaryButton = (props) => <Button variant="primary" {...props} />;
+export const SecondaryButton = (props) => <Button variant="secondary" {...props} />;
+export const SuccessButton = (props) => <Button variant="success" {...props} />;
+export const DangerButton = (props) => <Button variant="danger" {...props} />;
+export const WarningButton = (props) => <Button variant="warning" {...props} />;
+export const InfoButton = (props) => <Button variant="info" {...props} />;
+export const OutlineButton = (props) => <Button variant="outline" {...props} />;
+export const GhostButton = (props) => <Button variant="ghost" {...props} />;
+export const LinkButton = (props) => <Button variant="link" {...props} />;
 
 export default Button;

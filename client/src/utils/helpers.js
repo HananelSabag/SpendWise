@@ -401,6 +401,71 @@ export const isEmpty = (obj) => {
   return false;
 };
 
+/**
+ * 🚀 PRODUCTION-SAFE LOGGING UTILITIES
+ * @version 2.0.0
+ */
+
+// Development-only logger
+export const devLogger = {
+  log: (...args) => {
+    if (import.meta.env.MODE === 'development') {
+      console.log(...args);
+    }
+  },
+  
+  warn: (...args) => {
+    if (import.meta.env.MODE === 'development') {
+      console.warn(...args);
+    }
+  },
+  
+  error: (...args) => {
+    if (import.meta.env.MODE === 'development') {
+      console.error(...args);
+    }
+  },
+  
+  group: (...args) => {
+    if (import.meta.env.MODE === 'development') {
+      console.group(...args);
+    }
+  },
+  
+  groupEnd: () => {
+    if (import.meta.env.MODE === 'development') {
+      console.groupEnd();
+    }
+  },
+  
+  table: (...args) => {
+    if (import.meta.env.MODE === 'development') {
+      console.table(...args);
+    }
+  }
+};
+
+// Performance-aware logger
+export const perfLogger = {
+  time: (label) => {
+    if (import.meta.env.MODE === 'development') {
+      console.time(label);
+    }
+  },
+  
+  timeEnd: (label) => {
+    if (import.meta.env.MODE === 'development') {
+      console.timeEnd(label);
+    }
+  },
+  
+  logPerformance: (operation, duration, threshold = 100) => {
+    if (import.meta.env.MODE === 'development' && duration > threshold) {
+      console.warn(`⚠️ Slow operation detected: ${operation} took ${duration}ms`);
+    }
+  }
+};
+
 // Export all utilities
 export default {
   currency,

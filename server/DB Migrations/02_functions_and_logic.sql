@@ -1,15 +1,185 @@
--- ✅ SpendWise Database Functions - All Business Logic That Works with Dashboard
--- This file contains all database functions for recurring transactions, balance calculations, and deletion logic
--- Version: Production Ready - Matches working Supabase deployment
+-- ✅ SpendWise Database Functions - OPTIMIZED VERSION 2.0
+-- This file contains optimized database functions aligned with the JavaScript-based architecture
+-- Version: Production Ready - Matches current optimized server implementation
 
 -- ===============================
--- ESSENTIAL BALANCE FUNCTION - DASHBOARD CRITICAL
+-- CORE DASHBOARD FUNCTIONS - CRITICAL FOR FRONTEND
 -- ===============================
 
--- ✅ CORRECTED: Period balance function with BOTH overloads (TESTED AND WORKING)
--- This function is CRITICAL for dashboard functionality
+-- ✅ ENHANCED: Dashboard summary function with optimized performance
+CREATE OR REPLACE FUNCTION get_dashboard_summary(
+    p_user_id INTEGER,
+    p_date DATE DEFAULT CURRENT_DATE
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_result JSON;
+    v_start_of_month DATE;
+    v_end_of_month DATE;
+BEGIN
+    -- Calculate month boundaries
+    v_start_of_month := DATE_TRUNC('month', p_date)::DATE;
+    v_end_of_month := (DATE_TRUNC('month', p_date) + INTERVAL '1 month - 1 day')::DATE;
+    
+    -- Build comprehensive dashboard data
+    SELECT json_build_object(
+        'current_balance', (
+            SELECT COALESCE(SUM(
+                CASE WHEN type = 'income' THEN amount ELSE -amount END
+            ), 0)
+            FROM (
+                SELECT amount, 'income' as type FROM income 
+                WHERE user_id = p_user_id AND deleted_at IS NULL
+                UNION ALL
+                SELECT amount, 'expense' as type FROM expenses 
+                WHERE user_id = p_user_id AND deleted_at IS NULL
+            ) all_transactions
+        ),
+        'monthly_income', (
+            SELECT COALESCE(SUM(amount), 0)
+            FROM income 
+            WHERE user_id = p_user_id 
+            AND date BETWEEN v_start_of_month AND v_end_of_month
+            AND deleted_at IS NULL
+        ),
+        'monthly_expenses', (
+            SELECT COALESCE(SUM(amount), 0)
+            FROM expenses 
+            WHERE user_id = p_user_id 
+            AND date BETWEEN v_start_of_month AND v_end_of_month
+            AND deleted_at IS NULL
+        ),
+        'today_transactions', (
+            SELECT COUNT(*)
+            FROM (
+                SELECT id FROM income 
+                WHERE user_id = p_user_id AND date = p_date AND deleted_at IS NULL
+                UNION ALL
+                SELECT id FROM expenses 
+                WHERE user_id = p_user_id AND date = p_date AND deleted_at IS NULL
+            ) today_trans
+        ),
+        'active_templates', (
+            SELECT COUNT(*)
+            FROM recurring_templates
+            WHERE user_id = p_user_id 
+            AND is_active = true
+            AND (end_date IS NULL OR end_date >= p_date)
+        )
+    ) INTO v_result;
+    
+    RETURN v_result;
+END;
+$$;
 
--- Version 1: Handle TIMESTAMP WITH TIME ZONE (used by dashboard queries)
+-- ✅ ENHANCED: Monthly summary function with trend analysis
+CREATE OR REPLACE FUNCTION get_monthly_summary(
+    p_user_id INTEGER,
+    p_year INTEGER DEFAULT EXTRACT(YEAR FROM CURRENT_DATE),
+    p_month INTEGER DEFAULT EXTRACT(MONTH FROM CURRENT_DATE)
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_result JSON;
+    v_start_date DATE;
+    v_end_date DATE;
+    v_prev_start DATE;
+    v_prev_end DATE;
+BEGIN
+    -- Calculate current month boundaries
+    v_start_date := DATE(p_year || '-' || p_month || '-01');
+    v_end_date := (v_start_date + INTERVAL '1 month - 1 day')::DATE;
+    
+    -- Calculate previous month for comparison
+    v_prev_start := (v_start_date - INTERVAL '1 month')::DATE;
+    v_prev_end := (v_start_date - INTERVAL '1 day')::DATE;
+    
+    -- Build comprehensive monthly summary
+    SELECT json_build_object(
+        'period', json_build_object(
+            'year', p_year,
+            'month', p_month,
+            'start_date', v_start_date,
+            'end_date', v_end_date
+        ),
+        'current_month', json_build_object(
+            'income', COALESCE((
+                SELECT SUM(amount) FROM income 
+                WHERE user_id = p_user_id 
+                AND date BETWEEN v_start_date AND v_end_date
+                AND deleted_at IS NULL
+            ), 0),
+            'expenses', COALESCE((
+                SELECT SUM(amount) FROM expenses 
+                WHERE user_id = p_user_id 
+                AND date BETWEEN v_start_date AND v_end_date
+                AND deleted_at IS NULL
+            ), 0),
+            'transactions', (
+                SELECT COUNT(*) FROM (
+                    SELECT id FROM income 
+                    WHERE user_id = p_user_id AND date BETWEEN v_start_date AND v_end_date AND deleted_at IS NULL
+                    UNION ALL
+                    SELECT id FROM expenses 
+                    WHERE user_id = p_user_id AND date BETWEEN v_start_date AND v_end_date AND deleted_at IS NULL
+                ) current_trans
+            )
+        ),
+        'previous_month', json_build_object(
+            'income', COALESCE((
+                SELECT SUM(amount) FROM income 
+                WHERE user_id = p_user_id 
+                AND date BETWEEN v_prev_start AND v_prev_end
+                AND deleted_at IS NULL
+            ), 0),
+            'expenses', COALESCE((
+                SELECT SUM(amount) FROM expenses 
+                WHERE user_id = p_user_id 
+                AND date BETWEEN v_prev_start AND v_prev_end
+                AND deleted_at IS NULL
+            ), 0)
+        ),
+        'daily_breakdown', (
+            SELECT json_agg(
+                json_build_object(
+                    'date', day_date,
+                    'income', COALESCE(day_income, 0),
+                    'expenses', COALESCE(day_expenses, 0),
+                    'balance', COALESCE(day_income, 0) - COALESCE(day_expenses, 0)
+                ) ORDER BY day_date
+            )
+            FROM (
+                SELECT 
+                    gs.day_date,
+                    SUM(i.amount) as day_income,
+                    SUM(e.amount) as day_expenses
+                FROM generate_series(v_start_date, v_end_date, '1 day'::interval) gs(day_date)
+                LEFT JOIN income i ON i.date = gs.day_date::DATE 
+                    AND i.user_id = p_user_id AND i.deleted_at IS NULL
+                LEFT JOIN expenses e ON e.date = gs.day_date::DATE 
+                    AND e.user_id = p_user_id AND e.deleted_at IS NULL
+                GROUP BY gs.day_date
+            ) daily_data
+        )
+    ) INTO v_result;
+    
+    RETURN v_result;
+END;
+$$;
+
+-- ===============================
+-- LEGACY BALANCE FUNCTIONS - MAINTAINED FOR COMPATIBILITY
+-- ===============================
+
+-- ✅ Period balance function - Version 1: TIMESTAMP WITH TIME ZONE
 CREATE OR REPLACE FUNCTION get_period_balance(
     p_user_id INTEGER,
     p_start_date TIMESTAMP WITH TIME ZONE,
@@ -25,20 +195,21 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    -- Use the already-correct daily_balances view to aggregate period totals
-    -- This ensures we get accurate data without double-counting or wrong distributions
     RETURN QUERY 
     SELECT 
-        COALESCE(SUM(db.income), 0)::DECIMAL(10,2) as income,
-        COALESCE(SUM(db.expenses), 0)::DECIMAL(10,2) as expenses,
-        COALESCE(SUM(db.net_amount), 0)::DECIMAL(10,2) as balance
-    FROM daily_balances db
-    WHERE db.user_id = p_user_id 
-    AND db.date BETWEEN p_start_date::DATE AND p_end_date::DATE;
+        COALESCE(SUM(i.amount), 0)::DECIMAL(10,2) as income,
+        COALESCE(SUM(e.amount), 0)::DECIMAL(10,2) as expenses,
+        (COALESCE(SUM(i.amount), 0) - COALESCE(SUM(e.amount), 0))::DECIMAL(10,2) as balance
+    FROM income i
+    FULL OUTER JOIN expenses e ON i.user_id = e.user_id 
+        AND i.date = e.date
+    WHERE COALESCE(i.user_id, e.user_id) = p_user_id 
+    AND COALESCE(i.date, e.date) BETWEEN p_start_date::DATE AND p_end_date::DATE
+    AND COALESCE(i.deleted_at, e.deleted_at) IS NULL;
 END;
 $$;
 
--- Version 2: Handle DATE parameters (alternative usage)
+-- ✅ Period balance function - Version 2: DATE
 CREATE OR REPLACE FUNCTION get_period_balance(
     p_user_id INTEGER,
     p_start_date DATE,
@@ -54,317 +225,345 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    -- Use the already-correct daily_balances view to aggregate period totals
-    -- This ensures we get accurate data without double-counting or wrong distributions
     RETURN QUERY 
     SELECT 
-        COALESCE(SUM(db.income), 0)::DECIMAL(10,2) as income,
-        COALESCE(SUM(db.expenses), 0)::DECIMAL(10,2) as expenses,
-        COALESCE(SUM(db.net_amount), 0)::DECIMAL(10,2) as balance
-    FROM daily_balances db
-    WHERE db.user_id = p_user_id 
-    AND db.date BETWEEN p_start_date AND p_end_date;
+        COALESCE(SUM(i.amount), 0)::DECIMAL(10,2) as income,
+        COALESCE(SUM(e.amount), 0)::DECIMAL(10,2) as expenses,
+        (COALESCE(SUM(i.amount), 0) - COALESCE(SUM(e.amount), 0))::DECIMAL(10,2) as balance
+    FROM income i
+    FULL OUTER JOIN expenses e ON i.user_id = e.user_id 
+        AND i.date = e.date
+    WHERE COALESCE(i.user_id, e.user_id) = p_user_id 
+    AND COALESCE(i.date, e.date) BETWEEN p_start_date AND p_end_date
+    AND COALESCE(i.deleted_at, e.deleted_at) IS NULL;
 END;
 $$;
 
 -- ===============================
--- RECURRING TRANSACTION FUNCTIONS
+-- 🚀 NEW: COMPREHENSIVE ANALYTICS FUNCTIONS
 -- ===============================
 
--- ✅ ENHANCED: Recurring transaction generation with skip_dates support
-CREATE OR REPLACE FUNCTION generate_recurring_transactions()
-RETURNS void 
+-- ✅ USER STATISTICS AND ANALYTICS
+CREATE OR REPLACE FUNCTION get_user_analytics(
+    p_user_id INTEGER,
+    p_months_back INTEGER DEFAULT 12
+)
+RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    template RECORD;
-    next_date DATE;
-    generation_end_date DATE;
-    last_generated_date DATE;
-    transactions_created INTEGER := 0;
+    v_result JSON;
+    v_start_date DATE;
 BEGIN
-    -- Set generation period (3 months ahead)
-    generation_end_date := CURRENT_DATE + INTERVAL '3 months';
+    v_start_date := (CURRENT_DATE - (p_months_back || ' months')::INTERVAL)::DATE;
     
-    -- Process each active template
-    FOR template IN 
-        SELECT * FROM recurring_templates 
-        WHERE is_active = true 
-        AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-        ORDER BY id
-    LOOP
-        -- Find last generated date for this template
-        EXECUTE format('
-            SELECT MAX(date) 
-            FROM %I 
-            WHERE template_id = $1 AND deleted_at IS NULL',
-            CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
-        ) INTO last_generated_date USING template.id;
-        
-        -- Set starting point correctly
-        IF last_generated_date IS NULL THEN
-            -- NEW template: Start from start_date
-            next_date := template.start_date;
-        ELSE
-            -- EXISTING template: Calculate next occurrence
-            next_date := CASE template.interval_type
-                WHEN 'daily' THEN last_generated_date + INTERVAL '1 day'
-                WHEN 'weekly' THEN last_generated_date + INTERVAL '1 week'
-                WHEN 'monthly' THEN 
+    SELECT json_build_object(
+        'user_profile', json_build_object(
+            'total_transactions', (
+                SELECT COUNT(*) FROM (
+                    SELECT id FROM income WHERE user_id = p_user_id AND deleted_at IS NULL
+                    UNION ALL
+                    SELECT id FROM expenses WHERE user_id = p_user_id AND deleted_at IS NULL
+                ) all_trans
+            ),
+            'active_days', (
+                SELECT COUNT(DISTINCT date) FROM (
+                    SELECT date FROM income WHERE user_id = p_user_id AND deleted_at IS NULL
+                    UNION
+                    SELECT date FROM expenses WHERE user_id = p_user_id AND deleted_at IS NULL
+                ) activity_dates
+            ),
+            'first_transaction', (
+                SELECT MIN(date) FROM (
+                    SELECT date FROM income WHERE user_id = p_user_id AND deleted_at IS NULL
+                    UNION
+                    SELECT date FROM expenses WHERE user_id = p_user_id AND deleted_at IS NULL
+                ) all_dates
+            ),
+            'last_transaction', (
+                SELECT MAX(date) FROM (
+                    SELECT date FROM income WHERE user_id = p_user_id AND deleted_at IS NULL
+                    UNION
+                    SELECT date FROM expenses WHERE user_id = p_user_id AND deleted_at IS NULL
+                ) all_dates
+            ),
+            'recurring_templates', (
+                SELECT COUNT(*) FROM recurring_templates 
+                WHERE user_id = p_user_id AND is_active = true
+            )
+        ),
+        'spending_patterns', json_build_object(
+            'avg_daily_spending', (
+                SELECT ROUND(AVG(daily_expenses), 2) FROM (
+                    SELECT date, SUM(amount) as daily_expenses
+                    FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                    AND date >= v_start_date
+                    GROUP BY date
+                ) daily_totals
+            ),
+            'avg_monthly_spending', (
+                SELECT ROUND(AVG(monthly_expenses), 2) FROM (
+                    SELECT DATE_TRUNC('month', date) as month, SUM(amount) as monthly_expenses
+                    FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                    AND date >= v_start_date
+                    GROUP BY DATE_TRUNC('month', date)
+                ) monthly_totals
+            ),
+            'top_expense_categories', (
+                SELECT json_agg(
+                    json_build_object(
+                        'category', c.name,
+                        'amount', category_totals.total_amount,
+                        'count', category_totals.transaction_count
+                    ) ORDER BY category_totals.total_amount DESC
+                ) 
+                FROM (
+                    SELECT 
+                        category_id,
+                        SUM(amount) as total_amount,
+                        COUNT(*) as transaction_count
+                    FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                    AND date >= v_start_date
+                    GROUP BY category_id
+                    ORDER BY total_amount DESC
+                    LIMIT 5
+                ) category_totals
+                LEFT JOIN categories c ON category_totals.category_id = c.id
+            ),
+            'monthly_trends', (
+                SELECT json_agg(
+                    json_build_object(
+                        'month', month,
+                        'income', COALESCE(monthly_income, 0),
+                        'expenses', COALESCE(monthly_expenses, 0),
+                        'savings', COALESCE(monthly_income, 0) - COALESCE(monthly_expenses, 0),
+                        'savings_rate', CASE 
+                            WHEN COALESCE(monthly_income, 0) > 0 
+                            THEN ROUND(((COALESCE(monthly_income, 0) - COALESCE(monthly_expenses, 0)) / monthly_income) * 100, 2)
+                            ELSE 0 
+                        END
+                    ) ORDER BY month DESC
+                )
+                FROM (
+                    SELECT 
+                        DATE_TRUNC('month', COALESCE(i.date, e.date)) as month,
+                        SUM(i.amount) as monthly_income,
+                        SUM(e.amount) as monthly_expenses
+                    FROM income i
+                    FULL OUTER JOIN expenses e ON DATE_TRUNC('month', i.date) = DATE_TRUNC('month', e.date)
+                        AND i.user_id = e.user_id
+                    WHERE COALESCE(i.user_id, e.user_id) = p_user_id
+                    AND COALESCE(i.deleted_at, e.deleted_at) IS NULL
+                    AND COALESCE(i.date, e.date) >= v_start_date
+                    GROUP BY DATE_TRUNC('month', COALESCE(i.date, e.date))
+                ) monthly_data
+            )
+        ),
+        'financial_health', json_build_object(
+            'current_balance', (
+                SELECT COALESCE(SUM(
+                    CASE WHEN type = 'income' THEN amount ELSE -amount END
+                ), 0)
+                FROM (
+                    SELECT amount, 'income' as type FROM income 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                    UNION ALL
+                    SELECT amount, 'expense' as type FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                ) all_transactions
+            ),
+            'average_savings_rate', (
+                SELECT ROUND(AVG(
                     CASE 
-                        WHEN template.day_of_month IS NOT NULL THEN
-                            -- Use the day_of_month (fixed clustering issue)
-                            (DATE_TRUNC('month', last_generated_date) + INTERVAL '1 month' + 
-                             (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', last_generated_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
-                        ELSE
-                            -- Fallback
-                            last_generated_date + INTERVAL '1 month'
+                        WHEN monthly_income > 0 
+                        THEN ((monthly_income - monthly_expenses) / monthly_income) * 100
+                        ELSE 0 
                     END
-            END;
-        END IF;
-        
-        -- Generate transactions until end date
-        WHILE next_date <= generation_end_date AND (template.end_date IS NULL OR next_date <= template.end_date) LOOP
-            
-            -- ✅ CRITICAL: Skip if this date is in the skip_dates array
-            IF template.skip_dates IS NOT NULL AND next_date = ANY(template.skip_dates) THEN
-                -- Move to next occurrence
-                next_date := CASE template.interval_type
-                    WHEN 'daily' THEN next_date + INTERVAL '1 day'
-                    WHEN 'weekly' THEN next_date + INTERVAL '1 week'
-                    WHEN 'monthly' THEN 
-                        (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                         (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', next_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
-                END;
-                CONTINUE;
-            END IF;
-            
-            -- Skip past dates (but allow today for new templates)
-            IF next_date < CURRENT_DATE AND NOT (last_generated_date IS NULL AND next_date = CURRENT_DATE) THEN
-                -- Move to next occurrence
-                next_date := CASE template.interval_type
-                    WHEN 'daily' THEN next_date + INTERVAL '1 day'
-                    WHEN 'weekly' THEN next_date + INTERVAL '1 week'
-                    WHEN 'monthly' THEN 
-                        (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                         (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', next_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
-                END;
-                CONTINUE;
-            END IF;
-            
-            -- Create the transaction
-            EXECUTE format('
-                INSERT INTO %I (user_id, amount, description, date, category_id, template_id)
-                VALUES ($1, $2, $3, $4, $5, $6)',
-                CASE WHEN template.type = 'expense' THEN 'expenses' ELSE 'income' END
-            ) USING template.user_id, template.amount, template.description, 
-                    next_date, template.category_id, template.id;
-            
-            transactions_created := transactions_created + 1;
-            
-            -- Calculate next occurrence
-            next_date := CASE template.interval_type
-                WHEN 'daily' THEN next_date + INTERVAL '1 day'
-                WHEN 'weekly' THEN next_date + INTERVAL '1 week'
-                WHEN 'monthly' THEN 
-                    (DATE_TRUNC('month', next_date) + INTERVAL '1 month' + 
-                     (LEAST(template.day_of_month, EXTRACT(DAY FROM (DATE_TRUNC('month', next_date) + INTERVAL '2 months' - INTERVAL '1 day')::DATE)) - 1) * INTERVAL '1 day')::DATE
-            END;
-        END LOOP;
-    END LOOP;
+                ), 2)
+                FROM (
+                    SELECT 
+                        DATE_TRUNC('month', COALESCE(i.date, e.date)) as month,
+                        COALESCE(SUM(i.amount), 0) as monthly_income,
+                        COALESCE(SUM(e.amount), 0) as monthly_expenses
+                    FROM income i
+                    FULL OUTER JOIN expenses e ON DATE_TRUNC('month', i.date) = DATE_TRUNC('month', e.date)
+                        AND i.user_id = e.user_id
+                    WHERE COALESCE(i.user_id, e.user_id) = p_user_id
+                    AND COALESCE(i.deleted_at, e.deleted_at) IS NULL
+                    AND COALESCE(i.date, e.date) >= v_start_date
+                    GROUP BY DATE_TRUNC('month', COALESCE(i.date, e.date))
+                ) monthly_savings
+            ),
+            'spending_variance', (
+                SELECT ROUND(STDDEV(monthly_expenses), 2) FROM (
+                    SELECT DATE_TRUNC('month', date) as month, SUM(amount) as monthly_expenses
+                    FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL
+                    AND date >= v_start_date
+                    GROUP BY DATE_TRUNC('month', date)
+                ) monthly_expenses_data
+            )
+        )
+    ) INTO v_result;
+    
+    RETURN v_result;
 END;
 $$;
 
--- ===============================
--- ADVANCED DELETION FUNCTIONS
--- ===============================
-
--- ✅ ENHANCED: Delete transaction with multiple strategies
-CREATE OR REPLACE FUNCTION delete_transaction_with_options(
-  p_transaction_type text,
-  p_transaction_id integer,
-  p_user_id integer,
-  p_delete_all boolean DEFAULT false,
-  p_delete_future boolean DEFAULT false,
-  p_delete_single boolean DEFAULT true
-) RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_template_id integer;
-  v_transaction_date date;
-  v_table_name text;
-BEGIN
-  -- Validate transaction type
-  IF p_transaction_type NOT IN ('expense', 'income') THEN
-    RAISE EXCEPTION 'Invalid transaction type: %', p_transaction_type;
-  END IF;
-  
-  -- Set table name
-  v_table_name := CASE WHEN p_transaction_type = 'expense' THEN 'expenses' ELSE 'income' END;
-  
-  -- Get transaction details
-  EXECUTE format('
-    SELECT template_id, date 
-    FROM %I 
-    WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
-    v_table_name
-  ) INTO v_template_id, v_transaction_date
-  USING p_transaction_id, p_user_id;
-  
-  -- Check if transaction exists
-  IF v_transaction_date IS NULL THEN
-    RAISE EXCEPTION 'Transaction not found or already deleted';
-  END IF;
-  
-  -- Handle different deletion strategies
-  IF p_delete_all AND v_template_id IS NOT NULL THEN
-    -- Delete ALL instances of this recurring transaction
-    EXECUTE format('
-      UPDATE %I 
-      SET deleted_at = NOW()
-      WHERE template_id = $1 AND user_id = $2 AND deleted_at IS NULL',
-      v_table_name
-    ) USING v_template_id, p_user_id;
-    
-    -- Deactivate the template
-    UPDATE recurring_templates 
-    SET is_active = false, end_date = CURRENT_DATE - INTERVAL '1 day'
-    WHERE id = v_template_id AND user_id = p_user_id;
-    
-  ELSIF p_delete_future AND v_template_id IS NOT NULL THEN
-    -- Delete FUTURE instances (including current)
-    EXECUTE format('
-      UPDATE %I 
-      SET deleted_at = NOW()
-      WHERE template_id = $1 AND user_id = $2 AND date >= $3 AND deleted_at IS NULL',
-      v_table_name
-    ) USING v_template_id, p_user_id, v_transaction_date;
-    
-    -- Update template end date to stop future generation
-    UPDATE recurring_templates 
-    SET end_date = v_transaction_date - INTERVAL '1 day'
-    WHERE id = v_template_id AND user_id = p_user_id;
-    
-  ELSE
-    -- Delete SINGLE instance (default)
-    EXECUTE format('
-      UPDATE %I 
-      SET deleted_at = NOW()
-      WHERE id = $1 AND user_id = $2',
-      v_table_name
-    ) USING p_transaction_id, p_user_id;
-    
-    -- Add this date to skip_dates if it's a recurring transaction
-    IF v_template_id IS NOT NULL THEN
-      UPDATE recurring_templates 
-      SET skip_dates = ARRAY_APPEND(COALESCE(skip_dates, '{}'), v_transaction_date)
-      WHERE id = v_template_id AND user_id = p_user_id;
-    END IF;
-  END IF;
-END;
-$$;
-
--- ===============================
--- LEGACY SUPPORT FUNCTIONS
--- ===============================
-
--- ✅ Legacy: Update future transactions (maintained for compatibility)
-CREATE OR REPLACE FUNCTION update_future_transactions(
-    p_template_id INTEGER,
+-- ✅ CATEGORY USAGE ANALYTICS
+CREATE OR REPLACE FUNCTION get_category_analytics(
     p_user_id INTEGER,
-    p_new_amount DECIMAL(10,2),
-    p_new_description TEXT,
-    p_new_category_id INTEGER,
-    p_from_date DATE DEFAULT CURRENT_DATE
+    p_months_back INTEGER DEFAULT 6
 )
-RETURNS void
+RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_template RECORD;
-    v_table_name TEXT;
+    v_result JSON;
+    v_start_date DATE;
 BEGIN
-    -- Get template info
-    SELECT * INTO v_template 
-    FROM recurring_templates 
-    WHERE id = p_template_id AND user_id = p_user_id;
+    v_start_date := (CURRENT_DATE - (p_months_back || ' months')::INTERVAL)::DATE;
     
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Template not found';
-    END IF;
+    SELECT json_build_object(
+        'category_performance', (
+            SELECT json_agg(
+                json_build_object(
+                    'category_id', c.id,
+                    'category_name', c.name,
+                    'category_type', c.type,
+                    'total_amount', COALESCE(stats.total_amount, 0),
+                    'transaction_count', COALESCE(stats.transaction_count, 0),
+                    'avg_amount', COALESCE(stats.avg_amount, 0),
+                    'max_amount', COALESCE(stats.max_amount, 0),
+                    'min_amount', COALESCE(stats.min_amount, 0),
+                    'last_used', stats.last_used,
+                    'usage_frequency', COALESCE(stats.usage_frequency, 0)
+                ) ORDER BY COALESCE(stats.total_amount, 0) DESC
+            )
+            FROM categories c
+            LEFT JOIN (
+                SELECT 
+                    category_id,
+                    SUM(amount) as total_amount,
+                    COUNT(*) as transaction_count,
+                    ROUND(AVG(amount), 2) as avg_amount,
+                    MAX(amount) as max_amount,
+                    MIN(amount) as min_amount,
+                    MAX(date) as last_used,
+                    ROUND(COUNT(*)::DECIMAL / GREATEST(DATE_PART('day', CURRENT_DATE - MIN(date)), 1), 2) as usage_frequency
+                FROM (
+                    SELECT category_id, amount, date FROM income 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL AND date >= v_start_date
+                    UNION ALL
+                    SELECT category_id, amount, date FROM expenses 
+                    WHERE user_id = p_user_id AND deleted_at IS NULL AND date >= v_start_date
+                ) all_transactions
+                GROUP BY category_id
+            ) stats ON c.id = stats.category_id
+            WHERE c.user_id = p_user_id OR c.is_default = true
+        ),
+        'monthly_category_trends', (
+            SELECT json_agg(
+                json_build_object(
+                    'month', month,
+                    'categories', category_data
+                ) ORDER BY month DESC
+            )
+            FROM (
+                SELECT 
+                    DATE_TRUNC('month', date) as month,
+                    json_agg(
+                        json_build_object(
+                            'category_name', c.name,
+                            'amount', monthly_amounts.total_amount
+                        ) ORDER BY monthly_amounts.total_amount DESC
+                    ) as category_data
+                FROM (
+                    SELECT 
+                        DATE_TRUNC('month', date) as month,
+                        category_id,
+                        SUM(amount) as total_amount
+                    FROM (
+                        SELECT category_id, amount, date FROM income 
+                        WHERE user_id = p_user_id AND deleted_at IS NULL AND date >= v_start_date
+                        UNION ALL
+                        SELECT category_id, amount, date FROM expenses 
+                        WHERE user_id = p_user_id AND deleted_at IS NULL AND date >= v_start_date
+                    ) all_transactions
+                    GROUP BY DATE_TRUNC('month', date), category_id
+                ) monthly_amounts
+                JOIN categories c ON monthly_amounts.category_id = c.id
+                GROUP BY month
+            ) monthly_category_data
+        )
+    ) INTO v_result;
     
-    -- Determine table name
-    v_table_name := CASE WHEN v_template.type = 'expense' THEN 'expenses' ELSE 'income' END;
-    
-    -- Update future transactions
-    EXECUTE format('
-        UPDATE %I 
-        SET amount = $1, description = $2, category_id = $3, updated_at = NOW()
-        WHERE template_id = $4 AND user_id = $5 AND date >= $6 AND deleted_at IS NULL',
-        v_table_name
-    ) USING p_new_amount, p_new_description, p_new_category_id, p_template_id, p_user_id, p_from_date;
-    
-    -- Update the template itself
-    UPDATE recurring_templates 
-    SET amount = p_new_amount, 
-        description = p_new_description, 
-        category_id = p_new_category_id,
-        updated_at = NOW()
-    WHERE id = p_template_id AND user_id = p_user_id;
+    RETURN v_result;
 END;
 $$;
 
--- ✅ Legacy: Delete future transactions (maintained for compatibility) - FIXED
-CREATE OR REPLACE FUNCTION delete_future_transactions(
-    p_template_id INTEGER,
-    p_user_id INTEGER,
-    p_from_date DATE DEFAULT CURRENT_DATE
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
+-- ===============================
+-- MAINTENANCE AND CLEANUP FUNCTIONS
+-- ===============================
+
+-- ✅ OPTIMIZED: Token cleanup function
+CREATE OR REPLACE FUNCTION cleanup_expired_tokens()
+RETURNS TABLE(deleted_password_tokens bigint, deleted_email_tokens bigint) AS $$
 DECLARE
-    v_template RECORD;
-    v_table_name TEXT;
+    p_deleted_count bigint := 0;
+    e_deleted_count bigint := 0;
 BEGIN
-    -- Get template info
-    SELECT * INTO v_template 
-    FROM recurring_templates 
-    WHERE id = p_template_id AND user_id = p_user_id;
-    
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Template not found';
-    END IF;
-    
-    -- Determine table name
-    v_table_name := CASE WHEN v_template.type = 'expense' THEN 'expenses' ELSE 'income' END;
-    
-    -- Soft delete future transactions
-    EXECUTE format('
-        UPDATE %I 
-        SET deleted_at = NOW()
-        WHERE template_id = $1 AND user_id = $2 AND date >= $3 AND deleted_at IS NULL',
-        v_table_name
-    ) USING p_template_id, p_user_id, p_from_date;
+    WITH deleted_p AS (
+        DELETE FROM password_reset_tokens
+        WHERE expires_at < NOW() OR used = TRUE
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO p_deleted_count FROM deleted_p;
+
+    WITH deleted_e AS (
+        DELETE FROM email_verification_tokens
+        WHERE expires_at < NOW() OR used = TRUE
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO e_deleted_count FROM deleted_e;
+
+    RETURN QUERY SELECT p_deleted_count, e_deleted_count;
 END;
-$$;
+$$ LANGUAGE plpgsql;
+
+-- ✅ OPTIMIZED: Database maintenance function
+CREATE OR REPLACE FUNCTION run_maintenance()
+RETURNS TEXT AS $$
+BEGIN
+    -- VACUUM ANALYZE all tables for performance
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) expenses';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) income';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) users';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) categories';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) recurring_templates';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) password_reset_tokens';
+    EXECUTE 'VACUUM (ANALYZE, VERBOSE) email_verification_tokens';
+
+    RETURN 'Maintenance completed: VACUUM ANALYZE performed on key tables.';
+END;
+$$ LANGUAGE plpgsql;
 
 -- ===============================
--- FUNCTION DOCUMENTATION
+-- FUNCTION DOCUMENTATION AND COMMENTS
 -- ===============================
 
-COMMENT ON FUNCTION get_period_balance(INTEGER, TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) IS 'DASHBOARD CRITICAL: Calculates period balance by aggregating daily_balances view - timestamp version - TESTED AND WORKING';
-COMMENT ON FUNCTION get_period_balance(INTEGER, DATE, DATE) IS 'DASHBOARD CRITICAL: Calculates period balance by aggregating daily_balances view - date version - TESTED AND WORKING';
-COMMENT ON FUNCTION generate_recurring_transactions() IS 'Enhanced recurring transaction generator with skip dates support';
-COMMENT ON FUNCTION delete_transaction_with_options(text,integer,integer,boolean,boolean,boolean) IS 'Advanced deletion with single/future/all strategies';
-COMMENT ON FUNCTION update_future_transactions(INTEGER,INTEGER,DECIMAL,TEXT,INTEGER,DATE) IS 'Legacy: Update future recurring transactions';
-COMMENT ON FUNCTION delete_future_transactions(INTEGER,INTEGER,DATE) IS 'Legacy: Delete future recurring transactions'; 
+COMMENT ON FUNCTION get_dashboard_summary(INTEGER, DATE) IS 'OPTIMIZED: Main dashboard data with comprehensive metrics - JavaScript-integrated';
+COMMENT ON FUNCTION get_monthly_summary(INTEGER, INTEGER, INTEGER) IS 'OPTIMIZED: Monthly financial summary with trend analysis and daily breakdown';
+COMMENT ON FUNCTION get_user_analytics(INTEGER, INTEGER) IS 'NEW: Comprehensive user analytics including spending patterns and financial health';
+COMMENT ON FUNCTION get_category_analytics(INTEGER, INTEGER) IS 'NEW: Category performance analytics with usage trends and insights';
+COMMENT ON FUNCTION get_period_balance(INTEGER, TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) IS 'LEGACY: Period balance calculation - timestamp version';
+COMMENT ON FUNCTION get_period_balance(INTEGER, DATE, DATE) IS 'LEGACY: Period balance calculation - date version';
+COMMENT ON FUNCTION cleanup_expired_tokens() IS 'OPTIMIZED: Automated token cleanup for security';
+COMMENT ON FUNCTION run_maintenance() IS 'OPTIMIZED: Database maintenance and performance optimization'; 

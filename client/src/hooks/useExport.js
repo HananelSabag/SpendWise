@@ -1,345 +1,298 @@
 /**
- * useExport Hook - Complete Data Export Management
- * Handles CSV, JSON, and PDF exports with progress tracking
+ * 📤 useExport Hook - Enhanced Data Export Management
+ * Features: CSV/PDF export, Progress tracking, Background processing
+ * NOW WITH UNIFIED API INTEGRATION! 🚀
+ * @version 2.0.0
  */
 
 import { useState, useCallback } from 'react';
-import { useApiQuery, useApiMutation } from './useApi';
-import { exportAPI, queryKeys } from '../utils/api';
-import { useAuth } from '../context/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+// ✅ NEW: Import unified API instead of old utils/api
+import { api } from '../api';
+
+// ✅ NEW: Import from Zustand stores instead of Context
+import { useAuth, useTranslation, useNotifications } from '../stores';
+
 import { useToast } from './useToast';
 
-/**
- * Main export hook with progress tracking
- */
+// ✅ Query keys for export operations
+export const exportQueryKeys = {
+  exportHistory: ['export', 'history'],
+  exportStatus: (id) => ['export', 'status', id]
+};
+
 export const useExport = () => {
-  const { isAuthenticated, user } = useAuth();
-  const toastService = useToast();
-  const [exportProgress, setExportProgress] = useState({
-    isExporting: false,
-    format: null,
-    progress: 0
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { addNotification } = useNotifications();
+  const { toastService } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [exportProgress, setExportProgress] = useState({});
+  const [activeExports, setActiveExports] = useState(new Set());
+
+  // ✅ ENHANCED: Export mutation with unified API
+  const exportMutation = useMutation({
+    mutationFn: async ({ type, format, filters, options = {} }) => {
+      // Use unified API for export
+      const result = await api.export.generateExport({
+        type,
+        format,
+        filters,
+        options,
+        userId: user?.id
+      });
+      
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error?.message || 'Export failed');
+      }
+    },
+    onMutate: ({ type, format }) => {
+      const exportId = `${type}_${format}_${Date.now()}`;
+      setActiveExports(prev => new Set([...prev, exportId]));
+      setExportProgress(prev => ({
+        ...prev,
+        [exportId]: { progress: 0, status: 'preparing' }
+      }));
+      return { exportId };
+    },
+    onSuccess: (data, variables, context) => {
+      const { exportId } = context;
+      
+      setExportProgress(prev => ({
+        ...prev,
+        [exportId]: { progress: 100, status: 'completed', downloadUrl: data.downloadUrl }
+      }));
+      
+      // Show success notification
+      addNotification({
+        type: 'success',
+        title: t('export.exportComplete'),
+        description: t('export.exportReady'),
+        duration: 5000
+      });
+      
+      // Auto-download if requested
+      if (data.downloadUrl && !variables.options?.skipAutoDownload) {
+        triggerDownload(data.downloadUrl, data.filename);
+      }
+      
+      // Invalidate export history
+      queryClient.invalidateQueries(exportQueryKeys.exportHistory);
+    },
+    onError: (error, variables, context) => {
+      const { exportId } = context || {};
+      
+      if (exportId) {
+        setExportProgress(prev => ({
+          ...prev,
+          [exportId]: { progress: 0, status: 'failed', error: error.message }
+        }));
+        setActiveExports(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(exportId);
+          return newSet;
+        });
+      }
+      
+      // Show error notification
+      addNotification({
+        type: 'error',
+        title: t('export.exportFailed'),
+        description: error.message || t('export.exportError'),
+        duration: 8000
+      });
+    },
+    onSettled: (data, error, variables, context) => {
+      const { exportId } = context || {};
+      
+      if (exportId) {
+        setTimeout(() => {
+          setActiveExports(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(exportId);
+            return newSet;
+          });
+          
+          setExportProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[exportId];
+            return newProgress;
+          });
+        }, 5000); // Clean up after 5 seconds
+      }
+    }
   });
-  
-  // Export options query - Fixed to handle server response format
-  const exportOptionsQuery = useApiQuery(
-    queryKeys.exportOptions,
-    () => exportAPI.getOptions(),
-    {
-      config: 'static',
-      enabled: isAuthenticated,
-      staleTime: 60 * 60 * 1000, // 1 hour
-      onError: (error) => {
-        console.error('Failed to load export options:', error);
-      }
+
+  // Helper function to trigger download
+  const triggerDownload = useCallback((url, filename) => {
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || 'export.csv';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toastService.error('Download failed');
     }
-  );
-  
-  // ✅ FIX: Process export options correctly based on server response format
-  const exportOptions = exportOptionsQuery.data?.data || {
-    availableFormats: [
-      { format: 'csv', available: true },
-      { format: 'json', available: true },
-      { format: 'pdf', available: false }
-    ],
-    dataIncluded: [],
-    userInfo: {},
-    limits: {},
-    privacyNote: 'Your exported data is generated on-demand and not stored on our servers.'
-  };
-  
-  // ✅ FIX: Improved export functions with better error handling
-  const exportCSVMutation = useApiMutation(
-    async () => {
-      setExportProgress({ isExporting: true, format: 'CSV', progress: 30 });
-      
-      try {
-        const result = await exportAPI.exportAsCSV();
-        setExportProgress({ isExporting: true, format: 'CSV', progress: 100 });
-        
-        setTimeout(() => {
-          setExportProgress({ isExporting: false, format: null, progress: 0 });
-        }, 1000);
-        
-        return result;
-      } catch (error) {
-        setExportProgress({ isExporting: false, format: null, progress: 0 });
-        
-        // Better error handling
-        if (error.response?.status === 404) {
-          toastService.error('toast.error.noDataToExport');
-        } else if (error.response?.status === 401) {
-          toastService.unauthorized();
-        } else if (error.response?.status === 429) {
-          toastService.error('toast.error.exportLimitReached');
-        } else {
-          toastService.error('toast.error.exportFailed', { params: { format: 'CSV' } });
-        }
-        
-        throw error;
-      }
-    },
-    {
-      onSuccess: () => {
-        toastService.csvExportCompleted();
-      },
-      showErrorToast: false // We handle errors manually above
-    }
-  );
-  
-  const exportJSONMutation = useApiMutation(
-    async () => {
-      setExportProgress({ isExporting: true, format: 'JSON', progress: 30 });
-      
-      try {
-        const result = await exportAPI.exportAsJSON();
-        setExportProgress({ isExporting: true, format: 'JSON', progress: 100 });
-        
-        setTimeout(() => {
-          setExportProgress({ isExporting: false, format: null, progress: 0 });
-        }, 1000);
-        
-        return result;
-      } catch (error) {
-        setExportProgress({ isExporting: false, format: null, progress: 0 });
-        
-        if (error.response?.status === 404) {
-          toastService.error('toast.error.noDataToExport');
-        } else if (error.response?.status === 401) {
-          toastService.unauthorized();
-        } else if (error.response?.status === 429) {
-          toastService.error('toast.error.exportLimitReached');
-        } else {
-          toastService.error('toast.error.exportFailed', { params: { format: 'JSON' } });
-        }
-        
-        throw error;
-      }
-    },
-    {
-      onSuccess: () => {
-        toastService.jsonExportCompleted();
-      },
-      showErrorToast: false
-    }
-  );
-  
-  const exportPDFMutation = useApiMutation(
-    async () => {
-      setExportProgress({ isExporting: true, format: 'PDF', progress: 30 });
-      
-      try {
-        const result = await exportAPI.exportAsPDF();
-        setExportProgress({ isExporting: true, format: 'PDF', progress: 100 });
-        
-        setTimeout(() => {
-          setExportProgress({ isExporting: false, format: null, progress: 0 });
-        }, 1000);
-        
-        return result;
-      } catch (error) {
-        setExportProgress({ isExporting: false, format: null, progress: 0 });
-        
-        if (error.response?.status === 501) {
-          toastService.pdfExportComingSoon();
-        } else if (error.response?.status === 404) {
-          toastService.error('toast.error.noDataToExport');
-        } else {
-          toastService.error('toast.error.exportFailed', { params: { format: 'PDF' } });
-        }
-        
-        throw error;
-      }
-    },
-    {
-      showErrorToast: false
-    }
-  );
-  
-  // ✅ FIX: Enhanced export functions with validation
-  const exportAsCSV = useCallback(async () => {
-    if (!isAuthenticated) {
-      toastService.unauthorized();
-      return;
-    }
+  }, [toastService]);
+
+  // ✅ ENHANCED: Export transactions with progress tracking
+  const exportTransactions = useCallback(async (filters = {}, options = {}) => {
+    const { format = 'csv', dateRange, categories, ...otherFilters } = filters;
     
     try {
-      return await exportCSVMutation.mutateAsync();
+      await exportMutation.mutateAsync({
+        type: 'transactions',
+        format,
+        filters: {
+          dateRange,
+          categories,
+          ...otherFilters
+        },
+        options: {
+          includeMetadata: true,
+          includeAnalytics: options.includeAnalytics || false,
+          ...options
+        }
+      });
     } catch (error) {
-      console.error('CSV export error:', error);
+      console.error('Transaction export failed:', error);
       throw error;
     }
-  }, [isAuthenticated, exportCSVMutation]);
-  
-  const exportAsJSON = useCallback(async () => {
-    if (!isAuthenticated) {
-      toastService.unauthorized();
-      return;
-    }
+  }, [exportMutation]);
+
+  // ✅ ENHANCED: Export categories
+  const exportCategories = useCallback(async (options = {}) => {
+    const { format = 'csv' } = options;
     
     try {
-      return await exportJSONMutation.mutateAsync();
+      await exportMutation.mutateAsync({
+        type: 'categories',
+        format,
+        filters: {},
+        options: {
+          includeUsageStats: true,
+          ...options
+        }
+      });
     } catch (error) {
-      console.error('JSON export error:', error);
+      console.error('Category export failed:', error);
       throw error;
     }
-  }, [isAuthenticated, exportJSONMutation]);
-  
-  const exportAsPDF = useCallback(async () => {
-    if (!isAuthenticated) {
-      toastService.unauthorized();
-      return;
-    }
-    
-    // Check if PDF is available from server
-    const pdfFormat = exportOptions.availableFormats?.find(f => f.format === 'pdf');
-    if (pdfFormat && !pdfFormat.available) {
-      toastService.pdfExportComingSoon();
-      return;
-    }
+  }, [exportMutation]);
+
+  // ✅ ENHANCED: Export financial report
+  const exportFinancialReport = useCallback(async (dateRange, options = {}) => {
+    const { format = 'pdf' } = options;
     
     try {
-      return await exportPDFMutation.mutateAsync();
+      await exportMutation.mutateAsync({
+        type: 'financial_report',
+        format,
+        filters: { dateRange },
+        options: {
+          includeCharts: true,
+          includeAnalytics: true,
+          includeRecommendations: true,
+          ...options
+        }
+      });
     } catch (error) {
-      console.error('PDF export error:', error);
+      console.error('Financial report export failed:', error);
       throw error;
     }
-  }, [isAuthenticated, exportOptions.availableFormats, exportPDFMutation]);
-  
-  // ✅ FIX: Better format availability check
-  const isFormatAvailable = useCallback((format) => {
-    if (!exportOptions.availableFormats) return format !== 'pdf'; // Default fallback
+  }, [exportMutation]);
+
+  // ✅ NEW: Export analytics data
+  const exportAnalytics = useCallback(async (analyticsType, dateRange, options = {}) => {
+    const { format = 'csv' } = options;
     
-    const option = exportOptions.availableFormats.find(f => f.format === format);
-    return option ? option.available : false;
-  }, [exportOptions.availableFormats]);
-  
-  // Get format info
-  const getFormatInfo = useCallback((format) => {
-    return exportOptions.availableFormats?.find(f => f.format === format) || null;
-  }, [exportOptions.availableFormats]);
-  
-  // Combined loading state
-  const isExporting = exportCSVMutation.isLoading || 
-                     exportJSONMutation.isLoading || 
-                     exportPDFMutation.isLoading ||
-                     exportProgress.isExporting;
-  
+    try {
+      await exportMutation.mutateAsync({
+        type: 'analytics',
+        format,
+        filters: { 
+          analyticsType, 
+          dateRange 
+        },
+        options: {
+          includeInsights: true,
+          includeProjections: true,
+          ...options
+        }
+      });
+    } catch (error) {
+      console.error('Analytics export failed:', error);
+      throw error;
+    }
+  }, [exportMutation]);
+
+  // ✅ NEW: Bulk export all data
+  const exportAllData = useCallback(async (options = {}) => {
+    const { format = 'zip' } = options;
+    
+    try {
+      await exportMutation.mutateAsync({
+        type: 'full_backup',
+        format,
+        filters: {},
+        options: {
+          includeTransactions: true,
+          includeCategories: true,
+          includeSettings: true,
+          includeAnalytics: true,
+          ...options
+        }
+      });
+    } catch (error) {
+      console.error('Full backup export failed:', error);
+      throw error;
+    }
+  }, [exportMutation]);
+
+  // ✅ Progress tracking utilities
+  const getExportProgress = useCallback((exportId) => {
+    return exportProgress[exportId] || null;
+  }, [exportProgress]);
+
+  const isExportActive = useCallback((exportId) => {
+    return activeExports.has(exportId);
+  }, [activeExports]);
+
+  const hasActiveExports = activeExports.size > 0;
+
   return {
     // Export functions
-    exportAsCSV,
-    exportAsJSON,
-    exportAsPDF,
+    exportTransactions,
+    exportCategories,
+    exportFinancialReport,
+    exportAnalytics,
+    exportAllData,
     
-    // Export options
-    exportOptions,
-    availableFormats: exportOptions.availableFormats || [],
-    dataIncluded: exportOptions.dataIncluded || [],
-    userInfo: exportOptions.userInfo || {},
-    limits: exportOptions.limits || {},
-    privacyNote: exportOptions.privacyNote || 'Your data is exported securely.',
-    
-    // Loading states
-    isLoadingOptions: exportOptionsQuery.isLoading,
-    isExporting,
+    // Progress tracking
     exportProgress,
+    activeExports: Array.from(activeExports),
+    hasActiveExports,
+    getExportProgress,
+    isExportActive,
     
-    // Error states
-    error: exportOptionsQuery.error,
+    // Status
+    isExporting: exportMutation.isLoading,
+    error: exportMutation.error,
     
-    // Utility functions
-    isFormatAvailable,
-    getFormatInfo,
+    // Utilities
+    triggerDownload,
     
-    // User info for export
-    exportUserInfo: {
-      username: user?.username || 'user',
-      email: user?.email || '',
-      currency: user?.preferences?.currency || 'USD',
-      language: user?.preferences?.language || 'en'
-    }
+    // Raw mutation for advanced usage
+    exportMutation
   };
 };
 
-/**
- * Hook for export history (future feature)
- */
-export const useExportHistory = () => {
-  const [history, setHistory] = useState(() => {
-    // Get from localStorage for now
-    const saved = localStorage.getItem('exportHistory');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const addToHistory = useCallback((format) => {
-    const newEntry = {
-      id: Date.now(),
-      format,
-      date: new Date().toISOString(),
-      size: null // Would come from server
-    };
-    
-    setHistory(prev => {
-      const updated = [newEntry, ...prev].slice(0, 10); // Keep last 10
-      localStorage.setItem('exportHistory', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
-  
-  const clearHistory = useCallback(() => {
-    setHistory([]);
-    localStorage.removeItem('exportHistory');
-  }, []);
-  
-  return {
-    history,
-    addToHistory,
-    clearHistory
-  };
-};
-
-/**
- * Hook for custom export configurations (future feature)
- */
-export const useExportConfig = () => {
-  const [config, setConfig] = useState(() => {
-    const saved = localStorage.getItem('exportConfig');
-    return saved ? JSON.parse(saved) : {
-      includeCategories: true,
-      includeNotes: true,
-      dateFormat: 'YYYY-MM-DD',
-      amountFormat: 'decimal', // 'decimal' or 'cents'
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
-  });
-  
-  const updateConfig = useCallback((updates) => {
-    setConfig(prev => {
-      const updated = { ...prev, ...updates };
-      localStorage.setItem('exportConfig', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
-  
-  const resetConfig = useCallback(() => {
-    const defaultConfig = {
-      includeCategories: true,
-      includeNotes: true,
-      dateFormat: 'YYYY-MM-DD',
-      amountFormat: 'decimal',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
-    
-    setConfig(defaultConfig);
-    localStorage.setItem('exportConfig', JSON.stringify(defaultConfig));
-  }, []);
-  
-  return {
-    config,
-    updateConfig,
-    resetConfig
-  };
-};
-
-// Export for components
 export default useExport;
