@@ -83,12 +83,12 @@ export const Analytics = createLazyComponent(
 );
 
 export const FinancialHealth = createLazyComponent(
-  () => import('../pages/analytics/FinancialHealth.jsx'),
+  () => import('../pages/analytics/FinancialHealth'),
   'FinancialHealth'
 );
 
 export const Insights = createLazyComponent(
-  () => import('../pages/analytics/Insights.jsx'),
+  () => import('../pages/analytics/Insights'),
   'Insights'
 );
 
