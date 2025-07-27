@@ -1,218 +1,202 @@
 /**
- * SpendWise Server - MINIMAL TEST VERSION
- * Finding what's causing the crash
+ * SpendWise Server - Production Ready + Mobile Support
+ * Main server entry point - FIXED VERSION
  */
 
-console.log('=== STARTING MINIMAL SERVER TEST ===');
-
-// Step 1: Basic requires
-console.log('1. Loading dotenv...');
-require('dotenv').config();
-
-console.log('2. Loading express...');
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const dotenv = require('dotenv');
 
-console.log('3. Creating app...');
+// Load environment variables first
+dotenv.config();
+
+// Load custom modules
+const logger = require('./utils/logger');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const requestId = require('./middleware/requestId');
+const scheduler = require('./utils/scheduler');
+const db = require('./config/db');
+const keepAlive = require('./utils/keepAlive');
+
+// Initialize Express app
 const app = express();
 
-console.log('4. Loading safe modules...');
-const cors = require('cors');
+// Trust proxy for Render deployment
+app.set('trust proxy', 1);
 
-console.log('4b. Testing logger module...');
-let logger;
-try {
-  logger = require('./utils/logger');
-  console.log('✅ Logger loaded successfully');
-} catch (error) {
-  console.error('❌ Logger failed:', error.message);
-  // Create fallback logger
-  logger = {
-    info: console.log,
-    error: console.error,
-    warn: console.warn
-  };
-}
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:", "http://localhost:5000", "http://localhost:3000", "http://localhost:5173"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
-console.log('4c. Testing database module...');
-let db;
-try {
-  db = require('./config/db');
-  console.log('✅ Database module loaded successfully');
-} catch (error) {
-  console.error('❌ Database module failed:', error.message);
-  console.error('Stack:', error.stack);
-  // Create fallback db
-  db = {
-    testConnection: () => Promise.resolve(true),
-    healthCheck: () => Promise.resolve(true)
-  };
-}
+app.use(compression());
 
-console.log('4d. Testing middleware modules...');
-let errorHandler, apiLimiter, requestId;
-try {
-  console.log('Loading errorHandler...');
-  const errorMiddleware = require('./middleware/errorHandler');
-  errorHandler = errorMiddleware.errorHandler;
-  console.log('✅ ErrorHandler loaded');
+// Enhanced CORS for mobile and network support
+const isLocalNetworkIP = (origin) => {
+  if (!origin) return false;
   
-  console.log('Loading rateLimiter...');
-  const rateLimiter = require('./middleware/rateLimiter');
-  apiLimiter = rateLimiter.apiLimiter;
-  console.log('✅ RateLimiter loaded');
+  const match = origin.match(/^https?:\/\/([^:]+)/);
+  if (!match) return false;
   
-  console.log('Loading requestId...');
-  requestId = require('./middleware/requestId');
-  console.log('✅ RequestId loaded');
+  const host = match[1];
   
-  console.log('✅ All middleware modules loaded successfully');
-} catch (error) {
-  console.error('❌ Middleware module failed:', error.message);
-  console.error('Stack:', error.stack);
-  // Create fallback middleware
-  errorHandler = (err, req, res, next) => {
-    res.status(500).json({ error: 'Internal server error' });
-  };
-  apiLimiter = (req, res, next) => next();
-  requestId = (req, res, next) => next();
-}
+  const localNetworkPatterns = [
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
+    /^localhost$/,
+    /^127\.0\.0\.1$/
+  ];
+  
+  return localNetworkPatterns.some(pattern => pattern.test(host));
+};
 
-console.log('4e. Testing scheduler and keepAlive...');
-let scheduler, keepAlive;
-try {
-  console.log('Loading scheduler...');
-  scheduler = require('./utils/scheduler');
-  console.log('✅ Scheduler loaded');
-  
-  console.log('Loading keepAlive...');
-  keepAlive = require('./utils/keepAlive');
-  console.log('✅ KeepAlive loaded');
-  
-  console.log('✅ Scheduler and KeepAlive loaded successfully');
-} catch (error) {
-  console.error('❌ Scheduler/KeepAlive module failed:', error.message);
-  console.error('Stack:', error.stack);
-  // Create fallback
-  scheduler = {
-    init: () => console.log('Scheduler disabled (fallback mode)')
-  };
-  keepAlive = {
-    start: () => console.log('KeepAlive disabled (fallback mode)')
-  };
-}
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? (process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || []) 
+  : ['http://localhost:3000', 'http://localhost:5173'];
 
-console.log('5. Setting up middleware...');
-app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests without origin (mobile apps, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check allowed origins
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow local network in development
+    if (process.env.NODE_ENV !== 'production' && isLocalNetworkIP(origin)) {
+      logger.info(`🌐 Allowing local network origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Allow dev servers
+    if (origin.includes(':5173') || origin.includes(':3000')) {
+      logger.info(`🌐 Allowing dev server origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    logger.warn(`🚫 CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  maxAge: 86400,
+  exposedHeaders: ['Content-Disposition']
+}));
 
-console.log('5b. Adding custom middleware...');
+// Body parser with size limit
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res, path) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// Request ID middleware
 app.use(requestId);
+
+// API rate limiter
 app.use('/api', apiLimiter);
-console.log('✅ Custom middleware added');
 
-console.log('6. Creating basic routes...');
-app.get('/', (req, res) => {
-  res.json({ message: 'SpendWise Server is running!' });
-});
+// Request logging (production-safe)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    logger.info('Request received', {
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      origin: req.headers.origin
+    });
+    next();
+  });
+}
 
+// Enhanced health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    console.log('Testing database connection for health check...');
+    const origin = req.headers.origin;
+    
+    // Set CORS headers for health check
+    if (origin && (allowedOrigins.includes(origin) || 
+        process.env.NODE_ENV !== 'production' && (
+          isLocalNetworkIP(origin) || 
+          origin.includes(':5173') || 
+          origin.includes(':3000')
+        ))) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    
     const dbHealth = await db.healthCheck();
-    console.log('Database health check result:', dbHealth);
     
     res.json({ 
       status: 'healthy',
       database: dbHealth ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV,
+      version: '1.0.0'
     });
   } catch (error) {
-    console.error('Health check error:', error.message);
+    logger.error('Health check failed', { error: error.message });
+    
     res.status(503).json({ 
-      status: 'unhealthy',
+      status: 'unhealthy', 
       database: 'error',
-      error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
     });
   }
 });
 
-console.log('6b. Testing API route loading...');
+// API routes with versioning
+const API_VERSION = '/api/v1';
+app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
+app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
+app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
+app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
+
+// Safe onboarding routes with error handling
 try {
-  console.log('Loading user routes...');
-  const userRoutes = require('./routes/userRoutes');
-  app.use('/api/v1/users', userRoutes);
-  console.log('✅ User routes loaded');
-  
-  console.log('Loading transaction routes...');
-  const transactionRoutes = require('./routes/transactionRoutes');
-  app.use('/api/v1/transactions', transactionRoutes);
-  console.log('✅ Transaction routes loaded');
-  
-  console.log('Loading category routes...');
-  const categoryRoutes = require('./routes/categoryRoutes');
-  app.use('/api/v1/categories', categoryRoutes);
-  console.log('✅ Category routes loaded');
-  
-  console.log('Loading export routes...');
-  const exportRoutes = require('./routes/exportRoutes');
-  app.use('/api/v1/export', exportRoutes);
-  console.log('✅ Export routes loaded');
-  
-  console.log('✅ All API routes loaded successfully');
+  app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
+  logger.info('✅ Onboarding routes loaded successfully');
 } catch (error) {
-  console.error('❌ API route loading failed:', error.message);
-  console.error('Stack:', error.stack);
-  // Add fallback routes
-  app.get('/api/v1/users', (req, res) => res.json({ message: 'Users API (fallback mode)' }));
-  app.get('/api/v1/transactions', (req, res) => res.json({ message: 'Transactions API (fallback mode)' }));
-  app.get('/api/v1/categories', (req, res) => res.json({ message: 'Categories API (fallback mode)' }));
-  app.get('/api/v1/export', (req, res) => res.json({ message: 'Export API (fallback mode)' }));
+  logger.error('⚠️ Failed to load onboarding routes:', error.message);
+  // Add fallback onboarding endpoint
+  app.post(`${API_VERSION}/onboarding/complete`, (req, res) => {
+    res.json({ success: true, message: 'Onboarding completed (fallback mode)' });
+  });
 }
 
-console.log('7. Getting port...');
-const PORT = process.env.PORT || 3000;
-
-console.log('8. Starting server...');
-app.listen(PORT, async () => {
-  console.log(`✅ MINIMAL SERVER RUNNING ON PORT ${PORT}`);
-  logger.info(`🚀 Server started successfully on port ${PORT}`);
-  
-  // Test database connection
-  try {
-    console.log('Testing initial database connection...');
-    await db.testConnection();
-    console.log('✅ Database connection test successful');
-    logger.info('Database connected successfully');
-  } catch (error) {
-    console.error('❌ Database connection test failed:', error.message);
-    logger.error('Database connection failed:', error.message);
-  }
-  
-  // Initialize scheduler and keepAlive
-  try {
-    console.log('Initializing scheduler...');
-    if (process.env.ENABLE_SCHEDULER !== 'false') {
-      scheduler.init();
-      console.log('✅ Scheduler initialized');
-    } else {
-      console.log('⚠️ Scheduler disabled by environment variable');
-    }
-    
-    console.log('Starting keepAlive service...');
-    keepAlive.start();
-    console.log('✅ KeepAlive service started');
-  } catch (error) {
-    console.error('❌ Failed to initialize scheduler/keepAlive:', error.message);
-    logger.error('Scheduler/KeepAlive initialization failed:', error.message);
-  }
-});
-
-console.log('9. Adding 404 handler...');
-// 404 handler for undefined routes
+// 404 handler
 app.use((req, res, next) => {
-  res.status(404).json({
+  res.status(404).json({ 
     error: {
       code: 'ROUTE_NOT_FOUND',
       message: `Cannot ${req.method} ${req.path}`,
@@ -221,19 +205,113 @@ app.use((req, res, next) => {
   });
 });
 
-console.log('9b. Adding simple error handler...');
-// Simple working error handler instead of the problematic one
+// FIXED: Simple, working error handler (replaces problematic ./middleware/errorHandler.js)
 app.use((err, req, res, next) => {
-  console.error('Error caught:', err.message);
-  res.status(err.status || 500).json({
+  logger.error('Error caught by handler:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+
+  // Handle specific error types
+  const status = err.status || err.statusCode || 500;
+  const code = err.code || 'INTERNAL_ERROR';
+  
+  res.status(status).json({
     error: {
-      code: err.code || 'INTERNAL_ERROR',
+      code,
       message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
       timestamp: new Date().toISOString()
     }
   });
 });
 
-console.log('10. Server setup complete - FIXED VERSION!');
+const PORT = process.env.PORT || 5000;
+
+/**
+ * Start the server with Supabase database connection
+ */
+const startServer = async () => {
+  logger.info('🚀 Starting SpendWise server...');
+  
+  try {
+    logger.info('📡 Testing database connection...');
+    // Test Supabase database connection with retry
+    let retries = 5;
+    while (retries > 0) {
+      try {
+        await db.testConnection();
+        logger.info('✅ Supabase database connection successful');
+        break;
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          logger.error('❌ Failed to connect to database after 5 retries');
+          throw error;
+        }
+        logger.warn(`⚠️ Database connection failed, retrying... (${5 - retries}/5)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    
+    logger.info('🔧 Starting HTTP server...');
+
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`🚀 Server running on port ${PORT} with Supabase database`);
+      logger.info(`🌐 CORS enabled for mobile development (local networks)`);
+      
+      // Initialize background jobs
+      if (process.env.ENABLE_SCHEDULER !== 'false') {
+        scheduler.init();
+        logger.info('✅ Scheduler initialized');
+      }
+      
+      // Start keep-alive service
+      keepAlive.start();
+      logger.info('✅ KeepAlive service started');
+    });
+
+    // Graceful shutdown
+    const gracefulShutdown = async (signal) => {
+      logger.info(`${signal} received, shutting down gracefully`);
+      
+      server.close(() => {
+        logger.info('HTTP server closed');
+      });
+      
+      // Close database connections
+      await db.gracefulShutdown();
+      logger.info('Supabase database connections closed');
+      
+      process.exit(0);
+    };
+
+    // Handle shutdown signals
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught errors
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught Exception:', error);
+      gracefulShutdown('UNCAUGHT_EXCEPTION');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      if (process.env.NODE_ENV !== 'production') {
+        gracefulShutdown('UNHANDLED_REJECTION');
+      }
+    });
+
+  } catch (err) {
+    logger.error('❌ Failed to start server with Supabase:', err);
+    logger.error('💡 Check your DATABASE_URL and network connection');
+    process.exit(1);
+  }
+};
+
+// Start server
+startServer();
 
 module.exports = app;
