@@ -4,8 +4,8 @@ const http = require('http');
 
 class KeepAliveService {
   constructor() {
-    this.appUrl = process.env.APP_URL; // Your deployed app URL
-    this.isEnabled = process.env.NODE_ENV === 'production' && process.env.ENABLE_KEEP_ALIVE === 'true';
+    this.appUrl = process.env.APP_URL || 'https://spendwise-dx8g.onrender.com'; // Your deployed app URL
+    this.isEnabled = process.env.NODE_ENV === 'production' || process.env.ENABLE_KEEP_ALIVE === 'true';
   }
 
   start() {

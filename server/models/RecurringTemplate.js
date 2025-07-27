@@ -102,19 +102,19 @@ class RecurringTemplate {
     try {
       const query = `
         INSERT INTO recurring_templates (
-          user_id, type, amount, description, category_id, interval_type,
+          user_id, type, amount, name, description, category_id, interval_type,
           day_of_month, day_of_week, start_date, end_date, notes,
           is_active, created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, NOW())
         RETURNING 
-          id, user_id, type, amount, description, category_id, interval_type,
+          id, user_id, type, amount, name, description, category_id, interval_type,
           day_of_month, day_of_week, start_date, end_date, notes,
           is_active, created_at
       `;
 
       const result = await db.query(query, [
-        user_id, type, amount, description.trim(), category_id,
+        user_id, type, amount, description.trim() || 'Recurring Transaction', description.trim(), category_id,
         interval_type, day_of_month, day_of_week,
         start_date, end_date, notes?.trim() || null
       ], 'create_recurring_template_optimized');
@@ -168,7 +168,7 @@ class RecurringTemplate {
     try {
       const query = `
         SELECT 
-          rt.id, rt.user_id, rt.type, rt.amount, rt.description, rt.category_id,
+          rt.id, rt.user_id, rt.type, rt.amount, rt.name, rt.description, rt.category_id,
           rt.interval_type, rt.day_of_month, rt.day_of_week, rt.start_date, rt.end_date,
           rt.notes, rt.is_active, rt.created_at, rt.updated_at,
           c.name as category_name, c.icon as category_icon

@@ -622,6 +622,203 @@ const validate = {
     }
 
     next();
+  },
+
+  /**
+   * Validate Google OAuth authentication
+   */
+  googleAuth: (req, res, next) => {
+    const { idToken, email, name, picture } = req.body;
+
+    // Check required fields
+    if (!idToken) {
+      return res.status(400).json(createValidationError(
+        'MISSING_ID_TOKEN',
+        'Google ID token is required'
+      ));
+    }
+
+    if (!email) {
+      return res.status(400).json(createValidationError(
+        'MISSING_EMAIL',
+        'Email is required'
+      ));
+    }
+
+    // Validate email format
+    if (!validators.email(email)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_EMAIL',
+        'Invalid email format'
+      ));
+    }
+
+    // Normalize email
+    req.body.email = email.toLowerCase().trim();
+
+    // Validate ID token format (basic check)
+    if (typeof idToken !== 'string' || idToken.length < 50) {
+      return res.status(400).json(createValidationError(
+        'INVALID_ID_TOKEN',
+        'Invalid Google ID token format'
+      ));
+    }
+
+    // Validate name if provided
+    if (name && (typeof name !== 'string' || name.length > 100)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_NAME',
+        'Name must be a string with maximum 100 characters'
+      ));
+    }
+
+    // Validate picture URL if provided
+    if (picture && (typeof picture !== 'string' || !picture.startsWith('http'))) {
+      return res.status(400).json(createValidationError(
+        'INVALID_PICTURE_URL',
+        'Picture must be a valid URL'
+      ));
+    }
+
+    next();
+  },
+
+  /**
+   * Validate email verification request
+   */
+  emailVerification: (req, res, next) => {
+    const { token, email } = req.body;
+
+    if (!token) {
+      return res.status(400).json(createValidationError(
+        'MISSING_TOKEN',
+        'Verification token is required'
+      ));
+    }
+
+    if (typeof token !== 'string' || token.length < 10) {
+      return res.status(400).json(createValidationError(
+        'INVALID_TOKEN',
+        'Invalid verification token format'
+      ));
+    }
+
+    if (email) {
+      if (!validators.email(email)) {
+        return res.status(400).json(createValidationError(
+          'INVALID_EMAIL',
+          'Invalid email format'
+        ));
+      }
+      req.body.email = email.toLowerCase().trim();
+    }
+
+    next();
+  },
+
+  /**
+   * Validate profile update request
+   */
+  profileUpdate: (req, res, next) => {
+    const { 
+      username, email, first_name, last_name, phone, bio, 
+      location, website, birthday, preferences 
+    } = req.body;
+
+    // Validate username if provided
+    if (username !== undefined) {
+      if (!validators.username(username)) {
+        return res.status(400).json(createValidationError(
+          'INVALID_USERNAME',
+          'Username must be 2-50 characters and contain only letters, numbers, spaces, hyphens, and underscores'
+        ));
+      }
+      req.body.username = username.toLowerCase().trim();
+    }
+
+    // Validate email if provided
+    if (email !== undefined) {
+      if (!validators.email(email)) {
+        return res.status(400).json(createValidationError(
+          'INVALID_EMAIL',
+          'Invalid email format'
+        ));
+      }
+      req.body.email = email.toLowerCase().trim();
+    }
+
+    // Validate names if provided
+    if (first_name !== undefined && (typeof first_name !== 'string' || first_name.length > 100)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_FIRST_NAME',
+        'First name must be a string with maximum 100 characters'
+      ));
+    }
+
+    if (last_name !== undefined && (typeof last_name !== 'string' || last_name.length > 100)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_LAST_NAME',
+        'Last name must be a string with maximum 100 characters'
+      ));
+    }
+
+    // Validate phone if provided
+    if (phone !== undefined && (typeof phone !== 'string' || phone.length > 20)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_PHONE',
+        'Phone must be a string with maximum 20 characters'
+      ));
+    }
+
+    // Validate bio if provided
+    if (bio !== undefined && (typeof bio !== 'string' || bio.length > 500)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_BIO',
+        'Bio must be a string with maximum 500 characters'
+      ));
+    }
+
+    // Validate location if provided
+    if (location !== undefined && (typeof location !== 'string' || location.length > 255)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_LOCATION',
+        'Location must be a string with maximum 255 characters'
+      ));
+    }
+
+    // Validate website if provided
+    if (website !== undefined && (typeof website !== 'string' || !website.match(/^https?:\/\/.+/))) {
+      return res.status(400).json(createValidationError(
+        'INVALID_WEBSITE',
+        'Website must be a valid URL starting with http:// or https://'
+      ));
+    }
+
+    // Validate birthday if provided
+    if (birthday !== undefined && !validators.date(birthday)) {
+      return res.status(400).json(createValidationError(
+        'INVALID_BIRTHDAY',
+        'Birthday must be a valid date'
+      ));
+    }
+
+    // Validate preferences if provided
+    if (preferences !== undefined) {
+      try {
+        if (typeof preferences === 'string') {
+          JSON.parse(preferences);
+        } else if (typeof preferences !== 'object') {
+          throw new Error('Invalid format');
+        }
+      } catch (e) {
+        return res.status(400).json(createValidationError(
+          'INVALID_PREFERENCES',
+          'Preferences must be a valid JSON object'
+        ));
+      }
+    }
+
+    next();
   }
 };
 

@@ -410,11 +410,8 @@ class AdminController {
             SUM(amount) as total_amount,
             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as transactions_24h,
             COUNT(DISTINCT user_id) as users_with_transactions
-          FROM (
-            SELECT user_id, amount, created_at FROM income WHERE deleted_at IS NULL
-            UNION ALL
-            SELECT user_id, amount, created_at FROM expenses WHERE deleted_at IS NULL
-          ) all_transactions
+          FROM transactions
+          WHERE deleted_at IS NULL
         `, [], 'admin_transaction_stats'),
         
         // System statistics

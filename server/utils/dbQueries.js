@@ -87,28 +87,15 @@ class DBQueries {
 
       // Get recent transactions with optimized query
       const recentResult = await db.query(`
-        (SELECT 
-          e.id, 'expense' as type, e.amount, e.description, e.date,
+        SELECT 
+          t.id, t.type, t.amount, t.description, t.date,
           COALESCE(c.name, 'General') as category_name,
           COALESCE(c.icon, 'tag') as category_icon,
-          e.template_id, e.created_at
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        WHERE e.user_id = $1 AND e.deleted_at IS NULL
-        ORDER BY e.date DESC, e.created_at DESC
-        LIMIT 5)
-        UNION ALL
-        (SELECT 
-          i.id, 'income' as type, i.amount, i.description, i.date,
-          COALESCE(c.name, 'General') as category_name,
-          COALESCE(c.icon, 'tag') as category_icon,
-          i.template_id, i.created_at
-        FROM income i
-        LEFT JOIN categories c ON i.category_id = c.id
-        WHERE i.user_id = $1 AND i.deleted_at IS NULL
-        ORDER BY i.date DESC, i.created_at DESC
-        LIMIT 5)
-        ORDER BY date DESC, created_at DESC
+          t.template_id, t.created_at
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+        ORDER BY t.date DESC, t.created_at DESC
         LIMIT 10
       `, [userId], 'get_recent_transactions_optimized');
 
@@ -226,12 +213,12 @@ class DBQueries {
     try {
       const result = await db.query(`
         SELECT 
-          COALESCE(SUM(CASE WHEN i.deleted_at IS NULL THEN i.amount ELSE 0 END), 0) as total_income,
-          COALESCE(SUM(CASE WHEN e.deleted_at IS NULL THEN e.amount ELSE 0 END), 0) as total_expenses
-        FROM income i
-        FULL OUTER JOIN expenses e ON i.user_id = e.user_id AND i.date = e.date
-        WHERE COALESCE(i.user_id, e.user_id) = $1
-        AND COALESCE(i.date, e.date) = $2
+          COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expenses
+        FROM transactions
+        WHERE user_id = $1
+        AND date = $2
+        AND deleted_at IS NULL
       `, [userId, dateStr], 'get_user_balance_optimized');
 
       const row = result.rows[0] || { total_income: 0, total_expenses: 0 };

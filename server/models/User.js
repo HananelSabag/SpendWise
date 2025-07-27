@@ -287,8 +287,12 @@ class User {
   static async update(userId, updateData) {
     try {
       const allowedFields = [
-        'first_name', 'last_name', 'username', 'bio', 'location', 
-        'website', 'avatar', 'phone', 'preferences'
+        'email', 'username', 'password_hash', 'email_verified', 'role',
+        'first_name', 'last_name', 'avatar', 'phone', 'bio', 'location',
+        'website', 'birthday', 'preferences', 'is_active', 'last_login_at',
+        'login_attempts', 'locked_until', 'google_id', 'oauth_provider', 
+        'oauth_provider_id', 'profile_picture_url', 'onboarding_completed',
+        'language_preference', 'theme_preference', 'currency_preference'
       ];
 
       const updates = {};
@@ -453,6 +457,147 @@ class User {
       };
     } catch (error) {
       logger.error('Export data retrieval failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  // Find user by Google ID
+  static async findByGoogleId(googleId) {
+    try {
+      const cacheKey = `user:google:${googleId}`;
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
+
+      const query = `
+        SELECT 
+          id, email, username, role, email_verified, is_active,
+          last_login_at, created_at, updated_at,
+          first_name, last_name, avatar, phone, bio, location,
+          website, birthday, preferences, google_id, oauth_provider,
+          oauth_provider_id, profile_picture_url
+        FROM users 
+        WHERE google_id = $1 AND is_active = true
+      `;
+
+      const result = await db.query(query, [googleId]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      user = result.rows[0];
+      
+      // Parse JSON fields safely
+      if (user.preferences) {
+        try {
+          user.preferences = JSON.parse(user.preferences);
+        } catch (e) {
+          user.preferences = {};
+        }
+      }
+
+      // Add computed fields
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.name = user.first_name && user.last_name ? 
+        `${user.first_name} ${user.last_name}` : 
+        user.username || user.first_name || 'User';
+      
+      // Normalize field names for client compatibility
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.emailVerified = user.email_verified;
+      user.createdAt = user.created_at;
+      user.updatedAt = user.updated_at;
+      user.lastLogin = user.last_login_at;
+      user.profilePicture = user.profile_picture_url || user.avatar;
+
+      // Cache the result
+      UserCache.set(cacheKey, user);
+
+      return user;
+    } catch (error) {
+      logger.error('User retrieval by Google ID failed', { googleId, error: error.message });
+      throw error;
+    }
+  }
+
+  // Create user with OAuth provider info
+  static async createWithOAuth(email, username, password, oauthData = {}) {
+    try {
+      // Validate required fields
+      if (!email || !username || !password) {
+        throw new Error('Email, username, and password are required');
+      }
+
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
+      const query = `
+        INSERT INTO users (
+          email, username, password_hash, verification_token,
+          google_id, oauth_provider, oauth_provider_id, profile_picture_url,
+          first_name, last_name, email_verified, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING id, email, username, created_at, updated_at, email_verified, oauth_provider
+      `;
+
+      const values = [
+        email.toLowerCase(),
+        username?.toLowerCase(),
+        hashedPassword,
+        verificationToken,
+        oauthData.google_id || null,
+        oauthData.oauth_provider || 'local',
+        oauthData.oauth_provider_id || null,
+        oauthData.profile_picture_url || null,
+        oauthData.first_name || null,
+        oauthData.last_name || null,
+        oauthData.email_verified || false
+      ];
+
+      const result = await db.query(query, values);
+      const user = result.rows[0];
+
+      // Invalidate relevant caches
+      UserCache.invalidate(`email:${email.toLowerCase()}`);
+      if (oauthData.google_id) {
+        UserCache.invalidate(`google:${oauthData.google_id}`);
+      }
+
+      logger.info('✅ User created with OAuth', {
+        userId: user.id,
+        email: user.email,
+        provider: user.oauth_provider
+      });
+
+      return user;
+    } catch (error) {
+      logger.error('❌ User creation with OAuth failed', {
+        email,
+        error: error.message
+      });
+
+      // Handle unique constraint violations
+      if (error.code === '23505') {
+        if (error.detail.includes('email')) {
+          throw new Error('Email already exists');
+        }
+        if (error.detail.includes('username')) {
+          throw new Error('Username already exists');
+        }
+        if (error.detail.includes('google_id')) {
+          throw new Error('Google account already linked to another user');
+        }
+      }
+      
       throw error;
     }
   }

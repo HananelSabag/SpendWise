@@ -249,10 +249,16 @@ const userController = {
 
         user = await User.create(email, username, randomPassword);
         
-        // Mark as verified since Google verified the email
+        // Mark as verified since Google verified the email and store Google info
         await User.update(user.id, { 
           email_verified: true,
-          onboarding_completed: false 
+          onboarding_completed: false,
+          google_id: idToken.split('.')[1], // Extract user ID from token
+          oauth_provider: 'google',
+          oauth_provider_id: idToken.split('.')[1],
+          profile_picture_url: picture,
+          first_name: name?.split(' ')[0] || '',
+          last_name: name?.split(' ').slice(1).join(' ') || ''
         });
 
         logger.info('✅ New Google user created', {
@@ -260,12 +266,27 @@ const userController = {
           email,
           username
         });
-      } else if (!user.email_verified) {
-        // Mark existing user as verified
-        await User.update(user.id, { email_verified: true });
+      } else {
+        // Update existing user with Google info if not already set
+        const updateData = { email_verified: true };
+        if (!user.google_id) {
+          updateData.google_id = idToken.split('.')[1];
+          updateData.oauth_provider = 'google';
+          updateData.oauth_provider_id = idToken.split('.')[1];
+        }
+        if (picture && !user.profile_picture_url) {
+          updateData.profile_picture_url = picture;
+        }
+        if (name && (!user.first_name || !user.last_name)) {
+          updateData.first_name = name?.split(' ')[0] || user.first_name || '';
+          updateData.last_name = name?.split(' ').slice(1).join(' ') || user.last_name || '';
+        }
+        
+        await User.update(user.id, updateData);
         logger.info('✅ Existing user verified via Google', {
           userId: user.id,
-          email
+          email,
+          updatedFields: Object.keys(updateData)
         });
       }
 

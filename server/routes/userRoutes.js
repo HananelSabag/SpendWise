@@ -47,7 +47,7 @@ router.post('/login',
  */
 router.post('/auth/google',
   authLimiter,
-  // validate.googleAuth, // DISABLED: validation function doesn't exist yet
+  validate.googleAuth, // ✅ NOW IMPLEMENTED
   userController.googleAuth
 );
 
@@ -58,7 +58,7 @@ router.post('/auth/google',
  */
 router.post('/verify-email',
   emailVerificationLimiter,
-  // validate.emailVerification, // DISABLED: validation function doesn't exist yet
+  validate.emailVerification, // ✅ NOW IMPLEMENTED
   userController.verifyEmail
 );
 
@@ -97,7 +97,7 @@ router.get('/profile',
  */
 router.put('/profile',
   auth,
-  // validate.profileUpdate, // DISABLED: validation function doesn't exist yet
+  validate.profileUpdate, // ✅ NOW IMPLEMENTED
   userController.updateProfile
 );
 
