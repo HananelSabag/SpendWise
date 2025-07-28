@@ -12,6 +12,8 @@ import {
   RefreshCw, Settings, Bell, TrendingUp
 } from 'lucide-react';
 
+console.log('📊 Dashboard component loading...');
+
 // ✅ Import Zustand stores
 import { 
   useAuth, 
@@ -19,28 +21,55 @@ import {
   useNotifications
 } from '../stores';
 
+console.log('📊 Dashboard - stores imported:', { 
+  hasUseAuth: !!useAuth, 
+  hasUseTranslation: !!useTranslation, 
+  hasUseNotifications: !!useNotifications 
+});
+
 // ✅ Import our new dashboard components
 import BalancePanel from '../components/features/dashboard/BalancePanel';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 import RecentTransactions from '../components/features/dashboard/RecentTransactions';
 import StatsChart from '../components/features/dashboard/StatsChart';
 
+console.log('📊 Dashboard - dashboard components imported');
+
 // ✅ Import modal components
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
+
+console.log('📊 Dashboard - modal components imported');
 
 // ✅ Import UI components
 import { Button, Card, LoadingSpinner } from '../components/ui';
 import { useDashboard } from '../hooks/useDashboard';
 import { cn } from '../utils/helpers';
 
+console.log('📊 Dashboard - UI components and hooks imported');
+
 /**
  * 📊 Dashboard Main Component
  */
 const Dashboard = () => {
+  console.log('📊 Dashboard component rendering...');
+
   // ✅ Zustand stores
-  const { user } = useAuth();
-  const { t, isRTL } = useTranslation('dashboard');
-  const { addNotification } = useNotifications();
+  try {
+    console.log('📊 Dashboard - calling useAuth...');
+    const { user } = useAuth();
+    console.log('📊 Dashboard - useAuth result:', { hasUser: !!user });
+
+    console.log('📊 Dashboard - calling useTranslation...');
+    const { t, isRTL } = useTranslation('dashboard');
+    console.log('📊 Dashboard - useTranslation result:', { hasT: !!t, isRTL });
+
+    console.log('📊 Dashboard - calling useNotifications...');
+    const { addNotification } = useNotifications();
+    console.log('📊 Dashboard - useNotifications result:', { hasAddNotification: !!addNotification });
+  } catch (error) {
+    console.error('📊 Dashboard - Error calling store hooks:', error);
+    throw error;
+  }
 
   // ✅ State management
   const [viewMode, setViewMode] = useState('overview'); // overview, analytics, goals, insights

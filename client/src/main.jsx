@@ -1,3 +1,5 @@
+console.log('🚀 MAIN.JSX - Starting app initialization...');
+
 /**
  * 🚀 SPENDWISE MAIN ENTRY POINT - PERFORMANCE OPTIMIZED
  * Features: Performance monitoring, Web Vitals, Enhanced error boundaries, API integration
@@ -5,28 +7,51 @@
  * @version 2.0.0
  */
 
+console.log('🚀 MAIN.JSX - About to import React...');
 import React, { StrictMode, Suspense } from 'react';
+console.log('🚀 MAIN.JSX - React imported successfully');
+
+console.log('🚀 MAIN.JSX - About to import ReactDOM...');
 import ReactDOM from 'react-dom/client';
+console.log('🚀 MAIN.JSX - ReactDOM imported successfully');
+
+console.log('🚀 MAIN.JSX - About to import React Query...');
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { ErrorBoundary } from 'react-error-boundary';
+console.log('🚀 MAIN.JSX - React Query imported successfully');
 
+console.log('🚀 MAIN.JSX - About to import ErrorBoundary...');
+import { ErrorBoundary } from 'react-error-boundary';
+console.log('🚀 MAIN.JSX - ErrorBoundary imported successfully');
+
+console.log('🚀 MAIN.JSX - About to import core App...');
 // Core imports
 import App from './app';
-import './index.css';
-import { queryClient } from './config/queryClient';
+console.log('🚀 MAIN.JSX - App imported successfully');
 
+console.log('🚀 MAIN.JSX - About to import CSS...');
+import './index.css';
+console.log('🚀 MAIN.JSX - CSS imported successfully');
+
+console.log('🚀 MAIN.JSX - About to import query client...');
+import { queryClient } from './config/queryClient';
+console.log('🚀 MAIN.JSX - Query client imported successfully');
+
+console.log('🚀 MAIN.JSX - About to import API...');
 // NEW: Import our unified API and performance monitoring
 import spendWiseAPI, { performanceAPI } from './api';
+console.log('🚀 MAIN.JSX - API imported successfully');
 
+console.log('🚀 MAIN.JSX - About to import performance utils...');
 // ✅ NEW: Performance optimization imports
 import { 
   initPerformanceOptimization, 
   productionOptimizations 
 } from './utils/performanceOptimizer';
 import { deploymentUtils } from './utils/buildOptimizer';
+console.log('🚀 MAIN.JSX - Performance utils imported successfully');
 
 // ✅ Initialize performance optimization
 const performanceManager = initPerformanceOptimization();
@@ -301,78 +326,148 @@ const initializeApp = async () => {
 };
 
 // ✅ Main App Component with Performance Tracking
+console.log('🚀 MAIN.JSX - Defining SpendWiseApp component...');
+
 const SpendWiseApp = () => {
+  console.log('🚀 MAIN.JSX - SpendWiseApp component rendering...');
+
   React.useEffect(() => {
-    // Complete app load measurement when component mounts
-    const loadResult = performanceMonitor.completeAppLoad();
-    
-    // Initialize app features
-    initializeApp();
+    console.log('🚀 MAIN.JSX - SpendWiseApp useEffect running...');
+    try {
+      // Complete app load measurement when component mounts
+      const loadResult = performanceMonitor.completeAppLoad();
+      console.log('🚀 MAIN.JSX - Performance monitoring completed:', loadResult);
+      
+      // Initialize app features
+      initializeApp();
+      console.log('🚀 MAIN.JSX - App initialization completed');
+    } catch (error) {
+      console.error('🚨 MAIN.JSX - Error in SpendWiseApp useEffect:', error);
+    }
   }, []);
 
-  const AppContent = () => (
-    <ErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onError={(error, errorInfo) => {
-        // Log error in development
-        if (import.meta.env.MODE === 'development') {
-          console.error('🚨 Error Boundary Caught:', error, errorInfo);
-        }
-        
-        // In production, could send to monitoring service
-      }}
-      onReset={() => {
-        // Clear caches on reset
-        queryClient.clear();
-        spendWiseAPI.utils.clearAllCaches();
-      }}
-    >
-      <Suspense fallback={<GlobalLoadingFallback />}>
-        {persister ? (
-          <PersistQueryClientProvider
-            client={queryClient}
-            persistOptions={{ persister }}
-          >
-            <App />
-            {import.meta.env.MODE === 'development' && (
-              <ReactQueryDevtools
-                initialIsOpen={false}
-                position="bottom-right"
-                toggleButtonProps={{
-                  style: { marginBottom: '60px' }
-                }}
-              />
+  const AppContent = () => {
+    console.log('🚀 MAIN.JSX - AppContent rendering...');
+    
+    try {
+      return (
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          onError={(error, errorInfo) => {
+            console.error('🚨 MAIN.JSX - ErrorBoundary caught error:', error, errorInfo);
+            // Log error in development
+            if (import.meta.env.MODE === 'development') {
+              console.error('🚨 Error Boundary Caught:', error, errorInfo);
+            }
+            
+            // In production, could send to monitoring service
+          }}
+          onReset={() => {
+            console.log('🚀 MAIN.JSX - ErrorBoundary reset triggered');
+            // Clear caches on reset
+            queryClient.clear();
+            spendWiseAPI.utils.clearAllCaches();
+          }}
+        >
+          <Suspense fallback={<GlobalLoadingFallback />}>
+            {persister ? (
+              <PersistQueryClientProvider
+                client={queryClient}
+                persistOptions={{ persister }}
+              >
+                <App />
+                {import.meta.env.MODE === 'development' && (
+                  <ReactQueryDevtools
+                    initialIsOpen={false}
+                    position="bottom-right"
+                    toggleButtonProps={{
+                      style: { marginBottom: '60px' }
+                    }}
+                  />
+                )}
+              </PersistQueryClientProvider>
+            ) : (
+              <QueryClientProvider client={queryClient}>
+                <App />
+                {import.meta.env.MODE === 'development' && (
+                  <ReactQueryDevtools
+                    initialIsOpen={false}
+                    position="bottom-right"
+                    toggleButtonProps={{
+                      style: { marginBottom: '60px' }
+                    }}
+                  />
+                )}
+              </QueryClientProvider>
             )}
-          </PersistQueryClientProvider>
-        ) : (
-          <QueryClientProvider client={queryClient}>
-            <App />
-            {import.meta.env.MODE === 'development' && (
-              <ReactQueryDevtools
-                initialIsOpen={false}
-                position="bottom-right"
-                toggleButtonProps={{
-                  style: { marginBottom: '60px' }
-                }}
-              />
-            )}
-          </QueryClientProvider>
-        )}
-      </Suspense>
-    </ErrorBoundary>
-  );
+          </Suspense>
+        </ErrorBoundary>
+      );
+    } catch (error) {
+      console.error('🚨 MAIN.JSX - Error in AppContent:', error);
+      throw error;
+    }
+  };
 
-  return import.meta.env.MODE === 'development' ? (
-    <StrictMode>
+  try {
+    console.log('🚀 MAIN.JSX - About to return SpendWiseApp content...');
+    return import.meta.env.MODE === 'development' ? (
+      <StrictMode>
+        <AppContent />
+      </StrictMode>
+    ) : (
       <AppContent />
-    </StrictMode>
-  ) : (
-    <AppContent />
-  );
+    );
+  } catch (error) {
+    console.error('🚨 MAIN.JSX - Error in SpendWiseApp return:', error);
+    throw error;
+  }
 };
 
 // ✅ Render Application
-root.render(<SpendWiseApp />);
+console.log('🚀 MAIN.JSX - About to render app...');
+
+try {
+  console.log('🚀 MAIN.JSX - Calling root.render...');
+  root.render(<SpendWiseApp />);
+  console.log('🚀 MAIN.JSX - App rendered successfully!');
+} catch (error) {
+  console.error('🚨 MAIN.JSX - CRITICAL ERROR during root.render:', error);
+  console.error('🚨 MAIN.JSX - Error stack:', error.stack);
+  console.error('🚨 MAIN.JSX - Error name:', error.name);
+  console.error('🚨 MAIN.JSX - Error message:', error.message);
+  
+  // Try to render a basic error message
+  try {
+    root.render(
+      <div style={{ 
+        padding: '20px', 
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#fee',
+        border: '2px solid #f00',
+        margin: '20px'
+      }}>
+        <h1>🚨 Critical App Error</h1>
+        <p><strong>Error:</strong> {error.message}</p>
+        <p><strong>Location:</strong> main.jsx render</p>
+        <details>
+          <summary>Technical Details</summary>
+          <pre>{error.stack}</pre>
+        </details>
+      </div>
+    );
+  } catch (fallbackError) {
+    console.error('🚨 MAIN.JSX - Even fallback render failed:', fallbackError);
+    document.body.innerHTML = `
+      <div style="padding: 20px; background: #fee; border: 2px solid #f00; margin: 20px;">
+        <h1>🚨 Critical App Error</h1>
+        <p><strong>Error:</strong> ${error.message}</p>
+        <p><strong>Location:</strong> main.jsx render</p>
+        <p>Check browser console for details</p>
+      </div>
+    `;
+  }
+}
 
 // ✅ Development Tools Setup
 if (import.meta.env.MODE === 'development') {

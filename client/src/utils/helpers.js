@@ -1,6 +1,26 @@
-// src/utils/helpers.js - Enhanced utility functions
-import { format, formatDistance, formatRelative, isToday, isYesterday, isTomorrow } from 'date-fns';
-import { he, enUS } from 'date-fns/locale';
+/**
+ * 🛠️ SPENDWISE UTILITY HELPERS - COMPLETE SYSTEM
+ * Comprehensive utility functions for the entire SpendWise application
+ * @version 2.0.0
+ */
+
+console.log('🛠️ Loading utility helpers...');
+
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// ✅ Class name utility (for Tailwind CSS)
+export function cn(...inputs) {
+  try {
+    console.log('🎨 cn() called with:', inputs);
+    const result = twMerge(clsx(inputs));
+    console.log('🎨 cn() result:', result);
+    return result;
+  } catch (error) {
+    console.error('🎨 cn() error:', error);
+    return '';
+  }
+}
 
 /**
  * Currency formatting utilities
@@ -368,13 +388,6 @@ export const debounce = (func, wait = 300) => {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
-};
-
-/**
- * Class names utility (like clsx)
- */
-export const cn = (...classes) => {
-  return classes.filter(Boolean).join(' ');
 };
 
 /**

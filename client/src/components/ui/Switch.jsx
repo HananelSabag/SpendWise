@@ -8,6 +8,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/helpers';
 
+console.log('🔘 Switch component loading...');
+
 const Switch = ({ 
   checked = false, 
   onCheckedChange, 
@@ -16,9 +18,16 @@ const Switch = ({
   className,
   ...props 
 }) => {
+  console.log('🔘 Switch render:', { checked, disabled, size, hasOnChange: !!onCheckedChange });
+
   const handleClick = () => {
+    console.log('🔘 Switch handleClick:', { disabled, hasOnChange: !!onCheckedChange });
     if (!disabled && onCheckedChange) {
-      onCheckedChange(!checked);
+      try {
+        onCheckedChange(!checked);
+      } catch (error) {
+        console.error('🔘 Switch onCheckedChange error:', error);
+      }
     }
   };
 

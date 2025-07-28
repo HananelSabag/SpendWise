@@ -13,6 +13,8 @@ import {
   Search, Grid, List
 } from 'lucide-react';
 
+console.log('🏷️ CategoryFormFields loading...');
+
 // ✅ Import Zustand stores
 import { useTranslation } from '../../../../stores';
 
@@ -27,6 +29,14 @@ import {
 } from './CategoryHelpers';
 import { getIconComponent } from '../../../../config/categoryIcons';
 import { cn } from '../../../../utils/helpers';
+
+console.log('🏷️ CategoryFormFields - UI components imported:', { 
+  hasCard: !!Card, 
+  hasSwitch: !!Switch, 
+  hasBadge: !!Badge, 
+  hasInput: !!Input, 
+  hasButton: !!Button 
+});
 
 /**
  * 🎨 Color Picker Component

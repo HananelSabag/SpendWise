@@ -7,6 +7,8 @@
 import React, { useCallback } from 'react';
 import { cn } from '../../utils/helpers';
 
+console.log('🎚️ Slider component loading...');
+
 const Slider = ({
   value = [0],
   onValueChange,
@@ -17,13 +19,21 @@ const Slider = ({
   className,
   ...props
 }) => {
+  console.log('🎚️ Slider render:', { value, min, max, step, disabled, hasOnChange: !!onValueChange });
+
   const currentValue = Array.isArray(value) ? value[0] : value;
   const percentage = ((currentValue - min) / (max - min)) * 100;
 
   const handleChange = useCallback((e) => {
+    console.log('🎚️ Slider handleChange:', { disabled, hasOnChange: !!onValueChange, eventType: e?.type });
     if (!disabled && onValueChange) {
-      const newValue = parseFloat(e.target.value);
-      onValueChange([newValue]);
+      try {
+        const newValue = parseFloat(e.target.value);
+        console.log('🎚️ Slider calling onValueChange with:', newValue);
+        onValueChange([newValue]);
+      } catch (error) {
+        console.error('🎚️ Slider onValueChange error:', error);
+      }
     }
   }, [disabled, onValueChange]);
 

@@ -5,6 +5,8 @@
  * @version 2.0.0
  */
 
+console.log('🏪 Loading Zustand stores...');
+
 // ✅ Import all stores
 import useAuthStore, { 
   useAuth, 
@@ -15,6 +17,8 @@ import useAuthStore, {
   authSelectors 
 } from './authStore.js';
 
+console.log('🔐 Auth store imported');
+
 import useTranslationStore, { 
   useTranslation, 
   useAuthTranslation,
@@ -23,6 +27,8 @@ import useTranslationStore, {
   useNavTranslation,
   SUPPORTED_LANGUAGES 
 } from './translationStore.js';
+
+console.log('🌐 Translation store imported');
 
 import useAppStore, { 
   useTheme, 
@@ -35,18 +41,29 @@ import useAppStore, {
   appSelectors 
 } from './appStore.js';
 
+console.log('🎛️ App store imported');
+
 // ✅ Store Initialization Manager
 class StoreManager {
   constructor() {
+    console.log('🏪 StoreManager constructor');
     this.initialized = false;
     this.initPromise = null;
   }
 
   // Initialize all stores
   async initialize() {
-    if (this.initialized) return true;
-    if (this.initPromise) return this.initPromise;
+    console.log('🏪 StoreManager.initialize() called');
+    if (this.initialized) {
+      console.log('🏪 Already initialized, returning true');
+      return true;
+    }
+    if (this.initPromise) {
+      console.log('🏪 Init already in progress, waiting...');
+      return this.initPromise;
+    }
 
+    console.log('🏪 Starting initialization...');
     this.initPromise = this._doInitialize();
     return this.initPromise;
   }

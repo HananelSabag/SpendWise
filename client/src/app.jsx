@@ -25,6 +25,13 @@ import {
   useTheme 
 } from './stores';
 
+console.log('🚀 App - stores imported:', { 
+  hasStoreProvider: !!StoreProvider, 
+  hasUseAuth: !!useAuth, 
+  hasUseTranslation: !!useTranslation, 
+  hasUseTheme: !!useTheme 
+});
+
 // NEW: Import unified API and performance monitoring
 import spendWiseAPI, { authAPI, adminAPI, performanceAPI } from './api';
 

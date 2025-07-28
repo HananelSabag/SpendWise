@@ -1,3 +1,5 @@
+console.log('📡 API/INDEX.JS - Starting API module loading...');
+
 /**
  * 🚀 UNIFIED SPENDWISE API - COMPLETE SYSTEM
  * Replaces utils/api.js (820 lines) + services/apiService.js (121 lines)
@@ -5,12 +7,24 @@
  * @version 2.0.0
  */
 
+console.log('📡 API/INDEX.JS - About to import API modules...');
 // ✅ Import all API modules
 import { api as apiClient, apiConfig } from './client.js';
+console.log('📡 API/INDEX.JS - API client imported');
+
 import authAPI from './auth.js';
+console.log('📡 API/INDEX.JS - Auth API imported');
+
 import adminAPI from './admin.js';
+console.log('📡 API/INDEX.JS - Admin API imported');
+
 import analyticsAPI from './analytics.js';
+console.log('📡 API/INDEX.JS - Analytics API imported');
+
 import performanceAPI from './performance.js';
+console.log('📡 API/INDEX.JS - Performance API imported');
+
+console.log('📡 API/INDEX.JS - All API modules imported successfully');
 
 // ✅ Transactions API Module - ALIGNED WITH SERVER ROUTES
 const transactionsAPI = {
@@ -685,7 +699,7 @@ export const api = {
   
   // Clear cache methods
   clearCache: apiClient.clearCache.bind(apiClient),
-  clearAllCache: apiClient.clearAllCache.bind(apiClient),
+  clearAllCache: () => apiClient.clearCache(), // Fixed: clearAllCache doesn't exist, use clearCache without pattern
   
   // 🔐 Authentication & Users (matches server/routes/userRoutes.js)
   auth: authAPI,
