@@ -218,12 +218,27 @@ try {
     app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
     console.log('✅ Analytics routes loaded');
   } catch (error) {
-    console.error('⚠️ Failed to load analytics routes:', error.message);
-    // Add fallback analytics endpoint
+    console.error('❌ CRITICAL: Analytics routes failed to load:', error.message);
+    console.error('❌ CRITICAL: Analytics route error stack:', error.stack);
+    
+    // ❌ NO FAKE FALLBACKS! Fail properly so we can fix the real issue
     app.get(`${API_VERSION}/analytics/dashboard/summary`, (req, res) => {
-      res.json({ success: false, error: { message: 'Analytics temporarily unavailable' } });
+      console.error('❌ CRITICAL: Analytics dashboard requested but routes failed to load!');
+      console.error('❌ CRITICAL: This should never happen in production!');
+      console.error('❌ CRITICAL: Check server logs and fix the analytics route loading issue!');
+      
+      res.status(503).json({ 
+        success: false, 
+        error: { 
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Analytics service temporarily unavailable. Please contact support.',
+          details: 'Server configuration error - analytics routes failed to load'
+        }
+      });
     });
-    console.log('✅ Analytics fallback routes added');
+    
+    console.error('❌ CRITICAL: Added ERROR fallback for analytics (this indicates a serious problem)');
+    console.error('❌ CRITICAL: Fix required: Check why ./routes/analyticsRoutes.js is failing to load');
   }
 } catch (error) {
   console.error('❌ API routes loading failed:', error.message);
@@ -236,12 +251,27 @@ try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
   console.log('✅ Onboarding routes loaded');
 } catch (error) {
-  console.error('⚠️ Failed to load onboarding routes:', error.message);
-  // Add fallback onboarding endpoint
+  console.error('❌ CRITICAL: Onboarding routes failed to load:', error.message);
+  console.error('❌ CRITICAL: Onboarding route error stack:', error.stack);
+  
+  // ❌ NO FAKE FALLBACKS! Fail properly so we can fix the real issue
   app.post(`${API_VERSION}/onboarding/complete`, (req, res) => {
-    res.json({ success: true, message: 'Onboarding completed (fallback mode)' });
+    console.error('❌ CRITICAL: Onboarding completion attempted but routes failed to load!');
+    console.error('❌ CRITICAL: This should never happen in production!');
+    console.error('❌ CRITICAL: Check server logs and fix the onboarding route loading issue!');
+    
+    res.status(503).json({ 
+      success: false, 
+      error: { 
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Onboarding service temporarily unavailable. Please contact support.',
+        details: 'Server configuration error - onboarding routes failed to load'
+      }
+    });
   });
-  console.log('✅ Onboarding fallback routes added');
+  
+  console.error('❌ CRITICAL: Added ERROR fallback for onboarding (this indicates a serious problem)');
+  console.error('❌ CRITICAL: Fix required: Check why ./routes/onboarding.js is failing to load');
 }
 
 // 404 handler - Fixed to prevent hanging requests

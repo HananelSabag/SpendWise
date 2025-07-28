@@ -48,14 +48,25 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
 
       console.log('✅ Onboarding completion successful:', response.data);
 
-      // Update auth store with completed onboarding status
+      // ✅ ENHANCED: Update auth store with completed onboarding status
       if (authActions.updateProfile) {
         try {
           await authActions.updateProfile({
             onboarding_completed: true
           });
+          console.log('✅ Auth store updated with onboarding completion');
         } catch (error) {
           console.warn('Failed to update auth store, but onboarding still completed:', error);
+        }
+      }
+
+      // ✅ ENHANCED: Force refresh user data from server
+      if (authActions.refreshUser || authActions.getProfile) {
+        try {
+          await (authActions.refreshUser || authActions.getProfile)();
+          console.log('✅ User data refreshed from server');
+        } catch (error) {
+          console.warn('Failed to refresh user data, but onboarding still completed:', error);
         }
       }
 

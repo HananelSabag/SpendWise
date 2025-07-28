@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const { authenticate } = require('../middleware/auth'); // ✅ FIXED: Use authenticate instead of auth
+const { auth } = require('../middleware/auth'); // ✅ FIXED: Use auth (not authenticate)
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
@@ -15,7 +15,7 @@ const logger = require('../utils/logger');
  * Mark user onboarding as complete
  */
 // ✅ DEBUG: Add GET route to test
-router.get('/complete', authenticate, async (req, res) => {
+router.get('/complete', auth, async (req, res) => {
   res.json({ 
     success: true,
     message: 'Onboarding routes are working! This should be a POST request, not GET!',
@@ -39,7 +39,7 @@ router.get('/test', async (req, res) => {
   });
 });
 
-router.post('/complete', authenticate, async (req, res) => {
+router.post('/complete', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -84,7 +84,7 @@ router.post('/complete', authenticate, async (req, res) => {
  * POST /api/onboarding/preferences
  * Update user preferences during onboarding
  */
-router.post('/preferences', authenticate, async (req, res) => {
+router.post('/preferences', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { 
@@ -161,7 +161,7 @@ router.post('/preferences', authenticate, async (req, res) => {
  * GET /api/onboarding/status
  * Get user onboarding status
  */
-router.get('/status', authenticate, async (req, res) => {
+router.get('/status', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findById(userId);
