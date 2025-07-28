@@ -48,19 +48,30 @@ export const CURRENCIES = {
   JPY: { code: 'JPY', symbol: '¥', name: 'Japanese Yen' }
 };
 
-// ✅ Date Format Configuration
+// ✅ Date Management State
 export const DATE_FORMATS = {
-  'MM/DD/YYYY': { format: 'MM/DD/YYYY', example: '12/31/2023', locale: 'en-US' },
-  'DD/MM/YYYY': { format: 'DD/MM/YYYY', example: '31/12/2023', locale: 'en-GB' },
-  'YYYY-MM-DD': { format: 'YYYY-MM-DD', example: '2023-12-31', locale: 'sv-SE' },
-  'DD.MM.YYYY': { format: 'DD.MM.YYYY', example: '31.12.2023', locale: 'de-DE' }
+  'MM/DD/YYYY': { locale: 'en-US', format: 'MM/DD/YYYY' },
+  'DD/MM/YYYY': { locale: 'en-GB', format: 'DD/MM/YYYY' },
+  'YYYY-MM-DD': { locale: 'sv-SE', format: 'YYYY-MM-DD' },
+  'DD.MM.YYYY': { locale: 'de-DE', format: 'DD.MM.YYYY' }
 };
 
-// ✅ App Store
+// ✅ Time Formats
+export const TIME_FORMATS = {
+  '12h': '12-hour',
+  '24h': '24-hour'
+};
+
+// ✅ App Store - Complete Application State Management
 export const useAppStore = create(
   subscribeWithSelector(
     persist(
       immer((set, get) => ({
+        // ✅ Date Management
+        selectedDate: new Date().toISOString().split('T')[0], // Today in YYYY-MM-DD format
+        dateFormat: 'MM/DD/YYYY',
+        timeFormat: '12h',
+
         // ✅ Theme State
         theme: 'auto',
         currentTheme: 'light', // Resolved theme (light/dark)
@@ -239,6 +250,35 @@ export const useAppStore = create(
           },
 
           // Date management
+          setSelectedDate: (date) => {
+            set((state) => {
+              state.selectedDate = date;
+            });
+          },
+
+          getDateForServer: (date) => {
+            // Convert date to server format (YYYY-MM-DD)
+            if (!date) {
+              return new Date().toISOString().split('T')[0];
+            }
+            
+            if (typeof date === 'string') {
+              // If already in YYYY-MM-DD format, return as is
+              if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return date;
+              }
+              // Otherwise convert to date and format
+              const dateObj = new Date(date);
+              return dateObj.toISOString().split('T')[0];
+            }
+            
+            if (date instanceof Date) {
+              return date.toISOString().split('T')[0];
+            }
+            
+            return new Date().toISOString().split('T')[0];
+          },
+
           setDateFormat: (format) => {
             if (!DATE_FORMATS[format]) return false;
             
