@@ -378,7 +378,8 @@ export const authAPI = {
           isSuperAdmin: (user.role || 'user') === 'super_admin',
           loginMethod: 'google'
         },
-        token
+        token,
+        isNewUser: false // Existing user logic
       };
     } catch (error) {
       console.error('🔍 DEBUG: Google OAuth error details:', {

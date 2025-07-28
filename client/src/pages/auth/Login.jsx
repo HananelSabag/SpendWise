@@ -119,16 +119,10 @@ const Login = () => {
           message: t('googleLoginSuccess')
         });
         
-        // ✅ Check if user needs onboarding
-        if (!user.onboardingCompleted && !user.onboarding_completed) {
-          console.log('🚀 Redirecting to onboarding for new Google user');
-          navigate('/onboarding', { replace: true });
-        } else {
-          // Navigate to intended page or dashboard
-          const from = location.state?.from?.pathname || '/';
-          console.log('🚀 Redirecting authenticated Google user to:', from);
-          navigate(from, { replace: true });
-        }
+        // ✅ Navigate to dashboard - onboarding will show as popup if needed
+        const from = location.state?.from?.pathname || '/';
+        console.log('🚀 Redirecting authenticated Google user to:', from);
+        navigate(from, { replace: true });
       } else {
         setErrors({ 
           general: result.error?.message || t('googleLoginFailed')

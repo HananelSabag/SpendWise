@@ -245,9 +245,18 @@ export const useAuthStore = create(
                 state.error = null;
               });
 
+              // ✅ Force redirect to login page after logout
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+              }
+
               return { success: true };
             } catch (error) {
               console.error('Logout failed:', error);
+              // Still redirect even if logout fails
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+              }
               return { success: false, error: error.message };
             }
           },

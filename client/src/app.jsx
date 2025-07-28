@@ -16,6 +16,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
+import NavigationFix from './components/common/NavigationFix';
 
 // ✅ NEW: Import Zustand stores (replaces ALL Context providers!)
 import { 
@@ -231,8 +232,11 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
     );
   }
   
-  // Not authenticated
+  // Not authenticated - redirect to login page
   if (!isAuthenticated) {
+    // Clear any stored navigation state
+    sessionStorage.removeItem('lastVisitedPage');
+    sessionStorage.removeItem('lastAdminPage');
     return <Navigate to="/login" replace />;
   }
   
@@ -451,6 +455,9 @@ const AppContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Navigation Fix Component */}
+      <NavigationFix />
+      
       {isAuthenticated && <Header />}
       
       <main className="flex-grow">
@@ -466,7 +473,27 @@ const AppContent = () => {
             ) : <SmartRedirect />
           } />
           
+          <Route path="/auth/login" element={
+            !isAuthenticated ? (
+              <RouteErrorBoundary routeName="Login">
+                <Suspense fallback={<RouteLoadingFallback route="login" />}>
+                  <Login />
+                </Suspense>
+              </RouteErrorBoundary>
+            ) : <SmartRedirect />
+          } />
+          
           <Route path="/register" element={
+            !isAuthenticated ? (
+              <RouteErrorBoundary routeName="Register">
+                <Suspense fallback={<RouteLoadingFallback route="registration" />}>
+                  <Register />
+                </Suspense>
+              </RouteErrorBoundary>
+            ) : <SmartRedirect />
+          } />
+          
+          <Route path="/auth/register" element={
             !isAuthenticated ? (
               <RouteErrorBoundary routeName="Register">
                 <Suspense fallback={<RouteLoadingFallback route="registration" />}>
