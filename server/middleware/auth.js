@@ -260,13 +260,49 @@ const clearUserCache = (userId) => {
 };
 
 /**
+ * 🔑 Generate JWT Tokens
+ * Creates access and refresh tokens for user
+ */
+const generateTokens = (user) => {
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role || 'user'
+  };
+
+  const accessToken = jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' } // 15 minutes
+  );
+
+  const refreshToken = jwt.sign(
+    payload,
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    { expiresIn: '7d' } // 7 days
+  );
+
+  return { accessToken, refreshToken };
+};
+
+/**
+ * 🔍 Verify JWT Token
+ * Verifies and decodes JWT token
+ */
+const verifyToken = (token, secret = process.env.JWT_SECRET) => {
+  try {
+    return jwt.verify(token, secret);
+  } catch (error) {
+    throw new Error('Invalid token');
+  }
+};
+
+/**
  * 📊 Get auth cache statistics
  */
 const getAuthCacheStats = () => {
   return {
     size: userCache.size,
-    max: userCache.max,
-    ttl: userCache.ttl,
     calculatedSize: userCache.calculatedSize
   };
 };
@@ -275,5 +311,7 @@ module.exports = {
   auth,
   optionalAuth,
   clearUserCache,
-  getAuthCacheStats
+  getAuthCacheStats,
+  generateTokens,
+  verifyToken
 };

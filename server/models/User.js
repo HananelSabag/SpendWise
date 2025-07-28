@@ -255,6 +255,10 @@ class User {
       }
 
       // Verify password
+      if (!user.password_hash) {
+        throw new Error('Password not set for this account');
+      }
+      
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
       if (!isValidPassword) {
