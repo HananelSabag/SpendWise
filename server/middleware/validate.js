@@ -638,23 +638,19 @@ const validate = {
       ));
     }
 
-    if (!email) {
-      return res.status(400).json(createValidationError(
-        'MISSING_EMAIL',
-        'Email is required'
-      ));
-    }
-
-    // Validate email format
-    if (!validators.email(email)) {
+    // ✅ Email is not strictly required - server can extract from idToken
+    // Only validate email format if provided
+    if (email && !validators.email(email)) {
       return res.status(400).json(createValidationError(
         'INVALID_EMAIL',
         'Invalid email format'
       ));
     }
 
-    // Normalize email
-    req.body.email = email.toLowerCase().trim();
+    // Normalize email if provided
+    if (email) {
+      req.body.email = email.toLowerCase().trim();
+    }
 
     // Validate ID token format (basic check)
     if (typeof idToken !== 'string' || idToken.length < 50) {

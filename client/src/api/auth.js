@@ -279,6 +279,9 @@ export const authAPI = {
   // ✅ Google OAuth Login
   async googleLogin() {
     try {
+      console.log('🔍 DEBUG: Starting Google OAuth flow...');
+      console.log('🔍 DEBUG: Google Client ID:', GOOGLE_CONFIG.CLIENT_ID);
+      
       // Initialize Google OAuth if needed
       if (!googleOAuth.isInitialized) {
         await googleOAuth.initialize();
@@ -286,6 +289,9 @@ export const authAPI = {
       
       // Get Google credential
       const credential = await googleOAuth.signIn();
+      console.log('🔍 DEBUG: Raw Google credential:', credential);
+      console.log('🔍 DEBUG: Credential type:', typeof credential);
+      console.log('🔍 DEBUG: Credential length:', credential?.length);
       
       // ✅ Extract user info from JWT credential
       let userInfo = { email: '', name: '', picture: '' };
@@ -293,29 +299,36 @@ export const authAPI = {
       try {
         // If it's a JWT token (from One Tap), decode it
         if (typeof credential === 'string' && credential.includes('.')) {
+          console.log('🔍 DEBUG: Attempting to decode JWT...');
           const decoded = jwtDecode(credential);
+          console.log('🔍 DEBUG: Decoded JWT payload:', decoded);
           userInfo = {
             email: decoded.email || '',
             name: decoded.name || '',
             picture: decoded.picture || ''
           };
-          console.log('🔍 DEBUG: Decoded Google JWT:', userInfo);
+          console.log('🔍 DEBUG: Extracted user info:', userInfo);
         } else {
           // If it's an access token (from popup), we'll let server extract from idToken
-          console.log('🔍 DEBUG: Google access token received');
+          console.log('🔍 DEBUG: Not a JWT token, might be access token');
         }
       } catch (decodeError) {
-        console.error('Failed to decode Google credential:', decodeError);
+        console.error('🔍 DEBUG: Failed to decode credential:', decodeError);
         // Continue with empty userInfo, let server handle it
       }
       
-      // Send credential to our backend with extracted user info
-      const response = await api.client.post('/users/auth/google', {
+      // ✅ Final payload to send
+      const payload = {
         idToken: credential,
         email: userInfo.email,
         name: userInfo.name,
         picture: userInfo.picture
-      });
+      };
+      
+      console.log('🔍 DEBUG: Payload being sent to server:', payload);
+      
+      // Send credential to our backend with extracted user info
+      const response = await api.client.post('/users/auth/google', payload);
 
       const { user, token } = response.data;
       
@@ -337,7 +350,11 @@ export const authAPI = {
         token
       };
     } catch (error) {
-      console.error('🔍 DEBUG: Google OAuth error:', error);
+      console.error('🔍 DEBUG: Google OAuth error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       return {
         success: false,
         error: {

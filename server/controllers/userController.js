@@ -225,12 +225,40 @@ const userController = {
    */
   googleAuth: asyncHandler(async (req, res) => {
     const start = Date.now();
-    const { idToken, email, name, picture } = req.body;
+    let { idToken, email, name, picture } = req.body;
 
-    if (!idToken || !email) {
+    if (!idToken) {
       throw { 
         ...errorCodes.VALIDATION_ERROR, 
-        details: 'Google ID token and email are required' 
+        details: 'Google ID token is required' 
+      };
+    }
+
+    // ✅ Extract email from JWT if not provided
+    if (!email) {
+      try {
+        // Basic JWT decode (just payload, not verification)
+        const payloadBase64 = idToken.split('.')[1];
+        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+        
+        email = payload.email;
+        name = name || payload.name;
+        picture = picture || payload.picture;
+        
+        console.log('🔍 DEBUG: Extracted from JWT:', { email, name, picture });
+      } catch (decodeError) {
+        console.error('🔍 DEBUG: Failed to decode idToken:', decodeError);
+        throw { 
+          ...errorCodes.VALIDATION_ERROR, 
+          details: 'Invalid Google ID token or missing email' 
+        };
+      }
+    }
+
+    if (!email) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: 'Email is required (from idToken or request body)' 
       };
     }
 
