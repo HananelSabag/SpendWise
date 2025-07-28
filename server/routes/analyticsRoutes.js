@@ -1,18 +1,18 @@
 /**
- * 📊 ANALYTICS ROUTES - Dashboard Analytics & User Insights
- * Provides analytics endpoints for dashboard and user data
+ * 📊 ANALYTICS ROUTES - Dashboard Analytics & User Insights  
+ * Fixed auth middleware import that was causing route loading failures
  * @module routes/analyticsRoutes
  */
 
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { auth } = require('../middleware/auth'); // ✅ FIXED: Use auth (not authenticate)
 const transactionController = require('../controllers/transactionController');
 
-// ✅ Dashboard Analytics Routes
-router.get('/dashboard/summary', authenticate, transactionController.getAnalyticsSummary);
+// ✅ Dashboard Analytics Routes (Primary route used by dashboard)
+router.get('/dashboard/summary', auth, transactionController.getAnalyticsSummary);
 
-// ✅ User Analytics Routes  
-router.get('/user', authenticate, transactionController.getUserAnalytics);
+// ✅ User Analytics Routes (Used by client analytics API)
+router.get('/user', auth, transactionController.getUserAnalytics);
 
 module.exports = router; 
