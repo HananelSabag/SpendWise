@@ -60,4 +60,19 @@ export const api = {
 // Set default configuration
 api.setBaseURL(import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1');
 
-export default api; 
+// Default export for backward compatibility
+const spendWiseAPI = api;
+export default spendWiseAPI;
+
+// Individual module exports for backward compatibility
+export { authAPI };
+export { adminAPI };
+export { analyticsAPI };
+export { performanceAPI };
+export { apiClient };
+
+// Additional backward compatibility exports
+export const auth = authAPI;
+export const admin = adminAPI;
+export const analytics = analyticsAPI;
+export const performance = performanceAPI; 

@@ -14,7 +14,6 @@ import './index.css';
 
 import { queryClient } from './config/queryClient';
 import { api } from './api';
-import { initializePerformanceMonitoring } from './utils/performanceOptimizer';
 
 /**
  * 🚨 Application Error Fallback
@@ -54,12 +53,6 @@ function ErrorFallback({ error, resetErrorBoundary }) {
  * 🎯 Main SpendWise Application
  */
 function SpendWiseApp() {
-  React.useEffect(() => {
-    // Initialize performance monitoring
-    const cleanup = initializePerformanceMonitoring();
-    return cleanup;
-  }, []);
-
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
