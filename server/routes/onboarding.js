@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const { User } = require('../models/User'); // ✅ FIXED: Destructure User from exports
 const { auth } = require('../middleware/auth'); // ✅ FIXED: Use auth (not authenticate)
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');

@@ -4,7 +4,7 @@
  * @module controllers/exportController
  */
 
-const User = require('../models/User');
+const { User } = require('../models/User'); // ✅ FIXED: Destructure User from exports
 const { asyncHandler } = require('../middleware/errorHandler');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
