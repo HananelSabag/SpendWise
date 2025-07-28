@@ -259,7 +259,7 @@ class User {
         throw new Error('This account uses Google Sign-In. Please use "Continue with Google" to login.');
       }
       
-      // Verify password
+      // Verify password for local accounts
       if (!user.password_hash) {
         throw new Error('Password not set for this account. Please reset your password or contact support.');
       }
