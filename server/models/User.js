@@ -25,14 +25,15 @@ class UserCache {
   }
 
   static set(key, data) {
-    // Simple size limit
+    // ✅ Cleanup old entries if cache is getting large
     if (this.cache.size >= 100) {
       const firstKey = this.cache.keys().next().value;
       this.cache.delete(firstKey);
     }
-    
+
+    // ✅ Store a DEEP COPY to prevent reference corruption
     this.cache.set(key, {
-      data,
+      data: JSON.parse(JSON.stringify(data)), // Deep copy via JSON
       timestamp: Date.now()
     });
   }
