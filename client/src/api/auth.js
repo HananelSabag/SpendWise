@@ -287,12 +287,34 @@ export const authAPI = {
       // Get Google credential
       const credential = await googleOAuth.signIn();
       
-      // Send credential to our backend  
+      // ✅ Extract user info from JWT credential
+      let userInfo = { email: '', name: '', picture: '' };
+      
+      try {
+        // If it's a JWT token (from One Tap), decode it
+        if (typeof credential === 'string' && credential.includes('.')) {
+          const decoded = jwtDecode(credential);
+          userInfo = {
+            email: decoded.email || '',
+            name: decoded.name || '',
+            picture: decoded.picture || ''
+          };
+          console.log('🔍 DEBUG: Decoded Google JWT:', userInfo);
+        } else {
+          // If it's an access token (from popup), we'll let server extract from idToken
+          console.log('🔍 DEBUG: Google access token received');
+        }
+      } catch (decodeError) {
+        console.error('Failed to decode Google credential:', decodeError);
+        // Continue with empty userInfo, let server handle it
+      }
+      
+      // Send credential to our backend with extracted user info
       const response = await api.client.post('/users/auth/google', {
         idToken: credential,
-        email: '', // Will be extracted from token on server
-        name: '',  // Will be extracted from token on server  
-        picture: '' // Will be extracted from token on server
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture
       });
 
       const { user, token } = response.data;
@@ -315,10 +337,11 @@ export const authAPI = {
         token
       };
     } catch (error) {
+      console.error('🔍 DEBUG: Google OAuth error:', error);
       return {
         success: false,
         error: {
-          message: error.message || 'Google Sign-In failed',
+          message: error.response?.data?.error?.message || error.message || 'Google Sign-In failed',
           code: 'GOOGLE_AUTH_ERROR'
         }
       };
