@@ -65,32 +65,31 @@ const UserMenu = ({
     }
   ];
 
-  // ✅ Admin menu items (if user is admin)
+  // ✅ Admin menu items (only for admin users)
   const adminMenuItems = user?.isAdmin ? [
     {
-      name: t('nav.adminDashboard'),
+      name: t('nav.admin'),
       href: '/admin',
       icon: Shield,
-      description: t('nav.adminDashboardDesc'),
-      divider: true
+      description: 'Admin Dashboard'
     },
     {
       name: t('nav.userManagement'),
       href: '/admin/users',
       icon: Users,
-      description: t('nav.userManagementDesc')
+      description: 'Manage Users'
     },
     {
-      name: t('nav.analytics'),
-      href: '/admin/analytics',
+      name: t('nav.systemStats'),
+      href: '/admin/stats',
       icon: BarChart3,
-      description: t('nav.analyticsDesc')
+      description: 'System Statistics'
     },
     {
-      name: t('nav.systemHealth'),
-      href: '/admin/system',
+      name: t('nav.activityLog'),
+      href: '/admin/activity',
       icon: Activity,
-      description: t('nav.systemHealthDesc')
+      description: 'Activity Log'
     }
   ] : [];
 
@@ -136,13 +135,13 @@ const UserMenu = ({
       >
         <Avatar
           src={user?.avatar || user?.profile_picture_url || user?.profilePicture}
-          alt={user?.username || user?.name || user?.email}
+          alt={user?.name || user?.email}
           size="sm"
-          fallback={user?.username?.charAt(0) || user?.name?.charAt(0) || user?.email?.charAt(0)}
+          fallback={user?.name?.charAt(0) || user?.username?.charAt(0) || user?.email?.charAt(0)}
         />
         <div className="hidden lg:block text-left">
           <p className="text-sm font-medium text-gray-900 dark:text-white">
-            {user?.username || user?.name || user?.displayName || t('common.user')}
+            {user?.name || user?.username || t('common.user')}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {user?.email}
@@ -180,13 +179,13 @@ const UserMenu = ({
                 <div className="flex items-center space-x-3 pb-4 border-b border-gray-200 dark:border-gray-700">
                   <Avatar
                     src={user?.avatar}
-                    alt={user?.username || user?.email}
+                    alt={user?.name || user?.email}
                     size="md"
-                    fallback={user?.username?.charAt(0) || user?.email?.charAt(0)}
+                    fallback={user?.name?.charAt(0) || user?.username?.charAt(0) || user?.email?.charAt(0)}
                   />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {user?.username || t('common.user')}
+                      {user?.name || user?.username || t('common.user')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {user?.email}

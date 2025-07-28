@@ -125,11 +125,7 @@ export const PrivacyPolicyModal = createLazyComponent(
   'PrivacyPolicyModal'
 );
 
-// ✅ Performance Stats
-console.log('🚀 Lazy Components System Initialized');
-console.log('📦 Components split into:', {
-  pages: 11,
-  features: 4,
-  utilities: 3,
-  total: 18
-}); 
+// Initialize all lazy components
+export const initializeLazyComponents = () => {
+  // Removed noisy initialization logging
+}; 

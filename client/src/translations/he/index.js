@@ -15,6 +15,12 @@ import onboarding from './onboarding.js';
 import transactions from './transactions.js';
 import dashboard from './dashboard.js';
 import categories from './categories.js';
+import preferences from './preferences.js';
+
+// UI & Legal translations
+import footer from './footer.js';
+import accessibility from './accessibility.js';
+import legal from './legal.js';
 
 // Export all translations
 export default {
@@ -25,5 +31,9 @@ export default {
   onboarding,
   transactions,
   dashboard,
-  categories
+  categories,
+  preferences,
+  footer,
+  accessibility,
+  legal
 }; 

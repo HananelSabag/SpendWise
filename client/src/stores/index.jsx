@@ -5,8 +5,6 @@
  * @version 2.0.0
  */
 
-console.log('🏪 Loading Zustand stores...');
-
 // ✅ Import all stores
 import useAuthStore, { 
   useAuth, 
@@ -17,8 +15,6 @@ import useAuthStore, {
   authSelectors 
 } from './authStore.js';
 
-console.log('🔐 Auth store imported');
-
 import useTranslationStore, { 
   useTranslation, 
   useAuthTranslation,
@@ -27,8 +23,6 @@ import useTranslationStore, {
   useNavTranslation,
   SUPPORTED_LANGUAGES 
 } from './translationStore.js';
-
-console.log('🌐 Translation store imported');
 
 import useAppStore, { 
   useTheme, 
@@ -40,8 +34,6 @@ import useAppStore, {
   DATE_FORMATS,
   appSelectors 
 } from './appStore.js';
-
-console.log('🎛️ App store imported');
 
 // ✅ Store Initialization Manager
 class StoreManager {

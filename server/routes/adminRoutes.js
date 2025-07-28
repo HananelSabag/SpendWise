@@ -12,6 +12,7 @@ const adminController = require('../controllers/adminController');
 const { securityMiddleware } = require('../middleware/security');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const logger = require('../utils/logger');
+const db = require('../config/db'); // Fixed db import path
 
 /**
  * 🛡️ Admin Authorization Middleware
@@ -61,7 +62,74 @@ const superAdminAuth = (req, res, next) => {
   next();
 };
 
-// Apply authentication and basic security to all admin routes
+/**
+ * @route   POST /api/v1/admin/bootstrap
+ * @desc    Bootstrap the first super admin (only if no super admin exists)
+ * @access  Public (but only works if no super admin exists)
+ */
+router.post('/bootstrap', async (req, res) => {
+  try {
+    const { email, secret } = req.body;
+    
+    // Simple secret check (you should change this)
+    if (secret !== 'spendwise_bootstrap_2025') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'INVALID_SECRET', message: 'Invalid bootstrap secret' }
+      });
+    }
+    
+    // Check if any super_admin already exists
+    const existingSuper = await db.query(
+      `SELECT id FROM users WHERE role = 'super_admin' LIMIT 1`,
+      [],
+      'check_existing_super_admin'
+    );
+    
+    if (existingSuper.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'SUPER_ADMIN_EXISTS', message: 'Super admin already exists' }
+      });
+    }
+    
+    // Update the specified user to super_admin
+    const result = await db.query(
+      `UPDATE users SET role = 'super_admin' WHERE email = $1 RETURNING id, email, username, role`,
+      [email.toLowerCase()],
+      'bootstrap_super_admin'
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found with that email' }
+      });
+    }
+    
+    logger.info('🚀 Super admin bootstrapped', {
+      email,
+      userId: result.rows[0].id
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Super admin bootstrapped successfully',
+        user: result.rows[0]
+      }
+    });
+    
+  } catch (error) {
+    logger.error('❌ Bootstrap error', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: { code: 'BOOTSTRAP_ERROR', message: 'Bootstrap failed' }
+    });
+  }
+});
+
+// Apply authentication and basic security to all admin routes (except bootstrap)
 router.use(auth);
 router.use(adminAuth);
 router.use(securityMiddleware.api);

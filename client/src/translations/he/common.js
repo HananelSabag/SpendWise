@@ -4,150 +4,94 @@
  */
 
 export default {
-  // אפליקציה
+  // Application name
   appName: 'SpendWise',
+
+  // Common user interface
+  user: 'משתמש',
+  admin: 'מנהל',
+  profilePicture: 'תמונת פרופיל',
   
-  // פעולות בסיסיות
+  // System status
   loading: 'טוען...',
-  error: 'שגיאה',
-  success: 'הצלחה',
-  warning: 'אזהרה',
-  info: 'מידע',
+  refresh: 'רענן',
+  refreshed: 'רוענן בהצלחה',
+  refreshError: 'שגיאה ברענון הנתונים',
   
-  // פעולות CRUD
-  save: 'שמור',
-  cancel: 'בטל',
-  delete: 'מחק',
-  edit: 'ערוך',
-  add: 'הוסף',
-  create: 'צור',
-  update: 'עדכן',
-  remove: 'הסר',
-  
-  // פעולות מודל/דיאלוג
-  close: 'סגור',
-  ok: 'אישור',
-  yes: 'כן',
-  no: 'לא',
-  confirm: 'אשר',
-  dismiss: 'התעלם',
-  
-  // ניווט ותפריטים
+  // Theme and UI
+  lightMode: 'מצב בהיר',
+  darkMode: 'מצב כהה',
+  lightTheme: 'בהיר',
+  darkTheme: 'כהה',
+  themeChanged: 'ערכת הנושא שונתה ל{{theme}}',
+  languageChanged: 'השפה שונתה בהצלחה',
+  currencyChanged: 'המטבע שונה ל{{currency}}',
+  settings: 'הגדרות',
+
+  // Navigation
   categories: 'קטגוריות',
-  manageCategoriesDesc: 'נהלו את הקטגוריות שלכם',
+  manageCategoriesDesc: 'ניהול קטגוריות הוצאות והכנסות',
   exchange: 'המרת מטבע',
-  currencyExchangeDesc: 'המירו בין מטבעות שונים',
-  recurring: 'חוזר',
-  recurringTransactionsDesc: 'עסקאות חוזרות',
+  currencyExchangeDesc: 'המרת מטבעות בזמן אמת',
+  recurring: 'תשלומים קבועים',
+  recurringTransactionsDesc: 'ניהול תשלומים חוזרים',
   openMenu: 'פתח תפריט',
-  showPassword: 'הצג סיסמה',
   calculator: 'מחשבון',
-  quickCalculatorDesc: 'מחשבון מהיר',
+  quickCalculatorDesc: 'מחשבון מהיר לחישובים',
   quickPanels: 'פאנלים מהירים',
-  
-  // נגישות
-  accessibility: {
-    theme: {
-      auto: 'אוטומטי'
-    },
-    contrast: {
-      normal: 'רגיל',
-      high: 'גבוה', 
-      maximum: 'מקסימלי'
-    }
+
+  // Categories
+  categories: {
+    food: 'מזון ומשקאות',
+    income: 'הכנסות',
+    transport: 'תחבורה',
+    entertainment: 'בילויים',
+    bills: 'חשבונות',
+    shopping: 'קניות',
+    health: 'בריאות',
+    education: 'חינוך',
+    travel: 'נסיעות',
+    other: 'אחר'
   },
-  
-  // ניווט
-  back: 'חזור',
-  next: 'הבא',
-  previous: 'הקודם',
-  continue: 'המשך',
-  finish: 'סיים',
-  skip: 'דלג',
-  profile: 'פרופיל',
-  complete: 'השלם',
-  
-  // פעולות טפסים
-  submit: 'שלח',
-  reset: 'איפוס',
-  clear: 'נקה',
-  apply: 'החל',
-  
-  // חיפוש ומסננים
-  search: 'חפש',
-  filter: 'סנן',
-  sort: 'מיין',
-  refresh: 'רענן',
-  reload: 'טען מחדש',
-  
-  // פעולות נתונים
-  export: 'ייצא',
-  import: 'ייבא',
-  download: 'הורד',
-  upload: 'העלה',
-  
-  // סטטוס
-  active: 'פעיל',
-  inactive: 'לא פעיל',
-  enabled: 'מופעל',
-  disabled: 'מושבת',
-  online: 'מחובר',
-  offline: 'מנותק',
-  
-  // זמן
-  today: 'היום',
-  yesterday: 'אתמול',
-  tomorrow: 'מחר',
-  thisWeek: 'השבוע',
-  thisMonth: 'החודש',
-  thisYear: 'השנה',
-  
-  // תוויות נפוצות
-  name: 'שם',
-  email: 'אימייל',
-  password: 'סיסמה',
-  username: 'שם משתמש',
-  phone: 'טלפון',
-  address: 'כתובת',
-  description: 'תיאור',
-  amount: 'סכום',
-  date: 'תאריך',
-  time: 'שעה',
-  category: 'קטגוריה',
-  type: 'סוג',
-  status: 'סטטוס',
-  
-  // יחידות
-  currency: 'מטבע',
-  percent: 'אחוז',
-  quantity: 'כמות',
-  total: 'סך הכל',
-  subtotal: 'סכום ביניים',
-  
-  // הודעות
-  noData: 'אין נתונים זמינים',
-  noResults: 'לא נמצאו תוצאות',
-  noChanges: 'לא זוהו שינויים',
-  saved: 'נשמר בהצלחה',
-  updated: 'עודכן בהצלחה',
-  deleted: 'נמחק בהצלחה',
-  created: 'נוצר בהצלחה',
-  
-  // ניסיון חוזר/שחזור שגיאות
-  retry: 'נסה שוב',
-  tryAgain: 'נסה שוב',
-  reload: 'טען מחדש',
-  refresh: 'רענן',
-  
-  // אישור
-  areYouSure: 'האם אתה בטוח?',
-  irreversible: 'פעולה זו לא ניתנת לביטול',
-  confirmDelete: 'האם אתה בטוח שברצונך למחוק פריט זה?',
-  
-  // מצבי טעינה
-  loadingData: 'טוען נתונים...',
-  savingChanges: 'שומר שינויים...',
-  processing: 'מעבד...',
-  uploading: 'מעלה...',
-  downloading: 'מוריד...'
+
+  // Common transactions
+  transactions: {
+    groceries: 'קניות בסופר',
+    salary: 'משכורת',
+    fuel: 'דלק לרכב',
+    coffee: 'קפה',
+    electricity: 'חשמל',
+    water: 'מים',
+    gas: 'גז',
+    internet: 'אינטרנט',
+    phone: 'טלפון',
+    rent: 'שכר דירה'
+  },
+
+  // Accessibility themes
+  themes: {
+    light: 'בהיר',
+    dark: 'כהה'
+  },
+
+  // Font sizes
+  fontSizes: {
+    extraSmall: 'קטן מאוד',
+    small: 'קטן',
+    medium: 'בינוני',
+    large: 'גדול',
+    extraLarge: 'גדול מאוד',
+    huge: 'ענק'
+  },
+
+  // Common actions
+  actions: {
+    close: 'סגור',
+    cancel: 'ביטול',
+    save: 'שמור',
+    delete: 'מחק',
+    edit: 'ערוך',
+    view: 'צפה',
+    back: 'חזור'
+  }
 }; 

@@ -1,13 +1,11 @@
 /**
  * 🎚️ SLIDER COMPONENT
  * Range slider for numeric values
- * Features: Accessible, Smooth animations, Mobile-friendly
+ * Features: Accessible, Smooth dragging, Multi-range support
  */
 
 import React, { useCallback } from 'react';
 import { cn } from '../../utils/helpers';
-
-console.log('🎚️ Slider component loading...');
 
 const Slider = ({
   value = [0],
@@ -16,51 +14,32 @@ const Slider = ({
   max = 100,
   step = 1,
   disabled = false,
-  className,
+  orientation = 'horizontal',
+  className = '',
+  trackClassName = '',
+  rangeClassName = '',
+  thumbClassName = '',
   ...props
 }) => {
-  console.log('🎚️ Slider render:', { value, min, max, step, disabled, hasOnChange: !!onValueChange });
-
   const currentValue = Array.isArray(value) ? value[0] : value;
   const percentage = ((currentValue - min) / (max - min)) * 100;
 
   const handleChange = useCallback((e) => {
-    console.log('🎚️ Slider handleChange:', { disabled, hasOnChange: !!onValueChange, eventType: e?.type });
     if (!disabled && onValueChange) {
-      try {
-        const newValue = parseFloat(e.target.value);
-        console.log('🎚️ Slider calling onValueChange with:', newValue);
-        onValueChange([newValue]);
-      } catch (error) {
-        console.error('🎚️ Slider onValueChange error:', error);
-      }
+      const newValue = parseInt(e.target.value);
+      onValueChange([newValue]);
     }
   }, [disabled, onValueChange]);
 
   return (
-    <div className={cn('relative w-full', className)}>
-      {/* Track */}
-      <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
-        {/* Progress */}
-        <div 
-          className="absolute h-2 bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-200"
-          style={{ width: `${percentage}%` }}
-        />
-        
-        {/* Thumb */}
-        <div 
-          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 transition-all duration-200"
-          style={{ left: `${percentage}%` }}
-        >
-          <div className={cn(
-            'w-4 h-4 bg-white border-2 border-blue-600 dark:border-blue-500 rounded-full shadow-lg',
-            'hover:scale-110 focus:scale-110 transition-transform duration-200',
-            disabled && 'opacity-50 cursor-not-allowed'
-          )} />
-        </div>
-      </div>
-
-      {/* Hidden input for accessibility and functionality */}
+    <div
+      className={cn(
+        'relative flex items-center w-full',
+        disabled && 'opacity-50 cursor-not-allowed',
+        className
+      )}
+      {...props}
+    >
       <input
         type="range"
         min={min}
@@ -69,11 +48,16 @@ const Slider = ({
         value={currentValue}
         onChange={handleChange}
         disabled={disabled}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={currentValue}
-        {...props}
+        className={cn(
+          'w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700',
+          'slider-thumb:appearance-none slider-thumb:h-4 slider-thumb:w-4 slider-thumb:rounded-full slider-thumb:bg-primary-600 slider-thumb:cursor-pointer',
+          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+          disabled && 'cursor-not-allowed',
+          trackClassName
+        )}
+        style={{
+          background: `linear-gradient(to right, rgb(59 130 246) 0%, rgb(59 130 246) ${percentage}%, rgb(229 231 235) ${percentage}%, rgb(229 231 235) 100%)`
+        }}
       />
     </div>
   );

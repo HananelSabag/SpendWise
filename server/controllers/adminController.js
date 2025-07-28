@@ -133,10 +133,10 @@ class AdminController {
   static manageUser = asyncHandler(async (req, res) => {
     const adminId = req.user.id;
     const { userId } = req.params;
-    const { action, reason, expiresHours } = req.body;
+    const { action, reason, expiresHours, role } = req.body;
     
     // Validate action
-    const validActions = ['block', 'unblock', 'delete', 'verify_email'];
+    const validActions = ['block', 'unblock', 'delete', 'verify_email', 'change_role'];
     if (!validActions.includes(action)) {
       return res.status(400).json({
         success: false,
@@ -157,16 +157,64 @@ class AdminController {
         }
       });
     }
+
+    // Validate role for change_role action
+    if (action === 'change_role') {
+      const validRoles = ['user', 'admin', 'super_admin'];
+      if (!role || !validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_ROLE',
+            message: `Role is required and must be one of: ${validRoles.join(', ')}`
+          }
+        });
+      }
+      
+      // Only super_admin can promote to admin/super_admin
+      if (['admin', 'super_admin'].includes(role) && req.user.role !== 'super_admin') {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_PRIVILEGES',
+            message: 'Only super admin can promote users to admin roles'
+          }
+        });
+      }
+    }
     
     try {
-      // Execute admin action
-      const result = await db.query(
-        'SELECT admin_manage_user($1, $2, $3, $4, $5) as result',
-        [adminId, parseInt(userId), action, reason, expiresHours ? parseInt(expiresHours) : null],
-        'admin_manage_user'
-      );
-      
-      const actionResult = result.rows[0]?.result;
+      let result;
+      let actionResult;
+
+      if (action === 'change_role') {
+        // Handle role change separately
+        result = await db.query(
+          `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, username, role`,
+          [role, parseInt(userId)],
+          'admin_change_user_role'
+        );
+        
+        if (result.rows.length === 0) {
+          throw new Error('User not found');
+        }
+        
+        actionResult = {
+          action: 'role_changed',
+          user: result.rows[0],
+          oldRole: 'unknown', // We don't track previous role in this simple implementation
+          newRole: role
+        };
+      } else {
+        // Execute standard admin action
+        result = await db.query(
+          'SELECT admin_manage_user($1, $2, $3, $4, $5) as result',
+          [adminId, parseInt(userId), action, reason, expiresHours ? parseInt(expiresHours) : null],
+          'admin_manage_user'
+        );
+        
+        actionResult = result.rows[0]?.result;
+      }
       
       logger.info(`🔒 Admin user management: ${action}`, {
         adminId,

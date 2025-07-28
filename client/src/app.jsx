@@ -395,7 +395,14 @@ const RouteErrorBoundary = ({ children, routeName }) => {
       onError={handleError}
       onReset={() => {
         // Clear route-specific caches on reset
-        spendWiseAPI.utils.clearAllCaches();
+        try {
+          if (spendWiseAPI?.utils?.clearAllCaches) {
+            spendWiseAPI.utils.clearAllCaches();
+          }
+        } catch (error) {
+          console.warn('Could not clear caches:', error);
+        }
+        window.location.reload();
       }}
     >
       {children}

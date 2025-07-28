@@ -204,7 +204,7 @@ export const useTranslationStore = create(
 
           // Load core translation modules (most commonly used)
           loadCoreModules: async () => {
-            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding'];
+            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences'];
             const { currentLanguage } = get();
             
             const loadPromises = coreModules.map(module => 
@@ -250,13 +250,11 @@ export const useTranslationStore = create(
 
             try {
               // ✅ DEBUG: Log import attempt
-              console.log(`🔍 Attempting to import: ../translations/${lang}/${module}.js`);
-              
-              // Dynamic import of translation module
+              // Removed noisy import logging
               const translations = await import(`../translations/${lang}/${module}.js`);
               const moduleData = translations.default || translations;
               
-              console.log(`✅ Successfully loaded: ${moduleKey}`, { moduleData });
+              // Removed noisy success logging
 
               // Cache the result
               translationCache.set(moduleKey, moduleData);
@@ -318,13 +316,13 @@ export const useTranslationStore = create(
 
             // ✅ Only log translation issues (not every successful translation)
             if (!translation || translation === key) {
-              console.warn('🔍 Translation missing:', {
+              console.warn('🔍 Translation missing:', JSON.stringify({
                 key,
                 module: moduleName,
                 translationKey,
                 moduleKey,
                 loadedModules: Object.keys(loadedModules)
-              });
+              }, null, 2));
             }
 
             // Use provided fallback or key itself

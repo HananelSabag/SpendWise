@@ -229,6 +229,19 @@ class User {
         }
       }
 
+      // Add computed fields that client expects (same as in findById)
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.name = user.username || user.first_name || 'User'; // Fallback for name field
+
+      // Normalize field names for client compatibility (same as in findById)
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.emailVerified = user.email_verified;
+      user.createdAt = user.created_at;
+      user.updatedAt = user.updated_at;
+      user.lastLogin = user.last_login_at;
+
       // Convert dates to ISO strings for consistency
       if (user.created_at) user.created_at = user.created_at.toISOString();
       if (user.updated_at) user.updated_at = user.updated_at.toISOString();

@@ -1,4 +1,4 @@
-console.log('⚡ QUERY-CLIENT - Starting React Query configuration...');
+// Removed noisy query client logs
 
 /**
  * React Query Configuration - Production Optimized
@@ -7,20 +7,11 @@ console.log('⚡ QUERY-CLIENT - Starting React Query configuration...');
  * @version 2.0.0
  */
 
-console.log('⚡ QUERY-CLIENT - About to import QueryClient...');
 import { QueryClient } from '@tanstack/react-query';
-console.log('⚡ QUERY-CLIENT - QueryClient imported');
-
-console.log('⚡ QUERY-CLIENT - About to import toast...');
 import toast from 'react-hot-toast';
-console.log('⚡ QUERY-CLIENT - Toast imported');
-
-console.log('⚡ QUERY-CLIENT - About to import unified API...');
 // ✅ NEW: Import unified API instead of old utils/api
 import { api } from '../api';
-console.log('⚡ QUERY-CLIENT - Unified API imported');
 
-console.log('⚡ QUERY-CLIENT - About to create QueryClient...');
 // Environment config
 const isDevelopment = process.env.NODE_ENV === 'development';
 const enableQueryLogging = isDevelopment && localStorage.getItem('debug_queries') === 'true';

@@ -12,6 +12,11 @@ export default {
   analytics: 'Analytics',
   admin: 'Admin',
   
+  // Navigation descriptions
+  profileDesc: 'Manage your personal profile',
+  settingsDesc: 'Customize your settings',
+  helpDesc: 'Get help and support',
+  
   // Dashboard sections
   overview: 'Overview',
   quickActions: 'Quick Actions',

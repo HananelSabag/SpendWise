@@ -12,6 +12,11 @@ export default {
   analytics: 'אנליטיקה',
   admin: 'מנהל',
   
+  // תיאורי ניווט
+  profileDesc: 'נהלו את הפרופיל האישי שלכם',
+  settingsDesc: 'התאימו את ההגדרות לצרכים שלכם',
+  helpDesc: 'קבלו עזרה ותמיכה',
+  
   // קטעי דשבורד
   overview: 'סקירה כללית',
   quickActions: 'פעולות מהירות',

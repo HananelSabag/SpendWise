@@ -66,21 +66,12 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     queryFn: async () => {
       // ✅ DEBUG: Check authentication state before making API calls
       const token = localStorage.getItem('accessToken');
-      console.log('🔍 Dashboard API Call - Auth Debug:', {
-        hasToken: !!token,
-        tokenLength: token ? token.length : 0,
-        tokenStart: token ? token.substring(0, 20) + '...' : 'none',
-        formattedDate
-      });
+      // Removed debug logging to prevent re-renders
       
       try {
         const result = await api.analytics.dashboard.getSummary(formattedDate);
         
-        console.log('🔍 Dashboard API Response:', {
-          success: result.success,
-          hasData: !!result.data,
-          error: result.error?.message
-        });
+        // Removed debug logging to prevent re-renders
         
         if (result.success) {
           return { data: result.data };
@@ -104,8 +95,11 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     },
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000),
     select: useCallback((data) => {
-      // ✅ FIXED: Improved data transformation with better error handling
-      const response = data?.data;
+      try {
+        // Removed debug logging to prevent re-renders
+        
+        // ✅ FIXED: Improved data transformation with better error handling
+        const response = data?.data;
       
       if (!response) {
         return {
@@ -156,35 +150,35 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       const processedData = {
         // Balance with currency formatting
         balance: {
-          current: numbers.safeNumber(dashboardData.balance?.current, 0),
-          previous: numbers.safeNumber(dashboardData.balance?.previous, 0),
-          change: numbers.safeNumber(dashboardData.balance?.change, 0),
+          current: dashboardData.balance?.current || 0,
+          previous: dashboardData.balance?.previous || 0,
+          change: dashboardData.balance?.change || 0,
           currency: dashboardData.balance?.currency || 'USD'
         },
         
-        // Monthly statistics with proper calculations
+        // Monthly statistics with proper calculations  
         monthlyStats: {
-          income: numbers.safeNumber(dashboardData.monthlyStats?.income, 0),
-          expenses: numbers.safeNumber(dashboardData.monthlyStats?.expenses, 0),
-          net: numbers.safeNumber(dashboardData.monthlyStats?.net || 
-                                  (dashboardData.monthlyStats?.income - dashboardData.monthlyStats?.expenses), 0),
+          income: dashboardData.monthlyStats?.income || 0,
+          expenses: dashboardData.monthlyStats?.expenses || 0,
+          net: dashboardData.monthlyStats?.net || 
+               ((dashboardData.monthlyStats?.income || 0) - (dashboardData.monthlyStats?.expenses || 0)),
           transactionCount: dashboardData.monthlyStats?.transactionCount || 0
         },
         
         // Recent transactions with enhanced processing
         recentTransactions: (dashboardData.recentTransactions || []).map(transaction => ({
           ...transaction,
-          amount: numbers.safeNumber(transaction.amount, 0),
-          formattedAmount: transaction.formattedAmount || numbers.formatCurrency(transaction.amount),
+          amount: transaction.amount || 0,
+          formattedAmount: transaction.formattedAmount || `$${transaction.amount || 0}`,
           date: transaction.date || new Date().toISOString()
         })),
         
         // Chart data with validation
         chartData: (dashboardData.chartData || []).map(point => ({
           ...point,
-          income: numbers.safeNumber(point.income, 0),
-          expenses: numbers.safeNumber(point.expenses, 0),
-          net: numbers.safeNumber(point.net, 0)
+          income: point.income || 0,
+          expenses: point.expenses || 0,
+          net: point.net || 0
         })),
         
         // Summary with computed values
@@ -193,7 +187,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
           totalTransactions: dashboardData.summary?.totalTransactions || 
                             (dashboardData.recentTransactions || []).length,
           categoriesUsed: dashboardData.summary?.categoriesUsed || 0,
-          avgTransactionAmount: numbers.safeNumber(dashboardData.summary?.avgTransactionAmount, 0)
+          avgTransactionAmount: dashboardData.summary?.avgTransactionAmount || 0
         },
         
         // Metadata
@@ -202,7 +196,23 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         isEmpty: (dashboardData.recentTransactions || []).length === 0
       };
 
+      // Removed debug logging to prevent re-renders
+
       return processedData;
+      } catch (error) {
+        console.error('❌ Data Transformation Error:', error);
+        console.error('❌ Error Stack:', error.stack);
+        
+        // Return safe fallback data
+        return {
+          balance: { current: 0, currency: 'USD' },
+          monthlyStats: { income: 0, expenses: 0, net: 0 },
+          recentTransactions: [],
+          chartData: [],
+          summary: {},
+          isEmpty: true
+        };
+      }
     }, [formattedDate])
   });
 
@@ -228,6 +238,9 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   const isLoading = dashboardQuery.isLoading || dashboardQuery.isFetching;
   const isError = dashboardQuery.isError;
   const isEmpty = dashboardQuery.data?.isEmpty || false;
+
+  // Removed debug logging to prevent re-renders
+  // console.log('🔍 Hook State Debug:', { queryIsError: dashboardQuery.isError });
 
   return {
     // Data

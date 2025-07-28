@@ -4,150 +4,94 @@
  */
 
 export default {
-  // Application
+  // Application name
   appName: 'SpendWise',
+
+  // Common user interface
+  user: 'User',
+  admin: 'Admin',
+  profilePicture: 'Profile Picture',
   
-  // Basic actions
+  // System status
   loading: 'Loading...',
-  error: 'Error',
-  success: 'Success',
-  warning: 'Warning',
-  info: 'Information',
+  refresh: 'Refresh',
+  refreshed: 'Refreshed successfully',
+  refreshError: 'Failed to refresh data',
   
-  // CRUD operations
-  save: 'Save',
-  cancel: 'Cancel',
-  delete: 'Delete',
-  edit: 'Edit',
-  add: 'Add',
-  create: 'Create',
-  update: 'Update',
-  remove: 'Remove',
-  
-  // Modal/Dialog actions
-  close: 'Close',
-  ok: 'OK',
-  yes: 'Yes',
-  no: 'No',
-  confirm: 'Confirm',
-  dismiss: 'Dismiss',
-  
-  // Navigation and menus
+  // Theme and UI
+  lightMode: 'Light Mode',
+  darkMode: 'Dark Mode',
+  lightTheme: 'light',
+  darkTheme: 'dark',
+  themeChanged: 'Theme changed to {{theme}}',
+  languageChanged: 'Language changed successfully',
+  currencyChanged: 'Currency changed to {{currency}}',
+  settings: 'Settings',
+
+  // Navigation  
   categories: 'Categories',
-  manageCategoriesDesc: 'Manage your categories',
-  exchange: 'Exchange',
-  currencyExchangeDesc: 'Convert between currencies',
-  recurring: 'Recurring',
-  recurringTransactionsDesc: 'Recurring transactions',
-  openMenu: 'Open menu',
-  showPassword: 'Show password',
+  manageCategoriesDesc: 'Manage expense and income categories',
+  exchange: 'Currency Exchange',
+  currencyExchangeDesc: 'Real-time currency conversion',
+  recurring: 'Recurring Payments',
+  recurringTransactionsDesc: 'Manage recurring transactions',
+  openMenu: 'Open Menu',
   calculator: 'Calculator',
-  quickCalculatorDesc: 'Quick calculator',
-  quickPanels: 'Quick panels',
-  
-  // Accessibility
-  accessibility: {
-    theme: {
-      auto: 'Auto'
-    },
-    contrast: {
-      normal: 'Normal',
-      high: 'High',
-      maximum: 'Maximum'
-    }
+  quickCalculatorDesc: 'Quick calculator for calculations',
+  quickPanels: 'Quick Panels',
+
+  // Categories
+  categories: {
+    food: 'Food & Dining',
+    income: 'Income',
+    transport: 'Transportation',
+    entertainment: 'Entertainment',
+    bills: 'Bills',
+    shopping: 'Shopping',
+    health: 'Health',
+    education: 'Education',
+    travel: 'Travel',
+    other: 'Other'
   },
-  
-  // Navigation
-  back: 'Back',
-  next: 'Next',
-  previous: 'Previous',
-  continue: 'Continue',
-  finish: 'Finish',
-  skip: 'Skip',
-  profile: 'Profile',
-  complete: 'Complete',
-  
-  // Form actions
-  submit: 'Submit',
-  reset: 'Reset',
-  clear: 'Clear',
-  apply: 'Apply',
-  
-  // Search and filters
-  search: 'Search',
-  filter: 'Filter',
-  sort: 'Sort',
-  refresh: 'Refresh',
-  reload: 'Reload',
-  
-  // Data operations
-  export: 'Export',
-  import: 'Import',
-  download: 'Download',
-  upload: 'Upload',
-  
-  // Status
-  active: 'Active',
-  inactive: 'Inactive',
-  enabled: 'Enabled',
-  disabled: 'Disabled',
-  online: 'Online',
-  offline: 'Offline',
-  
-  // Time
-  today: 'Today',
-  yesterday: 'Yesterday',
-  tomorrow: 'Tomorrow',
-  thisWeek: 'This Week',
-  thisMonth: 'This Month',
-  thisYear: 'This Year',
-  
-  // Common labels
-  name: 'Name',
-  email: 'Email',
-  password: 'Password',
-  username: 'Username',
-  phone: 'Phone',
-  address: 'Address',
-  description: 'Description',
-  amount: 'Amount',
-  date: 'Date',
-  time: 'Time',
-  category: 'Category',
-  type: 'Type',
-  status: 'Status',
-  
-  // Units
-  currency: 'Currency',
-  percent: 'Percent',
-  quantity: 'Quantity',
-  total: 'Total',
-  subtotal: 'Subtotal',
-  
-  // Messages
-  noData: 'No data available',
-  noResults: 'No results found',
-  noChanges: 'No changes detected',
-  saved: 'Saved successfully',
-  updated: 'Updated successfully',
-  deleted: 'Deleted successfully',
-  created: 'Created successfully',
-  
-  // Retry/Error recovery
-  retry: 'Retry',
-  tryAgain: 'Try Again',
-  reload: 'Reload',
-  refresh: 'Refresh',
-  
-  // Confirmation
-  areYouSure: 'Are you sure?',
-  irreversible: 'This action cannot be undone',
-  confirmDelete: 'Are you sure you want to delete this item?',
-  
-  // Loading states
-  loadingData: 'Loading data...',
-  savingChanges: 'Saving changes...',
-  processing: 'Processing...',
-  uploading: 'Uploading...',
-  downloading: 'Downloading...'
+
+  // Common transactions
+  transactions: {
+    groceries: 'Grocery Shopping',
+    salary: 'Salary',
+    fuel: 'Car Fuel',
+    coffee: 'Coffee',
+    electricity: 'Electricity Bill',
+    water: 'Water Bill',
+    gas: 'Gas Bill',
+    internet: 'Internet Bill',
+    phone: 'Phone Bill',
+    rent: 'Rent'
+  },
+
+  // Accessibility themes
+  themes: {
+    light: 'Light',
+    dark: 'Dark'
+  },
+
+  // Font sizes
+  fontSizes: {
+    extraSmall: 'Extra Small',
+    small: 'Small',
+    medium: 'Medium',
+    large: 'Large',
+    extraLarge: 'Extra Large',
+    huge: 'Huge'
+  },
+
+  // Common actions
+  actions: {
+    close: 'Close',
+    cancel: 'Cancel',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    view: 'View',
+    back: 'Back'
+  }
 }; 
