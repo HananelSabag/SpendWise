@@ -349,9 +349,16 @@ const userController = {
             id: user.id,
             email: user.email,
             username: user.username,
+            role: user.role, // ✅ Add missing role field
             email_verified: true,
-            onboarding_completed: user.onboarding_completed
+            onboarding_completed: user.onboarding_completed,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            profile_picture_url: user.profile_picture_url,
+            created_at: user.created_at,
+            oauth_provider: user.oauth_provider || 'google'
           },
+          token: accessToken, // ✅ Client expects 'token' not 'accessToken'
           tokens: {
             accessToken,
             refreshToken
