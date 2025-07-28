@@ -245,7 +245,7 @@ const userController = {
         name = name || payload.name;
         picture = picture || payload.picture;
         
-        console.log('🔍 DEBUG: Extracted from JWT:', { email, name, picture });
+        console.log('🔍 DEBUG: Extracted from JWT:', { email, name, picture, sub: payload.sub });
       } catch (decodeError) {
         console.error('🔍 DEBUG: Failed to decode idToken:', decodeError);
         throw { 
@@ -267,6 +267,18 @@ const userController = {
       // For now, we'll trust the frontend verification
       logger.info('🔐 Google OAuth attempt', { email, name });
 
+      // ✅ Extract Google user ID from JWT payload
+      let googleUserId = null;
+      try {
+        const payloadBase64 = idToken.split('.')[1];
+        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+        googleUserId = payload.sub; // Google user ID (usually numeric)
+        console.log('🔍 DEBUG: Google user ID extracted:', googleUserId);
+      } catch (extractError) {
+        console.error('🔍 DEBUG: Failed to extract Google user ID:', extractError);
+        // Continue without Google ID - not critical
+      }
+
       // Check if user exists
       let user = await User.findByEmail(email);
 
@@ -281,9 +293,9 @@ const userController = {
         await User.update(user.id, { 
           email_verified: true,
           onboarding_completed: false,
-          google_id: idToken.split('.')[1], // Extract user ID from token
+          google_id: googleUserId, // ✅ Use actual Google user ID (short)
           oauth_provider: 'google',
-          oauth_provider_id: idToken.split('.')[1],
+          oauth_provider_id: googleUserId, // ✅ Use actual Google user ID (short)
           profile_picture_url: picture,
           first_name: name?.split(' ')[0] || '',
           last_name: name?.split(' ').slice(1).join(' ') || ''
@@ -298,9 +310,9 @@ const userController = {
         // Update existing user with Google info if not already set
         const updateData = { email_verified: true };
         if (!user.google_id) {
-          updateData.google_id = idToken.split('.')[1];
+          updateData.google_id = googleUserId;
           updateData.oauth_provider = 'google';
-          updateData.oauth_provider_id = idToken.split('.')[1];
+          updateData.oauth_provider_id = googleUserId;
         }
         if (picture && !user.profile_picture_url) {
           updateData.profile_picture_url = picture;
