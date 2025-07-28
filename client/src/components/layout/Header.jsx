@@ -8,7 +8,7 @@
 import React, { useState, useCallback, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Shield } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import { 
@@ -106,19 +106,26 @@ const Header = () => {
               {[
                 { name: t('nav.dashboard'), href: '/', current: location.pathname === '/' },
                 { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' },
-                { name: t('nav.profile'), href: '/profile', current: location.pathname === '/profile' }
+                { name: t('nav.profile'), href: '/profile', current: location.pathname === '/profile' },
+                // ✅ Admin Dashboard - Only show for admin/super admin users
+                ...(user?.role === 'admin' || user?.role === 'super_admin' || user?.isAdmin || user?.isSuperAdmin 
+                  ? [{ name: t('nav.adminDashboard'), href: '/admin', current: location.pathname.startsWith('/admin') }] 
+                  : [])
               ].map((item) => (
                 <button
                   key={item.name}
                   onClick={() => navigate(item.href)}
                   className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-1",
                     item.current
                       ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      : item.href === '/admin' 
+                        ? "text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
                   )}
                 >
-                  {item.name}
+                  {item.href === '/admin' && <Shield className="w-4 h-4" />}
+                  <span>{item.name}</span>
                 </button>
               ))}
             </nav>
