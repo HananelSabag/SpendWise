@@ -19,7 +19,8 @@ import { queryConfigs } from '../config/queryClient';
 
 export const useDashboard = (date = null, forceRefresh = null) => {
   // ✅ NEW: Use Zustand app store for date management
-  const { selectedDate, dateFormat, getDateForServer } = useAppStore();
+  const { selectedDate, dateFormat } = useAppStore();
+  const getDateForServer = useAppStore((state) => state.getDateForServer);
   
   const queryClient = useQueryClient();
   const targetDate = date || selectedDate;
