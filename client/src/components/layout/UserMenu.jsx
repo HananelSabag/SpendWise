@@ -20,7 +20,7 @@ import { cn } from '../../utils/helpers';
 const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
   const { actions } = useAuthStore();
-  const { t } = useTranslation();
+  const { t, isRTL } = useTranslation();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
@@ -37,16 +37,6 @@ const UserMenu = ({ className = '' }) => {
       });
     }
   }, [user, actions]);
-
-  // ✅ COMPREHENSIVE DEBUG LOG
-  console.log('🔍 UserMenu DEBUG - Full user object:', {
-    user,
-    avatar: user?.avatar,
-    profile_picture_url: user?.profile_picture_url,
-    profilePicture: user?.profilePicture,
-    preferences: user?.preferences,
-    hasAvatar: !!(user?.avatar || user?.profile_picture_url || user?.profilePicture)
-  });
 
   // ✅ User menu items
   const userMenuItems = [
