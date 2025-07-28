@@ -299,11 +299,10 @@ export default {
 
   // ✅ Completion System
   completion: {
-    title: 'Setup Complete!',
-    subtitle: 'Welcome to SpendWise',
-    success: 'Onboarding completed successfully!',
-    failed: 'Onboarding completion failed. Please try again.',
-    description: 'Your account is now ready to use. Start tracking your expenses and reach your financial goals!'
+    success: 'Setup completed successfully! Welcome to SpendWise!',
+    failed: 'Setup completion failed. Please try again.',
+    completing: 'Completing your setup...',
+    almostDone: 'Almost done! Finalizing your account...'
   },
 
   // ✅ Type Labels

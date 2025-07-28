@@ -76,7 +76,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     },
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000),
     select: useCallback((data) => {
-      // Improved data transformation with error handling
+      // ✅ FIXED: Improved data transformation with better error handling
       const response = data?.data;
       
       if (!response) {
@@ -90,8 +90,28 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         };
       }
 
-      // ✅ FIX: Handle different response formats gracefully
-      const dashboardData = response.data || response;
+      // ✅ FIX: Handle both analytics and transactions endpoint formats
+      let dashboardData;
+      
+      // Check if this is the new analytics format
+      if (response.balance && typeof response.balance === 'object' && response.monthlyStats) {
+        dashboardData = response;
+      }
+      // Check if this is the old transactions format
+      else if (response.daily || response.recent_transactions) {
+        // Transform old format to new format
+        dashboardData = {
+          balance: { current: 0, currency: 'USD' },
+          monthlyStats: { income: 0, expenses: 0, net: 0 },
+          recentTransactions: response.recent_transactions || [],
+          chartData: [],
+          summary: {}
+        };
+      }
+      // Check if this is direct data (fallback)
+      else {
+        dashboardData = response;
+      }
       
       if (!dashboardData) {
         return {
@@ -104,7 +124,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         };
       }
 
-      // Enhanced data processing with validation
+      // ✅ FIXED: Enhanced data processing with validation
       const processedData = {
         // Balance with currency formatting
         balance: {
@@ -118,7 +138,8 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         monthlyStats: {
           income: numbers.safeNumber(dashboardData.monthlyStats?.income, 0),
           expenses: numbers.safeNumber(dashboardData.monthlyStats?.expenses, 0),
-          net: numbers.safeNumber(dashboardData.monthlyStats?.net, 0),
+          net: numbers.safeNumber(dashboardData.monthlyStats?.net || 
+                                  (dashboardData.monthlyStats?.income - dashboardData.monthlyStats?.expenses), 0),
           transactionCount: dashboardData.monthlyStats?.transactionCount || 0
         },
         
@@ -126,7 +147,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         recentTransactions: (dashboardData.recentTransactions || []).map(transaction => ({
           ...transaction,
           amount: numbers.safeNumber(transaction.amount, 0),
-          formattedAmount: numbers.formatCurrency(transaction.amount),
+          formattedAmount: transaction.formattedAmount || numbers.formatCurrency(transaction.amount),
           date: transaction.date || new Date().toISOString()
         })),
         
@@ -141,7 +162,8 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         // Summary with computed values
         summary: {
           ...dashboardData.summary,
-          totalTransactions: dashboardData.summary?.totalTransactions || 0,
+          totalTransactions: dashboardData.summary?.totalTransactions || 
+                            (dashboardData.recentTransactions || []).length,
           categoriesUsed: dashboardData.summary?.categoriesUsed || 0,
           avgTransactionAmount: numbers.safeNumber(dashboardData.summary?.avgTransactionAmount, 0)
         },

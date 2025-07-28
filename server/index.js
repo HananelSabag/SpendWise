@@ -212,11 +212,19 @@ try {
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   console.log('✅ Export routes loaded');
 
-  // ✅ TEMPORARILY DISABLED: Analytics routes (causing server crash)
-  // Will use fallback /transactions/dashboard endpoint
-  // console.log('Loading analytics routes...');
-  // app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
-  // console.log('✅ Analytics routes loaded');
+  // ✅ FIXED: Re-enable analytics routes 
+  try {
+    console.log('Loading analytics routes...');
+    app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
+    console.log('✅ Analytics routes loaded');
+  } catch (error) {
+    console.error('⚠️ Failed to load analytics routes:', error.message);
+    // Add fallback analytics endpoint
+    app.get(`${API_VERSION}/analytics/dashboard/summary`, (req, res) => {
+      res.json({ success: false, error: { message: 'Analytics temporarily unavailable' } });
+    });
+    console.log('✅ Analytics fallback routes added');
+  }
 } catch (error) {
   console.error('❌ API routes loading failed:', error.message);
   console.error('Stack:', error.stack);

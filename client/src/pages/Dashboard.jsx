@@ -51,15 +51,50 @@ const Dashboard = () => {
   const { 
     data: dashboardData, 
     isLoading, 
-    error, 
-    refetch 
+    isError, 
+    isEmpty,
+    refresh: refreshDashboard 
   } = useDashboard();
+
+  // ✅ Handle loading states properly
+  if (isLoading && !dashboardData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loadingDashboard')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Handle error states
+  if (isError && !dashboardData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center p-8 max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <RefreshCw className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            {t('dashboardError')}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {t('dashboardErrorMessage')}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            {t('reloadPage')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // ✅ Handle refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await refetch();
+      await refreshDashboard();
       addNotification({
         type: 'success',
         message: t('dashboard.refreshed'),
@@ -74,7 +109,7 @@ const Dashboard = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch, addNotification, t]);
+  }, [refreshDashboard, addNotification, t]);
 
   // ✅ Handle view mode navigation
   const handleViewModeChange = useCallback((mode) => {

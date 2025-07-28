@@ -288,5 +288,19 @@ export default {
     savingsGoal: "התקדמות יעד חיסכון",
     budgetAdherence: "דבקות בתקציב",
     expenseOptimization: "אופטימיזציה של הוצאות"
-  }
+  },
+
+  // ✅ ADD: Loading and error state translations in Hebrew
+  loadingDashboard: 'טוען לוח בקרה...',
+  dashboardError: 'שגיאה בלוח הבקרה',
+  dashboardErrorMessage: 'לא ניתן לטעון את נתוני לוח הבקרה. אנא נסו שוב.',
+  reloadPage: 'טען מחדש',
+  
+  // ✅ ADD: Common dashboard translations in Hebrew
+  overview: 'סקירה כללית',
+  analytics: 'אנליטיקה', 
+  goals: 'יעדים',
+  insights: 'תובנות',
+  refreshed: 'לוח הבקרה רוענן בהצלחה',
+  refreshError: 'רענון לוח הבקרה נכשל'
 }; 

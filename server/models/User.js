@@ -672,6 +672,42 @@ class User {
     };
   }
 
+  // ✅ ADD: Mark onboarding as complete
+  static async markOnboardingComplete(userId) {
+    try {
+      console.log('🎯 User.markOnboardingComplete called for userId:', userId);
+      
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
+      const user = await this.update(userId, {
+        onboarding_completed: true
+        // Note: onboarding_completed_at field doesn't exist in DB
+      });
+
+      if (!user) {
+        throw new Error('Failed to update user - user not found');
+      }
+
+      console.log('✅ User.markOnboardingComplete successful:', {
+        userId,
+        onboarding_completed: user.onboarding_completed
+      });
+
+      logger.info('✅ User onboarding marked as complete', { userId });
+      return user;
+    } catch (error) {
+      console.error('❌ User.markOnboardingComplete failed:', {
+        userId,
+        error: error.message,
+        stack: error.stack
+      });
+      logger.error('❌ Failed to mark onboarding complete', { userId, error: error.message });
+      throw error;
+    }
+  }
+
   // Soft delete
   static async delete(userId) {
     const query = `

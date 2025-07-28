@@ -144,19 +144,56 @@ const transactionController = {
         ? ((summary.total_income - summary.total_expenses) / summary.total_income * 100) 
         : 0;
 
+      // ✅ FIXED: Add recent transactions to analytics summary
+      const recentTransactionsQuery = `
+        SELECT 
+          t.id, t.type, t.amount, t.description, t.date,
+          c.name as category_name, c.icon as category_icon, c.color as category_color
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+        ORDER BY t.created_at DESC
+        LIMIT 10
+      `;
+      
+      const recentResult = await db.query(recentTransactionsQuery, [userId]);
+      const recentTransactions = recentResult.rows.map(tx => ({
+        ...tx,
+        formattedAmount: new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(tx.amount)
+      }));
+
       res.json({
         success: true,
         data: {
-          balance: summary.net_balance || 0,
-          income: summary.total_income || 0,
-          expenses: summary.total_expenses || 0,
-          savings: (summary.total_income || 0) - (summary.total_expenses || 0),
-          savingsRate: Math.round(savingsRate),
-          transactionCount: summary.transaction_count || 0,
-          categoriesUsed: summary.categories_used || 0,
-          changes: {
-            income: summary.income_change_percent || 0,
-            expenses: summary.expense_change_percent || 0
+          // ✅ FIXED: Structure data to match client expectations
+          balance: {
+            current: summary.net_balance || 0,
+            previous: summary.net_balance || 0, // TODO: Calculate previous period balance
+            change: 0, // TODO: Calculate change
+            currency: 'USD'
+          },
+          monthlyStats: {
+            income: summary.total_income || 0,
+            expenses: summary.total_expenses || 0,
+            net: summary.net_balance || 0,
+            transactionCount: summary.transaction_count || 0
+          },
+          recentTransactions: recentTransactions, // ✅ FIXED: Add real recent transactions
+          chartData: [], // TODO: Add chart data
+          summary: {
+            totalTransactions: summary.transaction_count || 0,
+            categoriesUsed: summary.categories_used || 0,
+            avgTransactionAmount: summary.transaction_count > 0 
+              ? (summary.total_income + summary.total_expenses) / summary.transaction_count 
+              : 0,
+            savingsRate: Math.round(savingsRate),
+            changes: {
+              income: summary.income_change_percent || 0,
+              expenses: summary.expense_change_percent || 0
+            }
           },
           period: period,
           generatedAt: new Date().toISOString()

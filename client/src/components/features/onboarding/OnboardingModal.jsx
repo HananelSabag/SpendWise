@@ -150,25 +150,21 @@ const OnboardingModal = ({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed inset-0 z-[9999] flex items-center justify-center"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+        onClick={handleClose}
       >
-        {/* Enhanced backdrop with blur */}
-        <motion.div
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          variants={backdropVariants}
-          onClick={handleClose}
-        />
-
-        {/* Main modal container - Mobile optimized */}
+        {/* ✅ FIXED: Single modal container without double backdrop */}
         <motion.div
           variants={modalVariants}
+          onClick={(e) => e.stopPropagation()} // Prevent backdrop click
           className={cn(
             "relative w-full h-full max-w-4xl max-h-[95vh]",
             "bg-white dark:bg-gray-900",
             "flex flex-col",
             "md:rounded-2xl md:shadow-2xl md:h-auto md:max-h-[90vh]",
             "md:border md:border-gray-200 md:dark:border-gray-700",
+            "overflow-hidden", // ✅ FIX: Prevent content bleeding
             className
           )}
         >

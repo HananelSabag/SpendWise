@@ -288,5 +288,19 @@ export default {
     savingsGoal: "Savings Goal Progress",
     budgetAdherence: "Budget Adherence",
     expenseOptimization: "Expense Optimization"
-  }
+  },
+
+  // ✅ ADD: Loading and error state translations
+  loadingDashboard: 'Loading dashboard...',
+  dashboardError: 'Dashboard Error',
+  dashboardErrorMessage: 'Unable to load dashboard data. Please try again.',
+  reloadPage: 'Reload Page',
+  
+  // ✅ ADD: Common dashboard translations
+  overview: 'Overview',
+  analytics: 'Analytics', 
+  goals: 'Goals',
+  insights: 'Insights',
+  refreshed: 'Dashboard refreshed successfully',
+  refreshError: 'Failed to refresh dashboard',
 }; 

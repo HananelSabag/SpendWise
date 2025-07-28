@@ -9,6 +9,7 @@ import authAPI from './auth.js';
 import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
 import performanceAPI from './performance.js';
+import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
 
 /**
  * 🎯 Unified API Export
@@ -35,6 +36,9 @@ export const api = {
   
   // Performance & Monitoring
   performance: performanceAPI,
+  
+  // ✅ ADD: Onboarding Management
+  onboarding: onboardingAPI,
   
   // Cache Management
   clearCache: apiClient.clearCache ? apiClient.clearCache.bind(apiClient) : () => {},

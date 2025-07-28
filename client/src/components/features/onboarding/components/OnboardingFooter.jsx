@@ -158,10 +158,10 @@ const OnboardingFooter = ({
         {/* Center Section - Skip Button or Progress */}
         <motion.div 
           variants={buttonVariants}
-          className="flex items-center"
+          className="flex items-center space-x-3"
         >
-          {/* Skip Button */}
-          {showSkipButton && canSkip && !isLastStep && (
+          {/* ✅ FIXED: Always show Skip button (not just when canSkip) */}
+          {showSkipButton && !isCompleting && (
             <Button
               variant="ghost"
               onClick={onSkip}
@@ -170,6 +170,19 @@ const OnboardingFooter = ({
             >
               <SkipForward className="w-4 h-4 mr-2" />
               {defaultTexts.skip}
+            </Button>
+          )}
+
+          {/* ✅ ADD: Always show Finish button for quick completion */}
+          {!isLastStep && !isCompleting && (
+            <Button
+              variant="outline"
+              onClick={onComplete}
+              disabled={isCompleting}
+              className="text-primary-600 hover:text-primary-700 border-primary-200 hover:border-primary-300 dark:text-primary-400 dark:hover:text-primary-300"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {defaultTexts.complete}
             </Button>
           )}
 
