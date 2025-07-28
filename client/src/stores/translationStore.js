@@ -308,16 +308,6 @@ export const useTranslationStore = create(
 
             const moduleKey = `${currentLanguage}.${moduleName}`;
 
-            // ✅ DEBUG: Log translation attempts
-            console.log('🔍 Translation attempt:', {
-              key,
-              module: moduleName,
-              translationKey,
-              moduleKey,
-              loadedModules: Object.keys(loadedModules),
-              hasModule: !!loadedModules[moduleKey]
-            });
-
             // Try to get from loaded modules
             let translation = get().actions.getFromLoadedModule(moduleKey, translationKey);
 
@@ -326,12 +316,16 @@ export const useTranslationStore = create(
               translation = get().actions.getFromFallback(moduleName, translationKey);
             }
 
-            // ✅ DEBUG: Log translation result
-            console.log('🔍 Translation result:', {
-              key,
-              translation,
-              foundIn: translation !== key ? 'found' : 'fallback-to-key'
-            });
+            // ✅ Only log translation issues (not every successful translation)
+            if (!translation || translation === key) {
+              console.warn('🔍 Translation missing:', {
+                key,
+                module: moduleName,
+                translationKey,
+                moduleKey,
+                loadedModules: Object.keys(loadedModules)
+              });
+            }
 
             // Use provided fallback or key itself
             if (!translation) {

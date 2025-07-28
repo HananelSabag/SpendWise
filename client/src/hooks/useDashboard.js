@@ -13,6 +13,7 @@ import { api } from '../api';
 
 // ✅ NEW: Import from Zustand stores instead of Context
 import { useAppStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
 
 import { numbers, debounce } from '../utils/helpers';
 import { queryConfigs } from '../config/queryClient';
@@ -21,6 +22,9 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   // ✅ NEW: Use Zustand app store for date management
   const { selectedDate, dateFormat } = useAppStore();
   const getDateForServer = useAppStore((state) => state.actions.getDateForServer);
+  
+  // ✅ ADD: Auth store for authentication checks
+  const { isAuthenticated, initialized, user } = useAuthStore();
   
   const queryClient = useQueryClient();
   const targetDate = date || selectedDate;
@@ -58,14 +62,38 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   // ✅ ENHANCED: Dashboard query with unified API integration
   const dashboardQuery = useQuery({
     queryKey,
+    enabled: initialized && isAuthenticated, // ✅ Only run when user is authenticated
     queryFn: async () => {
-      // ✅ FIXED: Simplified API call without debug logs
-      const result = await api.analytics.dashboard.getSummary(formattedDate);
+      // ✅ DEBUG: Check authentication state before making API calls
+      const token = localStorage.getItem('accessToken');
+      console.log('🔍 Dashboard API Call - Auth Debug:', {
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        tokenStart: token ? token.substring(0, 20) + '...' : 'none',
+        formattedDate
+      });
       
-      if (result.success) {
-        return { data: result.data };
-      } else {
-        throw new Error(result.error?.message || 'Failed to fetch dashboard data');
+      try {
+        const result = await api.analytics.dashboard.getSummary(formattedDate);
+        
+        console.log('🔍 Dashboard API Response:', {
+          success: result.success,
+          hasData: !!result.data,
+          error: result.error?.message
+        });
+        
+        if (result.success) {
+          return { data: result.data };
+        } else {
+          throw new Error(result.error?.message || 'Failed to fetch dashboard data');
+        }
+      } catch (error) {
+        console.error('❌ Dashboard API Error:', {
+          message: error.message,
+          status: error.response?.status,
+          responseData: error.response?.data
+        });
+        throw error;
       }
     },
     ...queryConfigs.dynamic,
