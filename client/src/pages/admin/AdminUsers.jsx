@@ -310,7 +310,7 @@ const AdminUsers = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(user.role)}
+                          {getRoleBadge(user?.role || 'user')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(user.status)}
@@ -412,8 +412,8 @@ const AdminUsers = () => {
                     {selectedUser.email}
                   </p>
                   <div className="flex gap-2 mt-2">
-                    {getRoleBadge(selectedUser.role)}
-                    {getStatusBadge(selectedUser.status)}
+                    {getRoleBadge(selectedUser?.role || 'user')}
+                    {getStatusBadge(selectedUser?.status || 'active')}
                   </div>
                 </div>
               </div>

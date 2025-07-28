@@ -400,8 +400,8 @@ export const authAPI = {
         success: true,
         user: {
           ...user,
-          isAdmin: ['admin', 'super_admin'].includes(user.role),
-          isSuperAdmin: user.role === 'super_admin'
+          isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
+          isSuperAdmin: (user.role || 'user') === 'super_admin'
         },
         token,
         message: 'Registration successful! Please check your email to verify your account.'
