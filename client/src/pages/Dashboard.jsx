@@ -54,22 +54,17 @@ const Dashboard = () => {
   console.log('📊 Dashboard component rendering...');
 
   // ✅ Zustand stores
-  try {
-    console.log('📊 Dashboard - calling useAuth...');
-    const { user } = useAuth();
-    console.log('📊 Dashboard - useAuth result:', { hasUser: !!user });
+  console.log('📊 Dashboard - calling useAuth...');
+  const { user } = useAuth();
+  console.log('📊 Dashboard - useAuth result:', { hasUser: !!user });
 
-    console.log('📊 Dashboard - calling useTranslation...');
-    const { t, isRTL } = useTranslation('dashboard');
-    console.log('📊 Dashboard - useTranslation result:', { hasT: !!t, isRTL });
+  console.log('📊 Dashboard - calling useTranslation...');
+  const { t, isRTL } = useTranslation('dashboard');
+  console.log('📊 Dashboard - useTranslation result:', { hasT: !!t, isRTL });
 
-    console.log('📊 Dashboard - calling useNotifications...');
-    const { addNotification } = useNotifications();
-    console.log('📊 Dashboard - useNotifications result:', { hasAddNotification: !!addNotification });
-  } catch (error) {
-    console.error('📊 Dashboard - Error calling store hooks:', error);
-    throw error;
-  }
+  console.log('📊 Dashboard - calling useNotifications...');
+  const { addNotification } = useNotifications();
+  console.log('📊 Dashboard - useNotifications result:', { hasAddNotification: !!addNotification });
 
   // ✅ State management
   const [viewMode, setViewMode] = useState('overview'); // overview, analytics, goals, insights

@@ -19,6 +19,7 @@ class GoogleOAuthManager {
   constructor() {
     this.isInitialized = false;
     this.isLoading = false;
+    this.credentialResolver = null;
   }
 
   // Initialize Google Identity Services
@@ -28,25 +29,38 @@ class GoogleOAuthManager {
     this.isLoading = true;
     
     try {
+      console.log('🔍 Initializing Google OAuth with Client ID:', GOOGLE_CONFIG.CLIENT_ID);
+      
+      // Check if Client ID is configured
+      if (!GOOGLE_CONFIG.CLIENT_ID || GOOGLE_CONFIG.CLIENT_ID === 'undefined') {
+        throw new Error('Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID environment variable.');
+      }
+      
       // Load Google Identity Services script
       await this.loadGoogleScript();
       
       // Initialize Google OAuth
       if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
+        const initConfig = {
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           callback: this.handleCredentialResponse.bind(this),
           auto_select: false,
-          cancel_on_tap_outside: true
-        });
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: false, // Disable FedCM to prevent redirect issues
+          itp_support: true
+        };
+        
+        console.log('🔍 Google OAuth init config:', initConfig);
+        window.google.accounts.id.initialize(initConfig);
         
         this.isInitialized = true;
+        console.log('✅ Google OAuth initialized successfully');
       } else {
         throw new Error('Google Identity Services failed to load');
       }
     } catch (error) {
-      console.error('Failed to initialize Google OAuth:', error);
-      throw new Error('Google Sign-In is currently unavailable');
+      console.error('❌ Failed to initialize Google OAuth:', error);
+      throw new Error(`Google Sign-In is currently unavailable: ${error.message}`);
     } finally {
       this.isLoading = false;
     }
@@ -83,43 +97,69 @@ class GoogleOAuthManager {
 
   // Handle Google credential response
   handleCredentialResponse(response) {
+    console.log('🔍 Google credential response received:', response);
+    
     if (this.credentialResolver) {
-      this.credentialResolver(response.credential);
+      if (response && response.credential) {
+        console.log('✅ Valid Google credential received');
+        this.credentialResolver(response.credential);
+      } else {
+        console.error('❌ Invalid Google credential response:', response);
+        this.credentialResolver(null);
+      }
       this.credentialResolver = null;
+    } else {
+      console.warn('⚠️ Google credential response received but no resolver available');
     }
   }
 
   // Trigger Google Sign-In
   async signIn() {
     if (!this.isInitialized) {
+      console.log('🔍 Google OAuth not initialized, initializing now...');
       await this.initialize();
     }
 
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔍 Starting Google Sign-In process...');
+        
         // Store resolver for callback
         this.credentialResolver = resolve;
         
-        // ✅ Only use ID token method - no access token fallback
+        // ✅ Use prompt method with better error handling
         window.google.accounts.id.prompt((notification) => {
+          console.log('🔍 Google Sign-In notification:', notification);
+          
           if (notification.isNotDisplayed()) {
-            reject(new Error('Google Sign-In popup was blocked or dismissed'));
+            console.error('❌ Google Sign-In popup was blocked or dismissed');
+            this.credentialResolver = null;
+            reject(new Error('Google Sign-In popup was blocked. Please allow popups and try again.'));
           } else if (notification.isSkippedMoment()) {
-            reject(new Error('Google Sign-In was skipped - please try again'));
+            console.error('❌ Google Sign-In was skipped');
+            this.credentialResolver = null;
+            reject(new Error('Google Sign-In was skipped. Please try clicking the Google sign-in button again.'));
+          } else if (notification.isDismissedMoment()) {
+            console.error('❌ Google Sign-In was dismissed');
+            this.credentialResolver = null;
+            reject(new Error('Google Sign-In was dismissed. Please try again.'));
           }
           // If successful, handleCredentialResponse will be called
         });
         
-        // Timeout after 30 seconds
+        // Timeout after 60 seconds
         setTimeout(() => {
           if (this.credentialResolver) {
+            console.error('❌ Google Sign-In timed out after 60 seconds');
             this.credentialResolver = null;
-            reject(new Error('Google Sign-In timed out - please try again'));
+            reject(new Error('Google Sign-In timed out. Please check your internet connection and try again.'));
           }
-        }, 30000);
+        }, 60000);
         
       } catch (error) {
-        reject(error);
+        console.error('❌ Google Sign-In error:', error);
+        this.credentialResolver = null;
+        reject(new Error(`Google Sign-In failed: ${error.message}`));
       }
     });
   }

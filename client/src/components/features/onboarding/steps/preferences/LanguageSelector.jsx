@@ -76,7 +76,7 @@ const LanguageSelector = ({
       direction: 'rtl',
       completion: 70
     }
-  ].filter(lang => availableLanguages.includes(lang.code));
+  ].filter(lang => availableLanguages && availableLanguages.includes && availableLanguages.includes(lang.code));
 
   // ✅ Animation variants
   const containerVariants = {

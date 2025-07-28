@@ -62,9 +62,19 @@ const OnboardingFooter = ({
 
   // ✅ Handle primary action (Next or Complete)
   const handlePrimaryAction = () => {
+    console.log('🔍 OnboardingFooter - Primary action clicked:', {
+      isLastStep,
+      canGoNext,
+      isCompleting,
+      hasOnComplete: !!onComplete,
+      hasOnNext: !!onNext
+    });
+    
     if (isLastStep) {
+      console.log('🎯 OnboardingFooter - Calling onComplete');
       onComplete?.();
     } else {
+      console.log('🔍 OnboardingFooter - Calling onNext');
       onNext?.();
     }
   };
@@ -177,7 +187,7 @@ const OnboardingFooter = ({
           <Button
             variant="primary"
             onClick={handlePrimaryAction}
-            disabled={!canGoNext || isCompleting}
+            disabled={isLastStep ? isCompleting : (!canGoNext || isCompleting)}
             loading={isCompleting}
             className="min-w-[120px]"
             aria-label={isLastStep ? defaultTexts.complete : defaultTexts.next}

@@ -375,10 +375,11 @@ export const analyticsAPI = {
     // Get dashboard summary
     async getSummary(date = null) {
       try {
-        const endpoint = date ? `/transactions/dashboard?date=${date}` : '/transactions/dashboard';
+        const params = date ? { date } : {};
         
-        const response = await api.cachedRequest(endpoint, {
-          method: 'GET'
+        const response = await api.cachedRequest('/analytics/dashboard/summary', {
+          method: 'GET',
+          params
         }, `dashboard-summary-${date || 'current'}`, 5 * 60 * 1000); // 5 minute cache
 
         return {

@@ -84,6 +84,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
         language_preference: stepData.preferences.language,
         currency_preference: stepData.preferences.currency,
         theme_preference: stepData.preferences.theme,
+        onboarding_completed: true, // ✅ Mark as completed in DB
         preferences: {
           ...user?.preferences,
           notifications: stepData.preferences.notifications,

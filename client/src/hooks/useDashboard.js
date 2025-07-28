@@ -20,7 +20,7 @@ import { queryConfigs } from '../config/queryClient';
 export const useDashboard = (date = null, forceRefresh = null) => {
   // ✅ NEW: Use Zustand app store for date management
   const { selectedDate, dateFormat } = useAppStore();
-  const getDateForServer = useAppStore((state) => state.getDateForServer);
+  const getDateForServer = useAppStore((state) => state.actions.getDateForServer);
   
   const queryClient = useQueryClient();
   const targetDate = date || selectedDate;
@@ -59,12 +59,18 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   const dashboardQuery = useQuery({
     queryKey,
     queryFn: async () => {
-      // Use unified API for dashboard data
-      const result = await api.transactions.getDashboard(formattedDate);
+      console.log('📊 useDashboard - Fetching data for date:', formattedDate);
+      
+      // ✅ FIX: Use the correct analytics API for dashboard data
+      const result = await api.analytics.dashboard.getSummary(formattedDate);
+      
+      console.log('📊 useDashboard - API result:', result);
       
       if (result.success) {
+        console.log('📊 useDashboard - Data received:', result.data);
         return { data: result.data };
       } else {
+        console.error('📊 useDashboard - API error:', result.error);
         throw new Error(result.error?.message || 'Failed to fetch dashboard data');
       }
     },

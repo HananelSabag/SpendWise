@@ -339,8 +339,8 @@ const userController = {
       const normalizedUser = {
         id: user.id,
         email: user.email,
-        username: user.username || user.first_name || name?.split(' ')[0] || 'User', // ✅ Prefer actual name
-        name: user.username || user.first_name || name?.split(' ')[0] || 'User', // ✅ Display name
+        username: user.username || user.first_name || name?.split(' ')[0] || email?.split('@')[0] || 'User',
+        name: user.username || user.first_name || name?.split(' ')[0] || email?.split('@')[0] || 'User',
         firstName: user.first_name || name?.split(' ')[0] || '',
         lastName: user.last_name || name?.split(' ').slice(1).join(' ') || '',
         role: user.role || 'user',

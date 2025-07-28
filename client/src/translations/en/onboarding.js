@@ -22,8 +22,8 @@ export default {
   modal: {
     back: 'Back',
     next: 'Next',
-    skip: 'Skip',
-    finish: 'Finish',
+    skip: 'Skip For Now',
+    finish: 'Complete Setup',
     close: 'Close',
     completing: 'Completing...',
     unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?',

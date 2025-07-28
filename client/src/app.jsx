@@ -17,6 +17,7 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
 import NavigationFix from './components/common/NavigationFix';
+import OnboardingManager from './components/common/OnboardingManager';
 
 // ✅ NEW: Import Zustand stores (replaces ALL Context providers!)
 import { 
@@ -457,6 +458,9 @@ const AppContent = () => {
     <div className="flex flex-col min-h-screen">
       {/* Navigation Fix Component */}
       <NavigationFix />
+      
+      {/* Onboarding Manager - Auto-triggers based on DB status */}
+      {isAuthenticated && <OnboardingManager />}
       
       {isAuthenticated && <Header />}
       

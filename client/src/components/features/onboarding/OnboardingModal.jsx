@@ -29,6 +29,7 @@ const OnboardingModal = ({
   isOpen = false, 
   onClose, 
   onComplete,
+  onSkip,
   forceShow = false,
   className = ''
 }) => {

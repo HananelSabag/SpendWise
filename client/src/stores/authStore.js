@@ -245,9 +245,15 @@ export const useAuthStore = create(
                 state.error = null;
               });
 
-              // ✅ Force redirect to login page after logout
+              // ✅ Use proper navigation instead of hard redirect
               if (typeof window !== 'undefined') {
-                window.location.href = '/login';
+                // Try to use React Router if available
+                if (window.spendWiseNavigate) {
+                  window.spendWiseNavigate('/login', { replace: true });
+                } else {
+                  // Fallback to location change
+                  window.location.replace('/login');
+                }
               }
 
               return { success: true };
@@ -255,7 +261,11 @@ export const useAuthStore = create(
               console.error('Logout failed:', error);
               // Still redirect even if logout fails
               if (typeof window !== 'undefined') {
-                window.location.href = '/login';
+                if (window.spendWiseNavigate) {
+                  window.spendWiseNavigate('/login', { replace: true });
+                } else {
+                  window.location.replace('/login');
+                }
               }
               return { success: false, error: error.message };
             }
