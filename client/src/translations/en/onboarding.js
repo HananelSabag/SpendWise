@@ -38,6 +38,63 @@ export default {
   title: 'Welcome to SpendWise!',
   subtitle: 'Let\'s set up your account in just a few steps',
 
+  // ✅ WELCOME STEP - MISSING TRANSLATIONS ADDED
+  welcome: {
+    title: 'Welcome to SpendWise!',
+    subtitle: 'Your smart financial companion',
+    description: 'Take control of your finances with powerful expense tracking, insights, and automation.',
+    
+    features: {
+      tracking: {
+        title: 'Smart Tracking',
+        description: 'Automatically categorize and track your expenses with AI-powered insights'
+      },
+      analytics: {
+        title: 'Visual Analytics',
+        description: 'Beautiful charts and reports to understand your spending patterns'
+      },
+      goals: {
+        title: 'Financial Goals',
+        description: 'Set and track budgets, savings goals, and financial milestones'
+      },
+      security: {
+        title: 'Bank-Grade Security',
+        description: 'Your financial data is protected with enterprise-level encryption'
+      },
+      mobile: {
+        title: 'Mobile-First',
+        description: 'Perfect experience on all devices - phone, tablet, and desktop'
+      },
+      automation: {
+        title: 'Smart Automation',
+        description: 'Recurring transactions and intelligent categorization save you time'
+      }
+    },
+
+    benefits: {
+      title: 'Why Choose SpendWise?',
+      items: {
+        easy: 'Easy to use interface',
+        powerful: 'Powerful analytics',
+        secure: 'Bank-grade security',
+        mobile: 'Works everywhere'
+      }
+    },
+
+    cta: {
+      getStarted: 'Get Started',
+      letsGo: 'Let\'s Go!',
+      continue: 'Continue Setup'
+    },
+
+    stats: {
+      users: '50K+ Users',
+      tracked: '$2M+ Tracked',
+      categories: '100+ Categories',
+      countries: '25+ Countries'
+    }
+  },
+
   // ✅ Template System
   templates: {
     title: 'Set Up Your Templates',

@@ -36,19 +36,19 @@ export const useAuthStore = create(
           initialize: () => {
             // ✅ FIXED: Synchronous initialization to prevent race conditions
             const token = localStorage.getItem('accessToken');
-            
-            set((state) => {
-              state.initialized = true;
-              state.isLoading = false;
               
+              set((state) => {
+                state.initialized = true;
+                state.isLoading = false;
+
               // Simple token check - if exists, assume authenticated
               if (token) {
-                state.isAuthenticated = true;
+                      state.isAuthenticated = true;
                 // Will be validated on first API call
-              }
+                  }
             });
 
-            return true;
+              return true;
           },
 
           // Basic login - SIMPLIFIED
@@ -198,6 +198,44 @@ export const useAuthStore = create(
             }
           },
 
+          // ✅ ADD: Get fresh profile data from server
+          getProfile: async () => {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            try {
+              const result = await authAPI.getProfile();
+              
+              if (result.success) {
+                // Update user data in store with fresh server data
+                set((state) => {
+                  state.user = result.user;
+                  state.isLoading = false;
+                  state.error = null;
+                });
+
+                // Sync updated preferences
+                get().actions.syncUserPreferences(result.user);
+
+                return { success: true, user: result.user };
+              } else {
+                set((state) => {
+                  state.error = result.error;
+                  state.isLoading = false;
+                });
+                return { success: false, error: result.error };
+              }
+            } catch (error) {
+              set((state) => {
+                state.error = api.normalizeError ? api.normalizeError(error) : { message: error.message };
+                state.isLoading = false;
+              });
+              throw error;
+            }
+          },
+
           // Update user profile
           updateProfile: async (updates) => {
             set((state) => {
@@ -239,18 +277,18 @@ export const useAuthStore = create(
 
           // Logout - SIMPLIFIED
           logout: async () => {
-            // Clear token
-            localStorage.removeItem('accessToken');
-            
-            // Reset state
+              // Clear token
+              localStorage.removeItem('accessToken');
+              
+              // Reset state
             get().actions.reset();
 
             // Navigate to login
-            if (window.spendWiseNavigate) {
-              window.spendWiseNavigate('/login', { replace: true });
-            } else {
-              window.location.replace('/login');
-            }
+                if (window.spendWiseNavigate) {
+                  window.spendWiseNavigate('/login', { replace: true });
+                } else {
+                  window.location.replace('/login');
+                }
 
             return { success: true };
           },
@@ -275,8 +313,8 @@ export const useAuthStore = create(
               state.lastActivity = Date.now();
               state.sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
 
-              // Check if user has biometric enabled
-              state.biometricEnabled = BiometricAuthManager.hasRegisteredCredentials();
+              // ✅ FIX: Mock biometric (not implemented yet)
+              state.biometricEnabled = false; // TODO: Implement BiometricAuthManager
             });
 
             // Setup auto logout timer
@@ -431,6 +469,7 @@ export const useAuth = () => {
     register: store.actions.register,
     logout: store.actions.logout,
     updateProfile: store.actions.updateProfile,
+    getProfile: store.actions.getProfile, // ✅ ADD: Export getProfile method
     verifyEmail: store.actions.verifyEmail,
     
     // Utilities

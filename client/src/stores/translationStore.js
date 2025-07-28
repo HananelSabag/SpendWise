@@ -204,7 +204,7 @@ export const useTranslationStore = create(
 
           // Load core translation modules (most commonly used)
           loadCoreModules: async () => {
-            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard'];
+            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding'];
             const { currentLanguage } = get();
             
             const loadPromises = coreModules.map(module => 
@@ -249,9 +249,14 @@ export const useTranslationStore = create(
             });
 
             try {
+              // ✅ DEBUG: Log import attempt
+              console.log(`🔍 Attempting to import: ../translations/${lang}/${module}.js`);
+              
               // Dynamic import of translation module
               const translations = await import(`../translations/${lang}/${module}.js`);
               const moduleData = translations.default || translations;
+              
+              console.log(`✅ Successfully loaded: ${moduleKey}`, { moduleData });
 
               // Cache the result
               translationCache.set(moduleKey, moduleData);
@@ -303,6 +308,16 @@ export const useTranslationStore = create(
 
             const moduleKey = `${currentLanguage}.${moduleName}`;
 
+            // ✅ DEBUG: Log translation attempts
+            console.log('🔍 Translation attempt:', {
+              key,
+              module: moduleName,
+              translationKey,
+              moduleKey,
+              loadedModules: Object.keys(loadedModules),
+              hasModule: !!loadedModules[moduleKey]
+            });
+
             // Try to get from loaded modules
             let translation = get().actions.getFromLoadedModule(moduleKey, translationKey);
 
@@ -310,6 +325,13 @@ export const useTranslationStore = create(
             if (!translation) {
               translation = get().actions.getFromFallback(moduleName, translationKey);
             }
+
+            // ✅ DEBUG: Log translation result
+            console.log('🔍 Translation result:', {
+              key,
+              translation,
+              foundIn: translation !== key ? 'found' : 'fallback-to-key'
+            });
 
             // Use provided fallback or key itself
             if (!translation) {
@@ -480,6 +502,9 @@ export const useTranslation = (module = null) => {
   const tSync = (key, options = {}) => {
     return store.actions.translate(key, { ...options, module });
   };
+
+  // ✅ FIXED: Return sync function as default (components expect immediate results)
+  const translationFunction = tSync;
 
   return {
     t: tSync, // Immediate translation

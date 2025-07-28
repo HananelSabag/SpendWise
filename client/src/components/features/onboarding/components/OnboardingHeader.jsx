@@ -1,261 +1,157 @@
 /**
- * 📋 ONBOARDING HEADER - Progress & Navigation
- * Extracted from massive OnboardingModal.jsx for better organization
- * Features: Progress bar, Step indicators, Title display, Close button
- * @version 3.0.0 - ONBOARDING REDESIGN
+ * 🎯 ONBOARDING HEADER - COMPACT & SHORTER VERSION
+ * Reduced padding, shorter height, better space efficiency  
+ * @version 3.1.0 - COMPACT MODE
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, CheckCircle } from 'lucide-react';
+import { X, ChevronLeft, Clock } from 'lucide-react';
 
-// ✅ Import stores and components
 import { useTranslation } from '../../../../stores';
-import { Button, Badge } from '../../../ui';
+import { Button } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
 /**
- * 📋 Onboarding Header Component
+ * 🎯 Compact Onboarding Header - Shorter & More Efficient
  */
 const OnboardingHeader = ({
-  currentStep,
-  totalSteps,
-  progress,
-  stepTitle,
-  stepIcon: StepIcon,
-  estimatedTimeRemaining = 0,
+  currentStep = 1,
+  totalSteps = 5,
+  progress = 0,
+  title = '',
+  subtitle = '',
+  canClose = true,
   onClose,
-  showCloseButton = true,
-  showProgress = true,
-  showEstimatedTime = false,
-  className = ''
+  isRTL = false,
+  compact = false // ✅ NEW: Compact mode
 }) => {
-  const { t, isRTL } = useTranslation('onboarding');
+  const { t } = useTranslation('onboarding');
 
-  // ✅ Animation variants
-  const headerVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.3 }
-    }
-  };
+  // ✅ DEBUG: Check translations in header
+  React.useEffect(() => {
+    console.log('🔍 OnboardingHeader translation debug:', {
+      titleProp: title,
+      subtitleProp: subtitle,
+      progressTranslation: t('progress.step'),
+      welcomeTranslation: t('progress.welcome'),
+      isTranslationWorking: typeof t === 'function'
+    });
+  }, [title, subtitle, t]);
 
-  const progressVariants = {
-    hidden: { width: 0 },
-    visible: { 
-      width: `${progress}%`,
-      transition: { duration: 0.5, ease: "easeOut" }
-    }
-  };
+  // ✅ Fallback texts
+  const displayTitle = title || t('title') || 'Welcome to SpendWise';
+  const displaySubtitle = subtitle || t('subtitle') || 'Let\'s set up your account';
+  const stepText = t('progress.step', { current: currentStep, total: totalSteps }) || `Step ${currentStep} of ${totalSteps}`;
 
   return (
-    <motion.div
-      variants={headerVariants}
-      initial="hidden"
-      animate="visible"
-      className={cn(
-        "relative flex-shrink-0",
-        "bg-gradient-to-r from-primary-500 to-primary-600",
-        "dark:from-primary-600 dark:to-primary-700",
-        "px-4 py-6 md:px-8",
-        "text-white",
-        className
-      )}
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      {/* Close Button */}
-      {showCloseButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className={cn(
-            "absolute top-4 text-white/80 hover:text-white",
-            "hover:bg-white/10 border-0 transition-colors",
-            isRTL ? "left-4" : "right-4"
-          )}
-          aria-label={t('modal.close')}
-        >
-          <X className="w-5 h-5" />
-        </Button>
-      )}
-
-      {/* Progress Section */}
-      {showProgress && (
-        <div className="mb-4">
-          {/* Progress Info */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium text-white/90">
-                {t('progress.step', { current: currentStep, total: totalSteps })}
-              </p>
-              
-              {/* Completion Badge */}
-              {progress === 100 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    {t('progress.complete')}
-                  </Badge>
-                </motion.div>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-3 text-sm text-white/70">
-              {/* Estimated Time */}
-              {showEstimatedTime && estimatedTimeRemaining > 0 && (
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-3 h-3" />
-                  <span>
-                    {t('progress.timeRemaining', { 
-                      minutes: estimatedTimeRemaining 
-                    })}
-                  </span>
-                </div>
-              )}
-
-              {/* Progress Percentage */}
-              <span className="font-medium">
-                {Math.round(progress)}%
-              </span>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="relative w-full bg-white/20 rounded-full h-2 overflow-hidden">
-            <motion.div
-              variants={progressVariants}
-              initial="hidden"
-              animate="visible"
-              className="absolute top-0 left-0 h-full bg-white rounded-full shadow-sm"
-            />
-            
-            {/* Progress Glow Effect */}
-            <motion.div
-              variants={progressVariants}
-              initial="hidden"
-              animate="visible"
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-full"
-              style={{ filter: 'blur(1px)' }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Step Title Section */}
-      <div className="text-center">
+    <div className={cn(
+      "relative w-full",
+      // ✅ COMPACT: Much less vertical padding
+      compact ? "py-2" : "py-4",
+      "transition-all duration-200"
+    )}>
+      
+      {/* ✅ COMPACT: Progress bar with minimal spacing */}
+      <div className={cn(
+        "w-full bg-gray-200 dark:bg-gray-700 rounded-full",
+        compact ? "h-1.5 mb-3" : "h-2 mb-4" // ✅ Thinner progress bar in compact mode
+      )}>
         <motion.div
-          key={`${currentStep}-${stepTitle}`}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-center space-x-3"
-        >
-          {/* Step Icon */}
-          {StepIcon && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-              className="flex-shrink-0"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                <StepIcon className="w-5 h-5" />
-              </div>
-            </motion.div>
-          )}
-
-          {/* Step Title */}
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold">
-              {stepTitle}
-            </h2>
-            
-            {/* Optional Step Description */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-sm text-white/80 mt-1"
-            >
-              {t('progress.stepDescription', { step: currentStep, total: totalSteps })}
-            </motion.p>
-          </div>
-        </motion.div>
-
-        {/* Step Indicators (Dots) */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex items-center justify-center space-x-2 mt-4"
-        >
-          {Array.from({ length: totalSteps }, (_, index) => (
-            <motion.div
-              key={index}
-              initial={{ scale: 0.8 }}
-              animate={{ 
-                scale: index === currentStep - 1 ? 1.2 : 1,
-                opacity: index < currentStep ? 1 : 0.4
-              }}
-              transition={{ duration: 0.2 }}
-              className={cn(
-                "w-2 h-2 rounded-full transition-all",
-                index < currentStep 
-                  ? "bg-white shadow-sm" 
-                  : index === currentStep - 1
-                    ? "bg-white shadow-md ring-2 ring-white/30"
-                    : "bg-white/30"
-              )}
-            />
-          ))}
-        </motion.div>
+          className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
       </div>
 
-      {/* Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+      {/* ✅ Header Content */}
+      <div className={cn(
+        "flex items-start justify-between",
+        compact ? "gap-2" : "gap-4" // ✅ Less gap in compact mode
+      )}>
         
-        {/* Animated Particles */}
-        {Array.from({ length: 3 }, (_, i) => (
+        {/* ✅ Left: Title & Subtitle */}
+        <div className="flex-1 min-w-0">
+          
+          {/* ✅ Step indicator */}
           <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-white/20 rounded-full"
-            initial={{ 
-              x: Math.random() * 100 + '%',
-              y: Math.random() * 100 + '%',
-              opacity: 0
-            }}
-            animate={{
-              x: [
-                Math.random() * 100 + '%',
-                Math.random() * 100 + '%',
-                Math.random() * 100 + '%'
-              ],
-              y: [
-                Math.random() * 100 + '%',
-                Math.random() * 100 + '%',
-                Math.random() * 100 + '%'
-              ],
-              opacity: [0, 0.6, 0]
-            }}
-            transition={{
-              duration: 8 + i * 2,
-              repeat: Infinity,
-              ease: "linear",
-              delay: i * 2
-            }}
-          />
-        ))}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "text-sm font-medium text-primary-600 dark:text-primary-400",
+              compact ? "mb-1" : "mb-2" // ✅ Less margin in compact mode
+            )}
+          >
+            {stepText}
+          </motion.div>
+
+          {/* ✅ COMPACT: Smaller title */}
+          <motion.h2
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className={cn(
+              "font-bold text-gray-900 dark:text-white",
+              "leading-tight",
+              compact ? "text-xl mb-1" : "text-2xl sm:text-3xl mb-2" // ✅ Much smaller in compact mode
+            )}
+          >
+            {displayTitle}
+          </motion.h2>
+
+          {/* ✅ COMPACT: Smaller subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className={cn(
+              "text-gray-600 dark:text-gray-300",
+              "leading-relaxed",
+              compact ? "text-sm" : "text-base sm:text-lg" // ✅ Much smaller in compact mode
+            )}
+          >
+            {displaySubtitle}
+          </motion.p>
+        </div>
+
+        {/* ✅ Right: Close button */}
+        {canClose && onClose && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Button
+              variant="ghost"
+              size={compact ? "sm" : "md"} // ✅ Smaller button in compact mode
+              onClick={onClose}
+              className={cn(
+                "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
+                "hover:bg-gray-100 dark:hover:bg-gray-800",
+                "transition-colors",
+                compact ? "p-2" : "p-3" // ✅ Less padding in compact mode
+              )}
+              aria-label="Close onboarding"
+            >
+              <X className={compact ? "w-4 h-4" : "w-5 h-5"} />
+            </Button>
+          </motion.div>
+        )}
       </div>
-    </motion.div>
+
+      {/* ✅ COMPACT: Optional progress percentage (smaller) */}
+      {!compact && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="absolute top-0 right-0 text-xs text-gray-500 dark:text-gray-400"
+        >
+          {Math.round(progress)}%
+        </motion.div>
+      )}
+    </div>
   );
 };
 

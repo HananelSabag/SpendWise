@@ -1,293 +1,242 @@
 /**
- * 🦶 ONBOARDING FOOTER - Navigation Controls
- * Extracted from massive OnboardingModal.jsx for better organization
- * Features: Back/Next buttons, Skip logic, Complete button, Loading states
- * @version 3.0.0 - ONBOARDING REDESIGN
+ * 🎯 ONBOARDING FOOTER - ENHANCED BUTTON LAYOUT
+ * Always visible skip & complete buttons, better alignment, responsive design
+ * @version 3.0.0 - ENHANCED UI/UX
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ChevronLeft, ChevronRight, Sparkles, Clock,
-  CheckCircle, ArrowRight, SkipForward
+  ArrowLeft, ArrowRight, 
+  SkipForward, Sparkles, 
+  Loader2, CheckCircle 
 } from 'lucide-react';
 
-// ✅ Import stores and components
+import { Button } from '../../../ui';
 import { useTranslation } from '../../../../stores';
-import { Button, LoadingSpinner } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
 /**
- * 🦶 Onboarding Footer Component
+ * 🎯 Enhanced Onboarding Footer with better button layout
  */
 const OnboardingFooter = ({
-  // Navigation state
-  canGoBack = true,
+  canGoPrevious = false,
   canGoNext = true,
-  canSkip = false,
+  canSkip = true,
   isFirstStep = false,
   isLastStep = false,
   isCompleting = false,
-
-  // Actions
-  onBack,
+  onPrevious,
   onNext,
   onSkip,
   onComplete,
-
-  // Customization
-  showBackButton = true,
-  showSkipButton = true,
-  showProgress = false,
-  currentStep = 1,
-  totalSteps = 5,
-
-  // Styling
-  className = '',
-  backButtonText = null,
-  nextButtonText = null,
-  skipButtonText = null,
-  completeButtonText = null
+  primaryActionText,
+  isRTL = false,
+  showSkipButton = true,    // ✅ NEW: Always show skip
+  showCompleteButton = true // ✅ NEW: Always show complete
 }) => {
-  const { t, isRTL } = useTranslation('onboarding');
+  const { t } = useTranslation('onboarding');
 
-  // ✅ Default button texts
+  // ✅ DEFAULT TEXTS with fallbacks
   const defaultTexts = {
-    back: backButtonText || t('modal.back'),
-    next: nextButtonText || t('modal.next'),
-    skip: skipButtonText || t('modal.skip'),
-    complete: completeButtonText || t('modal.finish'),
-    completing: t('modal.completing')
+    back: t('modal.back') || 'Back',
+    next: t('modal.next') || 'Next', 
+    skip: t('modal.skip') || 'Skip For Now',
+    complete: t('modal.finish') || 'Complete Setup',
+    completing: t('modal.completing') || 'Completing...'
   };
 
-  // ✅ Handle primary action (Next or Complete)
+  // ✅ ENHANCED: Handle primary action (Next or Complete)
   const handlePrimaryAction = () => {
-    console.log('🔍 OnboardingFooter - Primary action clicked:', {
+    const actionData = {
       isLastStep,
       canGoNext,
       isCompleting,
       hasOnComplete: !!onComplete,
       hasOnNext: !!onNext
-    });
+    };
     
-    if (isLastStep) {
+    console.log('🔍 OnboardingFooter - Primary action clicked:', actionData);
+    
+    if (isLastStep && onComplete) {
       console.log('🎯 OnboardingFooter - Calling onComplete');
-      onComplete?.();
-    } else {
+      onComplete();
+    } else if (onNext) {
       console.log('🔍 OnboardingFooter - Calling onNext');
-      onNext?.();
+      onNext();
     }
   };
 
-  // ✅ Animation variants
-  const footerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.3 }
-    }
-  };
-
+  // ✅ ENHANCED: Button animation variants
   const buttonVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
+    hidden: { opacity: 0, scale: 0.8 },
     visible: { 
       opacity: 1, 
       scale: 1,
       transition: { duration: 0.2 }
     },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9,
-      transition: { duration: 0.15 }
-    }
+    hover: { 
+      scale: 1.05,
+      transition: { duration: 0.1 }
+    },
+    tap: { scale: 0.95 }
   };
 
   return (
-    <motion.div
-      variants={footerVariants}
-      initial="hidden"
-      animate="visible"
-      className={cn(
-        "flex-shrink-0 px-4 py-4 md:px-8",
-        "bg-gray-50 dark:bg-gray-800/50",
-        "border-t border-gray-200 dark:border-gray-700",
-        className
-      )}
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      {/* Progress Indicator (optional) */}
-      {showProgress && (
-        <div className="flex items-center justify-center mb-4">
-          <div className="flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400">
-            <span>{t('progress.step', { current: currentStep, total: totalSteps })}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Main Navigation */}
-      <div className="flex items-center justify-between">
-        {/* Back Button */}
-        <motion.div variants={buttonVariants}>
-          {showBackButton && !isFirstStep ? (
+    <div className={cn(
+      "flex items-center justify-between gap-4",
+      "w-full",
+      // ✅ ENHANCED: Better responsive spacing
+      "flex-wrap sm:flex-nowrap"
+    )}>
+      
+      {/* ✅ LEFT SIDE: Back button */}
+      <div className="flex items-center gap-3">
+        {canGoPrevious && !isFirstStep && (
+          <motion.div
+            variants={buttonVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+            whileTap="tap"
+          >
             <Button
-              variant="outline"
-              onClick={onBack}
-              disabled={!canGoBack || isCompleting}
-              className="min-w-[100px]"
-              aria-label={defaultTexts.back}
+              variant="ghost"
+              onClick={onPrevious}
+              disabled={isCompleting}
+              className={cn(
+                "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
+                "transition-colors duration-200",
+                // ✅ ENHANCED: Better button sizing
+                "px-4 py-2 sm:px-6 sm:py-3"
+              )}
             >
               {isRTL ? (
-                <>
-                  {defaultTexts.back}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </>
+                <ArrowRight className="w-4 h-4 mr-2" />
               ) : (
-                <>
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  {defaultTexts.back}
-                </>
+                <ArrowLeft className="w-4 h-4 mr-2" />
               )}
+              {defaultTexts.back}
             </Button>
-          ) : (
-            // Invisible placeholder to maintain layout
-            <div className="min-w-[100px]" />
-          )}
-        </motion.div>
+          </motion.div>
+        )}
+      </div>
 
-        {/* Center Section - Skip Button or Progress */}
-        <motion.div 
-          variants={buttonVariants}
-          className="flex items-center space-x-3"
-        >
-          {/* ✅ FIXED: Always show Skip button (not just when canSkip) */}
-          {showSkipButton && !isCompleting && (
+      {/* ✅ CENTER: Always visible Skip & Complete buttons */}
+      <div className={cn(
+        "flex items-center gap-3",
+        // ✅ ENHANCED: Better responsive layout
+        "order-3 sm:order-2 w-full sm:w-auto justify-center",
+        "mt-4 sm:mt-0"
+      )}>
+        
+        {/* ✅ ENHANCED: Always show Skip button (not just when canSkip) */}
+        {showSkipButton && !isCompleting && (
+          <motion.div
+            variants={buttonVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+            whileTap="tap"
+          >
             <Button
               variant="ghost"
               onClick={onSkip}
               disabled={isCompleting}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className={cn(
+                "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                "border border-gray-300 dark:border-gray-600",
+                "hover:border-gray-400 dark:hover:border-gray-500",
+                "transition-all duration-200",
+                // ✅ ENHANCED: Better button sizing
+                "px-4 py-2 sm:px-6 sm:py-3"
+              )}
             >
               <SkipForward className="w-4 h-4 mr-2" />
               {defaultTexts.skip}
             </Button>
-          )}
+          </motion.div>
+        )}
 
-          {/* ✅ ADD: Always show Finish button for quick completion */}
-          {!isLastStep && !isCompleting && (
+        {/* ✅ ENHANCED: Always show Complete button for quick completion */}
+        {showCompleteButton && !isLastStep && !isCompleting && (
+          <motion.div
+            variants={buttonVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+            whileTap="tap"
+          >
             <Button
               variant="outline"
               onClick={onComplete}
               disabled={isCompleting}
-              className="text-primary-600 hover:text-primary-700 border-primary-200 hover:border-primary-300 dark:text-primary-400 dark:hover:text-primary-300"
+              className={cn(
+                "text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300",
+                "border-primary-300 hover:border-primary-400 dark:border-primary-600 dark:hover:border-primary-500",
+                "bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/20 dark:hover:bg-primary-900/30",
+                "transition-all duration-200",
+                // ✅ ENHANCED: Better button sizing
+                "px-4 py-2 sm:px-6 sm:py-3"
+              )}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {defaultTexts.complete}
             </Button>
-          )}
+          </motion.div>
+        )}
+      </div>
 
-          {/* Completion Progress (when completing) */}
-          {isCompleting && (
-            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-              <LoadingSpinner size="sm" />
-              <span>{defaultTexts.completing}</span>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Next/Complete Button */}
-        <motion.div variants={buttonVariants}>
+      {/* ✅ RIGHT SIDE: Primary action button (Next/Finish) */}
+      <div className={cn(
+        "flex items-center gap-3",
+        "order-2 sm:order-3"
+      )}>
+        <motion.div
+          variants={buttonVariants}
+          initial="hidden"
+          animate="visible"
+          whileHover="hover"
+          whileTap="tap"
+        >
           <Button
-            variant="primary"
             onClick={handlePrimaryAction}
-            disabled={isLastStep ? isCompleting : (!canGoNext || isCompleting)}
-            loading={isCompleting}
-            className="min-w-[120px]"
-            aria-label={isLastStep ? defaultTexts.complete : defaultTexts.next}
+            disabled={isCompleting || (!canGoNext && !isLastStep)}
+            className={cn(
+              // ✅ ENHANCED: Better primary button styling
+              "bg-primary-600 hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-700",
+              "text-white font-semibold",
+              "shadow-lg hover:shadow-xl",
+              "transition-all duration-200",
+              "px-6 py-3 sm:px-8 sm:py-3",
+              // ✅ ENHANCED: Loading state
+              isCompleting && "opacity-75 cursor-not-allowed"
+            )}
           >
             {isCompleting ? (
-              <span className="flex items-center space-x-2">
-                <LoadingSpinner size="sm" />
-                <span>{defaultTexts.completing}</span>
-              </span>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {defaultTexts.completing}
+              </>
             ) : isLastStep ? (
               <>
+                <CheckCircle className="w-4 h-4 mr-2" />
                 {defaultTexts.complete}
-                <Sparkles className={cn("w-4 h-4", isRTL ? "mr-2" : "ml-2")} />
               </>
             ) : (
               <>
+                {primaryActionText || defaultTexts.next}
                 {isRTL ? (
-                  <>
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    {defaultTexts.next}
-                  </>
+                  <ArrowLeft className="w-4 h-4 ml-2" />
                 ) : (
-                  <>
-                    {defaultTexts.next}
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </>
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 )}
               </>
             )}
           </Button>
         </motion.div>
       </div>
-
-      {/* Additional Info Section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="mt-3 text-center"
-      >
-        {/* Keyboard Shortcuts Hint */}
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {!isCompleting && (
-            <span>
-              {t('modal.keyboardHint')} • 
-              <kbd className="mx-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                {isRTL ? '←' : '→'}
-              </kbd>
-              {t('modal.nextShortcut')} • 
-              <kbd className="mx-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                {isRTL ? '→' : '←'}
-              </kbd>
-              {t('modal.backShortcut')}
-              {canSkip && (
-                <>
-                  {' • '}
-                  <kbd className="mx-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                    Esc
-                  </kbd>
-                  {t('modal.skipShortcut')}
-                </>
-              )}
-            </span>
-          )}
-        </div>
-
-        {/* Completion Indicator */}
-        {isLastStep && !isCompleting && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
-            className="flex items-center justify-center space-x-2 mt-2 text-green-600 dark:text-green-400"
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {t('modal.readyToComplete')}
-            </span>
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* Decorative Progress Line */}
-      {showProgress && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 to-primary-600 opacity-20" />
-      )}
-    </motion.div>
+    </div>
   );
 };
 

@@ -197,7 +197,8 @@ class User {
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
           website, birthday, preferences, login_attempts, locked_until,
-          oauth_provider, google_id
+          oauth_provider, google_id, onboarding_completed,
+          language_preference, theme_preference, currency_preference
         FROM users 
         WHERE email = $1
       `;
@@ -289,9 +290,17 @@ class User {
         finalResult: isGoogleOAuth
       });
 
-      // Check for Google OAuth users trying to use password login
-      if (isGoogleOAuth) {
+      // ✅ FIXED: Allow Google OAuth users to set password for hybrid login
+      if (isGoogleOAuth && !password) {
         throw new Error('This account uses Google sign-in. Please use the Google login button.');
+      }
+      
+      // ✅ ENHANCED: If Google user has set a password, allow password login
+      if (isGoogleOAuth && password && user.password_hash) {
+        console.log('🔍 Google user with password attempting login - allowing both methods');
+        // Continue with password authentication
+      } else if (isGoogleOAuth && password && !user.password_hash) {
+        throw new Error('This account uses Google sign-in. Please use the Google login button or set a password first.');
       }
 
       // 🔍 DEBUG: Check general password condition

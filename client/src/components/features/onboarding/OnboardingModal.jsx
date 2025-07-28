@@ -1,19 +1,18 @@
 /**
- * �� ONBOARDING MODAL - CLEAN ORCHESTRATOR
- * COMPLETELY REFACTORED from 491-line file to clean orchestrator
- * Features: Hook-based architecture, Extracted components, Mobile-first, Performance optimized
- * @version 4.0.0 - COMPLETE REDESIGN SUCCESS! 🎉
+ * 🎯 ONBOARDING MODAL - ENHANCED UI/UX VERSION  
+ * WIDER modal, shorter header, better responsive design
+ * @version 5.1.0 - WIDER + SHORTER HEADER + TRANSLATION DEBUG
  */
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ✅ Import our NEW clean hooks
+// ✅ Import our clean hooks
 import { useOnboardingState } from '../../../hooks/useOnboardingState';
 import { useOnboardingNavigation } from '../../../hooks/useOnboardingNavigation';
 import { useOnboardingCompletion } from '../../../hooks/useOnboardingCompletion';
 
-// ✅ Import our NEW clean components
+// ✅ Import our clean components
 import OnboardingHeader from './components/OnboardingHeader';
 import OnboardingFooter from './components/OnboardingFooter';
 
@@ -23,7 +22,7 @@ import { useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 
 /**
- * 🎯 Onboarding Modal - Clean Orchestrator
+ * 🎯 Enhanced Onboarding Modal - WIDER & SHORTER HEADER
  */
 const OnboardingModal = ({ 
   isOpen = false, 
@@ -34,6 +33,17 @@ const OnboardingModal = ({
   className = ''
 }) => {
   const { t, isRTL } = useTranslation('onboarding');
+
+  // ✅ DEBUG: Check if translations are working
+  React.useEffect(() => {
+    console.log('🔍 OnboardingModal translation debug:', {
+      namespace: 'onboarding',
+      titleTranslation: t('title'),
+      welcomeTitleTranslation: t('welcome.title'),
+      modalNextTranslation: t('modal.next'),
+      isTranslationFunctionWorking: typeof t === 'function'
+    });
+  }, [t]);
 
   // ✅ Initialize onboarding state
   const onboardingState = useOnboardingState({
@@ -48,194 +58,212 @@ const OnboardingModal = ({
     currentStepConfig,
     progress,
     setIsCompleting,
-    loadPersistedData,
-    clearPersistedData,
-    resetOnboarding
+    isCompleting,
+    hasChanges,
+    isValid
   } = onboardingState;
 
-  // ✅ Initialize completion logic
-  const completion = useOnboardingCompletion(stepData, {
-    enableRetry: true,
-    maxRetries: 3,
-    onSuccess: () => {
-      clearPersistedData();
-      onComplete?.();
-    },
+  // ✅ Navigation logic with enhanced UX
+  const {
+    canGoNext,
+    canGoPrevious,
+    isLastStep,
+    isFirstStep,
+    goNext,
+    goPrevious,
+    goToStep,
+    canSkip,
+    handlePrimaryAction
+  } = useOnboardingNavigation({
+    currentStep,
+    steps,
+    isValid,
+    stepData,
+    onComplete,
+    onSkip
+  });
+
+  // ✅ Completion logic with fallback strategies
+  const { completeOnboarding } = useOnboardingCompletion({
+    setIsCompleting,
+    onSuccess: onComplete,
     onError: (error) => {
       console.error('Onboarding completion failed:', error);
+    }
+  });
+
+  // ✅ Handle completion
+  const handleComplete = async () => {
+    console.log('🎯 OnboardingModal - Handling completion');
+    try {
+      setIsCompleting(true);
+      const result = await completeOnboarding(stepData);
+      if (result) {
+        console.log('✅ OnboardingModal - Completion successful');
+        onComplete?.();
+      }
+    } catch (error) {
+      console.error('❌ OnboardingModal - Completion failed:', error);
+    } finally {
       setIsCompleting(false);
     }
-  });
-
-  // ✅ Initialize navigation
-  const navigation = useOnboardingNavigation(onboardingState, {
-    enableKeyboard: isOpen,
-    enableValidation: true,
-    onComplete: () => {
-      setIsCompleting(true);
-      completion.completeOnboarding();
-    },
-    onNavigate: (stepIndex) => {
-      console.log(`Navigated to step ${stepIndex + 1}`);
-    }
-  });
-
-  // ✅ Handle modal close/skip
-  const handleClose = () => {
-    if (currentStepConfig.canSkip || forceShow) {
-      if (onboardingState.hasUnsavedChanges) {
-        const confirmed = window.confirm(t('modal.unsavedChanges'));
-        if (!confirmed) return;
-      }
-      
-      resetOnboarding();
-      onClose?.();
-    }
   };
 
-  // ✅ Load persisted data on mount
-  React.useEffect(() => {
-    if (isOpen) {
-      loadPersistedData();
-    }
-  }, [isOpen, loadPersistedData]);
-
-  // ✅ Don't render if not open
-  if (!isOpen) return null;
-
-  // ✅ Get current step component
-  const StepComponent = currentStepConfig.component;
-
-  // ✅ Animation variants
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.9, y: 20 },
-    visible: { 
-      opacity: 1, 
-      scale: 1, 
-      y: 0,
-      transition: { type: "spring", stiffness: 300, damping: 30 }
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9, 
-      y: 20,
-      transition: { duration: 0.2 }
-    }
-  };
-
+  // ✅ Enhanced modal variants for better animations
   const backdropVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 }
+    visible: { 
+      opacity: 1,
+      transition: { duration: 0.3 }
+    },
+    exit: { 
+      opacity: 0,
+      transition: { duration: 0.2 }
+    }
   };
 
-  const contentVariants = {
-    hidden: { opacity: 0, x: isRTL ? -20 : 20 },
+  const modalVariants = {
+    hidden: { 
+      opacity: 0, 
+      scale: 0.8,
+      y: 50
+    },
     visible: { 
       opacity: 1, 
-      x: 0,
-      transition: { duration: 0.2 }
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: 25,
+        stiffness: 300,
+        duration: 0.4
+      }
     },
     exit: { 
       opacity: 0, 
-      x: isRTL ? 20 : -20,
-      transition: { duration: 0.15 }
+      scale: 0.8,
+      y: 50,
+      transition: { duration: 0.2 }
     }
   };
+
+  if (!isOpen && !forceShow) {
+    return null;
+  }
 
   return (
     <AnimatePresence mode="wait">
-      <motion.div
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-        onClick={handleClose}
-      >
-        {/* ✅ FIXED: Single modal container without double backdrop */}
+      {(isOpen || forceShow) && (
         <motion.div
-          variants={modalVariants}
-          onClick={(e) => e.stopPropagation()} // Prevent backdrop click
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           className={cn(
-            "relative w-full h-full max-w-4xl max-h-[95vh]",
-            "bg-white dark:bg-gray-900",
-            "flex flex-col",
-            "md:rounded-2xl md:shadow-2xl md:h-auto md:max-h-[90vh]",
-            "md:border md:border-gray-200 md:dark:border-gray-700",
-            "overflow-hidden", // ✅ FIX: Prevent content bleeding
-            className
+            "fixed inset-0 z-50",
+            "bg-black/70 backdrop-blur-sm",
+            "flex items-center justify-center",
+            "p-4 sm:p-6 lg:p-8",
+            "overflow-hidden"
           )}
+          onClick={(e) => {
+            // Only close on backdrop click, not on modal content click
+            if (e.target === e.currentTarget) {
+              onClose?.();
+            }
+          }}
         >
-          {/* Header - Progress and title */}
-          <OnboardingHeader
-            currentStep={currentStep + 1}
-            totalSteps={steps.length}
-            progress={progress.percentage}
-            stepTitle={currentStepConfig.title}
-            stepIcon={currentStepConfig.icon}
-            estimatedTimeRemaining={progress.estimatedTimeRemaining}
-            onClose={handleClose}
-            showCloseButton={currentStepConfig.canSkip || forceShow}
-            showProgress={true}
-            showEstimatedTime={progress.estimatedTimeRemaining > 0}
-          />
+          <motion.div
+            variants={modalVariants}
+            onClick={(e) => e.stopPropagation()} // Prevent backdrop click
+            className={cn(
+              // ✅ ENHANCED: MUCH WIDER modal as requested
+              "relative w-full h-full max-w-7xl max-h-[95vh]",
+              "bg-white dark:bg-gray-900",
+              "flex flex-col",
+              
+              // ✅ RESPONSIVE: Much wider across all screens
+              "sm:h-auto sm:max-h-[90vh] sm:rounded-2xl",
+              "md:max-w-6xl md:max-h-[85vh]",
+              "lg:max-w-7xl lg:max-h-[90vh]",
+              "xl:max-w-[90vw]", // ✅ SUPER WIDE on large screens
+              "2xl:max-w-[85vw]",
+              
+              // ✅ ENHANCED: Better shadows and borders
+              "shadow-2xl border border-gray-200 dark:border-gray-700",
+              "sm:shadow-xl",
+              
+              // ✅ ENHANCED: Prevent content overflow
+              "overflow-hidden",
+              className
+            )}
+          >
+            {/* ✅ ENHANCED: SHORTER Header with minimal padding */}
+            <div className="flex-shrink-0 p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+              <OnboardingHeader
+                currentStep={currentStep}
+                totalSteps={steps.length}
+                progress={progress}
+                title={currentStepConfig?.title || t('title') || 'Welcome to SpendWise'}
+                subtitle={currentStepConfig?.subtitle || t('subtitle') || 'Let\'s set up your account'}
+                canClose={!isCompleting}
+                onClose={onClose}
+                isRTL={isRTL}
+                compact={true} // ✅ NEW: Compact mode for shorter header
+              />
+            </div>
 
-          {/* Step content - Mobile optimized scrolling */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                variants={contentVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="h-full"
-              >
-                <StepComponent
-                  data={onboardingState.getStepData(currentStepConfig.id)}
-                  onDataUpdate={(data, merge) => 
-                    onboardingState.updateStepData(currentStepConfig.id, data, merge)
-                  }
-                  onNext={navigation.goNext}
-                  onBack={navigation.goBack}
-                  onComplete={navigation.handleComplete}
-                  isFirstStep={navigation.isFirstStep}
-                  isLastStep={navigation.isLastStep}
-                  isCompleting={completion.isCompleting}
-                  
-                  // Additional props for enhanced step components
-                  stepIndex={currentStep}
-                  totalSteps={steps.length}
-                  canSkip={currentStepConfig.canSkip}
-                  estimatedTime={currentStepConfig.estimatedTime}
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+            {/* ✅ ENHANCED: Content area with MORE horizontal space */}
+            <div className={cn(
+              "flex-1 overflow-y-auto",
+              "p-8 sm:p-12 lg:p-16 xl:p-20", // ✅ MUCH MORE padding for wider content
+              "min-h-0", // Important for flex child scrolling
+              // ✅ ENHANCED: Better spacing for wider content
+              "space-y-8"
+            )}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
+                  transition={{ 
+                    duration: 0.3,
+                    ease: "easeInOut"
+                  }}
+                  className="w-full h-full"
+                >
+                  {currentStepConfig?.component}
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-          {/* Footer - Navigation controls */}
-          <OnboardingFooter
-            canGoBack={navigation.canGoBack}
-            canGoNext={navigation.canGoNext}
-            canSkip={navigation.canSkip}
-            isFirstStep={navigation.isFirstStep}
-            isLastStep={navigation.isLastStep}
-            isCompleting={completion.isCompleting}
-            
-            onBack={navigation.goBack}
-            onNext={navigation.goNext}
-            onSkip={navigation.skipStep}
-            onComplete={navigation.handleComplete}
-            
-            showBackButton={true}
-            showSkipButton={true}
-            currentStep={currentStep + 1}
-            totalSteps={steps.length}
-          />
+            {/* ✅ ENHANCED: Footer with consistent padding */}
+            <div className="flex-shrink-0 p-6 sm:p-8 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <OnboardingFooter
+                canGoPrevious={canGoPrevious}
+                canGoNext={canGoNext}
+                canSkip={canSkip}
+                isFirstStep={isFirstStep}
+                isLastStep={isLastStep}
+                isCompleting={isCompleting}
+                onPrevious={goPrevious}
+                onNext={goNext}
+                onSkip={onSkip}
+                onComplete={handleComplete}
+                primaryActionText={
+                  isLastStep 
+                    ? (isCompleting ? t('modal.completing') || 'Completing...' : t('modal.finish') || 'Complete Setup')
+                    : t('modal.next') || 'Next'
+                }
+                isRTL={isRTL}
+                showSkipButton={true} // ✅ Always show skip button as requested
+                showCompleteButton={true} // ✅ Always show complete button as requested
+              />
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

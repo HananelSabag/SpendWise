@@ -561,11 +561,21 @@ export const authAPI = {
       api.clearCache('user-profile');
       api.clearCache('users');
       
+      // ✅ FIXED: Handle server response format correctly
+      const userData = response.data?.data || response.data || response;
+      
+      console.log('🔍 updateProfile server response:', {
+        fullResponse: response,
+        extractedUserData: userData,
+        hasOnboardingCompleted: userData?.onboarding_completed
+      });
+      
       return {
         success: true,
-        user: response.data
+        user: userData  // ✅ FIXED: Extract user data correctly
       };
     } catch (error) {
+      console.error('❌ updateProfile error:', error);
       return {
         success: false,
         error: api.normalizeError(error)

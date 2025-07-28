@@ -176,8 +176,8 @@ const transactionController = {
             currency: 'USD'
           },
           monthlyStats: {
-            income: summary.total_income || 0,
-            expenses: summary.total_expenses || 0,
+          income: summary.total_income || 0,
+          expenses: summary.total_expenses || 0,
             net: summary.net_balance || 0,
             transactionCount: summary.transaction_count || 0
           },
@@ -189,10 +189,10 @@ const transactionController = {
             avgTransactionAmount: summary.transaction_count > 0 
               ? (summary.total_income + summary.total_expenses) / summary.transaction_count 
               : 0,
-            savingsRate: Math.round(savingsRate),
-            changes: {
-              income: summary.income_change_percent || 0,
-              expenses: summary.expense_change_percent || 0
+          savingsRate: Math.round(savingsRate),
+          changes: {
+            income: summary.income_change_percent || 0,
+            expenses: summary.expense_change_percent || 0
             }
           },
           period: period,

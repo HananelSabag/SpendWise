@@ -51,22 +51,45 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
       // ✅ ENHANCED: Update auth store with completed onboarding status
       if (authActions.updateProfile) {
         try {
-          await authActions.updateProfile({
+          const updateResult = await authActions.updateProfile({
             onboarding_completed: true
           });
-          console.log('✅ Auth store updated with onboarding completion');
+          console.log('✅ Auth store updateProfile result:', updateResult);
+          
+          // ✅ ENHANCED: If updateProfile succeeded, also directly update the user in store
+          if (updateResult.success && updateResult.user) {
+            authActions.setUser({
+              ...user,
+              ...updateResult.user,
+              onboarding_completed: true,
+              onboardingCompleted: true
+            });
+            console.log('✅ Direct auth store user update completed');
+          }
         } catch (error) {
           console.warn('Failed to update auth store, but onboarding still completed:', error);
         }
       }
 
-      // ✅ ENHANCED: Force refresh user data from server
-      if (authActions.refreshUser || authActions.getProfile) {
+      // ✅ ENHANCED: Since refreshUser doesn't exist, force a profile refetch
+      if (authActions.getProfile) {
         try {
-          await (authActions.refreshUser || authActions.getProfile)();
-          console.log('✅ User data refreshed from server');
+          const profileResult = await authActions.getProfile();
+          console.log('✅ Profile refetch result:', profileResult);
         } catch (error) {
-          console.warn('Failed to refresh user data, but onboarding still completed:', error);
+          console.warn('Failed to refresh profile, but onboarding still completed:', error);
+        }
+      } else {
+        // ✅ FALLBACK: Directly update auth store with onboarding completion
+        try {
+          authActions.setUser({
+            ...user,
+            onboarding_completed: true,
+            onboardingCompleted: true
+          });
+          console.log('✅ Fallback: Direct user update in auth store');
+        } catch (error) {
+          console.warn('Failed to directly update auth store:', error);
         }
       }
 
