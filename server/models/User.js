@@ -236,35 +236,65 @@ class User {
 
   // Authenticate user
   static async authenticate(email, password) {
+    const timer = `User.authenticate:${email}`;
+    logger.time(timer);
+
     try {
+      // Find user by email
       const user = await this.findByEmail(email);
       
+      // 🔍 DEBUG: Log the exact user data we got
+      console.log('🔍 DEBUG: User found:', {
+        email: user?.email,
+        hasPasswordHash: !!user?.password_hash,
+        passwordHashLength: user?.password_hash?.length,
+        oauthProvider: user?.oauth_provider,
+        googleId: user?.google_id,
+        isActive: user?.is_active,
+        emailVerified: user?.email_verified
+      });
+
       if (!user) {
-        // Constant-time delay to prevent email enumeration
-        await bcrypt.compare('dummy', '$2b$12$dummy.hash.to.prevent.timing');
-        throw new Error('Invalid credentials');
+        throw new Error('Invalid email or password');
       }
 
-      // Check if account is locked
-      if (user.locked_until && new Date(user.locked_until) > new Date()) {
-        throw new Error('Account is temporarily locked');
-      }
-
-      // Check if account is active
       if (!user.is_active) {
-        throw new Error('Account is disabled');
+        throw new Error('Account is deactivated');
       }
 
-      // Check if this is a Google OAuth user (no password set)
-      if (!user.password_hash && user.oauth_provider === 'google') {
-        throw new Error('This account uses Google Sign-In. Please use "Continue with Google" to login.');
+      // 🔍 DEBUG: Check Google OAuth condition
+      const isGoogleOAuth = !user.password_hash && user.oauth_provider === 'google';
+      console.log('🔍 DEBUG: Google OAuth check:', {
+        hasNoPasswordHash: !user.password_hash,
+        isGoogleProvider: user.oauth_provider === 'google',
+        finalResult: isGoogleOAuth
+      });
+
+      // Check for Google OAuth users trying to use password login
+      if (isGoogleOAuth) {
+        throw new Error('This account uses Google sign-in. Please use the Google login button.');
       }
-      
+
+      // 🔍 DEBUG: Check general password condition
+      const hasNoPassword = !user.password_hash;
+      console.log('🔍 DEBUG: Password check:', {
+        hasPasswordHash: !!user.password_hash,
+        passwordValue: user.password_hash ? 'EXISTS' : 'NULL',
+        hasNoPassword: hasNoPassword
+      });
+
       // Verify password for local accounts
-      if (!user.password_hash) {
+      if (hasNoPassword) {
         throw new Error('Password not set for this account. Please reset your password or contact support.');
       }
-      
+
+      // 🔍 DEBUG: About to compare passwords
+      console.log('🔍 DEBUG: About to compare passwords:', {
+        providedPasswordLength: password?.length,
+        storedHashLength: user.password_hash?.length,
+        hashStartsWith: user.password_hash?.substring(0, 7)
+      });
+
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
       if (!isValidPassword) {
@@ -290,6 +320,8 @@ class User {
     } catch (error) {
       logger.error('Authentication failed', { email, error: error.message });
       throw error;
+    } finally {
+      logger.timeEnd(timer);
     }
   }
 
