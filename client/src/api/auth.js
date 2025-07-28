@@ -100,19 +100,21 @@ class GoogleOAuthManager {
         // Store resolver for callback
         this.credentialResolver = resolve;
         
-        // Show Google One Tap or redirect
+        // ✅ Only use ID token method - no access token fallback
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback to popup
-            this.showPopup().then(resolve).catch(reject);
+          if (notification.isNotDisplayed()) {
+            reject(new Error('Google Sign-In popup was blocked or dismissed'));
+          } else if (notification.isSkippedMoment()) {
+            reject(new Error('Google Sign-In was skipped - please try again'));
           }
+          // If successful, handleCredentialResponse will be called
         });
         
         // Timeout after 30 seconds
         setTimeout(() => {
           if (this.credentialResolver) {
             this.credentialResolver = null;
-            reject(new Error('Google Sign-In timed out'));
+            reject(new Error('Google Sign-In timed out - please try again'));
           }
         }, 30000);
         
@@ -122,21 +124,9 @@ class GoogleOAuthManager {
     });
   }
 
-  // Show Google popup as fallback
+  // ✅ Simplified popup method - no longer needed but keeping for compatibility
   async showPopup() {
-    return new Promise((resolve, reject) => {
-      window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CONFIG.CLIENT_ID,
-        scope: 'email profile',
-        callback: (response) => {
-          if (response.access_token) {
-            resolve(response.access_token);
-          } else {
-            reject(new Error('Failed to get Google access token'));
-          }
-        }
-      }).requestAccessToken();
-    });
+    throw new Error('Please try Google Sign-In again - popup method disabled');
   }
 }
 
@@ -293,28 +283,40 @@ export const authAPI = {
       console.log('🔍 DEBUG: Credential type:', typeof credential);
       console.log('🔍 DEBUG: Credential length:', credential?.length);
       
+      // ✅ Validate that we received a proper JWT token
+      if (!credential || typeof credential !== 'string') {
+        throw new Error('Invalid Google credential received');
+      }
+      
+      // ✅ Check if it's a JWT (has 3 parts separated by dots)
+      const parts = credential.split('.');
+      if (parts.length !== 3) {
+        console.error('🔍 DEBUG: Not a JWT token - has', parts.length, 'parts instead of 3');
+        console.error('🔍 DEBUG: Token preview:', credential.substring(0, 50) + '...');
+        throw new Error('Invalid token format - expected JWT ID token');
+      }
+      
       // ✅ Extract user info from JWT credential
       let userInfo = { email: '', name: '', picture: '' };
       
       try {
-        // If it's a JWT token (from One Tap), decode it
-        if (typeof credential === 'string' && credential.includes('.')) {
-          console.log('🔍 DEBUG: Attempting to decode JWT...');
-          const decoded = jwtDecode(credential);
-          console.log('🔍 DEBUG: Decoded JWT payload:', decoded);
-          userInfo = {
-            email: decoded.email || '',
-            name: decoded.name || '',
-            picture: decoded.picture || ''
-          };
-          console.log('🔍 DEBUG: Extracted user info:', userInfo);
-        } else {
-          // If it's an access token (from popup), we'll let server extract from idToken
-          console.log('🔍 DEBUG: Not a JWT token, might be access token');
-        }
+        console.log('🔍 DEBUG: Attempting to decode JWT...');
+        const decoded = jwtDecode(credential);
+        console.log('🔍 DEBUG: Decoded JWT payload:', decoded);
+        userInfo = {
+          email: decoded.email || '',
+          name: decoded.name || '',
+          picture: decoded.picture || ''
+        };
+        console.log('🔍 DEBUG: Extracted user info:', userInfo);
       } catch (decodeError) {
         console.error('🔍 DEBUG: Failed to decode credential:', decodeError);
-        // Continue with empty userInfo, let server handle it
+        throw new Error('Failed to decode Google ID token');
+      }
+      
+      // ✅ Ensure we have an email
+      if (!userInfo.email) {
+        throw new Error('No email found in Google credential');
       }
       
       // ✅ Final payload to send
