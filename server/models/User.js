@@ -236,9 +236,6 @@ class User {
 
   // Authenticate user
   static async authenticate(email, password) {
-    const timer = `User.authenticate:${email}`;
-    logger.time(timer);
-
     try {
       // Find user by email
       const user = await this.findByEmail(email);
@@ -320,8 +317,6 @@ class User {
     } catch (error) {
       logger.error('Authentication failed', { email, error: error.message });
       throw error;
-    } finally {
-      logger.timeEnd(timer);
     }
   }
 
