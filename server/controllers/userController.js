@@ -284,7 +284,7 @@ const userController = {
 
       if (!user) {
         // Create new user with Google OAuth
-        const username = name?.replace(/\s+/g, '_').toLowerCase() || email.split('@')[0];
+        const username = name || email.split('@')[0]; // ✅ Use actual name, not just email prefix
         const randomPassword = crypto.randomBytes(32).toString('hex');
 
         user = await User.create(email, username, randomPassword);
@@ -292,11 +292,12 @@ const userController = {
         // Mark as verified since Google verified the email and store Google info
         await User.update(user.id, { 
           email_verified: true,
-          onboarding_completed: false,
+          onboarding_completed: false, // ✅ Will trigger onboarding flow
           google_id: googleUserId, // ✅ Use actual Google user ID (short)
           oauth_provider: 'google',
           oauth_provider_id: googleUserId, // ✅ Use actual Google user ID (short)
           profile_picture_url: picture,
+          avatar: picture, // ✅ Sync avatar with profile picture
           first_name: name?.split(' ')[0] || '',
           last_name: name?.split(' ').slice(1).join(' ') || ''
         });
@@ -316,6 +317,7 @@ const userController = {
         }
         if (picture && !user.profile_picture_url) {
           updateData.profile_picture_url = picture;
+          updateData.avatar = picture; // ✅ Sync avatar with profile picture
         }
         if (name && (!user.first_name || !user.last_name)) {
           updateData.first_name = name?.split(' ')[0] || user.first_name || '';
@@ -337,10 +339,10 @@ const userController = {
       const normalizedUser = {
         id: user.id,
         email: user.email,
-        username: user.username || user.first_name || 'User',
-        name: user.username || user.first_name || 'User', // Client expects 'name' field
-        firstName: user.first_name || user.firstName || '',
-        lastName: user.last_name || user.lastName || '',
+        username: user.username || user.first_name || name?.split(' ')[0] || 'User', // ✅ Prefer actual name
+        name: user.username || user.first_name || name?.split(' ')[0] || 'User', // ✅ Display name
+        firstName: user.first_name || name?.split(' ')[0] || '',
+        lastName: user.last_name || name?.split(' ').slice(1).join(' ') || '',
         role: user.role || 'user',
         isAdmin: user.isAdmin || false,
         isSuperAdmin: user.isSuperAdmin || false,
@@ -361,7 +363,8 @@ const userController = {
         updatedAt: user.updated_at,
         last_login: user.last_login_at,
         lastLogin: user.last_login_at,
-        avatar: user.avatar || null,
+        avatar: user.profile_picture_url || user.avatar || null, // ✅ Use Google profile picture
+        profilePicture: user.profile_picture_url || user.avatar || null,
         phone: user.phone || '',
         bio: user.bio || '',
         location: user.location || '',

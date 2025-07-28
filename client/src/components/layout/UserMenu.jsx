@@ -135,14 +135,14 @@ const UserMenu = ({
         aria-haspopup="true"
       >
         <Avatar
-          src={user?.avatar}
-          alt={user?.username || user?.email}
+          src={user?.avatar || user?.profile_picture_url || user?.profilePicture}
+          alt={user?.username || user?.name || user?.email}
           size="sm"
-          fallback={user?.username?.charAt(0) || user?.email?.charAt(0)}
+          fallback={user?.username?.charAt(0) || user?.name?.charAt(0) || user?.email?.charAt(0)}
         />
         <div className="hidden lg:block text-left">
           <p className="text-sm font-medium text-gray-900 dark:text-white">
-            {user?.username || t('common.user')}
+            {user?.username || user?.name || user?.displayName || t('common.user')}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {user?.email}

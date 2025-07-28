@@ -36,6 +36,8 @@ export default {
   continue: 'המשך',
   finish: 'סיים',
   skip: 'דלג',
+  profile: 'פרופיל',
+  complete: 'השלם',
   
   // פעולות טפסים
   submit: 'שלח',

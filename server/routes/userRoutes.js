@@ -102,6 +102,58 @@ router.put('/profile',
 );
 
 /**
+ * @route   POST /api/v1/users/upload-profile-picture
+ * @desc    Upload profile picture to Supabase Storage
+ * @access  Private
+ */
+router.post('/upload-profile-picture',
+  auth,
+  uploadProfilePicture,
+  async (req, res) => {
+    try {
+      if (!req.supabaseUpload) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'NO_FILE_UPLOADED',
+            message: 'No file was uploaded'
+          }
+        });
+      }
+
+      // Update user's avatar in database
+      const updatedUser = await userController.updateProfile({
+        user: req.user,
+        body: { 
+          avatar: req.supabaseUpload.url,
+          profile_picture_url: req.supabaseUpload.url
+        }
+      }, {
+        json: () => {} // Mock response object
+      });
+
+      res.json({
+        success: true,
+        data: {
+          url: req.supabaseUpload.url,
+          fileName: req.supabaseUpload.fileName,
+          message: 'Profile picture uploaded successfully'
+        }
+      });
+    } catch (error) {
+      console.error('❌ Profile picture upload route error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'UPLOAD_ROUTE_ERROR',
+          message: 'Failed to process profile picture upload'
+        }
+      });
+    }
+  }
+);
+
+/**
  * 🚀 NEW: Performance Monitoring Routes
  */
 

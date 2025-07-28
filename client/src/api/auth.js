@@ -334,11 +334,23 @@ export const authAPI = {
 
       // ✅ FIX: Properly extract user and token from server response
       console.log('🔍 DEBUG: Server response:', response.data);
-      
       let user, token;
       if (response.data.success && response.data.data) {
         user = response.data.data.user;
         token = response.data.data.accessToken || response.data.data.token;
+        
+        // ✅ CRITICAL: Normalize user data for UI consistency
+        if (user) {
+          // Ensure avatar is available from profile_picture_url
+          user.avatar = user.avatar || user.profile_picture_url || user.profilePicture;
+          
+          // Ensure display name is properly set
+          user.displayName = user.name || user.username || user.firstName || user.first_name || 'User';
+          user.username = user.username || user.name || user.firstName || user.first_name || user.email?.split('@')[0] || 'User';
+          
+          // Ensure onboarding flags are consistent
+          user.needsOnboarding = !user.onboarding_completed && !user.onboardingCompleted;
+        }
       } else {
         throw new Error('Invalid server response structure');
       }
@@ -674,6 +686,27 @@ export const authAPI = {
   isSuperAdmin() {
     const role = this.getUserRole();
     return role === 'super_admin';
+  },
+
+  // ✅ Upload profile picture
+  async uploadProfilePicture(formData) {
+    try {
+      const response = await api.client.post('/users/upload-profile-picture', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
   }
 };
 

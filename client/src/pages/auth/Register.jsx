@@ -24,6 +24,7 @@ import {
 import RegistrationForm from '../../components/features/auth/RegistrationForm';
 import SecuritySetup from '../../components/features/auth/SecuritySetup';
 import RegistrationComplete from '../../components/features/auth/RegistrationComplete';
+import GoogleProfileCompletion from '../../components/features/auth/GoogleProfileCompletion';
 import GuestSettings from '../../components/common/GuestSettings';
 
 import { api } from '../../api';
@@ -40,11 +41,12 @@ const Register = () => {
   const navigate = useNavigate();
   
   // ✅ Registration flow state
-  const [registrationStep, setRegistrationStep] = useState('form'); // form, security, complete
+  const [registrationStep, setRegistrationStep] = useState('form'); // form, security, googleProfile, complete
   const [userData, setUserData] = useState(null);
   const [securityData, setSecurityData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [errors, setErrors] = useState({});
 
   // ✅ Redirect if already authenticated
@@ -139,7 +141,7 @@ const Register = () => {
     }
   }, [validateForm, register, addNotification, t]);
 
-  // ✅ Handle Google registration - FIXED
+  // ✅ Handle Google registration - ENHANCED with profile completion
   const handleGoogleRegister = useCallback(async () => {
     setIsGoogleLoading(true);
     
@@ -148,21 +150,42 @@ const Register = () => {
       const result = await api.auth.googleLogin();
       
       if (result.success) {
-        // Google registration successful - go directly to complete
+        // Check if user needs profile completion
+        const needsProfileCompletion = !result.user.username || 
+                                       !result.user.google_profile_completed || 
+                                       !result.user.profile_completed;
+        
         setUserData({
+          id: result.user.id,
           firstName: result.user.firstName || result.user.name?.split(' ')[0] || 'User',
           lastName: result.user.lastName || result.user.name?.split(' ').slice(1).join(' ') || '',
           email: result.user.email,
-          fullName: result.user.name || `${result.user.firstName} ${result.user.lastName}`
+          name: result.user.name,
+          picture: result.user.avatar || result.user.picture,
+          username: result.user.username,
+          fullName: result.user.name || `${result.user.firstName} ${result.user.lastName}`,
+          google_profile_completed: result.user.google_profile_completed,
+          profile_completed: result.user.profile_completed
         });
         
-        setSecurityData({ securityScore: 75 }); // Google OAuth gives good security score
-        setRegistrationStep('complete');
+        setIsGoogleUser(true);
+        setSecurityData({ securityScore: 85 }); // Google OAuth gives good security score
         
-        addNotification({
-          type: 'success',
-          message: t('googleRegisterSuccess')
-        });
+        if (needsProfileCompletion) {
+          // Go to Google profile completion step
+          setRegistrationStep('googleProfile');
+          addNotification({
+            type: 'info',
+            message: t('completeProfileToGetStarted')
+          });
+        } else {
+          // User already has complete profile, go to final step
+          setRegistrationStep('complete');
+          addNotification({
+            type: 'success',
+            message: t('googleRegisterSuccess')
+          });
+        }
       } else {
         setErrors({ 
           general: result.error?.message || t('googleRegisterFailed')
@@ -194,6 +217,27 @@ const Register = () => {
     setRegistrationStep('complete');
   }, []);
 
+  // ✅ Handle Google profile completion
+  const handleGoogleProfileComplete = useCallback((completedUser) => {
+    setUserData(prev => ({ ...prev, ...completedUser }));
+    setRegistrationStep('complete');
+    
+    addNotification({
+      type: 'success',
+      message: t('profileSetupComplete')
+    });
+  }, [addNotification, t]);
+
+  // ✅ Handle Google profile completion skip
+  const handleGoogleProfileSkip = useCallback(() => {
+    setRegistrationStep('complete');
+    
+    addNotification({
+      type: 'info',
+      message: t('profileCanBeCompletedLater')
+    });
+  }, [addNotification, t]);
+
   // ✅ Handle registration completion
   const handleRegistrationComplete = useCallback(() => {
     navigate('/dashboard');
@@ -203,8 +247,11 @@ const Register = () => {
   const handleStepBack = useCallback(() => {
     if (registrationStep === 'security') {
       setRegistrationStep('form');
+    } else if (registrationStep === 'googleProfile') {
+      // For Google users, we can't go back to form, so skip profile completion
+      handleGoogleProfileSkip();
     }
-  }, [registrationStep]);
+  }, [registrationStep, handleGoogleProfileSkip]);
 
   // ✅ Animation variants
   const containerVariants = {
@@ -276,11 +323,13 @@ const Register = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {registrationStep === 'form' ? t('createAccount') :
              registrationStep === 'security' ? t('secureAccount') :
+             registrationStep === 'googleProfile' ? t('completeYourProfile') :
              t('welcomeAboard')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             {registrationStep === 'form' ? t('joinSpendWise') :
              registrationStep === 'security' ? t('almostDone') :
+             registrationStep === 'googleProfile' ? t('addDetailsToPersonalizeExperience') :
              t('readyToStart')}
           </p>
         </motion.div>
@@ -296,12 +345,22 @@ const Register = () => {
               <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600" />
               <div className={cn(
                 "w-3 h-3 rounded-full transition-colors",
-                registrationStep === 'security' ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                (registrationStep === 'security' || (isGoogleUser && registrationStep === 'googleProfile')) ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
               )} />
+              {isGoogleUser && (
+                <>
+                  <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600" />
+                  <div className={cn(
+                    "w-3 h-3 rounded-full transition-colors",
+                    registrationStep === 'googleProfile' ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                  )} />
+                </>
+              )}
             </div>
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 px-1">
               <span>{t('account')}</span>
-              <span>{t('security')}</span>
+              <span>{isGoogleUser ? t('profile') : t('security')}</span>
+              {isGoogleUser && <span>{t('complete')}</span>}
             </div>
           </motion.div>
         )}
@@ -343,6 +402,22 @@ const Register = () => {
                 />
               </motion.div>
             )}
+
+            {registrationStep === 'googleProfile' && (
+              <motion.div
+                key="googleProfile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <GoogleProfileCompletion
+                  onComplete={handleGoogleProfileComplete}
+                  onSkip={handleGoogleProfileSkip}
+                  initialUserData={userData}
+                />
+              </motion.div>
+            )}
             
             {registrationStep === 'complete' && (
               <motion.div
@@ -363,7 +438,7 @@ const Register = () => {
         </motion.div>
 
         {/* Navigation */}
-        {registrationStep === 'security' && (
+        {(registrationStep === 'security' || registrationStep === 'googleProfile') && (
           <motion.div variants={itemVariants} className="mt-6">
             <Button
               variant="ghost"
@@ -371,7 +446,7 @@ const Register = () => {
               className="w-full"
             >
               <ChevronLeft className={cn("w-4 h-4 mr-2", isRTL && "ml-2 mr-0 rotate-180")} />
-              {t('backToForm')}
+              {registrationStep === 'security' ? t('backToForm') : t('skipProfile')}
             </Button>
           </motion.div>
         )}

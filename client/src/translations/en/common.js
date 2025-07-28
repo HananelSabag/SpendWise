@@ -36,6 +36,8 @@ export default {
   continue: 'Continue',
   finish: 'Finish',
   skip: 'Skip',
+  profile: 'Profile',
+  complete: 'Complete',
   
   // Form actions
   submit: 'Submit',

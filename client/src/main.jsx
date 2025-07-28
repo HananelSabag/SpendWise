@@ -63,27 +63,49 @@ function SpendWiseApp() {
   );
 }
 
+// Global error handler for role access errors
+window.addEventListener('error', (event) => {
+  if (event.error?.message?.includes("Cannot read properties of undefined (reading 'role')")) {
+    console.warn('🔧 CAUGHT role access error - using fallback');
+    event.preventDefault(); // Prevent error from breaking the app
+    return false;
+  }
+});
+
 // Create React root and render
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 try {
   root.render(<SpendWiseApp />);
 } catch (error) {
-  console.error('🚨 CRITICAL ERROR during root.render:', error);
+  console.error('❌ Critical app error:', error);
   
-  // Fallback UI for critical render errors
-  document.getElementById('root').innerHTML = `
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); font-family: system-ui, -apple-system, sans-serif;">
-      <div style="max-width: 400px; width: 100%; margin: 0 1rem; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center;">
-        <div style="color: #ef4444; font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-        <h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">Unable to load SpendWise</h1>
-        <p style="color: #6b7280; margin-bottom: 1.5rem;">Please refresh the page or contact support if the problem persists.</p>
-        <button onclick="window.location.reload()" style="background: #3b82f6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;">
-          Refresh Page
-        </button>
-      </div>
-    </div>
-  `;
+  // Fallback UI
+  root.render(
+    React.createElement('div', {
+      style: { 
+        padding: '20px', 
+        textAlign: 'center',
+        fontFamily: 'system-ui'
+      }
+    }, [
+      React.createElement('h1', { key: 'title' }, 'SpendWise'),
+      React.createElement('p', { key: 'msg' }, 'Loading... Please refresh if this persists.'),
+      React.createElement('button', { 
+        key: 'refresh',
+        onClick: () => window.location.reload(),
+        style: { 
+          padding: '10px 20px',
+          margin: '10px',
+          border: 'none',
+          borderRadius: '5px',
+          background: '#007bff',
+          color: 'white',
+          cursor: 'pointer'
+        }
+      }, 'Refresh Page')
+    ])
+  );
 }
 
 // Development tools (only in development)

@@ -189,6 +189,45 @@ export const useAuthStore = create(
             }
           },
 
+          // Update user profile
+          updateProfile: async (updates) => {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            try {
+              const result = await authAPI.updateProfile(updates);
+              
+              if (result.success) {
+                // Update user data in store
+                set((state) => {
+                  state.user = { ...state.user, ...result.user };
+                  state.isLoading = false;
+                  state.error = null;
+                });
+
+                // Sync updated preferences
+                get().actions.syncUserPreferences(result.user);
+
+                return { success: true, user: result.user };
+              } else {
+                set((state) => {
+                  state.error = result.error;
+                  state.isLoading = false;
+                });
+                return { success: false, error: result.error };
+              }
+            } catch (error) {
+              const errorObj = { message: error.message || 'Profile update failed' };
+              set((state) => {
+                state.error = errorObj;
+                state.isLoading = false;
+              });
+              return { success: false, error: errorObj };
+            }
+          },
+
           // Logout
           logout: async () => {
             try {
@@ -388,8 +427,11 @@ export const useAuth = () => {
   return {
     ...store,
     login: store.actions.login,
+    register: store.actions.register,
     logout: store.actions.logout,
-    getProfile: store.actions.getProfile
+    updateProfile: store.actions.updateProfile,
+    getProfile: store.actions.getProfile,
+    verifyEmail: store.actions.verifyEmail
   };
 };
 
