@@ -41,6 +41,21 @@ export default {
   recurringTransactionsDesc: 'עסקאות חוזרות',
   openMenu: 'פתח תפריט',
   showPassword: 'הצג סיסמה',
+  calculator: 'מחשבון',
+  quickCalculatorDesc: 'מחשבון מהיר',
+  quickPanels: 'פאנלים מהירים',
+  
+  // נגישות
+  accessibility: {
+    theme: {
+      auto: 'אוטומטי'
+    },
+    contrast: {
+      normal: 'רגיל',
+      high: 'גבוה', 
+      maximum: 'מקסימלי'
+    }
+  },
   
   // ניווט
   back: 'חזור',

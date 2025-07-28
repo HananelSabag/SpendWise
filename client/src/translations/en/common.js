@@ -41,6 +41,21 @@ export default {
   recurringTransactionsDesc: 'Recurring transactions',
   openMenu: 'Open menu',
   showPassword: 'Show password',
+  calculator: 'Calculator',
+  quickCalculatorDesc: 'Quick calculator',
+  quickPanels: 'Quick panels',
+  
+  // Accessibility
+  accessibility: {
+    theme: {
+      auto: 'Auto'
+    },
+    contrast: {
+      normal: 'Normal',
+      high: 'High',
+      maximum: 'Maximum'
+    }
+  },
   
   // Navigation
   back: 'Back',

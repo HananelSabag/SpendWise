@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, useNotifications } from '../../stores';
 import OnboardingModal from '../features/onboarding/OnboardingModal';
 import { api } from '../../api';
@@ -13,6 +14,7 @@ import { api } from '../../api';
 const OnboardingManager = () => {
   const { user, updateProfile } = useAuth();
   const { addNotification } = useNotifications();
+  const navigate = useNavigate();
   
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -67,6 +69,10 @@ const OnboardingManager = () => {
         console.log('🎯 OnboardingManager - Onboarding completed successfully');
         setShowOnboarding(false);
         
+        // ✅ Navigate to dashboard after successful onboarding
+        console.log('🎯 OnboardingManager - Navigating to dashboard');
+        navigate('/', { replace: true });
+        
         addNotification({
           type: 'success',
           message: 'Welcome to SpendWise! Your account is now fully set up.',
@@ -88,7 +94,7 @@ const OnboardingManager = () => {
         duration: 5000
       });
     }
-  }, [updateProfile, addNotification]);
+  }, [updateProfile, addNotification, navigate]);
 
   // ✅ Handle onboarding close/skip
   const handleOnboardingClose = useCallback(() => {
