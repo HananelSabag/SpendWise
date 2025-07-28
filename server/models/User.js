@@ -384,7 +384,8 @@ class User {
         WHERE id = $${paramCount} AND is_active = true
         RETURNING id, email, username, role, email_verified,
                  first_name, last_name, avatar, phone, bio, location,
-                 website, birthday, preferences, created_at, updated_at
+                 website, birthday, preferences, created_at, updated_at,
+                 onboarding_completed, language_preference, theme_preference, currency_preference
       `;
 
       values.push(userId);

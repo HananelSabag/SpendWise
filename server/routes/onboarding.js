@@ -43,12 +43,37 @@ router.post('/complete', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    console.log('🚀 [ONBOARDING] Route called - attempting to complete onboarding', { 
+      userId, 
+      userObject: req.user,
+      body: req.body 
+    });
+    
     logger.info('🚀 [ONBOARDING] Attempting to complete onboarding', { userId });
+    
+    // ✅ ENHANCED: Add validation and debugging
+    if (!userId) {
+      console.error('❌ [ONBOARDING] No user ID found');
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'MISSING_USER_ID',
+          message: 'User ID is required'
+        }
+      });
+    }
+
+    console.log('🔍 [ONBOARDING] About to call User.markOnboardingComplete');
     
     // Mark onboarding as complete
     const updatedUser = await User.markOnboardingComplete(userId);
     
-    logger.info('✅ [ONBOARDING] User completed onboarding successfully', { userId, onboarding_completed: updatedUser.onboarding_completed });
+    console.log('✅ [ONBOARDING] User.markOnboardingComplete returned:', updatedUser);
+    
+    logger.info('✅ [ONBOARDING] User completed onboarding successfully', { 
+      userId, 
+      onboarding_completed: updatedUser.onboarding_completed 
+    });
     
     res.json({
       success: true,
@@ -58,9 +83,17 @@ router.post('/complete', auth, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ [ONBOARDING] Route error:', {
+      userId: req.user?.id,
+      error: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
+    
     logger.error('Error completing onboarding:', { 
       userId: req.user?.id, 
-      error: error.message 
+      error: error.message,
+      stack: error.stack
     });
     
     if (error.code === 'NOT_FOUND') {
@@ -74,7 +107,8 @@ router.post('/complete', auth, async (req, res) => {
       success: false,
       error: {
         ...errorCodes.INTERNAL_ERROR,
-        details: 'Failed to complete onboarding'
+        details: 'Failed to complete onboarding',
+        debug: error.message
       }
     });
   }

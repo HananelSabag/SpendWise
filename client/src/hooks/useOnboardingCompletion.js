@@ -87,6 +87,12 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
 
     } catch (error) {
       console.error('❌ Onboarding completion failed:', error);
+      console.error('❌ Server response details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
 
       addNotification({
         type: 'error',
