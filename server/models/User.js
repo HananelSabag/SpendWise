@@ -187,7 +187,8 @@ class User {
           id, email, username, password_hash, role, email_verified, is_active,
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
-          website, birthday, preferences, login_attempts, locked_until
+          website, birthday, preferences, login_attempts, locked_until,
+          oauth_provider, google_id
         FROM users 
         WHERE email = $1
       `;
