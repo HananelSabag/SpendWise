@@ -23,14 +23,14 @@ import {
 import CategoryForm from './forms/CategoryForm';
 import CategoryGrid from './components/CategoryGrid';
 import CategoryList from './components/CategoryList';
-import CategoryAnalytics from './analytics/CategoryAnalytics';
+// import CategoryAnalytics from './analytics/CategoryAnalytics'; // TEMP: Commented out to fix bind error
 
 // ✅ Import UI components
 import { Button, Input, Card, Modal, Dropdown, Badge } from '../../ui';
 
 // ✅ Import hooks
 import { useCategory } from '../../../hooks/useCategory';
-import { useCategoryAnalytics } from '../../../hooks/useCategoryAnalytics';
+// import { useCategoryAnalytics } from '../../../hooks/useCategoryAnalytics'; // TEMP: Commented out
 import { useCategorySelection } from '../../../hooks/useCategorySelection';
 
 // ✅ Import utilities
@@ -66,7 +66,7 @@ const CategoryManager = ({ className = '' }) => {
     toggleVisibility
   } = useCategory();
 
-  const { analytics } = useCategoryAnalytics();
+  // const { analytics } = useCategoryAnalytics(); // TEMP: Commented out
 
   // ✅ Selection hook
   const {
@@ -341,7 +341,7 @@ const CategoryManager = ({ className = '' }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <CategoryAnalytics />
+            {/* <CategoryAnalytics /> */} {/* TEMP: Commented out to fix bind error */}
           </motion.div>
         )}
       </AnimatePresence>
