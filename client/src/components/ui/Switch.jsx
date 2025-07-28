@@ -18,15 +18,12 @@ const Switch = ({
   className,
   ...props 
 }) => {
-  console.log('🔘 Switch render:', { checked, disabled, size, hasOnChange: !!onCheckedChange });
-
   const handleClick = () => {
-    console.log('🔘 Switch handleClick:', { disabled, hasOnChange: !!onCheckedChange });
     if (!disabled && onCheckedChange) {
       try {
         onCheckedChange(!checked);
       } catch (error) {
-        console.error('🔘 Switch onCheckedChange error:', error);
+        console.error('Switch onCheckedChange error:', error);
       }
     }
   };

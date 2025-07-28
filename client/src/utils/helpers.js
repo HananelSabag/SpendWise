@@ -1,20 +1,19 @@
 /**
- * 🛠️ SPENDWISE UTILITY HELPERS - COMPLETE SYSTEM
- * Comprehensive utility functions for the entire SpendWise application
- * @version 2.0.0
+ * 🛠️ UTILITY HELPERS - Core utilities for SpendWise
+ * Includes className merging, date formatting, and validation helpers
+ * @module utils/helpers
  */
-
-console.log('🛠️ Loading utility helpers...');
 
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-// ✅ Class name utility (for Tailwind CSS)
+/**
+ * 🎨 Merge CSS class names intelligently
+ * Combines clsx and tailwind-merge for optimal class handling
+ */
 export function cn(...inputs) {
   try {
-    console.log('🎨 cn() called with:', inputs);
     const result = twMerge(clsx(inputs));
-    console.log('🎨 cn() result:', result);
     return result;
   } catch (error) {
     console.error('🎨 cn() error:', error);
