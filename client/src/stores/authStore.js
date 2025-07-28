@@ -52,9 +52,10 @@ export const useAuthStore = create(
                     set((state) => {
                       state.isAuthenticated = true;
                       state.user = user.data;
-                      state.userRole = user.data.role || 'user';
-                      state.isAdmin = user.data.isAdmin || ['admin', 'super_admin'].includes(user.data.role);
-                      state.isSuperAdmin = user.data.isSuperAdmin || user.data.role === 'super_admin';
+                      // ✅ Add safety checks for user.data properties
+                      state.userRole = (user.data && user.data.role) || 'user';
+                      state.isAdmin = (user.data && user.data.isAdmin) || (user.data ? ['admin', 'super_admin'].includes(user.data.role || 'user') : false);
+                      state.isSuperAdmin = (user.data && user.data.isSuperAdmin) || (user.data ? (user.data.role || 'user') === 'super_admin' : false);
                     });
                   } else {
                     // Invalid token, clear it
@@ -103,9 +104,10 @@ export const useAuthStore = create(
                 set((state) => {
                   state.isAuthenticated = true;
                   state.user = userData;
-                  state.userRole = userData.role || 'user';
-                  state.isAdmin = ['admin', 'super_admin'].includes(userData.role);
-                  state.isSuperAdmin = userData.role === 'super_admin';
+                  // ✅ Add safety checks for userData properties
+                  state.userRole = (userData && userData.role) || 'user';
+                  state.isAdmin = userData ? ['admin', 'super_admin'].includes(userData.role || 'user') : false;
+                  state.isSuperAdmin = userData ? (userData.role || 'user') === 'super_admin' : false;
                   state.isLoading = false;
                   state.error = null;
                   state.sessionStart = new Date().toISOString();
@@ -220,12 +222,12 @@ export const useAuthStore = create(
               state.error = null;
               
               // ✅ Derive role-based state
-              state.userRole = user.role || 'user';
-              state.isAdmin = ['admin', 'super_admin'].includes(user.role);
-              state.isSuperAdmin = user.role === 'super_admin';
+              state.userRole = (user && user.role) || 'user';
+              state.isAdmin = user ? ['admin', 'super_admin'].includes(user.role || 'user') : false;
+              state.isSuperAdmin = user ? (user.role || 'user') === 'super_admin' : false;
               
               // ✅ Set permissions based on role
-              state.permissions = get().actions.getPermissionsForRole(user.role);
+              state.permissions = get().actions.getPermissionsForRole((user && user.role) || 'user');
               
               // ✅ Update session
               state.lastActivity = Date.now();

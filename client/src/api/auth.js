@@ -332,7 +332,24 @@ export const authAPI = {
       // Send credential to our backend with extracted user info
       const response = await api.client.post('/users/auth/google', payload);
 
-      const { user, token } = response.data;
+      // ✅ FIX: Properly extract user and token from server response
+      console.log('🔍 DEBUG: Server response:', response.data);
+      
+      let user, token;
+      if (response.data.success && response.data.data) {
+        user = response.data.data.user;
+        token = response.data.data.accessToken || response.data.data.token;
+      } else {
+        throw new Error('Invalid server response structure');
+      }
+      
+      // ✅ Add safety check for user object
+      if (!user) {
+        throw new Error('No user data in server response');
+      }
+      
+      console.log('🔍 DEBUG: Extracted user:', user);
+      console.log('🔍 DEBUG: Extracted token:', token);
       
       // Store token
       localStorage.setItem('accessToken', token);
@@ -345,8 +362,8 @@ export const authAPI = {
         success: true,
         user: {
           ...user,
-          isAdmin: ['admin', 'super_admin'].includes(user.role),
-          isSuperAdmin: user.role === 'super_admin',
+          isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
+          isSuperAdmin: (user.role || 'user') === 'super_admin',
           loginMethod: 'google'
         },
         token
