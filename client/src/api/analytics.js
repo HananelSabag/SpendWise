@@ -387,10 +387,28 @@ export const analyticsAPI = {
           data: response.data
         };
       } catch (error) {
-        return {
-          success: false,
-          error: api.normalizeError(error)
-        };
+        console.warn('📊 Analytics endpoint failed, trying fallback:', error.message);
+        
+        // ✅ FALLBACK: Try the existing transactions/dashboard endpoint
+        try {
+          const endpoint = date ? `/transactions/dashboard?date=${date}` : '/transactions/dashboard';
+          
+          const response = await api.cachedRequest(endpoint, {
+            method: 'GET'
+          }, `dashboard-fallback-${date || 'current'}`, 5 * 60 * 1000);
+
+          console.log('📊 Fallback dashboard endpoint worked');
+          return {
+            success: true,
+            data: response.data
+          };
+        } catch (fallbackError) {
+          console.error('📊 Both dashboard endpoints failed:', fallbackError);
+          return {
+            success: false,
+            error: api.normalizeError(error) // Return original error
+          };
+        }
       }
     },
 
