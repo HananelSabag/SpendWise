@@ -254,9 +254,14 @@ class User {
         throw new Error('Account is disabled');
       }
 
+      // Check if this is a Google OAuth user (no password set)
+      if (!user.password_hash && user.oauth_provider === 'google') {
+        throw new Error('This account uses Google Sign-In. Please use "Continue with Google" to login.');
+      }
+      
       // Verify password
       if (!user.password_hash) {
-        throw new Error('Password not set for this account');
+        throw new Error('Password not set for this account. Please reset your password or contact support.');
       }
       
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
