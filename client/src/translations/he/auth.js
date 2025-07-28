@@ -14,6 +14,8 @@ export default {
   emailPlaceholder: "הכניסו את כתובת האימייל שלכם",
   password: "סיסמה",
   passwordPlaceholder: "הכניסו את הסיסמה שלכם",
+  showPassword: "הצג סיסמה",
+  hidePassword: "הסתר סיסמה",
   
   // Buttons and actions
   signIn: "התחבר",

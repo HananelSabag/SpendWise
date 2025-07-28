@@ -74,11 +74,7 @@ const OnboardingModal = ({
     goToStep,
     canSkip,
     handlePrimaryAction
-  } = useOnboardingNavigation({
-    currentStep,
-    steps,
-    isValid,
-    stepData,
+  } = useOnboardingNavigation(onboardingState, {
     onComplete,
     onSkip
   });

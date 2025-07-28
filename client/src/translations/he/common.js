@@ -4,6 +4,9 @@
  */
 
 export default {
+  // אפליקציה
+  appName: 'SpendWise',
+  
   // פעולות בסיסיות
   loading: 'טוען...',
   error: 'שגיאה',
@@ -28,6 +31,16 @@ export default {
   no: 'לא',
   confirm: 'אשר',
   dismiss: 'התעלם',
+  
+  // ניווט ותפריטים
+  categories: 'קטגוריות',
+  manageCategoriesDesc: 'נהלו את הקטגוריות שלכם',
+  exchange: 'המרת מטבע',
+  currencyExchangeDesc: 'המירו בין מטבעות שונים',
+  recurring: 'חוזר',
+  recurringTransactionsDesc: 'עסקאות חוזרות',
+  openMenu: 'פתח תפריט',
+  showPassword: 'הצג סיסמה',
   
   // ניווט
   back: 'חזור',

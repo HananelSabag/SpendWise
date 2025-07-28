@@ -4,6 +4,9 @@
  */
 
 export default {
+  // Application
+  appName: 'SpendWise',
+  
   // Basic actions
   loading: 'Loading...',
   error: 'Error',
@@ -28,6 +31,16 @@ export default {
   no: 'No',
   confirm: 'Confirm',
   dismiss: 'Dismiss',
+  
+  // Navigation and menus
+  categories: 'Categories',
+  manageCategoriesDesc: 'Manage your categories',
+  exchange: 'Exchange',
+  currencyExchangeDesc: 'Convert between currencies',
+  recurring: 'Recurring',
+  recurringTransactionsDesc: 'Recurring transactions',
+  openMenu: 'Open menu',
+  showPassword: 'Show password',
   
   // Navigation
   back: 'Back',

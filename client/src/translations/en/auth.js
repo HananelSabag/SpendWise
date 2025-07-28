@@ -14,6 +14,8 @@ export default {
   emailPlaceholder: "Enter your email address",
   password: "Password", 
   passwordPlaceholder: "Enter your password",
+  showPassword: "Show password",
+  hidePassword: "Hide password",
   
   // Buttons and actions
   signIn: "Sign In",
