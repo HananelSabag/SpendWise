@@ -121,17 +121,17 @@ router.post('/upload-profile-picture',
         });
       }
 
-      // Update user's avatar in database - FIXED: Call User model directly
-      const User = require('../models/User');
-      const updatedUser = await User.update(req.user.id, {
-        avatar: req.supabaseUpload.publicUrl,
-        profile_picture_url: req.supabaseUpload.publicUrl
-      });
+      // Update user's avatar in database - FIXED: Use direct database query
+      const db = require('../config/db');
+      const result = await db.query(
+        'UPDATE users SET avatar = $1, profile_picture_url = $2, updated_at = NOW() WHERE id = $3 RETURNING id, avatar, profile_picture_url',
+        [req.supabaseUpload.publicUrl, req.supabaseUpload.publicUrl, req.user.id]
+      );
       
       console.log('✅ Profile picture - Database updated:', {
         userId: req.user.id,
         avatarUrl: req.supabaseUpload.publicUrl,
-        updatedUser: updatedUser
+        updatedUser: result.rows[0]
       });
 
       res.json({
@@ -140,7 +140,7 @@ router.post('/upload-profile-picture',
           url: req.supabaseUpload.publicUrl,
           fileName: req.supabaseUpload.fileName,
           message: 'Profile picture uploaded successfully',
-          user: updatedUser
+          user: result.rows[0]
         }
       });
     } catch (error) {

@@ -84,25 +84,36 @@ const Profile = () => {
       // No need to call updateProfile again - it causes validation errors
       // The upload-profile-picture endpoint handles both upload AND database update
       
-      // Refresh user data in auth store to get updated avatar
-      console.log('🔍 Profile Upload - About to refresh user profile...');
-      const refreshResult = await useAuthStore.getState().actions.getProfile();
-      console.log('🔍 Profile Upload - Profile refresh result:', refreshResult);
+      // Only refresh user data if upload was successful
+      if (response.success) {
+        console.log('🔍 Profile Upload - About to refresh user profile...');
+        const refreshResult = await useAuthStore.getState().actions.getProfile();
+        console.log('🔍 Profile Upload - Profile refresh result:', refreshResult);
+      }
       
-      // Force browser to refresh any cached images by updating avatar URLs
-      const avatarElements = document.querySelectorAll('img[src*="supabase"]');
-      avatarElements.forEach(img => {
-        if (img.src.includes('supabase')) {
-          const url = new URL(img.src);
-          url.searchParams.set('t', Date.now());
-          img.src = url.toString();
-        }
-      });
-      
-      addNotification({
-        type: 'success',
-        message: 'Profile picture updated!'
-      });
+      // Only show success and refresh cache if upload was successful
+      if (response.success) {
+        // Force browser to refresh any cached images by updating avatar URLs
+        const avatarElements = document.querySelectorAll('img[src*="supabase"]');
+        avatarElements.forEach(img => {
+          if (img.src.includes('supabase')) {
+            const url = new URL(img.src);
+            url.searchParams.set('t', Date.now());
+            img.src = url.toString();
+          }
+        });
+        
+        addNotification({
+          type: 'success',
+          message: 'Profile picture updated!'
+        });
+      } else {
+        // Upload failed, show error
+        addNotification({
+          type: 'error',
+          message: response.error?.message || 'Failed to upload profile picture'
+        });
+      }
     } catch (error) {
       console.error('🔍 Profile Upload Error:', error);
       addNotification({

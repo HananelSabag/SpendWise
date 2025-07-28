@@ -197,6 +197,8 @@ export default {
   signingOut: "Signing out...",
   
   // Account management
+  logout: "Logout", 
+  logoutDesc: "Sign out of your account",
   logoutSuccess: "Signed out successfully",
   passwordResetSent: "Password reset instructions sent to your email",
   passwordResetSuccess: "Password reset successfully!",

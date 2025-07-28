@@ -187,6 +187,8 @@ export default {
   signingOut: "מתנתק...",
   
   // Account management
+  logout: "התנתק",
+  logoutDesc: "התנתק מהחשבון",
   logoutSuccess: "התנתקתם בהצלחה",
   passwordResetSent: "הוראות איפוס סיסמה נשלחו לאימייל שלכם",
   passwordResetSuccess: "הסיסמה אופסה בהצלחה!",

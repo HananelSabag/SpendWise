@@ -72,7 +72,7 @@ const Dashboard = () => {
     } else if (user?.email) {
       userName = user.email.split('@')[0];
     } else {
-      userName = 'User';  // Simple fallback, no translation needed
+      userName = user?.email?.split('@')[0] || '';  // Never show "User" fallback
     }
     
     console.log('🔍 Dashboard - Extracted userName:', userName);
@@ -104,10 +104,10 @@ const Dashboard = () => {
     return greetingText;
   }, [user, t]);
 
-  // ✅ Profile picture with cache-busting for real-time updates
+  // ✅ Profile picture with cache-busting for real-time updates - NO FALLBACK TO "User"
   const profilePicture = user?.avatar 
     ? `${user.avatar}?t=${Date.now()}` // Add cache-busting timestamp
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.first_name || user?.username || 'User')}&background=3b82f6&color=ffffff&size=120`;
+    : null; // Never show generic user avatar
 
   // ✅ Date formatting based on current language
   const formatDate = useCallback((date) => {
