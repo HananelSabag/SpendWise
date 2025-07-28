@@ -333,6 +333,45 @@ const userController = {
       // Generate JWT tokens
       const { accessToken, refreshToken } = generateTokens(user);
 
+      // ✅ FIX: Use EXACT same normalization as regular login
+      const normalizedUser = {
+        id: user.id,
+        email: user.email,
+        username: user.username || user.first_name || 'User',
+        name: user.username || user.first_name || 'User', // Client expects 'name' field
+        firstName: user.first_name || user.firstName || '',
+        lastName: user.last_name || user.lastName || '',
+        role: user.role || 'user',
+        isAdmin: user.isAdmin || false,
+        isSuperAdmin: user.isSuperAdmin || false,
+        email_verified: user.email_verified || false,
+        emailVerified: user.email_verified || false,
+        onboarding_completed: user.onboarding_completed || false,
+        onboardingCompleted: user.onboarding_completed || false,
+        language_preference: user.language_preference || 'en',
+        languagePreference: user.language_preference || 'en',
+        theme_preference: user.theme_preference || 'light',
+        themePreference: user.theme_preference || 'light',
+        currency_preference: user.currency_preference || 'USD',
+        currencyPreference: user.currency_preference || 'USD',
+        preferences: user.preferences || {},
+        created_at: user.created_at,
+        createdAt: user.created_at,
+        updated_at: user.updated_at,
+        updatedAt: user.updated_at,
+        last_login: user.last_login_at,
+        lastLogin: user.last_login_at,
+        avatar: user.avatar || null,
+        phone: user.phone || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        website: user.website || '',
+        birthday: user.birthday || null,
+        isPremium: user.isPremium || false,
+        profile_picture_url: user.profile_picture_url,
+        oauth_provider: user.oauth_provider || 'google'
+      };
+
       const duration = Date.now() - start;
       logger.info('✅ Google OAuth successful', {
         userId: user.id,
@@ -345,20 +384,8 @@ const userController = {
       res.json({
         success: true,
         data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role, // ✅ Add missing role field
-            email_verified: true,
-            onboarding_completed: user.onboarding_completed,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            profile_picture_url: user.profile_picture_url,
-            created_at: user.created_at,
-            oauth_provider: user.oauth_provider || 'google'
-          },
-          token: accessToken, // ✅ Client expects 'token' not 'accessToken'
+          user: normalizedUser,
+          accessToken, // ✅ EXACT same structure as regular login
           tokens: {
             accessToken,
             refreshToken
