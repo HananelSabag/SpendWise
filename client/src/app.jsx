@@ -27,12 +27,8 @@ import {
   useTheme 
 } from './stores';
 
-console.log('🚀 App - stores imported:', { 
-  hasStoreProvider: !!StoreProvider, 
-  hasUseAuth: !!useAuth, 
-  hasUseTranslation: !!useTranslation, 
-  hasUseTheme: !!useTheme 
-});
+// ✅ Import App Initializer to fix race conditions
+import AppInitializer from './components/common/AppInitializer';
 
 // NEW: Import unified API and performance monitoring
 import spendWiseAPI, { authAPI, adminAPI, performanceAPI } from './api';
@@ -704,7 +700,9 @@ function App() {
       >
         {/* ✅ REPLACED: All Context providers with single StoreProvider! */}
         <StoreProvider>
-          <AppContent />
+          <AppInitializer>
+            <AppContent />
+          </AppInitializer>
         </StoreProvider>
       </Router>
 

@@ -145,13 +145,6 @@ class SpendWiseAPIClient {
         const token = localStorage.getItem('accessToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-          if (this.config?.DEBUG) {
-            console.log('🔑 Adding token to request:', config.url, token.substring(0, 20) + '...');
-          }
-        } else {
-          if (this.config?.DEBUG) {
-            console.log('⚠️ No token found for request:', config.url);
-          }
         }
 
         // Add request metadata
@@ -160,8 +153,9 @@ class SpendWiseAPIClient {
           retryCount: config.retryCount || 0
         };
 
-        if (this.config?.DEBUG) {
-          console.log('🚀 API Request:', config.method?.toUpperCase(), config.url);
+        // Request logged only in development
+        if (import.meta.env.DEV && config.url && config.method) {
+          console.log(`🚀 ${config.method.toUpperCase()} ${config.url}`);
         }
 
         return config;
@@ -175,10 +169,12 @@ class SpendWiseAPIClient {
         // Update server state on success
         this.serverState.updateSuccess();
 
-        // Log performance in debug mode
-        if (config.DEBUG && response.config.metadata) {
+        // Log performance in development only
+        if (import.meta.env.DEV && response.config.metadata) {
           const duration = Date.now() - response.config.metadata.startTime;
-          console.log(`✅ API Success (${duration}ms):`, response.config.url);
+          if (duration > 1000) { // Only log slow requests
+            console.log(`⚠️ Slow API (${duration}ms): ${response.config.url}`);
+          }
         }
 
         return response;
@@ -251,23 +247,16 @@ class SpendWiseAPIClient {
     const isOnAuthPage = ['/login', '/register', '/auth/login', '/auth/register', '/auth/verify-email', '/auth/password-reset'].includes(window.location.pathname);
     
     if (!isOnAuthPage) {
-      // Use React Router navigation instead of hard redirect to prevent loops
-      console.log('🔒 Authentication expired, redirecting to login...');
-      
       // Try to use React Router if available
       if (window.spendWiseNavigate) {
-        window.spendWiseNavigate('/auth/login', { replace: true });
+        window.spendWiseNavigate('/login', { replace: true });
       } else {
-        // Fallback to location change
-        window.location.replace('/auth/login');
+        window.location.replace('/login');
       }
     } else {
       // Already on auth page, just clear the auth state
-      console.log('🔒 Authentication error on auth page, clearing state...');
-      
-      // Notify auth store to clear state
       if (window.spendWiseAuthStore) {
-        window.spendWiseAuthStore.getState().actions.logout();
+        window.spendWiseAuthStore.getState().actions.reset();
       }
     }
   }

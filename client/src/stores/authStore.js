@@ -32,82 +32,44 @@ export const useAuthStore = create(
 
         // ✅ Actions
         actions: {
-          // Initialize auth store
-          initialize: async () => {
-            try {
-              console.log('🔐 Initializing auth store...');
+          // Initialize auth store - SIMPLIFIED
+          initialize: () => {
+            // ✅ FIXED: Synchronous initialization to prevent race conditions
+            const token = localStorage.getItem('accessToken');
+            
+            set((state) => {
+              state.initialized = true;
+              state.isLoading = false;
               
-              set((state) => {
-                state.initialized = true;
-                state.isLoading = false;
-              });
-
-              // Check for existing token
-              const token = localStorage.getItem('accessToken');
+              // Simple token check - if exists, assume authenticated
               if (token) {
-                try {
-                  // Try to validate token
-                  const user = await authAPI.validateToken(token);
-                  if (user.success) {
-                    set((state) => {
-                      state.isAuthenticated = true;
-                      state.user = user.data;
-                      // ✅ Add safety checks for user.data properties
-                      state.userRole = (user.data && user.data.role) || 'user';
-                      state.isAdmin = (user.data && user.data.isAdmin) || (user.data ? ['admin', 'super_admin'].includes(user.data.role || 'user') : false);
-                      state.isSuperAdmin = (user.data && user.data.isSuperAdmin) || (user.data ? (user.data.role || 'user') === 'super_admin' : false);
-                    });
-                  } else {
-                    // Invalid token, clear it
-                    localStorage.removeItem('accessToken');
-                  }
-                } catch (error) {
-                  console.warn('Token validation failed:', error);
-                  localStorage.removeItem('accessToken');
-                }
+                state.isAuthenticated = true;
+                // Will be validated on first API call
               }
+            });
 
-              console.log('✅ Auth store initialized successfully');
-              return true;
-            } catch (error) {
-              console.error('❌ Auth store initialization failed:', error);
-              set((state) => {
-                state.initialized = true; // Mark as initialized anyway
-                state.isLoading = false;
-              });
-              return false;
-            }
+            return true;
           },
 
-          // Basic login
-          login: async (email, password, options = {}) => {
-            console.log('🔑 Auth store login called', { email });
-            
+          // Basic login - SIMPLIFIED
+          login: async (email, password) => {
             set((state) => {
               state.isLoading = true;
               state.error = null;
             });
 
             try {
-              // Use the authAPI login method
               const result = await authAPI.login(email, password);
-              console.log('🔑 Auth API result:', result);
               
               if (result.success) {
                 const userData = result.user;
-                console.log('🔑 Setting user data:', userData);
                 
-                // Small delay to ensure token is saved properly
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Force a state update to ensure all components see the authenticated state
                 set((state) => {
                   state.isAuthenticated = true;
                   state.user = userData;
-                  // ✅ Add safety checks for userData properties
-                  state.userRole = (userData && userData.role) || 'user';
-                  state.isAdmin = userData ? ['admin', 'super_admin'].includes(userData.role || 'user') : false;
-                  state.isSuperAdmin = userData ? (userData.role || 'user') === 'super_admin' : false;
+                  state.userRole = userData?.role || 'user';
+                  state.isAdmin = ['admin', 'super_admin'].includes(userData?.role || 'user');
+                  state.isSuperAdmin = (userData?.role || 'user') === 'super_admin';
                   state.isLoading = false;
                   state.error = null;
                   state.sessionStart = new Date().toISOString();
@@ -123,10 +85,57 @@ export const useAuthStore = create(
                 return { success: false, error: result.error };
               }
             } catch (error) {
-              console.error('🔑 Auth store login error:', error);
               const errorObj = { 
                 message: error.message || 'Login failed', 
                 code: 'LOGIN_ERROR' 
+              };
+              
+              set((state) => {
+                state.isLoading = false;
+                state.error = errorObj;
+              });
+
+              return { success: false, error: errorObj };
+            }
+          },
+
+          // ✅ NEW: Google OAuth login - EXACT same logic as regular login
+          googleLogin: async () => {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            try {
+              const result = await authAPI.googleLogin();
+              
+              if (result.success) {
+                const userData = result.user;
+                
+                set((state) => {
+                  state.isAuthenticated = true;
+                  state.user = userData;
+                  state.userRole = userData?.role || 'user';
+                  state.isAdmin = ['admin', 'super_admin'].includes(userData?.role || 'user');
+                  state.isSuperAdmin = (userData?.role || 'user') === 'super_admin';
+                  state.isLoading = false;
+                  state.error = null;
+                  state.sessionStart = new Date().toISOString();
+                });
+
+                return { success: true, user: userData };
+              } else {
+                set((state) => {
+                  state.isLoading = false;
+                  state.error = result.error;
+                });
+
+                return { success: false, error: result.error };
+              }
+            } catch (error) {
+              const errorObj = { 
+                message: error.message || 'Google login failed', 
+                code: 'GOOGLE_LOGIN_ERROR' 
               };
               
               set((state) => {
@@ -228,47 +237,22 @@ export const useAuthStore = create(
             }
           },
 
-          // Logout
+          // Logout - SIMPLIFIED
           logout: async () => {
-            try {
-              // Clear token
-              localStorage.removeItem('accessToken');
-              
-              // Reset state
-              set((state) => {
-                state.isAuthenticated = false;
-                state.user = null;
-                state.userRole = 'user';
-                state.isAdmin = false;
-                state.isSuperAdmin = false;
-                state.sessionStart = null;
-                state.error = null;
-              });
+            // Clear token
+            localStorage.removeItem('accessToken');
+            
+            // Reset state
+            get().actions.reset();
 
-              // ✅ Use proper navigation instead of hard redirect
-              if (typeof window !== 'undefined') {
-                // Try to use React Router if available
-                if (window.spendWiseNavigate) {
-                  window.spendWiseNavigate('/login', { replace: true });
-                } else {
-                  // Fallback to location change
-                  window.location.replace('/login');
-                }
-              }
-
-              return { success: true };
-            } catch (error) {
-              console.error('Logout failed:', error);
-              // Still redirect even if logout fails
-              if (typeof window !== 'undefined') {
-                if (window.spendWiseNavigate) {
-                  window.spendWiseNavigate('/login', { replace: true });
-                } else {
-                  window.location.replace('/login');
-                }
-              }
-              return { success: false, error: error.message };
+            // Navigate to login
+            if (window.spendWiseNavigate) {
+              window.spendWiseNavigate('/login', { replace: true });
+            } else {
+              window.location.replace('/login');
             }
+
+            return { success: true };
           },
 
           // Set user data and derive role-based state
@@ -434,23 +418,28 @@ export const authSelectors = {
   error: (state) => state.error
 };
 
-// ✅ Convenience hooks
+// ✅ Enhanced exports with performance selectors and all methods
 export const useAuth = () => {
   const store = useAuthStore();
-  
-  // Set global store reference for API client error handling
-  if (typeof window !== 'undefined') {
-    window.spendWiseAuthStore = useAuthStore;
-  }
-  
   return {
+    // State
     ...store,
+    
+    // Actions
     login: store.actions.login,
+    googleLogin: store.actions.googleLogin, // ✅ ADD: Export googleLogin method
     register: store.actions.register,
     logout: store.actions.logout,
     updateProfile: store.actions.updateProfile,
-    getProfile: store.actions.getProfile,
-    verifyEmail: store.actions.verifyEmail
+    verifyEmail: store.actions.verifyEmail,
+    
+    // Utilities
+    reset: store.actions.reset,
+    setupBiometric: store.actions.setupBiometric,
+    
+    // Session management
+    extendSession: store.actions.extendSession,
+    checkSession: store.actions.checkSession
   };
 };
 

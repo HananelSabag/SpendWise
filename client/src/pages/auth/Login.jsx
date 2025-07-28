@@ -30,7 +30,7 @@ import { cn } from '../../utils/helpers';
 
 const Login = () => {
   // ✅ Zustand stores
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, googleLogin } = useAuth();
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
@@ -108,20 +108,17 @@ const Login = () => {
     setIsGoogleLoading(true);
     
     try {
-      // Use the correct API structure for Google OAuth
-      const result = await api.auth.googleLogin();
+      // ✅ Use auth store method instead of API directly
+      const result = await googleLogin();
       
       if (result.success) {
-        const user = result.user;
-        
         addNotification({
           type: 'success',
           message: t('googleLoginSuccess')
         });
         
-        // ✅ Navigate to dashboard - onboarding will show as popup if needed
-        const from = location.state?.from?.pathname || '/';
-        console.log('🚀 Redirecting authenticated Google user to:', from);
+        // ✅ FIXED: Navigate to dashboard with proper fallback
+        const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
         setErrors({ 
@@ -129,14 +126,13 @@ const Login = () => {
         });
       }
     } catch (error) {
-      console.error('🔴 Google login error:', error);
       setErrors({ 
         general: t('googleLoginError')
       });
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [addNotification, t, location, navigate]);
+  }, [googleLogin, addNotification, t, location, navigate]);
 
   // ✅ Animation variants
   const containerVariants = {

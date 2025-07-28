@@ -37,6 +37,7 @@ const RegistrationForm = ({
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    username: '', // ✅ ADD: Username field to match Google OAuth
     email: '',
     password: '',
     confirmPassword: ''
@@ -153,6 +154,34 @@ const RegistrationForm = ({
               </p>
             )}
           </div>
+        </div>
+
+        {/* ✅ ADD: Username Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('username')}
+          </label>
+          <div className="relative">
+            <Input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              placeholder={t('usernamePlaceholder')}
+              className={cn(
+                "pl-12",
+                errors.username && "border-red-300 focus:border-red-500"
+              )}
+              disabled={isSubmitting}
+              autoComplete="username"
+            />
+            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          </div>
+          {errors.username && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+              {errors.username}
+            </p>
+          )}
         </div>
 
         {/* Email */}

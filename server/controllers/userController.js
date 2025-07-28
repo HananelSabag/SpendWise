@@ -244,10 +244,7 @@ const userController = {
         email = payload.email;
         name = name || payload.name;
         picture = picture || payload.picture;
-        
-        console.log('🔍 DEBUG: Extracted from JWT:', { email, name, picture, sub: payload.sub });
       } catch (decodeError) {
-        console.error('🔍 DEBUG: Failed to decode idToken:', decodeError);
         throw { 
           ...errorCodes.VALIDATION_ERROR, 
           details: 'Invalid Google ID token or missing email' 
@@ -273,9 +270,7 @@ const userController = {
         const payloadBase64 = idToken.split('.')[1];
         const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
         googleUserId = payload.sub; // Google user ID (usually numeric)
-        console.log('🔍 DEBUG: Google user ID extracted:', googleUserId);
       } catch (extractError) {
-        console.error('🔍 DEBUG: Failed to extract Google user ID:', extractError);
         // Continue without Google ID - not critical
       }
 
@@ -302,6 +297,9 @@ const userController = {
           last_name: name?.split(' ').slice(1).join(' ') || ''
         });
 
+        // Refresh user data
+        user = await User.findById(user.id);
+
         logger.info('✅ New Google user created', {
           userId: user.id,
           email,
@@ -325,6 +323,10 @@ const userController = {
         }
         
         await User.update(user.id, updateData);
+        
+        // Refresh user data
+        user = await User.findById(user.id);
+        
         logger.info('✅ Existing user verified via Google', {
           userId: user.id,
           email,
@@ -339,10 +341,10 @@ const userController = {
       const normalizedUser = {
         id: user.id,
         email: user.email,
-        username: user.username || user.first_name || name?.split(' ')[0] || email?.split('@')[0] || 'User',
-        name: user.username || user.first_name || name?.split(' ')[0] || email?.split('@')[0] || 'User',
-        firstName: user.first_name || name?.split(' ')[0] || '',
-        lastName: user.last_name || name?.split(' ').slice(1).join(' ') || '',
+        username: user.username || user.first_name || 'User',
+        name: user.username || user.first_name || 'User', // Client expects 'name' field
+        firstName: user.first_name || user.firstName || '',
+        lastName: user.last_name || user.lastName || '',
         role: user.role || 'user',
         isAdmin: user.isAdmin || false,
         isSuperAdmin: user.isSuperAdmin || false,
@@ -364,26 +366,23 @@ const userController = {
         last_login: user.last_login_at,
         lastLogin: user.last_login_at,
         avatar: user.profile_picture_url || user.avatar || null, // ✅ Use Google profile picture
-        profilePicture: user.profile_picture_url || user.avatar || null,
         phone: user.phone || '',
         bio: user.bio || '',
         location: user.location || '',
         website: user.website || '',
         birthday: user.birthday || null,
-        isPremium: user.isPremium || false,
-        profile_picture_url: user.profile_picture_url,
-        oauth_provider: user.oauth_provider || 'google'
+        isPremium: user.isPremium || false
       };
 
       const duration = Date.now() - start;
       logger.info('✅ Google OAuth successful', {
         userId: user.id,
         email,
-        isNewUser: !user.id,
         duration: `${duration}ms`,
         performance: duration < 400 ? 'excellent' : duration < 800 ? 'good' : 'slow'
       });
 
+      // ✅ FIX: Return EXACT same structure as regular login
       res.json({
         success: true,
         data: {
@@ -392,8 +391,7 @@ const userController = {
           tokens: {
             accessToken,
             refreshToken
-          },
-          isNewUser: !user.id
+          }
         },
         metadata: {
           auth_method: 'google_oauth',

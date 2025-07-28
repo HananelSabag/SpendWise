@@ -309,9 +309,6 @@ export const authAPI = {
   // ✅ Google OAuth Login
   async googleLogin() {
     try {
-      console.log('🔍 DEBUG: Starting Google OAuth flow...');
-      console.log('🔍 DEBUG: Google Client ID:', GOOGLE_CONFIG.CLIENT_ID);
-      
       // Initialize Google OAuth if needed
       if (!googleOAuth.isInitialized) {
         await googleOAuth.initialize();
@@ -319,9 +316,6 @@ export const authAPI = {
       
       // Get Google credential
       const credential = await googleOAuth.signIn();
-      console.log('🔍 DEBUG: Raw Google credential:', credential);
-      console.log('🔍 DEBUG: Credential type:', typeof credential);
-      console.log('🔍 DEBUG: Credential length:', credential?.length);
       
       // ✅ Validate that we received a proper JWT token
       if (!credential || typeof credential !== 'string') {
@@ -331,8 +325,6 @@ export const authAPI = {
       // ✅ Check if it's a JWT (has 3 parts separated by dots)
       const parts = credential.split('.');
       if (parts.length !== 3) {
-        console.error('🔍 DEBUG: Not a JWT token - has', parts.length, 'parts instead of 3');
-        console.error('🔍 DEBUG: Token preview:', credential.substring(0, 50) + '...');
         throw new Error('Invalid token format - expected JWT ID token');
       }
       
@@ -340,17 +332,13 @@ export const authAPI = {
       let userInfo = { email: '', name: '', picture: '' };
       
       try {
-        console.log('🔍 DEBUG: Attempting to decode JWT...');
         const decoded = jwtDecode(credential);
-        console.log('🔍 DEBUG: Decoded JWT payload:', decoded);
         userInfo = {
           email: decoded.email || '',
           name: decoded.name || '',
           picture: decoded.picture || ''
         };
-        console.log('🔍 DEBUG: Extracted user info:', userInfo);
       } catch (decodeError) {
-        console.error('🔍 DEBUG: Failed to decode credential:', decodeError);
         throw new Error('Failed to decode Google ID token');
       }
       
@@ -367,66 +355,91 @@ export const authAPI = {
         picture: userInfo.picture
       };
       
-      console.log('🔍 DEBUG: Payload being sent to server:', payload);
-      
       // Send credential to our backend with extracted user info
       const response = await api.client.post('/users/auth/google', payload);
 
-      // ✅ FIX: Properly extract user and token from server response
-      console.log('🔍 DEBUG: Server response:', response.data);
+      // ✅ FIX: Use EXACT same extraction logic as regular login
       let user, token;
+      
+      // Try multiple extraction patterns (same as regular login)
       if (response.data.success && response.data.data) {
+        // Primary server format: { success: true, data: { user: {...}, accessToken: "..." } }
         user = response.data.data.user;
-        token = response.data.data.accessToken || response.data.data.token;
-        
-        // ✅ CRITICAL: Normalize user data for UI consistency
-        if (user) {
-          // Ensure avatar is available from profile_picture_url
-          user.avatar = user.avatar || user.profile_picture_url || user.profilePicture;
-          
-          // Ensure display name is properly set
-          user.displayName = user.name || user.username || user.firstName || user.first_name || 'User';
-          user.username = user.username || user.name || user.firstName || user.first_name || user.email?.split('@')[0] || 'User';
-          
-          // Ensure onboarding flags are consistent
-          user.needsOnboarding = !user.onboarding_completed && !user.onboardingCompleted;
-        }
+        token = response.data.data.accessToken ||           // ← MAIN PATH (actual server format)
+                response.data.data.tokens?.accessToken || 
+                response.data.data.tokens?.access_token || 
+                response.data.data.token;
+      } else if (response.data.data && response.data.data.tokens) {
+        // Alternative: data.tokens directly
+        user = response.data.data.user || response.data.user;
+        token = response.data.data.tokens.accessToken || response.data.data.tokens.access_token;
+      } else if (response.data.user && response.data.token) {
+        // Direct user/token structure
+        user = response.data.user;
+        token = response.data.token;
+      } else if (response.data.accessToken || response.data.token) {
+        // Legacy structure: user data directly + token
+        user = response.data;
+        token = response.data.accessToken || response.data.token;
       } else {
-        throw new Error('Invalid server response structure');
+        // Last resort: check all possible token locations
+        user = response.data.user || response.data.data?.user || response.data;
+        token = response.data.token || 
+                response.data.accessToken ||
+                response.data.data?.token ||
+                response.data.data?.accessToken ||
+                response.data.data?.tokens?.accessToken ||
+                response.data.data?.tokens?.access_token;
       }
       
-      // ✅ Add safety check for user object
+      // Ensure user has required properties
       if (!user) {
-        throw new Error('No user data in server response');
+        throw new Error('Invalid server response: no user data');
       }
       
-      console.log('🔍 DEBUG: Extracted user:', user);
-      console.log('🔍 DEBUG: Extracted token:', token);
+      // ✅ Use EXACT same normalization as regular login
+      const normalizedUser = {
+        id: user.id,
+        email: user.email,
+        username: user.username || user.name || user.display_name || user.first_name || 'User',
+        firstName: user.first_name || user.firstName || user.username || '',
+        lastName: user.last_name || user.lastName || '',
+        role: user.role || 'user',
+        email_verified: user.email_verified || user.emailVerified || false,
+        language_preference: user.language_preference || user.languagePreference || 'en',
+        theme_preference: user.theme_preference || user.themePreference || 'light',
+        currency_preference: user.currency_preference || user.currencyPreference || 'USD',
+        onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
+        preferences: user.preferences || {},
+        created_at: user.created_at || user.createdAt || new Date().toISOString(),
+        createdAt: user.created_at || user.createdAt || new Date().toISOString(),
+        updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
+        last_login: user.last_login || user.lastLogin || new Date().toISOString(),
+        avatar: user.avatar || null,
+        phone: user.phone || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        website: user.website || '',
+        birthday: user.birthday || null,
+        isPremium: user.isPremium || false
+      };
       
-      // Store token
-      localStorage.setItem('accessToken', token);
+      // Store token if provided
+      if (token) {
+        localStorage.setItem('accessToken', token);
+      }
       
-      // Clear auth cache
+      // Clear any auth-related cache
       api.clearCache('users');
       api.clearCache('auth');
       
+      // ✅ Return EXACT same structure as regular login
       return {
         success: true,
-        user: {
-          ...user,
-          isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-          isSuperAdmin: (user.role || 'user') === 'super_admin',
-          loginMethod: 'google'
-        },
-        token,
-        isNewUser: false // Existing user logic
+        user: normalizedUser,
+        token
       };
     } catch (error) {
-      console.error('🔍 DEBUG: Google OAuth error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       return {
         success: false,
         error: {

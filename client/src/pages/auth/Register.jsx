@@ -33,7 +33,7 @@ import { cn } from '../../utils/helpers';
 
 const Register = () => {
   // ✅ Zustand stores
-  const { register, isAuthenticated } = useAuth();
+  const { register, isAuthenticated, googleLogin } = useAuth();
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
@@ -66,6 +66,15 @@ const Register = () => {
 
     if (!formData.lastName?.trim()) {
       newErrors.lastName = t('lastNameRequired');
+    }
+
+    // ✅ ADD: Username validation
+    if (!formData.username?.trim()) {
+      newErrors.username = t('usernameRequired');
+    } else if (formData.username.length < 3) {
+      newErrors.username = t('usernameTooShort');
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = t('usernameInvalidCharacters');
     }
 
     if (!formData.email) {
@@ -105,6 +114,7 @@ const Register = () => {
       const registrationData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
+        username: formData.username.trim(), // ✅ ADD: Include username
         email: formData.email.trim(),
         password: formData.password,
         passwordStrength: formData.passwordAnalysis
@@ -147,13 +157,13 @@ const Register = () => {
     
     try {
       // Use the correct Google OAuth API
-      const result = await api.auth.googleLogin();
+      const result = await googleLogin();
       
       if (result.success) {
-        // Check if user needs profile completion
+        // ✅ FIXED: Check if user needs profile completion (must have username)
         const needsProfileCompletion = !result.user.username || 
-                                       !result.user.google_profile_completed || 
-                                       !result.user.profile_completed;
+                                       result.user.username === result.user.email?.split('@')[0] || // Generated username from email
+                                       !result.user.onboarding_completed;
         
         setUserData({
           id: result.user.id,
@@ -164,8 +174,7 @@ const Register = () => {
           picture: result.user.avatar || result.user.picture,
           username: result.user.username,
           fullName: result.user.name || `${result.user.firstName} ${result.user.lastName}`,
-          google_profile_completed: result.user.google_profile_completed,
-          profile_completed: result.user.profile_completed
+          onboarding_completed: result.user.onboarding_completed
         });
         
         setIsGoogleUser(true);
@@ -198,7 +207,7 @@ const Register = () => {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [api, addNotification, t]);
+  }, [googleLogin, addNotification, t]);
 
   // ✅ Handle security setup completion
   const handleSecurityComplete = useCallback((securitySetup) => {

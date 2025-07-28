@@ -142,8 +142,8 @@ const GoogleProfileCompletion = ({
         website: formData.website.trim(),
         phone: formData.phone.trim(),
         location: formData.location.trim(),
-        profile_completed: true,
-        google_profile_completed: true
+        onboarding_completed: true, // ✅ FIXED: Use consistent field name
+        profile_completed: true // ✅ Keep for backward compatibility
       };
 
       // Upload profile picture if selected

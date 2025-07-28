@@ -162,6 +162,7 @@ export default {
   completeProfileToGetStarted: 'השלם את הפרופיל שלך כדי להתחיל',
   
   termsRequired: "עליכם להסכים לתנאים והתניות",
+  acceptTermsRequired: "עליכם לקבל את התנאים והתניות",
   
   // Additional errors
   signUpFailed: "ההרשמה נכשלה",
@@ -196,5 +197,16 @@ export default {
   passwordStrengthStrong: "חזק",
   twoFactorEnable: "הפעל אימות דו-שלבי",
   twoFactorDisable: "בטל אימות דו-שלבי",
-  twoFactorRequired: "נדרש אימות דו-שלבי"
+  twoFactorRequired: "נדרש אימות דו-שלבי",
+  
+  // Additional registration translations in Hebrew
+  registrationSuccess: "הרשמה בהצלחה! אנא בדקו את האימייל שלכם לאימות.",
+  registrationFailed: "ההרשמה נכשלה. אנא נסו שוב.",
+  registrationError: "אירעה שגיאה במהלך ההרשמה.",
+  googleRegisterSuccess: "הרשמה עם Google בהצלחה!",
+  googleRegisterFailed: "הרשמה עם Google נכשלה. אנא נסו שוב.",
+  googleRegisterError: "אירעה שגיאה במהלך הרשמה עם Google.",
+  alreadyHaveAccount: "כבר יש לכם חשבון?",
+  welcomeAboard: "ברוכים הבאים!",
+  readyToStart: "הכל מוכן ואתם יכולים להתחיל לנהל את הכספים שלכם!"
 }; 

@@ -161,6 +161,18 @@ export default {
   profileCanBeCompletedLater: 'You can complete your profile later in settings',
   completeProfileToGetStarted: 'Complete your profile to get started',
   termsRequired: "You must agree to the terms and conditions",
+  acceptTermsRequired: "You must accept the terms and conditions",
+  
+  // ✅ ADD: Additional registration translations
+  registrationSuccess: "Registration successful! Please check your email for verification.",
+  registrationFailed: "Registration failed. Please try again.",
+  registrationError: "An error occurred during registration.",
+  googleRegisterSuccess: "Google registration successful!",
+  googleRegisterFailed: "Google registration failed. Please try again.",
+  googleRegisterError: "An error occurred during Google registration.",
+  alreadyHaveAccount: "Already have an account?",
+  welcomeAboard: "Welcome Aboard!",
+  readyToStart: "You're all set and ready to start managing your finances!",
   
   // Additional errors
   signUpFailed: "Sign up failed",
