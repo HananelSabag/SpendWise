@@ -1,6 +1,5 @@
 /**
  * ⚖️ LEGAL TRANSLATIONS - English
- * Legal documents, privacy policy, and compliance information
  */
 
 export default {
@@ -10,7 +9,7 @@ export default {
     cancel: 'Cancel'
   },
   
-  // Privacy Policy
+  // Privacy policy
   privacy: {
     title: 'Privacy Policy',
     lastUpdated: 'Last updated',
@@ -20,7 +19,7 @@ export default {
     // Header
     header: {
       title: 'Our Privacy Policy',
-      description: 'We are committed to protecting your privacy and personal information'
+      description: 'We are committed to protecting your privacy and data'
     },
     
     // Importance levels
@@ -33,15 +32,15 @@ export default {
     sections: {
       dataCollection: {
         title: 'Data Collection',
-        content: 'We collect only the information necessary for service operation'
+        content: 'We collect only the information necessary to operate the service'
       },
       dataUsage: {
         title: 'Data Usage',
-        content: 'Information is used to improve service and provide personalized user experience'
+        content: 'Information is used to improve the service and provide a personalized user experience'
       },
       dataSecurity: {
         title: 'Data Security',
-        content: 'We use advanced encryption technologies to protect your information'
+        content: 'We use advanced encryption technologies to protect information'
       },
       thirdParty: {
         title: 'Third Parties',
@@ -61,7 +60,7 @@ export default {
       },
       access: {
         title: 'Access Control',
-        description: 'Information access is limited to authorized personnel only'
+        description: 'Access to information is limited to authorized personnel only'
       },
       storage: {
         title: 'Secure Storage',
@@ -71,10 +70,10 @@ export default {
     
     // Contact
     contact: {
-      title: 'Privacy Contact Information',
+      title: 'Contact us about privacy',
       email: 'Email: privacy@spendwise.com',
       phone: 'Phone: +1-555-0123',
-      address: 'Address: 123 Technology Street, Tech City'
+      address: 'Address: 123 Technology Street, San Francisco, CA'
     },
     
     // Links
@@ -85,7 +84,7 @@ export default {
     }
   },
   
-  // Terms of Service
+  // Terms of service
   terms: {
     title: 'Terms of Service',
     lastUpdated: 'Last updated',
@@ -95,13 +94,13 @@ export default {
     // Header
     header: {
       title: 'Our Terms of Service',
-      description: 'Terms and conditions for using SpendWise services'
+      description: 'Terms for the SpendWise service agreement'
     },
     
     // Sections
     sections: {
       agreement: {
-        title: 'Service Agreement',
+        title: 'Usage Agreement',
         content: 'Using the service constitutes agreement to these terms'
       },
       services: {
@@ -114,13 +113,13 @@ export default {
       },
       liability: {
         title: 'Liability and Limitations',
-        content: 'Service is provided as-is without special warranty'
+        content: 'The service is provided as-is without special warranty'
       }
     },
     
     // Additional content
     additional: {
-      title: 'Additional Information',
+      title: 'Additional Content',
       dataProtection: 'Data protection in accordance with regulations',
       userRights: 'User rights and how to exercise them',
       support: 'Support and customer service'
@@ -132,11 +131,5 @@ export default {
       cookies: 'Cookie Policy',
       contact: 'Contact Us'
     }
-  },
-  
-  // Additional actions
-  actions: {
-    close: 'Close',
-    cancel: 'Cancel'
   }
 }; 

@@ -40,8 +40,45 @@ export default {
   quickCalculatorDesc: 'מחשבון מהיר לחישובים',
   quickPanels: 'פאנלים מהירים',
 
-  // Categories
-  categories: {
+  // Password and form elements
+  showPassword: 'הצג סיסמה',
+  hidePassword: 'הסתר סיסמה',
+
+  // Common actions
+  actions: {
+    close: 'סגור',
+    cancel: 'ביטול',
+    save: 'שמור',
+    delete: 'מחק',
+    edit: 'ערוך',
+    view: 'צפה',
+    back: 'חזור'
+  },
+
+  // Accessibility structure expected by components
+  accessibility: {
+    fontSize: {
+      extraSmall: 'קטן מאוד',
+      small: 'קטן',
+      normal: 'רגיל',
+      large: 'גדול',
+      extraLarge: 'גדול מאוד',
+      huge: 'ענק'
+    },
+    theme: {
+      light: 'בהיר',
+      dark: 'כהה',
+      auto: 'אוטומטי'
+    },
+    contrast: {
+      normal: 'רגיל',
+      high: 'גבוה',
+      maximum: 'מקסימלי'
+    }
+  },
+
+  // Category types
+  categoryTypes: {
     food: 'מזון ומשקאות',
     income: 'הכנסות',
     transport: 'תחבורה',
@@ -82,16 +119,5 @@ export default {
     large: 'גדול',
     extraLarge: 'גדול מאוד',
     huge: 'ענק'
-  },
-
-  // Common actions
-  actions: {
-    close: 'סגור',
-    cancel: 'ביטול',
-    save: 'שמור',
-    delete: 'מחק',
-    edit: 'ערוך',
-    view: 'צפה',
-    back: 'חזור'
   }
 }; 

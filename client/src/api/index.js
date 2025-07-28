@@ -40,6 +40,13 @@ export const api = {
   // ✅ ADD: Onboarding Management
   onboarding: onboardingAPI,
   
+  // Export functionality
+  export: {
+    exportTransactions: (format = 'csv') => apiClient.get(`/export/${format}`),
+    exportCategories: (format = 'csv') => apiClient.get(`/export/${format}`),
+    exportData: (format = 'csv') => apiClient.get(`/export/${format}`)
+  },
+  
   // Cache Management
   clearCache: apiClient.clearCache ? apiClient.clearCache.bind(apiClient) : () => {},
   clearAllCache: () => apiClient.clearCache ? apiClient.clearCache() : undefined,

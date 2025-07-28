@@ -115,7 +115,7 @@ const AdminDashboard = () => {
           <Badge variant="success" className="mb-4">
             {t('dashboard.welcome', { 
               fallback: 'Welcome back, {{name}}!',
-              name: user?.firstName || user?.email 
+              name: user?.name || user?.firstName || user?.username || user?.email 
             })}
           </Badge>
         </motion.div>

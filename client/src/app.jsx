@@ -1,12 +1,11 @@
 /**
- * 🚀 SPENDWISE APP - COMPLETE ROUTING & ADMIN SYSTEM
- * Features: Admin routing, OAuth integration, Role-based protection, Performance tracking
- * NOW WITH ZUSTAND STORES! (90% bundle reduction)
- * @version 2.0.0
+ * 🚀 SPENDWISE APP - CLEAN & OPTIMIZED
+ * Features: Clean routing, Role-based protection, Optimized performance
+ * @version 3.0.0 - MAJOR OPTIMIZATION
  */
 
-import React, { Suspense, lazy, useEffect, useState, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -16,325 +15,42 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
-import NavigationFix from './components/common/NavigationFix';
 import OnboardingManager from './components/common/OnboardingManager';
 
-// ✅ NEW: Import Zustand stores (replaces ALL Context providers!)
-import { 
-  StoreProvider,
-  useAuth,
-  useTranslation,
-  useTheme 
-} from './stores';
+// ✅ Zustand stores
+import { StoreProvider, useAuth, useTranslation } from './stores';
 
-// ✅ Import App Initializer to fix race conditions
+// ✅ App Initializer
 import AppInitializer from './components/common/AppInitializer';
 
-// NEW: Import unified API and performance monitoring
-import spendWiseAPI, { authAPI, adminAPI, performanceAPI } from './api';
-
-// Components
-
-// ✅ Lazy-loaded pages using centralized system
+// ✅ Lazy-loaded pages
 import * as LazyComponents from './components/LazyComponents';
 
-// Replace existing lazy imports with:
-const Login = LazyComponents.Login;
-const Register = LazyComponents.Register;
-const PasswordReset = LazyComponents.PasswordReset;
-const VerifyEmail = LazyComponents.VerifyEmail;
-const Dashboard = LazyComponents.Dashboard;
-const Profile = LazyComponents.Profile;
-const Transactions = LazyComponents.Transactions;
+// ✅ QueryClient Configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        if (error?.status >= 400 && error?.status < 500) return false;
+        return failureCount < 3;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: (failureCount, error) => {
+        if (error?.status >= 400 && error?.status < 500) return false;
+        return failureCount < 2;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
+    },
+  },
+});
 
-// ✅ Lazy-loaded admin pages
-const AdminDashboard = LazyComponents.AdminDashboard;
-const AdminUsers = LazyComponents.AdminUsers;
-const AdminSettings = LazyComponents.AdminSettings;
-const AdminActivity = LazyComponents.AdminActivity;
-const AdminStats = LazyComponents.AdminStats;
-
-// ✅ Lazy-loaded analytics pages  
-const Analytics = LazyComponents.Analytics;
-
-
-// ✅ Utility pages
-const NotFound = LazyComponents.NotFound;
-
-// ✅ Performance Monitoring Hook
-const usePerformanceTracking = () => {
-  const location = useLocation();
-  const [pageLoadMetric, setPageLoadMetric] = useState(null);
-
-  useEffect(() => {
-    // Start tracking page load
-    const metric = performanceAPI.clientMetrics.measurePageLoad(location.pathname);
-    setPageLoadMetric(metric);
-
-    // End tracking when component unmounts or location changes
-    return () => {
-      if (metric) {
-        const result = metric.end();
-        
-        // Log in debug mode
-        if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-          console.log(`📊 Page ${location.pathname} loaded in ${result.duration}ms`);
-        }
-      }
-    };
-  }, [location.pathname]);
-
-  return { pageLoadMetric };
-};
-
-// ✅ Enhanced Navigation Persistence with Admin Support
-const useNavigationPersistence = () => {
-  const location = useLocation();
-  const { isAuthenticated, user } = useAuth();
-  const hasToken = !!localStorage.getItem('accessToken');
-
-  useEffect(() => {
-    if (hasToken && location.pathname) {
-      // Define valid routes by user role
-      const userRoutes = ['/', '/transactions', '/profile', '/analytics'];
-      const adminRoutes = ['/admin', '/admin/users', '/admin/settings', '/admin/activity', '/admin/stats'];
-      
-      const isAdminRoute = location.pathname.startsWith('/admin');
-      const isValidUserRoute = userRoutes.includes(location.pathname);
-      const isValidAdminRoute = adminRoutes.includes(location.pathname);
-      
-      // Store location based on user role and route validity
-      if (user?.isAdmin && isValidAdminRoute) {
-        sessionStorage.setItem('lastAdminPage', location.pathname);
-      } else if (isValidUserRoute) {
-        sessionStorage.setItem('lastVisitedPage', location.pathname);
-      }
-    }
-  }, [location.pathname, hasToken, user]);
-
-  // Clear stored locations on logout
-  useEffect(() => {
-    if (!hasToken) {
-      sessionStorage.removeItem('lastVisitedPage');
-      sessionStorage.removeItem('lastAdminPage');
-    }
-  }, [hasToken]);
-};
-
-// ✅ Role-Based Route Protection (Updated to use Zustand)
-const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const { t } = useTranslation();
-  const hasToken = !!localStorage.getItem('accessToken');
-  const [showOfflineMessage, setShowOfflineMessage] = useState(false);
-  
-  // Track performance for protected routes
-  usePerformanceTracking();
-  
-  // Monitor online status
-  useEffect(() => {
-    const handleOnline = () => setShowOfflineMessage(false);
-    const handleOffline = () => setShowOfflineMessage(true);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-  
-  // Show offline message
-  if (showOfflineMessage) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center p-8">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.noInternetConnection', { fallback: 'No Internet Connection' })}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('errors.checkConnectionAndRetry', { fallback: 'Please check your connection and try again.' })}
-          </p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            {t('common.retry', { fallback: 'Retry' })}
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  // Loading state
-  if (hasToken && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <LoadingSpinner size="large" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {t('common.loadingData', { fallback: 'Connecting to server...' })}
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Authentication failed with token
-  if (hasToken && !isAuthenticated && !isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.connectionIssues', { fallback: 'Connection Issues' })}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('errors.unableToVerifyLogin', { fallback: 'Unable to verify your login. Please try again.' })}
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button 
-              onClick={() => window.location.reload()} 
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition-colors"
-            >
-              {t('common.retry', { fallback: 'Retry' })}
-            </button>
-            <button 
-              onClick={() => {
-                localStorage.removeItem('accessToken');
-                // Use proper navigation instead of hard redirect
-                if (window.spendWiseNavigate) {
-                  window.spendWiseNavigate('/auth/login', { replace: true });
-                } else {
-                  window.location.replace('/auth/login');
-                }
-              }} 
-              className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-            >
-              {t('auth.loginAgain', { fallback: 'Login Again' })}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Not authenticated - redirect to login page
-  if (!isAuthenticated) {
-    // Clear any stored navigation state
-    sessionStorage.removeItem('lastVisitedPage');
-    sessionStorage.removeItem('lastAdminPage');
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Check admin permissions
-  if (superAdminOnly && !user?.isSuperAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.superAdminRequired', { fallback: 'Super Admin Access Required' })}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('errors.noPermission', { fallback: "You don't have permission to access this page." })}
-          </p>
-          <button 
-            onClick={() => window.history.back()} 
-            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            {t('common.back', { fallback: 'Go Back' })}
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  if (adminOnly && !user?.isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.adminRequired', { fallback: 'Admin Access Required' })}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('errors.noPermission', { fallback: "You don't have permission to access this page." })}
-          </p>
-          <button 
-            onClick={() => window.history.back()} 
-            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            {t('common.back', { fallback: 'Go Back' })}
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  return children;
-};
-
-// ✅ Smart Redirect with Admin Support (Updated to use Zustand)
-const SmartRedirect = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const hasToken = !!localStorage.getItem('accessToken');
-  
-  if (hasToken && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Determine redirect destination based on user role and stored preferences
-  let redirectTo = '/';
-  
-  if (user?.isAdmin) {
-    const lastAdminPage = sessionStorage.getItem('lastAdminPage');
-    const adminRoutes = ['/admin', '/admin/users', '/admin/settings', '/admin/activity', '/admin/stats'];
-    
-    if (lastAdminPage && adminRoutes.includes(lastAdminPage)) {
-      redirectTo = lastAdminPage;
-    } else {
-      redirectTo = '/admin'; // Default admin page
-    }
-  } else {
-    const lastVisitedPage = sessionStorage.getItem('lastVisitedPage');
-    const validRoutes = ['/', '/transactions', '/profile', '/analytics'];
-    
-    if (lastVisitedPage && validRoutes.includes(lastVisitedPage)) {
-      redirectTo = lastVisitedPage;
-    }
-  }
-  
-  return <Navigate to={redirectTo} replace />;
-};
-
-// ✅ Enhanced Loading Component
+// ✅ Route Loading Fallback
 const RouteLoadingFallback = ({ route = 'page' }) => (
   <div className="min-h-[60vh] flex items-center justify-center">
     <div className="text-center">
@@ -348,15 +64,6 @@ const RouteLoadingFallback = ({ route = 'page' }) => (
 
 // ✅ Route Error Boundary
 const RouteErrorBoundary = ({ children, routeName }) => {
-  const handleError = (error, errorInfo) => {
-    console.error(`Route error in ${routeName}:`, error, errorInfo);
-    
-    // Track route-specific errors
-    if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-      console.log('Route error details:', { routeName, error: error.message, stack: error.stack });
-    }
-  };
-
   const ErrorFallback = ({ error, resetErrorBoundary }) => (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center p-8 max-w-md">
@@ -392,58 +99,136 @@ const RouteErrorBoundary = ({ children, routeName }) => {
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
-      onError={handleError}
-      onReset={() => {
-        // Clear route-specific caches on reset
-        try {
-          if (spendWiseAPI?.utils?.clearAllCaches) {
-            spendWiseAPI.utils.clearAllCaches();
-          }
-        } catch (error) {
-          console.warn('Could not clear caches:', error);
-        }
-        window.location.reload();
-      }}
+      onError={(error) => console.error(`Route error in ${routeName}:`, error)}
+      onReset={() => window.location.reload()}
     >
       {children}
     </ErrorBoundary>
   );
 };
 
-// ✅ Application Content with Enhanced Routing (Updated to use Zustand)
+// ✅ Role-Based Route Protection - SIMPLIFIED
+const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const { t } = useTranslation();
+  
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="text-center">
+          <LoadingSpinner size="large" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {t('common.loadingData', { fallback: 'Loading...' })}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Check permissions
+  if (superAdminOnly && !user?.isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8">
+          <h3 className="text-xl font-semibold mb-2">Super Admin Access Required</h3>
+          <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+          <button 
+            onClick={() => window.history.back()} 
+            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (adminOnly && !user?.isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8">
+          <h3 className="text-xl font-semibold mb-2">Admin Access Required</h3>
+          <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+          <button 
+            onClick={() => window.history.back()} 
+            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
+// ✅ Smart Redirect for authenticated users
+const SmartRedirect = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // For admin users, check if they were trying to access admin pages
+  if (user?.isAdmin && location.state?.from?.startsWith('/admin')) {
+    return <Navigate to={location.state.from} replace />;
+  }
+  
+  // For admin users, default to admin dashboard
+  if (user?.isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // For regular users, go to dashboard
+  return <Navigate to="/" replace />;
+};
+
+// ✅ App Content - SIMPLIFIED
 const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  // Set global navigation for API client error handling
+  // Set global navigation for error handling
   useEffect(() => {
     window.spendWiseNavigate = navigate;
-    return () => {
-      window.spendWiseNavigate = null;
-    };
+    return () => { window.spendWiseNavigate = null; };
   }, [navigate]);
-  
-  // Use navigation persistence and performance tracking
-  useNavigationPersistence();
-  usePerformanceTracking();
-  
-  // Suppress React Router warnings in development
-  useEffect(() => {
-    if (import.meta.env.MODE === 'development') {
-      const originalWarn = console.warn;
-      console.warn = (msg, ...args) => {
-        if (msg.includes('React Router Future Flag Warning')) {
-          return;
-        }
-        originalWarn(msg, ...args);
-      };
-      return () => {
-        console.warn = originalWarn;
-      };
-    }
-  }, []);
 
-  // Show loading screen during initial authentication
+  // ✅ NAVIGATION LOGIC - Integrated directly (no separate component needed)
+  useEffect(() => {
+    if (isLoading) return;
+    
+    const path = location.pathname;
+    
+    // Handle legacy auth routes
+    if (path.startsWith('/auth/')) {
+      if (isAuthenticated) {
+        navigate('/', { replace: true });
+      } else {
+        // Redirect to clean auth routes
+        if (path.startsWith('/auth/login')) navigate('/login', { replace: true });
+        if (path.startsWith('/auth/register')) navigate('/register', { replace: true });
+      }
+    }
+    
+    // Handle legacy dashboard route
+    if (path === '/dashboard') {
+      navigate('/', { replace: true });
+    }
+    
+    // Handle onboarding redirect
+    if (path === '/onboarding') {
+      navigate('/', { replace: true });
+    }
+  }, [location.pathname, isAuthenticated, isLoading, navigate]);
+
+  // Initial loading
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
@@ -459,32 +244,20 @@ const AppContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Navigation Fix Component */}
-      <NavigationFix />
-      
-      {/* Onboarding Manager - Auto-triggers based on DB status */}
+      {/* Onboarding Manager */}
       {isAuthenticated && <OnboardingManager />}
       
+      {/* Header */}
       {isAuthenticated && <Header />}
       
       <main className="flex-grow">
         <Routes>
-          {/* ✅ Public Authentication Routes */}
+          {/* ✅ Public Routes */}
           <Route path="/login" element={
             !isAuthenticated ? (
               <RouteErrorBoundary routeName="Login">
                 <Suspense fallback={<RouteLoadingFallback route="login" />}>
-                  <Login />
-                </Suspense>
-              </RouteErrorBoundary>
-            ) : <SmartRedirect />
-          } />
-          
-          <Route path="/auth/login" element={
-            !isAuthenticated ? (
-              <RouteErrorBoundary routeName="Login">
-                <Suspense fallback={<RouteLoadingFallback route="login" />}>
-                  <Login />
+                  <LazyComponents.Login />
                 </Suspense>
               </RouteErrorBoundary>
             ) : <SmartRedirect />
@@ -494,17 +267,7 @@ const AppContent = () => {
             !isAuthenticated ? (
               <RouteErrorBoundary routeName="Register">
                 <Suspense fallback={<RouteLoadingFallback route="registration" />}>
-                  <Register />
-                </Suspense>
-              </RouteErrorBoundary>
-            ) : <SmartRedirect />
-          } />
-          
-          <Route path="/auth/register" element={
-            !isAuthenticated ? (
-              <RouteErrorBoundary routeName="Register">
-                <Suspense fallback={<RouteLoadingFallback route="registration" />}>
-                  <Register />
+                  <LazyComponents.Register />
                 </Suspense>
               </RouteErrorBoundary>
             ) : <SmartRedirect />
@@ -514,17 +277,7 @@ const AppContent = () => {
             !isAuthenticated ? (
               <RouteErrorBoundary routeName="PasswordReset">
                 <Suspense fallback={<RouteLoadingFallback route="password reset" />}>
-                  <PasswordReset />
-                </Suspense>
-              </RouteErrorBoundary>
-            ) : <SmartRedirect />
-          } />
-          
-          <Route path="/reset-password" element={
-            !isAuthenticated ? (
-              <RouteErrorBoundary routeName="PasswordReset">
-                <Suspense fallback={<RouteLoadingFallback route="password reset" />}>
-                  <PasswordReset />
+                  <LazyComponents.PasswordReset />
                 </Suspense>
               </RouteErrorBoundary>
             ) : <SmartRedirect />
@@ -534,7 +287,7 @@ const AppContent = () => {
             !isAuthenticated ? (
               <RouteErrorBoundary routeName="VerifyEmail">
                 <Suspense fallback={<RouteLoadingFallback route="email verification" />}>
-                  <VerifyEmail />
+                  <LazyComponents.VerifyEmail />
                 </Suspense>
               </RouteErrorBoundary>
             ) : <SmartRedirect />
@@ -545,7 +298,7 @@ const AppContent = () => {
             <ProtectedRoute>
               <RouteErrorBoundary routeName="Dashboard">
                 <Suspense fallback={<RouteLoadingFallback route="dashboard" />}>
-                  <Dashboard />
+                  <LazyComponents.Dashboard />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -555,7 +308,7 @@ const AppContent = () => {
             <ProtectedRoute>
               <RouteErrorBoundary routeName="Transactions">
                 <Suspense fallback={<RouteLoadingFallback route="transactions" />}>
-                  <Transactions />
+                  <LazyComponents.Transactions />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -565,31 +318,28 @@ const AppContent = () => {
             <ProtectedRoute>
               <RouteErrorBoundary routeName="Profile">
                 <Suspense fallback={<RouteLoadingFallback route="profile" />}>
-                  <Profile />
+                  <LazyComponents.Profile />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
           } />
           
-          {/* ✅ Analytics Routes */}
           <Route path="/analytics" element={
             <ProtectedRoute>
               <RouteErrorBoundary routeName="Analytics">
                 <Suspense fallback={<RouteLoadingFallback route="analytics" />}>
-                  <Analytics />
+                  <LazyComponents.Analytics />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
           } />
           
-
-          
-          {/* ✅ Admin Routes (Admin Access Required) */}
+          {/* ✅ Admin Routes */}
           <Route path="/admin" element={
             <ProtectedRoute adminOnly={true}>
               <RouteErrorBoundary routeName="AdminDashboard">
                 <Suspense fallback={<RouteLoadingFallback route="admin dashboard" />}>
-                  <AdminDashboard />
+                  <LazyComponents.AdminDashboard />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -599,7 +349,7 @@ const AppContent = () => {
             <ProtectedRoute adminOnly={true}>
               <RouteErrorBoundary routeName="AdminUsers">
                 <Suspense fallback={<RouteLoadingFallback route="user management" />}>
-                  <AdminUsers />
+                  <LazyComponents.AdminUsers />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -609,7 +359,7 @@ const AppContent = () => {
             <ProtectedRoute superAdminOnly={true}>
               <RouteErrorBoundary routeName="AdminSettings">
                 <Suspense fallback={<RouteLoadingFallback route="admin settings" />}>
-                  <AdminSettings />
+                  <LazyComponents.AdminSettings />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -619,7 +369,7 @@ const AppContent = () => {
             <ProtectedRoute adminOnly={true}>
               <RouteErrorBoundary routeName="AdminActivity">
                 <Suspense fallback={<RouteLoadingFallback route="activity log" />}>
-                  <AdminActivity />
+                  <LazyComponents.AdminActivity />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -629,7 +379,7 @@ const AppContent = () => {
             <ProtectedRoute adminOnly={true}>
               <RouteErrorBoundary routeName="AdminStats">
                 <Suspense fallback={<RouteLoadingFallback route="system statistics" />}>
-                  <AdminStats />
+                  <LazyComponents.AdminStats />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
@@ -639,13 +389,14 @@ const AppContent = () => {
           <Route path="*" element={
             <RouteErrorBoundary routeName="NotFound">
               <Suspense fallback={<RouteLoadingFallback route="page" />}>
-                <NotFound />
+                <LazyComponents.NotFound />
               </Suspense>
             </RouteErrorBoundary>
           } />
         </Routes>
       </main>
       
+      {/* Footer & Accessibility */}
       {isAuthenticated && <Footer />}
       {isAuthenticated && <AccessibilityMenu />}
       
@@ -655,45 +406,13 @@ const AppContent = () => {
   );
 };
 
-// ✅ Enhanced QueryClient Configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors (client errors)
-        if (error?.status >= 400 && error?.status < 500) return false;
-        // Retry network errors and server errors
-        return failureCount < 3;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      retry: (failureCount, error) => {
-        // Retry network errors but not client errors
-        if (error?.status >= 400 && error?.status < 500) return false;
-        return failureCount < 2;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
-    },
-  },
-});
-
-// ✅ Main Application Component (ZUSTAND POWERED!)
+// ✅ Main App Component - CLEAN & OPTIMIZED
 function App() {
-  // Initialize API client on app start
+  // Development tools
   useEffect(() => {
-    if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-      console.log('🚀 SpendWise App initialized with Zustand stores + unified API');
-      console.log('📦 Bundle reduction: ~550KB → ~50KB (90% reduction!)');
-      
-      // Expose API for development
-      window.spendWiseAPI = spendWiseAPI;
-      window.authAPI = authAPI;
-      window.adminAPI = adminAPI;
+    if (import.meta.env.DEV) {
+      console.log('🚀 SpendWise App - Clean & Optimized');
+      window.queryClient = queryClient;
     }
   }, []);
 
@@ -705,7 +424,6 @@ function App() {
           v7_relativeSplatPath: true
         }}
       >
-        {/* ✅ REPLACED: All Context providers with single StoreProvider! */}
         <StoreProvider>
           <AppInitializer>
             <AppContent />
@@ -714,7 +432,7 @@ function App() {
       </Router>
 
       {/* Development tools */}
-      {import.meta.env.MODE === 'development' && (
+      {import.meta.env.DEV && (
         <ReactQueryDevtools 
           initialIsOpen={false} 
           position="bottom-right"

@@ -104,5 +104,51 @@ export default {
     afternoon: 'צהריים טובים', 
     evening: 'ערב טוב',
     night: 'לילה טוב'
+  },
+
+  // Overview section expected by Dashboard components
+  overview: {
+    quickActions: {
+      title: 'פעולות מהירות',
+      security: 'אבטחה',
+      share: 'שתף',
+      smart: 'חכם',
+      help: 'עזרה'
+    },
+    recentActivity: 'פעילות אחרונה',
+    items: 'פריטים',
+    viewAll: 'צפה בהכל',
+    achievements: {
+      title: 'הישגים'
+    }
+  },
+
+  // Common elements that might be accessed from dashboard context
+  common: {
+    profilePicture: 'תמונת פרופיל',
+    categoryTypes: {
+      food: 'מזון ומשקאות',
+      income: 'הכנסות',
+      transport: 'תחבורה',
+      entertainment: 'בילויים',
+      bills: 'חשבונות',
+      shopping: 'קניות',
+      health: 'בריאות',
+      education: 'חינוך',
+      travel: 'נסיעות',
+      other: 'אחר'
+    },
+    transactions: {
+      groceries: 'קניות בסופר',
+      salary: 'משכורת',
+      fuel: 'דלק לרכב',
+      coffee: 'קפה',
+      electricity: 'חשמל',
+      water: 'מים',
+      gas: 'גז',
+      internet: 'אינטרנט',
+      phone: 'טלפון',
+      rent: 'שכר דירה'
+    }
   }
 }; 

@@ -121,23 +121,26 @@ router.post('/upload-profile-picture',
         });
       }
 
-      // Update user's avatar in database
-      const updatedUser = await userController.updateProfile({
-        user: req.user,
-        body: { 
-          avatar: req.supabaseUpload.url,
-          profile_picture_url: req.supabaseUpload.url
-        }
-      }, {
-        json: () => {} // Mock response object
+      // Update user's avatar in database - FIXED: Call User model directly
+      const User = require('../models/User');
+      const updatedUser = await User.update(req.user.id, {
+        avatar: req.supabaseUpload.publicUrl,
+        profile_picture_url: req.supabaseUpload.publicUrl
+      });
+      
+      console.log('✅ Profile picture - Database updated:', {
+        userId: req.user.id,
+        avatarUrl: req.supabaseUpload.publicUrl,
+        updatedUser: updatedUser
       });
 
       res.json({
         success: true,
         data: {
-          url: req.supabaseUpload.url,
+          url: req.supabaseUpload.publicUrl,
           fileName: req.supabaseUpload.fileName,
-          message: 'Profile picture uploaded successfully'
+          message: 'Profile picture uploaded successfully',
+          user: updatedUser
         }
       });
     } catch (error) {

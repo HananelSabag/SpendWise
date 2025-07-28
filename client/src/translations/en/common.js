@@ -40,8 +40,45 @@ export default {
   quickCalculatorDesc: 'Quick calculator for calculations',
   quickPanels: 'Quick Panels',
 
-  // Categories
-  categories: {
+  // Password and form elements
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
+
+  // Common actions
+  actions: {
+    close: 'Close',
+    cancel: 'Cancel',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    view: 'View',
+    back: 'Back'
+  },
+
+  // Accessibility structure expected by components
+  accessibility: {
+    fontSize: {
+      extraSmall: 'Extra Small',
+      small: 'Small',
+      normal: 'Normal',
+      large: 'Large',
+      extraLarge: 'Extra Large',
+      huge: 'Huge'
+    },
+    theme: {
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto'
+    },
+    contrast: {
+      normal: 'Normal',
+      high: 'High',
+      maximum: 'Maximum'
+    }
+  },
+
+  // Category types
+  categoryTypes: {
     food: 'Food & Dining',
     income: 'Income',
     transport: 'Transportation',
@@ -82,16 +119,5 @@ export default {
     large: 'Large',
     extraLarge: 'Extra Large',
     huge: 'Huge'
-  },
-
-  // Common actions
-  actions: {
-    close: 'Close',
-    cancel: 'Cancel',
-    save: 'Save',
-    delete: 'Delete',
-    edit: 'Edit',
-    view: 'View',
-    back: 'Back'
   }
 }; 

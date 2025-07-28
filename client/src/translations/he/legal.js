@@ -132,10 +132,5 @@ export default {
       cookies: 'מדיניות עוגיות',
       contact: 'צור קשר'
     }
-  },
-  
-  // פעולות נוספות
-  actions: {
-    cancel: 'ביטול'
   }
 }; 

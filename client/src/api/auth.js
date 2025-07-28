@@ -583,6 +583,30 @@ export const authAPI = {
     }
   },
 
+  // ✅ Upload Avatar
+  async uploadAvatar(formData) {
+    try {
+      const response = await api.client.post('/users/upload-profile-picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      // Clear profile cache
+      api.clearCache('user-profile');
+      api.clearCache('users');
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('❌ uploadAvatar error:', error);
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
   // ✅ Password Reset Request
   async requestPasswordReset(email) {
     try {

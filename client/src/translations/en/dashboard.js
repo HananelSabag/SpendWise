@@ -104,5 +104,51 @@ export default {
     afternoon: 'Good afternoon',
     evening: 'Good evening', 
     night: 'Good night'
+  },
+
+  // Overview section expected by Dashboard components
+  overview: {
+    quickActions: {
+      title: 'Quick Actions',
+      security: 'Security',
+      share: 'Share',
+      smart: 'Smart',
+      help: 'Help'
+    },
+    recentActivity: 'Recent Activity',
+    items: 'Items',
+    viewAll: 'View All',
+    achievements: {
+      title: 'Achievements'
+    }
+  },
+
+  // Common elements that might be accessed from dashboard context
+  common: {
+    profilePicture: 'Profile Picture',
+    categoryTypes: {
+      food: 'Food & Drinks',
+      income: 'Income',
+      transport: 'Transportation',
+      entertainment: 'Entertainment',
+      bills: 'Bills & Utilities',
+      shopping: 'Shopping',
+      health: 'Health & Medical',
+      education: 'Education',
+      travel: 'Travel',
+      other: 'Other'
+    },
+    transactions: {
+      groceries: 'Groceries',
+      salary: 'Salary',
+      fuel: 'Fuel',
+      coffee: 'Coffee',
+      electricity: 'Electricity',
+      water: 'Water',
+      gas: 'Gas',
+      internet: 'Internet',
+      phone: 'Phone',
+      rent: 'Rent'
+    }
   }
 }; 

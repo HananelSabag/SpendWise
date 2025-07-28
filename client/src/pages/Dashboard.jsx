@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 
 // ✅ Import components and hooks
-import { useTranslation, useNotifications, useAuth } from '../stores';
+import { useTranslation, useNotifications, useAuth, useAuthStore } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
-import { LoadingSpinner, Button, Card } from '../components/ui';
+import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
 
 /**
  * 📊 Beautiful Dashboard Component
@@ -46,16 +46,68 @@ const Dashboard = () => {
   // ✅ Time-based greeting with proper language support
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    const userName = user?.first_name || user?.username || user?.email?.split('@')[0] || t('common.user', 'User');
     
-    if (hour < 12) return t('welcome.goodMorning', { name: userName });
-    if (hour < 17) return t('welcome.goodAfternoon', { name: userName });
-    if (hour < 21) return t('welcome.goodEvening', { name: userName });
-    return t('welcome.general', { name: userName });
+    // ✅ FIXED: Simple direct name extraction from server response
+    console.log('🔍 Dashboard - FULL User object:', user);
+    console.log('🔍 Dashboard - Avatar URL:', user?.avatar);
+    console.log('🔍 Dashboard - Avatar type:', typeof user?.avatar);
+    console.log('🔍 Dashboard - Avatar length:', user?.avatar?.length || 0);
+    
+    // Server provides normalized fields - use them directly
+    let userName = '';
+    
+    // Extract first and last name from server response
+    if (user?.firstName && user?.lastName) {
+      userName = `${user.firstName} ${user.lastName}`.trim();
+    } else if (user?.first_name && user?.last_name) {
+      userName = `${user.first_name} ${user.last_name}`.trim();
+    } else if (user?.name) {
+      userName = user.name;
+    } else if (user?.firstName) {
+      userName = user.firstName;
+    } else if (user?.first_name) {
+      userName = user.first_name;
+    } else if (user?.username) {
+      userName = user.username;
+    } else if (user?.email) {
+      userName = user.email.split('@')[0];
+    } else {
+      userName = 'User';  // Simple fallback, no translation needed
+    }
+    
+    console.log('🔍 Dashboard - Extracted userName:', userName);
+    
+    // Get translation and check if it has {{name}} placeholder
+    let greetingText = '';
+    if (hour < 12) {
+      greetingText = t('welcome.goodMorning');
+    } else if (hour < 17) {
+      greetingText = t('welcome.goodAfternoon');
+    } else if (hour < 21) {
+      greetingText = t('welcome.goodEvening');
+    } else {
+      greetingText = t('welcome.general');
+    }
+    
+    console.log('🔍 Dashboard - Translation result:', greetingText);
+    console.log('🔍 Dashboard - Contains {{name}}:', greetingText.includes('{{name}}'));
+    
+    // Replace {{name}} if it exists, otherwise just return the greeting
+    if (greetingText.includes('{{name}}')) {
+      greetingText = greetingText.replace('{{name}}', userName);
+    } else {
+      // If no {{name}} placeholder, construct greeting manually
+      greetingText = `${greetingText} ${userName}!`;
+    }
+    
+    console.log('🔍 Dashboard - Final greeting:', greetingText);
+    return greetingText;
   }, [user, t]);
 
-  // ✅ Profile picture placeholder
-  const profilePicture = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.first_name || user?.username || 'User')}&background=3b82f6&color=ffffff&size=120`;
+  // ✅ Profile picture with cache-busting for real-time updates
+  const profilePicture = user?.avatar 
+    ? `${user.avatar}?t=${Date.now()}` // Add cache-busting timestamp
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.first_name || user?.username || 'User')}&background=3b82f6&color=ffffff&size=120`;
 
   // ✅ Date formatting based on current language
   const formatDate = useCallback((date) => {
@@ -118,7 +170,7 @@ const Dashboard = () => {
     stats: {
       totalTransactions: 47,
       avgTransaction: 285,
-      topCategory: t('common.categories.food', 'Food & Dining'),
+      topCategory: t('common.categoryTypes.food', 'Food & Dining'),
       growthRate: '+12.5%'
     },
     recentTransactions: dashboardData?.recentTransactions || [
@@ -126,35 +178,35 @@ const Dashboard = () => {
         id: 1, 
         description: t('common.transactions.groceries', 'Grocery Shopping'), 
         amount: -120, 
-        category: t('common.categories.food', 'Food'), 
+        category: t('common.categoryTypes.food', 'Food'), 
         date: '2025-01-27' 
       },
       { 
         id: 2, 
         description: t('common.transactions.salary', 'Salary'), 
         amount: 5000, 
-        category: t('common.categories.income', 'Income'), 
+        category: t('common.categoryTypes.income', 'Income'), 
         date: '2025-01-26' 
       },
       { 
         id: 3, 
         description: t('common.transactions.fuel', 'Car Fuel'), 
         amount: -200, 
-        category: t('common.categories.transport', 'Transportation'), 
+        category: t('common.categoryTypes.transport', 'Transportation'), 
         date: '2025-01-25' 
       },
       { 
         id: 4, 
         description: t('common.transactions.coffee', 'Coffee'), 
         amount: -18, 
-        category: t('common.categories.entertainment', 'Entertainment'), 
+        category: t('common.categoryTypes.entertainment', 'Entertainment'), 
         date: '2025-01-25' 
       },
       { 
         id: 5, 
         description: t('common.transactions.electricity', 'Electricity Bill'), 
         amount: -350, 
-        category: t('common.categories.bills', 'Bills'), 
+        category: t('common.categoryTypes.bills', 'Bills'), 
         date: '2025-01-24' 
       }
     ]
@@ -206,10 +258,12 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
               <div className="relative">
-                <img 
-                  src={profilePicture}
-                  alt={t('common.profilePicture', 'Profile Picture')}
-                  className="w-16 h-16 rounded-full border-4 border-blue-500 shadow-lg"
+                <Avatar
+                  src={user?.avatar}
+                  alt={user?.name || user?.username || 'User'}
+                  name={user?.name || user?.username || 'User'}
+                  size="xl"
+                  className="border-4 border-blue-500 shadow-lg"
                 />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
@@ -218,7 +272,7 @@ const Dashboard = () => {
                   {greeting}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {t('overview')} • {formatDate(new Date())}
+                  {t('dashboard.overview', 'Overview')} • {formatDate(new Date())}
                 </p>
               </div>
             </div>
@@ -230,6 +284,17 @@ const Dashboard = () => {
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? t('loading') : t('refresh')}
+            </Button>
+            
+            {/* ✅ TEMPORARY: Debug Avatar Button */}
+            <Button 
+              onClick={async () => {
+                console.log('🔍 Debug - Manual profile refresh triggered');
+                await useAuthStore.getState().actions.getProfile();
+              }}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 ml-2"
+            >
+              🔍 Debug Avatar
             </Button>
           </div>
         </div>

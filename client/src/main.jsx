@@ -1,19 +1,14 @@
 /**
  * 🚀 MAIN APPLICATION ENTRY POINT
- * SpendWise client initialization with React Query and Error Boundaries
+ * SpendWise client initialization - OPTIMIZED & CLEAN
  */
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
 
 import App from './app.jsx';
 import './index.css';
-
-import { queryClient } from './config/queryClient';
-import { api } from './api';
 
 /**
  * 🚨 Application Error Fallback
@@ -49,25 +44,11 @@ function ErrorFallback({ error, resetErrorBoundary }) {
   );
 }
 
-/**
- * 🎯 Main SpendWise Application
- */
-function SpendWiseApp() {
-  return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-}
-
 // Global error handler for role access errors
 window.addEventListener('error', (event) => {
   if (event.error?.message?.includes("Cannot read properties of undefined (reading 'role')")) {
     console.warn('🔧 CAUGHT role access error - using fallback');
-    event.preventDefault(); // Prevent error from breaking the app
+    event.preventDefault();
     return false;
   }
 });
@@ -76,7 +57,11 @@ window.addEventListener('error', (event) => {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 try {
-  root.render(<SpendWiseApp />);
+  root.render(
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <App />
+    </ErrorBoundary>
+  );
 } catch (error) {
   console.error('❌ Critical app error:', error);
   
@@ -106,22 +91,4 @@ try {
       }, 'Refresh Page')
     ])
   );
-}
-
-// Development tools (only in development)
-if (import.meta.env.DEV) {
-  // Global development helpers
-  window.spendWiseAPI = api;
-  window.queryClient = queryClient;
-  window.clearAllCaches = () => {
-    queryClient.clear();
-    if (api.clearCache) api.clearCache();
-  };
-  window.getPerformanceStats = () => {
-    return {
-      memory: performance.memory,
-      navigation: performance.navigation,
-      timing: performance.timing
-    };
-  };
 }
