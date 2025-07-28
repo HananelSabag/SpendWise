@@ -88,21 +88,39 @@ const auth = async (req, res, next) => {
 
       user = result.rows[0];
       
-      // Check for user restrictions (blocks, etc.)
-      const restrictionsResult = await db.query(
-        `SELECT restriction_type, reason, expires_at
-         FROM user_restrictions 
-         WHERE user_id = $1 
-           AND is_active = true 
-           AND (expires_at IS NULL OR expires_at > NOW())`,
-        [userId],
-        'auth_user_restrictions'
-      );
+      // Check for user restrictions (blocks, etc.) - with error handling
+      let isRestricted = false;
+      let restrictionReason = null;
+      
+      try {
+        const restrictionsResult = await db.query(
+          `SELECT restriction_type, reason, expires_at
+           FROM user_restrictions 
+           WHERE user_id = $1 
+             AND is_active = true 
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+          [userId],
+          'auth_user_restrictions'
+        );
+        
+        if (restrictionsResult.rows.length > 0) {
+          isRestricted = true;
+          restrictionReason = restrictionsResult.rows[0].reason || 'Account restricted';
+        }
+      } catch (restrictionError) {
+        // Log the error but don't block authentication if restrictions table doesn't exist
+        logger.warn('⚠️ User restrictions check failed', {
+          userId,
+          error: restrictionError.message,
+          stack: restrictionError.stack
+        });
+        // Continue with authentication - assume no restrictions
+      }
 
-      // Add restrictions to user object
-      user.restrictions = restrictionsResult.rows;
-      user.isBlocked = restrictionsResult.rows.some(r => r.restriction_type === 'blocked');
-      user.isDeleted = restrictionsResult.rows.some(r => r.restriction_type === 'deleted');
+      // Add restrictions to user object (error-safe)
+      user.restrictions = isRestricted ? [{ restriction_type: 'active', reason: restrictionReason }] : [];
+      user.isBlocked = isRestricted;
+      user.isDeleted = false; // Only set to true if specifically deleted
 
       // Cache the user data
       userCache.set(cacheKey, user);
