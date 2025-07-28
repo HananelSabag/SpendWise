@@ -5,43 +5,48 @@
  * @version 2.0.0
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronDown,
-  User,
-  LogOut,
-  Settings,
-  Shield,
-  BarChart3,
-  Users,
-  Activity,
-  HelpCircle
+import { 
+  ChevronDown, User, Settings, LogOut, Shield, 
+  Download, Users, BarChart3, HelpCircle
 } from 'lucide-react';
 
-// ✅ Import Zustand stores
-import { 
-  useAuth, 
-  useTranslation,
-  useNotifications
-} from '../../stores';
-
+import { useAuth, useAuthStore, useTranslation, useNotifications } from '../../stores';
+import { Avatar, Button } from '../ui';
 import { cn } from '../../utils/helpers';
-import { Avatar } from '../ui';
 
-/**
- * 👤 User Menu Component
- */
-const UserMenu = ({ 
-  className = '' 
-}) => {
+const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
-  const { t, isRTL } = useTranslation();
+  const { actions } = useAuthStore();
+  const { t } = useTranslation();
   const { addNotification } = useNotifications();
-  
   const navigate = useNavigate();
+
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // ✅ CRITICAL DEBUG: Check if avatar is missing and refresh if needed
+  useEffect(() => {
+    if (user && !user.avatar && !user.profile_picture_url) {
+      console.log('🔍 Avatar missing, refreshing user profile...');
+      actions.getProfile().then(result => {
+        console.log('🔍 Profile refresh result:', result);
+      });
+    }
+  }, [user, actions]);
+
+  // ✅ COMPREHENSIVE DEBUG LOG
+  console.log('🔍 UserMenu DEBUG - Full user object:', {
+    user,
+    avatar: user?.avatar,
+    profile_picture_url: user?.profile_picture_url,
+    profilePicture: user?.profilePicture,
+    preferences: user?.preferences,
+    hasAvatar: !!(user?.avatar || user?.profile_picture_url || user?.profilePicture)
+  });
 
   // ✅ User menu items
   const userMenuItems = [
@@ -88,7 +93,7 @@ const UserMenu = ({
     {
       name: t('nav.activityLog'),
       href: '/admin/activity',
-      icon: Activity,
+      icon: Download, // Changed from Activity to Download for consistency
       description: 'Activity Log'
     }
   ] : [];

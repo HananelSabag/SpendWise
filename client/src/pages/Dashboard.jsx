@@ -48,10 +48,6 @@ const Dashboard = () => {
     const hour = new Date().getHours();
     
     // ✅ FIXED: Simple direct name extraction from server response
-    console.log('🔍 Dashboard - FULL User object:', user);
-    console.log('🔍 Dashboard - Avatar URL:', user?.avatar);
-    console.log('🔍 Dashboard - Avatar type:', typeof user?.avatar);
-    console.log('🔍 Dashboard - Avatar length:', user?.avatar?.length || 0);
     
     // Server provides normalized fields - use them directly
     let userName = '';
@@ -75,9 +71,7 @@ const Dashboard = () => {
       userName = user?.email?.split('@')[0] || '';  // Never show "User" fallback
     }
     
-    console.log('🔍 Dashboard - Extracted userName:', userName);
-    
-    // Get translation and check if it has {{name}} placeholder
+    // Get translation and replace {{name}} placeholder
     let greetingText = '';
     if (hour < 12) {
       greetingText = t('welcome.goodMorning');
@@ -89,10 +83,7 @@ const Dashboard = () => {
       greetingText = t('welcome.general');
     }
     
-    console.log('🔍 Dashboard - Translation result:', greetingText);
-    console.log('🔍 Dashboard - Contains {{name}}:', greetingText.includes('{{name}}'));
-    
-    // Replace {{name}} if it exists, otherwise just return the greeting
+    // Replace {{name}} if it exists, otherwise construct greeting manually
     if (greetingText.includes('{{name}}')) {
       greetingText = greetingText.replace('{{name}}', userName);
     } else {
@@ -100,7 +91,6 @@ const Dashboard = () => {
       greetingText = `${greetingText} ${userName}!`;
     }
     
-    console.log('🔍 Dashboard - Final greeting:', greetingText);
     return greetingText;
   }, [user, t]);
 
@@ -272,7 +262,7 @@ const Dashboard = () => {
                   {greeting}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {t('dashboard.overview', 'Overview')} • {formatDate(new Date())}
+                  {t('overview', 'Overview')} • {formatDate(new Date())}
                 </p>
               </div>
             </div>
@@ -284,17 +274,6 @@ const Dashboard = () => {
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? t('loading') : t('refresh')}
-            </Button>
-            
-            {/* ✅ TEMPORARY: Debug Avatar Button */}
-            <Button 
-              onClick={async () => {
-                console.log('🔍 Debug - Manual profile refresh triggered');
-                await useAuthStore.getState().actions.getProfile();
-              }}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 ml-2"
-            >
-              🔍 Debug Avatar
             </Button>
           </div>
         </div>

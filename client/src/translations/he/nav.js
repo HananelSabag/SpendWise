@@ -5,12 +5,14 @@
 
 export default {
   // ניווט ראשי
-  dashboard: 'דשבורד',
-  transactions: 'עסקאות',
+  dashboard: 'לוח בקרה',
+  transactions: 'תנועות',
+  categories: 'קטגוריות', 
+  analytics: 'אנליטיקה',
   profile: 'פרופיל',
   settings: 'הגדרות',
-  analytics: 'אנליטיקה',
-  admin: 'מנהל',
+  help: 'עזרה',
+  adminDashboard: 'לוח בקרה מנהל',
   
   // תיאורי ניווט
   profileDesc: 'נהלו את הפרופיל האישי שלכם',

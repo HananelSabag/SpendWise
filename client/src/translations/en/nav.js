@@ -4,13 +4,14 @@
  */
 
 export default {
-  // Main Navigation
+  // Main navigation
   dashboard: 'Dashboard',
   transactions: 'Transactions',
   profile: 'Profile',
   settings: 'Settings',
   analytics: 'Analytics',
   admin: 'Admin',
+  adminDashboard: 'Admin Dashboard',
   
   // Navigation descriptions
   profileDesc: 'Manage your personal profile',

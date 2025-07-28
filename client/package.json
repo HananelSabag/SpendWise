@@ -4,7 +4,9 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev-clean.js",
+    "dev:basic": "vite --open",
+    "dev:clean": "node scripts/dev-clean.js",
     "dev:admin": "vite --mode admin",
     "dev:analytics": "vite --mode analytics",
     "dev:mobile": "vite --host 0.0.0.0 --port 5173",

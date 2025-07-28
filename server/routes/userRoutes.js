@@ -121,17 +121,18 @@ router.post('/upload-profile-picture',
         });
       }
 
-      // Update user's avatar in database - FIXED: Use direct database query
+      // Update user's avatar in database - FIXED: Preserve onboarding_completed
       const db = require('../config/db');
       const result = await db.query(
-        'UPDATE users SET avatar = $1, profile_picture_url = $2, updated_at = NOW() WHERE id = $3 RETURNING id, avatar, profile_picture_url',
+        'UPDATE users SET avatar = $1, profile_picture_url = $2, updated_at = NOW() WHERE id = $3 RETURNING id, avatar, profile_picture_url, onboarding_completed',
         [req.supabaseUpload.publicUrl, req.supabaseUpload.publicUrl, req.user.id]
       );
       
       console.log('✅ Profile picture - Database updated:', {
         userId: req.user.id,
         avatarUrl: req.supabaseUpload.publicUrl,
-        updatedUser: result.rows[0]
+        updatedUser: result.rows[0],
+        onboardingPreserved: result.rows[0].onboarding_completed
       });
 
       res.json({

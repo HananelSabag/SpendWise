@@ -3,67 +3,48 @@
  */
 
 export default {
-  // Main title
-  title: 'Profile',
-  subtitle: 'Manage your personal information and account preferences',
-  
-  // Main tabs  
+  // Navigation tabs
   tabs: {
     personal: 'Personal Info',
-    security: 'Security',
-    export: 'Data Export',
     preferences: 'Preferences',
-    notifications: 'Notifications'
+    security: 'Security',
+    export: 'Export Data'
   },
-  
-  // Personal info
+
+  // Messages
+  messages: {
+    profileUpdated: 'Profile updated successfully',
+    preferencesUpdated: 'Preferences updated successfully',
+    passwordChanged: 'Password changed successfully',
+    uploadSuccess: 'Profile picture uploaded successfully',
+    uploadError: 'Failed to upload profile picture'
+  },
+
+  // Personal Info section
   personal: {
-    title: 'Personal Details',
-    subtitle: 'Update your personal information',
-    
-    // Fields
-    fields: {
-      firstName: 'First Name',
-      lastName: 'Last Name', 
-      username: 'Username',
-      email: 'Email Address',
-      phone: 'Phone Number',
-      dateOfBirth: 'Date of Birth',
-      address: 'Address',
-      city: 'City',
-      country: 'Country',
-      zipCode: 'ZIP Code'
-    },
-    
-    // Profile picture
-    avatar: {
-      title: 'Profile Picture',
-      subtitle: 'Update your profile image',
-      upload: 'Upload new image',
-      remove: 'Remove image',
-      change: 'Change image',
-      uploading: 'Uploading image...',
-      success: 'Image updated successfully',
-      error: 'Error uploading image',
-      requirements: 'Max size: 5MB, Formats: JPG, PNG, GIF'
-    },
-    
-    // Actions
-    actions: {
-      save: 'Save Changes',
-      cancel: 'Cancel',
-      reset: 'Reset',
-      edit: 'Edit'
-    },
-    
-    // Messages
-    messages: {
-      saved: 'Details saved successfully',
-      error: 'Error saving details',
-      validation: 'Please fill in all required fields'
-    }
+    title: 'Personal Information',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email',
+    phone: 'Phone',
+    location: 'Location',
+    website: 'Website',
+    birthday: 'Birthday',
+    bio: 'Bio',
+    bioPlaceholder: 'Tell us about yourself...',
+    memberSince: 'Member since'
   },
-  
+
+  // Preferences section
+  preferences: {
+    title: 'Application Preferences',
+    subtitle: 'Customize your SpendWise experience with these settings.',
+    language: 'Language',
+    theme: 'Theme',
+    currency: 'Currency',
+    savePreferences: 'Save Preferences'
+  },
+
   // Security
   security: {
     title: 'Security & Account',

@@ -509,7 +509,8 @@ export const authAPI = {
         method: 'GET'
       }, 'user-profile', 10 * 60 * 1000); // 10 minute cache
       
-      const user = response.data;
+      // ✅ FIXED: Handle server response structure correctly
+      const user = response.data?.data || response.data;
       
       // Normalize user object for consistency
       const normalizedUser = {
@@ -697,7 +698,8 @@ export const authAPI = {
       });
       
       if (response.data) {
-        const user = response.data;
+        // ✅ FIXED: Handle server response structure correctly
+        const user = response.data?.data || response.data;
         
         // Normalize user object
         const normalizedUser = {

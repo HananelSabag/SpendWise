@@ -4,68 +4,49 @@
  */
 
 export default {
-  // כותרת ראשית
-  title: 'פרופיל',
-  subtitle: 'נהל את המידע האישי והעדפות החשבון שלך',
-  
-  // לשוניות ראשיות  
+  // Navigation tabs
   tabs: {
     personal: 'מידע אישי',
-    security: 'אבטחה',
-    export: 'ייצוא נתונים',
     preferences: 'העדפות',
-    notifications: 'התראות'
+    security: 'אבטחה',
+    export: 'ייצוא נתונים'
   },
-  
-  // מידע אישי
+
+  // Messages
+  messages: {
+    profileUpdated: 'הפרופיל עודכן בהצלחה',
+    preferencesUpdated: 'ההעדפות עודכנו בהצלחה',
+    passwordChanged: 'הסיסמה שונתה בהצלחה',
+    uploadSuccess: 'תמונת הפרופיל הועלתה בהצלחה',
+    uploadError: 'העלאת תמונת הפרופיל נכשלה'
+  },
+
+  // Personal Info section
   personal: {
-    title: 'פרטים אישיים',
-    subtitle: 'עדכן את הפרטים האישיים שלך',
-    
-    // שדות
-    fields: {
-      firstName: 'שם פרטי',
-      lastName: 'שם משפחה', 
-      username: 'שם משתמש',
-      email: 'כתובת אימייל',
-      phone: 'מספר טלפון',
-      dateOfBirth: 'תאריך לידה',
-      address: 'כתובת',
-      city: 'עיר',
-      country: 'מדינה',
-      zipCode: 'מיקוד'
-    },
-    
-    // תמונת פרופיל
-    avatar: {
-      title: 'תמונת פרופיל',
-      subtitle: 'עדכן את התמונה שלך',
-      upload: 'העלה תמונה חדשה',
-      remove: 'הסר תמונה',
-      change: 'שנה תמונה',
-      uploading: 'מעלה תמונה...',
-      success: 'התמונה עודכנה בהצלחה',
-      error: 'שגיאה בהעלאת התמונה',
-      requirements: 'גודל מקסימלי: 5MB, פורמטים: JPG, PNG, GIF'
-    },
-    
-    // פעולות
-    actions: {
-      save: 'שמור שינויים',
-      cancel: 'ביטול',
-      reset: 'איפוס',
-      edit: 'ערוך'
-    },
-    
-    // הודעות
-    messages: {
-      saved: 'הפרטים נשמרו בהצלחה',
-      error: 'שגיאה בשמירת הפרטים',
-      validation: 'אנא מלא את כל השדות הנדרשים'
-    }
+    title: 'מידע אישי',
+    firstName: 'שם פרטי',
+    lastName: 'שם משפחה',
+    email: 'אימייל',
+    phone: 'טלפון',
+    location: 'מיקום',
+    website: 'אתר אינטרנט',
+    birthday: 'תאריך לידה',
+    bio: 'ביוגרפיה',
+    bioPlaceholder: 'ספר לנו על עצמך...',
+    memberSince: 'חבר מאז'
   },
-  
-  // אבטחה
+
+  // Preferences section
+  preferences: {
+    title: 'העדפות יישום',
+    subtitle: 'התאם את חוויית SpendWise שלך עם ההגדרות הללו.',
+    language: 'שפה',
+    theme: 'ערכת נושא',
+    currency: 'מטבע',
+    savePreferences: 'שמור העדפות'
+  },
+
+  // Security section
   security: {
     title: 'אבטחה וחשבון',
     subtitle: 'נהל את הגדרות האבטחה שלך',
@@ -147,29 +128,6 @@ export default {
       ready: 'הקובץ מוכן להורדה',
       error: 'שגיאה ביצירת הקובץ',
       emailSent: 'הקובץ נשלח לאימייל שלך'
-    }
-  },
-  
-  // העדפות
-  preferences: {
-    title: 'העדפות',
-    subtitle: 'התאם את החוויה שלך',
-    
-    // שפה ואזור
-    language: {
-      title: 'שפה ואזור',
-      language: 'שפה',
-      currency: 'מטבע',
-      dateFormat: 'פורמט תאריך',
-      timezone: 'אזור זמן'
-    },
-    
-    // תצוגה
-    display: {
-      title: 'תצוגה',
-      theme: 'ערכת נושא',
-      density: 'צפיפות',
-      animations: 'אנימציות'
     }
   },
   

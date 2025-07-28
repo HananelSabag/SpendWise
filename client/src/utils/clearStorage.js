@@ -1,0 +1,165 @@
+/**
+ * 🧹 CLEAR STORAGE UTILITY
+ * Clears cache, localStorage, sessionStorage when URL params detected
+ */
+
+/**
+ * Clear browser storage based on URL parameters
+ */
+export const clearStorageFromURL = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const clearParam = urlParams.get('clear');
+  
+  if (!clearParam) return;
+  
+  const clearTypes = clearParam.split(',');
+  let clearedItems = [];
+  
+  try {
+    // Clear localStorage
+    if (clearTypes.includes('storage') || clearTypes.includes('localStorage')) {
+      localStorage.clear();
+      clearedItems.push('localStorage');
+      console.log('🧹 localStorage cleared');
+    }
+    
+    // Clear sessionStorage  
+    if (clearTypes.includes('storage') || clearTypes.includes('sessionStorage')) {
+      sessionStorage.clear();
+      clearedItems.push('sessionStorage');
+      console.log('🧹 sessionStorage cleared');
+    }
+    
+    // Clear cookies
+    if (clearTypes.includes('cookies')) {
+      // Clear all cookies for current domain
+      document.cookie.split(";").forEach(cookie => {
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      });
+      clearedItems.push('cookies');
+      console.log('🧹 cookies cleared');
+    }
+    
+    // Clear cache (using Cache API if available)
+    if (clearTypes.includes('cache') && 'caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.delete(cacheName);
+        });
+        clearedItems.push('cache');
+        console.log('🧹 cache cleared');
+      });
+    }
+    
+    // Clear specific SpendWise stores
+    if (clearTypes.includes('storage')) {
+      // Clear Zustand persist storage
+      const zustandKeys = ['spendwise-auth', 'spendwise-translations', 'spendwise-app'];
+      zustandKeys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+      
+      // Clear React Query cache
+      localStorage.removeItem('REACT_QUERY_OFFLINE_CACHE');
+      sessionStorage.removeItem('REACT_QUERY_OFFLINE_CACHE');
+      
+      console.log('🧹 SpendWise specific storage cleared');
+    }
+    
+    if (clearedItems.length > 0) {
+      console.log(`✅ Cleared: ${clearedItems.join(', ')}`);
+      
+      // Show notification to user
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        setTimeout(() => {
+          const notification = document.createElement('div');
+          notification.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: #10b981;
+              color: white;
+              padding: 12px 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+              z-index: 10000;
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 14px;
+              font-weight: 500;
+            ">
+              🧹 Cleared: ${clearedItems.join(', ')}
+              <button onclick="this.parentElement.remove()" style="
+                background: none;
+                border: none;
+                color: white;
+                margin-left: 10px;
+                cursor: pointer;
+                font-size: 16px;
+              ">×</button>
+            </div>
+          `;
+          document.body.appendChild(notification);
+          
+          // Auto-remove after 3 seconds
+          setTimeout(() => {
+            if (notification.parentElement) {
+              notification.remove();
+            }
+          }, 3000);
+        }, 1000);
+      }
+      
+      // Clean URL (remove clear parameter)
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.delete('clear');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+    
+  } catch (error) {
+    console.error('❌ Error clearing storage:', error);
+  }
+};
+
+/**
+ * Manual clear storage function for development
+ */
+export const clearAllStorage = () => {
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear cookies
+    document.cookie.split(";").forEach(cookie => {
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    });
+    
+    // Clear cache
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.delete(cacheName);
+        });
+      });
+    }
+    
+    console.log('✅ All storage cleared manually');
+    
+    // Reload page
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('❌ Error clearing storage manually:', error);
+  }
+};
+
+// Make available globally for console debugging
+if (typeof window !== 'undefined') {
+  window.clearSpendWiseStorage = clearAllStorage;
+  console.log('💡 Use clearSpendWiseStorage() in console to manually clear all storage');
+} 

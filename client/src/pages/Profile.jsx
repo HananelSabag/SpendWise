@@ -8,7 +8,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Shield, Download, Camera, Edit2, Save, X,
-  Eye, EyeOff, Key, Mail, Calendar, MapPin
+  Eye, EyeOff, Key, Mail, Calendar, MapPin, Settings
 } from 'lucide-react';
 
 import { 
@@ -38,11 +38,20 @@ const Profile = () => {
 
   // Form data
   const [personalData, setPersonalData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
+    firstName: user?.first_name || user?.firstName || '',
+    lastName: user?.last_name || user?.lastName || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    location: user?.location || ''
+    location: user?.location || '',
+    bio: user?.bio || '',
+    website: user?.website || '',
+    birthday: user?.birthday || ''
+  });
+
+  const [preferencesData, setPreferencesData] = useState({
+    language_preference: user?.language_preference || 'en',
+    theme_preference: user?.theme_preference || 'light',
+    currency_preference: user?.currency_preference || 'USD'
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -51,9 +60,10 @@ const Profile = () => {
     confirmPassword: ''
   });
 
-  // Simple tabs - only essentials
+  // ENHANCED tabs - include preferences
   const tabs = [
     { id: 'personal', label: t('tabs.personal', 'Personal Info'), icon: User },
+    { id: 'preferences', label: t('tabs.preferences', 'Preferences'), icon: Settings },
     { id: 'security', label: t('tabs.security', 'Security'), icon: Shield },
     { id: 'export', label: t('tabs.export', 'Export Data'), icon: Download }
   ];
@@ -125,25 +135,76 @@ const Profile = () => {
     }
   }, [addNotification, updateProfile]);
 
-  // Handle personal info update
+  // ✅ ENHANCED: Update personal info with all fields
   const handlePersonalUpdate = useCallback(async () => {
+    if (!personalData.firstName?.trim() || !personalData.lastName?.trim()) {
+      addNotification({
+        type: 'error',
+        message: 'First name and last name are required'
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await updateProfile(personalData);
-      setIsEditing(false);
-      addNotification({
-        type: 'success',
-        message: 'Profile updated successfully!'
+      const result = await updateProfile({
+        firstName: personalData.firstName.trim(),
+        lastName: personalData.lastName.trim(),
+        phone: personalData.phone?.trim() || '',
+        location: personalData.location?.trim() || '',
+        bio: personalData.bio?.trim() || '',
+        website: personalData.website?.trim() || '',
+        birthday: personalData.birthday || null
       });
+
+      if (result.success) {
+        setIsEditing(false);
+        addNotification({
+          type: 'success',
+          message: t('messages.profileUpdated', 'Profile updated successfully')
+        });
+      } else {
+        throw new Error(result.error?.message || 'Update failed');
+      }
     } catch (error) {
       addNotification({
         type: 'error',
-        message: 'Failed to update profile'
+        message: error.message || 'Failed to update profile'
       });
     } finally {
       setIsLoading(false);
     }
-  }, [personalData, updateProfile, addNotification]);
+  }, [personalData, updateProfile, addNotification, t]);
+
+  // ✅ NEW: Update preferences
+  const handlePreferencesUpdate = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await updateProfile({
+        language_preference: preferencesData.language_preference,
+        theme_preference: preferencesData.theme_preference,
+        currency_preference: preferencesData.currency_preference
+      });
+
+      if (result.success) {
+        addNotification({
+          type: 'success',
+          message: t('messages.preferencesUpdated', 'Preferences updated successfully')
+        });
+        // Reload page to apply theme/language changes
+        window.location.reload();
+      } else {
+        throw new Error(result.error?.message || 'Update failed');
+      }
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        message: error.message || 'Failed to update preferences'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [preferencesData, updateProfile, addNotification, t]);
 
   // Handle password change
   const handlePasswordChange = useCallback(async () => {
@@ -238,38 +299,66 @@ const Profile = () => {
             value={personalData.firstName}
             onChange={(e) => setPersonalData(prev => ({ ...prev, firstName: e.target.value }))}
             disabled={!isEditing}
-            icon={<User className="w-5 h-5" />}
+            required
           />
           <Input
             label="Last Name"
             value={personalData.lastName}
             onChange={(e) => setPersonalData(prev => ({ ...prev, lastName: e.target.value }))}
             disabled={!isEditing}
-            icon={<User className="w-5 h-5" />}
+            required
           />
           <Input
             label="Email"
-            value={personalData.email}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, email: e.target.value }))}
-            disabled={!isEditing}
-            icon={<Mail className="w-5 h-5" />}
             type="email"
+            value={personalData.email}
+            disabled={true}
+            className="opacity-50 cursor-not-allowed"
           />
           <Input
             label="Phone"
+            type="tel"
             value={personalData.phone}
             onChange={(e) => setPersonalData(prev => ({ ...prev, phone: e.target.value }))}
             disabled={!isEditing}
-            placeholder="Optional"
+            placeholder="+1234567890"
           />
           <Input
             label="Location"
             value={personalData.location}
             onChange={(e) => setPersonalData(prev => ({ ...prev, location: e.target.value }))}
             disabled={!isEditing}
-            icon={<MapPin className="w-5 h-5" />}
-            placeholder="Optional"
-            className="md:col-span-2"
+            placeholder="City, Country"
+          />
+          <Input
+            label="Website"
+            type="url"
+            value={personalData.website}
+            onChange={(e) => setPersonalData(prev => ({ ...prev, website: e.target.value }))}
+            disabled={!isEditing}
+            placeholder="https://..."
+          />
+          <Input
+            label="Birthday"
+            type="date"
+            value={personalData.birthday}
+            onChange={(e) => setPersonalData(prev => ({ ...prev, birthday: e.target.value }))}
+            disabled={!isEditing}
+          />
+        </div>
+        
+        {/* Bio field - full width */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Bio
+          </label>
+          <textarea
+            value={personalData.bio}
+            onChange={(e) => setPersonalData(prev => ({ ...prev, bio: e.target.value }))}
+            disabled={!isEditing}
+            rows={3}
+            placeholder="Tell us about yourself..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -284,6 +373,87 @@ const Profile = () => {
             </Button>
           </div>
         )}
+      </div>
+    </Card>
+  );
+
+  // ✅ NEW: Preferences Tab
+  const renderPreferencesTab = () => (
+    <Card className="p-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Application Preferences
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Customize your SpendWise experience with these settings.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Language Preference */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Language
+            </label>
+            <select
+              value={preferencesData.language_preference}
+              onChange={(e) => setPreferencesData(prev => ({ ...prev, language_preference: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            >
+              <option value="en">English</option>
+              <option value="he">עברית (Hebrew)</option>
+            </select>
+          </div>
+
+          {/* Theme Preference */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Theme
+            </label>
+            <select
+              value={preferencesData.theme_preference}
+              onChange={(e) => setPreferencesData(prev => ({ ...prev, theme_preference: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">System</option>
+            </select>
+          </div>
+
+          {/* Currency Preference */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Currency
+            </label>
+            <select
+              value={preferencesData.currency_preference}
+              onChange={(e) => setPreferencesData(prev => ({ ...prev, currency_preference: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            >
+              <option value="USD">🇺🇸 USD - US Dollar</option>
+              <option value="EUR">🇪🇺 EUR - Euro</option>
+              <option value="GBP">🇬🇧 GBP - British Pound</option>
+              <option value="ILS">🇮🇱 ILS - Israeli Shekel</option>
+              <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+              <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+              <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            onClick={handlePreferencesUpdate}
+            loading={isLoading}
+            className="px-6"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Save Preferences
+          </Button>
+        </div>
       </div>
     </Card>
   );
@@ -399,6 +569,7 @@ const Profile = () => {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'personal' && renderPersonalTab()}
+            {activeTab === 'preferences' && renderPreferencesTab()}
             {activeTab === 'security' && renderSecurityTab()}
             {activeTab === 'export' && renderExportTab()}
           </motion.div>
