@@ -218,27 +218,16 @@ try {
     app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
     console.log('✅ Analytics routes loaded');
   } catch (error) {
-    console.error('❌ CRITICAL: Analytics routes failed to load:', error.message);
-    console.error('❌ CRITICAL: Analytics route error stack:', error.stack);
-    
-    // ❌ NO FAKE FALLBACKS! Fail properly so we can fix the real issue
-    app.get(`${API_VERSION}/analytics/dashboard/summary`, (req, res) => {
-      console.error('❌ CRITICAL: Analytics dashboard requested but routes failed to load!');
-      console.error('❌ CRITICAL: This should never happen in production!');
-      console.error('❌ CRITICAL: Check server logs and fix the analytics route loading issue!');
-      
-      res.status(503).json({ 
-        success: false, 
-        error: { 
-          code: 'SERVICE_UNAVAILABLE',
-          message: 'Analytics service temporarily unavailable. Please contact support.',
-          details: 'Server configuration error - analytics routes failed to load'
-        }
-      });
-    });
-    
-    console.error('❌ CRITICAL: Added ERROR fallback for analytics (this indicates a serious problem)');
-    console.error('❌ CRITICAL: Fix required: Check why ./routes/analyticsRoutes.js is failing to load');
+    console.error('❌ Analytics routes failed:', error.message);
+  }
+
+  // ✅ ADMIN ROUTES - Add missing admin routes
+  try {
+    console.log('Loading admin routes...');
+    app.use(`${API_VERSION}/admin`, require('./routes/adminRoutes'));
+    console.log('✅ Admin routes loaded');
+  } catch (error) {
+    console.error('❌ Admin routes failed:', error.message);
   }
 } catch (error) {
   console.error('❌ API routes loading failed:', error.message);

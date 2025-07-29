@@ -1,39 +1,36 @@
 /**
- * 🌍 ENGLISH TRANSLATIONS - MASTER INDEX
- * Comprehensive translation system for SpendWise
- * @version 2.0.0
+ * English Translations Index
+ * Exports all translation modules for the English language
  */
 
-// Core translations
 import common from './common.js';
-import auth from './auth.js';
-import nav from './nav.js';
 import errors from './errors.js';
-
-// Feature translations
-import onboarding from './onboarding.js';
-import transactions from './transactions.js';
+import nav from './nav.js';
+import auth from './auth.js';
 import dashboard from './dashboard.js';
-import categories from './categories.js';
-import preferences from './preferences.js';
-
-// UI & Legal translations
+import onboarding from './onboarding.js';
 import footer from './footer.js';
 import accessibility from './accessibility.js';
 import legal from './legal.js';
+import preferences from './preferences.js';
+import profile from './profile.js';
+import categories from './categories.js';
+import transactions from './transactions.js';
+import admin from './admin.js'; // ✅ ADD: Admin translations
 
-// Export all translations
 export default {
   common,
-  auth,
-  nav,
   errors,
-  onboarding,
-  transactions,
+  nav,
+  auth,
   dashboard,
-  categories,
-  preferences,
+  onboarding,
   footer,
   accessibility,
-  legal
+  legal,
+  preferences,
+  profile,
+  categories,
+  transactions,
+  admin, // ✅ ADD: Admin translations
 }; 

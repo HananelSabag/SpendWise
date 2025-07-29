@@ -113,9 +113,14 @@ const Input = forwardRef(({
             'absolute inset-y-0 flex items-center pointer-events-none',
             isRTL ? 'right-0 pr-3' : 'left-0 pl-3'
           )}>
-            {React.isValidElement(icon) ? React.cloneElement(icon, {
-              className: cn('w-5 h-5 text-gray-400', icon.props.className)
-            }) : icon}
+            {React.isValidElement(icon) 
+              ? React.cloneElement(icon, {
+                  className: cn('w-5 h-5 text-gray-400', icon.props.className)
+                })
+              : typeof icon === 'function' 
+                ? React.createElement(icon, { className: 'w-5 h-5 text-gray-400' })
+                : icon
+            }
           </div>
         )}
 
@@ -174,18 +179,28 @@ const Input = forwardRef(({
               {/* Right icon */}
               {showRightIcon && !isPassword && (
                 <div>
-                  {React.isValidElement(icon) ? React.cloneElement(icon, {
-                    className: cn('w-5 h-5 text-gray-400', icon.props.className)
-                  }) : icon}
+                  {React.isValidElement(icon) 
+                    ? React.cloneElement(icon, {
+                        className: cn('w-5 h-5 text-gray-400', icon.props.className)
+                      })
+                    : typeof icon === 'function' 
+                      ? React.createElement(icon, { className: 'w-5 h-5 text-gray-400' })
+                      : icon
+                  }
                 </div>
               )}
 
               {/* End icon */}
               {endIcon && (
                 <div>
-                  {React.isValidElement(endIcon) ? React.cloneElement(endIcon, {
-                    className: cn('w-5 h-5 text-gray-400', endIcon.props.className)
-                  }) : endIcon}
+                  {React.isValidElement(endIcon) 
+                    ? React.cloneElement(endIcon, {
+                        className: cn('w-5 h-5 text-gray-400', endIcon.props.className)
+                      })
+                    : typeof endIcon === 'function' 
+                      ? React.createElement(endIcon, { className: 'w-5 h-5 text-gray-400' })
+                      : endIcon
+                  }
                 </div>
               )}
 
