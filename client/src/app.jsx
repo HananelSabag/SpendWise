@@ -107,9 +107,9 @@ const RouteErrorBoundary = ({ children, routeName }) => {
   );
 };
 
-// ✅ Role-Based Route Protection - SIMPLIFIED
+// ✅ Role-Based Route Protection - FIXED
 const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, isAdmin, isSuperAdmin } = useAuth();
   const { t } = useTranslation();
   
   // Loading state
@@ -131,13 +131,16 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
     return <Navigate to="/login" replace />;
   }
   
-  // Check permissions
-  if (superAdminOnly && !user?.isSuperAdmin) {
+  // Check super admin permission
+  if (superAdminOnly && !isSuperAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center p-8">
           <h3 className="text-xl font-semibold mb-2">Super Admin Access Required</h3>
           <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Current role: {user?.role || 'Unknown'} | Required: super_admin
+          </p>
           <button 
             onClick={() => window.history.back()} 
             className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg"
@@ -149,13 +152,16 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
     );
   }
   
-  // ✅ FIX: Check admin access with proper fallback logic
-  if (adminOnly && !(user?.isAdmin || user?.isSuperAdmin || ['admin', 'super_admin'].includes(user?.role))) {
+  // Check admin permission
+  if (adminOnly && !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center p-8">
           <h3 className="text-xl font-semibold mb-2">Admin Access Required</h3>
           <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Current role: {user?.role || 'Unknown'} | Required: admin or super_admin
+          </p>
           <button 
             onClick={() => window.history.back()} 
             className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg"

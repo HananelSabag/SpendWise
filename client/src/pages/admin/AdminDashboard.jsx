@@ -5,12 +5,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
   Users, CheckCircle, XCircle, Activity, BarChart3, Settings, 
-  Shield, Clock, TrendingUp, AlertCircle, Database, Server
+  Shield, Clock, TrendingUp, AlertCircle, Database, Server, ArrowLeft, RefreshCw
 } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores and API
@@ -25,6 +25,7 @@ const AdminDashboard = () => {
   const { t, isRTL } = useTranslation('admin');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
+  const navigate = useNavigate();
 
   // ✅ Real-time admin data
   const { 
@@ -59,41 +60,21 @@ const AdminDashboard = () => {
               {t('errors.adminRequired', { fallback: 'Admin privileges required to access this page' })}
             </p>
             
-            {/* Bootstrap Super Admin Button */}
             <Button
-              onClick={async () => {
-                try {
-                  const result = await api.admin.bootstrapSuperAdmin();
-                  if (result.success) {
-                    addNotification({
-                      type: 'success',
-                      message: 'Super admin setup completed. Please refresh the page.'
-                    });
-                    setTimeout(() => window.location.reload(), 2000);
-                  } else {
-                    addNotification({
-                      type: 'error',
-                      message: 'Bootstrap failed: ' + (result.error?.message || 'Unknown error')
-                    });
-                  }
-                } catch (error) {
-                  addNotification({
-                    type: 'error',
-                    message: 'Bootstrap error: ' + error.message
-                  });
-                }
-              }}
+              onClick={() => navigate('/')}
               className="mr-2"
             >
-              <Shield className="w-4 h-4 mr-2" />
-              Setup Super Admin
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go to Dashboard
             </Button>
             
-            <Link to="/dashboard">
-              <Button variant="outline">
-                Back to Dashboard
-              </Button>
-            </Link>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh Page
+            </Button>
           </div>
         </Card>
       </div>

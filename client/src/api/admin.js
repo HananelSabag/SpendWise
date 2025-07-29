@@ -8,26 +8,6 @@ import { api } from './client.js';
 
 // ✅ Admin API Module
 export const adminAPI = {
-  // ✅ Bootstrap Super Admin (No auth required)
-  async bootstrapSuperAdmin() {
-    try {
-      const response = await api.client.post('/admin/bootstrap/super-admin', {
-        email: 'hananel12345@gmail.com',
-        confirmationKey: 'bootstrap-super-admin-2024'
-      });
-      
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
   // ✅ Get Admin Dashboard Overview
   async getDashboard() {
     try {
@@ -45,6 +25,41 @@ export const adminAPI = {
         success: false,
         error: api.normalizeError(error)
       };
+    }
+  },
+
+  // ✅ Admin Settings API
+  settings: {
+    // Get current system settings
+    async get() {
+      try {
+        const response = await api.client.get('/admin/settings');
+        return {
+          success: true,
+          data: response.data
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: api.normalizeError(error)
+        };
+      }
+    },
+
+    // Update system settings
+    async update(settings) {
+      try {
+        const response = await api.client.put('/admin/settings', settings);
+        return {
+          success: true,
+          data: response.data
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: api.normalizeError(error)
+        };
+      }
     }
   },
 

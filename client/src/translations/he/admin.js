@@ -115,4 +115,46 @@ export default {
     accessDenied: 'גישה נדחתה',
     adminRequired: 'נדרשות הרשאות מנהל לגישה לעמוד זה',
   },
+
+  // Admin Settings
+  settings: {
+    title: 'הגדרות מערכת',
+    description: 'קביעת הגדרות כלל-מערכתיות והעדפות (למנהל על בלבד)',
+    categories: 'קטגוריות',
+    general: 'כללי',
+    security: 'אבטחה',
+    email: 'דואל',
+    features: 'תכונות',
+    analytics: 'אנליטיקה',
+    
+    // General Settings
+    siteName: 'שם האתר',
+    siteNameDesc: 'שם האפליקציה שלך',
+    userRegistration: 'רישום משתמשים',
+    userRegistrationDesc: 'אפשר למשתמשים חדשים להירשם',
+    emailVerification: 'נדרש אימות דואל',
+    emailVerificationDesc: 'דרוש אימות דואל עבור חשבונות חדשים',
+    googleOAuth: 'Google OAuth',
+    googleOAuthDesc: 'הפעל אימות Google OAuth',
+    
+    // Security Settings
+    maintenanceMode: 'מצב תחזוקה',
+    maintenanceModeDesc: 'הפעל מצב תחזוקה להגבלת גישה',
+    
+    // Feature Settings
+    analytics: 'מעקב אנליטיקה',
+    analyticsDesc: 'הפעל אנליטיקה ומעקב שימוש',
+    notifications: 'התראות מערכת',
+    notificationsDesc: 'הפעל התראות כלל-מערכתיות',
+    
+    // Status Messages
+    loaded: 'הגדרות נטענו בהצלחה',
+    loadError: 'נכשל בטעינת הגדרות',
+    saved: 'הגדרות נשמרו בהצלחה',
+    saveError: 'נכשל בשמירת הגדרות',
+    
+    // API Integration
+    apiReady: 'מערכת הגדרות מוכנה',
+    apiDesc: 'הממשק מוכן לחיבור API בצד השרת. הגדרות נמצאות במצב הדגמה.'
+  },
 }; 
