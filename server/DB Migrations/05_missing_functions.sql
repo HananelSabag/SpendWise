@@ -202,6 +202,52 @@ END;
 $$;
 
 -- ===============================
+-- ENSURE USER RESTRICTIONS TABLE
+-- ===============================
+
+-- Create user_restrictions table if it doesn't exist
+CREATE TABLE IF NOT EXISTS user_restrictions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    restriction_type VARCHAR(50) NOT NULL, -- 'blocked', 'login_disabled', 'export_disabled', etc.
+    reason TEXT,
+    applied_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    expires_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Add unique constraint to prevent duplicate active restrictions
+    UNIQUE(user_id, restriction_type, is_active)
+);
+
+-- Add indexes for performance
+CREATE INDEX IF NOT EXISTS idx_user_restrictions_user_id ON user_restrictions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_restrictions_active ON user_restrictions(is_active);
+CREATE INDEX IF NOT EXISTS idx_user_restrictions_type ON user_restrictions(restriction_type);
+
+-- ===============================
+-- ENSURE ADMIN ACTIVITY LOG TABLE  
+-- ===============================
+
+-- Create admin_activity_log table if it doesn't exist
+CREATE TABLE IF NOT EXISTS admin_activity_log (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action_type VARCHAR(50) NOT NULL, -- 'view_users', 'block_user', 'delete_user', 'change_settings', etc.
+    target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action_details JSONB DEFAULT '{}',
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add indexes for admin activity log
+CREATE INDEX IF NOT EXISTS idx_admin_activity_log_admin_id ON admin_activity_log(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_activity_log_created_at ON admin_activity_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_activity_log_action_type ON admin_activity_log(action_type);
+
+-- ===============================
 -- LOG SUCCESSFUL SETUP
 -- ===============================
 

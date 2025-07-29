@@ -42,6 +42,7 @@ export default {
     searchPlaceholder: 'חפש משתמשים...',
     noUsers: 'לא נמצאו משתמשים',
     noUsersDesc: 'אין משתמשים התואמים לקריטריונים שלך',
+    userDetails: 'פרטי משתמש',
   },
 
   // Table
@@ -79,28 +80,39 @@ export default {
     inactive: 'לא פעיל',
   },
 
-  // System
-  system: {
-    status: 'סטטוס',
-    server: 'שרת',
-    database: 'מסד נתונים',
-    security: 'אבטחה',
-    online: 'מקוון',
-    connected: 'מחובר',
+  // Users Management - Additional keys
+  users: {
+    title: 'ניהול משתמשים',
+    subtitle: 'ניהול חשבונות משתמשים והרשאות',
+    searchPlaceholder: 'חפש משתמשים...',
+    noUsers: 'לא נמצאו משתמשים',
+    noUsersDesc: 'אין משתמשים התואמים לקריטריונים שלך',
+    userDetails: 'פרטי משתמש',
   },
 
-  // Common
+  // Fields
+  fields: {
+    joinDate: 'תאריך הצטרפות',
+    lastLogin: 'התחברות אחרונה',
+    transactionCount: 'מספר עסקאות',
+    totalSpent: 'סה"כ הוצאות',
+  },
+
+  // Common - Additional keys
   common: {
     refresh: 'רענן',
     loading: 'טוען...',
     error: 'שגיאה',
     success: 'הצלחה',
+    never: 'אף פעם',
   },
 
-  // Errors
+  // Errors - Additional keys
   errors: {
     statsLoadFailed: 'טעינת הסטטיסטיקות נכשלה',
     usersLoadFailed: 'טעינת המשתמשים נכשלה',
     actionFailed: 'הפעולה נכשלה',
+    accessDenied: 'גישה נדחתה',
+    adminRequired: 'נדרשות הרשאות מנהל לגישה לעמוד זה',
   },
 }; 

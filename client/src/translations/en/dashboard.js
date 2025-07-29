@@ -123,6 +123,15 @@ export default {
     }
   },
 
+  // Main sections
+  sections: {
+    balance: 'Balance',
+    transactions: 'Recent Transactions',
+    analytics: 'Analytics',
+    quickActions: 'Quick Actions',
+    overview: 'Overview',
+  },
+
   // Common elements that might be accessed from dashboard context
   common: {
     profilePicture: 'Profile Picture',

@@ -123,6 +123,15 @@ export default {
     }
   },
 
+  // Main sections
+  sections: {
+    balance: 'יתרה',
+    transactions: 'עסקאות אחרונות', 
+    analytics: 'ניתוחים',
+    quickActions: 'פעולות מהירות',
+    overview: 'סקירה כללית',
+  },
+
   // Common elements that might be accessed from dashboard context
   common: {
     profilePicture: 'תמונת פרופיל',

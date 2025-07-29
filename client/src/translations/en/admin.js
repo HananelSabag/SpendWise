@@ -42,6 +42,7 @@ export default {
     searchPlaceholder: 'Search users...',
     noUsers: 'No users found',
     noUsersDesc: 'No users match your search criteria',
+    userDetails: 'User Details',
   },
 
   // Table
@@ -82,6 +83,7 @@ export default {
     loading: 'Loading...',
     error: 'Error',
     success: 'Success',
+    never: 'Never',
   },
 
   // Errors
@@ -89,6 +91,8 @@ export default {
     statsLoadFailed: 'Failed to load admin statistics',
     usersLoadFailed: 'Failed to load users',
     actionFailed: 'Action failed',
+    accessDenied: 'Access Denied',
+    adminRequired: 'Admin privileges required to access this page',
   },
 
   // Confirmations
@@ -102,5 +106,13 @@ export default {
     blocked: 'Blocked',
     pending: 'Pending',
     inactive: 'Inactive',
+  },
+
+  // Fields
+  fields: {
+    joinDate: 'Join Date',
+    lastLogin: 'Last Login',
+    transactionCount: 'Transaction Count',
+    totalSpent: 'Total Spent',
   },
 }; 
