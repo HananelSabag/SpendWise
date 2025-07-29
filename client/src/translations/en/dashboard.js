@@ -4,160 +4,44 @@
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-export default {
-  // Basic translations
+export const dashboard = {
   title: 'Dashboard',
-  overview: 'Overview', 
-  analytics: 'Analytics',
-  goals: 'Goals',
-  insights: 'Insights',
-  
-  // Welcome messages with time-based greetings
-  welcome: {
-    goodMorning: 'Good morning, {{name}}! 🌅',
-    goodAfternoon: 'Good afternoon, {{name}}! ☀️', 
-    goodEvening: 'Good evening, {{name}}! 🌙',
-    general: 'Hello, {{name}}! 👋'
-  },
-  
-  // Time periods for balance tabs
-  timePeriods: {
-    daily: 'Daily',
-    weekly: 'Weekly',
-    monthly: 'Monthly', 
-    yearly: 'Yearly'
-  },
-  
-  // Balance and financial data
-  balance: {
-    title: 'Current Balance',
-    income: 'Income',
-    expenses: 'Expenses',
-    net: 'Net',
-    change: 'Change',
-    growth: 'Growth'
-  },
+  overview: 'Overview',
+  welcome: 'Welcome back!',
+  quickStats: 'Quick Stats',
+  recentActivity: 'Recent Activity',
+  balance: 'Balance',
+  income: 'Income',
+  expenses: 'Expenses',
+  transactions: 'Transactions',
+  categories: 'Categories',
+  reports: 'Reports',
+  settings: 'Settings',
   
   // Quick Actions
   quickActions: {
     title: 'Quick Actions',
-    addExpense: 'Add Expense',
-    addIncome: 'Add Income',
-    transfer: 'Transfer', 
-    viewReports: 'Reports',
-    categories: 'Categories',
-    amount: 'Amount',
-    description: 'Description',
-    category: 'Category',
-    add: 'Add',
-    cancel: 'Cancel',
-    success: 'Added successfully!',
-    placeholder: {
-      amount: 'Enter amount...',
-      description: 'Description (optional)',
-      selectCategory: 'Select category'
-    }
+    addTransaction: 'Add Transaction',
+    viewReports: 'View Reports',
+    manageCategories: 'Manage Categories',
+    exportData: 'Export Data'
   },
   
   // Recent Transactions
   recentTransactions: {
     title: 'Recent Transactions',
     viewAll: 'View All',
-    noTransactions: 'No transactions found',
+    noTransactions: 'No recent transactions',
     amount: 'Amount',
-    date: 'Date',
-    category: 'Category'
+    category: 'Category',
+    date: 'Date'
   },
   
-  // Stats and Tips
-  stats: {
-    title: 'Statistics',
-    thisMonth: 'This Month',
-    lastMonth: 'Last Month', 
-    totalTransactions: 'Total Transactions',
-    avgTransaction: 'Avg per Transaction',
-    topCategory: 'Top Category'
-  },
-  
-  tips: {
-    title: 'Smart Tips 💡',
-    savingTip: 'Saving 20% of income will help you reach savings goals faster',
-    budgetTip: 'Track daily expenses to better control your budget', 
-    categoryTip: 'Dividing expenses into categories helps identify spending patterns'
-  },
-  
-  // Navigation and actions
-  refresh: 'Refresh',
-  loading: 'Loading...',
-  loadingDashboard: 'Loading dashboard...',
-  reloadPage: 'Try Again',
-  
-  // Error handling
-  dashboardError: 'Dashboard Error',
-  dashboardErrorMessage: 'Unable to load dashboard data',
-  refreshed: 'Dashboard refreshed successfully',
-  refreshError: 'Dashboard refresh failed',
-  
-  // Additional UI elements
-  greetings: {
-    morning: 'Good morning',
-    afternoon: 'Good afternoon',
-    evening: 'Good evening', 
-    night: 'Good night'
-  },
-
-  // Overview section expected by Dashboard components
-  overview: {
-    quickActions: {
-      title: 'Quick Actions',
-      security: 'Security',
-      share: 'Share',
-      smart: 'Smart',
-      help: 'Help'
-    },
-    recentActivity: 'Recent Activity',
-    items: 'Items',
-    viewAll: 'View All',
-    achievements: {
-      title: 'Achievements'
-    }
-  },
-
-  // Main sections
-  sections: {
-    balance: 'Balance',
-    transactions: 'Recent Transactions',
-    analytics: 'Analytics',
-    quickActions: 'Quick Actions',
-    overview: 'Overview',
-  },
-
-  // Common elements that might be accessed from dashboard context
-  common: {
-    profilePicture: 'Profile Picture',
-    categoryTypes: {
-      food: 'Food & Drinks',
-      income: 'Income',
-      transport: 'Transportation',
-      entertainment: 'Entertainment',
-      bills: 'Bills & Utilities',
-      shopping: 'Shopping',
-      health: 'Health & Medical',
-      education: 'Education',
-      travel: 'Travel',
-      other: 'Other'
-    },
-    transactions: {
-      groceries: 'Groceries',
-      salary: 'Salary',
-      fuel: 'Fuel',
-      coffee: 'Coffee',
-      electricity: 'Electricity',
-      water: 'Water',
-      gas: 'Gas',
-      internet: 'Internet',
-      phone: 'Phone',
-      rent: 'Rent'
-    }
+  // Charts
+  charts: {
+    title: 'Financial Overview',
+    expenses: 'Expenses by Category',
+    income: 'Income Trends',
+    balance: 'Balance Over Time'
   }
 }; 

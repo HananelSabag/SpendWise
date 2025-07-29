@@ -3,121 +3,65 @@
  * Most frequently used UI elements and actions
  */
 
-export default {
-  // Application name
-  appName: 'SpendWise',
-
-  // Common user interface
-  user: 'User',
-  admin: 'Admin',
-  profilePicture: 'Profile Picture',
-  
-  // System status
-  loading: 'Loading...',
+export const common = {
+  // Basic actions
+  save: 'Save',
+  saving: 'Saving...',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  edit: 'Edit',
+  add: 'Add',
+  remove: 'Remove',
+  search: 'Search',
+  filter: 'Filter',
+  sort: 'Sort',
   refresh: 'Refresh',
-  refreshed: 'Refreshed successfully',
-  refreshError: 'Failed to refresh data',
+  back: 'Back',
+  next: 'Next',
+  previous: 'Previous',
+  continue: 'Continue',
+  close: 'Close',
+  open: 'Open',
+  yes: 'Yes',
+  no: 'No',
+  ok: 'OK',
   
-  // Theme and UI
-  lightMode: 'Light Mode',
-  darkMode: 'Dark Mode',
-  lightTheme: 'light',
-  darkTheme: 'dark',
-  themeChanged: 'Theme changed to {{theme}}',
-  languageChanged: 'Language changed successfully',
-  currencyChanged: 'Currency changed to {{currency}}',
-  settings: 'Settings',
-
-  // Navigation  
-  categories: 'Categories',
-  manageCategoriesDesc: 'Manage expense and income categories',
-  exchange: 'Currency Exchange',
-  currencyExchangeDesc: 'Real-time currency conversion',
-  recurring: 'Recurring Payments',
-  recurringTransactionsDesc: 'Manage recurring transactions',
-  openMenu: 'Open Menu',
-  calculator: 'Calculator',
-  quickCalculatorDesc: 'Quick calculator for calculations',
-  quickPanels: 'Quick Panels',
-
-  // Password and form elements
-  showPassword: 'Show password',
-  hidePassword: 'Hide password',
-
-  // Common actions
-  actions: {
-    close: 'Close',
-    cancel: 'Cancel',
-    save: 'Save',
-    delete: 'Delete',
-    edit: 'Edit',
-    view: 'View',
-    back: 'Back'
-  },
-
-  // Accessibility structure expected by components
-  accessibility: {
-    fontSize: {
-      extraSmall: 'Extra Small',
-      small: 'Small',
-      normal: 'Normal',
-      large: 'Large',
-      extraLarge: 'Extra Large',
-      huge: 'Huge'
-    },
-    theme: {
-      light: 'Light',
-      dark: 'Dark',
-      auto: 'Auto'
-    },
-    contrast: {
-      normal: 'Normal',
-      high: 'High',
-      maximum: 'Maximum'
-    }
-  },
-
-  // Category types
-  categoryTypes: {
-    food: 'Food & Dining',
-    income: 'Income',
-    transport: 'Transportation',
-    entertainment: 'Entertainment',
-    bills: 'Bills',
-    shopping: 'Shopping',
-    health: 'Health',
-    education: 'Education',
-    travel: 'Travel',
-    other: 'Other'
-  },
-
-  // Common transactions
-  transactions: {
-    groceries: 'Grocery Shopping',
-    salary: 'Salary',
-    fuel: 'Car Fuel',
-    coffee: 'Coffee',
-    electricity: 'Electricity Bill',
-    water: 'Water Bill',
-    gas: 'Gas Bill',
-    internet: 'Internet Bill',
-    phone: 'Phone Bill',
-    rent: 'Rent'
-  },
-
-  // Accessibility themes
-  themes: {
-    light: 'Light',
-    dark: 'Dark'
-  },
-
-  // Font sizes
-  fontSizes: {
-    extraSmall: 'Extra Small',
-    small: 'Small',
-    medium: 'Medium',
-    large: 'Large',
-    extraLarge: 'Extra Large',
-    huge: 'Huge'
-  }
+  // Navigation
+  closeMenu: 'Close Menu',
+  quickActions: 'Quick Actions',
+  
+  // Status
+  loading: 'Loading...',
+  loadingData: 'Loading data...',
+  error: 'Error',
+  success: 'Success',
+  warning: 'Warning',
+  info: 'Info',
+  
+  // Data states
+  noData: 'No data available',
+  noResults: 'No results found',
+  empty: 'Empty',
+  
+  // Time
+  today: 'Today',
+  yesterday: 'Yesterday',
+  thisWeek: 'This Week',
+  thisMonth: 'This Month',
+  thisYear: 'This Year',
+  
+  // Amounts
+  total: 'Total',
+  amount: 'Amount',
+  balance: 'Balance',
+  
+  // Actions confirmation
+  confirmDelete: 'Are you sure you want to delete this?',
+  confirmAction: 'Are you sure?',
+  
+  // Form validation
+  required: 'This field is required',
+  invalid: 'Invalid input',
+  tooShort: 'Too short',
+  tooLong: 'Too long'
 }; 

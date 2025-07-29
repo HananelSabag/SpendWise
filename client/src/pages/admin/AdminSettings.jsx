@@ -9,7 +9,7 @@ import { ArrowLeft, Save, AlertCircle, CheckCircle, Settings, Shield, Mail, BarC
 import { motion } from 'framer-motion';
 
 // Import components and hooks
-import { Button } from '../../components/ui/Button';
+import Button from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { useTranslation, useNotification } from '../../stores';
