@@ -88,7 +88,25 @@ export default {
   // General
   total: 'Total',
   amount: 'Amount',
-  balance: 'Balance',
+  balance: {
+    daily: 'Today',
+    weekly: 'This Week',
+    monthly: 'This Month',
+    yearly: 'This Year',
+    title: 'Balance',
+    balancesHidden: 'Balances Hidden',
+    balancesShown: 'Balances Shown',
+    income: 'Income',
+    expenses: 'Expenses',
+    net: 'Net',
+    total: 'Total',
+    savingsRate: 'Savings Rate',
+    accounts: 'Accounts',
+    dailySummary: 'Today\'s financial activity',
+    weeklySummary: 'This week\'s summary', 
+    monthlySummary: 'This month\'s overview',
+    yearlySummary: 'This year\'s progress'
+  },
   currency: 'Currency',
   language: 'Language',
   settings: 'Settings',
@@ -98,5 +116,8 @@ export default {
   logout: 'Logout',
   login: 'Login',
   register: 'Register',
-  user: 'User'
+  user: 'User',
+
+  // Quick panels
+  quickPanelsTip: 'Click the icon to open quick actions panel'
 }; 

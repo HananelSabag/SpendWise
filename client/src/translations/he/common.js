@@ -88,7 +88,25 @@ export default {
   // כללי
   total: 'סה"כ',
   amount: 'סכום',
-  balance: 'יתרה',
+  balance: {
+    daily: 'היום',
+    weekly: 'השבוע הזה',
+    monthly: 'החודש הזה',
+    yearly: 'השנה הזו',
+    title: 'מאזן',
+    balancesHidden: 'מאזנים מוסתרים',
+    balancesShown: 'מאזנים מוצגים',
+    income: 'הכנסות',
+    expenses: 'הוצאות',
+    net: 'נטו',
+    total: 'סך הכל',
+    savingsRate: 'שיעור חיסכון',
+    accounts: 'חשבונות',
+    dailySummary: 'פעילות פיננסית יומית',
+    weeklySummary: 'סיכום השבוע',
+    monthlySummary: 'סקירת החודש', 
+    yearlySummary: 'התקדמות השנה'
+  },
   currency: 'מטבע',
   language: 'שפה',
   settings: 'הגדרות',
@@ -98,5 +116,8 @@ export default {
   logout: 'התנתק',
   login: 'התחבר',
   register: 'הרשם',
-  user: 'משתמש'
+  user: 'משתמש',
+
+  // Quick panels
+  quickPanelsTip: 'לחצו על האייקון כדי לפתוח פאנל פעולות מהיר'
 }; 

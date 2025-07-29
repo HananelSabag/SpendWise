@@ -695,7 +695,28 @@ export const useTransactions = (options = {}) => {
           ...filters
         });
 
-        const data = response.data;
+        // ✅ FIXED: Handle API response structure properly
+        console.log('🔍 API Response Structure:', response);
+        
+        // The API returns { success: true, data: response.data }
+        // So we need to access response.data, not response.data.data
+        const rawData = response.success ? response.data : response;
+        
+        if (!rawData) {
+          console.warn('⚠️ No data received from transactions API');
+          return { transactions: [], hasMore: false, total: 0 };
+        }
+
+        // Structure the data properly for infinite query
+        const data = {
+          transactions: Array.isArray(rawData) ? rawData : (rawData.transactions || []),
+          hasMore: rawData.hasMore || (Array.isArray(rawData) ? rawData.length === pageSize : false),
+          total: rawData.total || (Array.isArray(rawData) ? rawData.length : 0),
+          page: pageParam,
+          limit: pageSize
+        };
+
+        console.log('📊 Structured Data:', data);
 
         // Add AI analysis if enabled
         if (enableAI && data.transactions) {
@@ -764,7 +785,10 @@ export const useTransactions = (options = {}) => {
     queryFn: async () => {
       if (!enableAI) return null;
       
-      const allTransactions = transactionsQuery.data?.pages.flatMap(page => page.transactions) || [];
+      // ✅ FIXED: Safe access to transactions in insights query
+      const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
+        return page?.transactions || [];
+      }) || [];
       if (allTransactions.length === 0) return null;
 
       const insights = TransactionAnalytics.generateSpendingInsights(allTransactions);
@@ -1001,7 +1025,10 @@ export const useTransactions = (options = {}) => {
   }, []);
 
   const selectAll = useCallback(() => {
-    const allTransactions = transactionsQuery.data?.pages.flatMap(page => page.transactions) || [];
+    // ✅ FIXED: Safe access to transactions in selectAll
+    const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
+      return page?.transactions || [];
+    }) || [];
     setSelectedTransactions(new Set(allTransactions.map(t => t.id)));
   }, [transactionsQuery.data]);
 
@@ -1013,7 +1040,10 @@ export const useTransactions = (options = {}) => {
   const getTransactionInsights = useCallback(async (transactionId) => {
     if (!enableAI) return null;
 
-    const allTransactions = transactionsQuery.data?.pages.flatMap(page => page.transactions) || [];
+    // ✅ FIXED: Safe access to transactions in getTransactionInsights  
+    const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
+      return page?.transactions || [];
+    }) || [];
     const transaction = allTransactions.find(t => t.id === transactionId);
     
     if (!transaction) return null;
@@ -1034,11 +1064,22 @@ export const useTransactions = (options = {}) => {
 
   // ✅ Processed data
   const allTransactions = useMemo(() => {
-    return transactionsQuery.data?.pages.flatMap(page => page.transactions) || [];
+    if (!transactionsQuery.data?.pages) return [];
+    
+    return transactionsQuery.data.pages.flatMap(page => {
+      // ✅ FIXED: Safe access to page.transactions with fallback
+      if (!page || !page.transactions || !Array.isArray(page.transactions)) {
+        console.warn('⚠️ Invalid page structure:', page);
+        return [];
+      }
+      return page.transactions;
+    }) || [];
   }, [transactionsQuery.data]);
 
   const batchInsights = useMemo(() => {
-    return transactionsQuery.data?.pages[0]?.batchInsights || null;
+    // ✅ FIXED: Safe access to batchInsights
+    const firstPage = transactionsQuery.data?.pages?.[0];
+    return firstPage?.batchInsights || null;
   }, [transactionsQuery.data]);
 
   return {

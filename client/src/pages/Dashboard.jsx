@@ -14,7 +14,12 @@ import {
 // ✅ Import components and hooks
 import { useTranslation, useNotifications, useAuth, useAuthStore, useCurrency } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
+import { useTransactions } from '../hooks/useTransactions';
 import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
+
+// ✅ Import real dashboard components
+import BalancePanel from '../components/features/dashboard/BalancePanel';
+import RecentTransactions from '../components/features/dashboard/RecentTransactions';
 
 /**
  * 📊 Beautiful Dashboard Component
@@ -34,7 +39,7 @@ const Dashboard = () => {
   const [quickAmount, setQuickAmount] = useState('');
   const [quickDescription, setQuickDescription] = useState('');
   
-  // ✅ Data fetching hook
+  // ✅ Data fetching hooks
   const { 
     data: dashboardData, 
     isLoading, 
@@ -43,6 +48,16 @@ const Dashboard = () => {
     isEmpty,
     refresh: refreshDashboard 
   } = useDashboard();
+
+  // ✅ Real transactions data
+  const { 
+    transactions, 
+    loading: transactionsLoading,
+    refetch: refetchTransactions 
+  } = useTransactions({
+    pageSize: 10,
+    enableAI: false
+  });
 
   // ✅ Time-based greeting with proper language support
   const greeting = useMemo(() => {
@@ -283,78 +298,14 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Balance Panel with Tabs */}
-        <Card className="mb-8 overflow-hidden shadow-2xl border-0">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">{t('balance.title')}</h2>
-              <PiggyBank className="w-8 h-8" />
-            </div>
-            <div className="text-4xl font-bold mb-2">
-              {formatCurrency ? formatCurrency(enhancedData.balance) : `${currencySymbol}${enhancedData.balance.toLocaleString()}`}
-            </div>
-            <div className="flex items-center text-blue-100">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              {enhancedData.stats.growthRate} {t('stats.thisMonth')}
-            </div>
-          </div>
-          
-          {/* Period Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex overflow-x-auto">
-              {Object.keys(enhancedData.periods).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    selectedPeriod === period
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                  }`}
-                >
-                  {t(`timePeriods.${period}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Period Data */}
-          <div className="p-6">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <ArrowUpRight className={`w-5 h-5 text-green-500 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('balance.income')}</span>
-                </div>
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].income) : `${currencySymbol}${enhancedData.periods[selectedPeriod].income.toLocaleString()}`}
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <ArrowDownRight className={`w-5 h-5 text-red-500 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('balance.expenses')}</span>
-                </div>
-                <div className="text-2xl font-bold text-red-600">
-                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].expenses) : `${currencySymbol}${enhancedData.periods[selectedPeriod].expenses.toLocaleString()}`}
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <DollarSign className={`w-5 h-5 text-blue-500 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('balance.net')}</span>
-                </div>
-                <div className={`text-2xl font-bold ${
-                  enhancedData.periods[selectedPeriod].net >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].net) : `${currencySymbol}${enhancedData.periods[selectedPeriod].net.toLocaleString()}`}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
+        {/* Balance Panel with Real Data */}
+        <BalancePanel 
+          data={{
+            totalBalance: dashboardData?.balance?.current || 3870
+          }}
+          showDetails={true}
+          className="mb-8"
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -470,51 +421,21 @@ const Dashboard = () => {
               </div>
             </Card>
 
-            {/* Recent Transactions */}
-            <Card className="shadow-xl">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {t('recentTransactions.title')}
-                  </h3>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    {t('recentTransactions.viewAll')}
-                  </Button>
-                </div>
-                
-                {enhancedData.recentTransactions.length > 0 ? (
-                  <div className="space-y-3">
-                    {enhancedData.recentTransactions.slice(0, 5).map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-                          <div className={`w-3 h-3 rounded-full ${transaction.amount > 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              {transaction.description}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {transaction.category} • {formatDate(transaction.date)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className={`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency ? 
-                    (transaction.amount > 0 ? '+' : '') + formatCurrency(Math.abs(transaction.amount)) : 
-                    `${transaction.amount > 0 ? '+' : ''}${currencySymbol}${Math.abs(transaction.amount).toLocaleString()}`
-                  }
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>{t('recentTransactions.noTransactions')}</p>
-                  </div>
-                )}
-              </div>
-            </Card>
+                         {/* Recent Transactions with Real Data */}
+             <RecentTransactions 
+               maxItems={5}
+               showFilters={false}
+               showActions={false}
+               onViewAll={() => {
+                 // Navigate to transactions page
+                 window.location.href = '/transactions';
+               }}
+               onAddTransaction={() => setShowQuickAction(true)}
+               onRefresh={() => {
+                 refreshDashboard();
+                 refetchTransactions();
+               }}
+             />
 
             {/* Tips Panel */}
             <Card className="shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">

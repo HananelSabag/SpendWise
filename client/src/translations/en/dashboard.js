@@ -17,6 +17,50 @@ export default {
   categories: 'Categories',
   reports: 'Reports',
   settings: 'Settings',
+
+  // ✅ ADDED: Missing account-related translations
+  accounts: {
+    main: 'Main Account'
+  },
+
+  account: {
+    noTransactions: 'No transactions yet'
+  },
+
+  // ✅ ADDED: Common UI translations
+  common: {
+    hide: '🙈 Hide',
+    show: '👁️ Show'
+  },
+
+  // ✅ ADDED: Time periods for balance tabs  
+  timePeriods: {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly'
+  },
+
+  // ✅ ADDED: Balance section translations
+  balance: {
+    title: 'Current Balance',
+    income: 'Income',
+    expenses: 'Expenses',
+    net: 'Total',
+    change: 'Change',
+    growth: 'Growth',
+    balancesHidden: 'Balances hidden',
+    balancesShown: 'Balances shown',
+    refreshed: 'Balance refreshed successfully'
+  },
+
+  // ✅ ADDED: Period summary translations
+  periodSummary: {
+    daily: 'Daily financial activity',
+    weekly: 'Week summary',
+    monthly: 'Month overview',
+    yearly: 'Year progress'
+  },
   
   // Quick Actions
   quickActions: {
@@ -66,6 +110,7 @@ export default {
     title: 'Recent Transactions',
     viewAll: 'View All',
     noTransactions: 'No recent transactions',
+    noTransactionsDescription: 'Start tracking your finances by adding your first transaction',
     amount: 'Amount',
     category: 'Category',
     date: 'Date'

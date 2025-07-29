@@ -11,6 +11,21 @@ export default {
   analytics: 'אנליטיקה',
   goals: 'יעדים', 
   insights: 'תובנות',
+
+  // ✅ ADDED: Missing account-related translations 
+  accounts: {
+    main: 'חשבון ראשי'
+  },
+
+  account: {
+    noTransactions: 'אין תנועות עדיין'
+  },
+
+  // ✅ ADDED: Common UI translations
+  common: {
+    hide: '🙈 הסתר',
+    show: '👁️ הצג'
+  },
   
   // Welcome messages with time-based greetings
   welcome: {
@@ -33,9 +48,20 @@ export default {
     title: 'יתרה נוכחית',
     income: 'הכנסות',
     expenses: 'הוצאות',
-    net: 'נטו',
+    net: 'סך הכל',
     change: 'שינוי',
-    growth: 'צמיחה'
+    growth: 'צמיחה',
+    balancesHidden: 'יתרות הוסתרו',
+    balancesShown: 'יתרות מוצגות',
+    refreshed: 'יתרה רוענה בהצלחה'
+  },
+
+  // ✅ ADDED: Period summary translations
+  periodSummary: {
+    daily: 'פעילות פיננסית יומית',
+    weekly: 'סיכום השבוע',
+    monthly: 'סקירת החודש',
+    yearly: 'התקדמות השנה'
   },
   
   // Quick Actions
@@ -98,6 +124,7 @@ export default {
     title: 'תנועות אחרונות',
     viewAll: 'צפה בהכל',
     noTransactions: 'לא נמצאו תנועות',
+    noTransactionsDescription: 'התחל לעקוב אחר הכספים שלך על ידי הוספת התנועה הראשונה שלך',
     amount: 'סכום',
     date: 'תאריך',
     category: 'קטגוריה'
@@ -167,7 +194,7 @@ export default {
   },
 
   // Common elements that might be accessed from dashboard context
-  common: {
+  commonElements: {
     profilePicture: 'תמונת פרופיל',
     categoryTypes: {
       food: 'מזון ומשקאות',

@@ -20,6 +20,9 @@ import TransactionFilters from './transactions/TransactionFilters';
 import TransactionList from './transactions/TransactionList';
 import TransactionActions from './transactions/TransactionActions';
 
+// ✅ Import useTransactions hook for real data
+import { useTransactions } from '../../../hooks/useTransactions';
+
 import { Button, Card } from '../../ui';
 import { cn, dateHelpers } from '../../../utils/helpers';
 
@@ -27,8 +30,6 @@ import { cn, dateHelpers } from '../../../utils/helpers';
  * 📋 Recent Transactions Main Component
  */
 const RecentTransactions = ({
-  transactions = [],
-  isLoading = false,
   onEdit,
   onDelete,
   onDuplicate,
@@ -44,6 +45,16 @@ const RecentTransactions = ({
   // ✅ Zustand stores
   const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
+
+  // ✅ Get real transactions data
+  const { 
+    transactions, 
+    loading: isLoading, 
+    refetch: refetchTransactions 
+  } = useTransactions({
+    pageSize: maxItems,
+    enableAI: false // Disable AI for performance in dashboard
+  });
 
   // ✅ State management
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +78,12 @@ const RecentTransactions = ({
     setSearchQuery('');
     setFilters({});
   }, []);
+
+  // ✅ Handle refresh with real refetch
+  const handleRefresh = useCallback(() => {
+    refetchTransactions();
+    if (onRefresh) onRefresh();
+  }, [refetchTransactions, onRefresh]);
 
   // ✅ Handle sorting
   const handleSortChange = useCallback((newSort) => {

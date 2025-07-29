@@ -1,14 +1,14 @@
 /**
- * 🏷️ CATEGORY MANAGER - CLEAN ORCHESTRATOR
- * COMPLETELY REFACTORED from 1,195-line monster to clean orchestrator
- * Features: Unified architecture, Clean separation, Mobile-first, Performance optimized
- * @version 4.0.0 - COMPLETE REDESIGN SUCCESS! 🎉
+ * 🏷️ CATEGORY MANAGER - MOBILE-FIRST MODAL
+ * COMPLETELY REFACTORED for mobile compatibility and RTL support
+ * Features: Modal overlay, Mobile-first, RTL support, Clean UI
+ * @version 5.0.0 - MOBILE & RTL OPTIMIZED! 🎉
  */
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, Search, Filter, Grid, List, Settings,
+  Plus, Search, Filter, Grid, List, Settings, X,
   BarChart3, Download, RefreshCw, Eye, EyeOff
 } from 'lucide-react';
 
@@ -40,8 +40,12 @@ import { cn } from '../../../utils/helpers';
 /**
  * 🏷️ Category Manager - Clean Orchestrator
  */
-const CategoryManager = ({ className = '' }) => {
-  const { t } = useTranslation('categories');
+const CategoryManager = ({ 
+  isOpen = false, 
+  onClose = () => {}, 
+  className = '' 
+}) => {
+  const { t, isRTL } = useTranslation('categories');
   const { addNotification } = useNotifications();
   const { theme } = useTheme();
 
@@ -58,6 +62,7 @@ const CategoryManager = ({ className = '' }) => {
   // ✅ Data hooks
   const {
     categories,
+    analytics,
     isLoading,
     createCategory,
     updateCategory,
@@ -175,20 +180,55 @@ const CategoryManager = ({ className = '' }) => {
     setShowCreateModal(true);
   };
 
+  // ✅ Don't render if not open
+  if (!isOpen) return null;
+
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('title')}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('subtitle', { count: categories.length })}
-          </p>
+    <div 
+      className="fixed inset-0 z-50 overflow-hidden"
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="absolute inset-4 sm:inset-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              {t('title')}
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('subtitle', { count: categories.length })}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <X className="w-5 h-5" />
+          </Button>
         </div>
 
-        <div className="flex items-center space-x-3">
+        {/* Modal Content */}
+        <div className="flex-1 overflow-auto p-4">
+          <div className={cn("space-y-6", className)}>
+              {/* Quick Actions */}
+        <div className="flex items-center justify-end">
           <Button
             onClick={() => setShowCreateModal(true)}
             variant="primary"
@@ -198,65 +238,72 @@ const CategoryManager = ({ className = '' }) => {
             <span>{t('actions.create')}</span>
           </Button>
         </div>
-      </div>
 
-      {/* Controls */}
-      <Card className="p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              {/* Controls */}
+        <Card className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
+                      {/* Search */}
+            <div className="relative">
+              <Search className={cn(
+                "absolute top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400",
+                isRTL ? "right-3" : "left-3"
+              )} />
               <Input
                 placeholder={t('search.placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className={cn(
+                  "w-full",
+                  isRTL ? "pr-10" : "pl-10"
+                )}
               />
             </div>
 
-            {/* Sort */}
-            <Dropdown
-              trigger={
-                <Button variant="outline" className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4" />
-                  <span>{t('sort.label')}</span>
-                </Button>
-              }
-              items={sortOptions.map(option => ({
-                label: option.label,
-                onClick: () => setSortBy(option.value),
-                selected: sortBy === option.value
-              }))}
-            />
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sort */}
 
-            {/* Show Hidden Toggle */}
-            <Button
-              variant={showHidden ? "primary" : "outline"}
-              onClick={() => setShowHidden(!showHidden)}
-              className="flex items-center space-x-2"
-            >
-              {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              <span>{t('filters.showHidden')}</span>
-            </Button>
-          </div>
+                          <Dropdown
+                trigger={
+                  <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t('sort.label')}</span>
+                  </Button>
+                }
+                items={sortOptions.map(option => ({
+                  label: option.label,
+                  onClick: () => setSortBy(option.value),
+                  selected: sortBy === option.value
+                }))}
+              />
 
-          {/* View Mode */}
-          <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            {viewModeOptions.map((option) => (
+              {/* Show Hidden Toggle */}
               <Button
-                key={option.value}
-                variant={viewMode === option.value ? "primary" : "ghost"}
+                variant={showHidden ? "primary" : "outline"}
                 size="sm"
-                onClick={() => setViewMode(option.value)}
+                onClick={() => setShowHidden(!showHidden)}
                 className="flex items-center space-x-2"
               >
-                <option.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{option.label}</span>
+                {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                <span className="hidden sm:inline">{t('filters.showHidden')}</span>
               </Button>
-            ))}
-          </div>
+
+              {/* View Mode */}
+              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 ml-auto">
+                {viewModeOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={viewMode === option.value ? "primary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode(option.value)}
+                    className="flex items-center space-x-1"
+                  >
+                    <option.icon className="w-4 h-4" />
+                    <span className="hidden md:inline text-xs">{option.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
         </div>
 
         {/* Selection Summary */}
@@ -288,102 +335,104 @@ const CategoryManager = ({ className = '' }) => {
         )}
       </Card>
 
-      {/* Content */}
-      <AnimatePresence mode="wait">
-        {viewMode === 'grid' && (
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <CategoryGrid
-              categories={processedCategories}
-              analytics={analytics?.categories || {}}
-              selectedCategories={new Set(selectedCategories.map(cat => cat.id))}
-              loading={isLoading}
-              onCategorySelect={toggleCategory}
-              onCategoryEdit={handleEditCategory}
-              onCategoryDelete={handleDeleteCategory}
-              onCategoryDuplicate={handleDuplicateCategory}
-              onTogglePin={togglePin}
-              onToggleVisibility={toggleVisibility}
-              onCreateNew={() => setShowCreateModal(true)}
-            />
-          </motion.div>
+
+
+        {/* Categories Content */}
+        <div className="flex-1 min-h-[300px] sm:min-h-[400px]">
+          <AnimatePresence mode="wait">
+            {viewMode === 'grid' && (
+              <motion.div
+                key="grid"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="h-full"
+              >
+                <CategoryGrid
+                  categories={processedCategories}
+                  analytics={analytics?.categories || {}}
+                  selectedCategories={new Set(selectedCategories.map(cat => cat.id))}
+                  loading={isLoading}
+                  onCategorySelect={toggleCategory}
+                  onCategoryEdit={handleEditCategory}
+                  onCategoryDelete={handleDeleteCategory}
+                  onCategoryDuplicate={handleDuplicateCategory}
+                  onTogglePin={togglePin}
+                  onToggleVisibility={toggleVisibility}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === 'list' && (
+              <motion.div
+                key="list"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="h-full"
+              >
+                <CategoryList
+                  categories={processedCategories}
+                  analytics={analytics?.categories || {}}
+                  selectedCategories={new Set(selectedCategories.map(cat => cat.id))}
+                  loading={isLoading}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onCategorySelect={toggleCategory}
+                  onCategoryEdit={handleEditCategory}
+                  onCategoryDelete={handleDeleteCategory}
+                  onCategoryDuplicate={handleDuplicateCategory}
+                  onTogglePin={togglePin}
+                  onToggleVisibility={toggleVisibility}
+                  onCreateNew={() => setShowCreateModal(true)}
+                />
+              </motion.div>
+            )}
+
+            {viewMode === 'analytics' && (
+              <motion.div
+                key="analytics"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="h-full flex items-center justify-center"
+              >
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>{t('analytics.comingSoon', 'Analytics coming soon')}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <CategoryForm
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSubmit={handleCreateCategory}
+            mode="create"
+          />
         )}
 
-        {viewMode === 'list' && (
-          <motion.div
-            key="list"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <CategoryList
-              categories={processedCategories}
-              analytics={analytics?.categories || {}}
-              selectedCategories={new Set(selectedCategories.map(cat => cat.id))}
-              loading={isLoading}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onCategorySelect={toggleCategory}
-              onCategoryEdit={handleEditCategory}
-              onCategoryDelete={handleDeleteCategory}
-              onCategoryDuplicate={handleDuplicateCategory}
-              onTogglePin={togglePin}
-              onToggleVisibility={toggleVisibility}
-              onCreateNew={() => setShowCreateModal(true)}
-            />
-          </motion.div>
-        )}
-
-        {viewMode === 'analytics' && (
-          <motion.div
-            key="analytics"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            {/* <CategoryAnalytics /> */} {/* TEMP: Commented out to fix bind error */}
-          </motion.div>
+        {showEditModal && editingCategory && (
+          <CategoryForm
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setEditingCategory(null);
+            }}
+            onSubmit={handleUpdateCategory}
+            mode="edit"
+            initialData={editingCategory}
+          />
         )}
       </AnimatePresence>
-
-      {/* Create Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title={t('modals.create.title')}
-        size="lg"
-      >
-        <CategoryForm
-          mode="create"
-          onSubmit={handleCreateCategory}
-          onCancel={() => setShowCreateModal(false)}
-        />
-      </Modal>
-
-      {/* Edit Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingCategory(null);
-        }}
-        title={t('modals.edit.title')}
-        size="lg"
-      >
-        <CategoryForm
-          mode="edit"
-          initialData={editingCategory}
-          onSubmit={handleUpdateCategory}
-          onCancel={() => {
-            setShowEditModal(false);
-            setEditingCategory(null);
-          }}
-        />
-      </Modal>
     </div>
   );
 };

@@ -6,8 +6,6 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { DollarSign, CreditCard, Sparkles, ChevronRight } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -15,14 +13,11 @@ import {
   useNotifications
 } from '../../../stores';
 
-// ✅ Import extracted components
-import BalanceDisplay from './balance/BalanceDisplay';
-import AccountsList from './balance/AccountsList';
-import FinancialInsights from './balance/FinancialInsights';
-import FinancialHealth from './balance/FinancialHealth';
-
 import { Button, Card } from '../../ui';
 import { cn } from '../../../utils/helpers';
+
+// ✅ Import hooks to get real transaction data
+import { useTransactions } from '../../../hooks/useTransactions';
 
 /**
  * 💰 Balance Panel Main Component
@@ -37,59 +32,198 @@ const BalancePanel = ({
   const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
 
+  // ✅ Get real transactions data
+  const { transactions, loading: transactionsLoading } = useTransactions({
+    pageSize: 1000, // Get more data for accurate calculations
+    enableAI: false // Disable AI for performance
+  });
+
+  console.log('🚀 BalancePanel transactions:', transactions?.length || 0);
+
   // ✅ State management
-  const [viewMode, setViewMode] = useState('overview'); // overview, accounts, insights, health
+  const [viewMode, setViewMode] = useState('daily'); // daily, weekly, monthly, yearly
   const [showBalances, setShowBalances] = useState(true);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ✅ Mock data enhancement
+  // ✅ REAL DATA: Calculate actual balances from transactions
   const enhancedData = useMemo(() => {
-    const accounts = [
-      {
-        id: 'main',
-        name: t('accounts.main'),
-        type: 'checking',
-        balance: data.totalBalance || 12450.75,
-        change: 324.50,
-        trend: [12100, 12200, 12150, 12300, 12450.75],
-        isFavorite: true,
-        lastTransaction: t('account.yesterday')
-      },
-      {
-        id: 'savings',
-        name: t('accounts.savings'),
-        type: 'savings',
-        balance: 8750.25,
-        change: 150.00,
-        trend: [8600, 8650, 8700, 8725, 8750.25],
-        isFavorite: false,
-        lastTransaction: t('account.lastWeek')
-      },
-      {
-        id: 'investment',
-        name: t('accounts.investment'),
-        type: 'investment',
-        balance: 15200.00,
-        change: -245.80,
-        trend: [15400, 15350, 15300, 15250, 15200],
-        isFavorite: false,
-        lastTransaction: t('account.today')
-      }
-    ];
+    if (!transactions || transactions.length === 0) {
+      // Return default structure while loading
+      return {
+        accounts: [{
+          id: 'main',
+          name: t('accounts.main'),
+          type: 'checking',
+          balance: 0,
+          change: 0,
+          trend: [],
+          isFavorite: true,
+          lastTransaction: t('account.noTransactions')
+        }],
+        summary: {
+          totalBalance: 0,
+          totalChange: 0,
+          trendData: [],
+          dailyBalance: 0,
+          weeklyBalance: 0,
+          monthlyBalance: 0,
+          yearlyBalance: 0,
+          income: 0,
+          expenses: 0,
+          savings: 0,
+          savingsRate: 0
+        }
+      };
+    }
+
+    // Calculate real daily balance data
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+    console.log('🔍 Date ranges:', {
+      today: today.toISOString(),
+      weekAgo: weekAgo.toISOString(),
+      monthAgo: monthAgo.toISOString(),
+      yearAgo: yearAgo.toISOString()
+    });
+
+    // Filter transactions by time periods
+    console.log('🔍 Total transactions:', transactions.length);
+    
+    const todayTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date || t.created_at);
+      const isToday = transactionDate >= today;
+      console.log('Today check:', t.description, transactionDate, isToday);
+      return isToday;
+    });
+
+    const weekTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date || t.created_at);
+      return transactionDate >= weekAgo;
+    });
+
+    const monthTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date || t.created_at);
+      return transactionDate >= monthAgo;
+    });
+
+    const yearTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date || t.created_at);
+      return transactionDate >= yearAgo;
+    });
+
+    console.log('🔍 Filtered counts:', {
+      today: todayTransactions.length,
+      week: weekTransactions.length, 
+      month: monthTransactions.length,
+      year: yearTransactions.length
+    });
+
+    // Calculate balances for each period
+    const calculateBalance = (transactionList) => {
+      return transactionList.reduce((balance, transaction) => {
+        const amount = parseFloat(transaction.amount) || 0;
+        return transaction.type === 'income' ? balance + amount : balance - amount;
+      }, 0);
+    };
+
+    const calculateIncomeExpenses = (transactionList) => {
+      return transactionList.reduce((acc, transaction) => {
+        const amount = parseFloat(transaction.amount) || 0;
+        if (transaction.type === 'income') {
+          acc.income += amount;
+        } else {
+          acc.expenses += amount;
+        }
+        return acc;
+      }, { income: 0, expenses: 0 });
+    };
+
+    // Calculate for different periods
+    const dailyBalance = calculateBalance(todayTransactions);
+    const weeklyBalance = calculateBalance(weekTransactions);
+    const monthlyBalance = calculateBalance(monthTransactions);
+    const yearlyBalance = calculateBalance(yearTransactions);
+    const totalBalance = calculateBalance(transactions);
+
+    const monthlyStats = calculateIncomeExpenses(monthTransactions);
+    const yearlyStats = calculateIncomeExpenses(yearTransactions);
+
+    // Calculate daily trend for last 7 days
+    const dailyTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date || t.created_at);
+        return transactionDate.toDateString() === date.toDateString();
+      });
+      const dayBalance = calculateBalance(dayTransactions);
+      dailyTrend.push(dayBalance);
+    }
+
+    // Main account with real data
+    const accounts = [{
+      id: 'main',
+      name: t('accounts.main'),
+      type: 'checking',
+      balance: totalBalance,
+      change: dailyBalance,
+      trend: dailyTrend,
+      isFavorite: true,
+      lastTransaction: transactions.length > 0 ? 
+        new Date(transactions[0]?.date || transactions[0]?.created_at).toLocaleDateString() : 
+        t('account.noTransactions')
+    }];
+
+    // Calculate stats for each period
+    const todayStats = calculateIncomeExpenses(todayTransactions);
+    const weekStats = calculateIncomeExpenses(weekTransactions);
+    const yearStats = calculateIncomeExpenses(yearTransactions);
 
     const summary = {
-      totalBalance: accounts.reduce((sum, acc) => sum + acc.balance, 0),
-      totalChange: accounts.reduce((sum, acc) => sum + acc.change, 0),
-      trendData: [36000, 36200, 36100, 36300, 36400.75],
-      income: data.monthlyIncome || 4500,
-      expenses: data.monthlyExpenses || 3200,
-      savings: data.monthlySavings || 1300,
-      savingsRate: ((data.monthlySavings || 1300) / (data.monthlyIncome || 4500)) * 100
+      totalBalance,
+      totalChange: dailyBalance,
+      trendData: dailyTrend,
+      dailyBalance,
+      weeklyBalance,
+      monthlyBalance,
+      yearlyBalance,
+      // Income and expenses by period
+      dailyIncome: todayStats.income,
+      dailyExpenses: todayStats.expenses,
+      weeklyIncome: weekStats.income,
+      weeklyExpenses: weekStats.expenses,
+      monthlyIncome: monthlyStats.income,
+      monthlyExpenses: monthlyStats.expenses,
+      yearlyIncome: yearStats.income,
+      yearlyExpenses: yearStats.expenses,
+      // Current selected period (will be updated based on viewMode)
+      income: monthlyStats.income,
+      expenses: monthlyStats.expenses,
+      savings: monthlyStats.income - monthlyStats.expenses,
+      savingsRate: monthlyStats.income > 0 ? ((monthlyStats.income - monthlyStats.expenses) / monthlyStats.income) * 100 : 0
     };
 
     return { accounts, summary };
-  }, [data, t]);
+  }, [transactions, t]);
+
+  // ✅ Get current period data based on selected viewMode
+  const currentPeriodData = useMemo(() => {
+    if (!enhancedData?.summary) return { income: 0, expenses: 0, balance: 0 };
+    
+    console.log('🔍 Debug enhancedData.summary:', enhancedData.summary);
+    console.log('🔍 Debug viewMode:', viewMode);
+    
+    return {
+      income: enhancedData.summary[`${viewMode}Income`] || 0,
+      expenses: enhancedData.summary[`${viewMode}Expenses`] || 0,
+      balance: enhancedData.summary[`${viewMode}Balance`] || 0
+    };
+  }, [enhancedData, viewMode]);
 
   // ✅ Handle balance visibility toggle
   const handleToggleVisibility = useCallback(() => {
@@ -211,197 +345,131 @@ const BalancePanel = ({
     // TODO: Open improvement guide
   }, [addNotification, t]);
 
-  // ✅ View mode options
-  const viewModeOptions = [
-    { id: 'overview', label: t('viewModes.overview'), icon: DollarSign },
-    { id: 'accounts', label: t('viewModes.accounts'), icon: CreditCard },
-    { id: 'insights', label: t('viewModes.insights'), icon: Sparkles },
-    { id: 'health', label: t('viewModes.health'), icon: ChevronRight }
-  ];
 
-  // ✅ Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4 }
-    }
-  };
 
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className={cn("space-y-6", className)}
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      {/* Header with view mode tabs */}
-      <motion.div variants={itemVariants}>
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {t('balance.title')}
-            </h2>
-            
-            <div className="flex items-center space-x-2">
-              {onToggleDetails && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggleDetails}
-                  className="p-2"
-                >
-                  <ChevronRight className={cn(
-                    "w-4 h-4 transition-transform",
-                    showDetails && "rotate-90"
-                  )} />
-                </Button>
-              )}
-            </div>
+
+    return (
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          {t('balance.title')}
+        </h2>
+        <Button
+          variant="ghost"
+          onClick={handleToggleVisibility}
+          className="text-sm"
+        >
+          {showBalances ? t('common.hide') : t('common.show')}
+        </Button>
+      </div>
+
+      {/* Period Tabs */}
+      <div className="flex space-x-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+        <button
+          onClick={() => setViewMode('daily')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all",
+            viewMode === 'daily'
+              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          )}
+        >
+          {t('timePeriods.daily')}
+        </button>
+        <button
+          onClick={() => setViewMode('weekly')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all",
+            viewMode === 'weekly'
+              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          )}
+        >
+          {t('timePeriods.weekly')}
+        </button>
+        <button
+          onClick={() => setViewMode('monthly')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all",
+            viewMode === 'monthly'
+              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          )}
+        >
+          {t('timePeriods.monthly')}
+        </button>
+        <button
+          onClick={() => setViewMode('yearly')}
+          className={cn(
+            "px-4 py-2 rounded-md text-sm font-medium transition-all",
+            viewMode === 'yearly'
+              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          )}
+        >
+          {t('timePeriods.yearly')}
+        </button>
+      </div>
+
+      {/* Balance Display for Selected Period */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Income */}
+        <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700">
+          <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">
+            {t('balance.income')}
           </div>
-
-          {/* View mode tabs */}
-          <div className="flex flex-wrap gap-2">
-            {viewModeOptions.map((mode) => {
-              const Icon = mode.icon;
-              return (
-                <Button
-                  key={mode.id}
-                  variant={viewMode === mode.id ? "primary" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode(mode.id)}
-                  className="flex items-center space-x-2"
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{mode.label}</span>
-                </Button>
-              );
-            })}
+          <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+            {showBalances ? `₪${currentPeriodData.income.toFixed(0)}` : '••••'}
           </div>
-        </Card>
-      </motion.div>
+        </div>
 
-      {/* Main content based on view mode */}
-      <AnimatePresence mode="wait">
-        {viewMode === 'overview' && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            <BalanceDisplay
-              balance={enhancedData.summary.totalBalance}
-              change={enhancedData.summary.totalChange}
-              trendData={enhancedData.summary.trendData}
-              showBalances={showBalances}
-              onToggleVisibility={handleToggleVisibility}
-              onRefresh={handleRefresh}
-              isRefreshing={isRefreshing}
-            />
+        {/* Expenses */}
+        <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700">
+          <div className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">
+            {t('balance.expenses')}
+          </div>
+          <div className="text-2xl font-bold text-red-700 dark:text-red-300">
+            {showBalances ? `₪${currentPeriodData.expenses.toFixed(0)}` : '••••'}
+          </div>
+        </div>
 
-            {/* Quick summary stats */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                  {showBalances ? `${enhancedData.summary.savingsRate.toFixed(1)}%` : '••%'}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('balance.savingsRate')}
-                </div>
-              </div>
-              
-              <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  {enhancedData.accounts.length}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('balance.accounts')}
-                </div>
-              </div>
-              
-              <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                  85
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('health.score')}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+        {/* Net Total */}
+        <div className={cn(
+          "text-center p-4 rounded-xl border",
+          currentPeriodData.balance >= 0
+            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+        )}>
+          <div className={cn(
+            "text-sm font-medium mb-1",
+            currentPeriodData.balance >= 0
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-red-600 dark:text-red-400"
+          )}>
+            {t('balance.net')}
+          </div>
+          <div className={cn(
+            "text-2xl font-bold",
+            currentPeriodData.balance >= 0
+              ? "text-blue-700 dark:text-blue-300"
+              : "text-red-700 dark:text-red-300"
+          )}>
+            {showBalances ? `₪${currentPeriodData.balance.toFixed(0)}` : '••••'}
+          </div>
+        </div>
+      </div>
 
-        {viewMode === 'accounts' && (
-          <motion.div
-            key="accounts"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AccountsList
-              accounts={enhancedData.accounts}
-              selectedAccount={selectedAccount}
-              showBalances={showBalances}
-              onAccountSelect={handleAccountSelect}
-              onAccountEdit={handleAccountEdit}
-              onToggleFavorite={handleToggleFavorite}
-              onAddAccount={handleAddAccount}
-            />
-          </motion.div>
-        )}
-
-        {viewMode === 'insights' && (
-          <motion.div
-            key="insights"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <FinancialInsights
-              onInsightAction={handleInsightAction}
-              onInsightDismiss={handleInsightDismiss}
-              onRecommendationAccept={handleRecommendationAccept}
-              onRecommendationDecline={handleRecommendationDecline}
-              onGenerateInsights={handleGenerateInsights}
-            />
-          </motion.div>
-        )}
-
-        {viewMode === 'health' && (
-          <motion.div
-            key="health"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <FinancialHealth
-              overallScore={85}
-              showDetails={showDetails}
-              onViewReport={handleViewHealthReport}
-              onImproveScore={handleImproveScore}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {/* Period Summary */}
+      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+          {viewMode === 'daily' && t('periodSummary.daily')}
+          {viewMode === 'weekly' && t('periodSummary.weekly')}
+          {viewMode === 'monthly' && t('periodSummary.monthly')}
+          {viewMode === 'yearly' && t('periodSummary.yearly')}
+        </div>
+      </div>
+    </Card>
   );
 };
 
