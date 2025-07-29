@@ -10,14 +10,14 @@ import { motion } from 'framer-motion';
 
 // Import components and hooks
 import Button from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { useTranslation, useNotification } from '../../stores';
+import Card from '../../components/ui/Card';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { useTranslation, useNotifications } from '../../stores';
 import { api } from '../../api';
 
 const AdminSettings = () => {
   const { t, isRTL } = useTranslation();
-  const { addNotification } = useNotification();
+  const { addNotification } = useNotifications();
   
   // State management
   const [loading, setLoading] = useState(false);

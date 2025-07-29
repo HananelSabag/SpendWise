@@ -3,9 +3,9 @@
  * Exports all translation modules for the Hebrew language
  */
 
-import common from './common.js';
+import { common } from './common.js';
 import errors from './errors.js';
-import nav from './nav.js';
+import { nav } from './nav.js';
 import auth from './auth.js';
 import dashboard from './dashboard.js';
 import onboarding from './onboarding.js';
@@ -16,7 +16,7 @@ import preferences from './preferences.js';
 import profile from './profile.js';
 import categories from './categories.js';
 import transactions from './transactions.js';
-import admin from './admin.js'; // ✅ ADD: Admin translations
+import admin from './admin.js'; // ✅ Hebrew admin still uses default export
 
 export default {
   common,
@@ -32,5 +32,5 @@ export default {
   profile,
   categories,
   transactions,
-  admin, // ✅ ADD: Admin translations
+  admin,
 }; 
