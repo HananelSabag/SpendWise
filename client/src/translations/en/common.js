@@ -3,7 +3,10 @@
  * Most frequently used UI elements and actions
  */
 
-export const common = {
+export default {
+  // App info
+  appName: 'SpendWise',
+
   // Basic actions
   save: 'Save',
   saving: 'Saving...',
@@ -12,56 +15,83 @@ export const common = {
   edit: 'Edit',
   add: 'Add',
   remove: 'Remove',
-  search: 'Search',
-  filter: 'Filter',
-  sort: 'Sort',
-  refresh: 'Refresh',
+  create: 'Create',
+  update: 'Update',
+  submit: 'Submit',
+  confirm: 'Confirm',
   back: 'Back',
   next: 'Next',
-  previous: 'Previous',
-  continue: 'Continue',
+  skip: 'Skip',
+  done: 'Done',
   close: 'Close',
   open: 'Open',
-  yes: 'Yes',
-  no: 'No',
-  ok: 'OK',
-  
+  refresh: 'Refresh',
+  reset: 'Reset',
+
   // Navigation
+  menu: 'Menu',
+  openMenu: 'Open Menu',
   closeMenu: 'Close Menu',
   quickActions: 'Quick Actions',
-  
+  quickPanels: 'Quick Panels',
+
+  // Features
+  categories: 'Categories',
+  manageCategoriesDesc: 'Organize and manage your expense and income categories',
+  recurring: 'Recurring',
+  recurringTransactionsDesc: 'Set up automatic recurring transactions',
+  exchange: 'Exchange',
+  currencyExchangeDesc: 'Convert between different currencies',
+  calculator: 'Calculator',
+  quickCalculatorDesc: 'Quick calculation tool for expenses',
+
+  // Accessibility
+  accessibility: {
+    fontSize: {
+      extraSmall: 'Extra Small',
+      small: 'Small',
+      normal: 'Normal',
+      large: 'Large',
+      extraLarge: 'Extra Large',
+      huge: 'Huge'
+    },
+    theme: {
+      light: 'Light',
+      dark: 'Dark',
+      auto: 'Auto'
+    },
+    contrast: {
+      normal: 'Normal',
+      high: 'High',
+      maximum: 'Maximum'
+    }
+  },
+
   // Status
   loading: 'Loading...',
-  loadingData: 'Loading data...',
   error: 'Error',
   success: 'Success',
   warning: 'Warning',
-  info: 'Info',
-  
-  // Data states
-  noData: 'No data available',
-  noResults: 'No results found',
-  empty: 'Empty',
-  
-  // Time
+  info: 'Information',
+
+  // Time & Date
   today: 'Today',
   yesterday: 'Yesterday',
-  thisWeek: 'This Week',
-  thisMonth: 'This Month',
-  thisYear: 'This Year',
-  
-  // Amounts
+  week: 'Week',
+  month: 'Month',
+  year: 'Year',
+
+  // General
   total: 'Total',
   amount: 'Amount',
   balance: 'Balance',
-  
-  // Actions confirmation
-  confirmDelete: 'Are you sure you want to delete this?',
-  confirmAction: 'Are you sure?',
-  
-  // Form validation
-  required: 'This field is required',
-  invalid: 'Invalid input',
-  tooShort: 'Too short',
-  tooLong: 'Too long'
+  currency: 'Currency',
+  language: 'Language',
+  settings: 'Settings',
+  profile: 'Profile',
+  help: 'Help',
+  about: 'About',
+  logout: 'Logout',
+  login: 'Login',
+  register: 'Register'
 }; 

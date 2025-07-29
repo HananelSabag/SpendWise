@@ -1,40 +1,37 @@
 /**
  * 🧭 NAVIGATION TRANSLATIONS - English
- * Navigation menu, breadcrumbs, and routing
+ * Navigation menus, links, and routing labels
  */
 
-export const nav = {
+export default {
   // Main navigation
   navigation: 'Navigation',
   dashboard: 'Dashboard',
   transactions: 'Transactions',
+  categories: 'Categories',
   analytics: 'Analytics',
   profile: 'Profile',
   settings: 'Settings',
+  admin: 'Admin',
   
   // Admin navigation
-  admin: 'Admin',
-  userManagement: 'User Management',
-  systemStats: 'System Statistics',
-  systemSettings: 'System Settings',
-  activityLog: 'Activity Log',
-  
-  // Quick actions
-  quickActions: 'Quick Actions',
-  addTransaction: 'Add Transaction',
-  viewReports: 'View Reports',
+  adminDashboard: 'Admin Dashboard',
   
   // User menu
-  account: 'Account',
-  preferences: 'Preferences',
+  profileDesc: 'Manage your account settings and preferences',
+  settingsDesc: 'Adjust app settings and preferences',
   help: 'Help',
-  logout: 'Logout',
+  helpDesc: 'Get support and documentation',
   
   // Mobile
-  menu: 'Menu',
-  closeMenu: 'Close Menu',
+  mobileMenu: 'Mobile Menu',
   
   // Breadcrumbs
   home: 'Home',
-  back: 'Back'
+  back: 'Back',
+  
+  // Quick navigation
+  overview: 'Overview',
+  recent: 'Recent',
+  favorites: 'Favorites'
 }; 

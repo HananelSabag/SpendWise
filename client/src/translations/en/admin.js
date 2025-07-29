@@ -3,7 +3,7 @@
  * Admin dashboard, user management, and system settings translations
  */
 
-export const admin = {
+export default {
   // Navigation
   dashboard: 'Admin Dashboard',
   userManagement: 'User Management',

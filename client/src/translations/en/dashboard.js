@@ -1,10 +1,10 @@
 /**
- * 📊 DASHBOARD TRANSLATIONS - ENGLISH
+ * 📊 DASHBOARD TRANSLATIONS - English
  * Complete dashboard system translations for revolutionary UX
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-export const dashboard = {
+export default {
   title: 'Dashboard',
   overview: 'Overview',
   welcome: 'Welcome back!',

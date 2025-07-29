@@ -3,38 +3,35 @@
  * תרגומי ניווט - עברית
  */
 
-export const nav = {
-  // Main navigation
+export default {
+  // ניווט ראשי
   navigation: 'ניווט',
   dashboard: 'לוח בקרה',
-  transactions: 'תנועות',
+  transactions: 'עסקאות',
+  categories: 'קטגוריות',
   analytics: 'אנליטיקה',
   profile: 'פרופיל',
   settings: 'הגדרות',
+  admin: 'מנהל',
   
-  // Admin navigation
-  admin: 'ניהול',
-  userManagement: 'ניהול משתמשים',
-  systemStats: 'סטטיסטיקות מערכת',
-  systemSettings: 'הגדרות מערכת',
-  activityLog: 'יומן פעילות',
+  // ניווט מנהל
+  adminDashboard: 'לוח בקרה מנהל',
   
-  // Quick actions
-  quickActions: 'פעולות מהירות',
-  addTransaction: 'הוסף תנועה',
-  viewReports: 'צפה בדוחות',
-  
-  // User menu
-  account: 'חשבון',
-  preferences: 'העדפות',
+  // תפריט משתמש
+  profileDesc: 'נהל את הגדרות החשבון וההעדפות שלך',
+  settingsDesc: 'התאם הגדרות אפליקציה והעדפות',
   help: 'עזרה',
-  logout: 'התנתק',
+  helpDesc: 'קבל תמיכה ותיעוד',
   
-  // Mobile
-  menu: 'תפריט',
-  closeMenu: 'סגור תפריט',
+  // נייד
+  mobileMenu: 'תפריט נייד',
   
-  // Breadcrumbs
+  // פירורי לחם
   home: 'בית',
-  back: 'חזור'
+  back: 'חזור',
+  
+  // ניווט מהיר
+  overview: 'סקירה',
+  recent: 'אחרונים',
+  favorites: 'מועדפים'
 }; 

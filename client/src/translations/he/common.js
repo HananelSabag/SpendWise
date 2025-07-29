@@ -3,8 +3,11 @@
  * תרגומים נפוצים - עברית
  */
 
-export const common = {
-  // Basic actions
+export default {
+  // מידע על האפליקציה
+  appName: 'SpendWise',
+
+  // פעולות בסיסיות
   save: 'שמור',
   saving: 'שומר...',
   cancel: 'בטל',
@@ -12,56 +15,83 @@ export const common = {
   edit: 'ערוך',
   add: 'הוסף',
   remove: 'הסר',
-  search: 'חפש',
-  filter: 'סנן',
-  sort: 'מיין',
-  refresh: 'רענן',
+  create: 'צור',
+  update: 'עדכן',
+  submit: 'שלח',
+  confirm: 'אשר',
   back: 'חזור',
   next: 'הבא',
-  previous: 'הקודם',
-  continue: 'המשך',
+  skip: 'דלג',
+  done: 'בוצע',
   close: 'סגור',
   open: 'פתח',
-  yes: 'כן',
-  no: 'לא',
-  ok: 'אישור',
-  
-  // Navigation
+  refresh: 'רענן',
+  reset: 'איפוס',
+
+  // ניווט
+  menu: 'תפריט',
+  openMenu: 'פתח תפריט',
   closeMenu: 'סגור תפריט',
   quickActions: 'פעולות מהירות',
-  
-  // Status
+  quickPanels: 'לוחות מהירים',
+
+  // תכונות
+  categories: 'קטגוריות',
+  manageCategoriesDesc: 'ארגן ונהל את קטגוריות ההוצאות וההכנסות שלך',
+  recurring: 'חוזר',
+  recurringTransactionsDesc: 'הגדר עסקאות חוזרות אוטומטיות',
+  exchange: 'המרה',
+  currencyExchangeDesc: 'המר בין מטבעות שונים',
+  calculator: 'מחשבון',
+  quickCalculatorDesc: 'כלי חישוב מהיר להוצאות',
+
+  // נגישות
+  accessibility: {
+    fontSize: {
+      extraSmall: 'קטן במיוחד',
+      small: 'קטן',
+      normal: 'רגיל',
+      large: 'גדול',
+      extraLarge: 'גדול במיוחד',
+      huge: 'ענק'
+    },
+    theme: {
+      light: 'בהיר',
+      dark: 'כהה',
+      auto: 'אוטומטי'
+    },
+    contrast: {
+      normal: 'רגיל',
+      high: 'גבוה',
+      maximum: 'מקסימלי'
+    }
+  },
+
+  // סטטוס
   loading: 'טוען...',
-  loadingData: 'טוען נתונים...',
   error: 'שגיאה',
   success: 'הצלחה',
   warning: 'אזהרה',
   info: 'מידע',
-  
-  // Data states
-  noData: 'אין נתונים זמינים',
-  noResults: 'לא נמצאו תוצאות',
-  empty: 'ריק',
-  
-  // Time
+
+  // זמן ותאריך
   today: 'היום',
   yesterday: 'אתמול',
-  thisWeek: 'השבוע',
-  thisMonth: 'החודש',
-  thisYear: 'השנה',
-  
-  // Amounts
-  total: 'סך הכל',
+  week: 'שבוע',
+  month: 'חודש',
+  year: 'שנה',
+
+  // כללי
+  total: 'סה"כ',
   amount: 'סכום',
   balance: 'יתרה',
-  
-  // Actions confirmation
-  confirmDelete: 'האם אתה בטוח שברצונך למחוק את זה?',
-  confirmAction: 'האם אתה בטוח?',
-  
-  // Form validation
-  required: 'שדה זה נדרש',
-  invalid: 'קלט לא חוקי',
-  tooShort: 'קצר מדי',
-  tooLong: 'ארוך מדי'
+  currency: 'מטבע',
+  language: 'שפה',
+  settings: 'הגדרות',
+  profile: 'פרופיל',
+  help: 'עזרה',
+  about: 'אודות',
+  logout: 'התנתק',
+  login: 'התחבר',
+  register: 'הרשם'
 }; 
