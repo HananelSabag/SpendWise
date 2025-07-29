@@ -176,7 +176,7 @@ const Profile = () => {
     }
   }, [personalData, updateProfile, addNotification, t]);
 
-  // ✅ NEW: Update preferences
+  // ✅ NEW: Update preferences (no page reload)
   const handlePreferencesUpdate = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -191,8 +191,17 @@ const Profile = () => {
           type: 'success',
           message: t('messages.preferencesUpdated', 'Preferences updated successfully')
         });
-        // Reload page to apply theme/language changes
-        window.location.reload();
+        
+        // Apply theme immediately without reload
+        if (preferencesData.theme_preference !== user?.theme_preference) {
+          document.documentElement.classList.toggle('dark', preferencesData.theme_preference === 'dark');
+        }
+        
+        // Refresh user data to get updated preferences
+        const refreshResult = await useAuthStore.getState().actions.getProfile();
+        if (refreshResult.success) {
+          console.log('✅ Profile preferences updated and refreshed');
+        }
       } else {
         throw new Error(result.error?.message || 'Update failed');
       }
@@ -204,7 +213,7 @@ const Profile = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [preferencesData, updateProfile, addNotification, t]);
+  }, [preferencesData, updateProfile, addNotification, t, user]);
 
   // Handle password change
   const handlePasswordChange = useCallback(async () => {
@@ -283,14 +292,55 @@ const Profile = () => {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
-          <Button
-            variant={isEditing ? "outline" : "primary"}
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? <X className="w-4 h-4 mr-2" /> : <Edit2 className="w-4 h-4 mr-2" />}
-            {isEditing ? 'Cancel' : 'Edit'}
-          </Button>
+          <div className="flex items-center space-x-2">
+            {isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditing(false);
+                  // Reset form data to original user data
+                  setPersonalData({
+                    firstName: user?.first_name || user?.firstName || '',
+                    lastName: user?.last_name || user?.lastName || '',
+                    email: user?.email || '',
+                    phone: user?.phone || '',
+                    location: user?.location || '',
+                    bio: user?.bio || '',
+                    website: user?.website || '',
+                    birthday: user?.birthday || ''
+                  });
+                }}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            )}
+            <Button
+              variant={isEditing ? "primary" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (isEditing) {
+                  handlePersonalUpdate();
+                } else {
+                  setIsEditing(true);
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isEditing ? (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isLoading ? 'Saving...' : 'Save Changes'}
+                </>
+              ) : (
+                <>
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,17 +412,7 @@ const Profile = () => {
           />
         </div>
 
-        {isEditing && (
-          <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePersonalUpdate} disabled={isLoading}>
-              <Save className="w-4 h-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        )}
+
       </div>
     </Card>
   );
@@ -523,10 +563,72 @@ const Profile = () => {
         Download all your financial data in various formats.
       </p>
       
-      <Button onClick={() => setShowExportModal(true)}>
-        <Download className="w-4 h-4 mr-2" />
-        Export Data
-      </Button>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Button 
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                const result = await api.export.exportAsCSV();
+                if (result.success) {
+                  addNotification({
+                    type: 'success',
+                    message: 'CSV export started - download will begin shortly'
+                  });
+                } else {
+                  throw new Error(result.error?.message || 'Export failed');
+                }
+              } catch (error) {
+                addNotification({
+                  type: 'error',
+                  message: error.message || 'Failed to export CSV'
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+            variant="outline"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export as CSV
+          </Button>
+          
+          <Button 
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                const result = await api.export.exportAsJSON();
+                if (result.success) {
+                  addNotification({
+                    type: 'success',
+                    message: 'JSON export started - download will begin shortly'
+                  });
+                } else {
+                  throw new Error(result.error?.message || 'Export failed');
+                }
+              } catch (error) {
+                addNotification({
+                  type: 'error',
+                  message: error.message || 'Failed to export JSON'
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+            variant="outline"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export as JSON
+          </Button>
+        </div>
+        
+        <Button onClick={() => setShowExportModal(true)} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Advanced Export Options
+        </Button>
+      </div>
     </Card>
   );
 

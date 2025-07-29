@@ -28,6 +28,10 @@ export default {
   refresh: 'Refresh',
   reset: 'Reset',
 
+  // Password actions
+  showPassword: 'Show Password',
+  hidePassword: 'Hide Password',
+
   // Navigation
   menu: 'Menu',
   openMenu: 'Open Menu',
@@ -93,5 +97,6 @@ export default {
   about: 'About',
   logout: 'Logout',
   login: 'Login',
-  register: 'Register'
+  register: 'Register',
+  user: 'User'
 }; 

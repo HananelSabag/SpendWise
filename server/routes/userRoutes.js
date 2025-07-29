@@ -158,6 +158,17 @@ router.post('/upload-profile-picture',
 );
 
 /**
+ * @route   POST /api/v1/users/change-password
+ * @desc    Change user password with current password verification
+ * @access  Private
+ */
+router.post('/change-password',
+  auth,
+  validate.passwordChange,
+  userController.changePassword
+);
+
+/**
  * 🚀 NEW: Performance Monitoring Routes
  */
 

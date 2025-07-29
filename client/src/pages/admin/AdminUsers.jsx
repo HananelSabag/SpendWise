@@ -189,7 +189,8 @@ const AdminUsers = () => {
     <div className={cn(
       'min-h-screen bg-gray-50 dark:bg-gray-900',
       isRTL && 'rtl'
-    )}>
+    )}
+    dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div 
@@ -200,7 +201,8 @@ const AdminUsers = () => {
           <div className={cn(
             'flex items-center mb-4',
             isRTL && 'flex-row-reverse'
-          )}>
+          )}
+          dir={isRTL ? 'rtl' : 'ltr'}>
             <Link 
               to="/admin" 
               className={cn(
@@ -210,11 +212,19 @@ const AdminUsers = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('users.title', { fallback: 'User Management' })}
-            </h1>
+            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+              <h1 className={cn(
+                "text-3xl font-bold text-gray-900 dark:text-white",
+                isRTL && "text-right"
+              )}>
+                {t('users.title', { fallback: 'User Management' })}
+              </h1>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className={cn(
+            "text-gray-600 dark:text-gray-400",
+            isRTL && "text-right"
+          )} dir={isRTL ? 'rtl' : 'ltr'}>
             {t('users.subtitle', { 
               fallback: 'Manage {{total}} users across the platform',
               total: totalUsers.toLocaleString()

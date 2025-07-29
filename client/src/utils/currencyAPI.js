@@ -127,7 +127,7 @@ export const getAvailableCurrencies = async () => {
 /**
  * Format currency with proper symbol
  */
-export const formatCurrency = (amount, currency = 'ILS', locale = 'he-IL') => {
+export const formatCurrency = (amount, currency = 'USD', locale = 'en-US') => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,

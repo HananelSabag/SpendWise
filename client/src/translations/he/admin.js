@@ -9,6 +9,15 @@ export default {
     title: 'לוח בקרה מנהל',
     subtitle: 'סקירת מערכת וניהול',
     welcome: 'ברוך הבא, {{name}}!',
+    roleStatus: 'גישת מנהל מערכת'
+  },
+
+  // Dashboard Page
+  dashboardPage: {
+    title: 'לוח בקרה מנהל',
+    subtitle: 'ניהול מערכת מלא וניהול משתמשים',
+    welcome: 'ברוכים השבים',
+    roleStatus: 'גישת מנהל מערכת'
   },
 
   // Stats
@@ -20,7 +29,28 @@ export default {
     totalTransactions: 'סך הכל עסקאות',
     totalCategories: 'סך הכל קטגוריות',
     systemHealth: 'בריאות המערכת',
+    totalRevenue: 'סך כל הסכומים',
+    thisMonth: 'החודש',
+    today: 'היום',
+    verified: 'מאומתים',
+    fromAllTransactions: 'מכל הפעולות'
   },
+
+  // System Status
+  system: {
+    status: 'סטטוס המערכת',
+    server: 'שרת',
+    online: 'מקוון',
+    database: 'בסיס נתונים',
+    connected: 'מחובר',
+    security: 'אבטחה'
+  },
+
+  // Navigation & Pages
+  systemStats: 'סטטיסטיקות מערכת',
+  statsDescription: 'מדדי מערכת מקיפים ואנליטיקה',
+  activityLog: 'יומן פעילות',
+  activityDescription: 'מעקב אחר פעולות מנהל ופעילות מערכת',
 
   // Actions
   actions: {

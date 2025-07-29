@@ -66,4 +66,6 @@ notes:
   - "We welcome code-first design systems if they reduce friction"
   - "If new architecture is proposed – create a migration plan with clear win"
   -"make sure every md you create go to doc folder and not into the code folders!"
+  -"no git command by yyourself only i do the git work you can only check!"
+  -"dont npm run dev only i test it you tell me when you need you can try npm run build for checking!"
 

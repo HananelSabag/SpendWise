@@ -5,28 +5,50 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from '../../stores';
+import { cn } from '../../utils/helpers';
 
 const AdminStats = () => {
+  const { t, isRTL } = useTranslation();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className={cn(
+      "min-h-screen bg-gray-50 dark:bg-gray-900",
+      isRTL && 'rtl'
+    )}
+    dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center mb-4">
+          <div className={cn(
+            'flex items-center mb-4',
+            isRTL && 'flex-row-reverse'
+          )}
+          dir={isRTL ? 'rtl' : 'ltr'}>
             <Link 
               to="/admin" 
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4"
+              className={cn(
+                'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4',
+                isRTL && 'ml-4 mr-0'
+              )}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              System Statistics
-            </h1>
+            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+              <h1 className={cn(
+                "text-3xl font-bold text-gray-900 dark:text-white",
+                isRTL && "text-right"
+              )}>
+                {t('admin.systemStats', { fallback: 'System Statistics' })}
+              </h1>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Comprehensive system metrics and analytics
+          <p className={cn(
+            "text-gray-600 dark:text-gray-400",
+            isRTL && "text-right"
+          )} dir={isRTL ? 'rtl' : 'ltr'}>
+            {t('admin.statsDescription', { fallback: 'Comprehensive system metrics and analytics' })}
           </p>
         </div>
 

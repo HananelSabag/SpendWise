@@ -42,9 +42,28 @@ export const api = {
   
   // Export functionality
   export: {
-    exportTransactions: (format = 'csv') => apiClient.get(`/export/${format}`),
-    exportCategories: (format = 'csv') => apiClient.get(`/export/${format}`),
-    exportData: (format = 'csv') => apiClient.get(`/export/${format}`)
+    async exportAsCSV() {
+      try {
+        const response = await apiClient.get('/export/csv');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+      }
+    },
+    async exportAsJSON() {
+      try {
+        const response = await apiClient.get('/export/json');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+      }
+    },
+    async exportData(format = 'csv') {
+      if (format === 'json') {
+        return this.exportAsJSON();
+      }
+      return this.exportAsCSV();
+    }
   },
   
   // Cache Management

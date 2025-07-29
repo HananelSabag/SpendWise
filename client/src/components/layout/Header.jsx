@@ -97,7 +97,7 @@ const Header = () => {
                   transition={{ duration: 0.6 }}
                   className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center"
                 >
-                  <DollarSign className="w-5 h-5 text-white" />
+                  <span className="text-white font-bold text-lg">S</span>
                 </motion.div>
                 <span className="hidden sm:block text-xl font-bold">
                   {t('common.appName', { fallback: 'SpendWise' })}

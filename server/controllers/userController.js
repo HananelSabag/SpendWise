@@ -650,6 +650,105 @@ const userController = {
       });
       throw error;
     }
+  }),
+
+  /**
+   * 🔐 Change user password with current password verification
+   * @route POST /api/v1/users/change-password
+   */
+  changePassword: asyncHandler(async (req, res) => {
+    const start = Date.now();
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+      // Get user with password hash for verification
+      const query = `
+        SELECT id, email, password_hash, oauth_provider
+        FROM users 
+        WHERE id = $1 AND is_active = true
+      `;
+      
+      const result = await db.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
+      }
+
+      const user = result.rows[0];
+      
+      // Check if user has a password (not OAuth-only account)
+      if (!user.password_hash) {
+        if (user.oauth_provider) {
+          throw { 
+            ...errorCodes.FORBIDDEN, 
+            details: `This account uses ${user.oauth_provider} login. Please use ${user.oauth_provider} to manage your account.` 
+          };
+        } else {
+          throw { 
+            ...errorCodes.BAD_REQUEST, 
+            details: 'No password set for this account. Please reset your password.' 
+          };
+        }
+      }
+
+      // Verify current password
+      const bcrypt = require('bcrypt');
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+      
+      if (!isValidPassword) {
+        throw { 
+          ...errorCodes.UNAUTHORIZED, 
+          details: 'Current password is incorrect' 
+        };
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+      
+      // Update password in database
+      const updateQuery = `
+        UPDATE users 
+        SET password_hash = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING id, email, username
+      `;
+      
+      const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
+      
+      const duration = Date.now() - start;
+      logger.info('✅ User password changed successfully', {
+        userId,
+        email: user.email,
+        duration: `${duration}ms`,
+        performance: duration < 100 ? 'excellent' : duration < 300 ? 'good' : 'slow'
+      });
+
+      res.json({
+        success: true,
+        message: 'Password changed successfully',
+        data: {
+          id: updateResult.rows[0].id,
+          email: updateResult.rows[0].email,
+          username: updateResult.rows[0].username
+        },
+        metadata: {
+          updated: true,
+          duration: `${duration}ms`,
+          security_enhanced: true
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      const duration = Date.now() - start;
+      logger.error('❌ Password change failed', {
+        userId,
+        error: error.message,
+        duration: `${duration}ms`
+      });
+      throw error;
+    }
   })
 };
 

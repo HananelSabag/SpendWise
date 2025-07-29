@@ -48,35 +48,36 @@ const MobileNavigation = ({
   className = '' 
 }) => {
   const { user, logout, isAuthenticated } = useAuth();
-  const { t, isRTL } = useTranslation();
+  const translationResult = useTranslation();
+  const { t, isRTL = false } = translationResult || { t: (key) => key, isRTL: false };
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
   
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Navigation items
+  // ✅ Navigation items with fallbacks
   const navigationItems = [
     {
-      name: t('nav.dashboard'),
+      name: t('nav.dashboard') || 'Dashboard',
       href: '/',
       icon: Home,
       current: location.pathname === '/'
     },
     {
-      name: t('nav.transactions'),
+      name: t('nav.transactions') || 'Transactions', 
       href: '/transactions',
       icon: CreditCard,
       current: location.pathname === '/transactions'
     },
     {
-      name: t('nav.analytics'),
+      name: t('nav.analytics') || 'Analytics',
       href: '/analytics',
       icon: BarChart3,
       current: location.pathname === '/analytics'
     },
     {
-      name: t('nav.profile'),
+      name: t('nav.profile') || 'Profile',
       href: '/profile',
       icon: User,
       current: location.pathname === '/profile'
@@ -86,32 +87,32 @@ const MobileNavigation = ({
   // ✅ Admin navigation (if user is admin or super admin)
   const adminItems = (isAdmin || isSuperAdmin) ? [
     {
-      name: t('nav.adminDashboard'),
+      name: t('nav.adminDashboard') || 'Admin Dashboard',
       href: '/admin',
       icon: Shield,
       current: location.pathname.startsWith('/admin')
     },
     {
-      name: t('nav.userManagement'),
+      name: t('nav.userManagement') || 'User Management',
       href: '/admin/users',
       icon: Users,
       current: location.pathname === '/admin/users'
     },
     {
-      name: t('nav.systemStats'),
+      name: t('nav.systemStats') || 'System Statistics',
       href: '/admin/stats',
       icon: BarChart3,
       current: location.pathname === '/admin/stats'
     },
     {
-      name: t('nav.activityLog'),
+      name: t('nav.activityLog') || 'Activity Log',
       href: '/admin/activity',
       icon: Activity,
       current: location.pathname === '/admin/activity'
     },
     // ✅ System Settings - Only for super admin
     ...(isSuperAdmin ? [{
-      name: t('nav.systemSettings'),
+      name: t('nav.systemSettings') || 'System Settings',
       href: '/admin/settings',
       icon: Settings,
       current: location.pathname === '/admin/settings'
@@ -151,6 +152,38 @@ const MobileNavigation = ({
       }
     }
   ];
+
+  // ✅ Debug logging (moved after all variable declarations)
+  if (import.meta.env.DEV && isOpen) {
+    console.log('🔍 Mobile Navigation Debug:', {
+      isOpen,
+      navigationItems,
+      navigationItemsLength: navigationItems.length,
+      isAuthenticated,
+      user: user?.email,
+      isAdmin,
+      isSuperAdmin,
+      adminItems,
+      adminItemsLength: adminItems.length,
+      quickActions,
+      quickActionsLength: quickActions.length,
+      translations: {
+        dashboard: t('nav.dashboard'),
+        transactions: t('nav.transactions'),
+        analytics: t('nav.analytics'),
+        profile: t('nav.profile'),
+        navigation: t('nav.navigation'),
+        quickActions: t('common.quickActions'),
+        administration: t('nav.administration')
+      },
+      navigationItemsDetails: navigationItems.map(item => ({
+        name: item.name,
+        href: item.href,
+        current: item.current,
+        translationResult: item.name
+      }))
+    });
+  }
 
   // ✅ Handle navigation
   const handleNavigation = useCallback((href) => {
@@ -194,7 +227,7 @@ const MobileNavigation = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+              className="fixed inset-0 bg-black bg-opacity-50 z-[55] lg:hidden"
             />
 
             {/* Drawer */}
@@ -217,23 +250,24 @@ const MobileNavigation = ({
                 damping: 30
               }}
               className={cn(
-                "fixed top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-gray-900 shadow-xl z-50 overflow-y-auto",
+                "fixed top-0 bottom-0 w-80 max-w-[90vw] bg-white dark:bg-gray-900 shadow-xl z-[60] overflow-hidden",
                 isRTL ? "right-0" : "left-0"
               )}
+              style={{ height: '100dvh' }}
             >
-              <div className="flex flex-col h-full">
+                              <div className="flex flex-col h-full min-h-screen">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-3">
                     <Avatar
-                      src={user?.avatar}
-                      alt={user?.username || user?.email}
+                      src={user?.avatar || user?.profile_picture_url || user?.profilePicture}
+                      alt={user?.username || user?.name || user?.email}
                       size="md"
-                      fallback={user?.username?.charAt(0) || user?.email?.charAt(0)}
+                      fallback={user?.username?.charAt(0) || user?.name?.charAt(0) || user?.email?.charAt(0)}
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user?.username || t('common.user')}
+                        {user?.username || user?.name || t('common.user') || 'User'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {user?.email}
@@ -250,13 +284,13 @@ const MobileNavigation = ({
                 </div>
 
                 {/* Navigation */}
-                <div className="flex-1 py-4">
+                <div className="flex-1 py-2 overflow-y-auto min-h-0">
                   {/* Main Navigation */}
-                  <div className="px-4 mb-6">
-                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                      {t('nav.navigation')}
-                    </h3>
-                    <nav className="space-y-1">
+                  <div className="px-4 mb-6 min-h-0">
+                                          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                        {t('nav.navigation') || 'Navigation'}
+                      </h3>
+                      <nav className="space-y-2">
                       {navigationItems.map((item) => {
                         const Icon = item.icon;
                         return (
@@ -264,7 +298,7 @@ const MobileNavigation = ({
                             key={item.name}
                             onClick={() => handleNavigation(item.href)}
                             className={cn(
-                              "w-full flex items-center px-3 py-3 rounded-lg text-left transition-colors",
+                              "w-full flex items-center px-4 py-4 rounded-lg text-left transition-colors min-h-[48px]",
                               item.current
                                 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -285,7 +319,7 @@ const MobileNavigation = ({
                   {quickActions.length > 0 && (
                     <div className="px-4 mb-6">
                       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                        {t('common.quickActions')}
+                        {t('common.quickActions') || 'Quick Actions'}
                       </h3>
                       <div className="space-y-2">
                         {quickActions.map((action) => {
@@ -323,9 +357,9 @@ const MobileNavigation = ({
                   {adminItems.length > 0 && (
                     <div className="px-4 mb-6">
                       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                        {t('nav.administration')}
+                        {t('nav.administration') || 'Administration'}
                       </h3>
-                      <nav className="space-y-1">
+                                              <nav className="space-y-2">
                         {adminItems.map((item) => {
                           const Icon = item.icon;
                           return (
@@ -360,7 +394,7 @@ const MobileNavigation = ({
                     className="w-full"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    {t('auth.logout')}
+                    {t('auth.logout') || 'Logout'}
                   </Button>
                 </div>
               </div>

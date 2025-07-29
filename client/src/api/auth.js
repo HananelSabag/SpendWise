@@ -797,6 +797,25 @@ export const authAPI = {
         error: api.normalizeError(error)
       };
     }
+  },
+
+  // ✅ Change Password
+  async changePassword(passwordData) {
+    try {
+      const response = await api.client.post('/users/change-password', passwordData);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: response.data?.message || 'Password changed successfully'
+      };
+    } catch (error) {
+      console.error('❌ changePassword error:', error);
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
   }
 };
 

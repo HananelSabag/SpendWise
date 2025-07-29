@@ -44,7 +44,18 @@ export const currency = {
       maximumFractionDigits: 1,
     });
     
-    const symbol = currencyCode === 'ILS' ? '₪' : '$';
+    // Use proper currency symbols instead of hardcoded $ default
+    const symbols = {
+      USD: '$',
+      EUR: '€', 
+      ILS: '₪',
+      GBP: '£',
+      JPY: '¥',
+      CAD: 'C$',
+      AUD: 'A$',
+      CHF: 'CHF'
+    };
+    const symbol = symbols[currencyCode] || currencyCode;
     return symbol + formatter.format(amount);
   },
   

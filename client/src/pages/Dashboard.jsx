@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 // ✅ Import components and hooks
-import { useTranslation, useNotifications, useAuth, useAuthStore } from '../stores';
+import { useTranslation, useNotifications, useAuth, useAuthStore, useCurrency } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
 
@@ -24,6 +24,7 @@ const Dashboard = () => {
   const { t, currentLanguage, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
   const { user } = useAuth();
+  const { currency, formatCurrency } = useCurrency();
   
   // ✅ Local state hooks
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -108,7 +109,11 @@ const Dashboard = () => {
   }, [currentLanguage]);
 
   // ✅ Currency symbol based on language
-  const currencySymbol = currentLanguage === 'he' ? '₪' : '$';
+  // Get currency symbol from user's preference (not language)
+  const currencySymbol = {
+    USD: '$', EUR: '€', ILS: '₪', GBP: '£', JPY: '¥',
+    CAD: 'C$', AUD: 'A$', CHF: 'CHF'
+  }[currency] || '$';
 
   // ✅ Event handlers - ALL useCallback at top level
   const handleRefresh = useCallback(async () => {
@@ -286,7 +291,7 @@ const Dashboard = () => {
               <PiggyBank className="w-8 h-8" />
             </div>
             <div className="text-4xl font-bold mb-2">
-              {currencySymbol}{enhancedData.balance.toLocaleString()}
+              {formatCurrency ? formatCurrency(enhancedData.balance) : `${currencySymbol}${enhancedData.balance.toLocaleString()}`}
             </div>
             <div className="flex items-center text-blue-100">
               <TrendingUp className="w-4 h-4 mr-1" />
@@ -322,7 +327,7 @@ const Dashboard = () => {
                   <span className="text-sm text-gray-600 dark:text-gray-400">{t('balance.income')}</span>
                 </div>
                 <div className="text-2xl font-bold text-green-600">
-                  {currencySymbol}{enhancedData.periods[selectedPeriod].income.toLocaleString()}
+                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].income) : `${currencySymbol}${enhancedData.periods[selectedPeriod].income.toLocaleString()}`}
                 </div>
               </div>
               
@@ -332,7 +337,7 @@ const Dashboard = () => {
                   <span className="text-sm text-gray-600 dark:text-gray-400">{t('balance.expenses')}</span>
                 </div>
                 <div className="text-2xl font-bold text-red-600">
-                  {currencySymbol}{enhancedData.periods[selectedPeriod].expenses.toLocaleString()}
+                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].expenses) : `${currencySymbol}${enhancedData.periods[selectedPeriod].expenses.toLocaleString()}`}
                 </div>
               </div>
               
@@ -344,7 +349,7 @@ const Dashboard = () => {
                 <div className={`text-2xl font-bold ${
                   enhancedData.periods[selectedPeriod].net >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {currencySymbol}{enhancedData.periods[selectedPeriod].net.toLocaleString()}
+                  {formatCurrency ? formatCurrency(enhancedData.periods[selectedPeriod].net) : `${currencySymbol}${enhancedData.periods[selectedPeriod].net.toLocaleString()}`}
                 </div>
               </div>
             </div>
@@ -448,7 +453,9 @@ const Dashboard = () => {
                     <div className="text-sm text-gray-600">{t('stats.totalTransactions')}</div>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{currencySymbol}{enhancedData.stats.avgTransaction}</div>
+                    <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency ? formatCurrency(enhancedData.stats.avgTransaction) : `${currencySymbol}${enhancedData.stats.avgTransaction}`}
+                </div>
                     <div className="text-sm text-gray-600">{t('stats.avgTransaction')}</div>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -492,7 +499,10 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className={`font-bold text-lg ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {transaction.amount > 0 ? '+' : ''}{currencySymbol}{Math.abs(transaction.amount).toLocaleString()}
+                          {formatCurrency ? 
+                    (transaction.amount > 0 ? '+' : '') + formatCurrency(Math.abs(transaction.amount)) : 
+                    `${transaction.amount > 0 ? '+' : ''}${currencySymbol}${Math.abs(transaction.amount).toLocaleString()}`
+                  }
                         </div>
                       </div>
                     ))}

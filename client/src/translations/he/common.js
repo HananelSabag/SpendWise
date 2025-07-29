@@ -28,6 +28,10 @@ export default {
   refresh: 'רענן',
   reset: 'איפוס',
 
+  // פעולות סיסמה
+  showPassword: 'הצג סיסמה',
+  hidePassword: 'הסתר סיסמה',
+
   // ניווט
   menu: 'תפריט',
   openMenu: 'פתח תפריט',
@@ -93,5 +97,6 @@ export default {
   about: 'אודות',
   logout: 'התנתק',
   login: 'התחבר',
-  register: 'הרשם'
+  register: 'הרשם',
+  user: 'משתמש'
 }; 

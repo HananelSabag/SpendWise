@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useTranslation, useNotifications } from '../../stores';
+import { cn } from '../../utils/helpers';
 import { api } from '../../api';
 
 const AdminSettings = () => {
@@ -146,7 +147,11 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className={cn(
+      "min-h-screen bg-gray-50 dark:bg-gray-900",
+      isRTL && 'rtl'
+    )}
+    dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div 
@@ -155,18 +160,33 @@ const AdminSettings = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className={`flex items-center mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={cn(
+            'flex items-center mb-4',
+            isRTL && 'flex-row-reverse'
+          )}
+          dir={isRTL ? 'rtl' : 'ltr'}>
             <Link 
               to="/admin" 
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4"
+              className={cn(
+                'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4',
+                isRTL && 'ml-4 mr-0'
+              )}
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('admin.settings.title', { fallback: 'System Settings' })}
-            </h1>
+            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+              <h1 className={cn(
+                "text-3xl font-bold text-gray-900 dark:text-white",
+                isRTL && "text-right"
+              )}>
+                {t('admin.settings.title', { fallback: 'System Settings' })}
+              </h1>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className={cn(
+            "text-gray-600 dark:text-gray-400",
+            isRTL && "text-right"
+          )} dir={isRTL ? 'rtl' : 'ltr'}>
             {t('admin.settings.description', { fallback: 'Configure system-wide settings and preferences (Super Admin Only)' })}
           </p>
         </motion.div>

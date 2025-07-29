@@ -26,7 +26,7 @@ import { cn } from '../../utils/helpers';
 
 const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
-  const { t } = useTranslation();
+  const { t, isRTL = false } = useTranslation() || { t: (key) => key, isRTL: false };
   const { addNotification } = useNotifications();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
@@ -123,7 +123,7 @@ const UserMenu = ({ className = '' }) => {
   }, []);
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative hidden lg:block", className)}>
       {/* User button */}
       <button
         onClick={() => setShowDropdown(!showDropdown)}
@@ -168,7 +168,7 @@ const UserMenu = ({ className = '' }) => {
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
               className={cn(
-                "absolute mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-40",
+                "absolute mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50",
                 isRTL ? "left-0" : "right-0"
               )}
             >

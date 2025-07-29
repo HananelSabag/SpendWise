@@ -48,15 +48,22 @@ class StoreManager {
       // Initialize auth store
       await useAuthStore.getState().actions.initialize();
       
-      // Initialize translation store
+      // Initialize translation store with localStorage first (works immediately)
       const savedLanguage = localStorage.getItem('spendwise-language') || 
                            (navigator.language.startsWith('he') ? 'he' : 'en');
       await useTranslationStore.getState().actions.setLanguage(savedLanguage);
       
-      // Initialize app store
+      // Initialize app store with defaults first
       const appStore = useAppStore.getState();
       appStore.actions.updateResolvedTheme();
       appStore.actions.applyAccessibilitySettings();
+      
+      // Then sync with user preferences if authenticated (async)
+      const authState = useAuthStore.getState();
+      if (authState.user && authState.isAuthenticated) {
+        // Sync user preferences after initialization
+        authState.actions.syncUserPreferences(authState.user);
+      }
       
       this.initialized = true;
       
@@ -173,8 +180,8 @@ export const CurrencyProvider = StoreProvider;
 export const DateProvider = StoreProvider;
 export const AppStateProvider = StoreProvider;
 
-// ✅ Development utilities
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
+// ✅ Development utilities + Store access for currency functions
+if (typeof window !== 'undefined') {
   window.stores = {
     auth: useAuthStore,
     translation: useTranslationStore,
@@ -182,7 +189,16 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
     manager: storeManager
   };
   
-  window.resetAllStores = () => storeManager.resetAll();
+  // Add stores for currency functions to access
+  window.spendWiseStores = {
+    auth: useAuthStore,
+    translation: useTranslationStore,
+    app: useAppStore
+  };
+  
+  if (import.meta.env.DEV) {
+    window.resetAllStores = () => storeManager.resetAll();
+  }
 }
 
 // ✅ Default export

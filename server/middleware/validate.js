@@ -815,6 +815,67 @@ const validate = {
     }
 
     next();
+  },
+
+  // ✅ Password Change Validation
+  passwordChange: (req, res, next) => {
+    const { currentPassword, newPassword } = req.body;
+
+    // Required fields check
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Current password and new password are required',
+          details: {
+            currentPassword: !currentPassword ? 'Current password is required' : null,
+            newPassword: !newPassword ? 'New password is required' : null
+          }
+        }
+      });
+    }
+
+    // Password strength validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'New password must be at least 8 characters long',
+          details: { newPassword: 'Password too short' }
+        }
+      });
+    }
+
+    // Password complexity check
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+    
+    if (!hasLetter || !hasNumber) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'New password must contain at least one letter and one number',
+          details: { newPassword: 'Password not complex enough' }
+        }
+      });
+    }
+
+    // Prevent same password
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'New password must be different from current password',
+          details: { newPassword: 'New password cannot be same as current' }
+        }
+      });
+    }
+
+    next();
   }
 };
 

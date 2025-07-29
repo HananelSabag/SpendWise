@@ -8,7 +8,30 @@ export default {
   dashboard: 'Admin Dashboard',
   userManagement: 'User Management',
   systemStats: 'System Statistics', 
+  statsDescription: 'Comprehensive system metrics and analytics',
   activityLog: 'Activity Log',
+  activityDescription: 'Monitor admin actions and system activity',
+  
+  // Dashboard
+  dashboardPage: {
+    title: 'Admin Dashboard',
+    subtitle: 'Complete system administration and user management',
+    welcome: 'Welcome back',
+    roleStatus: 'Administrator Access'
+  },
+  
+  // Stats
+  stats: {
+    totalUsers: 'Total Users',
+    activeUsers: 'Verified Users',
+    totalTransactions: 'Total Transactions',
+    systemHealth: 'System Health',
+    totalRevenue: 'Total Amount',
+    thisMonth: 'this month',
+    today: 'today',
+    verified: 'verified',
+    fromAllTransactions: 'from all transactions'
+  },
   
   // System Status
   system: {
@@ -51,14 +74,10 @@ export default {
     notifications: 'System Notifications',
     notificationsDesc: 'Enable system-wide notifications',
     
-    // Status Messages
-    loaded: 'Settings loaded successfully',
-    loadError: 'Failed to load settings',
-    saved: 'Settings saved successfully',
-    saveError: 'Failed to save settings',
-    
-    // API Integration
-    apiReady: 'Settings System Ready',
-    apiDesc: 'This interface is ready for backend API integration. Settings are currently in demo mode.'
+    // Actions
+    save: 'Save Changes',
+    saving: 'Saving...',
+    saved: 'Settings Saved',
+    reset: 'Reset to Defaults'
   },
 }; 

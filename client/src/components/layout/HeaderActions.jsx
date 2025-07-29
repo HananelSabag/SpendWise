@@ -58,9 +58,18 @@ const HeaderActions = ({
     });
   }, [currentLanguage, setLanguage, addNotification, t]);
 
+  // ✅ Currency configuration with symbols
+  const currencyConfig = {
+    USD: { symbol: '$', name: 'US Dollar' },
+    EUR: { symbol: '€', name: 'Euro' },
+    ILS: { symbol: '₪', name: 'Israeli Shekel' },
+    GBP: { symbol: '£', name: 'British Pound' },
+    JPY: { symbol: '¥', name: 'Japanese Yen' }
+  };
+
   // ✅ Handle currency cycle
   const handleCurrencyToggle = useCallback(() => {
-    const currencies = ['USD', 'EUR', 'ILS', 'GBP'];
+    const currencies = Object.keys(currencyConfig);
     const currentIndex = currencies.indexOf(currency);
     const nextCurrency = currencies[(currentIndex + 1) % currencies.length];
     
@@ -70,7 +79,7 @@ const HeaderActions = ({
       type: 'success',
       message: t('common.currencyChanged', { currency: nextCurrency })
     });
-  }, [currency, setCurrency, addNotification, t]);
+  }, [currency, setCurrency, addNotification, t, currencyConfig]);
 
   // ✅ Action buttons configuration
   const actionButtons = [
@@ -90,8 +99,12 @@ const HeaderActions = ({
     },
     {
       key: 'currency',
-      icon: DollarSign,
-      label: currency,
+             icon: () => (
+         <span className="font-bold text-lg leading-none w-5 h-5 flex items-center justify-center">
+           {currencyConfig[currency]?.symbol || '$'}
+         </span>
+       ),
+             label: currency,
       onClick: handleCurrencyToggle,
       className: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
       showLabel: true
@@ -120,7 +133,7 @@ const HeaderActions = ({
             title={button.label}
             aria-label={button.label}
           >
-            <Icon className="w-5 h-5" />
+            {typeof Icon === 'function' ? <Icon /> : <Icon className="w-5 h-5" />}
             {button.showLabel && (
               <span className="ml-1 text-xs font-medium hidden sm:inline">
                 {button.label}
