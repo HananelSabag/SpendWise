@@ -108,7 +108,7 @@ const Header = () => {
                 { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' },
                 { name: t('nav.profile'), href: '/profile', current: location.pathname === '/profile' },
                 // ✅ Admin Dashboard - Only show for admin/super admin users
-                ...(user?.role === 'admin' || user?.role === 'super_admin' || user?.isAdmin || user?.isSuperAdmin 
+                ...(user?.isAdmin || user?.isSuperAdmin || ['admin', 'super_admin'].includes(user?.role)
                   ? [{ name: t('nav.adminDashboard'), href: '/admin', current: location.pathname.startsWith('/admin') }] 
                   : [])
               ].map((item) => (

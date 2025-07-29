@@ -149,7 +149,8 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
     );
   }
   
-  if (adminOnly && !user?.isAdmin) {
+  // ✅ FIX: Check admin access with proper fallback logic
+  if (adminOnly && !(user?.isAdmin || user?.isSuperAdmin || ['admin', 'super_admin'].includes(user?.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center p-8">
