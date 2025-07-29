@@ -8,6 +8,7 @@ import apiClient from './client.js';
 import authAPI from './auth.js';
 import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
+import categoriesAPI from './categories.js'; // ✅ ADD: Import categories API
 import performanceAPI from './performance.js';
 import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
 import transactionAPI from './transactions.js'; // ✅ ADD: Import transaction API
@@ -26,7 +27,7 @@ export const api = {
   
   // Data Management  
   transactions: transactionAPI, // ✅ FIXED: Use proper transaction API
-  categories: apiClient.categories,
+  categories: categoriesAPI, // ✅ FIXED: Use proper categories API
   
   // Analytics & Reports
   analytics: analyticsAPI,

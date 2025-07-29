@@ -42,6 +42,7 @@ export default {
   
   // Transaction specific
   addTransaction: 'Add Transaction',
+  addFirstTransaction: 'Add First Transaction',
   editTransaction: 'Edit Transaction',
   deleteTransaction: 'Delete Transaction',
   recurring: 'Recurring',

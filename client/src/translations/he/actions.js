@@ -42,6 +42,7 @@ export default {
   
   // Transaction specific
   addTransaction: 'הוסף עסקה',
+  addFirstTransaction: 'הוסף עסקה ראשונה',
   editTransaction: 'ערוך עסקה',
   deleteTransaction: 'מחק עסקה',
   recurring: 'חוזר',

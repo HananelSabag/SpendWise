@@ -171,6 +171,20 @@ export default {
       title: "Edit Recurring Transaction",
       subtitle: "Update recurring transaction settings"
     },
+    steps: {
+      setup: {
+        title: "Setup Recurring Transaction",
+        description: "Configure the recurring transaction details"
+      },
+      preview: {
+        title: "Preview",
+        description: "Review the settings before saving"
+      },
+      confirm: {
+        title: "Confirm Creation",
+        description: "Confirm creating the recurring transaction"
+      }
+    },
     
     // Frequency
     frequency: {
@@ -221,13 +235,6 @@ export default {
     summary: {
       title: "Summary",
       preview: "Preview Upcoming Transactions"
-    },
-
-    // Steps
-    steps: {
-      basic: "Basic",
-      schedule: "Schedule",
-      review: "Review"
     },
 
     // Preview

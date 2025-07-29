@@ -270,13 +270,6 @@ export default {
       preview: "תצוגה מקדימה של עסקאות קרובות"
     },
 
-    // Steps
-    steps: {
-      basic: "בסיסי",
-      schedule: "לוח זמנים",
-      review: "סקירה"
-    },
-
     // Preview
     preview: {
       title: "עסקאות קרובות",

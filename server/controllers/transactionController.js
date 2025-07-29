@@ -207,7 +207,7 @@ const transactionController = {
   }),
 
   /**
-   * ✅ NEW: User Analytics - What client is calling  
+   * ✅ FIXED: User Analytics - What client is calling  
    * @route GET /api/v1/analytics/user
    */
   getUserAnalytics: asyncHandler(async (req, res) => {
@@ -249,10 +249,11 @@ const transactionController = {
           (SELECT json_agg(md.*) FROM monthly_data md) as monthly_trends,
           (SELECT json_agg(cb.*) FROM category_breakdown cb) as top_categories,
           (
-            SELECT 
-              AVG(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as avg_expense,
-              MAX(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as max_expense,
-              MIN(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as min_expense
+            SELECT json_build_object(
+              'avg_expense', AVG(CASE WHEN type = 'expense' THEN amount ELSE 0 END),
+              'max_expense', MAX(CASE WHEN type = 'expense' THEN amount ELSE 0 END),
+              'min_expense', MIN(CASE WHEN type = 'expense' THEN amount ELSE 0 END)
+            )
             FROM transactions 
             WHERE user_id = $1 AND type = 'expense'
               AND created_at >= NOW() - INTERVAL '` + months + ` months'
@@ -262,6 +263,27 @@ const transactionController = {
       const result = await db.query(query, [userId]);
       const analytics = result.rows[0] || {};
 
+      // ✅ FIXED: Get recent transactions that client expects
+      const recentTransactionsQuery = `
+        SELECT 
+          t.id,
+          t.type,
+          t.amount,
+          t.description,
+          t.date,
+          t.created_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+        ORDER BY t.created_at DESC
+        LIMIT 20
+      `;
+      
+      const recentResult = await db.query(recentTransactionsQuery, [userId]);
+
       res.json({
         success: true,
         data: {
@@ -269,6 +291,7 @@ const transactionController = {
           trends: analytics.monthly_trends || [],
           categories: analytics.top_categories || [],
           expenseStats: analytics.expense_stats || {},
+          transactions: recentResult.rows || [], // ✅ FIXED: Add transactions field that client expects
           period: `${months} months`,
           generatedAt: new Date().toISOString()
         }
@@ -319,6 +342,257 @@ const transactionController = {
 
     } catch (error) {
       logger.error('Recent transactions failed', { userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * ✅ NEW: Get filtered transactions with pagination
+   * @route GET /api/v1/transactions
+   */
+  getTransactions: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100
+    const offset = (page - 1) * limit;
+
+    // Parse filters
+    const filters = {
+      type: req.query.type || 'all', // all | income | expense
+      category: req.query.category || 'all',
+      dateRange: req.query.dateRange || 'all',
+      search: req.query.search || '',
+      sortBy: req.query.sortBy || 'date',
+      sortOrder: req.query.sortOrder || 'desc'
+    };
+
+    try {
+      // Build dynamic WHERE clause
+      let whereConditions = ['t.user_id = $1'];
+      let queryParams = [userId];
+      let paramCount = 1;
+
+      // Type filter
+      if (filters.type !== 'all') {
+        paramCount++;
+        whereConditions.push(`t.type = $${paramCount}`);
+        queryParams.push(filters.type);
+      }
+
+      // Category filter
+      if (filters.category !== 'all' && filters.category) {
+        paramCount++;
+        whereConditions.push(`c.id = $${paramCount}`);
+        queryParams.push(filters.category);
+      }
+
+      // Search filter
+      if (filters.search) {
+        paramCount++;
+        whereConditions.push(`(t.description ILIKE $${paramCount} OR c.name ILIKE $${paramCount})`);
+        queryParams.push(`%${filters.search}%`);
+      }
+
+      // Date range filter
+      if (filters.dateRange !== 'all') {
+        let dateCondition = '';
+        switch (filters.dateRange) {
+          case 'today':
+            dateCondition = `t.created_at >= CURRENT_DATE`;
+            break;
+          case 'week':
+            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
+            break;
+          case 'month':
+            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '30 days'`;
+            break;
+          case 'quarter':
+            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '90 days'`;
+            break;
+          case 'year':
+            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '365 days'`;
+            break;
+        }
+        if (dateCondition) {
+          whereConditions.push(dateCondition);
+        }
+      }
+
+      // Build ORDER BY clause
+      let orderBy = 't.created_at DESC'; // Default
+      if (filters.sortBy === 'amount') {
+        orderBy = `t.amount ${filters.sortOrder.toUpperCase()}`;
+      } else if (filters.sortBy === 'category') {
+        orderBy = `c.name ${filters.sortOrder.toUpperCase()}`;
+      } else if (filters.sortBy === 'description') {
+        orderBy = `t.description ${filters.sortOrder.toUpperCase()}`;
+      }
+
+      // Build UNION query for expenses and income tables
+      let expenseQuery = `
+        SELECT 
+          e.id,
+          'expense' as type,
+          e.amount,
+          e.description,
+          e.date,
+          e.created_at,
+          e.updated_at,
+          c.id as category_id,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.deleted_at IS NULL AND e.user_id = $1
+      `;
+      
+      let incomeQuery = `
+        SELECT 
+          i.id,
+          'income' as type,
+          i.amount,
+          i.description,
+          i.date,
+          i.created_at,
+          i.updated_at,
+          c.id as category_id,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE i.deleted_at IS NULL AND i.user_id = $1
+      `;
+
+      let currentParamCount = 1;
+      let unionQueryParams = [userId];
+
+      // Apply type filter
+      let queriesNeeded = [];
+      if (filters.type === 'all' || filters.type === 'expense') {
+        queriesNeeded.push(expenseQuery);
+      }
+      if (filters.type === 'all' || filters.type === 'income') {
+        queriesNeeded.push(incomeQuery);
+      }
+
+      // Apply additional filters to both queries
+      let additionalConditions = [];
+      
+      // Category filter
+      if (filters.category !== 'all' && filters.category) {
+        currentParamCount++;
+        additionalConditions.push(`c.id = $${currentParamCount}`);
+        unionQueryParams.push(filters.category);
+      }
+
+      // Search filter
+      if (filters.search) {
+        currentParamCount++;
+        additionalConditions.push(`(description ILIKE $${currentParamCount} OR c.name ILIKE $${currentParamCount})`);
+        unionQueryParams.push(`%${filters.search}%`);
+      }
+
+      // Date range filter
+      if (filters.dateRange !== 'all') {
+        let dateCondition = '';
+        switch (filters.dateRange) {
+          case 'today':
+            dateCondition = `created_at >= CURRENT_DATE`;
+            break;
+          case 'week':
+            dateCondition = `created_at >= CURRENT_DATE - INTERVAL '7 days'`;
+            break;
+          case 'month':
+            dateCondition = `created_at >= CURRENT_DATE - INTERVAL '30 days'`;
+            break;
+          case 'quarter':
+            dateCondition = `created_at >= CURRENT_DATE - INTERVAL '90 days'`;
+            break;
+          case 'year':
+            dateCondition = `created_at >= CURRENT_DATE - INTERVAL '365 days'`;
+            break;
+        }
+        if (dateCondition) {
+          additionalConditions.push(dateCondition);
+        }
+      }
+
+      // Add additional conditions to queries
+      if (additionalConditions.length > 0) {
+        const conditionString = ' AND ' + additionalConditions.join(' AND ');
+        queriesNeeded = queriesNeeded.map(query => query + conditionString);
+      }
+
+             // Build ORDER BY clause
+       let orderByClause = 'created_at DESC'; // Default
+       if (filters.sortBy === 'amount') {
+         orderByClause = `amount ${filters.sortOrder.toUpperCase()}`;
+       } else if (filters.sortBy === 'category') {
+         orderByClause = `category_name ${filters.sortOrder.toUpperCase()}`;
+       } else if (filters.sortBy === 'description') {
+         orderByClause = `description ${filters.sortOrder.toUpperCase()}`;
+       }
+
+      // Final union query
+      const transactionsQuery = `
+        WITH combined_transactions AS (
+          ${queriesNeeded.join(' UNION ALL ')}
+        )
+        SELECT * FROM combined_transactions
+                 ORDER BY ${orderByClause}
+        LIMIT $${currentParamCount + 1} OFFSET $${currentParamCount + 2}
+      `;
+
+      unionQueryParams.push(limit, offset);
+
+      // Count query for pagination
+      const countQuery = `
+        WITH combined_transactions AS (
+          ${queriesNeeded.join(' UNION ALL ')}
+        )
+        SELECT COUNT(*) as total FROM combined_transactions
+      `;
+
+             // Execute queries
+       const [transactionsResult, countResult] = await Promise.all([
+         db.query(transactionsQuery, unionQueryParams),
+         db.query(countQuery, unionQueryParams.slice(0, -2)) // Remove limit and offset from count query
+       ]);
+
+      const transactions = transactionsResult.rows;
+      const total = parseInt(countResult.rows[0].total);
+      const totalPages = Math.ceil(total / limit);
+      const hasMore = page < totalPages;
+
+      // Calculate summary
+      const summary = {
+        total: total,
+        totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0),
+        totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0),
+        count: transactions.length
+      };
+      summary.netAmount = summary.totalIncome - summary.totalExpenses;
+
+      res.json({
+        success: true,
+        data: {
+          transactions,
+          summary,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasMore
+          },
+          filters: filters
+        }
+      });
+
+    } catch (error) {
+      logger.error('Get transactions failed', { userId, error: error.message });
       throw error;
     }
   }),

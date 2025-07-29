@@ -16,9 +16,25 @@ const categoryController = {
    */
   getAll: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const { type } = req.query;
+    const { type, defaults_only, user_only } = req.query;
     
-    let categories = await Category.getAll(userId);
+    // Determine what categories to include
+    let includeDefaults = true;
+    if (user_only === 'true') {
+      includeDefaults = false;
+    }
+    
+    let categories = await Category.findAllByUser(userId, false, includeDefaults);
+    
+    // If only defaults requested, filter to only default categories
+    if (defaults_only === 'true') {
+      categories = categories.filter(cat => cat.is_default === true);
+    }
+    
+    // If only user categories requested, filter to only user categories
+    if (user_only === 'true') {
+      categories = categories.filter(cat => cat.user_id === userId);
+    }
     
     // Filter by type if specified
     if (type && ['income', 'expense'].includes(type)) {
@@ -28,7 +44,9 @@ const categoryController = {
     logger.info('Categories retrieved', { 
       userId, 
       count: categories.length,
-      type: type || 'all'
+      type: type || 'all',
+      defaults_only: defaults_only === 'true',
+      user_only: user_only === 'true'
     });
     
     res.json({

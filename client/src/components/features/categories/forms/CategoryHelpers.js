@@ -260,6 +260,7 @@ export const getIconSuggestions = (categoryName) => {
  * 🔍 Filter Categories by Search
  */
 export const filterCategoriesByText = (categories, searchText) => {
+  if (!categories || !Array.isArray(categories)) return [];
   if (!searchText || searchText.trim() === '') return categories;
   
   const search = searchText.toLowerCase().trim();
@@ -274,6 +275,7 @@ export const filterCategoriesByText = (categories, searchText) => {
  * 📊 Sort Categories
  */
 export const sortCategories = (categories, sortBy = 'name', sortOrder = 'asc') => {
+  if (!categories || !Array.isArray(categories)) return [];
   const sorted = [...categories];
   
   sorted.sort((a, b) => {

@@ -79,6 +79,10 @@ const CategoryManager = ({ className = '' }) => {
 
   // ✅ Filtered and sorted categories
   const processedCategories = useMemo(() => {
+    if (!categories || !Array.isArray(categories)) {
+      return [];
+    }
+    
     let filtered = categories;
     
     // Filter by search

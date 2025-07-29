@@ -119,16 +119,14 @@ router.get('/debug/templates/:id',
 router.get('/',
   getTransactionsLimiter,
   validate.transactionFilters,
-  // transactionController.getTransactions // DISABLED: function doesn't exist yet
-  transactionController.getRecentTransactions // Using available function instead
+  transactionController.getTransactions // ✅ FIXED: Now using proper function
 );
 
 // Search transactions by text
 router.get('/search',
   getTransactionsLimiter,
   validate.searchQuery,
-  // transactionController.search // DISABLED: function doesn't exist yet
-  transactionController.getRecentTransactions // Using available function instead
+  transactionController.getTransactions // ✅ FIXED: Using proper function for search
 );
 
 // Get recent transactions 

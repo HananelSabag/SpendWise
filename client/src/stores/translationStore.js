@@ -204,7 +204,7 @@ export const useTranslationStore = create(
 
           // Load core translation modules (most commonly used)
           loadCoreModules: async () => {
-            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories'];
+            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories', 'empty'];
             const { currentLanguage } = get();
             
             const loadPromises = coreModules.map(module => 
