@@ -153,6 +153,50 @@ export default {
       marketing: 'שיווק'
     }
   },
+
+  // ✅ ADDED: Overview section for ProfileOverview.jsx component
+  overview: {
+    // Recent Activity
+    recentActivity: 'פעילות אחרונה',
+    items: 'פריטים',
+    viewAll: 'צפה בהכל',
+
+    // Activity Types
+    activity: {
+      expense: 'הוצאה חדשה',
+      expenseDesc: 'הוספת הוצאה לתקציב',
+      income: 'הכנסה חדשה', 
+      incomeDesc: 'הוספת הכנסה לחשבון',
+      achievement: 'הישג חדש',
+      achievementDesc: 'השגת יעד חדש',
+      setting: 'עדכון הגדרות',
+      settingDesc: 'שינוי הגדרות האפליקציה'
+    },
+
+    // Achievements
+    achievements: {
+      title: 'הישגים',
+      saver: 'חוסך מקצועי',
+      saverDesc: 'חסכת מעל 1000₪ החודש',
+      streak: 'רצף יומי',
+      streakDesc: '7 ימים רצופים של מעקב',
+      categories: 'מנהל קטגוריות',
+      categoriesDesc: 'יצרת 5 קטגוריות מותאמות',
+      budgeter: 'מתקצב חכם',
+      budgeterDesc: 'נשארת בתקציב 3 חודשים'
+    },
+
+    // Quick Actions
+    quickActions: {
+      title: 'פעולות מהירות',
+      export: 'ייצא נתונים',
+      preferences: 'העדפות',
+      security: 'אבטחה',
+      share: 'שתף',
+      smart: 'חכם',
+      help: 'עזרה'
+    }
+  },
   
   // פעולות כלליות
   actions: {

@@ -17,6 +17,7 @@ import {
 
 import { cn } from '../../../../utils/helpers';
 import { parseAmountInput } from '../forms/TransactionHelpers';
+import { getCurrencySymbol } from '../../../../utils/currencyAPI';
 
 /**
  * 💰 Amount Input Component
@@ -34,7 +35,7 @@ const AmountInput = ({
   ...props
 }) => {
   const { t } = useTranslation('transactions');
-  const { currency, formatCurrency, getCurrencySymbol } = useCurrency();
+  const { currency, formatCurrency } = useCurrency();
   
   const inputRef = useRef(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -46,7 +47,7 @@ const AmountInput = ({
   }, [value]);
 
   // ✅ Currency symbol
-  const currencySymbol = useMemo(() => getCurrencySymbol(), [getCurrencySymbol]);
+  const currencySymbol = useMemo(() => getCurrencySymbol(currency), [currency]);
 
   // ✅ Type configuration
   const typeConfig = useMemo(() => {

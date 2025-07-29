@@ -14,9 +14,13 @@ import {
 import { 
   useAuth, 
   useAuthStore,
-  useTranslation, 
-  useNotifications 
+  useTranslation,
+  useTranslationStore, 
+  useNotifications,
+  useAppStore
 } from '../stores';
+import { useAuthToasts } from '../hooks/useAuthToasts';
+import { useToast } from '../hooks/useToast';
 
 import { Button, Card, Input, Avatar, LoadingSpinner } from '../components/ui';
 import ExportModal from '../components/features/profile/ExportModal';
@@ -27,6 +31,8 @@ const Profile = () => {
   const { user, updateProfile } = useAuth();
   const { t, isRTL } = useTranslation('profile');
   const { addNotification } = useNotifications();
+  const authToasts = useAuthToasts(); // ✅ Enhanced auth toast system
+  const toast = useToast(); // ✅ General toast for non-auth operations
 
   // State
   const [activeTab, setActiveTab] = useState('personal');
@@ -54,6 +60,17 @@ const Profile = () => {
     currency_preference: user?.currency_preference || 'USD'
   });
 
+  // ✅ Sync preferences data when user data changes (on login/refresh)
+  React.useEffect(() => {
+    if (user) {
+      setPreferencesData({
+        language_preference: user.language_preference || 'en',
+        theme_preference: user.theme_preference || 'light',
+        currency_preference: user.currency_preference || 'USD'
+      });
+    }
+  }, [user?.language_preference, user?.theme_preference, user?.currency_preference]);
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -74,10 +91,7 @@ const Profile = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      addNotification({
-        type: 'error',
-        message: 'Profile picture must be less than 5MB'
-      });
+      authToasts.avatarTooLarge();
       return;
     }
 
@@ -113,35 +127,23 @@ const Profile = () => {
           }
         });
         
-        addNotification({
-          type: 'success',
-          message: 'Profile picture updated!'
-        });
+        authToasts.avatarUploaded();
       } else {
         // Upload failed, show error
-        addNotification({
-          type: 'error',
-          message: response.error?.message || 'Failed to upload profile picture'
-        });
+        authToasts.avatarUploadFailed();
       }
     } catch (error) {
       console.error('🔍 Profile Upload Error:', error);
-      addNotification({
-        type: 'error',
-        message: 'Failed to upload profile picture'
-      });
+      authToasts.avatarUploadFailed();
     } finally {
       setIsLoading(false);
     }
-  }, [addNotification, updateProfile]);
+  }, [authToasts, updateProfile]);
 
   // ✅ ENHANCED: Update personal info with all fields
   const handlePersonalUpdate = useCallback(async () => {
     if (!personalData.firstName?.trim() || !personalData.lastName?.trim()) {
-      addNotification({
-        type: 'error',
-        message: 'First name and last name are required'
-      });
+      authToasts.requiredFieldsMissing();
       return;
     }
 
@@ -159,27 +161,22 @@ const Profile = () => {
 
       if (result.success) {
         setIsEditing(false);
-        addNotification({
-          type: 'success',
-          message: t('messages.profileUpdated', 'Profile updated successfully')
-        });
+        authToasts.profileUpdated();
       } else {
         throw new Error(result.error?.message || 'Update failed');
       }
     } catch (error) {
-      addNotification({
-        type: 'error',
-        message: error.message || 'Failed to update profile'
-      });
+      authToasts.profileUpdateFailed();
     } finally {
       setIsLoading(false);
     }
-  }, [personalData, updateProfile, addNotification, t]);
+  }, [personalData, updateProfile, authToasts, t]);
 
-  // ✅ NEW: Update preferences (no page reload)
+  // ✅ ENHANCED: Update preferences with immediate application
   const handlePreferencesUpdate = useCallback(async () => {
     setIsLoading(true);
     try {
+      // First update the database
       const result = await updateProfile({
         language_preference: preferencesData.language_preference,
         theme_preference: preferencesData.theme_preference,
@@ -187,49 +184,66 @@ const Profile = () => {
       });
 
       if (result.success) {
-        addNotification({
-          type: 'success',
-          message: t('messages.preferencesUpdated', 'Preferences updated successfully')
-        });
+        // ✅ 1. Apply theme immediately
+        const applyTheme = (theme) => {
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else if (theme === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.classList.toggle('dark', prefersDark);
+          }
+        };
         
-        // Apply theme immediately without reload
         if (preferencesData.theme_preference !== user?.theme_preference) {
-          document.documentElement.classList.toggle('dark', preferencesData.theme_preference === 'dark');
+          applyTheme(preferencesData.theme_preference);
         }
-        
-        // Refresh user data to get updated preferences
+
+        // ✅ 2. Apply language immediately  
+        if (preferencesData.language_preference !== user?.language_preference) {
+          const translationStore = useTranslationStore.getState();
+          translationStore.actions.setLanguage(preferencesData.language_preference);
+        }
+
+        // ✅ 3. Apply currency immediately
+        if (preferencesData.currency_preference !== user?.currency_preference) {
+          const appStore = useAppStore.getState();
+          appStore.actions.setCurrency(preferencesData.currency_preference);
+        }
+
+        // ✅ 4. Refresh user data to sync with database
         const refreshResult = await useAuthStore.getState().actions.getProfile();
         if (refreshResult.success) {
-          console.log('✅ Profile preferences updated and refreshed');
+          console.log('✅ Profile preferences updated and applied:', {
+            theme: preferencesData.theme_preference,
+            language: preferencesData.language_preference,
+            currency: preferencesData.currency_preference
+          });
         }
+
+        // ✅ 5. Show success notification
+        authToasts.preferencesUpdated();
+        
       } else {
         throw new Error(result.error?.message || 'Update failed');
       }
     } catch (error) {
-      addNotification({
-        type: 'error',
-        message: error.message || 'Failed to update preferences'
-      });
+      authToasts.profileUpdateFailed();
     } finally {
       setIsLoading(false);
     }
-  }, [preferencesData, updateProfile, addNotification, t, user]);
+  }, [preferencesData, updateProfile, authToasts, t, user]);
 
   // Handle password change
   const handlePasswordChange = useCallback(async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      addNotification({
-        type: 'error',
-        message: 'Passwords do not match'
-      });
+      authToasts.passwordMismatch();
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      addNotification({
-        type: 'error',
-        message: 'Password must be at least 8 characters'
-      });
+      authToasts.passwordTooShort();
       return;
     }
 
@@ -241,19 +255,13 @@ const Profile = () => {
       });
       
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      addNotification({
-        type: 'success',
-        message: 'Password changed successfully!'
-      });
+      authToasts.passwordChanged();
     } catch (error) {
-      addNotification({
-        type: 'error',
-        message: 'Failed to change password'
-      });
+      authToasts.passwordChangeFailed(error);
     } finally {
       setIsLoading(false);
     }
-  }, [passwordData, addNotification]);
+  }, [passwordData, authToasts]);
 
   const renderPersonalTab = () => (
     <Card className="p-6">
@@ -571,18 +579,13 @@ const Profile = () => {
               try {
                 const result = await api.export.exportAsCSV();
                 if (result.success) {
-                  addNotification({
-                    type: 'success',
-                    message: 'CSV export started - download will begin shortly'
-                  });
+                  // Using general toast for export operations (not auth-specific)
+                  toast.success('CSV export started - download will begin shortly');
                 } else {
                   throw new Error(result.error?.message || 'Export failed');
                 }
               } catch (error) {
-                addNotification({
-                  type: 'error',
-                  message: error.message || 'Failed to export CSV'
-                });
+                toast.error(error.message || 'Failed to export CSV');
               } finally {
                 setIsLoading(false);
               }
@@ -600,18 +603,13 @@ const Profile = () => {
               try {
                 const result = await api.export.exportAsJSON();
                 if (result.success) {
-                  addNotification({
-                    type: 'success',
-                    message: 'JSON export started - download will begin shortly'
-                  });
+                  // Using general toast for export operations (not auth-specific)
+                  toast.success('JSON export started - download will begin shortly');
                 } else {
                   throw new Error(result.error?.message || 'Export failed');
                 }
               } catch (error) {
-                addNotification({
-                  type: 'error',
-                  message: error.message || 'Failed to export JSON'
-                });
+                toast.error(error.message || 'Failed to export JSON');
               } finally {
                 setIsLoading(false);
               }

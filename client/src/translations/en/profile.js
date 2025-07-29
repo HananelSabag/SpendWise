@@ -175,6 +175,50 @@ export default {
       marketing: 'Marketing'
     }
   },
+
+  // ✅ ADDED: Overview section for ProfileOverview.jsx component
+  overview: {
+    // Recent Activity
+    recentActivity: 'Recent Activity',
+    items: 'items',
+    viewAll: 'View All',
+
+    // Activity Types
+    activity: {
+      expense: 'New Expense',
+      expenseDesc: 'Added expense to budget',
+      income: 'New Income',
+      incomeDesc: 'Added income to account',
+      achievement: 'New Achievement',
+      achievementDesc: 'Earned a new milestone',
+      setting: 'Settings Update',
+      settingDesc: 'Modified app settings'
+    },
+
+    // Achievements
+    achievements: {
+      title: 'Achievements',
+      saver: 'Pro Saver',
+      saverDesc: 'Saved over $1000 this month',
+      streak: 'Daily Streak',
+      streakDesc: '7 consecutive days of tracking',
+      categories: 'Category Master',
+      categoriesDesc: 'Created 5 custom categories',
+      budgeter: 'Smart Budgeter',
+      budgeterDesc: 'Stayed within budget for 3 months'
+    },
+
+    // Quick Actions
+    quickActions: {
+      title: 'Quick Actions',
+      export: 'Export Data',
+      preferences: 'Preferences',
+      security: 'Security',
+      share: 'Share',
+      smart: 'Smart',
+      help: 'Help'
+    }
+  },
   
   // General actions
   actions: {

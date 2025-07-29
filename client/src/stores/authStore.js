@@ -279,22 +279,54 @@ export const useAuthStore = create(
             }
           },
 
-          // Logout - SIMPLIFIED
-          logout: async () => {
+          // ✅ Enhanced Logout with toast notifications
+          logout: async (showToast = true) => {
+            try {
+              // Show loading toast if needed
+              let loadingToastId;
+              if (showToast && window.authToasts) {
+                loadingToastId = window.authToasts.signingOut();
+              }
+
+              // Call logout API
+              try {
+                await authAPI.logout();
+              } catch (error) {
+                // Log error but continue with local logout
+                console.warn('Logout API error (continuing with local logout):', error);
+              }
+
               // Clear token
               localStorage.removeItem('accessToken');
               
               // Reset state
-            get().actions.reset();
+              get().actions.reset();
 
-            // Navigate to login
-                if (window.spendWiseNavigate) {
-                  window.spendWiseNavigate('/login', { replace: true });
-                } else {
-                  window.location.replace('/login');
+              // Dismiss loading toast and show success
+              if (showToast && window.authToasts) {
+                if (loadingToastId) {
+                  window.authToasts.toast.dismiss(loadingToastId);
                 }
+                window.authToasts.logoutSuccess();
+              }
 
-            return { success: true };
+              // Navigate to login
+              if (window.spendWiseNavigate) {
+                window.spendWiseNavigate('/login', { replace: true });
+              } else {
+                window.location.replace('/login');
+              }
+
+              return { success: true };
+            } catch (error) {
+              console.error('Logout failed:', error);
+              
+              if (showToast && window.authToasts) {
+                window.authToasts.logoutFailed();
+              }
+              
+              return { success: false, error };
+            }
           },
 
           // Set user data and derive role-based state

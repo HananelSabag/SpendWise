@@ -19,6 +19,7 @@ import {
   useTheme,
   useNotifications
 } from '../../stores';
+import { useAuthToasts } from '../../hooks/useAuthToasts';
 
 // ✅ Import components
 import LoginForm from '../../components/features/auth/LoginForm';
@@ -37,6 +38,7 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const authToasts = useAuthToasts(); // ✅ Enhanced auth toasts with translations
 
   // ✅ Login state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,26 +84,25 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        addNotification({
-          type: 'success',
-          message: t('loginSuccess')
-        });
+        authToasts.loginSuccess(result.user);
         
         const from = location.state?.from?.pathname || '/';
         navigate(from, { replace: true });
       } else {
+        authToasts.loginFailed(result.error);
         setErrors({ 
           general: result.error?.message || t('loginFailed')
         });
       }
     } catch (error) {
+      authToasts.loginFailed(error);
       setErrors({ 
         general: t('authenticationFailed')
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateForm, login, addNotification, t, location, navigate]);
+  }, [validateForm, login, authToasts, t, location, navigate]);
 
   // ✅ Handle Google login - FIXED
   const handleGoogleLogin = useCallback(async () => {
@@ -112,27 +113,26 @@ const Login = () => {
       const result = await googleLogin();
       
       if (result.success) {
-        addNotification({
-          type: 'success',
-          message: t('googleLoginSuccess')
-        });
+        authToasts.googleLoginSuccess(result.user);
         
         // ✅ FIXED: Navigate to dashboard with proper fallback
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
+        authToasts.googleLoginFailed();
         setErrors({ 
           general: result.error?.message || t('googleLoginFailed')
         });
       }
     } catch (error) {
+      authToasts.googleLoginFailed();
       setErrors({ 
         general: t('googleLoginError')
       });
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [googleLogin, addNotification, t, location, navigate]);
+  }, [googleLogin, authToasts, t, location, navigate]);
 
   // ✅ Animation variants
   const containerVariants = {

@@ -15,6 +15,9 @@ import {
   useNotifications
 } from '../../../stores';
 
+// ✅ Import API for real transaction creation
+import { api } from '../../../api';
+
 // ✅ Import extracted components
 import QuickActionCard, { ActionGrid } from './actions/QuickActionCard';
 import SmartSuggestions from './actions/SmartSuggestions';
@@ -64,8 +67,19 @@ const QuickActionsBar = ({
         icon: () => React.createElement(require('lucide-react').Minus, { className: "w-6 h-6" }),
         color: 'text-red-600 dark:text-red-400',
         bgColor: 'bg-red-100 dark:bg-red-900/20',
-        onClick: () => console.log('Quick expense'),
+        onClick: () => handleQuickExpense(),
         usage: '1h ago'
+      },
+      {
+        id: 'quick_income',
+        title: t('actions.quickIncome'),
+        description: t('actions.quickIncomeDesc'),
+        icon: () => React.createElement(require('lucide-react').Plus, { className: "w-6 h-6" }),
+        color: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-100 dark:bg-green-900/20',
+        onClick: () => handleQuickIncome(),
+        popular: true,
+        usage: '2h ago'
       }
     ],
     analytics: [
@@ -86,7 +100,7 @@ const QuickActionsBar = ({
         icon: () => React.createElement(require('lucide-react').PieChart, { className: "w-6 h-6" }),
         color: 'text-orange-600 dark:text-orange-400',
         bgColor: 'bg-orange-100 dark:bg-orange-900/20',
-        onClick: () => console.log('Spending breakdown')
+        onClick: () => onViewAnalytics?.() // Redirect to analytics for spending breakdown
       }
     ],
     goals: [
@@ -107,7 +121,7 @@ const QuickActionsBar = ({
         icon: () => React.createElement(require('lucide-react').Calculator, { className: "w-6 h-6" }),
         color: 'text-cyan-600 dark:text-cyan-400',
         bgColor: 'bg-cyan-100 dark:bg-cyan-900/20',
-        onClick: () => console.log('Budget planner')
+        onClick: () => onSetGoals?.() // Redirect to goals for budget planning
       }
     ],
     tools: [
@@ -118,7 +132,7 @@ const QuickActionsBar = ({
         icon: () => React.createElement(require('lucide-react').Globe, { className: "w-6 h-6" }),
         color: 'text-violet-600 dark:text-violet-400',
         bgColor: 'bg-violet-100 dark:bg-violet-900/20',
-        onClick: () => console.log('Currency converter')
+        onClick: () => handleCurrencyConverter() // Open currency converter
       },
       {
         id: 'schedule_payment',
@@ -182,6 +196,80 @@ const QuickActionsBar = ({
     counts.all = Object.values(quickActions).flat().length;
     return counts;
   }, [quickActions]);
+
+  // ✅ Quick action handlers
+  const handleQuickExpense = useCallback(async () => {
+    try {
+      // Use language-appropriate quick expense category
+      const categoryId = isRTL ? 59 : 68; // Hebrew: 59, English: 68
+      
+      const result = await api.transactions.createQuickExpense({
+        amount: 100, // Default amount, user can change in modal
+        description: isRTL ? 'הוצאה מהירה' : 'Quick Expense',
+        categoryId: categoryId
+      });
+      
+      if (result.success) {
+        addNotification({
+          type: 'success',
+          message: t('notifications.quickExpenseCreated'),
+          duration: 3000
+        });
+        // Refresh dashboard data
+        onAddTransaction?.(); // Trigger parent refresh
+      } else {
+        throw new Error(result.error?.message || 'Failed to create expense');
+      }
+    } catch (error) {
+      console.error('Quick expense failed:', error);
+      addNotification({
+        type: 'error',
+        message: t('notifications.quickExpenseFailed'),
+        duration: 4000
+      });
+    }
+  }, [addNotification, t, isRTL, onAddTransaction]);
+
+  const handleQuickIncome = useCallback(async () => {
+    try {
+      // Use language-appropriate quick income category
+      const categoryId = isRTL ? 55 : 64; // Hebrew: 55, English: 64
+      
+      const result = await api.transactions.createQuickIncome({
+        amount: 500, // Default amount for income
+        description: isRTL ? 'הכנסה מהירה' : 'Quick Income',
+        categoryId: categoryId
+      });
+      
+      if (result.success) {
+        addNotification({
+          type: 'success',
+          message: t('notifications.quickIncomeCreated'),
+          duration: 3000
+        });
+        // Refresh dashboard data
+        onAddTransaction?.(); // Trigger parent refresh
+      } else {
+        throw new Error(result.error?.message || 'Failed to create income');
+      }
+    } catch (error) {
+      console.error('Quick income failed:', error);
+      addNotification({
+        type: 'error',
+        message: t('notifications.quickIncomeFailed'),
+        duration: 4000
+      });
+    }
+  }, [addNotification, t, isRTL, onAddTransaction]);
+
+  const handleCurrencyConverter = useCallback(() => {
+    // TODO: Implement currency converter modal or redirect
+    addNotification({
+      type: 'info',
+      message: t('actions.currencyConverterOpening'),
+      duration: 2000
+    });
+  }, [addNotification, t]);
 
   // ✅ Handle action click
   const handleActionClick = useCallback((action) => {

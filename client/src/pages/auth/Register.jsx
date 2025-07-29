@@ -19,6 +19,7 @@ import {
   useTheme,
   useNotifications 
 } from '../../stores';
+import { useAuthToasts } from '../../hooks/useAuthToasts';
 
 // ✅ Import extracted components
 import RegistrationForm from '../../components/features/auth/RegistrationForm';
@@ -37,6 +38,7 @@ const Register = () => {
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
+  const authToasts = useAuthToasts(); // ✅ Enhanced auth toasts
 
   const navigate = useNavigate();
   
@@ -133,23 +135,22 @@ const Register = () => {
         // Move to security setup
         setRegistrationStep('security');
         
-        addNotification({
-          type: 'success',
-          message: t('registrationSuccess')
-        });
+        authToasts.registrationSuccess();
       } else {
+        authToasts.registrationFailed(result.error);
         setErrors({ 
           general: result.error?.message || t('registrationFailed')
         });
       }
     } catch (error) {
+      authToasts.registrationFailed(error);
       setErrors({ 
         general: t('registrationError')
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateForm, register, addNotification, t]);
+  }, [validateForm, register, authToasts, t]);
 
   // ✅ Handle Google registration - ENHANCED with profile completion
   const handleGoogleRegister = useCallback(async () => {
@@ -183,6 +184,7 @@ const Register = () => {
         if (needsProfileCompletion) {
           // Go to Google profile completion step
           setRegistrationStep('googleProfile');
+          // Info message for profile completion (keep as notification for now)
           addNotification({
             type: 'info',
             message: t('completeProfileToGetStarted')
@@ -190,24 +192,23 @@ const Register = () => {
         } else {
           // User already has complete profile, go to final step
           setRegistrationStep('complete');
-          addNotification({
-            type: 'success',
-            message: t('googleRegisterSuccess')
-          });
+          authToasts.googleRegistrationSuccess(result.user);
         }
       } else {
+        authToasts.googleLoginFailed();
         setErrors({ 
           general: result.error?.message || t('googleRegisterFailed')
         });
       }
     } catch (error) {
+      authToasts.googleLoginFailed();
       setErrors({ 
         general: t('googleRegisterError')
       });
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [googleLogin, addNotification, t]);
+  }, [googleLogin, authToasts, t]);
 
   // ✅ Handle security setup completion
   const handleSecurityComplete = useCallback((securitySetup) => {

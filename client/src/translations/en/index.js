@@ -17,6 +17,12 @@ import profile from './profile.js';
 import categories from './categories.js';
 import transactions from './transactions.js';
 import admin from './admin.js';
+import toast from './toast.js';
+import views from './views.js';
+import pages from './pages.js';
+import actions from './actions.js';
+import summary from './summary.js';
+import search from './search.js';
 
 export default {
   common,
@@ -33,4 +39,10 @@ export default {
   categories,
   transactions,
   admin,
+  toast,
+  views,
+  pages,
+  actions,
+  summary,
+  search,
 }; 

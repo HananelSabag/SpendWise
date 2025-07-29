@@ -124,8 +124,8 @@ const ToastIcon = ({ type, size = 20 }) => {
   return icons[type] || icons.info;
 };
 
-// ✅ UPDATED: Toast notification component with Zustand
-const ToastNotification = ({ message, type, icon: customIcon }) => {
+// ✅ ENHANCED: Toast notification component with close button
+const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }) => {
   // ✅ NEW: Use Zustand translation store
   const { currentLanguage, isRTL } = useTranslation();
 
@@ -198,6 +198,36 @@ const ToastNotification = ({ message, type, icon: customIcon }) => {
         </p>
       </div>
 
+      {/* Close Button */}
+      <button
+        onClick={() => {
+          if (onClose) onClose();
+          toast.dismiss(toastId);
+        }}
+        className={`
+          flex-shrink-0 ${isRTL ? 'mr-2' : 'ml-2'} 
+          p-1 rounded-lg transition-all duration-200
+          hover:bg-black/10 dark:hover:bg-white/10
+          focus:outline-none focus:ring-2 focus:ring-current focus:ring-opacity-50
+          ${typeStyles.text}
+        `}
+        aria-label="Close notification"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-4 h-4"
+        >
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Gradient border effect */}
       <div 
         className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent pointer-events-none"
@@ -212,10 +242,10 @@ const ToastNotification = ({ message, type, icon: customIcon }) => {
 };
 
 /**
- * ✅ UPDATED: Main useToast hook with Zustand compatibility
+ * ✅ ENHANCED: Main useToast hook with comprehensive translation support
  */
 export const useToast = () => {
-  // ✅ NEW: Use Zustand translation store
+  // ✅ NEW: Use Zustand translation store with toast namespace
   const { t } = useTranslation('toast');
 
   // Toast notification functions
@@ -224,17 +254,26 @@ export const useToast = () => {
       ? t(message) || message 
       : message;
 
+    // ✅ Smart positioning: right-top on desktop, top-center on mobile
+    const getPosition = () => {
+      if (options.position) return options.position;
+      const isMobile = window.innerWidth <= 768;
+      return isMobile ? 'top-center' : 'top-right';
+    };
+
     return toast.custom(
       (toastData) => (
         <ToastNotification
           message={resolvedMessage}
           type={type}
           icon={options.icon}
+          toastId={toastData.id}
+          onClose={options.onClose}
         />
       ),
       {
         duration: options.duration || (type === 'loading' ? Infinity : 4000),
-        position: options.position || 'top-center',
+        position: getPosition(),
         ...options
       }
     );
@@ -321,19 +360,30 @@ export const useToast = () => {
   }), [success, error, warning, info, loading, promise, dismiss, dismissAll, showToast]);
 };
 
-// ✅ Toaster Provider Component
+// ✅ Enhanced Toaster Provider Component with smart positioning
 export const ToastProvider = ({ children }) => {
   const { isRTL } = useTranslation();
+  
+  // ✅ Smart positioning: right-top on desktop, top-center on mobile
+  const getDefaultPosition = () => {
+    if (typeof window === 'undefined') return 'top-center';
+    const isMobile = window.innerWidth <= 768;
+    return isMobile ? 'top-center' : 'top-right';
+  };
   
   return (
     <>
       {children}
       <Toaster
-        position="top-center"
+        position={getDefaultPosition()}
         reverseOrder={isRTL}
         gutter={8}
         containerStyle={{
-          zIndex: 9999
+          zIndex: 9999,
+          // ✅ Better spacing from edges
+          top: '20px',
+          right: '20px',
+          left: '20px'
         }}
         toastOptions={{
           duration: 4000,
@@ -341,7 +391,10 @@ export const ToastProvider = ({ children }) => {
             background: 'transparent',
             boxShadow: 'none',
             padding: 0,
-            margin: 0
+            margin: 0,
+            // ✅ Responsive width
+            maxWidth: '100%',
+            width: 'auto'
           }
         }}
       />

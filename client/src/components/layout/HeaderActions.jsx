@@ -1,8 +1,8 @@
 /**
- * ⚙️ HEADER ACTIONS - Theme, Language & Settings Controls
+ * ⚙️ HEADER ACTIONS - Theme, Language & Currency Controls
  * Extracted from Header.jsx for better performance and maintainability
- * Features: Theme toggle, Language switcher, Settings access
- * @version 2.0.0
+ * Features: Theme toggle, Language switcher, Currency controls
+ * @version 2.0.0 - CLEANED UP (removed settings duplicate)
  */
 
 import React, { useCallback } from 'react';
@@ -10,8 +10,7 @@ import {
   Sun,
   Moon,
   Globe,
-  DollarSign,
-  Settings
+  DollarSign
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -81,7 +80,7 @@ const HeaderActions = ({
     });
   }, [currency, setCurrency, addNotification, t, currencyConfig]);
 
-  // ✅ Action buttons configuration
+  // ✅ Action buttons configuration - REMOVED SETTINGS (moved to user menu)
   const actionButtons = [
     {
       key: 'theme',
@@ -100,22 +99,16 @@ const HeaderActions = ({
     {
       key: 'currency',
              icon: () => (
-         <span className="font-bold text-lg leading-none w-5 h-5 flex items-center justify-center">
-           {currencyConfig[currency]?.symbol || '$'}
-         </span>
-       ),
+        <span className="font-bold text-lg leading-none w-5 h-5 flex items-center justify-center">
+          {currencyConfig[currency]?.symbol || '$'}
+        </span>
+      ),
              label: currency,
       onClick: handleCurrencyToggle,
       className: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
       showLabel: true
-    },
-    {
-      key: 'settings',
-      icon: Settings,
-      label: t('common.settings'),
-      onClick: () => onOpenModal?.('settings'),
-      className: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
     }
+    // ✅ REMOVED: Settings button (available in user dropdown)
   ];
 
   return (

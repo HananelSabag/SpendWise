@@ -10,6 +10,7 @@ import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
 import performanceAPI from './performance.js';
 import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
+import transactionAPI from './transactions.js'; // ✅ ADD: Import transaction API
 
 /**
  * 🎯 Unified API Export
@@ -24,7 +25,7 @@ export const api = {
   users: authAPI, // Alias for backward compatibility
   
   // Data Management  
-  transactions: apiClient.transactions,
+  transactions: transactionAPI, // ✅ FIXED: Use proper transaction API
   categories: apiClient.categories,
   
   // Analytics & Reports
@@ -97,10 +98,12 @@ export { authAPI };
 export { adminAPI };
 export { analyticsAPI };
 export { performanceAPI };
+export { transactionAPI }; // ✅ ADD: Export transaction API
 export { apiClient };
 
 // Additional backward compatibility exports
 export const auth = authAPI;
 export const admin = adminAPI;
 export const analytics = analyticsAPI;
-export const performance = performanceAPI; 
+export const performance = performanceAPI;
+export const transactions = transactionAPI; // ✅ ADD: Transaction alias 

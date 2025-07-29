@@ -20,6 +20,10 @@ import OnboardingManager from './components/common/OnboardingManager';
 // ✅ Zustand stores
 import { StoreProvider, useAuth, useTranslation } from './stores';
 
+// ✅ Toast Provider
+import { ToastProvider } from './hooks/useToast';
+import AuthToastProvider from './components/common/AuthToastProvider';
+
 // ✅ App Initializer
 import AppInitializer from './components/common/AppInitializer';
 
@@ -432,9 +436,13 @@ function App() {
         }}
       >
         <StoreProvider>
-          <AppInitializer>
-            <AppContent />
-          </AppInitializer>
+          <ToastProvider>
+            <AuthToastProvider>
+              <AppInitializer>
+                <AppContent />
+              </AppInitializer>
+            </AuthToastProvider>
+          </ToastProvider>
         </StoreProvider>
       </Router>
 

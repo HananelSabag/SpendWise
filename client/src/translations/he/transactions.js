@@ -15,15 +15,45 @@ export default {
 
   // Transaction fields
   fields: {
-    description: "תיאור",
-    amount: "סכום",
-    category: "קטגוריה",
-    date: "תאריך",
-    type: "סוג",
-    tags: "תגיות",
-    notes: "הערות",
+    description: {
+      label: "תיאור",
+      placeholder: "הכניסו תיאור עסקה"
+    },
+    amount: {
+      label: "סכום",
+      placeholder: "0.00"
+    },
+    category: {
+      label: "קטגוריה", 
+      placeholder: "בחרו קטגוריה"
+    },
+    date: {
+      label: "תאריך",
+      helper: "תאריך העסקה",
+      helperWithTime: "תאריך ושעת העסקה"
+    },
+    type: {
+      label: "סוג העסקה",
+      helper: "בחרו אם זו הכנסה או הוצאה"
+    },
+    tags: {
+      label: "תגיות",
+      placeholder: "הוסיפו תגיות...",
+      helper: "תגיות לארגון ומיון (אופציונלי)"
+    },
+    notes: {
+      label: "הערות",
+      placeholder: "הערות נוספות...",
+      helper: "מידע נוסף על העסקה (אופציונלי)"
+    },
     receipt: "קבלה",
-    recurring: "חוזר"
+    recurring: {
+      title: "עסקה חוזרת",
+      description: "הגדר עסקה שחוזרת בקביעות"
+    },
+    advanced: {
+      title: "הגדרות מתקדמות"
+    }
   },
 
   // Placeholders
@@ -170,6 +200,23 @@ export default {
     edit: {
       title: "ערוך עסקה חוזרת",
       subtitle: "עדכן הגדרות עסקה חוזרת"
+    },
+    steps: {
+      setup: {
+        title: "הגדרת עסקה חוזרת",
+        description: "הגדר את פרטי העסקה החוזרת"
+      },
+      preview: {
+        title: "תצוגה מקדימה",
+        description: "בדוק את ההגדרות לפני שמירה"
+      },
+      confirm: {
+        title: "אישור יצירה",
+        description: "אשר את יצירת העסקה החוזרת"
+      }
+    },
+    modal: {
+      createTitle: "צור עסקה חוזרת"
     },
     
     // Frequency
@@ -422,5 +469,49 @@ export default {
     monthly: "ניתוח חודשי",
     comparison: "השוואת תקופות",
     insights: "תובנות"
+  },
+
+  // Modals
+  modals: {
+    add: {
+      title: "הוסף עסקה חדשה",
+      subtitle: "צור עסקה חדשה למעקב הוצאות והכנסות"
+    },
+    edit: {
+      edit: {
+        title: "ערוך עסקה",
+        subtitle: "עדכן פרטי העסקה"
+      }
+    }
+  },
+
+  // Forms
+  form: {
+    addTransaction: "הוסף עסקה",
+    cancel: "בטל",
+    create: "צור עסקה",
+    save: "שמור שינויים",
+    update: "עדכן עסקה"
+  },
+
+  // Date picker
+  datePicker: {
+    today: "היום",
+    yesterday: "אתמול", 
+    thisWeek: "השבוע",
+    lastWeek: "השבוע שעבר",
+    thisMonth: "החודש",
+    lastMonth: "החודש שעבר"
+  },
+
+  // Notes suggestions
+  notes: {
+    suggestions: {
+      receipt: "יש קבלה",
+      business: "הוצאה עסקית",
+      personal: "הוצאה אישית",
+      gift: "מתנה",
+      emergency: "חירום"
+    }
   }
 }; 

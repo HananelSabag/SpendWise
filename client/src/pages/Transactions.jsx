@@ -122,14 +122,30 @@ const Transactions = () => {
     isLoading: actionsLoading
   } = useTransactionActions();
 
-  // ✅ Derived data
-  const transactions = transactionsData?.transactions || [];
-  const summary = transactionsData?.summary || {
-    totalIncome: 0,
-    totalExpenses: 0,
-    netAmount: 0,
-    count: 0
-  };
+  // ✅ Derived data with better error handling
+  const transactions = React.useMemo(() => {
+    if (!transactionsData) return [];
+    
+    // Handle different response formats
+    if (Array.isArray(transactionsData)) return transactionsData;
+    if (transactionsData.transactions && Array.isArray(transactionsData.transactions)) {
+      return transactionsData.transactions;
+    }
+    if (transactionsData.data?.transactions && Array.isArray(transactionsData.data.transactions)) {
+      return transactionsData.data.transactions;
+    }
+    
+    return [];
+  }, [transactionsData]);
+
+  const summary = React.useMemo(() => {
+    return transactionsData?.summary || transactionsData?.data?.summary || {
+      totalIncome: 0,
+      totalExpenses: 0,
+      netAmount: 0,
+      count: transactions.length
+    };
+  }, [transactionsData, transactions.length]);
 
   // ✅ Handle transaction success (refresh data)
   const handleTransactionSuccess = useCallback((transaction) => {

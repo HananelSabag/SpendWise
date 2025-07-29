@@ -225,7 +225,7 @@ const transactionController = {
             COUNT(*) as monthly_transactions
           FROM transactions 
           WHERE user_id = $1 
-            AND created_at >= NOW() - INTERVAL '${months} months'
+            AND created_at >= NOW() - INTERVAL '` + months + ` months'
           GROUP BY DATE_TRUNC('month', created_at)
           ORDER BY month DESC
         ),
@@ -240,7 +240,7 @@ const transactionController = {
           LEFT JOIN categories c ON t.category_id = c.id
           WHERE t.user_id = $1 
             AND t.type = 'expense'
-            AND t.created_at >= NOW() - INTERVAL '${months} months'
+            AND t.created_at >= NOW() - INTERVAL '` + months + ` months'
           GROUP BY c.id, c.name, c.icon
           ORDER BY total_amount DESC
           LIMIT 10
@@ -255,7 +255,7 @@ const transactionController = {
               MIN(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as min_expense
             FROM transactions 
             WHERE user_id = $1 AND type = 'expense'
-              AND created_at >= NOW() - INTERVAL '${months} months'
+              AND created_at >= NOW() - INTERVAL '` + months + ` months'
           ) as expense_stats
       `;
 

@@ -7,7 +7,7 @@
 export default {
   // Basic translations
   title: 'לוח בקרה',
-  overview: 'סקירה כללית',
+  overview: 'סקירה כללית', // ✅ FIXED: Keep as simple string (used by Dashboard.jsx:269)
   analytics: 'אנליטיקה',
   goals: 'יעדים', 
   insights: 'תובנות',
@@ -58,6 +58,40 @@ export default {
       selectCategory: 'בחר קטגוריה'
     }
   },
+
+  // ✅ ADDED: Quick Action Buttons (Hebrew)
+  actions: {
+    quickExpense: 'הוצאה מהירה',
+    quickExpenseDesc: 'הוסף הוצאה מיידית',
+    quickIncome: 'הכנסה מהירה',
+    quickIncomeDesc: 'הוסף הכנסה מיידית',
+    addTransaction: 'הוסף תנועה',
+    addTransactionDesc: 'צור תנועה חדשה',
+    viewAnalytics: 'צפה באנליטיקה',
+    viewAnalyticsDesc: 'ראה תובנות פיננסיות',
+    spendingBreakdown: 'פירוט הוצאות',
+    spendingBreakdownDesc: 'ניתוח קטגוריות',
+    setGoal: 'קבע יעד',
+    setGoalDesc: 'צור יעד פיננסי',
+    budgetPlanner: 'מתכנן תקציב',
+    budgetPlannerDesc: 'תכנן את התקציב שלך',
+    currencyConverter: 'המרת מטבע',
+    currencyConverterDesc: 'המר מטבעות',
+    schedulePayment: 'תזמן תשלום',
+    schedulePaymentDesc: 'הגדר תשלום חוזר',
+    popular: 'פופולרי',
+    lastUsed: 'שימוש אחרון {{time}}',
+    executed: '{{action}} בוצע בהצלחה',
+    currencyConverterOpening: 'פותח המרת מטבע...'
+  },
+
+  // ✅ ADDED: Notification messages (Hebrew)
+  notifications: {
+    quickExpenseCreated: 'הוצאה מהירה נוספה בהצלחה!',
+    quickExpenseFailed: 'נכשל בהוספת הוצאה מהירה',
+    quickIncomeCreated: 'הכנסה מהירה נוספה בהצלחה!',
+    quickIncomeFailed: 'נכשל בהוספת הכנסה מהירה'
+  },
   
   // Recent Transactions
   recentTransactions: {
@@ -106,8 +140,8 @@ export default {
     night: 'לילה טוב'
   },
 
-  // Overview section expected by Dashboard components
-  overview: {
+  // ✅ FIXED: Renamed from 'overview' to 'overviewSection' to avoid conflict
+  overviewSection: {
     quickActions: {
       title: 'פעולות מהירות',
       security: 'אבטחה',
