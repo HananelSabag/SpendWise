@@ -16,6 +16,11 @@ export default {
   
   // Admin navigation
   adminDashboard: 'Admin Dashboard',
+  userManagement: 'User Management',
+  systemStats: 'System Statistics',
+  systemSettings: 'System Settings',
+  activityLog: 'Activity Log',
+  administration: 'Administration',
   
   // User menu
   profileDesc: 'Manage your account settings and preferences',

@@ -14,7 +14,9 @@ import { DollarSign, Shield } from 'lucide-react';
 import { 
   useAuth, 
   useTranslation, 
-  useTheme
+  useTheme,
+  useIsAdmin,
+  useIsSuperAdmin
 } from '../../stores';
 
 // ✅ Import extracted components
@@ -37,6 +39,8 @@ const Header = () => {
   const { user, isAuthenticated } = useAuth();
   const { t, isRTL } = useTranslation();
   const { isDark } = useTheme();
+  const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsSuperAdmin();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,9 +110,10 @@ const Header = () => {
               {[
                 { name: t('nav.dashboard'), href: '/', current: location.pathname === '/' },
                 { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' },
+                { name: t('nav.analytics'), href: '/analytics', current: location.pathname === '/analytics' },
                 { name: t('nav.profile'), href: '/profile', current: location.pathname === '/profile' },
                 // ✅ Admin Dashboard - Only show for admin/super admin users
-                ...(user?.isAdmin || user?.isSuperAdmin || ['admin', 'super_admin'].includes(user?.role)
+                ...(isAdmin || isSuperAdmin
                   ? [{ name: t('nav.adminDashboard'), href: '/admin', current: location.pathname.startsWith('/admin') }] 
                   : [])
               ].map((item) => (

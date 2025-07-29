@@ -13,32 +13,28 @@ import {
   Download, Users, BarChart3, HelpCircle
 } from 'lucide-react';
 
-import { useAuth, useAuthStore, useTranslation, useNotifications } from '../../stores';
+// ✅ Import Zustand stores and hooks
+import { 
+  useAuth, 
+  useTranslation,
+  useNotifications,
+  useIsAdmin,
+  useIsSuperAdmin
+} from '../../stores';
 import { Avatar, Button } from '../ui';
 import { cn } from '../../utils/helpers';
 
 const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
-  const { actions } = useAuthStore();
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { addNotification } = useNotifications();
+  const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsSuperAdmin();
+  
   const navigate = useNavigate();
-
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const dropdownRef = useRef(null);
 
-  // ✅ CRITICAL DEBUG: Check if avatar is missing and refresh if needed
-  useEffect(() => {
-    if (user && !user.avatar && !user.profile_picture_url) {
-      console.log('🔍 Avatar missing, refreshing user profile...');
-      actions.getProfile().then(result => {
-        console.log('🔍 Profile refresh result:', result);
-      });
-    }
-  }, [user, actions]);
-
-  // ✅ User menu items
+  // ✅ Main user menu items
   const userMenuItems = [
     {
       name: t('nav.profile'),
@@ -61,7 +57,7 @@ const UserMenu = ({ className = '' }) => {
   ];
 
   // ✅ Admin menu items (only for admin users)
-  const adminMenuItems = user?.isAdmin ? [
+  const adminMenuItems = (isAdmin || isSuperAdmin) ? [
     {
       name: t('nav.admin'),
       href: '/admin',
@@ -83,9 +79,16 @@ const UserMenu = ({ className = '' }) => {
     {
       name: t('nav.activityLog'),
       href: '/admin/activity',
-      icon: Download, // Changed from Activity to Download for consistency
+      icon: Download,
       description: 'Activity Log'
-    }
+    },
+    // ✅ System Settings - Only for super admin
+    ...(isSuperAdmin ? [{
+      name: t('nav.systemSettings'),
+      href: '/admin/settings',
+      icon: Settings,
+      description: 'System Settings'
+    }] : [])
   ] : [];
 
   // ✅ Handle navigation

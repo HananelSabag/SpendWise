@@ -30,7 +30,9 @@ import {
 // ✅ Import Zustand stores
 import { 
   useAuth, 
-  useTranslation
+  useTranslation,
+  useIsAdmin,
+  useIsSuperAdmin
 } from '../../stores';
 
 import { cn } from '../../utils/helpers';
@@ -47,6 +49,8 @@ const MobileNavigation = ({
 }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const { t, isRTL } = useTranslation();
+  const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsSuperAdmin();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,6 +70,12 @@ const MobileNavigation = ({
       current: location.pathname === '/transactions'
     },
     {
+      name: t('nav.analytics'),
+      href: '/analytics',
+      icon: BarChart3,
+      current: location.pathname === '/analytics'
+    },
+    {
       name: t('nav.profile'),
       href: '/profile',
       icon: User,
@@ -73,8 +83,8 @@ const MobileNavigation = ({
     }
   ];
 
-  // ✅ Admin navigation (if user is admin)
-  const adminItems = user?.isAdmin ? [
+  // ✅ Admin navigation (if user is admin or super admin)
+  const adminItems = (isAdmin || isSuperAdmin) ? [
     {
       name: t('nav.adminDashboard'),
       href: '/admin',
@@ -88,11 +98,24 @@ const MobileNavigation = ({
       current: location.pathname === '/admin/users'
     },
     {
-      name: t('nav.analytics'),
-      href: '/admin/analytics',
+      name: t('nav.systemStats'),
+      href: '/admin/stats',
       icon: BarChart3,
-      current: location.pathname === '/admin/analytics'
-    }
+      current: location.pathname === '/admin/stats'
+    },
+    {
+      name: t('nav.activityLog'),
+      href: '/admin/activity',
+      icon: Activity,
+      current: location.pathname === '/admin/activity'
+    },
+    // ✅ System Settings - Only for super admin
+    ...(isSuperAdmin ? [{
+      name: t('nav.systemSettings'),
+      href: '/admin/settings',
+      icon: Settings,
+      current: location.pathname === '/admin/settings'
+    }] : [])
   ] : [];
 
   // ✅ Quick actions (mobile panels)

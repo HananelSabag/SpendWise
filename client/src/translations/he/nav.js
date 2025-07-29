@@ -16,6 +16,11 @@ export default {
   
   // ניווט מנהל
   adminDashboard: 'לוח בקרה מנהל',
+  userManagement: 'ניהול משתמשים',
+  systemStats: 'סטטיסטיקות מערכת',
+  systemSettings: 'הגדרות מערכת',
+  activityLog: 'יומן פעילות',
+  administration: 'ניהול',
   
   // תפריט משתמש
   profileDesc: 'נהל את הגדרות החשבון וההעדפות שלך',
