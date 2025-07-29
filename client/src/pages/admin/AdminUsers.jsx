@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Search, Filter, MoreVertical, UserX, UserCheck, 
   Shield, Crown, User, Calendar, Mail, Phone, Ban, Trash2,
-  Eye, Edit, CheckCircle, XCircle, AlertTriangle
+  Eye, Edit, CheckCircle, XCircle, AlertTriangle, Users
 } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores and API
@@ -117,7 +117,23 @@ const AdminUsers = () => {
 
   // Filtered users
   const users = usersData?.data?.users || [];
-  const totalUsers = usersData?.data?.total || 0;
+  const totalUsers = usersData?.data?.total || usersData?.data?.summary?.total_users || 0;
+
+  // Safe data access with fallbacks
+  const safeUsers = users.map(user => ({
+    id: user.id,
+    email: user.email || 'Unknown',
+    username: user.username || 'Unknown',
+    first_name: user.first_name || user.firstName || '',
+    last_name: user.last_name || user.lastName || '',
+    role: user.role || 'user',
+    status: user.status || 'active',
+    created_at: user.created_at || user.createdAt || new Date().toISOString(),
+    email_verified: user.email_verified || user.emailVerified || false,
+    avatar: user.avatar || user.profilePicture || null,
+    total_transactions: user.total_transactions || 0,
+    total_amount: user.total_amount || 0
+  }));
 
   // User action handlers
   const handleBlockUser = (userId) => {
@@ -282,7 +298,7 @@ const AdminUsers = () => {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   <AnimatePresence>
-                    {users.map((user) => (
+                    {safeUsers.length > 0 ? safeUsers.map((user) => (
                       <motion.tr
                         key={user.id}
                         initial={{ opacity: 0 }}
@@ -295,13 +311,16 @@ const AdminUsers = () => {
                             <div className="flex-shrink-0 h-10 w-10">
                               <img 
                                 className="h-10 w-10 rounded-full" 
-                                src={user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.firstName + ' ' + user.lastName)}&background=3B82F6&color=fff`}
-                                alt={user.firstName + ' ' + user.lastName}
+                                src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`}
+                                alt={(user.first_name || '') + ' ' + (user.last_name || '')}
+                                onError={(e) => {
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`;
+                                }}
                               />
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {user.firstName} {user.lastName}
+                                {user.first_name || user.username || 'Unknown'} {user.last_name || ''}
                               </div>
                               <div className="text-sm text-gray-500 dark:text-gray-400">
                                 {user.email}
@@ -310,13 +329,13 @@ const AdminUsers = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(user?.role || 'user')}
+                          {getRoleBadge(user.role)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(user.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {new Date(user.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
@@ -356,10 +375,11 @@ const AdminUsers = () => {
                             {isSuperAdmin && user.id !== currentUser?.id && (
                               <Button
                                 size="sm"
-                                variant="destructive"
+                                variant="outline"
                                 onClick={() => handleDeleteUser(user.id)}
                                 disabled={actionLoading === user.id}
                                 loading={actionLoading === user.id}
+                                className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -367,12 +387,26 @@ const AdminUsers = () => {
                           </div>
                         </td>
                       </motion.tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-12 text-center">
+                          <div className="text-gray-500 dark:text-gray-400">
+                            <Users className="mx-auto h-12 w-12 mb-4" />
+                            <h3 className="text-lg font-medium mb-2">
+                              {t('users.noUsers', { fallback: 'No users found' })}
+                            </h3>
+                            <p className="text-sm">
+                              {t('users.noUsersDesc', { fallback: 'No users match your search criteria' })}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </AnimatePresence>
                 </tbody>
               </table>
               
-              {users.length === 0 && (
+              {safeUsers.length === 0 && (
                 <div className="text-center py-12">
                   <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -401,12 +435,12 @@ const AdminUsers = () => {
               <div className="flex items-center space-x-4">
                 <img 
                   className="h-16 w-16 rounded-full" 
-                  src={selectedUser.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.firstName + ' ' + selectedUser.lastName)}&background=3B82F6&color=fff`}
-                  alt={selectedUser.firstName + ' ' + selectedUser.lastName}
+                  src={selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.first_name + ' ' + selectedUser.last_name)}&background=3B82F6&color=fff`}
+                  alt={selectedUser.first_name + ' ' + selectedUser.last_name}
                 />
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    {selectedUser.firstName} {selectedUser.lastName}
+                    {selectedUser.first_name} {selectedUser.last_name}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {selectedUser.email}
@@ -424,7 +458,7 @@ const AdminUsers = () => {
                     {t('fields.joinDate', { fallback: 'Join Date' })}
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {new Date(selectedUser.createdAt).toLocaleDateString()}
+                    {new Date(selectedUser.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
@@ -440,7 +474,7 @@ const AdminUsers = () => {
                     {t('fields.transactionCount', { fallback: 'Transactions' })}
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedUser.transactionCount || 0}
+                    {selectedUser.total_transactions || 0}
                   </p>
                 </div>
                 <div>
@@ -448,7 +482,7 @@ const AdminUsers = () => {
                     {t('fields.totalSpent', { fallback: 'Total Spent' })}
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    ${selectedUser.totalSpent || '0.00'}
+                    ${selectedUser.total_amount || '0.00'}
                   </p>
                 </div>
               </div>

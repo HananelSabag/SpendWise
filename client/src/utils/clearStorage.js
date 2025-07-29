@@ -158,8 +158,38 @@ export const clearAllStorage = () => {
   }
 };
 
+/**
+ * 🌐 Clear translation cache
+ * Useful for fixing translation loading issues
+ */
+export const clearTranslationCache = () => {
+  try {
+    // Clear any translation-related localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('translation') || key.includes('i18n') || key.includes('language'))) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    console.log('🌐 Translation cache cleared:', keysToRemove);
+    return { cleared: keysToRemove.length, keys: keysToRemove };
+  } catch (error) {
+    console.error('❌ Failed to clear translation cache:', error);
+    return { error: error.message };
+  }
+};
+
 // Make available globally for console debugging
 if (typeof window !== 'undefined') {
   window.clearSpendWiseStorage = clearAllStorage;
   console.log('💡 Use clearSpendWiseStorage() in console to manually clear all storage');
+} 
+
+// Make it available globally for debugging
+if (typeof window !== 'undefined') {
+  window.clearTranslationCache = clearTranslationCache;
 } 

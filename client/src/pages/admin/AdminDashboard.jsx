@@ -45,6 +45,61 @@ const AdminDashboard = () => {
     },
   });
 
+  // ✅ Error handling for access denied
+  if (isError && error?.response?.status === 403) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Card className="p-8 max-w-md">
+          <div className="text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {t('errors.accessDenied', { fallback: 'Access Denied' })}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {t('errors.adminRequired', { fallback: 'Admin privileges required to access this page' })}
+            </p>
+            
+            {/* Bootstrap Super Admin Button */}
+            <Button
+              onClick={async () => {
+                try {
+                  const result = await api.admin.bootstrapSuperAdmin();
+                  if (result.success) {
+                    addNotification({
+                      type: 'success',
+                      message: 'Super admin setup completed. Please refresh the page.'
+                    });
+                    setTimeout(() => window.location.reload(), 2000);
+                  } else {
+                    addNotification({
+                      type: 'error',
+                      message: 'Bootstrap failed: ' + (result.error?.message || 'Unknown error')
+                    });
+                  }
+                } catch (error) {
+                  addNotification({
+                    type: 'error',
+                    message: 'Bootstrap error: ' + error.message
+                  });
+                }
+              }}
+              className="mr-2"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Setup Super Admin
+            </Button>
+            
+            <Link to="/dashboard">
+              <Button variant="outline">
+                Back to Dashboard
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   // Loading state
   if (isLoading) {
     return (

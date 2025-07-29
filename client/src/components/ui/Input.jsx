@@ -176,22 +176,8 @@ const Input = forwardRef(({
                 <AlertCircle className="w-5 h-5 text-red-500" />
               )}
 
-              {/* Right icon */}
-              {showRightIcon && !isPassword && (
-                <div>
-                  {React.isValidElement(icon) 
-                    ? React.cloneElement(icon, {
-                        className: cn('w-5 h-5 text-gray-400', icon.props.className)
-                      })
-                    : typeof icon === 'function' 
-                      ? React.createElement(icon, { className: 'w-5 h-5 text-gray-400' })
-                      : icon
-                  }
-                </div>
-              )}
-
               {/* End icon */}
-              {endIcon && (
+              {endIcon && !isPassword && (
                 <div>
                   {React.isValidElement(endIcon) 
                     ? React.cloneElement(endIcon, {

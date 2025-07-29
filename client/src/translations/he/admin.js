@@ -8,7 +8,7 @@ export default {
   dashboard: {
     title: 'לוח בקרה מנהל',
     subtitle: 'סקירת מערכת וניהול',
-    welcome: 'ברוך הבא, מנהל',
+    welcome: 'ברוך הבא, {{name}}!',
   },
 
   // Stats
@@ -30,6 +30,9 @@ export default {
     systemSettingsDesc: 'הגדרת פרמטרי מערכת',
     activityLog: 'יומן פעילות',
     activityLogDesc: 'צפייה בהיסטוריית פעילות מנהל',
+    userBlocked: 'המשתמש נחסם בהצלחה',
+    userUnblocked: 'חסימת המשתמש בוטלה בהצלחה',
+    userDeleted: 'המשתמש נמחק בהצלחה',
   },
 
   // Users Management
@@ -63,6 +66,19 @@ export default {
     superAdmin: 'מנהל על',
   },
 
+  // Confirmations
+  confirmations: {
+    deleteUser: 'האם אתה בטוח שברצונך למחוק את המשתמש?',
+  },
+
+  // Status
+  status: {
+    active: 'פעיל',
+    blocked: 'חסום', 
+    pending: 'ממתין',
+    inactive: 'לא פעיל',
+  },
+
   // System
   system: {
     status: 'סטטוס',
@@ -79,5 +95,12 @@ export default {
     loading: 'טוען...',
     error: 'שגיאה',
     success: 'הצלחה',
+  },
+
+  // Errors
+  errors: {
+    statsLoadFailed: 'טעינת הסטטיסטיקות נכשלה',
+    usersLoadFailed: 'טעינת המשתמשים נכשלה',
+    actionFailed: 'הפעולה נכשלה',
   },
 }; 

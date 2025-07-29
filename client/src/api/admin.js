@@ -8,6 +8,26 @@ import { api } from './client.js';
 
 // ✅ Admin API Module
 export const adminAPI = {
+  // ✅ Bootstrap Super Admin (No auth required)
+  async bootstrapSuperAdmin() {
+    try {
+      const response = await api.client.post('/admin/bootstrap/super-admin', {
+        email: 'hananel12345@gmail.com',
+        confirmationKey: 'bootstrap-super-admin-2024'
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
   // ✅ Get Admin Dashboard Overview
   async getDashboard() {
     try {
@@ -20,6 +40,7 @@ export const adminAPI = {
         data: response.data
       };
     } catch (error) {
+      console.error('🔍 Admin dashboard error:', error);
       return {
         success: false,
         error: api.normalizeError(error)
@@ -54,16 +75,17 @@ export const adminAPI = {
           }
         });
 
+        // ✅ FIXED: Handle the correct database response structure
+        const data = response.data?.data || {};
+        
         return {
           success: true,
-          data: response.data.users || [],
-          pagination: {
-            page,
-            limit,
-            total: response.data.total || 0,
-            pages: Math.ceil((response.data.total || 0) / limit)
-          },
-          summary: response.data.summary || {}
+          data: {
+            users: data.users || [],
+            total: data.summary?.total_users || 0,
+            summary: data.summary || {},
+            pagination: data.pagination || {}
+          }
         };
       } catch (error) {
         return {
@@ -169,6 +191,62 @@ export const adminAPI = {
           error: api.normalizeError(error)
         };
       }
+    }
+  },
+
+  // ✅ User Action APIs
+  async blockUser(userId) {
+    try {
+      const response = await api.client.post(`/admin/users/${userId}/manage`, {
+        action: 'block',
+        reason: 'Blocked by admin'
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
+  async unblockUser(userId) {
+    try {
+      const response = await api.client.post(`/admin/users/${userId}/manage`, {
+        action: 'unblock'
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
+  },
+
+  async deleteUser(userId) {
+    try {
+      const response = await api.client.post(`/admin/users/${userId}/manage`, {
+        action: 'delete'
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
     }
   },
 

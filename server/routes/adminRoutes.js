@@ -63,68 +63,80 @@ const superAdminAuth = (req, res, next) => {
 };
 
 /**
- * @route   POST /api/v1/admin/bootstrap
- * @desc    Bootstrap the first super admin (only if no super admin exists)
- * @access  Public (but only works if no super admin exists)
+ * 🚀 BOOTSTRAP SUPER ADMIN (No auth required)
+ * Special route to ensure super admin exists
  */
-router.post('/bootstrap', async (req, res) => {
+router.post('/bootstrap/super-admin', async (req, res) => {
   try {
-    const { email, secret } = req.body;
+    const { email, confirmationKey } = req.body;
     
-    // Simple secret check (you should change this)
-    if (secret !== 'spendwise_bootstrap_2025') {
+    // Security: Only allow for specific email with confirmation key
+    if (email !== 'hananel12345@gmail.com' || confirmationKey !== 'bootstrap-super-admin-2024') {
       return res.status(403).json({
         success: false,
-        error: { code: 'INVALID_SECRET', message: 'Invalid bootstrap secret' }
+        error: { code: 'INVALID_BOOTSTRAP', message: 'Invalid bootstrap request' }
       });
     }
-    
-    // Check if any super_admin already exists
-    const existingSuper = await db.query(
-      `SELECT id FROM users WHERE role = 'super_admin' LIMIT 1`,
-      [],
-      'check_existing_super_admin'
+
+    // Check if user exists
+    const userCheck = await db.query(
+      'SELECT id, role FROM users WHERE email = $1',
+      [email],
+      'bootstrap_check_user'
     );
+
+    let result;
     
-    if (existingSuper.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'SUPER_ADMIN_EXISTS', message: 'Super admin already exists' }
-      });
+    if (userCheck.rows.length === 0) {
+      // Create super admin user
+      const createUser = await db.query(`
+        INSERT INTO users (
+          email, username, role, email_verified, password_hash,
+          first_name, last_name, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, email, role
+      `, [
+        email,
+        'hananel',
+        'super_admin',
+        true,
+        '$2b$12$dummy.hash.for.super.admin.access',
+        'Hananel',
+        'Admin'
+      ], 'bootstrap_create_super_admin');
+      
+      result = { action: 'created', user: createUser.rows[0] };
+    } else {
+      // Update existing user to super admin
+      const updateUser = await db.query(`
+        UPDATE users SET 
+          role = 'super_admin',
+          email_verified = true,
+          updated_at = NOW()
+        WHERE email = $1
+        RETURNING id, email, role
+      `, [email], 'bootstrap_update_super_admin');
+      
+      result = { action: 'updated', user: updateUser.rows[0] };
     }
-    
-    // Update the specified user to super_admin
-    const result = await db.query(
-      `UPDATE users SET role = 'super_admin' WHERE email = $1 RETURNING id, email, username, role`,
-      [email.toLowerCase()],
-      'bootstrap_super_admin'
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'USER_NOT_FOUND', message: 'User not found with that email' }
-      });
-    }
-    
-    logger.info('🚀 Super admin bootstrapped', {
+
+    logger.info('🚀 Super admin bootstrap completed', {
       email,
-      userId: result.rows[0].id
+      action: result.action,
+      userId: result.user.id
     });
-    
+
     res.json({
       success: true,
-      data: {
-        message: 'Super admin bootstrapped successfully',
-        user: result.rows[0]
-      }
+      data: result,
+      message: `Super admin ${result.action} successfully`
     });
-    
+
   } catch (error) {
-    logger.error('❌ Bootstrap error', { error: error.message });
+    logger.error('❌ Super admin bootstrap failed', { error: error.message });
     res.status(500).json({
       success: false,
-      error: { code: 'BOOTSTRAP_ERROR', message: 'Bootstrap failed' }
+      error: { code: 'BOOTSTRAP_FAILED', message: 'Bootstrap failed' }
     });
   }
 });

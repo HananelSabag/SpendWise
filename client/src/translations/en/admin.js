@@ -8,7 +8,7 @@ export default {
   dashboard: {
     title: 'Admin Dashboard',
     subtitle: 'System Overview & Management',
-    welcome: 'Welcome, Administrator',
+    welcome: 'Welcome back, {{name}}!',
   },
 
   // Stats
@@ -30,6 +30,9 @@ export default {
     systemSettingsDesc: 'Configure system parameters',
     activityLog: 'Activity Log',
     activityLogDesc: 'View admin activity history',
+    userBlocked: 'User blocked successfully',
+    userUnblocked: 'User unblocked successfully',
+    userDeleted: 'User deleted successfully',
   },
 
   // Users Management
@@ -79,5 +82,25 @@ export default {
     loading: 'Loading...',
     error: 'Error',
     success: 'Success',
+  },
+
+  // Errors
+  errors: {
+    statsLoadFailed: 'Failed to load admin statistics',
+    usersLoadFailed: 'Failed to load users',
+    actionFailed: 'Action failed',
+  },
+
+  // Confirmations
+  confirmations: {
+    deleteUser: 'Are you sure you want to delete this user?',
+  },
+
+  // Status
+  status: {
+    active: 'Active',
+    blocked: 'Blocked',
+    pending: 'Pending',
+    inactive: 'Inactive',
   },
 }; 
