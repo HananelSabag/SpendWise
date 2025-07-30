@@ -67,6 +67,17 @@ export const api = {
         });
         return { success: true, data: response.data };
       } catch (error) {
+        // ✅ ENHANCED: Handle blob response errors properly
+        if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+          // Server returned JSON error in blob format
+          const text = await error.response.data.text();
+          try {
+            const jsonError = JSON.parse(text);
+            return { success: false, error: { message: jsonError.error?.message || jsonError.message || 'PDF export failed' } };
+          } catch {
+            return { success: false, error: { message: 'PDF export failed' } };
+          }
+        }
         return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
       }
     },

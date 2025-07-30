@@ -28,6 +28,8 @@ const ExportModal = ({ isOpen, onClose }) => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
+      console.log(`🚀 Starting ${selectedFormat.toUpperCase()} export for user:`, user?.username);
+      
       // ✅ FIXED: Use correct API methods that align with server endpoints
       let response;
       if (selectedFormat === 'csv') {
@@ -37,6 +39,8 @@ const ExportModal = ({ isOpen, onClose }) => {
       } else if (selectedFormat === 'pdf') {
         response = await api.export.exportAsPDF();
       }
+      
+      console.log(`📊 Export response:`, { success: response.success, hasData: !!response.data, error: response.error });
       
       if (!response.success) {
         throw new Error(response.error?.message || 'Export failed');

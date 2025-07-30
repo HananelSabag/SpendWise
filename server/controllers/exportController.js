@@ -279,6 +279,18 @@ const exportAsPDF = asyncHandler(async (req, res) => {
     
     const exportData = await User.getExportData(userId);
     
+    // ✅ ENHANCED: Validate export data before PDF generation
+    if (!exportData || typeof exportData !== 'object') {
+      logger.error('📄 PDF export failed - invalid export data', { userId, exportData: typeof exportData });
+      return res.status(500).json({
+        error: {
+          code: 'INVALID_EXPORT_DATA',
+          message: 'Could not retrieve user data for export',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+    
     if (!exportData || !exportData.transactions || exportData.transactions.length === 0) {
       logger.warn('📄 PDF export failed - no data', { userId });
       return res.status(404).json({
@@ -416,7 +428,14 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => {
         const pdfBuffer = Buffer.concat(buffers);
+        logger.info('📄 PDF generation completed', { 
+          bufferSize: pdfBuffer.length 
+        });
         resolve(pdfBuffer);
+      });
+      doc.on('error', (err) => {
+        logger.error('📄 PDF generation error', { error: err.message });
+        reject(err);
       });
       
       // ✅ BEAUTIFUL HEADER SECTION
@@ -611,7 +630,12 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
     } catch (error) {
       logger.error('📄 PDF generation failed', { 
         error: error.message, 
-        stack: error.stack 
+        stack: error.stack,
+        exportDataValid: !!exportData,
+        hasTransactions: exportData?.transactions?.length || 0,
+        hasMonthlySummary: exportData?.monthly_summary?.length || 0,
+        hasUser: !!exportData?.user,
+        userCurrency: exportData?.user?.currency_preference
       });
       reject(error);
     }
