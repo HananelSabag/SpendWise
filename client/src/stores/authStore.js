@@ -388,24 +388,37 @@ export const useAuthStore = create(
             return rolePermissions[role] || rolePermissions.user;
           },
 
-          // ✅ Sync user preferences with other stores
+          // ✅ Sync user preferences with other stores - ENHANCED for persistent preferences
           syncUserPreferences: (user) => {
             if (!user) return;
 
             try {
+              console.log('🔄 Syncing user preferences from database:', {
+                language: user.language_preference,
+                theme: user.theme_preference,
+                currency: user.currency_preference
+              });
+
               // Sync with app store
               const appStore = window.spendWiseStores?.app || (typeof useAppStore !== 'undefined' ? useAppStore.getState() : null);
               if (appStore && appStore.actions) {
-                // Sync currency
-                const userCurrency = user.currency_preference || user.currencyPreference || 'shekel';
-                if (userCurrency !== appStore.currency) {
-                  appStore.actions.setCurrency(userCurrency);
+                // ✅ Sync currency - Use correct defaults and mappings
+                const userCurrency = user.currency_preference || user.currencyPreference || 'ILS';
+                // Handle legacy 'shekel' mapping to 'ILS'
+                const normalizedCurrency = userCurrency === 'shekel' ? 'ILS' : userCurrency;
+                if (normalizedCurrency !== appStore.currency) {
+                  appStore.actions.setCurrency(normalizedCurrency);
+                  console.log('✅ Applied currency preference:', normalizedCurrency);
                 }
 
-                // Sync theme
+                // ✅ Sync theme - Apply immediately to DOM
                 const userTheme = user.theme_preference || user.themePreference || 'system';
                 if (userTheme !== appStore.theme) {
                   appStore.actions.setTheme(userTheme);
+                  console.log('✅ Applied theme preference:', userTheme);
+                  
+                  // Apply theme to DOM immediately
+                  get().actions.applyThemeToDOM(userTheme);
                 }
               }
 
@@ -415,10 +428,31 @@ export const useAuthStore = create(
                 const userLanguage = user.language_preference || user.languagePreference || 'en';
                 if (userLanguage !== translationStore.currentLanguage) {
                   translationStore.actions.setLanguage(userLanguage);
+                  console.log('✅ Applied language preference:', userLanguage);
                 }
               }
+              
+              console.log('✅ User preferences successfully synced from database');
+              
             } catch (error) {
-              console.warn('Failed to sync user preferences:', error);
+              console.warn('❌ Failed to sync user preferences:', error);
+            }
+          },
+
+          // ✅ Apply theme to DOM immediately (helper for preference sync)
+          applyThemeToDOM: (theme) => {
+            try {
+              if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+              } else if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+              } else if (theme === 'system' || theme === 'auto') {
+                // Apply system preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', prefersDark);
+              }
+            } catch (error) {
+              console.warn('Failed to apply theme to DOM:', error);
             }
           },
 
@@ -451,6 +485,39 @@ export const useAuthStore = create(
             set((state) => {
               state.lastActivity = Date.now();
             });
+          },
+
+          // ✅ Setup guest preferences (called on logout and app init for non-authenticated users)
+          setupGuestPreferences: () => {
+            try {
+              // Clear any existing guest preferences
+              const appStore = window.spendWiseStores?.app || (typeof useAppStore !== 'undefined' ? useAppStore.getState() : null);
+              if (appStore && appStore.actions) {
+                appStore.actions.clearGuestPreferences();
+                appStore.actions.initializeGuestPreferences();
+              }
+
+              // Initialize guest language preferences
+              const translationStore = window.spendWiseStores?.translation || (typeof useTranslationStore !== 'undefined' ? useTranslationStore.getState() : null);
+              if (translationStore && translationStore.actions) {
+                translationStore.actions.setLanguage('en'); // Default to English for guests
+              }
+
+              console.log('✅ Guest preferences setup completed');
+            } catch (error) {
+              console.warn('Failed to setup guest preferences:', error);
+            }
+          },
+
+          // ✅ Initialize authentication state (called on app startup)
+          initializeAuth: () => {
+            const { isAuthenticated } = get();
+            
+            if (!isAuthenticated) {
+              // User is not authenticated, setup guest preferences
+              get().actions.setupGuestPreferences();
+            }
+            // If authenticated, preferences will be synced via syncUserPreferences
           },
 
           // Reset auth store

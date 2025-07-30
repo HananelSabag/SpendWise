@@ -169,7 +169,8 @@ export default {
     synchronizing: "מסנכרן נתונים...",
     connecting: "מתחבר...",
     preparing: "מכין...",
-    almostDone: "כמעט סיימנו..."
+    almostDone: "כמעט סיימנו...",
+    signingOut: "מתנתק..."
   },
 
   // ✅ Common Actions

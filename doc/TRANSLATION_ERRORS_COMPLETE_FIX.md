@@ -166,6 +166,90 @@ All these translation missing errors should now be resolved:
 - ✅ Clear structure for adding new translations
 - ✅ Reliable translation key resolution
 
+## Additional Fix: Toast Loading Translation
+
+### 🔍 New Missing Translation Issue
+**Key**: `loading.signingOut` in Hebrew toast translations
+**Error**: Component was looking for "מתנתק..." when user logs out
+**Solution**: Added missing Hebrew translation to match English version
+
+### ✅ Fixed in `client/src/translations/he/toast.js`
+```javascript
+loading: {
+  pleaseWait: "אנא המתינו...",
+  loading: "טוען...",
+  processing: "מעבד את הבקשה שלכם...",
+  saving: "שומר שינויים...",
+  uploading: "מעלה קובץ...",
+  downloading: "מוריד...",
+  synchronizing: "מסנכרן נתונים...",
+  connecting: "מתחבר...",
+  preparing: "מכין...",
+  almostDone: "כמעט סיימנו...",
+  signingOut: "מתנתק..."  // ✅ ADDED: Missing logout loading message
+},
+```
+
+## Additional Fixes: Theme & Currency Issues
+
+### 🎨 Theme Not Working - MAJOR BUG FIXED
+**Issue**: User set light theme in preferences but it wasn't being applied
+**Root Cause**: `updateResolvedTheme()` function was **overwriting** `document.documentElement.className` instead of properly toggling the 'dark' class
+**Solution**: Fixed theme application to use `classList.add/remove` methods
+
+#### ✅ Fixed in `client/src/stores/appStore.js`
+```javascript
+// ❌ BEFORE - Overwrote all classes
+document.documentElement.className = resolvedTheme === 'dark' ? 'dark' : '';
+
+// ✅ AFTER - Properly toggle dark class
+if (resolvedTheme === 'dark') {
+  document.documentElement.classList.add('dark');
+} else {
+  document.documentElement.classList.remove('dark');
+}
+```
+
+### 💰 Currency Mapping Issue Fixed
+**Issue**: User preferences used 'shekel' but app store expected 'ILS' currency codes
+**Solution**: Added currency mapping in setCurrency function to handle user-friendly names
+
+#### ✅ Fixed in `client/src/stores/appStore.js`
+```javascript
+setCurrency: (currencyCode) => {
+  // ✅ FIXED: Map user preference values to currency codes
+  const currencyMapping = {
+    'shekel': 'ILS',
+    'dollar': 'USD',
+    'euro': 'EUR',
+    'pound': 'GBP',
+    'yen': 'JPY'
+  };
+  
+  const mappedCurrency = currencyMapping[currencyCode] || currencyCode;
+  // ... rest of function
+}
+```
+
+#### ✅ Updated Default Currency
+Changed default currency from 'USD' to 'ILS' to match Israeli user expectations
+
+### 🌐 Additional Missing Translations Fixed
+Added missing translations that were causing new console errors:
+- `welcome.goodAfternoon` - English dashboard
+- `refresh`, `loading`, `loadingDashboard` - English dashboard  
+- Enhanced `quickActions` section with missing actions
+
 ## Status: ✅ COMPLETE
 
-All identified translation missing errors have been systematically resolved with proper English and Hebrew translations. The application should now display all text correctly with no console translation errors. 
+All identified issues have been systematically resolved:
+1. ✅ **Translation errors** - Fixed missing keys in both English and Hebrew
+2. ✅ **Theme switching** - Fixed major bug preventing theme changes
+3. ✅ **Currency handling** - Fixed mapping between user preferences and currency codes
+4. ✅ **Toast loading message** - Added missing Hebrew translation
+
+The application should now:
+- Display all text correctly with no console translation errors
+- Properly apply theme changes when user selects light/dark theme
+- Handle shekel currency correctly as the default
+- Show proper Hebrew text during logout process 

@@ -63,6 +63,9 @@ class StoreManager {
       if (authState.user && authState.isAuthenticated) {
         // Sync user preferences after initialization
         authState.actions.syncUserPreferences(authState.user);
+      } else {
+        // Setup guest preferences for non-authenticated users
+        authState.actions.setupGuestPreferences();
       }
       
       this.initialized = true;

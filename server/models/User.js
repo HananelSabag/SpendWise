@@ -83,8 +83,8 @@ class User {
         hashedPassword,
         verificationToken,
         'en',      // ✅ Default language: English
-        'shekel',  // ✅ Default currency: Shekel (as requested)
-        'system'   // ✅ Default theme: System (as requested)
+        'ILS',     // ✅ Default currency: Israeli Shekel (ILS code)
+        'system'   // ✅ Default theme: System (follows OS/browser preference)
       ];
 
       const result = await db.query(query, values);

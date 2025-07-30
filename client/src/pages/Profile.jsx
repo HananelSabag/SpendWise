@@ -57,7 +57,7 @@ const Profile = () => {
   const [preferencesData, setPreferencesData] = useState({
     language_preference: user?.language_preference || 'en',
     theme_preference: user?.theme_preference || 'system',
-    currency_preference: user?.currency_preference || 'shekel'
+    currency_preference: user?.currency_preference || 'ILS'
   });
 
   // ✅ Sync preferences data when user data changes (on login/refresh)
@@ -66,7 +66,7 @@ const Profile = () => {
       setPreferencesData({
         language_preference: user.language_preference || 'en',
         theme_preference: user.theme_preference || 'system',
-        currency_preference: user.currency_preference || 'shekel'
+        currency_preference: user.currency_preference || 'ILS'
       });
     }
   }, [user?.language_preference, user?.theme_preference, user?.currency_preference]);
@@ -480,7 +480,7 @@ const Profile = () => {
               onChange={(e) => setPreferencesData(prev => ({ ...prev, currency_preference: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
-              <option value="shekel">🇮🇱 ₪ Israeli Shekel</option>
+              <option value="ILS">🇮🇱 ₪ Israeli Shekel</option>
               <option value="USD">🇺🇸 USD - US Dollar</option>
               <option value="EUR">🇪🇺 EUR - Euro</option>
               <option value="GBP">🇬🇧 GBP - British Pound</option>

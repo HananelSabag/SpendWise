@@ -18,6 +18,20 @@ export default {
   reports: 'Reports',
   settings: 'Settings',
 
+  // ✅ FIXED: Welcome messages with time-based greetings
+  welcome: {
+    goodMorning: 'Good morning, {{name}}! 🌅',
+    goodAfternoon: 'Good afternoon, {{name}}! ☀️',
+    goodEvening: 'Good evening, {{name}}! 🌙',
+    general: 'Hello, {{name}}! 👋'
+  },
+
+  // ✅ FIXED: Navigation actions
+  refresh: 'Refresh',
+  loading: 'Loading...',
+  loadingDashboard: 'Loading dashboard...',
+  reloadPage: 'Try again',
+
   // ✅ FIXED: Account-related translations
   accounts: {
     main: 'Main Account'
@@ -120,10 +134,26 @@ export default {
   // Quick Actions
   quickActions: {
     title: 'Quick Actions',
+    addExpense: 'Add Expense',
+    addIncome: 'Add Income', 
+    transfer: 'Transfer',
+    viewReports: 'View Reports',
+    categories: 'Categories',
+    amount: 'Amount',
+    description: 'Description',
+    category: 'Category',
+    add: 'Add',
+    cancel: 'Cancel',
+    success: 'Added successfully!',
     addTransaction: 'Add Transaction',
     viewReports: 'View Reports',
     manageCategories: 'Manage Categories',
-    exportData: 'Export Data'
+    exportData: 'Export Data',
+    placeholder: {
+      amount: 'Enter amount...',
+      description: 'Description (optional)',
+      selectCategory: 'Select category'
+    }
   },
 
   // ✅ FIXED: Notification messages

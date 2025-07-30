@@ -40,6 +40,11 @@ const HeaderActions = ({
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
     
+    // ✅ Save guest preferences for non-authenticated users
+    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
+      window.spendWiseStores?.app?.getState?.()?.actions?.saveGuestPreferences?.();
+    }
+    
     addNotification({
       type: 'success',
       message: t('common.themeChanged', { theme: t(`common.${newTheme}Theme`) })
@@ -51,6 +56,19 @@ const HeaderActions = ({
     const newLanguage = currentLanguage === 'en' ? 'he' : 'en';
     setLanguage(newLanguage);
     
+    // ✅ Save guest preferences for non-authenticated users
+    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
+      // For guests, save language preference to sessionStorage
+      try {
+        const guestPrefs = JSON.parse(sessionStorage.getItem('spendwise-guest-preferences') || '{}');
+        guestPrefs.language = newLanguage;
+        guestPrefs.timestamp = Date.now();
+        sessionStorage.setItem('spendwise-guest-preferences', JSON.stringify(guestPrefs));
+      } catch (error) {
+        console.warn('Failed to save guest language preference:', error);
+      }
+    }
+    
     addNotification({
       type: 'success',
       message: t('common.languageChanged')
@@ -59,7 +77,7 @@ const HeaderActions = ({
 
   // ✅ Currency configuration with symbols
   const currencyConfig = {
-    shekel: { symbol: '₪', name: 'Israeli Shekel' },
+    ILS: { symbol: '₪', name: 'Israeli Shekel' },
     USD: { symbol: '$', name: 'US Dollar' },
     EUR: { symbol: '€', name: 'Euro' },
     GBP: { symbol: '£', name: 'British Pound' },
@@ -73,6 +91,11 @@ const HeaderActions = ({
     const nextCurrency = currencies[(currentIndex + 1) % currencies.length];
     
     setCurrency(nextCurrency);
+    
+    // ✅ Save guest preferences for non-authenticated users
+    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
+      window.spendWiseStores?.app?.getState?.()?.actions?.saveGuestPreferences?.();
+    }
     
     addNotification({
       type: 'success',

@@ -90,7 +90,7 @@ export const useAppStore = create(
         },
         
         // ✅ Currency State
-        currency: 'USD',
+        currency: 'ILS', // Default to Israeli Shekel to match user expectations
         currencyPosition: 'before', // before, after
         decimalPlaces: 2,
         thousandSeparator: ',',
@@ -147,9 +147,13 @@ export const useAppStore = create(
               state.currentTheme = resolvedTheme;
             });
             
-            // Update document class
+            // ✅ FIXED: Properly toggle dark class without removing other classes
             if (typeof document !== 'undefined') {
-              document.documentElement.className = resolvedTheme === 'dark' ? 'dark' : '';
+              if (resolvedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
             }
           },
 
@@ -197,10 +201,22 @@ export const useAppStore = create(
 
           // Currency management
           setCurrency: (currencyCode) => {
-            if (!CURRENCIES[currencyCode]) return false;
+            // ✅ FIXED: Map user preference values to currency codes
+            const currencyMapping = {
+              'shekel': 'ILS',
+              'dollar': 'USD',
+              'euro': 'EUR',
+              'pound': 'GBP',
+              'yen': 'JPY'
+            };
+            
+            // Map preference to actual currency code
+            const mappedCurrency = currencyMapping[currencyCode] || currencyCode;
+            
+            if (!CURRENCIES[mappedCurrency]) return false;
             
             set((state) => {
-              state.currency = currencyCode;
+              state.currency = mappedCurrency;
             });
             
             return true;
@@ -247,6 +263,68 @@ export const useAppStore = create(
             }
             
             return formatted;
+          },
+
+          // ✅ Guest preference management (session-only storage)
+          initializeGuestPreferences: () => {
+            try {
+              const guestPrefs = sessionStorage.getItem('spendwise-guest-preferences');
+              if (guestPrefs) {
+                const parsed = JSON.parse(guestPrefs);
+                
+                // Apply guest preferences to stores
+                if (parsed.theme && THEMES[parsed.theme]) {
+                  get().actions.setTheme(parsed.theme);
+                }
+                if (parsed.currency && CURRENCIES[parsed.currency]) {
+                  get().actions.setCurrency(parsed.currency);
+                }
+                
+                console.log('✅ Guest preferences loaded from session:', parsed);
+              } else {
+                // Set default guest preferences
+                get().actions.setGuestDefaults();
+              }
+            } catch (error) {
+              console.warn('Failed to load guest preferences, using defaults:', error);
+              get().actions.setGuestDefaults();
+            }
+          },
+
+          setGuestDefaults: () => {
+            // Apply the same defaults as for new users
+            get().actions.setTheme('system');
+            get().actions.setCurrency('ILS');
+            
+            // Save defaults to session storage
+            get().actions.saveGuestPreferences();
+            
+            console.log('✅ Guest default preferences applied');
+          },
+
+          saveGuestPreferences: () => {
+            try {
+              const { theme, currency } = get();
+              const guestPrefs = {
+                theme,
+                currency,
+                timestamp: Date.now()
+              };
+              
+              sessionStorage.setItem('spendwise-guest-preferences', JSON.stringify(guestPrefs));
+              console.log('✅ Guest preferences saved to session:', guestPrefs);
+            } catch (error) {
+              console.warn('Failed to save guest preferences:', error);
+            }
+          },
+
+          clearGuestPreferences: () => {
+            try {
+              sessionStorage.removeItem('spendwise-guest-preferences');
+              console.log('✅ Guest preferences cleared from session');
+            } catch (error) {
+              console.warn('Failed to clear guest preferences:', error);
+            }
           },
 
           // Date management
@@ -420,7 +498,7 @@ export const useAppStore = create(
                 focusVisible: true,
                 announcements: true
               };
-              state.currency = 'USD';
+              state.currency = 'ILS'; // Default to Israeli Shekel
               state.dateFormat = 'MM/DD/YYYY';
               state.timeFormat = '12h';
               state.performanceMode = 'auto';

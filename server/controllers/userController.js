@@ -354,7 +354,7 @@ const userController = {
           last_name: name?.split(' ').slice(1).join(' ') || '',
           // ✅ Set same default preferences as regular registration
           language_preference: 'en',      // Default language: English
-          currency_preference: 'shekel',  // Default currency: Shekel
+          currency_preference: 'ILS',     // Default currency: Israeli Shekel (ILS code)
           theme_preference: 'system'      // Default theme: System
         });
 
