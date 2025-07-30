@@ -93,11 +93,21 @@ router.get('/verify-email/:token',
 
 /**
  * @route   POST /api/v1/users/logout
- * @desc    Logout user and cleanup session
- * @access  Private
+ * @desc    Logout user and cleanup session (graceful auth handling)
+ * @access  Public (handles auth failures gracefully)
  */
 router.post('/logout',
-  auth,
+  // ✅ Optional auth - don't fail if token is invalid
+  (req, res, next) => {
+    // Try to authenticate, but continue even if it fails
+    auth(req, res, (error) => {
+      if (error) {
+        // Auth failed - continue without user info
+        req.user = null;
+      }
+      next(); // Always continue to logout handler
+    });
+  },
   userController.logout
 );
 

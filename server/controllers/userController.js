@@ -771,45 +771,63 @@ const userController = {
     const start = Date.now();
     
     try {
-      // Get user from auth middleware
+      // Get user from auth middleware (may be null if auth failed)
       const userId = req.user?.id;
       
       if (userId) {
-        // Optional: Update last activity/logout time
-        await User.update(userId, { 
-          last_logout_at: new Date(),
-          last_activity: new Date()
-        });
-        
-        logger.info('✅ User logout successful', {
-          userId,
+        // User was authenticated - update logout time
+        try {
+          await User.update(userId, { 
+            last_logout_at: new Date(),
+            last_activity: new Date()
+          });
+          
+          logger.info('✅ User logout successful (authenticated)', {
+            userId,
+            duration: `${Date.now() - start}ms`
+          });
+        } catch (dbError) {
+          // Database error - log but continue
+          logger.warn('Database update failed during logout', {
+            userId,
+            error: dbError.message
+          });
+        }
+      } else {
+        // No user (auth failed) - still allow logout
+        logger.info('✅ Logout successful (unauthenticated session cleanup)', {
           duration: `${Date.now() - start}ms`
         });
       }
 
-      // Return success - client will handle token cleanup
+      // Always return success - client handles token cleanup regardless
       res.json({
         success: true,
-        message: 'Logged out successfully',
+        message: userId ? 'Logged out successfully' : 'Session cleared successfully',
         metadata: {
           duration: `${Date.now() - start}ms`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          authenticated: !!userId
         }
       });
 
     } catch (error) {
       const duration = Date.now() - start;
-      logger.warn('❌ Logout error (continuing)', {
+      logger.warn('❌ Logout error (returning success anyway)', {
         userId: req.user?.id,
         error: error.message,
         duration: `${duration}ms`
       });
       
-      // Even if server logout fails, return success so client can cleanup
+      // Always return success so client can cleanup
       res.json({
         success: true,
-        message: 'Logged out (server warning)',
-        warning: 'Server logout had issues but client cleanup will proceed'
+        message: 'Session cleared (with server warnings)',
+        warning: 'Server had issues but client cleanup will proceed',
+        metadata: {
+          duration: `${duration}ms`,
+          timestamp: new Date().toISOString()
+        }
       });
     }
   })
