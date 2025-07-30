@@ -565,16 +565,9 @@ class User {
 
       const categoryAnalysisResult = await db.query(categoryAnalysisQuery, [userId]);
 
-      // ✅ FIXED: Get user analytics (fallback since function doesn't exist in production)
-      let analyticsResult = { rows: [{ analytics: null }] };
-      try {
-        const analyticsQuery = `SELECT get_user_analytics($1, 12) as analytics`;
-        analyticsResult = await db.query(analyticsQuery, [userId]);
-      } catch (error) {
-        logger.warn('get_user_analytics function not found, using fallback', { userId, error: error.message });
-        // Fallback: Calculate basic analytics from transactions
-        analyticsResult = { rows: [{ analytics: null }] };
-      }
+      // ✅ FIXED: Skip analytics function entirely since it doesn't exist in production
+      const analyticsResult = { rows: [{ analytics: null }] };
+      logger.info('Using analytics fallback since get_user_analytics function does not exist in production', { userId });
 
       // ✅ Build comprehensive export data (matching controller expectations)
       const exportData = {
