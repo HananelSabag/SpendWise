@@ -335,7 +335,7 @@ const userController = {
 
       if (!user) {
         // ✅ EDGE CASE: New Google user - create with Google OAuth
-        console.log('🆕 Creating new Google OAuth user');
+        logger.info('🆕 Creating new Google OAuth user', { email });
         const username = name || email.split('@')[0];
         const randomPassword = crypto.randomBytes(32).toString('hex');
 
@@ -367,7 +367,8 @@ const userController = {
         const hadGoogleAuth = !!user.google_id;
         const hadRegularAuth = !!user.password_hash;
         
-        console.log('🔍 Existing user Google login:', {
+        logger.info('🔍 Existing user Google login', {
+          email,
           hadGoogleAuth,
           hadRegularAuth,
           authMethod: hadGoogleAuth ? 'google' : hadRegularAuth ? 'regular' : 'unknown'
@@ -383,7 +384,10 @@ const userController = {
           updateData.oauth_provider_id = googleUserId;
           
           if (hadRegularAuth) {
-            console.log('🔗 Linking Google account to existing regular account');
+            logger.info('🔗 Linking Google account to existing regular account', { 
+              email, 
+              userId: user.id 
+            });
           }
         }
         
@@ -756,6 +760,57 @@ const userController = {
         duration: `${duration}ms`
       });
       throw error;
+    }
+  }),
+
+  /**
+   * 🚀 NEW: Logout with token cleanup
+   * @route POST /api/v1/users/logout
+   */
+  logout: asyncHandler(async (req, res) => {
+    const start = Date.now();
+    
+    try {
+      // Get user from auth middleware
+      const userId = req.user?.id;
+      
+      if (userId) {
+        // Optional: Update last activity/logout time
+        await User.update(userId, { 
+          last_logout_at: new Date(),
+          last_activity: new Date()
+        });
+        
+        logger.info('✅ User logout successful', {
+          userId,
+          duration: `${Date.now() - start}ms`
+        });
+      }
+
+      // Return success - client will handle token cleanup
+      res.json({
+        success: true,
+        message: 'Logged out successfully',
+        metadata: {
+          duration: `${Date.now() - start}ms`,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      const duration = Date.now() - start;
+      logger.warn('❌ Logout error (continuing)', {
+        userId: req.user?.id,
+        error: error.message,
+        duration: `${duration}ms`
+      });
+      
+      // Even if server logout fails, return success so client can cleanup
+      res.json({
+        success: true,
+        message: 'Logged out (server warning)',
+        warning: 'Server logout had issues but client cleanup will proceed'
+      });
     }
   })
 };

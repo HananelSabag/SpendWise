@@ -295,45 +295,47 @@ class User {
         throw new Error('Account is deactivated');
       }
 
-      // 🔍 DEBUG: Check Google OAuth condition
-      const isGoogleOAuth = !user.password_hash && user.oauth_provider === 'google';
-      console.log('🔍 DEBUG: Google OAuth check:', {
-        hasNoPasswordHash: !user.password_hash,
-        isGoogleProvider: user.oauth_provider === 'google',
-        finalResult: isGoogleOAuth
+      // 🔍 DEBUG: Check user authentication methods
+      const hasPassword = !!user.password_hash;
+      const isGoogleUser = user.oauth_provider === 'google' || !!user.google_id;
+      
+      console.log('🔍 DEBUG: Authentication methods available:', {
+        hasPassword: hasPassword,
+        isGoogleUser: isGoogleUser,
+        oauthProvider: user.oauth_provider,
+        googleId: user.google_id ? 'EXISTS' : 'NULL'
       });
 
-      // ✅ FIXED: Allow Google OAuth users to set password for hybrid login
-      if (isGoogleOAuth && !password) {
-        throw new Error('This account uses Google sign-in. Please use the Google login button.');
+      // ✅ HYBRID LOGIN SUPPORT: Handle different authentication scenarios
+      if (!password) {
+        // No password provided - suggest appropriate login method
+        if (isGoogleUser && !hasPassword) {
+          throw new Error('This account uses Google sign-in. Please use the Google login button.');
+        } else if (!hasPassword) {
+          throw new Error('Password is required for this account.');
+        } else {
+          throw new Error('Password is required.');
+        }
       }
       
-      // ✅ EDGE CASE HANDLING: Google user trying to login with password
-      if (isGoogleOAuth && password) {
-        if (user.password_hash) {
-          console.log('🔍 Google user with password - allowing hybrid login');
-          // Continue with password authentication - user has both methods
-        } else {
-          // Google user without password - provide helpful message
+      // ✅ PASSWORD LOGIN ATTEMPT: Check if password authentication is possible
+      if (!hasPassword) {
+        if (isGoogleUser) {
+          // Google user without password - provide helpful guidance
           throw new Error(`This account was created with Google sign-in. To use email/password login, please:
 1. Sign in with Google first
 2. Go to Settings → Security → Set Password
 3. Then you can use either login method`);
+        } else {
+          // Regular user without password - account setup issue
+          throw new Error('Password not set for this account. Please reset your password or contact support.');
         }
       }
+      
+      // ✅ HYBRID LOGIN SUCCESS: User has password, allow login regardless of OAuth provider
+      console.log('✅ Password authentication available - proceeding with login');
 
-      // 🔍 DEBUG: Check general password condition
-      const hasNoPassword = !user.password_hash;
-      console.log('🔍 DEBUG: Password check:', {
-        hasPasswordHash: !!user.password_hash,
-        passwordValue: user.password_hash ? 'EXISTS' : 'NULL',
-        hasNoPassword: hasNoPassword
-      });
-
-      // Verify password for local accounts
-      if (hasNoPassword) {
-        throw new Error('Password not set for this account. Please reset your password or contact support.');
-      }
+      // Password validation already handled above - proceed with password verification
 
       // 🔍 DEBUG: About to compare passwords
       console.log('🔍 DEBUG: About to compare passwords:', {

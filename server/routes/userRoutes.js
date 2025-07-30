@@ -92,6 +92,16 @@ router.get('/verify-email/:token',
  */
 
 /**
+ * @route   POST /api/v1/users/logout
+ * @desc    Logout user and cleanup session
+ * @access  Private
+ */
+router.post('/logout',
+  auth,
+  userController.logout
+);
+
+/**
  * @route   GET /api/v1/users/profile
  * @desc    Get user profile (cached for performance)
  * @access  Private
