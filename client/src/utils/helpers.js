@@ -120,6 +120,15 @@ export const dateHelpers = {
     });
   },
   
+  // ✅ ADD: Missing fromNow function (alias for formatDistance)
+  fromNow: (date, locale = 'he') => {
+    const dateLocale = locale === 'he' ? he : enUS;
+    return formatDistance(new Date(date), new Date(), { 
+      addSuffix: true,
+      locale: dateLocale 
+    });
+  },
+  
   normalize: (date) => {
     const d = new Date(date);
     d.setHours(12, 0, 0, 0);

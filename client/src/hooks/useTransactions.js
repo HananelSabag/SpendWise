@@ -697,21 +697,60 @@ export const useTransactions = (options = {}) => {
 
         // ✅ FIXED: Handle API response structure properly
         console.log('🔍 API Response Structure:', response);
+        console.log('🔍 response.success:', response.success);
+        console.log('🔍 response.data:', response.data);
+        console.log('🔍 typeof response.data:', typeof response.data);
         
         // The API returns { success: true, data: response.data }
-        // So we need to access response.data, not response.data.data
-        const rawData = response.success ? response.data : response;
+        // But let's check if it's nested: { success: true, data: { success: true, data: {...} } }
+        let rawData;
+        if (response.success && response.data) {
+          // Check if response.data has its own success/data structure (nested)
+          if (response.data.success && response.data.data) {
+            console.log('🔍 Detected NESTED response structure');
+            rawData = response.data.data; // Double nested
+          } else {
+            console.log('🔍 Using normal response.data structure');
+            rawData = response.data; // Normal
+          }
+        } else {
+          console.log('🔍 Using fallback response structure');
+          rawData = response;
+        }
         
         if (!rawData) {
           console.warn('⚠️ No data received from transactions API');
           return { transactions: [], hasMore: false, total: 0 };
         }
 
+        // ✅ FIXED: Handle server response structure correctly
+        // Server returns: { success: true, data: { transactions: [...], summary: {...}, pagination: {...} } }
+        console.log('🔍 Raw data structure:', rawData);
+        console.log('🔍 rawData.transactions length:', rawData.transactions?.length || 'undefined');
+        
+        let transactionsArray = [];
+        let total = 0;
+        let hasMore = false;
+        
+        if (Array.isArray(rawData)) {
+          // If rawData is directly an array (fallback)
+          transactionsArray = rawData;
+          total = rawData.length;
+        } else if (rawData.transactions && Array.isArray(rawData.transactions)) {
+          // If rawData has transactions property (expected server format)
+          transactionsArray = rawData.transactions;
+          total = rawData.pagination?.total || rawData.summary?.total || rawData.transactions.length;
+          hasMore = rawData.pagination?.hasMore || false;
+        } else {
+          console.warn('⚠️ Unexpected data structure from transactions API:', rawData);
+          transactionsArray = [];
+        }
+
         // Structure the data properly for infinite query
         const data = {
-          transactions: Array.isArray(rawData) ? rawData : (rawData.transactions || []),
-          hasMore: rawData.hasMore || (Array.isArray(rawData) ? rawData.length === pageSize : false),
-          total: rawData.total || (Array.isArray(rawData) ? rawData.length : 0),
+          transactions: transactionsArray,
+          hasMore: hasMore || (transactionsArray.length === pageSize),
+          total: total,
           page: pageParam,
           limit: pageSize
         };

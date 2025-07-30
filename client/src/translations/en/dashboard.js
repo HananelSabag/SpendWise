@@ -18,7 +18,7 @@ export default {
   reports: 'Reports',
   settings: 'Settings',
 
-  // ✅ ADDED: Missing account-related translations
+  // ✅ FIXED: Account-related translations
   accounts: {
     main: 'Main Account'
   },
@@ -27,52 +27,31 @@ export default {
     noTransactions: 'No transactions yet'
   },
 
-  // ✅ ADDED: Common UI translations
+  // ✅ FIXED: Common UI translations
   common: {
-    hide: '🙈 Hide',
-    show: '👁️ Show'
+    hide: 'Hide',
+    show: 'Show',
+    categoryTypes: {
+      food: 'Food & Dining',
+      income: 'Income',
+      transport: 'Transportation',
+      entertainment: 'Entertainment',
+      bills: 'Bills & Utilities'
+    },
+    transactions: {
+      groceries: 'Groceries',
+      salary: 'Salary',
+      fuel: 'Fuel',
+      coffee: 'Coffee',
+      electricity: 'Electricity'
+    }
   },
 
-  // ✅ ADDED: Time periods for balance tabs  
-  timePeriods: {
-    daily: 'Daily',
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    yearly: 'Yearly'
-  },
-
-  // ✅ ADDED: Balance section translations
-  balance: {
-    title: 'Current Balance',
-    income: 'Income',
-    expenses: 'Expenses',
-    net: 'Total',
-    change: 'Change',
-    growth: 'Growth',
-    balancesHidden: 'Balances hidden',
-    balancesShown: 'Balances shown',
-    refreshed: 'Balance refreshed successfully'
-  },
-
-  // ✅ ADDED: Period summary translations
-  periodSummary: {
-    daily: 'Daily financial activity',
-    weekly: 'Week summary',
-    monthly: 'Month overview',
-    yearly: 'Year progress'
-  },
-  
-  // Quick Actions
-  quickActions: {
-    title: 'Quick Actions',
-    addTransaction: 'Add Transaction',
-    viewReports: 'View Reports',
-    manageCategories: 'Manage Categories',
-    exportData: 'Export Data'
-  },
-
-  // ✅ ADDED: Quick Action Buttons
+  // ✅ FIXED: Action translations for TransactionCard and other components
   actions: {
+    edit: 'Edit',
+    delete: 'Delete', 
+    duplicate: 'Duplicate',
     quickExpense: 'Quick Expense',
     quickExpenseDesc: 'Add expense instantly',
     quickIncome: 'Quick Income', 
@@ -97,7 +76,57 @@ export default {
     currencyConverterOpening: 'Opening currency converter...'
   },
 
-  // ✅ ADDED: Notification messages
+  // ✅ FIXED: Category translations
+  category: {
+    uncategorized: 'Uncategorized'
+  },
+
+  // ✅ FIXED: Insights translations
+  insights: {
+    largeTransaction: 'Large Transaction',
+    recurringPattern: 'Recurring Pattern',
+    businessExpense: 'Business Expense'
+  },
+
+  // ✅ FIXED: Time periods for balance tabs  
+  timePeriods: {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly'
+  },
+
+  // ✅ FIXED: Balance section translations
+  balance: {
+    title: 'Current Balance',
+    income: 'Income',
+    expenses: 'Expenses',
+    net: 'Total',
+    change: 'Change',
+    growth: 'Growth',
+    balancesHidden: 'Balances hidden',
+    balancesShown: 'Balances shown',
+    refreshed: 'Balance refreshed successfully'
+  },
+
+  // ✅ FIXED: Period summary translations
+  periodSummary: {
+    daily: 'Daily financial activity',
+    weekly: 'Week summary',
+    monthly: 'Month overview',
+    yearly: 'Year progress'
+  },
+  
+  // Quick Actions
+  quickActions: {
+    title: 'Quick Actions',
+    addTransaction: 'Add Transaction',
+    viewReports: 'View Reports',
+    manageCategories: 'Manage Categories',
+    exportData: 'Export Data'
+  },
+
+  // ✅ FIXED: Notification messages
   notifications: {
     quickExpenseCreated: 'Quick expense added successfully!',
     quickExpenseFailed: 'Failed to add quick expense',
@@ -105,7 +134,7 @@ export default {
     quickIncomeFailed: 'Failed to add quick income'
   },
   
-  // Recent Transactions
+  // ✅ FIXED: Recent Transactions (no duplicates)
   recentTransactions: {
     title: 'Recent Transactions',
     viewAll: 'View All',
@@ -113,7 +142,9 @@ export default {
     noTransactionsDescription: 'Start tracking your finances by adding your first transaction',
     amount: 'Amount',
     category: 'Category',
-    date: 'Date'
+    date: 'Date',
+    lastUpdate: 'Last updated {time}',
+    showing: 'Showing {count} transactions'
   },
   
   // Charts

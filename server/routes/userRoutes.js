@@ -52,6 +52,17 @@ router.post('/auth/google',
 );
 
 /**
+ * 🔄 NEW: Token Refresh
+ * @route   POST /api/v1/users/refresh-token
+ * @desc    Refresh access token using refresh token
+ * @access  Public
+ */
+router.post('/refresh-token',
+  authLimiter,
+  userController.refreshToken
+);
+
+/**
  * @route   POST /api/v1/users/verify-email
  * @desc    Verify email with token (enhanced security)
  * @access  Public

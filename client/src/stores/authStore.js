@@ -9,6 +9,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { authAPI } from '../api';
+import { jwtDecode } from 'jwt-decode';
 
 // ✅ Auth Store
 export const useAuthStore = create(
@@ -79,6 +80,9 @@ export const useAuthStore = create(
                   state.sessionStart = new Date().toISOString();
                 });
 
+                // ✅ FIX: Start token refresh monitoring for regular login
+                get().actions.startTokenRefreshTimer();
+
                 return { success: true, user: userData };
               } else {
                 set((state) => {
@@ -126,6 +130,9 @@ export const useAuthStore = create(
                   state.error = null;
                   state.sessionStart = new Date().toISOString();
                 });
+
+                // ✅ FIX: Start token refresh monitoring for Google login
+                get().actions.startTokenRefreshTimer();
 
                 return { success: true, user: userData };
               } else {
@@ -279,7 +286,7 @@ export const useAuthStore = create(
             }
           },
 
-          // ✅ Enhanced Logout with toast notifications
+          // ✅ Enhanced Logout with toast notifications - RELIABLE VERSION
           logout: async (showToast = true) => {
             try {
               // Show loading toast if needed
@@ -288,7 +295,10 @@ export const useAuthStore = create(
                 loadingToastId = window.authToasts.signingOut();
               }
 
-              // Call logout API
+              // ✅ FIX: Clear timers first to prevent automatic refresh during logout
+              get().actions.clearTokenRefreshTimer();
+
+              // Call logout API (don't let this fail the logout)
               try {
                 await authAPI.logout();
               } catch (error) {
@@ -296,8 +306,9 @@ export const useAuthStore = create(
                 console.warn('Logout API error (continuing with local logout):', error);
               }
 
-              // Clear token
+              // ✅ FIX: Clear ALL tokens and auth data  
               localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
               
               // Reset state
               get().actions.reset();
@@ -320,6 +331,12 @@ export const useAuthStore = create(
               return { success: true };
             } catch (error) {
               console.error('Logout failed:', error);
+              
+              // ✅ FIX: Force clear everything even if logout API fails
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              get().actions.clearTokenRefreshTimer();
+              get().actions.reset();
               
               if (showToast && window.authToasts) {
                 window.authToasts.logoutFailed();
@@ -438,9 +455,12 @@ export const useAuthStore = create(
 
           // Reset auth store
           reset: () => {
-            const { autoLogoutTimer } = get();
+            const { autoLogoutTimer, tokenRefreshTimer } = get();
             if (autoLogoutTimer) {
               clearTimeout(autoLogoutTimer);
+            }
+            if (tokenRefreshTimer) {
+              clearTimeout(tokenRefreshTimer);
             }
 
             set((state) => {
@@ -457,11 +477,63 @@ export const useAuthStore = create(
               state.lastActivity = Date.now();
               state.sessionExpiry = null;
               state.autoLogoutTimer = null;
+              state.tokenRefreshTimer = null;
               state.deviceFingerprint = null;
               state.securityAnalysis = null;
               state.biometricEnabled = false;
               state.initialized = false;
             });
+          },
+
+          // ✅ NEW: Token Refresh Timer Management
+          startTokenRefreshTimer: () => {
+            // Clear existing timer
+            get().actions.clearTokenRefreshTimer();
+
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+
+            try {
+              const decoded = jwtDecode(token);
+              const now = Date.now() / 1000;
+              
+              // Refresh 2 minutes before expiry
+              const refreshTime = (decoded.exp - now - 120) * 1000;
+              
+              if (refreshTime > 0) {
+                const timer = setTimeout(async () => {
+                  console.log('🔄 Auto-refreshing token...');
+                  const result = await authAPI.refreshToken();
+                  
+                  if (result.success) {
+                    console.log('✅ Token auto-refreshed successfully');
+                    // Restart timer for new token
+                    get().actions.startTokenRefreshTimer();
+                  } else if (result.requiresLogin) {
+                    console.log('❌ Token refresh failed, logging out...');
+                    get().actions.logout(false); // Silent logout
+                  }
+                }, refreshTime);
+
+                set((state) => {
+                  state.tokenRefreshTimer = timer;
+                });
+
+                console.log(`🔄 Token refresh timer set for ${Math.round(refreshTime/1000/60)} minutes`);
+              }
+            } catch (error) {
+              console.error('Failed to set token refresh timer:', error);
+            }
+          },
+
+          clearTokenRefreshTimer: () => {
+            const { tokenRefreshTimer } = get();
+            if (tokenRefreshTimer) {
+              clearTimeout(tokenRefreshTimer);
+              set((state) => {
+                state.tokenRefreshTimer = null;
+              });
+            }
           }
         }
       })),

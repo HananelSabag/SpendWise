@@ -27,6 +27,9 @@ export default {
   open: 'Open',
   refresh: 'Refresh',
   reset: 'Reset',
+  show: 'Show',
+  hide: 'Hide',
+  duplicate: 'Duplicate',
 
   // Password actions
   showPassword: 'Show Password',
@@ -48,6 +51,79 @@ export default {
   currencyExchangeDesc: 'Convert between different currencies',
   calculator: 'Calculator',
   quickCalculatorDesc: 'Quick calculation tool for expenses',
+
+  // ✅ NEW: Category Types (missing keys causing errors)
+  categoryTypes: {
+    // Food & Dining
+    food: 'Food & Dining',
+    groceries: 'Groceries', 
+    restaurants: 'Restaurants',
+    fastfood: 'Fast Food',
+    coffee: 'Coffee & Cafes',
+    
+    // Transportation
+    transport: 'Transportation',
+    gas: 'Gas & Fuel',
+    parking: 'Parking',
+    taxi: 'Taxi & Rideshare',
+    publictransport: 'Public Transport',
+    
+    // Bills & Utilities
+    bills: 'Bills & Utilities',
+    electricity: 'Electricity',
+    water: 'Water',
+    internet: 'Internet',
+    phone: 'Phone',
+    
+    // Shopping
+    shopping: 'Shopping',
+    clothing: 'Clothing',
+    electronics: 'Electronics',
+    home: 'Home & Garden',
+    
+    // Healthcare
+    healthcare: 'Healthcare',
+    doctor: 'Doctor',
+    pharmacy: 'Pharmacy',
+    insurance: 'Insurance',
+    
+    // Entertainment
+    entertainment: 'Entertainment',
+    movies: 'Movies',
+    games: 'Games',
+    sports: 'Sports',
+    
+    // Income
+    salary: 'Salary',
+    freelance: 'Freelance',
+    investment: 'Investment',
+    other: 'Other'
+  },
+
+  // ✅ NEW: Transaction descriptions (missing keys causing errors)
+  transactions: {
+    // Common transaction descriptions
+    groceries: 'Groceries',
+    salary: 'Monthly Salary',
+    rent: 'Monthly Rent',
+    gas: 'Gas',
+    electricity: 'Electricity Bill',
+    water: 'Water Bill',
+    internet: 'Internet Bill',
+    phone: 'Phone Bill',
+    coffee: 'Coffee',
+    lunch: 'Lunch',
+    dinner: 'Dinner',
+    shopping: 'Shopping',
+    transport: 'Transportation',
+    parking: 'Parking',
+    movie: 'Movie Ticket',
+    doctor: 'Doctor Visit',
+    pharmacy: 'Pharmacy',
+    freelance: 'Freelance Work',
+    investment: 'Investment Return',
+    other: 'Other'
+  },
 
   // Accessibility
   accessibility: {

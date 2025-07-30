@@ -308,12 +308,18 @@ class User {
         throw new Error('This account uses Google sign-in. Please use the Google login button.');
       }
       
-      // ✅ ENHANCED: If Google user has set a password, allow password login
-      if (isGoogleOAuth && password && user.password_hash) {
-        console.log('🔍 Google user with password attempting login - allowing both methods');
-        // Continue with password authentication
-      } else if (isGoogleOAuth && password && !user.password_hash) {
-        throw new Error('This account uses Google sign-in. Please use the Google login button or set a password first.');
+      // ✅ EDGE CASE HANDLING: Google user trying to login with password
+      if (isGoogleOAuth && password) {
+        if (user.password_hash) {
+          console.log('🔍 Google user with password - allowing hybrid login');
+          // Continue with password authentication - user has both methods
+        } else {
+          // Google user without password - provide helpful message
+          throw new Error(`This account was created with Google sign-in. To use email/password login, please:
+1. Sign in with Google first
+2. Go to Settings → Security → Set Password
+3. Then you can use either login method`);
+        }
       }
 
       // 🔍 DEBUG: Check general password condition

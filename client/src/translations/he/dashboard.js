@@ -7,12 +7,12 @@
 export default {
   // Basic translations
   title: 'לוח בקרה',
-  overview: 'סקירה כללית', // ✅ FIXED: Keep as simple string (used by Dashboard.jsx:269)
+  overview: 'סקירה כללית',
   analytics: 'אנליטיקה',
   goals: 'יעדים', 
   insights: 'תובנות',
 
-  // ✅ ADDED: Missing account-related translations 
+  // ✅ FIXED: Account-related translations 
   accounts: {
     main: 'חשבון ראשי'
   },
@@ -21,10 +21,65 @@ export default {
     noTransactions: 'אין תנועות עדיין'
   },
 
-  // ✅ ADDED: Common UI translations
+  // ✅ FIXED: Common UI translations (no duplicates)
   common: {
-    hide: '🙈 הסתר',
-    show: '👁️ הצג'
+    hide: 'הסתר',
+    show: 'הצג',
+    categoryTypes: {
+      food: 'מזון ומסעדות',
+      income: 'הכנסות',
+      transport: 'תחבורה',
+      entertainment: 'בילויים',
+      bills: 'חשבונות ותשלומים'
+    },
+    transactions: {
+      groceries: 'קניות במכולת',
+      salary: 'משכורת',
+      fuel: 'דלק',
+      coffee: 'קפה',
+      electricity: 'חשמל'
+    }
+  },
+
+  // ✅ FIXED: Action translations for TransactionCard and other components (no duplicates)
+  actions: {
+    edit: 'ערוך',
+    delete: 'מחק', 
+    duplicate: 'שכפל',
+    quickExpense: 'הוצאה מהירה',
+    quickExpenseDesc: 'הוסף הוצאה מיידית',
+    quickIncome: 'הכנסה מהירה',
+    quickIncomeDesc: 'הוסף הכנסה מיידית',
+    addTransaction: 'הוסף תנועה',
+    addTransactionDesc: 'צור תנועה חדשה',
+    viewAnalytics: 'צפה באנליטיקה',
+    viewAnalyticsDesc: 'ראה תובנות פיננסיות',
+    spendingBreakdown: 'פירוט הוצאות',
+    spendingBreakdownDesc: 'ניתוח קטגוריות',
+    setGoal: 'קבע יעד',
+    setGoalDesc: 'צור יעד פיננסי',
+    budgetPlanner: 'מתכנן תקציב',
+    budgetPlannerDesc: 'תכנן את התקציב שלך',
+    currencyConverter: 'המרת מטבע',
+    currencyConverterDesc: 'המר מטבעות',
+    schedulePayment: 'תזמן תשלום',
+    schedulePaymentDesc: 'הגדר תשלום חוזר',
+    popular: 'פופולרי',
+    lastUsed: 'שימוש אחרון {{time}}',
+    executed: '{{action}} בוצע בהצלחה',
+    currencyConverterOpening: 'פותח המרת מטבע...'
+  },
+
+  // ✅ FIXED: Category translations
+  category: {
+    uncategorized: 'לא מקוטלג'
+  },
+
+  // ✅ FIXED: Insights translations
+  insights: {
+    largeTransaction: 'עסקה גדולה',
+    recurringPattern: 'דפוס חוזר',
+    businessExpense: 'הוצאה עסקית'
   },
   
   // Welcome messages with time-based greetings
@@ -56,7 +111,7 @@ export default {
     refreshed: 'יתרה רוענה בהצלחה'
   },
 
-  // ✅ ADDED: Period summary translations
+  // ✅ FIXED: Period summary translations
   periodSummary: {
     daily: 'פעילות פיננסית יומית',
     weekly: 'סיכום השבוע',
@@ -85,33 +140,7 @@ export default {
     }
   },
 
-  // ✅ ADDED: Quick Action Buttons (Hebrew)
-  actions: {
-    quickExpense: 'הוצאה מהירה',
-    quickExpenseDesc: 'הוסף הוצאה מיידית',
-    quickIncome: 'הכנסה מהירה',
-    quickIncomeDesc: 'הוסף הכנסה מיידית',
-    addTransaction: 'הוסף תנועה',
-    addTransactionDesc: 'צור תנועה חדשה',
-    viewAnalytics: 'צפה באנליטיקה',
-    viewAnalyticsDesc: 'ראה תובנות פיננסיות',
-    spendingBreakdown: 'פירוט הוצאות',
-    spendingBreakdownDesc: 'ניתוח קטגוריות',
-    setGoal: 'קבע יעד',
-    setGoalDesc: 'צור יעד פיננסי',
-    budgetPlanner: 'מתכנן תקציב',
-    budgetPlannerDesc: 'תכנן את התקציב שלך',
-    currencyConverter: 'המרת מטבע',
-    currencyConverterDesc: 'המר מטבעות',
-    schedulePayment: 'תזמן תשלום',
-    schedulePaymentDesc: 'הגדר תשלום חוזר',
-    popular: 'פופולרי',
-    lastUsed: 'שימוש אחרון {{time}}',
-    executed: '{{action}} בוצע בהצלחה',
-    currencyConverterOpening: 'פותח המרת מטבע...'
-  },
-
-  // ✅ ADDED: Notification messages (Hebrew)
+  // ✅ FIXED: Notification messages
   notifications: {
     quickExpenseCreated: 'הוצאה מהירה נוספה בהצלחה!',
     quickExpenseFailed: 'נכשל בהוספת הוצאה מהירה',
@@ -119,7 +148,7 @@ export default {
     quickIncomeFailed: 'נכשל בהוספת הכנסה מהירה'
   },
   
-  // Recent Transactions
+  // ✅ FIXED: Recent Transactions (no duplicates)
   recentTransactions: {
     title: 'תנועות אחרונות',
     viewAll: 'צפה בהכל',
@@ -127,7 +156,9 @@ export default {
     noTransactionsDescription: 'התחל לעקוב אחר הכספים שלך על ידי הוספת התנועה הראשונה שלך',
     amount: 'סכום',
     date: 'תאריך',
-    category: 'קטגוריה'
+    category: 'קטגוריה',
+    lastUpdate: 'עודכן לאחרונה {time}',
+    showing: 'מציג {count} תנועות'
   },
   
   // Stats and Tips
@@ -220,5 +251,13 @@ export default {
       phone: 'טלפון',
       rent: 'שכר דירה'
     }
+  },
+  
+  // Charts
+  charts: {
+    title: 'סקירה פיננסית',
+    expenses: 'הוצאות לפי קטגוריה',
+    income: 'מגמות הכנסות',
+    balance: 'יתרה לאורך זמן'
   }
 }; 

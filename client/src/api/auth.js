@@ -7,6 +7,7 @@
 import { api } from './client.js';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
+import { normalizeUserData } from '../utils/userNormalizer';
 
 // ✅ Google OAuth Configuration
 const GOOGLE_CONFIG = {
@@ -222,36 +223,23 @@ export const authAPI = {
         throw new Error('Invalid server response: no user data');
       }
       
-      // Normalize user object to match expected structure
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.name || user.display_name || user.first_name || 'User',
-        firstName: user.first_name || user.firstName || user.username || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        email_verified: user.email_verified || user.emailVerified || false,
-        language_preference: user.language_preference || user.languagePreference || 'en',
-        theme_preference: user.theme_preference || user.themePreference || 'light',
-        currency_preference: user.currency_preference || user.currencyPreference || 'USD',
-        onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
-        preferences: user.preferences || {},
-        created_at: user.created_at || user.createdAt || new Date().toISOString(),
-        createdAt: user.created_at || user.createdAt || new Date().toISOString(),
-        updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
-        last_login: user.last_login || user.lastLogin || new Date().toISOString(),
-        avatar: user.avatar || null,
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false
-      };
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
       
-      // Store token if provided
+      // Store tokens if provided
       if (token) {
         localStorage.setItem('accessToken', token);
+      }
+
+      // ✅ FIX: Store refresh token if provided  
+      const refreshToken = response.data.data?.tokens?.refreshToken || 
+                          response.data.data?.refreshToken ||
+                          response.data.tokens?.refreshToken ||
+                          response.data.refreshToken;
+      
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+        console.log('✅ Refresh token stored for login');
       }
       
       // Clear any auth-related cache
@@ -261,7 +249,8 @@ export const authAPI = {
       return {
         success: true,
         user: normalizedUser,
-        token
+        token,
+        refreshToken
       };
     } catch (error) {
       console.error('🔑 Auth API login error:', error);
@@ -397,36 +386,23 @@ export const authAPI = {
         throw new Error('Invalid server response: no user data');
       }
       
-      // ✅ Use EXACT same normalization as regular login
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.name || user.display_name || user.first_name || 'User',
-        firstName: user.first_name || user.firstName || user.username || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        email_verified: user.email_verified || user.emailVerified || false,
-        language_preference: user.language_preference || user.languagePreference || 'en',
-        theme_preference: user.theme_preference || user.themePreference || 'light',
-        currency_preference: user.currency_preference || user.currencyPreference || 'USD',
-        onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
-        preferences: user.preferences || {},
-        created_at: user.created_at || user.createdAt || new Date().toISOString(),
-        createdAt: user.created_at || user.createdAt || new Date().toISOString(),
-        updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
-        last_login: user.last_login || user.lastLogin || new Date().toISOString(),
-        avatar: user.avatar || null,
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false
-      };
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
       
-      // Store token if provided
+      // Store tokens if provided
       if (token) {
         localStorage.setItem('accessToken', token);
+      }
+
+      // ✅ FIX: Store refresh token for Google Auth too
+      const refreshToken = response.data.data?.tokens?.refreshToken || 
+                          response.data.data?.refreshToken ||
+                          response.data.tokens?.refreshToken ||
+                          response.data.refreshToken;
+      
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+        console.log('✅ Refresh token stored for Google login');
       }
       
       // Clear any auth-related cache
@@ -437,7 +413,8 @@ export const authAPI = {
       return {
         success: true,
         user: normalizedUser,
-        token
+        token,
+        refreshToken
       };
     } catch (error) {
       return {
@@ -512,34 +489,8 @@ export const authAPI = {
       // ✅ FIXED: Handle server response structure correctly
       const user = response.data?.data || response.data;
       
-      // Normalize user object for consistency
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.name || user.display_name || user.first_name || 'User',
-        firstName: user.first_name || user.firstName || user.username || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        email_verified: user.email_verified || user.emailVerified || false,
-        language_preference: user.language_preference || user.languagePreference || 'en',
-        theme_preference: user.theme_preference || user.themePreference || 'light',
-        currency_preference: user.currency_preference || user.currencyPreference || 'USD',
-        onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
-        preferences: user.preferences || {},
-        created_at: user.created_at || user.createdAt || new Date().toISOString(),
-        createdAt: user.created_at || user.createdAt || new Date().toISOString(),
-        updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
-        last_login: user.last_login || user.lastLogin || new Date().toISOString(),
-        avatar: user.avatar || null,
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false,
-        isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-        isSuperAdmin: (user.role || 'user') === 'super_admin'
-      };
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
 
       return {
         success: true,
@@ -680,16 +631,30 @@ export const authAPI = {
     }
   },
 
-  // ✅ Validate Token
+  // ✅ Validate Token with AUTO-REFRESH
   async validateToken(token) {
     try {
       // First do a quick local validation
       const decoded = jwtDecode(token);
       const now = Date.now() / 1000;
       
+      // ✅ FIX: Check if token will expire soon (within 2 minutes)
+      const willExpireSoon = decoded.exp - now < 120; // 2 minutes
+      
       if (decoded.exp < now) {
-        localStorage.removeItem('accessToken');
-        return { success: false, error: 'Token expired' };
+        // Token already expired - try to refresh
+        console.log('🔄 Token expired, attempting refresh...');
+        return await this.refreshToken();
+      }
+      
+      if (willExpireSoon) {
+        // Token expires soon - refresh proactively
+        console.log('🔄 Token expires soon, refreshing proactively...');
+        const refreshResult = await this.refreshToken();
+        if (refreshResult.success) {
+          return refreshResult;
+        }
+        // If refresh fails, continue with current token
       }
       
       // Then validate with server and get fresh user data
@@ -701,32 +666,8 @@ export const authAPI = {
         // ✅ FIXED: Handle server response structure correctly
         const user = response.data?.data || response.data;
         
-        // Normalize user object
-        const normalizedUser = {
-          id: user.id,
-          email: user.email,
-          username: user.username || user.name || user.display_name || user.first_name || 'User',
-          firstName: user.first_name || user.firstName || user.username || '',
-          lastName: user.last_name || user.lastName || '',
-          role: user.role || 'user',
-          email_verified: user.email_verified || user.emailVerified || false,
-          language_preference: user.language_preference || user.languagePreference || 'en',
-          theme_preference: user.theme_preference || user.themePreference || 'light',
-          currency_preference: user.currency_preference || user.currencyPreference || 'USD',
-          onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
-          preferences: user.preferences || {},
-          created_at: user.created_at || user.createdAt || new Date().toISOString(),
-          createdAt: user.created_at || user.createdAt || new Date().toISOString(),
-          updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
-          last_login: user.last_login || user.lastLogin || new Date().toISOString(),
-          avatar: user.avatar || null,
-          phone: user.phone || '',
-          bio: user.bio || '',
-          location: user.location || '',
-          website: user.website || '',
-          birthday: user.birthday || null,
-          isPremium: user.isPremium || false
-        };
+        // ✅ CLEANED: Use centralized user normalization
+        const normalizedUser = normalizeUserData(user);
         
         return {
           success: true,
@@ -738,10 +679,66 @@ export const authAPI = {
       
     } catch (error) {
       console.warn('Token validation failed:', error);
+      
+      // ✅ FIX: If 401, try refresh before giving up
+      if (error.response?.status === 401) {
+        console.log('🔄 Got 401, attempting token refresh...');
+        return await this.refreshToken();
+      }
+      
       localStorage.removeItem('accessToken');
       return {
         success: false,
         error: 'Token validation failed'
+      };
+    }
+  },
+
+  // ✅ NEW: Automatic Token Refresh
+  async refreshToken() {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        console.log('❌ No refresh token available');
+        return { success: false, error: 'No refresh token', requiresLogin: true };
+      }
+
+      console.log('🔄 Refreshing access token...');
+      const response = await api.client.post('/users/refresh-token', {
+        refreshToken: refreshToken
+      });
+
+      if (response.data?.success && response.data?.data) {
+        const { accessToken, refreshToken: newRefreshToken, user } = response.data.data;
+        
+        // Update stored tokens
+        localStorage.setItem('accessToken', accessToken);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+        }
+        
+        console.log('✅ Token refreshed successfully');
+        return { 
+          success: true, 
+          data: user,
+          token: accessToken,
+          refreshed: true
+        };
+      }
+      
+      throw new Error('Invalid refresh response');
+      
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+      
+      // Clear invalid tokens
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      
+      return { 
+        success: false, 
+        error: 'Token refresh failed',
+        requiresLogin: true
       };
     }
   },

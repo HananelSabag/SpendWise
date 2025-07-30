@@ -6,12 +6,13 @@
 
 const { User } = require('../models/User');
 const { generateTokens, verifyToken } = require('../middleware/auth');
+const { normalizeUserData } = require('../utils/userNormalizer');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const emailService = require('../services/emailService');
 const crypto = require('crypto');
-const db = require('../config/db'); // ✅ FIXED: Added missing db import
+const db = require('../config/db');
 
 // Enhanced token generation with better entropy
 const generateVerificationToken = () => {
@@ -145,42 +146,8 @@ const userController = {
       // Generate JWT tokens
       const { accessToken, refreshToken } = generateTokens(user);
 
-      // ✅ FIX: Normalize user data for client expectations
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.first_name || 'User',
-        name: user.username || user.first_name || 'User', // Client expects 'name' field
-        firstName: user.first_name || user.firstName || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-        isSuperAdmin: (user.role || 'user') === 'super_admin',
-        email_verified: user.email_verified || false,
-        emailVerified: user.email_verified || false,
-        onboarding_completed: user.onboarding_completed || false,
-        onboardingCompleted: user.onboarding_completed || false,
-        language_preference: user.language_preference || 'en',
-        languagePreference: user.language_preference || 'en',
-        theme_preference: user.theme_preference || 'light',
-        themePreference: user.theme_preference || 'light',
-        currency_preference: user.currency_preference || 'USD',
-        currencyPreference: user.currency_preference || 'USD',
-        preferences: user.preferences || {},
-        created_at: user.created_at,
-        createdAt: user.created_at,
-        updated_at: user.updated_at,
-        updatedAt: user.updated_at,
-        last_login: user.last_login_at,
-        lastLogin: user.last_login_at,
-        avatar: user.avatar || null,
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false
-      };
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
 
       const duration = Date.now() - start;
       logger.info('✅ User login successful', {
@@ -215,6 +182,95 @@ const userController = {
         error: error.message,
         duration: `${duration}ms`
       });
+      throw error;
+    }
+  }),
+
+  /**
+   * 🔄 NEW: Token Refresh Endpoint
+   * @route POST /api/v1/users/refresh-token
+   */
+  refreshToken: asyncHandler(async (req, res) => {
+    const start = Date.now();
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      throw {
+        code: 'MISSING_REFRESH_TOKEN',
+        message: 'Refresh token is required',
+        status: 400
+      };
+    }
+
+    try {
+      // Verify refresh token
+      const decoded = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+      const userId = decoded.userId;
+
+      // Get fresh user data
+      const user = await User.findById(userId);
+      if (!user) {
+        throw {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+          status: 404
+        };
+      }
+
+      if (!user.is_active) {
+        throw {
+          code: 'ACCOUNT_DEACTIVATED',
+          message: 'Account is deactivated',
+          status: 403
+        };
+      }
+
+      // Generate new tokens
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
+
+      const duration = Date.now() - start;
+      logger.info('✅ Token refreshed successfully', {
+        userId: user.id,
+        email: user.email,
+        duration: `${duration}ms`
+      });
+
+      res.json({
+        success: true,
+        data: {
+          user: normalizedUser,
+          accessToken,
+          refreshToken: newRefreshToken,
+          tokens: {
+            accessToken,
+            refreshToken: newRefreshToken
+          }
+        },
+        metadata: {
+          duration: `${duration}ms`,
+          refreshed: true
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      const duration = Date.now() - start;
+      logger.warn('❌ Token refresh failed', {
+        error: error.message,
+        duration: `${duration}ms`
+      });
+      
+      if (error.message === 'Invalid token') {
+        throw {
+          code: 'INVALID_REFRESH_TOKEN',
+          message: 'Invalid or expired refresh token',
+          status: 401
+        };
+      }
+      
       throw error;
     }
   }),
@@ -278,8 +334,9 @@ const userController = {
       let user = await User.findByEmail(email);
 
       if (!user) {
-        // Create new user with Google OAuth
-        const username = name || email.split('@')[0]; // ✅ Use actual name, not just email prefix
+        // ✅ EDGE CASE: New Google user - create with Google OAuth
+        console.log('🆕 Creating new Google OAuth user');
+        const username = name || email.split('@')[0];
         const randomPassword = crypto.randomBytes(32).toString('hex');
 
         user = await User.create(email, username, randomPassword);
@@ -288,11 +345,11 @@ const userController = {
         await User.update(user.id, { 
           email_verified: true,
           onboarding_completed: false, // ✅ Will trigger onboarding flow
-          google_id: googleUserId, // ✅ Use actual Google user ID (short)
+          google_id: googleUserId,
           oauth_provider: 'google',
-          oauth_provider_id: googleUserId, // ✅ Use actual Google user ID (short)
+          oauth_provider_id: googleUserId,
           profile_picture_url: picture,
-          avatar: picture, // ✅ Sync avatar with profile picture
+          avatar: picture,
           first_name: name?.split(' ')[0] || '',
           last_name: name?.split(' ').slice(1).join(' ') || ''
         });
@@ -306,16 +363,34 @@ const userController = {
           username
         });
       } else {
+        // ✅ EDGE CASE: Existing user signing in with Google
+        const hadGoogleAuth = !!user.google_id;
+        const hadRegularAuth = !!user.password_hash;
+        
+        console.log('🔍 Existing user Google login:', {
+          hadGoogleAuth,
+          hadRegularAuth,
+          authMethod: hadGoogleAuth ? 'google' : hadRegularAuth ? 'regular' : 'unknown'
+        });
+
         // Update existing user with Google info if not already set
         const updateData = { email_verified: true };
+        
+        // Link Google account if not already linked
         if (!user.google_id) {
           updateData.google_id = googleUserId;
           updateData.oauth_provider = 'google';
           updateData.oauth_provider_id = googleUserId;
+          
+          if (hadRegularAuth) {
+            console.log('🔗 Linking Google account to existing regular account');
+          }
         }
+        
+        // Update profile info from Google if missing
         if (picture && !user.profile_picture_url) {
           updateData.profile_picture_url = picture;
-          updateData.avatar = picture; // ✅ Sync avatar with profile picture
+          updateData.avatar = picture;
         }
         if (name && (!user.first_name || !user.last_name)) {
           updateData.first_name = name?.split(' ')[0] || user.first_name || '';
@@ -327,9 +402,10 @@ const userController = {
         // Refresh user data
         user = await User.findById(user.id);
         
-        logger.info('✅ Existing user verified via Google', {
+        logger.info('✅ Existing user authenticated via Google', {
           userId: user.id,
           email,
+          linkedGoogle: !hadGoogleAuth && updateData.google_id,
           updatedFields: Object.keys(updateData)
         });
       }
@@ -337,42 +413,8 @@ const userController = {
       // Generate JWT tokens
       const { accessToken, refreshToken } = generateTokens(user);
 
-      // ✅ FIX: Use EXACT same normalization as regular login
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.first_name || 'User',
-        name: user.username || user.first_name || 'User', // Client expects 'name' field
-        firstName: user.first_name || user.firstName || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-        isSuperAdmin: (user.role || 'user') === 'super_admin',
-        email_verified: user.email_verified || false,
-        emailVerified: user.email_verified || false,
-        onboarding_completed: user.onboarding_completed || false,
-        onboardingCompleted: user.onboarding_completed || false,
-        language_preference: user.language_preference || 'en',
-        languagePreference: user.language_preference || 'en',
-        theme_preference: user.theme_preference || 'light',
-        themePreference: user.theme_preference || 'light',
-        currency_preference: user.currency_preference || 'USD',
-        currencyPreference: user.currency_preference || 'USD',
-        preferences: user.preferences || {},
-        created_at: user.created_at,
-        createdAt: user.created_at,
-        updated_at: user.updated_at,
-        updatedAt: user.updated_at,
-        last_login: user.last_login_at,
-        lastLogin: user.last_login_at,
-        avatar: user.profile_picture_url || user.avatar || null, // ✅ Use Google profile picture
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false
-      };
+      // ✅ CLEANED: Use centralized user normalization  
+      const normalizedUser = normalizeUserData(user);
 
       const duration = Date.now() - start;
       logger.info('✅ Google OAuth successful', {
@@ -428,42 +470,8 @@ const userController = {
         throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
       }
 
-      // ✅ FIX: Ensure consistent normalization (same as login)
-      const normalizedUser = {
-        id: user.id,
-        email: user.email,
-        username: user.username || user.first_name || 'User',
-        name: user.username || user.first_name || 'User', // Client expects 'name' field
-        firstName: user.first_name || user.firstName || '',
-        lastName: user.last_name || user.lastName || '',
-        role: user.role || 'user',
-        isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-        isSuperAdmin: (user.role || 'user') === 'super_admin',
-        email_verified: user.email_verified || false,
-        emailVerified: user.email_verified || false,
-        onboarding_completed: user.onboarding_completed || false,
-        onboardingCompleted: user.onboarding_completed || false,
-        language_preference: user.language_preference || 'en',
-        languagePreference: user.language_preference || 'en',
-        theme_preference: user.theme_preference || 'light',
-        themePreference: user.theme_preference || 'light',
-        currency_preference: user.currency_preference || 'USD',
-        currencyPreference: user.currency_preference || 'USD',
-        preferences: user.preferences || {},
-        created_at: user.created_at,
-        createdAt: user.created_at,
-        updated_at: user.updated_at,
-        updatedAt: user.updated_at,
-        last_login: user.last_login_at,
-        lastLogin: user.last_login_at,
-        avatar: user.avatar || null,
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        website: user.website || '',
-        birthday: user.birthday || null,
-        isPremium: user.isPremium || false
-      };
+      // ✅ CLEANED: Use centralized user normalization
+      const normalizedUser = normalizeUserData(user);
 
       const duration = Date.now() - start;
       logger.debug('✅ User profile served', {

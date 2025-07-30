@@ -407,7 +407,7 @@ const CategoryManager = ({
         </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Modals */}
       <AnimatePresence>

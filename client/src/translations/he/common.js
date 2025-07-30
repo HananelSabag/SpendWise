@@ -27,6 +27,9 @@ export default {
   open: 'פתח',
   refresh: 'רענן',
   reset: 'איפוס',
+  show: 'הצג',
+  hide: 'הסתר',
+  duplicate: 'שכפל',
 
   // פעולות סיסמה
   showPassword: 'הצג סיסמה',
@@ -48,6 +51,79 @@ export default {
   currencyExchangeDesc: 'המר בין מטבעות שונים',
   calculator: 'מחשבון',
   quickCalculatorDesc: 'כלי חישוב מהיר להוצאות',
+
+  // ✅ חדש: סוגי קטגוריות (מפתחות חסרים שגורמים לשגיאות)
+  categoryTypes: {
+    // אוכל ומסעדות
+    food: 'מזון ומסעדות',
+    groceries: 'קניות במכולת', 
+    restaurants: 'מסעדות',
+    fastfood: 'מזון מהיר',
+    coffee: 'קפה ובתי קפה',
+    
+    // תחבורה
+    transport: 'תחבורה',
+    gas: 'דלק',
+    parking: 'חניה',
+    taxi: 'מונית ונסיעות שיתוף',
+    publictransport: 'תחבורה ציבורית',
+    
+    // חשבונות ושירותים
+    bills: 'חשבונות ושירותים',
+    electricity: 'חשמל',
+    water: 'מים',
+    internet: 'אינטרנט',
+    phone: 'טלפון',
+    
+    // קניות
+    shopping: 'קניות',
+    clothing: 'ביגוד',
+    electronics: 'אלקטרוניקה',
+    home: 'בית וגינה',
+    
+    // בריאות
+    healthcare: 'בריאות',
+    doctor: 'רופא',
+    pharmacy: 'בית מרקחת',
+    insurance: 'ביטוח',
+    
+    // בידור
+    entertainment: 'בידור',
+    movies: 'סרטים',
+    games: 'משחקים',
+    sports: 'ספורט',
+    
+    // הכנסות
+    salary: 'משכורת',
+    freelance: 'עבודה עצמאית',
+    investment: 'השקעות',
+    other: 'אחר'
+  },
+
+  // ✅ חדש: תיאורי עסקאות (מפתחות חסרים שגורמים לשגיאות)
+  transactions: {
+    // תיאורי עסקאות נפוצים
+    groceries: 'קניות במכולת',
+    salary: 'משכורת חודשית',
+    rent: 'שכר דירה חודשי',
+    gas: 'דלק',
+    electricity: 'חשבון חשמל',
+    water: 'חשבון מים',
+    internet: 'חשבון אינטרנט',
+    phone: 'חשבון טלפון',
+    coffee: 'קפה',
+    lunch: 'ארוחת צהריים',
+    dinner: 'ארוחת ערב',
+    shopping: 'קניות',
+    transport: 'תחבורה',
+    parking: 'חניה',
+    movie: 'כרטיס קולנוע',
+    doctor: 'ביקור רופא',
+    pharmacy: 'בית מרקחת',
+    freelance: 'עבודה עצמאית',
+    investment: 'החזר השקעה',
+    other: 'אחר'
+  },
 
   // נגישות
   accessibility: {

@@ -24,7 +24,7 @@ const transactionAPI = {
    */
   async create(type = 'transaction', data) {
     try {
-      const response = await apiClient.post(`/transactions/${type}`, data);
+      const response = await apiClient.client.post(`/transactions/${type}`, data);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -38,7 +38,7 @@ const transactionAPI = {
    */
   async getAll(params = {}) {
     try {
-      const response = await apiClient.get('/transactions', { params });
+      const response = await apiClient.client.get('/transactions', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -52,7 +52,7 @@ const transactionAPI = {
    */
   async getRecent(limit = 10) {
     try {
-      const response = await apiClient.get('/transactions/recent', { 
+      const response = await apiClient.client.get('/transactions/recent', { 
         params: { limit } 
       });
       return { success: true, data: response.data };
@@ -70,7 +70,7 @@ const transactionAPI = {
    */
   async update(type, id, data) {
     try {
-      const response = await apiClient.put(`/transactions/${type}/${id}`, data);
+      const response = await apiClient.client.put(`/transactions/${type}/${id}`, data);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -85,7 +85,7 @@ const transactionAPI = {
    */
   async delete(type, id) {
     try {
-      const response = await apiClient.delete(`/transactions/${type}/${id}`);
+      const response = await apiClient.client.delete(`/transactions/${type}/${id}`);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -140,7 +140,7 @@ const transactionAPI = {
    */
   async getRecurringTemplates() {
     try {
-      const response = await apiClient.get('/transactions/templates');
+      const response = await apiClient.client.get('/transactions/templates');
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -173,7 +173,7 @@ const transactionAPI = {
    */
   async updateRecurringTemplate(id, data) {
     try {
-      const response = await apiClient.put(`/transactions/templates/${id}`, data);
+      const response = await apiClient.client.put(`/transactions/templates/${id}`, data);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -187,7 +187,7 @@ const transactionAPI = {
    */
   async deleteRecurringTemplate(id) {
     try {
-      const response = await apiClient.delete(`/transactions/templates/${id}`);
+      const response = await apiClient.client.delete(`/transactions/templates/${id}`);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -202,7 +202,7 @@ const transactionAPI = {
    */
   async skipRecurringDates(id, dates) {
     try {
-      const response = await apiClient.post(`/transactions/templates/${id}/skip`, { dates });
+      const response = await apiClient.client.post(`/transactions/templates/${id}/skip`, { dates });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -215,7 +215,7 @@ const transactionAPI = {
    */
   async generateRecurring() {
     try {
-      const response = await apiClient.post('/transactions/generate-recurring');
+      const response = await apiClient.client.post('/transactions/generate-recurring');
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -233,7 +233,7 @@ const transactionAPI = {
    */
   async getDashboardData(params = {}) {
     try {
-      const response = await apiClient.get('/transactions/dashboard', { params });
+      const response = await apiClient.client.get('/transactions/dashboard', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -247,7 +247,7 @@ const transactionAPI = {
    */
   async getSummary(params = {}) {
     try {
-      const response = await apiClient.get('/transactions/summary', { params });
+      const response = await apiClient.client.get('/transactions/summary', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -261,7 +261,7 @@ const transactionAPI = {
    */
   async getCategoryBreakdown(params = {}) {
     try {
-      const response = await apiClient.get('/transactions/categories/breakdown', { params });
+      const response = await apiClient.client.get('/transactions/categories/breakdown', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -276,7 +276,7 @@ const transactionAPI = {
    */
   async search(query, filters = {}) {
     try {
-      const response = await apiClient.get('/transactions/search', { 
+      const response = await apiClient.client.get('/transactions/search', { 
         params: { q: query, ...filters } 
       });
       return { success: true, data: response.data };
@@ -297,7 +297,7 @@ const transactionAPI = {
   async getBalanceDetails(date) {
     try {
       const params = date ? { date } : {};
-      const response = await apiClient.get('/transactions/balance/details', { params });
+      const response = await apiClient.client.get('/transactions/balance/details', { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -311,7 +311,7 @@ const transactionAPI = {
    */
   async getBalanceHistory(period = 'monthly') {
     try {
-      const response = await apiClient.get(`/transactions/balance/history/${period}`);
+      const response = await apiClient.client.get(`/transactions/balance/history/${period}`);
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
