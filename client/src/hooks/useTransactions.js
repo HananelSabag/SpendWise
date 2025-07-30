@@ -696,25 +696,15 @@ export const useTransactions = (options = {}) => {
         });
 
         // ✅ FIXED: Handle API response structure properly
-        console.log('🔍 API Response Structure:', response);
-        console.log('🔍 response.success:', response.success);
-        console.log('🔍 response.data:', response.data);
-        console.log('🔍 typeof response.data:', typeof response.data);
-        
-        // The API returns { success: true, data: response.data }
-        // But let's check if it's nested: { success: true, data: { success: true, data: {...} } }
         let rawData;
         if (response.success && response.data) {
           // Check if response.data has its own success/data structure (nested)
           if (response.data.success && response.data.data) {
-            console.log('🔍 Detected NESTED response structure');
             rawData = response.data.data; // Double nested
           } else {
-            console.log('🔍 Using normal response.data structure');
             rawData = response.data; // Normal
           }
         } else {
-          console.log('🔍 Using fallback response structure');
           rawData = response;
         }
         
@@ -722,11 +712,6 @@ export const useTransactions = (options = {}) => {
           console.warn('⚠️ No data received from transactions API');
           return { transactions: [], hasMore: false, total: 0 };
         }
-
-        // ✅ FIXED: Handle server response structure correctly
-        // Server returns: { success: true, data: { transactions: [...], summary: {...}, pagination: {...} } }
-        console.log('🔍 Raw data structure:', rawData);
-        console.log('🔍 rawData.transactions length:', rawData.transactions?.length || 'undefined');
         
         let transactionsArray = [];
         let total = 0;
@@ -754,8 +739,6 @@ export const useTransactions = (options = {}) => {
           page: pageParam,
           limit: pageSize
         };
-
-        console.log('📊 Structured Data:', data);
 
         // Add AI analysis if enabled
         if (enableAI && data.transactions) {

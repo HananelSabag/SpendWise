@@ -438,23 +438,30 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
         reject(err);
       });
       
-      // ✅ BEAUTIFUL HEADER SECTION
-      doc.fontSize(24).fillColor('#1f2937').text('SpendWise Financial Report', 50, 50);
-      doc.fontSize(12).fillColor('#6b7280').text(`Generated on ${new Date().toLocaleDateString()}`, 50, 80);
+      // ✅ STUNNING HEADER WITH GRADIENT EFFECT
+      doc.rect(0, 0, 612, 100).fillAndStroke('#1e40af', '#3b82f6');
+      doc.fontSize(28).fillColor('#ffffff').text('SpendWise Financial Report', 50, 30);
+      doc.fontSize(14).fillColor('#e0e7ff').text(`Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`, 50, 65);
       
-      // User Info Section
-      doc.fontSize(16).fillColor('#374151').text('Account Summary', 50, 120);
-      doc.fontSize(12).fillColor('#4b5563');
-      doc.text(`Account Holder: ${exportData.user.username}`, 70, 145);
-      doc.text(`Member Since: ${new Date(exportData.user.created_at).toLocaleDateString()}`, 70, 165);
-      doc.text(`Currency: ${exportData.user.currency_preference}`, 70, 185);
-      doc.text(`Total Transactions: ${exportData.transactions.length}`, 70, 205);
-      doc.text(`Active Days: ${exportData.user.active_days}`, 70, 225);
+      // ✅ ACCOUNT SUMMARY CARD WITH BACKGROUND
+      doc.rect(40, 120, 532, 140).fillAndStroke('#f8fafc', '#e2e8f0');
+      doc.fontSize(18).fillColor('#1e40af').text('Account Summary', 60, 140);
       
-      // ✅ FINANCIAL OVERVIEW SECTION
-      let yPos = 260;
-      doc.fontSize(16).fillColor('#374151').text('Financial Overview', 50, yPos);
-      yPos += 30;
+      // Two-column layout for user info
+      doc.fontSize(12).fillColor('#374151');
+      doc.text(`Account Holder: ${exportData.user.username}`, 70, 170);
+      doc.text(`Member Since: ${new Date(exportData.user.created_at).toLocaleDateString()}`, 70, 190);
+      doc.text(`Primary Currency: ${exportData.user.currency_preference}`, 70, 210);
+      
+      // Right column
+      doc.text(`Total Transactions: ${exportData.transactions.length}`, 320, 170);
+      doc.text(`Active Days: ${exportData.user.active_days}`, 320, 190);
+      doc.text(`Report Period: Last 12 Months`, 320, 210);
+      
+      // ✅ FINANCIAL OVERVIEW WITH STUNNING CARDS
+      let yPos = 290;
+      doc.fontSize(18).fillColor('#1e40af').text('Financial Overview', 50, yPos);
+      yPos += 40;
       
       // Calculate totals
       const totalIncome = exportData.monthly_summary.reduce((sum, ms) => sum + parseFloat(ms.monthly_income || 0), 0);
@@ -462,33 +469,51 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
       const netBalance = totalIncome - totalExpenses;
       const savingsRate = totalIncome > 0 ? ((netBalance / totalIncome) * 100) : 0;
       
-      // Financial metrics with colors
-      doc.fontSize(12);
-      doc.fillColor('#059669').text(`💰 Total Income: ${totalIncome.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
-      yPos += 20;
-      doc.fillColor('#dc2626').text(`💸 Total Expenses: ${totalExpenses.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
-      yPos += 20;
-      doc.fillColor(netBalance >= 0 ? '#059669' : '#dc2626').text(`📊 Net Balance: ${netBalance.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
-      yPos += 20;
-      doc.fillColor('#3b82f6').text(`💯 Savings Rate: ${savingsRate.toFixed(1)}%`, 70, yPos);
-      yPos += 40;
+      // ✅ INCOME CARD
+      doc.rect(50, yPos, 240, 70).fillAndStroke('#ecfdf5', '#10b981');
+      doc.fontSize(14).fillColor('#065f46').text('TOTAL INCOME', 70, yPos + 15);
+      doc.fontSize(20).fillColor('#047857').text(`${totalIncome.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos + 35);
       
-      // ✅ MONTHLY TRENDS SECTION
+      // ✅ EXPENSES CARD
+      doc.rect(320, yPos, 240, 70).fillAndStroke('#fef2f2', '#ef4444');
+      doc.fontSize(14).fillColor('#7f1d1d').text('TOTAL EXPENSES', 340, yPos + 15);
+      doc.fontSize(20).fillColor('#dc2626').text(`${totalExpenses.toFixed(2)} ${exportData.user.currency_preference}`, 340, yPos + 35);
+      
+      yPos += 90;
+      
+      // ✅ NET BALANCE CARD
+      const balanceColor = netBalance >= 0 ? '#10b981' : '#ef4444';
+      const balanceBg = netBalance >= 0 ? '#ecfdf5' : '#fef2f2';
+      const balanceText = netBalance >= 0 ? '#065f46' : '#7f1d1d';
+      
+      doc.rect(50, yPos, 240, 70).fillAndStroke(balanceBg, balanceColor);
+      doc.fontSize(14).fillColor(balanceText).text('NET BALANCE', 70, yPos + 15);
+      doc.fontSize(20).fillColor(balanceColor).text(`${netBalance.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos + 35);
+      
+      // ✅ SAVINGS RATE CARD
+      doc.rect(320, yPos, 240, 70).fillAndStroke('#eff6ff', '#3b82f6');
+      doc.fontSize(14).fillColor('#1e3a8a').text('SAVINGS RATE', 340, yPos + 15);
+      doc.fontSize(20).fillColor('#2563eb').text(`${savingsRate.toFixed(1)}%`, 340, yPos + 35);
+      
+      yPos += 100;
+      
+      // ✅ MONTHLY TRENDS WITH BEAUTIFUL TABLE
       if (exportData.monthly_summary.length > 0) {
-        doc.fontSize(16).fillColor('#374151').text('Monthly Trends (Last 12 Months)', 50, yPos);
+        doc.fontSize(18).fillColor('#1e40af').text('Monthly Trends (Last 12 Months)', 50, yPos);
+        yPos += 30;
+        
+        // Table header with background
+        doc.rect(50, yPos, 510, 25).fillAndStroke('#1e40af', '#1e40af');
+        doc.fontSize(11).fillColor('#ffffff');
+        doc.text('Month', 70, yPos + 8);
+        doc.text('Income', 150, yPos + 8);
+        doc.text('Expenses', 230, yPos + 8);
+        doc.text('Balance', 310, yPos + 8);
+        doc.text('Savings %', 430, yPos + 8);
         yPos += 25;
         
-        // Table header
-        doc.fontSize(10).fillColor('#6b7280');
-        doc.text('Month', 70, yPos);
-        doc.text('Income', 150, yPos);
-        doc.text('Expenses', 230, yPos);
-        doc.text('Balance', 310, yPos);
-        doc.text('Savings %', 390, yPos);
-        yPos += 15;
-        
-        // Table rows
-        doc.fontSize(9).fillColor('#374151');
+        // Table rows with alternating backgrounds
+        doc.fontSize(10);
         exportData.monthly_summary.slice(0, 12).forEach((ms, index) => {
           const income = parseFloat(ms.monthly_income || 0);
           const expenses = parseFloat(ms.monthly_expenses || 0);
@@ -496,17 +521,16 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
           const monthSavings = income > 0 ? ((balance / income) * 100) : 0;
           
           // Alternating row background
-          if (index % 2 === 0) {
-            doc.fillColor('#f9fafb').rect(50, yPos - 5, 500, 15).fill();
-          }
+          const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+          doc.rect(50, yPos, 510, 20).fillAndStroke(bgColor, '#e2e8f0');
           
           doc.fillColor('#374151');
-          doc.text(ms.month, 70, yPos);
-          doc.fillColor('#059669').text(income.toFixed(2), 150, yPos);
-          doc.fillColor('#dc2626').text(expenses.toFixed(2), 230, yPos);
-          doc.fillColor(balance >= 0 ? '#059669' : '#dc2626').text(balance.toFixed(2), 310, yPos);
-          doc.fillColor('#3b82f6').text(monthSavings.toFixed(1) + '%', 390, yPos);
-          yPos += 15;
+          doc.text(ms.month, 70, yPos + 6);
+          doc.fillColor('#059669').text(`+${income.toFixed(2)}`, 150, yPos + 6);
+          doc.fillColor('#dc2626').text(`-${expenses.toFixed(2)}`, 230, yPos + 6);
+          doc.fillColor(balance >= 0 ? '#059669' : '#dc2626').text(balance.toFixed(2), 310, yPos + 6);
+          doc.fillColor('#3b82f6').text(monthSavings.toFixed(1) + '%', 430, yPos + 6);
+          yPos += 20;
           
           // New page if needed
           if (yPos > 700) {
@@ -518,7 +542,7 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
         yPos += 30;
       }
       
-      // ✅ TOP CATEGORIES SECTION
+      // ✅ TOP CATEGORIES WITH BEAUTIFUL DESIGN
       if (exportData.category_analysis.length > 0) {
         // Check if we need a new page
         if (yPos > 600) {
@@ -526,17 +550,18 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
           yPos = 50;
         }
         
-        doc.fontSize(16).fillColor('#374151').text('Top Spending Categories', 50, yPos);
-        yPos += 25;
+        doc.fontSize(18).fillColor('#1e40af').text('Top Spending Categories', 50, yPos);
+        yPos += 30;
         
-        // Categories table
-        doc.fontSize(10).fillColor('#6b7280');
-        doc.text('Category', 70, yPos);
-        doc.text('Type', 200, yPos);
-        doc.text('Count', 280, yPos);
-        doc.text('Total Amount', 340, yPos);
-        doc.text('Average', 440, yPos);
-        yPos += 15;
+        // Categories table header
+        doc.rect(50, yPos, 510, 25).fillAndStroke('#1e40af', '#1e40af');
+        doc.fontSize(11).fillColor('#ffffff');
+        doc.text('Category', 70, yPos + 8);
+        doc.text('Type', 180, yPos + 8);
+        doc.text('Count', 240, yPos + 8);
+        doc.text('Total Amount', 300, yPos + 8);
+        doc.text('Average', 420, yPos + 8);
+        yPos += 25;
         
         exportData.category_analysis.slice(0, 10).forEach((ca, index) => {
           if (yPos > 700) {
@@ -545,17 +570,23 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
           }
           
           // Alternating row background
-          if (index % 2 === 0) {
-            doc.fillColor('#f9fafb').rect(50, yPos - 5, 500, 15).fill();
-          }
+          const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+          doc.rect(50, yPos, 510, 20).fillAndStroke(bgColor, '#e2e8f0');
           
-          doc.fontSize(9).fillColor('#374151');
-          doc.text(ca.category_name, 70, yPos);
-          doc.fillColor(ca.type === 'income' ? '#059669' : '#dc2626').text(ca.type, 200, yPos);
-          doc.fillColor('#374151').text(ca.usage_count.toString(), 280, yPos);
-          doc.text(parseFloat(ca.total_amount).toFixed(2), 340, yPos);
-          doc.text(parseFloat(ca.avg_amount).toFixed(2), 440, yPos);
-          yPos += 15;
+          doc.fontSize(10).fillColor('#374151');
+          doc.text(ca.category_name, 70, yPos + 6);
+          
+          // Type with badge-like appearance
+          const typeColor = ca.type === 'income' ? '#059669' : '#dc2626';
+          const typeBg = ca.type === 'income' ? '#ecfdf5' : '#fef2f2';
+          doc.rect(180, yPos + 3, 50, 14).fillAndStroke(typeBg, typeColor);
+          doc.fillColor(typeColor).text(ca.type.toUpperCase(), 185, yPos + 6);
+          
+          doc.fillColor('#374151');
+          doc.text(ca.usage_count.toString(), 250, yPos + 6);
+          doc.text(parseFloat(ca.total_amount).toFixed(2), 300, yPos + 6);
+          doc.text(parseFloat(ca.avg_amount).toFixed(2), 420, yPos + 6);
+          yPos += 20;
         });
         
         yPos += 30;
@@ -572,47 +603,33 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
         doc.fontSize(16).fillColor('#374151').text('Financial Insights & Analytics', 50, yPos);
         yPos += 25;
         
-        // Spending patterns
+        // Analytics card with beautiful design
+        doc.rect(50, yPos, 510, 120).fillAndStroke('#f0f9ff', '#0284c7');
+        
+        doc.fontSize(14).fillColor('#0c4a6e');
+        doc.text('KEY INSIGHTS', 70, yPos + 20);
+        
+        doc.fontSize(11).fillColor('#374151');
+        
+        // Display analytics data without emojis
         if (exportData.analytics.spendingPatterns) {
           const patterns = exportData.analytics.spendingPatterns;
-          doc.fontSize(12).fillColor('#4b5563');
-          doc.text(`📈 Average Daily Spending: ${patterns.avgDailySpending?.toFixed(2) || 'N/A'}`, 70, yPos);
-          yPos += 20;
-          doc.text(`📅 Average Monthly Spending: ${patterns.avgMonthlySpending?.toFixed(2) || 'N/A'}`, 70, yPos);
-          yPos += 20;
-          doc.text(`🎯 Spending Trend: ${patterns.trendDirection || 'Stable'}`, 70, yPos);
-          yPos += 30;
-        }
-        
-        // Top categories
-        if (exportData.analytics.spendingPatterns?.biggestExpenseCategory) {
-          doc.text(`🔥 Top Expense Category: ${exportData.analytics.spendingPatterns.biggestExpenseCategory.category_name}`, 70, yPos);
-          yPos += 20;
-        }
-        if (exportData.analytics.spendingPatterns?.biggestIncomeCategory) {
-          doc.text(`💰 Top Income Category: ${exportData.analytics.spendingPatterns.biggestIncomeCategory.category_name}`, 70, yPos);
-          yPos += 30;
-        }
-        
-        // Insights
-        if (exportData.analytics.insights && exportData.analytics.insights.length > 0) {
-          doc.fontSize(14).fillColor('#374151').text('💡 Financial Recommendations', 70, yPos);
-          yPos += 20;
+          doc.text(`Average Daily Spending: ${patterns.avgDailySpending?.toFixed(2) || 'N/A'}`, 70, yPos + 45);
+          doc.text(`Average Monthly Spending: ${patterns.avgMonthlySpending?.toFixed(2) || 'N/A'}`, 70, yPos + 65);
+          doc.text(`Spending Trend: ${patterns.trendDirection || 'Stable'}`, 320, yPos + 45);
           
-          exportData.analytics.insights.slice(0, 5).forEach((insight, index) => {
-            if (yPos > 700) {
-              doc.addPage();
-              yPos = 50;
-            }
-            
-            doc.fontSize(10).fillColor('#6b7280');
-            doc.text(`${index + 1}. ${insight.title}`, 90, yPos);
-            yPos += 15;
-            doc.fontSize(9).fillColor('#4b5563');
-            doc.text(insight.description, 100, yPos, { width: 400 });
-            yPos += 25;
-          });
+          if (patterns.biggestExpenseCategory) {
+            doc.text(`Top Expense Category: ${patterns.biggestExpenseCategory.category_name}`, 320, yPos + 65);
+          }
+          
+          if (patterns.biggestIncomeCategory) {
+            doc.text(`Top Income Category: ${patterns.biggestIncomeCategory.category_name}`, 320, yPos + 85);
+          }
+        } else {
+          doc.text('Analytics data not available', 70, yPos + 45);
         }
+        
+        yPos += 130;
       }
       
       // ✅ FIXED: Skip footer to avoid page indexing issues entirely

@@ -13,6 +13,66 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const db = require('../config/db');
 
+// 🔍 Enhanced debugging utilities for transactions
+const debugTransaction = {
+  logRequest: (action, userId, params = {}) => {
+    const requestId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    logger.info(`💰 [${requestId}] Transaction ${action} initiated`, {
+      userId,
+      action,
+      params,
+      timestamp: new Date().toISOString(),
+      requestId
+    });
+    return requestId;
+  },
+  
+  logSuccess: (requestId, action, result, duration) => {
+    logger.info(`✅ [${requestId}] Transaction ${action} succeeded`, {
+      action,
+      resultType: typeof result,
+      hasData: !!result,
+      dataCount: Array.isArray(result) ? result.length : (result?.id ? 1 : 0),
+      duration: `${duration}ms`,
+      requestId
+    });
+  },
+  
+  logError: (requestId, action, error, context = {}) => {
+    logger.error(`❌ [${requestId}] Transaction ${action} failed`, {
+      action,
+      error: {
+        message: error.message,
+        code: error.code,
+        stack: error.stack?.split('\n').slice(0, 3)
+      },
+      context,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
+  },
+  
+  logCategorySync: (requestId, categoryId, categoryData) => {
+    logger.debug(`🏷️ [${requestId}] Category sync`, {
+      categoryId,
+      categoryFound: !!categoryData,
+      categoryName: categoryData?.name,
+      categoryIcon: categoryData?.icon,
+      categoryColor: categoryData?.color,
+      requestId
+    });
+  },
+  
+  logQueryExecution: (requestId, queryType, params, rowCount) => {
+    logger.debug(`🔍 [${requestId}] Query executed`, {
+      queryType,
+      paramCount: Array.isArray(params) ? params.length : 0,
+      rowCount,
+      requestId
+    });
+  }
+};
+
 const transactionController = {
   /**
    * 🚀 OPTIMIZED: Get dashboard data with smart caching
@@ -318,14 +378,16 @@ const transactionController = {
           t.type,
           t.amount,
           t.description,
+          t.date,
           t.created_at,
           t.updated_at,
+          t.category_id,
           c.name as category_name,
           c.icon as category_icon,
           c.color as category_color
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
+        WHERE t.user_id = $1 AND (t.deleted_at IS NULL)
         ORDER BY t.created_at DESC
         LIMIT $2
       `;
@@ -347,11 +409,13 @@ const transactionController = {
   }),
 
   /**
-   * ✅ NEW: Get filtered transactions with pagination
+   * ✅ FIXED: Get filtered transactions with pagination + Enhanced Debugging
    * @route GET /api/v1/transactions
    */
   getTransactions: asyncHandler(async (req, res) => {
+    const start = Date.now();
     const userId = req.user.id;
+    const requestId = debugTransaction.logRequest('getTransactions', userId, req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100
     const offset = (page - 1) * limit;
@@ -513,35 +577,70 @@ const transactionController = {
   }),
 
   /**
-   * 🚀 OPTIMIZED: Create transaction with cache invalidation
+   * ✅ FIXED: Create transaction with simplified schema + Enhanced Debugging
    * @route POST /api/v1/transactions/:type
    */
   create: asyncHandler(async (req, res) => {
     const start = Date.now();
     const { type } = req.params;
     const userId = req.user.id;
+    const requestId = debugTransaction.logRequest('create', userId, { type, body: req.body });
+
+
 
     if (!['expense', 'income'].includes(type)) {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid transaction type' };
     }
 
-    const transactionData = {
-      user_id: userId,
-      ...req.body,
-      amount: parseFloat(req.body.amount)
-    };
+    const { amount, description, categoryId, notes, date } = req.body;
+
+    // Validate required fields
+    if (!amount || isNaN(parseFloat(amount))) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Valid amount is required' };
+    }
 
     try {
-      const transaction = await Transaction.create(type, transactionData);
+      // ✅ FIXED: Use actual database schema
+      const query = `
+        INSERT INTO transactions (
+          user_id, category_id, amount, type, description, notes, date, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
+      `;
+
+      const values = [
+        userId,
+        categoryId || null,
+        parseFloat(amount),
+        type,
+        description || '',
+        notes || '',
+        date || new Date().toISOString().split('T')[0] // Use today if no date provided
+      ];
+
+
+
+      const result = await db.query(query, values);
+      const transaction = result.rows[0];
+
+      // Get category info if category_id exists
+      if (transaction.category_id) {
+        const categoryQuery = `
+          SELECT name, icon, color FROM categories WHERE id = $1
+        `;
+        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
+        if (categoryResult.rows.length > 0) {
+          transaction.category = categoryResult.rows[0];
+        }
+      }
 
       const duration = Date.now() - start;
-      logger.info('✅ Transaction created', {
+      logger.info('✅ Transaction created successfully', {
         transactionId: transaction.id,
         userId,
         type,
         amount: transaction.amount,
-        duration: `${duration}ms`,
-        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
+        duration: `${duration}ms`
       });
 
       res.status(201).json({
@@ -549,8 +648,7 @@ const transactionController = {
         data: transaction,
         metadata: {
           created: true,
-          duration: `${duration}ms`,
-          optimized: true
+          duration: `${duration}ms`
         },
         timestamp: new Date().toISOString()
       });
@@ -561,6 +659,7 @@ const transactionController = {
         userId,
         type,
         error: error.message,
+        stack: error.stack,
         duration: `${duration}ms`
       });
       throw error;
@@ -686,30 +785,108 @@ const transactionController = {
   }),
 
   /**
-   * 🚀 OPTIMIZED: Update transaction with cache invalidation
+   * ✅ FIXED: Update transaction with correct schema
    * @route PUT /api/v1/transactions/:type/:id
    */
   update: asyncHandler(async (req, res) => {
     const start = Date.now();
     const { type, id } = req.params;
     const userId = req.user.id;
-    const updates = { ...req.body };
 
-    if (updates.amount) {
-      updates.amount = parseFloat(updates.amount);
-    }
+
+
+    const { amount, description, categoryId, notes, date } = req.body;
 
     try {
-      const transaction = await Transaction.update(type, id, updates, userId);
+      // First check if transaction exists and belongs to user
+      const checkQuery = `
+        SELECT id FROM transactions WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)
+      `;
+      const checkResult = await db.query(checkQuery, [id, userId]);
+      
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found'
+        });
+      }
+
+      // Build update query dynamically
+      const updates = [];
+      const values = [];
+      let paramCount = 1;
+
+      if (amount !== undefined && !isNaN(parseFloat(amount))) {
+        updates.push(`amount = $${paramCount++}`);
+        values.push(parseFloat(amount));
+      }
+
+      if (description !== undefined) {
+        updates.push(`description = $${paramCount++}`);
+        values.push(description || '');
+      }
+
+      if (categoryId !== undefined) {
+        updates.push(`category_id = $${paramCount++}`);
+        values.push(categoryId || null);
+      }
+
+      if (notes !== undefined) {
+        updates.push(`notes = $${paramCount++}`);
+        values.push(notes || '');
+      }
+
+      if (date !== undefined) {
+        updates.push(`date = $${paramCount++}`);
+        values.push(date);
+      }
+
+      if (type && ['income', 'expense'].includes(type)) {
+        updates.push(`type = $${paramCount++}`);
+        values.push(type);
+      }
+
+      updates.push(`updated_at = NOW()`);
+
+      if (updates.length === 1) { // Only updated_at
+        return res.status(400).json({
+          success: false,
+          error: 'No valid fields to update'
+        });
+      }
+
+      const updateQuery = `
+        UPDATE transactions 
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
+      `;
+
+      values.push(id, userId);
+
+
+
+      const result = await db.query(updateQuery, values);
+      const transaction = result.rows[0];
+
+      // Get category info if category_id exists
+      if (transaction.category_id) {
+        const categoryQuery = `
+          SELECT name, icon, color FROM categories WHERE id = $1
+        `;
+        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
+        if (categoryResult.rows.length > 0) {
+          transaction.category = categoryResult.rows[0];
+        }
+      }
 
       const duration = Date.now() - start;
-      logger.info('✅ Transaction updated', {
+      logger.info('✅ Transaction updated successfully', {
         transactionId: id,
         userId,
         type,
-        fields: Object.keys(updates),
-        duration: `${duration}ms`,
-        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
+        fieldsUpdated: Object.keys(req.body),
+        duration: `${duration}ms`
       });
 
       res.json({
@@ -717,9 +894,7 @@ const transactionController = {
         data: transaction,
         metadata: {
           updated: true,
-          fields: Object.keys(updates),
-          duration: `${duration}ms`,
-          optimized: true
+          duration: `${duration}ms`
         },
         timestamp: new Date().toISOString()
       });
@@ -731,6 +906,7 @@ const transactionController = {
         userId,
         type,
         error: error.message,
+        stack: error.stack,
         duration: `${duration}ms`
       });
       throw error;
@@ -738,7 +914,7 @@ const transactionController = {
   }),
 
   /**
-   * 🚀 OPTIMIZED: Delete transaction with cache invalidation
+   * ✅ FIXED: Delete transaction with soft delete
    * @route DELETE /api/v1/transactions/:type/:id
    */
   delete: asyncHandler(async (req, res) => {
@@ -746,25 +922,50 @@ const transactionController = {
     const { type, id } = req.params;
     const userId = req.user.id;
 
+
+
     try {
-      const success = await Transaction.delete(type, id, userId);
+      // First check if transaction exists and belongs to user
+      const checkQuery = `
+        SELECT id FROM transactions WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)
+      `;
+      const checkResult = await db.query(checkQuery, [id, userId]);
+      
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found'
+        });
+      }
+
+      // Soft delete the transaction
+      const deleteQuery = `
+        UPDATE transactions 
+        SET deleted_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND user_id = $2
+        RETURNING id
+      `;
+
+      const result = await db.query(deleteQuery, [id, userId]);
+      const success = result.rows.length > 0;
 
       const duration = Date.now() - start;
-      logger.info('✅ Transaction deleted', {
+      logger.info('✅ Transaction soft deleted successfully', {
         transactionId: id,
         userId,
         type,
-        duration: `${duration}ms`,
-        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
+        duration: `${duration}ms`
       });
 
       res.json({
         success: true,
-        data: { deleted: success },
+        data: { 
+          deleted: success,
+          id: id
+        },
         metadata: {
           deleted: true,
-          duration: `${duration}ms`,
-          optimized: true
+          duration: `${duration}ms`
         },
         timestamp: new Date().toISOString()
       });
@@ -776,6 +977,7 @@ const transactionController = {
         userId,
         type,
         error: error.message,
+        stack: error.stack,
         duration: `${duration}ms`
       });
       throw error;

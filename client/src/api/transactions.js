@@ -41,6 +41,7 @@ const transactionAPI = {
       const response = await apiClient.client.get('/transactions', { params });
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('TransactionAPI.getAll error:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },
@@ -316,6 +317,38 @@ const transactionAPI = {
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
+  },
+
+  // ==========================================
+  // 🔧 CONVENIENCE ALIASES FOR HOOKS
+  // ==========================================
+
+  /**
+   * Create expense (alias for consistency with hooks)
+   * @param {Object} data - Expense data
+   * @returns {Promise<Object>} Created expense
+   */
+  async createExpense(data) {
+    const expenseData = {
+      ...data,
+      type: 'expense',
+      amount: Math.abs(data.amount) // Ensure positive for expense
+    };
+    return this.create('expense', expenseData);
+  },
+
+  /**
+   * Create income (alias for consistency with hooks)
+   * @param {Object} data - Income data
+   * @returns {Promise<Object>} Created income
+   */
+  async createIncome(data) {
+    const incomeData = {
+      ...data,
+      type: 'income',
+      amount: Math.abs(data.amount) // Ensure positive for income
+    };
+    return this.create('income', incomeData);
   }
 };
 
