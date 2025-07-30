@@ -275,9 +275,12 @@ const exportAsPDF = asyncHandler(async (req, res) => {
   const { includeAnalytics = 'true' } = req.query;
   
   try {
+    logger.info('📄 PDF export requested', { userId, includeAnalytics });
+    
     const exportData = await User.getExportData(userId);
     
     if (!exportData || !exportData.transactions || exportData.transactions.length === 0) {
+      logger.warn('📄 PDF export failed - no data', { userId });
       return res.status(404).json({
         error: {
           code: 'NO_DATA',
@@ -286,6 +289,13 @@ const exportAsPDF = asyncHandler(async (req, res) => {
         }
       });
     }
+    
+    logger.info('📄 Generating PDF with data', { 
+      userId,
+      transactions: exportData.transactions.length,
+      monthlyPeriods: exportData.monthly_summary.length,
+      categories: exportData.category_analysis.length
+    });
     
     // Generate beautiful PDF report
     const pdfBuffer = await generatePDFReport(exportData, includeAnalytics === 'true');
@@ -296,7 +306,7 @@ const exportAsPDF = asyncHandler(async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', pdfBuffer.length);
     
-    logger.info('📄 PDF export completed', { 
+    logger.info('📄 PDF export completed successfully', { 
       userId, 
       recordCount: exportData.transactions.length,
       monthlyPeriods: exportData.monthly_summary.length,
@@ -308,8 +318,21 @@ const exportAsPDF = asyncHandler(async (req, res) => {
     
     res.send(pdfBuffer);
   } catch (error) {
-    logger.error('❌ PDF export failed', { userId, error: error.message });
-    throw error;
+    logger.error('❌ PDF export failed with error', { 
+      userId, 
+      error: error.message, 
+      stack: error.stack,
+      name: error.name
+    });
+    
+    res.status(500).json({
+      error: {
+        code: 'PDF_GENERATION_FAILED',
+        message: 'Failed to generate PDF report. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        timestamp: new Date().toISOString()
+      }
+    });
   }
 });
 
@@ -382,6 +405,11 @@ const getExportOptions = asyncHandler(async (req, res) => {
 const generatePDFReport = async (exportData, includeAnalytics) => {
   return new Promise((resolve, reject) => {
     try {
+      logger.info('📄 Starting PDF generation', { 
+        userTransactions: exportData.transactions.length,
+        includeAnalytics 
+      });
+      
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
       const buffers = [];
       
@@ -579,7 +607,12 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
       
       // Finalize the PDF
       doc.end();
+      logger.info('📄 PDF generation completed successfully');
     } catch (error) {
+      logger.error('📄 PDF generation failed', { 
+        error: error.message, 
+        stack: error.stack 
+      });
       reject(error);
     }
   });
