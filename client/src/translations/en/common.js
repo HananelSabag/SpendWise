@@ -37,6 +37,7 @@ export default {
 
   // Navigation
   menu: 'Menu',
+  admin: 'Admin',
   openMenu: 'Open Menu',
   closeMenu: 'Close Menu',
   quickActions: 'Quick Actions',

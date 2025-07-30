@@ -1,23 +1,21 @@
 /**
- * ⚙️ HEADER ACTIONS - Theme, Language & Currency Controls
+ * ⚙️ HEADER ACTIONS - Theme & Language Controls
  * Extracted from Header.jsx for better performance and maintainability
- * Features: Theme toggle, Language switcher, Currency controls
- * @version 2.0.0 - CLEANED UP (removed settings duplicate)
+ * Features: Theme toggle, Language switcher (SESSION-ONLY changes)
+ * @version 2.1.0 - SIMPLIFIED (removed currency control - use Profile page for persistent changes)
  */
 
 import React, { useCallback } from 'react';
 import {
   Sun,
   Moon,
-  Globe,
-  DollarSign
+  Globe
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import { 
   useTranslation, 
   useTheme,
-  useCurrency,
   useNotifications
 } from '../../stores';
 
@@ -32,7 +30,6 @@ const HeaderActions = ({
 }) => {
   const { currentLanguage, setLanguage, t } = useTranslation();
   const { isDark, setTheme } = useTheme();
-  const { currency, setCurrency } = useCurrency();
   const { addNotification } = useNotifications();
 
   // ✅ Handle theme toggle (SESSION-ONLY: Does not save to database)
@@ -75,35 +72,7 @@ const HeaderActions = ({
     });
   }, [currentLanguage, setLanguage, addNotification, t]);
 
-  // ✅ Currency configuration with symbols
-  const currencyConfig = {
-    ILS: { symbol: '₪', name: 'Israeli Shekel' },
-    USD: { symbol: '$', name: 'US Dollar' },
-    EUR: { symbol: '€', name: 'Euro' },
-    GBP: { symbol: '£', name: 'British Pound' },
-    JPY: { symbol: '¥', name: 'Japanese Yen' }
-  };
-
-  // ✅ Handle currency cycle (SESSION-ONLY: Does not save to database)
-  const handleCurrencyToggle = useCallback(() => {
-    const currencies = Object.keys(currencyConfig);
-    const currentIndex = currencies.indexOf(currency);
-    const nextCurrency = currencies[(currentIndex + 1) % currencies.length];
-    
-    setCurrency(nextCurrency);
-    
-    // ✅ Save guest preferences for non-authenticated users
-    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
-      window.spendWiseStores?.app?.getState?.()?.actions?.saveGuestPreferences?.();
-    }
-    
-    addNotification({
-      type: 'success',
-      message: t('common.currencyChanged', { currency: nextCurrency })
-    });
-  }, [currency, setCurrency, addNotification, t, currencyConfig]);
-
-  // ✅ Action buttons configuration - REMOVED SETTINGS (moved to user menu)
+  // ✅ Action buttons configuration - Theme & Language only (SESSION changes)
   const actionButtons = [
     {
       key: 'theme',
@@ -118,19 +87,8 @@ const HeaderActions = ({
       label: currentLanguage === 'en' ? 'עברית' : 'English',
       onClick: handleLanguageToggle,
       className: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-    },
-    {
-      key: 'currency',
-             icon: () => (
-        <span className="font-bold text-lg leading-none w-5 h-5 flex items-center justify-center">
-          {currencyConfig[currency]?.symbol || '$'}
-        </span>
-      ),
-             label: currency,
-      onClick: handleCurrencyToggle,
-      className: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-      showLabel: true
     }
+    // ✅ REMOVED: Currency button (use Profile page for persistent currency changes)
     // ✅ REMOVED: Settings button (available in user dropdown)
   ];
 

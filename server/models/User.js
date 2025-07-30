@@ -506,7 +506,7 @@ class User {
     await db.query(query, [userId]);
   }
 
-  // ✅ CRITICAL: Add the missing getExportData method that exportController.js expects
+  // ✅ ENHANCED: Complete export data with analytics aligned with exportController.js expectations
   static async getExportData(userId) {
     try {
       const user = await this.findById(userId);
@@ -514,45 +514,127 @@ class User {
         throw new Error('User not found');
       }
 
-      // Get user's transactions for export
+      // ✅ Get unified transactions from income + expenses tables (as expected by controller)
       const transactionsQuery = `
         SELECT 
-          t.id, t.type, t.amount, t.description, t.category_id,
-          t.created_at, t.updated_at,
-          c.name as category_name, c.icon as category_icon
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
-        ORDER BY t.created_at DESC
+          id, 'income' as type, amount, description, 
+          category_id, date, created_at, updated_at, notes,
+          c.name as category
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE i.user_id = $1 AND i.deleted_at IS NULL
+        UNION ALL
+        SELECT 
+          id, 'expense' as type, amount, description, 
+          category_id, date, created_at, updated_at, notes,
+          c.name as category
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = $1 AND e.deleted_at IS NULL
+        ORDER BY created_at DESC
       `;
 
       const transactionsResult = await db.query(transactionsQuery, [userId]);
 
-      // Get user's categories
-      const categoriesQuery = `
-        SELECT id, name, icon, color, type
-        FROM categories
-        WHERE user_id = $1 OR user_id IS NULL
-        ORDER BY name
+      // ✅ Get monthly summary data (expected by controller)
+      const monthlySummaryQuery = `
+        SELECT 
+          TO_CHAR(month, 'YYYY-MM') as month,
+          COALESCE(monthly_income, 0) as monthly_income,
+          COALESCE(monthly_expenses, 0) as monthly_expenses,
+          monthly_transactions
+        FROM (
+          SELECT 
+            DATE_TRUNC('month', COALESCE(i.date, e.date)) as month,
+            SUM(i.amount) as monthly_income,
+            SUM(e.amount) as monthly_expenses,
+            COUNT(*) as monthly_transactions
+          FROM income i
+          FULL OUTER JOIN expenses e ON DATE_TRUNC('month', i.date) = DATE_TRUNC('month', e.date)
+            AND i.user_id = e.user_id
+          WHERE COALESCE(i.user_id, e.user_id) = $1
+          AND COALESCE(i.deleted_at, e.deleted_at) IS NULL
+          AND COALESCE(i.date, e.date) >= CURRENT_DATE - INTERVAL '12 months'
+          GROUP BY DATE_TRUNC('month', COALESCE(i.date, e.date))
+          ORDER BY month DESC
+        ) monthly_data
       `;
 
-      const categoriesResult = await db.query(categoriesQuery, [userId]);
+      const monthlySummaryResult = await db.query(monthlySummaryQuery, [userId]);
 
-      return {
+      // ✅ Get category analysis (expected by controller)
+      const categoryAnalysisQuery = `
+        SELECT 
+          c.name as category_name,
+          c.type,
+          COUNT(*) as usage_count,
+          SUM(trans.amount) as total_amount,
+          AVG(trans.amount) as avg_amount,
+          MAX(trans.amount) as max_amount
+        FROM categories c
+        INNER JOIN (
+          SELECT category_id, amount FROM income 
+          WHERE user_id = $1 AND deleted_at IS NULL
+          UNION ALL
+          SELECT category_id, amount FROM expenses 
+          WHERE user_id = $1 AND deleted_at IS NULL
+        ) trans ON c.id = trans.category_id
+        WHERE c.user_id = $1 OR c.is_default = true
+        GROUP BY c.id, c.name, c.type
+        ORDER BY total_amount DESC
+      `;
+
+      const categoryAnalysisResult = await db.query(categoryAnalysisQuery, [userId]);
+
+      // ✅ Get user analytics using database function
+      const analyticsQuery = `SELECT get_user_analytics($1, 12) as analytics`;
+      const analyticsResult = await db.query(analyticsQuery, [userId]);
+
+      // ✅ Build comprehensive export data (matching controller expectations)
+      const exportData = {
         user: {
           id: user.id,
           email: user.email,
           username: user.username,
-          createdAt: user.created_at,
-          preferences: user.preferences
+          created_at: user.created_at,
+          language_preference: user.language_preference,
+          theme_preference: user.theme_preference,
+          currency_preference: user.currency_preference,
+          // Enhanced user stats (expected by controller)
+          total_transactions: transactionsResult.rows.length,
+          active_days: analyticsResult.rows[0]?.analytics?.user_profile?.active_days || 0,
+          first_transaction: analyticsResult.rows[0]?.analytics?.user_profile?.first_transaction || null,
+          last_transaction: analyticsResult.rows[0]?.analytics?.user_profile?.last_transaction || null
         },
         transactions: transactionsResult.rows,
-        categories: categoriesResult.rows,
+        monthly_summary: monthlySummaryResult.rows,
+        category_analysis: categoryAnalysisResult.rows,
+        analytics: analyticsResult.rows[0]?.analytics || {
+          spendingPatterns: {
+            avgDailySpending: 0,
+            avgMonthlySpending: 0,
+            savingsRate: 0,
+            trendDirection: 'stable',
+            biggestExpenseCategory: categoryAnalysisResult.rows.find(c => c.type === 'expense') || null,
+            biggestIncomeCategory: categoryAnalysisResult.rows.find(c => c.type === 'income') || null
+          },
+          insights: []
+        },
         exportDate: new Date().toISOString(),
         totalTransactions: transactionsResult.rows.length
       };
+
+      logger.info('✅ Enhanced export data generated', { 
+        userId, 
+        transactions: exportData.transactions.length,
+        monthlyPeriods: exportData.monthly_summary.length,
+        categories: exportData.category_analysis.length,
+        hasAnalytics: !!exportData.analytics 
+      });
+
+      return exportData;
     } catch (error) {
-      logger.error('Export data retrieval failed', { userId, error: error.message });
+      logger.error('❌ Enhanced export data retrieval failed', { userId, error: error.message });
       throw error;
     }
   }

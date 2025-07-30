@@ -20,37 +20,55 @@ const ExportModal = ({ isOpen, onClose }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const formats = [
-    { value: 'csv', label: 'CSV', description: 'Excel compatible format', icon: FileText },
-    { value: 'json', label: 'JSON', description: 'Raw data format', icon: Database }
+    { value: 'csv', label: 'CSV', description: 'Excel compatible spreadsheet format', icon: FileText },
+    { value: 'json', label: 'JSON', description: 'Machine-readable data format', icon: Database },
+    { value: 'pdf', label: 'PDF', description: 'Professional report with charts 🆕', icon: FileText, new: true }
   ];
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await api.export.exportTransactions(selectedFormat);
+      // ✅ FIXED: Use correct API methods that align with server endpoints
+      let response;
+      if (selectedFormat === 'csv') {
+        response = await api.export.exportAsCSV();
+      } else if (selectedFormat === 'json') {
+        response = await api.export.exportAsJSON();
+      } else if (selectedFormat === 'pdf') {
+        response = await api.export.exportAsPDF();
+      }
       
-      // Create download
-      const blob = new Blob([response.data], { 
-        type: selectedFormat === 'csv' ? 'text/csv' : 'application/json' 
+      if (!response.success) {
+        throw new Error(response.error?.message || 'Export failed');
+      }
+      
+      // ✅ FIXED: Handle server response correctly (server sends direct data)
+      const data = response.data;
+      const blob = new Blob([data], { 
+        type: selectedFormat === 'csv' ? 'text/csv' : 
+              selectedFormat === 'json' ? 'application/json' :
+              selectedFormat === 'pdf' ? 'application/pdf' : 'text/plain'
       });
+      
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `spendwise-data-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
+      link.download = `spendwise-export-${user?.username || 'user'}-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
       link.click();
       
       URL.revokeObjectURL(url);
       
       addNotification({
         type: 'success',
-        message: 'Data exported successfully!'
+        message: `${selectedFormat.toUpperCase()} export completed successfully!`
       });
       
       onClose();
     } catch (error) {
+      console.error('Export error:', error);
       addNotification({
         type: 'error',
-        message: 'Failed to export data'
+        message: error.message || 'Failed to export data'
       });
     } finally {
       setIsExporting(false);
@@ -87,7 +105,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                     <button
                       key={format.value}
                       onClick={() => setSelectedFormat(format.value)}
-                      className={`w-full p-3 rounded-lg border-2 transition-colors ${
+                      className={`w-full p-3 rounded-lg border-2 transition-colors relative ${
                         selectedFormat === format.value
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
@@ -95,9 +113,14 @@ const ExportModal = ({ isOpen, onClose }) => {
                     >
                       <div className="flex items-center space-x-3">
                         <Icon className="w-5 h-5 text-blue-600" />
-                        <div className="text-left">
+                        <div className="text-left flex-1">
                           <div className="font-medium text-gray-900 dark:text-white">
                             {format.label}
+                            {format.new && (
+                              <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                                NEW
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {format.description}

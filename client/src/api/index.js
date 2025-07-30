@@ -42,7 +42,7 @@ export const api = {
   // ✅ ADD: Onboarding Management
   onboarding: onboardingAPI,
   
-  // Export functionality
+  // ✅ ENHANCED: Export functionality with PDF support
   export: {
     async exportAsCSV() {
       try {
@@ -60,11 +60,23 @@ export const api = {
         return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
       }
     },
-    async exportData(format = 'csv') {
-      if (format === 'json') {
-        return this.exportAsJSON();
+    async exportAsPDF() {
+      try {
+        const response = await apiClient.get('/export/pdf', {
+          responseType: 'blob' // ✅ Important for PDF binary data
+        });
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
       }
-      return this.exportAsCSV();
+    },
+    async getExportOptions() {
+      try {
+        const response = await apiClient.get('/export/options');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+      }
     }
   },
   

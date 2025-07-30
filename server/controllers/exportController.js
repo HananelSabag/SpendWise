@@ -8,6 +8,8 @@ const { User } = require('../models/User'); // ✅ FIXED: Destructure User from 
 const { asyncHandler } = require('../middleware/errorHandler');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
+const PDFDocument = require('pdfkit');
+const path = require('path');
 
 /**
  * 📊 ENHANCED Export user data as CSV with analytics
@@ -265,25 +267,50 @@ const generateAdvancedJSON = (exportData, includeAnalytics) => {
 };
 
 /**
- * Export user data as PDF (placeholder)
+ * 📄 ENHANCED: Export user data as beautiful PDF report
  * @route GET /api/v1/export/pdf
  */
 const exportAsPDF = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const { includeAnalytics = 'true' } = req.query;
   
-  logger.info('PDF export requested (not implemented)', { userId });
-  
-  res.status(501).json({
-    error: {
-      code: 'NOT_IMPLEMENTED',
-      message: 'PDF export is coming soon! Please use CSV or JSON export for now.',
-      alternatives: [
-        { format: 'CSV', endpoint: '/api/v1/export/csv' },
-        { format: 'JSON', endpoint: '/api/v1/export/json' }
-      ],
-      timestamp: new Date().toISOString()
+  try {
+    const exportData = await User.getExportData(userId);
+    
+    if (!exportData || !exportData.transactions || exportData.transactions.length === 0) {
+      return res.status(404).json({
+        error: {
+          code: 'NO_DATA',
+          message: 'No transaction data available for PDF export',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
-  });
+    
+    // Generate beautiful PDF report
+    const pdfBuffer = await generatePDFReport(exportData, includeAnalytics === 'true');
+    
+    const filename = `spendwise_report_${exportData.user.username.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    logger.info('📄 PDF export completed', { 
+      userId, 
+      recordCount: exportData.transactions.length,
+      monthlyPeriods: exportData.monthly_summary.length,
+      categories: exportData.category_analysis.length,
+      includeAnalytics: includeAnalytics === 'true',
+      filename,
+      pdfSize: pdfBuffer.length
+    });
+    
+    res.send(pdfBuffer);
+  } catch (error) {
+    logger.error('❌ PDF export failed', { userId, error: error.message });
+    throw error;
+  }
 });
 
 /**
@@ -319,10 +346,9 @@ const getExportOptions = asyncHandler(async (req, res) => {
         {
           format: 'pdf',
           name: 'PDF (Portable Document Format)',
-          description: 'Formatted report with charts and summaries',
+          description: 'Professional report with charts and financial analysis',
           endpoint: '/api/v1/export/pdf',
-          available: false,
-          comingSoon: true,
+          available: true,
           mimeType: 'application/pdf'
         }
       ],
@@ -346,6 +372,218 @@ const getExportOptions = asyncHandler(async (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+/**
+ * 🎨 Generate beautiful PDF financial report
+ * @param {Object} exportData - Complete export data from database
+ * @param {Boolean} includeAnalytics - Whether to include analytics section
+ * @returns {Buffer} PDF buffer
+ */
+const generatePDFReport = async (exportData, includeAnalytics) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const buffers = [];
+      
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        resolve(pdfBuffer);
+      });
+      
+      // ✅ BEAUTIFUL HEADER SECTION
+      doc.fontSize(24).fillColor('#1f2937').text('SpendWise Financial Report', 50, 50);
+      doc.fontSize(12).fillColor('#6b7280').text(`Generated on ${new Date().toLocaleDateString()}`, 50, 80);
+      
+      // User Info Section
+      doc.fontSize(16).fillColor('#374151').text('Account Summary', 50, 120);
+      doc.fontSize(12).fillColor('#4b5563');
+      doc.text(`Account Holder: ${exportData.user.username}`, 70, 145);
+      doc.text(`Member Since: ${new Date(exportData.user.created_at).toLocaleDateString()}`, 70, 165);
+      doc.text(`Currency: ${exportData.user.currency_preference}`, 70, 185);
+      doc.text(`Total Transactions: ${exportData.transactions.length}`, 70, 205);
+      doc.text(`Active Days: ${exportData.user.active_days}`, 70, 225);
+      
+      // ✅ FINANCIAL OVERVIEW SECTION
+      let yPos = 260;
+      doc.fontSize(16).fillColor('#374151').text('Financial Overview', 50, yPos);
+      yPos += 30;
+      
+      // Calculate totals
+      const totalIncome = exportData.monthly_summary.reduce((sum, ms) => sum + parseFloat(ms.monthly_income || 0), 0);
+      const totalExpenses = exportData.monthly_summary.reduce((sum, ms) => sum + parseFloat(ms.monthly_expenses || 0), 0);
+      const netBalance = totalIncome - totalExpenses;
+      const savingsRate = totalIncome > 0 ? ((netBalance / totalIncome) * 100) : 0;
+      
+      // Financial metrics with colors
+      doc.fontSize(12);
+      doc.fillColor('#059669').text(`💰 Total Income: ${totalIncome.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
+      yPos += 20;
+      doc.fillColor('#dc2626').text(`💸 Total Expenses: ${totalExpenses.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
+      yPos += 20;
+      doc.fillColor(netBalance >= 0 ? '#059669' : '#dc2626').text(`📊 Net Balance: ${netBalance.toFixed(2)} ${exportData.user.currency_preference}`, 70, yPos);
+      yPos += 20;
+      doc.fillColor('#3b82f6').text(`💯 Savings Rate: ${savingsRate.toFixed(1)}%`, 70, yPos);
+      yPos += 40;
+      
+      // ✅ MONTHLY TRENDS SECTION
+      if (exportData.monthly_summary.length > 0) {
+        doc.fontSize(16).fillColor('#374151').text('Monthly Trends (Last 12 Months)', 50, yPos);
+        yPos += 25;
+        
+        // Table header
+        doc.fontSize(10).fillColor('#6b7280');
+        doc.text('Month', 70, yPos);
+        doc.text('Income', 150, yPos);
+        doc.text('Expenses', 230, yPos);
+        doc.text('Balance', 310, yPos);
+        doc.text('Savings %', 390, yPos);
+        yPos += 15;
+        
+        // Table rows
+        doc.fontSize(9).fillColor('#374151');
+        exportData.monthly_summary.slice(0, 12).forEach((ms, index) => {
+          const income = parseFloat(ms.monthly_income || 0);
+          const expenses = parseFloat(ms.monthly_expenses || 0);
+          const balance = income - expenses;
+          const monthSavings = income > 0 ? ((balance / income) * 100) : 0;
+          
+          // Alternating row background
+          if (index % 2 === 0) {
+            doc.fillColor('#f9fafb').rect(50, yPos - 5, 500, 15).fill();
+          }
+          
+          doc.fillColor('#374151');
+          doc.text(ms.month, 70, yPos);
+          doc.fillColor('#059669').text(income.toFixed(2), 150, yPos);
+          doc.fillColor('#dc2626').text(expenses.toFixed(2), 230, yPos);
+          doc.fillColor(balance >= 0 ? '#059669' : '#dc2626').text(balance.toFixed(2), 310, yPos);
+          doc.fillColor('#3b82f6').text(monthSavings.toFixed(1) + '%', 390, yPos);
+          yPos += 15;
+          
+          // New page if needed
+          if (yPos > 700) {
+            doc.addPage();
+            yPos = 50;
+          }
+        });
+        
+        yPos += 30;
+      }
+      
+      // ✅ TOP CATEGORIES SECTION
+      if (exportData.category_analysis.length > 0) {
+        // Check if we need a new page
+        if (yPos > 600) {
+          doc.addPage();
+          yPos = 50;
+        }
+        
+        doc.fontSize(16).fillColor('#374151').text('Top Spending Categories', 50, yPos);
+        yPos += 25;
+        
+        // Categories table
+        doc.fontSize(10).fillColor('#6b7280');
+        doc.text('Category', 70, yPos);
+        doc.text('Type', 200, yPos);
+        doc.text('Count', 280, yPos);
+        doc.text('Total Amount', 340, yPos);
+        doc.text('Average', 440, yPos);
+        yPos += 15;
+        
+        exportData.category_analysis.slice(0, 10).forEach((ca, index) => {
+          if (yPos > 700) {
+            doc.addPage();
+            yPos = 50;
+          }
+          
+          // Alternating row background
+          if (index % 2 === 0) {
+            doc.fillColor('#f9fafb').rect(50, yPos - 5, 500, 15).fill();
+          }
+          
+          doc.fontSize(9).fillColor('#374151');
+          doc.text(ca.category_name, 70, yPos);
+          doc.fillColor(ca.type === 'income' ? '#059669' : '#dc2626').text(ca.type, 200, yPos);
+          doc.fillColor('#374151').text(ca.usage_count.toString(), 280, yPos);
+          doc.text(parseFloat(ca.total_amount).toFixed(2), 340, yPos);
+          doc.text(parseFloat(ca.avg_amount).toFixed(2), 440, yPos);
+          yPos += 15;
+        });
+        
+        yPos += 30;
+      }
+      
+      // ✅ ANALYTICS & INSIGHTS SECTION
+      if (includeAnalytics && exportData.analytics) {
+        // Check if we need a new page
+        if (yPos > 600) {
+          doc.addPage();
+          yPos = 50;
+        }
+        
+        doc.fontSize(16).fillColor('#374151').text('Financial Insights & Analytics', 50, yPos);
+        yPos += 25;
+        
+        // Spending patterns
+        if (exportData.analytics.spendingPatterns) {
+          const patterns = exportData.analytics.spendingPatterns;
+          doc.fontSize(12).fillColor('#4b5563');
+          doc.text(`📈 Average Daily Spending: ${patterns.avgDailySpending?.toFixed(2) || 'N/A'}`, 70, yPos);
+          yPos += 20;
+          doc.text(`📅 Average Monthly Spending: ${patterns.avgMonthlySpending?.toFixed(2) || 'N/A'}`, 70, yPos);
+          yPos += 20;
+          doc.text(`🎯 Spending Trend: ${patterns.trendDirection || 'Stable'}`, 70, yPos);
+          yPos += 30;
+        }
+        
+        // Top categories
+        if (exportData.analytics.spendingPatterns?.biggestExpenseCategory) {
+          doc.text(`🔥 Top Expense Category: ${exportData.analytics.spendingPatterns.biggestExpenseCategory.category_name}`, 70, yPos);
+          yPos += 20;
+        }
+        if (exportData.analytics.spendingPatterns?.biggestIncomeCategory) {
+          doc.text(`💰 Top Income Category: ${exportData.analytics.spendingPatterns.biggestIncomeCategory.category_name}`, 70, yPos);
+          yPos += 30;
+        }
+        
+        // Insights
+        if (exportData.analytics.insights && exportData.analytics.insights.length > 0) {
+          doc.fontSize(14).fillColor('#374151').text('💡 Financial Recommendations', 70, yPos);
+          yPos += 20;
+          
+          exportData.analytics.insights.slice(0, 5).forEach((insight, index) => {
+            if (yPos > 700) {
+              doc.addPage();
+              yPos = 50;
+            }
+            
+            doc.fontSize(10).fillColor('#6b7280');
+            doc.text(`${index + 1}. ${insight.title}`, 90, yPos);
+            yPos += 15;
+            doc.fontSize(9).fillColor('#4b5563');
+            doc.text(insight.description, 100, yPos, { width: 400 });
+            yPos += 25;
+          });
+        }
+      }
+      
+      // ✅ FOOTER
+      const pageCount = doc.bufferedPageRange().count;
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+        doc.fontSize(8).fillColor('#9ca3af');
+        doc.text(`SpendWise Report - Page ${i + 1} of ${pageCount}`, 50, 750);
+        doc.text(`Generated: ${new Date().toISOString()}`, 400, 750);
+      }
+      
+      // Finalize the PDF
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 module.exports = {
   exportAsCSV,

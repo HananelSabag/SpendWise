@@ -10,6 +10,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { authAPI } from '../api';
 import { jwtDecode } from 'jwt-decode';
+import { useAppStore } from './appStore';
+import { useTranslationStore } from './translationStore';
 
 // ✅ Auth Store
 export const useAuthStore = create(
@@ -406,37 +408,50 @@ export const useAuthStore = create(
                 fullUser: user
               });
 
-              // Sync with app store
-              const appStore = window.spendWiseStores?.app || (typeof useAppStore !== 'undefined' ? useAppStore.getState() : null);
-              if (appStore && appStore.actions) {
-                // ✅ Sync currency - Use correct defaults and mappings
-                const userCurrency = user.currency_preference || user.currencyPreference || 'ILS';
-                // Handle legacy 'shekel' mapping to 'ILS'
-                const normalizedCurrency = userCurrency === 'shekel' ? 'ILS' : userCurrency;
-                if (normalizedCurrency !== appStore.currency) {
-                  appStore.actions.setCurrency(normalizedCurrency);
-                  console.log('✅ Applied currency preference:', normalizedCurrency);
-                }
-
-                // ✅ Sync theme - Apply immediately to DOM
-                const userTheme = user.theme_preference || user.themePreference || 'system';
-                if (userTheme !== appStore.theme) {
-                  appStore.actions.setTheme(userTheme);
-                  console.log('✅ Applied theme preference:', userTheme);
+              // ✅ Sync with app store (FIXED: Direct import approach like Profile page)
+              try {
+                const appStore = useAppStore.getState();
+                
+                if (appStore && appStore.actions) {
+                  // ✅ Sync currency - Use correct defaults and mappings
+                  const userCurrency = user.currency_preference || user.currencyPreference || 'ILS';
+                  // Handle legacy 'shekel' mapping to 'ILS'
+                  const normalizedCurrency = userCurrency === 'shekel' ? 'ILS' : userCurrency;
                   
-                  // Apply theme to DOM immediately
-                  get().actions.applyThemeToDOM(userTheme);
+                  if (normalizedCurrency !== appStore.currency) {
+                    appStore.actions.setCurrency(normalizedCurrency);
+                    console.log('✅ Applied currency preference:', normalizedCurrency);
+                  }
+
+                  // ✅ Sync theme - Apply immediately to DOM
+                  const userTheme = user.theme_preference || user.themePreference || 'system';
+                  
+                  if (userTheme !== appStore.theme) {
+                    appStore.actions.setTheme(userTheme);
+                    console.log('✅ Applied theme preference:', userTheme);
+                    
+                    // Apply theme to DOM immediately
+                    get().actions.applyThemeToDOM(userTheme);
+                  }
                 }
+              } catch (error) {
+                console.error('❌ Failed to access app store:', error);
               }
 
-              // Sync with translation store
-              const translationStore = window.spendWiseStores?.translation || (typeof useTranslationStore !== 'undefined' ? useTranslationStore.getState() : null);
-              if (translationStore && translationStore.actions) {
-                const userLanguage = user.language_preference || user.languagePreference || 'en';
-                if (userLanguage !== translationStore.currentLanguage) {
-                  translationStore.actions.setLanguage(userLanguage);
-                  console.log('✅ Applied language preference:', userLanguage);
+              // ✅ Sync with translation store (FIXED: Direct import approach like Profile page)
+              try {
+                const translationStore = useTranslationStore.getState();
+                
+                if (translationStore && translationStore.actions) {
+                  const userLanguage = user.language_preference || user.languagePreference || 'en';
+                  
+                  if (userLanguage !== translationStore.currentLanguage) {
+                    translationStore.actions.setLanguage(userLanguage);
+                    console.log('✅ Applied language preference:', userLanguage);
+                  }
                 }
+              } catch (error) {
+                console.error('❌ Failed to access translation store:', error);
               }
               
               console.log('✅ User preferences successfully synced from database');
@@ -497,15 +512,15 @@ export const useAuthStore = create(
           // ✅ Setup guest preferences (called on logout and app init for non-authenticated users)
           setupGuestPreferences: () => {
             try {
-              // Clear any existing guest preferences
-              const appStore = window.spendWiseStores?.app || (typeof useAppStore !== 'undefined' ? useAppStore.getState() : null);
+              // Clear any existing guest preferences (using direct store access)
+              const appStore = useAppStore.getState();
               if (appStore && appStore.actions) {
                 appStore.actions.clearGuestPreferences();
                 appStore.actions.initializeGuestPreferences();
               }
 
-              // Initialize guest language preferences
-              const translationStore = window.spendWiseStores?.translation || (typeof useTranslationStore !== 'undefined' ? useTranslationStore.getState() : null);
+              // Initialize guest language preferences (using direct store access)
+              const translationStore = useTranslationStore.getState();
               if (translationStore && translationStore.actions) {
                 translationStore.actions.setLanguage('en'); // Default to English for guests
               }

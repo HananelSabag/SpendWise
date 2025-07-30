@@ -506,63 +506,107 @@ const Profile = () => {
     </Card>
   );
 
-  const renderSecurityTab = () => (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Change Password</h3>
-      
-      <div className="space-y-4 max-w-md">
-        <div className="relative">
-          <Input
-            label="Current Password"
-            type={showCurrentPassword ? "text" : "password"}
-            value={passwordData.currentPassword}
-            onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-            icon={<Key className="w-5 h-5" />}
-          />
-          <button
-            type="button"
-            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-            className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
-          >
-            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
+  const renderSecurityTab = () => {
+    // ✅ Check if user is Google-only (no password set)
+    const isGoogleOnlyUser = user?.oauth_provider === 'google' && !user?.hasPassword;
+    
+    return (
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Change Password</h3>
+        
+        {/* ✅ Google OAuth User Notice */}
+        {isGoogleOnlyUser ? (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Google Account Security
+                </h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                  Your account uses Google sign-in for authentication. To add password login as an option:
+                </p>
+                <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-decimal">
+                  <li>Set a password below to enable hybrid login</li>
+                  <li>You can then use either Google or password to sign in</li>
+                  <li>Your Google sign-in will continue to work normally</li>
+                </ol>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-3 font-medium">
+                  ✨ This gives you more login flexibility without removing Google authentication
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        
+        <div className="space-y-4 max-w-md">
+        {/* ✅ Current Password - Only show for users with existing passwords */}
+        {!isGoogleOnlyUser && (
+          <div className="relative">
+            <Input
+              label="Current Password"
+              type={showCurrentPassword ? "text" : "password"}
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+              icon={<Key className="w-5 h-5" />}
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+              className="absolute right-3 top-8 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        )}
 
         <div className="relative">
           <Input
-            label="New Password"
+            label={isGoogleOnlyUser ? "Set Password" : "New Password"}
             type={showNewPassword ? "text" : "password"}
             value={passwordData.newPassword}
             onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
             icon={<Key className="w-5 h-5" />}
+            placeholder={isGoogleOnlyUser ? "Choose a secure password..." : "Enter new password..."}
           />
           <button
             type="button"
             onClick={() => setShowNewPassword(!showNewPassword)}
-            className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-8 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
 
         <Input
-          label="Confirm New Password"
+          label={isGoogleOnlyUser ? "Confirm Password" : "Confirm New Password"}
           type="password"
           value={passwordData.confirmPassword}
           onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
           icon={<Key className="w-5 h-5" />}
+          placeholder={isGoogleOnlyUser ? "Confirm your password..." : "Confirm new password..."}
         />
 
         <Button 
           onClick={handlePasswordChange} 
-          disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading}
+          disabled={
+            // ✅ For Google-only users: only need new password & confirm
+            // ✅ For regular users: need current password + new password + confirm
+            isGoogleOnlyUser 
+              ? (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+              : (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+          }
           className="w-full"
         >
-          {isLoading ? 'Changing Password...' : 'Change Password'}
+          {isLoading 
+            ? (isGoogleOnlyUser ? 'Setting Password...' : 'Changing Password...') 
+            : (isGoogleOnlyUser ? 'Set Password' : 'Change Password')
+          }
         </Button>
-      </div>
-    </Card>
-  );
+        </div>
+      </Card>
+    );
+  };
 
   const renderExportTab = () => (
     <Card className="p-6">

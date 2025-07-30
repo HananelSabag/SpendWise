@@ -183,5 +183,23 @@ export default {
     expenses: 'Expenses by Category',
     income: 'Income Trends',
     balance: 'Balance Over Time'
+  },
+
+  // ✅ MISSING: Stats section
+  stats: {
+    title: 'Statistics',
+    thisMonth: 'This Month',
+    lastMonth: 'Last Month',
+    totalTransactions: 'Total Transactions',
+    avgTransaction: 'Avg per Transaction',
+    topCategory: 'Top Category'
+  },
+
+  // ✅ MISSING: Tips section
+  tips: {
+    title: 'Smart Tips 💡',
+    savingTip: 'Saving 20% of your income will help you reach your savings goal faster',
+    budgetTip: 'Track daily expenses to better control your budget',
+    categoryTip: 'Dividing expenses into categories will help you identify spending patterns'
   }
 }; 
