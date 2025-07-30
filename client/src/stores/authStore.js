@@ -68,6 +68,11 @@ export const useAuthStore = create(
                 // ✅ DEBUG: Log user data to understand structure
                 console.log('🔍 Auth Store - Login success, userData received:', userData);
                 console.log('🔍 Auth Store - Available user fields:', Object.keys(userData || {}));
+                console.log('🔍 Auth Store - User preferences:', {
+                  language_preference: userData?.language_preference,
+                  theme_preference: userData?.theme_preference,
+                  currency_preference: userData?.currency_preference
+                });
                 
                 set((state) => {
                   state.isAuthenticated = true;
@@ -396,7 +401,9 @@ export const useAuthStore = create(
               console.log('🔄 Syncing user preferences from database:', {
                 language: user.language_preference,
                 theme: user.theme_preference,
-                currency: user.currency_preference
+                currency: user.currency_preference,
+                userFields: Object.keys(user),
+                fullUser: user
               });
 
               // Sync with app store

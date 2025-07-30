@@ -33,7 +33,7 @@ export const normalizeUserData = (user) => {
     // ✅ Preferences - FIXED defaults to match user requirements
     language_preference: user.language_preference || user.languagePreference || 'en',
     theme_preference: user.theme_preference || user.themePreference || 'system',
-    currency_preference: user.currency_preference || user.currencyPreference || 'shekel',
+    currency_preference: user.currency_preference || user.currencyPreference || 'ILS',
     onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
     preferences: user.preferences || {},
     

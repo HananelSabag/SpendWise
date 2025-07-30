@@ -132,7 +132,8 @@ class User {
           id, email, username, role, email_verified, is_active,
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
-          website, birthday, preferences
+          website, birthday, preferences,
+          language_preference, theme_preference, currency_preference
         FROM users 
         WHERE id = $1 AND is_active = true
       `;

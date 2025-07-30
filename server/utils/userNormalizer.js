@@ -46,8 +46,8 @@ const normalizeUserData = (user) => {
     languagePreference: user.language_preference || 'en',
     theme_preference: user.theme_preference || 'system',
     themePreference: user.theme_preference || 'system',
-    currency_preference: user.currency_preference || 'shekel',
-    currencyPreference: user.currency_preference || 'shekel',
+    currency_preference: user.currency_preference || 'ILS',
+    currencyPreference: user.currency_preference || 'ILS',
     preferences: user.preferences || {},
     
     // ✅ Timestamps (both formats)
