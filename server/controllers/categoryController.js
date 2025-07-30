@@ -4,7 +4,7 @@
  * @module controllers/categoryController
  */
 
-const Category = require('../models/Category');
+const { Category } = require('../models/Category');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
@@ -168,7 +168,7 @@ const categoryController = {
    * @route POST /api/v1/categories
    */
   create: asyncHandler(async (req, res) => {
-    const { name, description, icon, type } = req.body;
+    const { name, description, icon, type, color } = req.body;
     const userId = req.user.id;
     
     // Validation
@@ -184,11 +184,17 @@ const categoryController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Category name must be less than 100 characters' };
     }
     
+    // Validate color if provided
+    if (color && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Color must be a valid hex code (e.g., #3B82F6)' };
+    }
+    
     const category = await Category.create({
       name: name.trim(),
       description: description?.trim() || null,
-      icon: icon?.trim() || 'tag',
-      type
+      icon: icon?.trim() || 'Tag',
+      type,
+      color: color || '#6B7280'
     }, userId);
     
     logger.info('Category created', { 
@@ -211,7 +217,7 @@ const categoryController = {
    */
   update: asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { name, description, icon, type } = req.body;
+    const { name, description, icon, type, color } = req.body;
     const userId = req.user.id;
     
     if (!id || isNaN(parseInt(id))) {
@@ -227,11 +233,17 @@ const categoryController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Type must be income or expense' };
     }
     
+    // Validate color if provided
+    if (color && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
+      throw { ...errorCodes.VALIDATION_ERROR, details: 'Color must be a valid hex code (e.g., #3B82F6)' };
+    }
+    
     const updateData = {};
     if (name) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description?.trim() || null;
     if (icon) updateData.icon = icon.trim();
     if (type) updateData.type = type;
+    if (color) updateData.color = color;
     
     if (Object.keys(updateData).length === 0) {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'No valid updates provided' };

@@ -109,7 +109,7 @@ export default defineConfig(({ command, mode }) => {
       host: '0.0.0.0',
       port: 5173,
       strictPort: true,
-      open: true, // ✅ Enable auto-open in new tab (not new window)
+      open: false, // ✅ Disable auto-open - let dev-clean.js handle it
       
       hmr: {
         host: 'localhost',

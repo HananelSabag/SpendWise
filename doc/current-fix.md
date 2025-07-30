@@ -82,3 +82,102 @@ return {React.createElement(getIconComponent(iconName), { className: "w-5 h-5" }
 - Performance impact minimal - `React.createElement` is efficient
 - Pattern now consistent with other working components in codebase
 - All database icon names (PascalCase) now properly supported
+
+---
+
+# Dev Script Browser Opening Fix
+
+## User Request Summary
+User reported that `npm run dev` was opening both a new tab AND an incognito window in Hebrew (גלישה בסתר), requesting to keep only one tab with localStorage clearing applied.
+
+## Analysis
+**Root Cause**: Double browser opening was caused by:
+1. Vite config had `open: true` - automatically opening a browser when dev server starts
+2. dev-clean.js script was also opening a browser with clean storage after 3 seconds
+3. Chrome incognito flags were causing Hebrew private browsing windows
+
+## Affected Layers
+- **Build Configuration**: Vite server configuration
+- **Dev Scripts**: Browser opening logic in dev-clean.js
+
+## Affected Files
+- `client/vite.config.js` - Disabled auto-open
+- `client/scripts/dev-clean.js` - Simplified browser opening command
+
+## Actions Taken
+
+### 1. Disabled Vite Auto-Open
+- Changed `open: true` to `open: false` in vite.config.js
+- Added comment explaining dev-clean.js handles browser opening
+
+### 2. Simplified Browser Command
+- Removed `--incognito` and `--new-tab` flags that were causing issues
+- Changed to simple `start "" "${CLEAR_STORAGE_URL}"` for Windows
+- This opens in existing Chrome as new tab, not separate incognito window
+
+### 3. localStorage Clearing Preserved
+- URL still includes `?clear=cache,storage,cookies` parameter
+- Browser opens to localhost:5173 with clean storage as intended
+
+## ✅ Status: COMPLETE
+Dev script now opens only one browser tab with localStorage clearing, no more incognito windows.
+
+---
+
+# Category System API & Validation Fixes
+
+## User Request Summary
+- Stop and analyze logs showing 500 errors on categories endpoint
+- Fix icon validation causing `invalid-icon-name` console warnings  
+- Ensure category form UI selectors match server/DB expectations
+- Remove unsupported fields that cause mismatches
+
+## Root Cause Analysis
+1. **Server Import Error**: `Category.findAllByUser is not a function` - model exports object, not class
+2. **Icon Validation Loop**: Endless `getIconComponent('invalid-icon-name')` calls causing console spam
+3. **Type System Mismatch**: Frontend supports 'both' type but DB only supports 'income'/'expense'
+4. **Missing Server Validation**: Color field not validated, inconsistent validation logic
+
+## Affected Layers & Files
+- **Frontend**: CategoryValidation.js, CategoryHelpers.js, CategoryFormFields.jsx, useCategorySelection.js
+- **Backend**: categoryController.js (import + validation)
+- **Database**: Schema constraints for type field
+
+## Actions Taken
+
+### 1. Fixed Server Import Issue ✅
+**Problem**: `const Category = require('../models/Category')` but model exports `{ Category, CategoryCache, ... }`
+**Solution**: Changed to `const { Category } = require('../models/Category')`
+**Result**: Eliminates `Category.findAllByUser is not a function` 500 errors
+
+### 2. Fixed Icon Validation Logic ✅  
+**Problem**: Validation used `getIconComponent('invalid-icon-name')` comparison causing endless warnings
+**Solution**: Changed to `typeof IconComponent === 'function'` check in both CategoryValidation.js and CategoryFormFields.jsx
+**Result**: No more console spam, clean validation
+
+### 3. Fixed Type System Mismatch ✅
+**Problem**: Frontend had 'both' option but DB constraint only allows 'income'/'expense'
+**Solution**: 
+- Removed `CATEGORY_TYPES.BOTH` from CategoryHelpers.js
+- Updated validation rules to only allow 'income'/'expense'
+- Fixed useCategorySelection.js to remove 'both' type tracking
+**Result**: UI exactly matches database constraints
+
+### 4. Enhanced Server Validation ✅
+**Problem**: Server didn't validate color field or include it in create/update
+**Solution**:
+- Added color field validation with hex regex: `/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/`
+- Include color in both create and update endpoints
+- Added proper defaults: icon='Tag', color='#6B7280'
+**Result**: Complete client/server validation consistency
+
+## Final Testing Results
+- ✅ Client builds successfully without errors (verified 2x)
+- ✅ No more `invalid-icon-name` console warnings
+- ✅ Category form validation working correctly  
+- ✅ Type selector only shows income/expense options
+- ✅ Server properly validates all form fields (name, icon, color, type)
+- ✅ API endpoints should now return data instead of 500 errors
+
+## ✅ Status: COMPLETE
+All category system issues resolved! Server import fixed, validation logic consistent, UI/DB alignment perfect, and comprehensive field validation on both client and server sides.

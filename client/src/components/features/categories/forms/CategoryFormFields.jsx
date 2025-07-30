@@ -263,7 +263,15 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
       </div>
 
       {/* Icon validation feedback */}
-      {value && !getIconComponent(value) && (
+      {value && (() => {
+        // Use the same validation logic as CategoryValidation.js
+        try {
+          const IconComponent = getIconComponent(value);
+          return !(IconComponent && typeof IconComponent === 'function');
+        } catch {
+          return true; // Show error if validation fails
+        }
+      })() && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
