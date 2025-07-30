@@ -70,16 +70,21 @@ class User {
       const query = `
         INSERT INTO users (
           email, username, password_hash, verification_token,
+          language_preference, currency_preference, theme_preference,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, NOW(), NOW())
-        RETURNING id, email, username, created_at, updated_at, email_verified
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, email, username, created_at, updated_at, email_verified, 
+                  language_preference, currency_preference, theme_preference
       `;
 
       const values = [
         email.toLowerCase(),
         username?.toLowerCase(),
         hashedPassword,
-        verificationToken
+        verificationToken,
+        'en',      // ✅ Default language: English
+        'shekel',  // ✅ Default currency: Shekel (as requested)
+        'system'   // ✅ Default theme: System (as requested)
       ];
 
       const result = await db.query(query, values);

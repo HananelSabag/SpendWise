@@ -30,6 +30,8 @@ export default {
   show: 'הצג',
   hide: 'הסתר',
   duplicate: 'שכפל',
+  goBack: 'חזור',
+  needHelp: 'זקוק לעזרה?',
 
   // פעולות סיסמה
   showPassword: 'הצג סיסמה',
@@ -37,6 +39,7 @@ export default {
 
   // ניווט
   menu: 'תפריט',
+  admin: 'ניהול',
   openMenu: 'פתח תפריט',
   closeMenu: 'סגור תפריט',
   quickActions: 'פעולות מהירות',

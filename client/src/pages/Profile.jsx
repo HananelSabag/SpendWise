@@ -56,8 +56,8 @@ const Profile = () => {
 
   const [preferencesData, setPreferencesData] = useState({
     language_preference: user?.language_preference || 'en',
-    theme_preference: user?.theme_preference || 'light',
-    currency_preference: user?.currency_preference || 'USD'
+    theme_preference: user?.theme_preference || 'system',
+    currency_preference: user?.currency_preference || 'shekel'
   });
 
   // ✅ Sync preferences data when user data changes (on login/refresh)
@@ -65,8 +65,8 @@ const Profile = () => {
     if (user) {
       setPreferencesData({
         language_preference: user.language_preference || 'en',
-        theme_preference: user.theme_preference || 'light',
-        currency_preference: user.currency_preference || 'USD'
+        theme_preference: user.theme_preference || 'system',
+        currency_preference: user.currency_preference || 'shekel'
       });
     }
   }, [user?.language_preference, user?.theme_preference, user?.currency_preference]);
@@ -102,7 +102,7 @@ const Profile = () => {
       
       const response = await api.users.uploadAvatar(formData);
       console.log('🔍 Profile Upload Response:', response);
-      console.log('🔍 Profile Upload - Avatar URL from server:', response.data?.url);
+      console.log('🔍 Profile Upload - Avatar URL from server:', response.data?.data?.url || response.data?.url);
       
       // ✅ FIXED: The upload endpoint already updates the user's avatar in database
       // No need to call updateProfile again - it causes validation errors
@@ -480,10 +480,10 @@ const Profile = () => {
               onChange={(e) => setPreferencesData(prev => ({ ...prev, currency_preference: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
             >
+              <option value="shekel">🇮🇱 ₪ Israeli Shekel</option>
               <option value="USD">🇺🇸 USD - US Dollar</option>
               <option value="EUR">🇪🇺 EUR - Euro</option>
               <option value="GBP">🇬🇧 GBP - British Pound</option>
-              <option value="ILS">🇮🇱 ILS - Israeli Shekel</option>
               <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
               <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
               <option value="AUD">🇦🇺 AUD - Australian Dollar</option>

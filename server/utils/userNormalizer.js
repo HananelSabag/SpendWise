@@ -41,13 +41,13 @@ const normalizeUserData = (user) => {
     onboarding_completed: user.onboarding_completed || false,
     onboardingCompleted: user.onboarding_completed || false,
     
-    // ✅ Preferences (both formats)
+    // ✅ Preferences (both formats) - FIXED defaults
     language_preference: user.language_preference || 'en',
     languagePreference: user.language_preference || 'en',
-    theme_preference: user.theme_preference || 'light',
-    themePreference: user.theme_preference || 'light',
-    currency_preference: user.currency_preference || 'USD',
-    currencyPreference: user.currency_preference || 'USD',
+    theme_preference: user.theme_preference || 'system',
+    themePreference: user.theme_preference || 'system',
+    currency_preference: user.currency_preference || 'shekel',
+    currencyPreference: user.currency_preference || 'shekel',
     preferences: user.preferences || {},
     
     // ✅ Timestamps (both formats)

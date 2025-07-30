@@ -172,7 +172,7 @@ export const useAuthToasts = () => {
     },
 
     signingOut: () => {
-      return toast.loading(t('loading.processing', 'Signing out...'));
+      return toast.loading(t('loading.signingOut', 'Signing out...'));
     },
 
     uploadingAvatar: () => {

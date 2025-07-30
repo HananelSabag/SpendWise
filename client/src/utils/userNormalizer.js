@@ -30,10 +30,10 @@ export const normalizeUserData = (user) => {
     // ✅ Verification Status
     email_verified: user.email_verified || user.emailVerified || false,
     
-    // ✅ Preferences
+    // ✅ Preferences - FIXED defaults to match user requirements
     language_preference: user.language_preference || user.languagePreference || 'en',
-    theme_preference: user.theme_preference || user.themePreference || 'light',
-    currency_preference: user.currency_preference || user.currencyPreference || 'USD',
+    theme_preference: user.theme_preference || user.themePreference || 'system',
+    currency_preference: user.currency_preference || user.currencyPreference || 'shekel',
     onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
     preferences: user.preferences || {},
     

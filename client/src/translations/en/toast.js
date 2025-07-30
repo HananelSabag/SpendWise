@@ -169,7 +169,8 @@ export default {
     synchronizing: "Synchronizing data...",
     connecting: "Connecting...",
     preparing: "Preparing...",
-    almostDone: "Almost done..."
+    almostDone: "Almost done...",
+    signingOut: "Signing out..."
   },
 
   // ✅ Common Actions

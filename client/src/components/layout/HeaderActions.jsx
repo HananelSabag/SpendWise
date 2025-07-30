@@ -35,7 +35,7 @@ const HeaderActions = ({
   const { currency, setCurrency } = useCurrency();
   const { addNotification } = useNotifications();
 
-  // ✅ Handle theme toggle
+  // ✅ Handle theme toggle (SESSION-ONLY: Does not save to database)
   const handleThemeToggle = useCallback(() => {
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
@@ -46,7 +46,7 @@ const HeaderActions = ({
     });
   }, [isDark, setTheme, addNotification, t]);
 
-  // ✅ Handle language toggle
+  // ✅ Handle language toggle (SESSION-ONLY: Does not save to database)
   const handleLanguageToggle = useCallback(() => {
     const newLanguage = currentLanguage === 'en' ? 'he' : 'en';
     setLanguage(newLanguage);
@@ -59,14 +59,14 @@ const HeaderActions = ({
 
   // ✅ Currency configuration with symbols
   const currencyConfig = {
+    shekel: { symbol: '₪', name: 'Israeli Shekel' },
     USD: { symbol: '$', name: 'US Dollar' },
     EUR: { symbol: '€', name: 'Euro' },
-    ILS: { symbol: '₪', name: 'Israeli Shekel' },
     GBP: { symbol: '£', name: 'British Pound' },
     JPY: { symbol: '¥', name: 'Japanese Yen' }
   };
 
-  // ✅ Handle currency cycle
+  // ✅ Handle currency cycle (SESSION-ONLY: Does not save to database)
   const handleCurrencyToggle = useCallback(() => {
     const currencies = Object.keys(currencyConfig);
     const currentIndex = currencies.indexOf(currency);

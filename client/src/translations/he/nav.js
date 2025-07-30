@@ -13,6 +13,7 @@ export default {
   profile: 'פרופיל',
   settings: 'הגדרות',
   admin: 'מנהל',
+  contactSupport: 'צור קשר עם התמיכה',
   
   // ניווט מנהל
   adminDashboard: 'לוח בקרה מנהל',

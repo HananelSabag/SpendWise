@@ -92,6 +92,7 @@ export default {
   checkEmail: "בדקו את האימייל שלכם",
   checkEmailMessage: "שלחנו הוראות איפוס סיסמה לכתובת האימייל שלכם.",
   backToLogin: "חזרה להתחברות",
+  goToLogin: "חזור להתחברות",
   newPassword: "סיסמה חדשה",
   newPasswordPlaceholder: "הכניסו את הסיסמה החדשה שלכם",
   confirmNewPassword: "אשרו סיסמה חדשה",

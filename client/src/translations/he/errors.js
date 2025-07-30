@@ -9,6 +9,8 @@ export default {
   unexpectedError: 'אירעה שגיאה לא צפויה',
   tryAgain: 'אנא נסה שוב',
   contactSupport: 'אנא פנה לתמיכה אם הבעיה נמשכת',
+  pageNotFound: 'העמוד לא נמצא',
+  pageNotFoundDesc: 'מצטערים, הדף שחיפשתם לא קיים',
   
   // שגיאות רשת
   networkError: 'שגיאת רשת. אנא בדוק את החיבור שלך.',

@@ -397,13 +397,13 @@ export const useAuthStore = create(
               const appStore = window.spendWiseStores?.app || (typeof useAppStore !== 'undefined' ? useAppStore.getState() : null);
               if (appStore && appStore.actions) {
                 // Sync currency
-                const userCurrency = user.currency_preference || user.currencyPreference || 'USD';
+                const userCurrency = user.currency_preference || user.currencyPreference || 'shekel';
                 if (userCurrency !== appStore.currency) {
                   appStore.actions.setCurrency(userCurrency);
                 }
 
                 // Sync theme
-                const userTheme = user.theme_preference || user.themePreference || 'light';
+                const userTheme = user.theme_preference || user.themePreference || 'system';
                 if (userTheme !== appStore.theme) {
                   appStore.actions.setTheme(userTheme);
                 }

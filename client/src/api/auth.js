@@ -546,10 +546,8 @@ export const authAPI = {
       api.clearCache('user-profile');
       api.clearCache('users');
       
-      return {
-        success: true,
-        data: response.data
-      };
+      // ✅ FIX: Return the server response directly, not double-wrapped
+      return response.data;
     } catch (error) {
       console.error('❌ uploadAvatar error:', error);
       return {
