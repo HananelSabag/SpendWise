@@ -775,24 +775,12 @@ const userController = {
       const userId = req.user?.id;
       
       if (userId) {
-        // User was authenticated - update logout time
-        try {
-          await User.update(userId, { 
-            last_logout_at: new Date(),
-            last_activity: new Date()
-          });
-          
-          logger.info('✅ User logout successful (authenticated)', {
-            userId,
-            duration: `${Date.now() - start}ms`
-          });
-        } catch (dbError) {
-          // Database error - log but continue
-          logger.warn('Database update failed during logout', {
-            userId,
-            error: dbError.message
-          });
-        }
+        // User was authenticated - just log successful logout
+        // Skip database updates that might fail due to missing fields
+        logger.info('✅ User logout successful (authenticated)', {
+          userId,
+          duration: `${Date.now() - start}ms`
+        });
       } else {
         // No user (auth failed) - still allow logout
         logger.info('✅ Logout successful (unauthenticated session cleanup)', {
