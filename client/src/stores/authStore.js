@@ -315,8 +315,8 @@ export const useAuthStore = create(
 
               // Dismiss loading toast and show success
               if (showToast && window.authToasts) {
-                if (loadingToastId && window.authToasts.toast?.dismiss) {
-                  window.authToasts.toast.dismiss(loadingToastId);
+                if (loadingToastId && window.authToasts.dismiss) {
+                  window.authToasts.dismiss(loadingToastId);
                 }
                 window.authToasts.logoutSuccess();
               }

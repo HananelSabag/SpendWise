@@ -27,14 +27,14 @@ setTimeout(() => {
   let openCommand = '';
   
   if (os === 'win32') {
-    // Windows - Open Chrome/Edge with clean session
-    openCommand = `start "" "chrome.exe" --new-window --incognito --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir=%TEMP%/spendwise-clean --clear-token-service "${CLEAR_STORAGE_URL}" || start "" "msedge.exe" --new-window --inprivate --disable-web-security --user-data-dir=%TEMP%/spendwise-clean "${CLEAR_STORAGE_URL}" || start "" "${CLEAR_STORAGE_URL}"`;
+    // Windows - Open Chrome/Edge in new tab (not new window)
+    openCommand = `start "" "chrome.exe" --incognito --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir=%TEMP%/spendwise-clean --clear-token-service "${CLEAR_STORAGE_URL}" || start "" "msedge.exe" --inprivate --disable-web-security --user-data-dir=%TEMP%/spendwise-clean "${CLEAR_STORAGE_URL}" || start "" "${CLEAR_STORAGE_URL}"`;
   } else if (os === 'darwin') {
-    // macOS - Open Chrome/Safari with clean session  
-    openCommand = `open -na "Google Chrome" --args --new-window --incognito --user-data-dir=/tmp/spendwise-clean "${CLEAR_STORAGE_URL}" || open -a Safari "${CLEAR_STORAGE_URL}" || open "${CLEAR_STORAGE_URL}"`;
+    // macOS - Open Chrome/Safari in new tab (not new window)
+    openCommand = `open -a "Google Chrome" --args --incognito --user-data-dir=/tmp/spendwise-clean "${CLEAR_STORAGE_URL}" || open -a Safari "${CLEAR_STORAGE_URL}" || open "${CLEAR_STORAGE_URL}"`;
   } else {
-    // Linux - Open Chrome/Firefox with clean session
-    openCommand = `google-chrome --new-window --incognito --user-data-dir=/tmp/spendwise-clean "${CLEAR_STORAGE_URL}" || firefox --private-window "${CLEAR_STORAGE_URL}" || xdg-open "${CLEAR_STORAGE_URL}"`;
+    // Linux - Open Chrome/Firefox in new tab (not new window)
+    openCommand = `google-chrome --incognito --user-data-dir=/tmp/spendwise-clean "${CLEAR_STORAGE_URL}" || firefox --private-window "${CLEAR_STORAGE_URL}" || xdg-open "${CLEAR_STORAGE_URL}"`;
   }
   
   exec(openCommand, (error) => {

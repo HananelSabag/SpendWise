@@ -21,6 +21,7 @@ export const useAuthToasts = () => {
     },
 
     loginFailed: (error) => {
+      // ✅ FIX: Always use English translation keys, never use error message as key
       const message = error?.code === 'INVALID_CREDENTIALS'
         ? t('auth.invalidCredentials', 'Invalid email or password. Please try again.')
         : t('auth.loginFailed', 'Login failed. Please check your credentials.');
@@ -180,6 +181,11 @@ export const useAuthToasts = () => {
 
     updatingProfile: () => {
       return toast.loading(t('loading.saving', 'Saving changes...'));
-    }
+    },
+
+    // ✅ Expose toast utilities for dismissing loading toasts
+    dismiss: toast.dismiss,
+    dismissAll: toast.dismissAll,
+    toast: toast // ✅ Direct access to toast methods
   };
 }; 
