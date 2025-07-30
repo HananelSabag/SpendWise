@@ -16,6 +16,7 @@ import {
 import { useTranslation, useNotifications } from '../../../../../stores';
 import { Card, Switch, Badge, Button } from '../../../../ui';
 import { cn } from '../../../../../utils/helpers';
+import { getIconComponent } from '../../../../../config/categoryIcons';
 
 /**
  * 🔔 Notification Settings Component
@@ -372,14 +373,12 @@ const NotificationSettings = ({
         </h4>
         <div className="space-y-4">
           {notificationCategories.map((category) => {
-            const CategoryIcon = category.icon;
-            
             return (
               <Card key={category.id} className="p-4">
                 {/* Category Header */}
                 <div className="flex items-center space-x-3 mb-4">
                   <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", category.bgColor)}>
-                    <CategoryIcon className={cn("w-5 h-5", category.color)} />
+                    {React.createElement(getIconComponent(category.icon), { className: cn("w-5 h-5", category.color) })}
                   </div>
                   <div>
                     <h5 className="font-medium text-gray-900 dark:text-white">

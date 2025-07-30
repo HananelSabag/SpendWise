@@ -13,6 +13,7 @@ import { useTranslation } from '../../../../../stores';
 import { Button, Badge } from '../../../../ui';
 import { TEMPLATE_CATEGORIES } from './TemplateLibrary';
 import { cn } from '../../../../../utils/helpers';
+import { getIconComponent } from '../../../../../config/categoryIcons';
 
 /**
  * 📂 Template Categories Component
@@ -59,7 +60,6 @@ const TemplateCategories = ({
   const renderTabs = () => (
     <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto">
       {TEMPLATE_CATEGORIES.map((category) => {
-        const IconComponent = category.icon;
         const isActive = currentCategory === category.id;
         const count = templateCounts[category.id] || 0;
 
@@ -78,10 +78,12 @@ const TemplateCategories = ({
                 isActive && "shadow-sm"
               )}
             >
-              <IconComponent className={cn(
-                "w-4 h-4 flex-shrink-0",
-                isActive ? "text-white" : category.color
-              )} />
+              {React.createElement(getIconComponent(category.icon), {
+                className: cn(
+                  "w-4 h-4 flex-shrink-0",
+                  isActive ? "text-white" : category.color
+                )
+              })}
               
               <span className="hidden sm:inline truncate">
                 {t(category.labelKey)}
@@ -118,7 +120,6 @@ const TemplateCategories = ({
   const renderGrid = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
       {TEMPLATE_CATEGORIES.map((category) => {
-        const IconComponent = category.icon;
         const isActive = currentCategory === category.id;
         const count = templateCounts[category.id] || 0;
 
@@ -143,10 +144,12 @@ const TemplateCategories = ({
                 "w-12 h-12 mx-auto rounded-lg flex items-center justify-center mb-2",
                 isActive ? "bg-blue-100 dark:bg-blue-800" : category.bgColor
               )}>
-                <IconComponent className={cn(
-                  "w-6 h-6",
-                  isActive ? "text-blue-600 dark:text-blue-400" : category.color
-                )} />
+                {React.createElement(getIconComponent(category.icon), {
+                  className: cn(
+                    "w-6 h-6",
+                    isActive ? "text-blue-600 dark:text-blue-400" : category.color
+                  )
+                })}
               </div>
 
               {/* Label */}
@@ -171,7 +174,6 @@ const TemplateCategories = ({
   const renderList = () => (
     <div className="space-y-2">
       {TEMPLATE_CATEGORIES.map((category) => {
-        const IconComponent = category.icon;
         const isActive = currentCategory === category.id;
         const count = templateCounts[category.id] || 0;
 
@@ -195,10 +197,12 @@ const TemplateCategories = ({
                 "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
                 isActive ? "bg-blue-100 dark:bg-blue-800" : category.bgColor
               )}>
-                <IconComponent className={cn(
-                  "w-5 h-5",
-                  isActive ? "text-blue-600 dark:text-blue-400" : category.color
-                )} />
+                {React.createElement(getIconComponent(category.icon), {
+                  className: cn(
+                    "w-5 h-5",
+                    isActive ? "text-blue-600 dark:text-blue-400" : category.color
+                  )
+                })}
               </div>
 
               {/* Content */}

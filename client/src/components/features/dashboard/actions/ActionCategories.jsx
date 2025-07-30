@@ -17,6 +17,7 @@ import { useTranslation } from '../../../../stores';
 
 import { Button, Input, Badge, Dropdown } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
+import { getIconComponent } from '../../../../config/categoryIcons';
 
 /**
  * 🏷️ Category Tab Button
@@ -43,7 +44,7 @@ const CategoryTab = ({
         className
       )}
     >
-      {category.icon && React.createElement(category.icon, { className: "w-4 h-4" })}
+                  {category.icon && React.createElement(getIconComponent(category.icon), { className: "w-4 h-4" })}
       <span>{category.label}</span>
       {count > 0 && (
         <Badge 
@@ -240,7 +241,6 @@ const ActionCategories = ({
     >
       <div className="p-2 w-48">
         {activeCategories.map((category) => {
-          const Icon = category.icon;
           return (
             <button
               key={category.id}
@@ -250,7 +250,7 @@ const ActionCategories = ({
                 selectedCategory === category.id && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
               )}
             >
-              {Icon && <Icon className="w-4 h-4" />}
+              {category.icon && React.createElement(getIconComponent(category.icon), { className: "w-4 h-4" })}
               <span className="text-sm">{category.label}</span>
               {actionCounts[category.id] > 0 && (
                 <Badge variant="outline" size="xs" className="ml-auto">

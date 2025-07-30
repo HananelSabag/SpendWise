@@ -412,25 +412,44 @@ const CategoryManager = ({
       {/* Modals */}
       <AnimatePresence>
         {showCreateModal && (
-          <CategoryForm
+          <Modal
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
-            onSubmit={handleCreateCategory}
-            mode="create"
-          />
+            title={t('form.addCategory')}
+            size="4xl"
+            className="z-[60]"
+            mobileFullScreen={true}
+          >
+            <CategoryForm
+              onClose={() => setShowCreateModal(false)}
+              onSubmit={handleCreateCategory}
+              mode="create"
+            />
+          </Modal>
         )}
 
         {showEditModal && editingCategory && (
-          <CategoryForm
+          <Modal
             isOpen={showEditModal}
             onClose={() => {
               setShowEditModal(false);
               setEditingCategory(null);
             }}
-            onSubmit={handleUpdateCategory}
-            mode="edit"
-            initialData={editingCategory}
-          />
+            title={t('form.editCategory')}
+            size="4xl"
+            className="z-[60]"
+            mobileFullScreen={true}
+          >
+            <CategoryForm
+              onClose={() => {
+                setShowEditModal(false);
+                setEditingCategory(null);
+              }}
+              onSubmit={handleUpdateCategory}
+              mode="edit"
+              initialData={editingCategory}
+            />
+          </Modal>
         )}
       </AnimatePresence>
     </div>

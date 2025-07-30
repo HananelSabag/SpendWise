@@ -23,6 +23,7 @@ import {
 
 import { Card, Badge, Button, Tooltip } from '../../../ui';
 import { cn, dateHelpers } from '../../../../utils/helpers';
+import { getIconComponent } from '../../../../config/categoryIcons';
 
 /**
  * 🎯 Smart Transaction Card
@@ -51,7 +52,14 @@ const TransactionCard = ({
   const isIncome = transaction.type === 'income' || transaction.amount > 0;
   const amount = Math.abs(transaction.amount || 0);
   const formattedDate = dateHelpers.fromNow(transaction.date);
-  const categoryIcon = transaction.category?.icon || Receipt;
+  
+  // Get proper icon component using the mapping function
+  const iconName = transaction.category_icon || transaction.category?.icon || 'Receipt';
+  
+  // Get the icon component - this will always return a valid React component
+  const IconComponent = React.useMemo(() => {
+    return getIconComponent(iconName);
+  }, [iconName]);
 
   // AI-powered insights
   const aiInsights = useMemo(() => {
@@ -161,7 +169,7 @@ const TransactionCard = ({
                 ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                 : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
             )}>
-              {React.createElement(categoryIcon, { className: "w-5 h-5" })}
+              {React.createElement(IconComponent, { className: "w-5 h-5" })}
             </div>
 
             {/* Transaction details */}
@@ -185,7 +193,7 @@ const TransactionCard = ({
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <span>{transaction.category?.name || t('category.uncategorized')}</span>
+                <span>{transaction.category_name || transaction.category?.name || t('category.uncategorized')}</span>
                 <span>•</span>
                 <span>{formattedDate}</span>
               </div>

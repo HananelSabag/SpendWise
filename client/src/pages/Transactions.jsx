@@ -96,14 +96,14 @@ const Transactions = () => {
     endDate: ''
   });
 
-  // ✅ Enhanced transactions hook with filtering
+  // ✅ Enhanced transactions hook with filtering - FIXED destructuring
   const {
-    data: transactionsData,
+    transactions: transactionsData,
     loading: transactionsLoading,
     error: transactionsError,
     refetch: refetchTransactions,
-    hasMore,
-    loadMore
+    hasNextPage: hasMore,
+    fetchNextPage: loadMore
   } = useTransactions({
     search: searchQuery,
     filters: {
@@ -122,30 +122,24 @@ const Transactions = () => {
     isLoading: actionsLoading
   } = useTransactionActions();
 
-  // ✅ Derived data with better error handling
+  // ✅ Derived data - FIXED since transactionsData is now already the transactions array
   const transactions = React.useMemo(() => {
-    if (!transactionsData) return [];
-    
-    // Handle different response formats
-    if (Array.isArray(transactionsData)) return transactionsData;
-    if (transactionsData.transactions && Array.isArray(transactionsData.transactions)) {
-      return transactionsData.transactions;
-    }
-    if (transactionsData.data?.transactions && Array.isArray(transactionsData.data.transactions)) {
-      return transactionsData.data.transactions;
-    }
-    
-    return [];
+    if (!transactionsData || !Array.isArray(transactionsData)) return [];
+    return transactionsData;
   }, [transactionsData]);
 
   const summary = React.useMemo(() => {
-    return transactionsData?.summary || transactionsData?.data?.summary || {
-      totalIncome: 0,
-      totalExpenses: 0,
-      netAmount: 0,
+    // ✅ FIXED: Calculate summary from transactions array since transactionsData is now just the array
+    const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    return {
+      totalIncome,
+      totalExpenses,
+      netAmount: totalIncome - totalExpenses,
       count: transactions.length
     };
-  }, [transactionsData, transactions.length]);
+  }, [transactions]);
 
   // ✅ Handle transaction success (refresh data)
   const handleTransactionSuccess = useCallback((transaction) => {

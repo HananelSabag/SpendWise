@@ -8,6 +8,7 @@ const Category = require('../models/Category');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const db = require('../config/db');
 
 // 🔍 Enhanced debugging utilities
 const debugCategory = {
@@ -144,7 +145,7 @@ const categoryController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
     }
     
-    const category = await Category.getById(parseInt(id));
+    const category = await Category.findById(parseInt(id), userId);
     
     if (!category) {
       throw { ...errorCodes.NOT_FOUND, message: 'Category not found' };
@@ -275,7 +276,7 @@ const categoryController = {
       
       // Check if category exists and user owns it
       logger.debug(`🔍 [${requestId}] Checking category existence`, { categoryId });
-      const category = await Category.getById(categoryId);
+      const category = await Category.findById(categoryId, userId);
       
       if (!category) {
         debugCategory.logError(requestId, 'delete', new Error('Category not found'), { categoryId });
@@ -366,7 +367,24 @@ const categoryController = {
       throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid category ID' };
     }
     
-    const stats = await Category.getUsageStats(parseInt(id), userId);
+    // Simple fallback implementation - get basic stats from database
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as transaction_count,
+        COALESCE(SUM(amount), 0) as total_amount,
+        COALESCE(AVG(amount), 0) as avg_amount,
+        MAX(date) as last_used
+      FROM transactions 
+      WHERE category_id = $1 AND user_id = $2 AND deleted_at IS NULL
+    `;
+    
+    const result = await db.query(statsQuery, [parseInt(id), userId]);
+    const stats = result.rows[0] || {
+      transaction_count: 0,
+      total_amount: 0,
+      avg_amount: 0,
+      last_used: null
+    };
     
     res.json({
       success: true,
@@ -383,15 +401,38 @@ const categoryController = {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
     
-    const categories = await Category.getWithTransactionCounts(
-      userId, 
-      startDate ? new Date(startDate) : null,
-      endDate ? new Date(endDate) : null
-    );
+    // Simple fallback implementation - get categories with transaction counts
+    let dateFilter = '';
+    const params = [userId];
+    
+    if (startDate && endDate) {
+      dateFilter = 'AND t.date BETWEEN $2 AND $3';
+      params.push(new Date(startDate), new Date(endDate));
+    } else if (startDate) {
+      dateFilter = 'AND t.date >= $2';
+      params.push(new Date(startDate));
+    } else if (endDate) {
+      dateFilter = 'AND t.date <= $2';
+      params.push(new Date(endDate));
+    }
+    
+    const categoriesQuery = `
+      SELECT 
+        c.id, c.name, c.description, c.icon, c.color, c.type, c.is_default,
+        COUNT(t.id) as transaction_count,
+        COALESCE(SUM(t.amount), 0) as total_amount
+      FROM categories c
+      LEFT JOIN transactions t ON c.id = t.category_id AND t.user_id = $1 AND t.deleted_at IS NULL ${dateFilter}
+      WHERE (c.user_id = $1 OR c.is_default = true)
+      GROUP BY c.id, c.name, c.description, c.icon, c.color, c.type, c.is_default
+      ORDER BY c.name
+    `;
+    
+    const result = await db.query(categoriesQuery, params);
     
     res.json({
       success: true,
-      data: categories,
+      data: result.rows,
       timestamp: new Date().toISOString()
     });
   })

@@ -18,6 +18,7 @@ import { useTranslation, useTheme } from '../../../../stores';
 
 import { Button, Input, Badge } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
+import { getIconComponent } from '../../../../config/categoryIcons';
 
 /**
  * 📂 CategoriesStep - MOBILE-FIRST PERFECTION!
@@ -237,7 +238,6 @@ const CategoriesStep = ({
         )}>
           {filteredCategories.map((category) => {
             const isSelected = selectedCategories.includes(category.id);
-            const IconComponent = category.icon;
             
             return (
               <motion.div
@@ -261,7 +261,7 @@ const CategoriesStep = ({
                   category.color,
                   viewMode === 'list' ? "flex-shrink-0" : "mb-3 mx-auto"
                 )}>
-                  <IconComponent className="w-6 h-6 text-white" />
+                  {React.createElement(getIconComponent(category.icon), { className: "w-6 h-6 text-white" })}
                 </div>
 
                 {/* Category info */}

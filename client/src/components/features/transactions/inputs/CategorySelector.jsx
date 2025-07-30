@@ -246,7 +246,6 @@ const CategorySelector = ({
                   {filteredCategories.length > 0 ? (
                     <div className="p-2">
                       {filteredCategories.map((category) => {
-                        const CategoryIcon = getIconComponent(category.icon);
                         return (
                           <button
                             key={category.id}
@@ -261,7 +260,7 @@ const CategorySelector = ({
                               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                               style={{ backgroundColor: category.color }}
                             >
-                              <CategoryIcon className="w-4 h-4 text-white" />
+                              {React.createElement(getIconComponent(category.icon), { className: "w-4 h-4 text-white" })}
                             </div>
                             
                             <span className="font-medium truncate">
@@ -349,7 +348,6 @@ const CategorySelector = ({
                   </label>
                   <div className="grid grid-cols-6 gap-2">
                     {iconOptions.map((iconName) => {
-                      const IconComponent = getIconComponent(iconName);
                       return (
                         <button
                           key={iconName}
@@ -361,7 +359,7 @@ const CategorySelector = ({
                               : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                           )}
                         >
-                          <IconComponent className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          {React.createElement(getIconComponent(iconName), { className: "w-5 h-5 text-gray-600 dark:text-gray-400" })}
                         </button>
                       );
                     })}

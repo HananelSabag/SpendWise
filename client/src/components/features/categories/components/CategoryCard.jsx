@@ -49,8 +49,6 @@ const CategoryCard = ({
   
   const [isHovered, setIsHovered] = useState(false);
 
-  // ✅ Get category icon component
-  const IconComponent = getIconComponent(category.icon);
   const typeInfo = getCategoryTypeInfo(category.type);
   
   // ✅ Analytics data
@@ -178,7 +176,7 @@ const CategoryCard = ({
           className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: category.color }}
         >
-          <IconComponent className="w-4 h-4 text-white" />
+          {React.createElement(getIconComponent(category.icon), { className: "w-4 h-4 text-white" })}
         </div>
 
         {/* Name */}
@@ -230,7 +228,7 @@ const CategoryCard = ({
           className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: category.color }}
         >
-          <IconComponent className="w-6 h-6 text-white" />
+          {React.createElement(getIconComponent(category.icon), { className: "w-6 h-6 text-white" })}
         </div>
 
         {/* Content */}
@@ -374,7 +372,7 @@ const CategoryCard = ({
           className="w-12 h-12 rounded-lg flex items-center justify-center"
           style={{ backgroundColor: category.color }}
         >
-          <IconComponent className="w-6 h-6 text-white" />
+          {React.createElement(getIconComponent(category.icon), { className: "w-6 h-6 text-white" })}
         </div>
 
         {/* Quick actions */}

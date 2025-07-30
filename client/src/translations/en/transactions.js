@@ -15,15 +15,45 @@ export default {
 
   // Transaction fields
   fields: {
-    description: "Description",
-    amount: "Amount",
-    category: "Category",
-    date: "Date",
-    type: "Type",
-    tags: "Tags",
-    notes: "Notes",
+    description: {
+      label: "Description",
+      placeholder: "Enter transaction description"
+    },
+    amount: {
+      label: "Amount",
+      placeholder: "0.00"
+    },
+    category: {
+      label: "Category", 
+      placeholder: "Select a category"
+    },
+    date: {
+      label: "Date",
+      helper: "Transaction date",
+      helperWithTime: "Transaction date and time"
+    },
+    type: {
+      label: "Transaction Type",
+      helper: "Choose whether this is income or expense"
+    },
+    tags: {
+      label: "Tags",
+      placeholder: "Add tags...",
+      helper: "Tags for organization and sorting (optional)"
+    },
+    notes: {
+      label: "Notes",
+      placeholder: "Additional notes...",
+      helper: "Additional information about the transaction (optional)"
+    },
     receipt: "Receipt",
-    recurring: "Recurring"
+    recurring: {
+      title: "Recurring Transaction",
+      description: "Set up a transaction that repeats regularly"
+    },
+    advanced: {
+      title: "Advanced Settings"
+    }
   },
 
   // Placeholders
@@ -184,6 +214,9 @@ export default {
         title: "Confirm Creation",
         description: "Confirm creating the recurring transaction"
       }
+    },
+    modal: {
+      createTitle: "Create Recurring Transaction"
     },
     
     // Frequency
@@ -429,5 +462,49 @@ export default {
     monthly: "Monthly Analysis",
     comparison: "Period Comparison",
     insights: "Insights"
+  },
+
+  // Modals
+  modals: {
+    add: {
+      title: "Add New Transaction",
+      subtitle: "Create a new transaction to track expenses and income"
+    },
+    edit: {
+      edit: {
+        title: "Edit Transaction",
+        subtitle: "Update transaction details"
+      }
+    }
+  },
+
+  // Forms
+  form: {
+    addTransaction: "Add Transaction",
+    cancel: "Cancel",
+    create: "Create Transaction",
+    save: "Save Changes",
+    update: "Update Transaction"
+  },
+
+  // Date picker
+  datePicker: {
+    today: "Today",
+    yesterday: "Yesterday", 
+    thisWeek: "This Week",
+    lastWeek: "Last Week",
+    thisMonth: "This Month",
+    lastMonth: "Last Month"
+  },
+
+  // Notes suggestions
+  notes: {
+    suggestions: {
+      receipt: "Has receipt",
+      business: "Business expense",
+      personal: "Personal expense",
+      gift: "Gift",
+      emergency: "Emergency"
+    }
   }
 }; 

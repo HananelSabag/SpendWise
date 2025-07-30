@@ -43,8 +43,7 @@ export const useCategorySelection = (categories = [], options = {}) => {
       // Type breakdown
       byType: {
         income: selected.filter(cat => cat.type === 'income').length,
-        expense: selected.filter(cat => cat.type === 'expense').length,
-        both: selected.filter(cat => cat.type === 'both').length
+        expense: selected.filter(cat => cat.type === 'expense').length
       },
       
       // Status breakdown

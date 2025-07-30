@@ -13,8 +13,6 @@ import {
   Search, Grid, List
 } from 'lucide-react';
 
-console.log('🏷️ CategoryFormFields loading...');
-
 // ✅ Import Zustand stores
 import { useTranslation } from '../../../../stores';
 
@@ -29,14 +27,6 @@ import {
 } from './CategoryHelpers';
 import { getIconComponent } from '../../../../config/categoryIcons';
 import { cn } from '../../../../utils/helpers';
-
-console.log('🏷️ CategoryFormFields - UI components imported:', { 
-  hasCard: !!Card, 
-  hasSwitch: !!Switch, 
-  hasBadge: !!Badge, 
-  hasInput: !!Input, 
-  hasButton: !!Button 
-});
 
 /**
  * 🎨 Color Picker Component
@@ -73,28 +63,35 @@ const ColorPicker = ({ value, onChange, error }) => {
       </div>
 
       {/* Color Grid */}
-      <div className="grid grid-cols-8 gap-2">
+      <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
         {colorCategories[selectedCategory].map((color) => (
           <motion.button
             key={color.value}
             type="button"
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => onChange(color.value)}
             className={cn(
-              "w-8 h-8 rounded-lg border-2 transition-all relative",
+              "relative w-12 h-12 sm:w-10 sm:h-10 rounded-xl border-3 transition-all duration-200 shadow-sm hover:shadow-md",
               value === color.value 
-                ? "border-gray-900 dark:border-white scale-110" 
-                : "border-gray-300 dark:border-gray-600 hover:scale-105"
+                ? "border-white scale-110 shadow-lg ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800" 
+                : "border-gray-200 dark:border-gray-600 hover:border-white dark:hover:border-gray-400"
             )}
             style={{ backgroundColor: color.value }}
             title={color.name}
           >
             {value === color.value && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 bg-white rounded-full shadow-lg" />
-              </div>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute inset-0 flex items-center justify-center"
+              >
+                <div className="w-3 h-3 bg-white rounded-full shadow-lg ring-1 ring-gray-300" />
+              </motion.div>
             )}
+            
+            {/* Hover overlay */}
+            <div className="absolute inset-0 rounded-xl bg-white dark:bg-gray-900 opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
           </motion.button>
         ))}
       </div>
@@ -152,6 +149,8 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
           <div className="grid grid-cols-6 gap-2">
             {aiSuggestions.map((iconName) => {
               const IconComponent = getIconComponent(iconName);
+              const isValidIcon = IconComponent && typeof IconComponent === 'function';
+              
               return (
                 <motion.button
                   key={iconName}
@@ -160,13 +159,23 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
                   whileTap={{ scale: 0.9 }}
                   onClick={() => onChange(iconName)}
                   className={cn(
-                    "p-2 rounded-lg border transition-all",
+                    "p-3 rounded-xl border-2 transition-all min-h-[44px] flex items-center justify-center",
                     value === iconName
                       ? "border-blue-500 bg-blue-100 dark:bg-blue-800"
                       : "border-blue-300 dark:border-blue-600 hover:border-blue-400"
                   )}
+                  title={iconName}
                 >
-                  <IconComponent className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+                  {isValidIcon ? (
+                    React.createElement(IconComponent, { 
+                      className: "w-5 h-5 text-blue-700 dark:text-blue-300",
+                      'data-icon': iconName
+                    })
+                  ) : (
+                    <div className="w-5 h-5 bg-blue-200 dark:bg-blue-800 rounded border border-blue-400 dark:border-blue-600 flex items-center justify-center">
+                      <span className="text-xs text-blue-600 dark:text-blue-400">?</span>
+                    </div>
+                  )}
                 </motion.button>
               );
             })}
@@ -201,28 +210,71 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
       </div>
 
       {/* Icon Grid */}
-      <div className="grid grid-cols-8 gap-2 max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-        {filteredIcons.map((iconName) => {
-          const IconComponent = getIconComponent(iconName);
-          return (
-            <motion.button
-              key={iconName}
-              type="button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onChange(iconName)}
-              className={cn(
-                "p-2 rounded-lg border transition-all",
-                value === iconName
-                  ? "border-blue-500 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
-                  : "border-gray-300 dark:border-gray-600 hover:border-blue-300 text-gray-600 dark:text-gray-400"
-              )}
-            >
-              <IconComponent className="w-5 h-5" />
-            </motion.button>
-          );
-        })}
+      <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-dashed border-gray-200 dark:border-gray-700">
+        {filteredIcons.length > 0 ? (
+          filteredIcons.map((iconName) => {
+            const IconComponent = getIconComponent(iconName);
+            // More robust validation
+            const isValidIcon = IconComponent && typeof IconComponent === 'function';
+            
+            return (
+              <motion.button
+                key={iconName}
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onChange(iconName)}
+                className={cn(
+                  "relative p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center min-h-[52px] min-w-[52px]",
+                  value === iconName
+                    ? "border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105"
+                    : "border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md",
+                  !isValidIcon && "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
+                )}
+                title={`${iconName} ${isValidIcon ? '' : '(Invalid)'}`}
+              >
+                {isValidIcon ? (
+                  React.createElement(IconComponent, { 
+                    className: "w-6 h-6",
+                    'data-icon': iconName,
+                    key: iconName
+                  })
+                ) : (
+                  <div className="w-6 h-6 bg-red-200 dark:bg-red-800 rounded border-2 border-red-400 dark:border-red-600 flex items-center justify-center">
+                    <span className="text-xs text-red-600 dark:text-red-400 font-bold">?</span>
+                  </div>
+                )}
+                
+                {value === iconName && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                )}
+              </motion.button>
+            );
+          })
+        ) : (
+          <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+            <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">{t('fields.icon.noResults', 'No icons found')}</p>
+            <p className="text-xs mt-1 opacity-75">Try a different category or search term</p>
+          </div>
+        )}
       </div>
+
+      {/* Icon validation feedback */}
+      {value && !getIconComponent(value) && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg"
+        >
+          <p className="text-sm text-red-600 dark:text-red-400 flex items-center space-x-2">
+            <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">!</span>
+            <span>{t('fields.icon.invalidIcon', 'Selected icon is not valid')}</span>
+          </p>
+        </motion.div>
+      )}
 
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -319,7 +371,7 @@ const CategoryFormFields = ({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {t('fields.type.label')} *
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {CATEGORY_TYPE_OPTIONS.map((option) => {
               const IconComponent = getIconComponent(option.icon);
               return (
@@ -330,22 +382,22 @@ const CategoryFormFields = ({
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleFieldChange('type', option.value)}
                   className={cn(
-                    "p-3 rounded-lg border-2 transition-all text-center",
+                    "p-4 rounded-xl border-2 transition-all text-center min-h-[80px] flex flex-col items-center justify-center",
                     formData.type === option.value
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                      : "border-gray-300 dark:border-gray-600 hover:border-blue-300"
+                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 shadow-lg transform scale-105"
+                      : "border-gray-300 dark:border-gray-600 hover:border-blue-300 hover:shadow-md"
                   )}
                 >
                   <IconComponent className={cn(
-                    "w-6 h-6 mx-auto mb-1",
+                    "w-7 h-7 mb-2",
                     formData.type === option.value
                       ? "text-blue-600 dark:text-blue-400"
                       : "text-gray-500 dark:text-gray-400"
                   )} />
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                     {t(`types.${option.label}`)}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">
                     {t(`types.${option.label}Description`)}
                   </div>
                 </motion.button>
@@ -367,9 +419,9 @@ const CategoryFormFields = ({
           <span>{t('sections.visual')}</span>
         </h3>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Icon Selector */}
-          <motion.div variants={fieldVariants}>
+          <motion.div variants={fieldVariants} className="lg:col-span-1">
             <IconSelector
               value={formData.icon}
               onChange={(icon) => handleFieldChange('icon', icon)}
@@ -379,7 +431,7 @@ const CategoryFormFields = ({
           </motion.div>
 
           {/* Color Picker */}
-          <motion.div variants={fieldVariants}>
+          <motion.div variants={fieldVariants} className="lg:col-span-1">
             <ColorPicker
               value={formData.color}
               onChange={(color) => handleFieldChange('color', color)}

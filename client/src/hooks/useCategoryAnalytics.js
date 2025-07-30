@@ -51,7 +51,7 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
         // Category growth trends
         trends: (categories || []).map(cat => ({
           id: cat?.id,
-          name: cat?.name || 'Unknown',
+          name: cat?.name || cat?.category_name || 'Uncategorized',
           color: cat?.color || '#666',
           growth: calculateGrowth(cat),
           usage: cat?.transaction_count || 0,

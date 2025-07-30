@@ -30,6 +30,7 @@ export default {
   show: 'Show',
   hide: 'Hide',
   duplicate: 'Duplicate',
+  selectOption: 'Select an option',
 
   // Password actions
   showPassword: 'Show Password',

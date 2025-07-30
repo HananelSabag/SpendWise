@@ -5,6 +5,8 @@
  * @version 3.0.0 - NEW CLEAN ARCHITECTURE
  */
 
+import { getIconComponent } from '../../../../config/categoryIcons';
+
 /**
  * 📋 Validation Rules Configuration
  */
@@ -21,11 +23,17 @@ const VALIDATION_RULES = {
   },
   icon: {
     required: true,
-    validIcons: [
-      'Tag', 'DollarSign', 'Home', 'Car', 'Coffee', 'Utensils',
-      'ShoppingBag', 'Heart', 'Music', 'Film', 'Book', 'Gamepad2',
-      'Plane', 'Smartphone', 'Globe', 'Settings', 'Star', 'Award'
-    ]
+    validator: (icon) => {
+      // Check if icon is valid by trying to get the component
+      try {
+        const IconComponent = getIconComponent(icon);
+        // A valid icon should not be the fallback Circle component
+        // and should not be undefined/null
+        return IconComponent && typeof IconComponent === 'function';
+      } catch {
+        return false;
+      }
+    }
   },
   color: {
     required: true,
@@ -33,7 +41,7 @@ const VALIDATION_RULES = {
   },
   type: {
     required: true,
-    options: ['expense', 'income', 'both']
+    options: ['expense', 'income']
   }
 };
 
@@ -109,7 +117,8 @@ export const validateIcon = (icon, t) => {
     return errors;
   }
 
-  if (!VALIDATION_RULES.icon.validIcons.includes(icon)) {
+  // Use the validator function to check if icon is valid
+  if (!VALIDATION_RULES.icon.validator(icon)) {
     errors.push(t('validation.icon.invalid', { 
       fallback: 'Selected icon is not valid' 
     }));

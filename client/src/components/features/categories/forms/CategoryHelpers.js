@@ -10,8 +10,7 @@
  */
 export const CATEGORY_TYPES = {
   EXPENSE: 'expense',
-  INCOME: 'income',
-  BOTH: 'both'
+  INCOME: 'income'
 };
 
 export const CATEGORY_TYPE_OPTIONS = [
@@ -28,13 +27,6 @@ export const CATEGORY_TYPE_OPTIONS = [
     color: 'green',
     icon: 'TrendingUp',
     description: 'For income and earnings'
-  },
-  {
-    value: CATEGORY_TYPES.BOTH,
-    label: 'both',
-    color: 'blue',
-    icon: 'ArrowUpDown',
-    description: 'For both income and expenses'
   }
 ];
 

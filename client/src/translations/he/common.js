@@ -32,6 +32,7 @@ export default {
   duplicate: 'שכפל',
   goBack: 'חזור',
   needHelp: 'זקוק לעזרה?',
+  selectOption: 'בחר אופציה',
 
   // פעולות סיסמה
   showPassword: 'הצג סיסמה',

@@ -2,15 +2,16 @@
 alwaysApply: true
 ---
 
-projectTitle: DevTogether Platform
+projectTitle: SpendWise
 projectType: fullstack
 environment: live
 mode: upgrade
 
 description: |
-  DevTogether is a fully functional production platform connecting junior developers with nonprofits.
-  It uses role-based access, project workflows, approvals, chats and more – built with React, Supabase, and clean separation of concerns.
-  We are now in a stable position to refactor, modernize, or upgrade tools, architecture, or logic – **if it provides real value**.
+  SpendWise is a full-featured production-grade personal finance tracker.
+  It includes JWT authentication, recurring transactions engine, export system, smart categories, and a robust PostgreSQL backend via Supabase.
+  The system is deployed across Vercel (frontend), Render (server), and Supabase (database).
+  We are now performing a complete server-side and database redesign to support future scalability and Google OAuth – while maintaining frontend compatibility.
 
 rules:
   - name: progressiveUpgrade
@@ -55,17 +56,26 @@ rules:
       type: validate
       condition: rbacEnforced: true
 
+  - name: singleSessionLog
+    description: All logs and summaries must be appended to a single Markdown file named `current-fix.md` inside the `/doc` folder. Do not create new files for each task.
+    appliesTo:
+      actions: [logging, documentation]
+    action:
+      type: enforce
+      condition:
+        filePath: doc/current-fix.md
+        behavior: appendOnly
+
 guidelines:
   - "This is a working system. Suggest upgrades only if they bring tangible value."
   - "Favor composability, clarity and maintainability over buzzwords."
   - "Avoid bloated abstractions and over-modularization unless warranted."
   - "If using a new tool – clearly explain why and simplify integration."
-
-notes:
+  - "Maintain a running session log inside `doc/current-fix.md` – append only, never overwrite or create new md files unless instructed."
+  - "Each entry must include: (1) User request summary, (2) Analysis, (3) Affected layers, (4) Affected files, (5) Actions taken."
   - "Use Vite, TanStack, or Zustand only if it simplifies or speeds up the app"
   - "We welcome code-first design systems if they reduce friction"
   - "If new architecture is proposed – create a migration plan with clear win"
-  -"make sure every md you create go to doc folder and not into the code folders!"
-  -"no git command by yyourself only i do the git work you can only check!"
-  -"dont npm run dev only i test it you tell me when you need you can try npm run build for checking!"
-
+  - "make sure every md you create go to doc folder and not into the code folders!"
+  - "no git command by yourself – only I do the git work. You can only check!"
+  - "don’t run `npm run dev` – only I test it. You may use `npm run build` to check instead!"

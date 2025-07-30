@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, X, AlertCircle, CheckCircle, Clock, Tag } from 'lucide-react';
+import { Save, X, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -30,6 +30,7 @@ const CategoryForm = ({
   initialData = null,
   onSubmit,
   onCancel,
+  onClose,
   isLoading = false,
   showAdvanced = true,
   className = ''
@@ -62,6 +63,15 @@ const CategoryForm = ({
       setValidationErrors(errors);
     }
   }, [errors, isDirty]);
+
+  // ✅ Handle close modal
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else if (onCancel) {
+      onCancel();
+    }
+  }, [onClose, onCancel]);
 
   // ✅ Handle form field changes
   const handleFieldChange = useCallback((field, value) => {
@@ -115,12 +125,8 @@ const CategoryForm = ({
         duration: 3000
       });
       
-      // Reset form if creating new category
-      if (mode === 'create') {
-        setFormData(getDefaultCategoryData());
-        setIsDirty(false);
-        setValidationErrors({});
-      }
+      // Close modal after successful submission
+      handleClose();
       
     } catch (error) {
       console.error('Category submission failed:', error);
@@ -144,18 +150,6 @@ const CategoryForm = ({
     
     onCancel?.();
   }, [isDirty, onCancel, t]);
-
-  // ✅ Form title based on mode
-  const formTitle = useMemo(() => {
-    switch (mode) {
-      case 'edit':
-        return t('form.editCategory');
-      case 'duplicate':
-        return t('form.duplicateCategory');
-      default:
-        return t('form.addCategory');
-    }
-  }, [mode, t]);
 
   // ✅ Animation variants
   const containerVariants = {
@@ -183,61 +177,45 @@ const CategoryForm = ({
       animate="visible"
       onSubmit={handleSubmit}
       className={cn(
-        "space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg",
+        "space-y-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700",
         className
       )}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* Form Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {formTitle}
-          </h2>
-          {mode === 'edit' && initialData && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {t('form.editingCategory', { 
-                name: formData.name
-              })}
-            </p>
-          )}
-        </div>
-
-        {/* Form Status */}
-        <div className="flex items-center space-x-2">
-          {isDirty && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-orange-600 dark:text-orange-400"
-            >
-              <Clock className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.unsaved')}</span>
-            </motion.div>
-          )}
-          
-          {!isValid && isDirty && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-red-600 dark:text-red-400"
-            >
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.invalid')}</span>
-            </motion.div>
-          )}
-          
-          {isValid && isDirty && !isSubmitting && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-green-600 dark:text-green-400"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.valid')}</span>
-            </motion.div>
-          )}
-        </div>
+      {/* Form Status */}
+      <div className="flex items-center justify-end space-x-2 mb-4">
+        {isDirty && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center space-x-1 text-orange-600 dark:text-orange-400"
+          >
+            <Clock className="w-4 h-4" />
+            <span className="text-xs font-medium">{t('form.unsaved')}</span>
+          </motion.div>
+        )}
+        
+        {!isValid && isDirty && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center space-x-1 text-red-600 dark:text-red-400"
+          >
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-xs font-medium">{t('form.invalid')}</span>
+          </motion.div>
+        )}
+        
+        {isValid && isDirty && !isSubmitting && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center space-x-1 text-green-600 dark:text-green-400"
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-xs font-medium">{t('form.valid')}</span>
+          </motion.div>
+        )}
       </div>
 
       {/* Form Fields */}
@@ -252,12 +230,18 @@ const CategoryForm = ({
       </motion.div>
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <motion.div 
+        className="flex items-center justify-end space-x-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
         <Button
           type="button"
           variant="outline"
-          onClick={handleCancel}
+          onClick={handleClose}
           disabled={isSubmitting || isLoading}
+          className="px-6 py-2.5 rounded-xl font-medium transition-all duration-200 hover:shadow-md"
         >
           <X className="w-4 h-4 mr-2" />
           {t('form.cancel')}
@@ -267,7 +251,12 @@ const CategoryForm = ({
           type="submit"
           variant="primary"
           disabled={!isValid || isSubmitting || isLoading}
-          className="min-w-[120px]"
+          className={cn(
+            "px-8 py-2.5 rounded-xl font-medium min-w-[140px] transition-all duration-200",
+            "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
+            "shadow-lg hover:shadow-xl transform hover:scale-105",
+            "disabled:from-gray-400 disabled:to-gray-500 disabled:transform-none disabled:shadow-none"
+          )}
         >
           {isSubmitting || isLoading ? (
             <LoadingSpinner size="sm" className="mr-2" />
@@ -281,7 +270,7 @@ const CategoryForm = ({
               : t('form.update')
           }
         </Button>
-      </div>
+      </motion.div>
     </motion.form>
   );
 };

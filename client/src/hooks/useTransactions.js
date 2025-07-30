@@ -731,10 +731,21 @@ export const useTransactions = (options = {}) => {
           transactionsArray = [];
         }
 
+        // Transform flat category data to nested structure for all transactions
+        const transformedTransactions = transactionsArray.map(transaction => ({
+          ...transaction,
+          // Transform flat category data to nested structure for frontend compatibility
+          category: transaction.category_name ? {
+            name: transaction.category_name,
+            icon: transaction.category_icon,
+            color: transaction.category_color
+          } : transaction.category
+        }));
+
         // Structure the data properly for infinite query
         const data = {
-          transactions: transactionsArray,
-          hasMore: hasMore || (transactionsArray.length === pageSize),
+          transactions: transformedTransactions,
+          hasMore: hasMore || (transformedTransactions.length === pageSize),
           total: total,
           page: pageParam,
           limit: pageSize
@@ -744,7 +755,7 @@ export const useTransactions = (options = {}) => {
         if (enableAI && data.transactions) {
           performanceRef.current.recordAIAnalysis();
           
-          const userContext = await this.getUserContext();
+          const userContext = await getUserContext();
           const analysisPromises = data.transactions.map(transaction =>
             TransactionAIEngine.analyzeTransaction(transaction, userContext)
           );
@@ -753,7 +764,13 @@ export const useTransactions = (options = {}) => {
           
           data.transactions = data.transactions.map((transaction, index) => ({
             ...transaction,
-            aiAnalysis: analyses[index]
+            aiAnalysis: analyses[index],
+            // Transform flat category data to nested structure for frontend compatibility
+            category: transaction.category_name ? {
+              name: transaction.category_name,
+              icon: transaction.category_icon,
+              color: transaction.category_color
+            } : transaction.category
           }));
 
           // Generate batch insights

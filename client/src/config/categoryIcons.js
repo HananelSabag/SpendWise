@@ -7,12 +7,20 @@ import {
   Tag, Star, Sparkles, Crown, Gift, Heart, Shield,
   ShoppingCart, ShoppingBag, Palette, Camera, Smartphone, Laptop,
   Home, Zap, Car, Fuel, Phone, MapPin, Bus,
-  Utensils, Coffee, Pizza, Wine,
+  Utensils, UtensilsCrossed, Coffee, Pizza, Wine,
   Plane, Briefcase, Book, GraduationCap,
   Dumbbell, Pill, Baby, PawPrint,
   DollarSign, CreditCard, Banknote, PiggyBank, TrendingUp, TrendingDown,
   Music, Gamepad2, Tv, Film,
-  Wallet, Award, Building, FileText, MoreHorizontal, Circle, User
+  Wallet, Award, Building, FileText, MoreHorizontal, Circle, User,
+  Receipt, Code,
+  // Additional icons needed for CategoryFormFields
+  PieChart, BarChart3, Percent, Target, Video, Radio, Headphones, Disc,
+  Globe, Settings, Activity, Wifi, Monitor, Mouse, Keyboard,
+  Train, Bike, Truck, Ship, Navigation, Stethoscope, Cross,
+  Brain, Eye, Thermometer, Bookmark, Flag, Hash, Square, Triangle, Hexagon,
+  // Missing critical icons
+  ArrowUpDown, Pin, PinOff
 } from 'lucide-react';
 
 /**
@@ -99,6 +107,162 @@ export const iconMap = Object.values(iconCategories)
   }, {});
 
 /**
+ * Additional icon mappings for database icon names (PascalCase from DB)
+ */
+export const dbIconMap = {
+  // Common database icon names (exact matches from DB)
+  'Briefcase': Briefcase,
+  'Receipt': Receipt, 
+  'UtensilsCrossed': UtensilsCrossed,
+  'Car': Car,
+  'Code': Code,
+  'Gamepad2': Gamepad2,
+  'TrendingUp': TrendingUp,
+  'ShoppingBag': ShoppingBag,
+  'Heart': Heart,
+  'MoreHorizontal': MoreHorizontal,
+  'DollarSign': DollarSign,
+  'Tag': Tag,
+  'Circle': Circle,
+  'User': User,
+  'Film': Film,
+  'Zap': Zap,
+  'ShoppingCart': ShoppingCart,
+  'Building': Building,
+  'CreditCard': CreditCard,
+  'Home': Home,
+  'Plane': Plane,
+  'Fuel': Fuel,
+  'Music': Music,
+  'Tv': Tv,
+  'Book': Book,
+  'GraduationCap': GraduationCap,
+  'Dumbbell': Dumbbell,
+  'Pill': Pill,
+  'Baby': Baby,
+  'PawPrint': PawPrint,
+  'Smartphone': Smartphone,
+  'Laptop': Laptop,
+  'Coffee': Coffee,
+  'Pizza': Pizza,
+  'Wine': Wine,
+  'Utensils': Utensils,
+  'Banknote': Banknote,
+  'PiggyBank': PiggyBank,
+  'TrendingDown': TrendingDown,
+  'Award': Award,
+  'FileText': FileText,
+  'Bus': Bus,
+  'MapPin': MapPin,
+  'Phone': Phone,
+  'Palette': Palette,
+  'Camera': Camera,
+  'Star': Star,
+  'Gift': Gift,
+  'Shield': Shield,
+  'Crown': Crown,
+  'Sparkles': Sparkles,
+  'Wallet': Wallet,
+  
+  // Additional icons for CategoryFormFields
+  'PieChart': PieChart,
+  'BarChart3': BarChart3,
+  'Percent': Percent,
+  'Target': Target,
+  'Video': Video,
+  'Radio': Radio,
+  'Headphones': Headphones,
+  'Disc': Disc,
+  'Globe': Globe,
+  'Settings': Settings,
+  'Activity': Activity,
+  'Wifi': Wifi,
+  'Monitor': Monitor,
+  'Mouse': Mouse,
+  'Keyboard': Keyboard,
+  'Train': Train,
+  'Bike': Bike,
+  'Truck': Truck,
+  'Ship': Ship,
+  'Navigation': Navigation,
+  'Stethoscope': Stethoscope,
+  'Cross': Cross,
+  'Brain': Brain,
+  'Eye': Eye,
+  'Thermometer': Thermometer,
+  'Bookmark': Bookmark,
+  'Flag': Flag,
+  'Hash': Hash,
+  'Square': Square,
+  'Triangle': Triangle,
+  'Hexagon': Hexagon,
+  'ArrowUpDown': ArrowUpDown,
+  'Pin': Pin,
+  'PinOff': PinOff,
+  
+  // Lowercase versions
+  'briefcase': Briefcase,
+  'receipt': Receipt,
+  'utensilscrossed': UtensilsCrossed,
+  'car': Car,
+  'code': Code,
+  'gamepad2': Gamepad2,
+  'trending-up': TrendingUp,
+  'trendingup': TrendingUp,
+  'shopping-bag': ShoppingBag,
+  'shoppingbag': ShoppingBag,
+  'heart': Heart,
+  'more-horizontal': MoreHorizontal,
+  'morehorizontal': MoreHorizontal,
+  'dollar-sign': DollarSign,
+  'dollarsign': DollarSign,
+  'tag': Tag,
+  'circle': Circle,
+  'user': User,
+  'film': Film,
+  
+  // Lowercase versions of new icons
+  'piechart': PieChart,
+  'pie-chart': PieChart,
+  'barchart3': BarChart3,
+  'bar-chart-3': BarChart3,
+  'percent': Percent,
+  'target': Target,
+  'video': Video,
+  'radio': Radio,
+  'headphones': Headphones,
+  'disc': Disc,
+  'globe': Globe,
+  'settings': Settings,
+  'activity': Activity,
+  'wifi': Wifi,
+  'monitor': Monitor,
+  'mouse': Mouse,
+  'keyboard': Keyboard,
+  'train': Train,
+  'bike': Bike,
+  'truck': Truck,
+  'ship': Ship,
+  'navigation': Navigation,
+  'stethoscope': Stethoscope,
+  'cross': Cross,
+  'brain': Brain,
+  'eye': Eye,
+  'thermometer': Thermometer,
+  'bookmark': Bookmark,
+  'flag': Flag,
+  'hash': Hash,
+  'square': Square,
+  'triangle': Triangle,
+  'hexagon': Hexagon,
+  'arrowupdown': ArrowUpDown,
+  'arrow-up-down': ArrowUpDown,
+  'pin': Pin,
+  'pinoff': PinOff,
+  'pin-off': PinOff
+};
+
+/**
  * Smart category icon mapping based on category names
  * Maps common category names to appropriate icons
  */
@@ -175,12 +339,37 @@ export const categoryIconMap = {
 };
 
 /**
- * Get icon component by name
+ * Get icon component by name (handles both kebab-case and PascalCase from DB)
  * @param {string} iconName - Name of the icon
  * @returns {React.Component} Icon component
  */
 export const getIconComponent = (iconName) => {
-  return iconMap[iconName] || iconMap['circle'];
+  if (!iconName) {
+    return Circle;
+  }
+  
+  // Try database icon mapping first (for PascalCase names from DB)
+  if (dbIconMap[iconName]) {
+    return dbIconMap[iconName];
+  }
+  
+  // Try regular icon mapping (kebab-case)
+  if (iconMap[iconName]) {
+    return iconMap[iconName];
+  }
+  
+  // Try lowercase version
+  const lowerName = iconName.toLowerCase();
+  if (dbIconMap[lowerName]) {
+    return dbIconMap[lowerName];
+  }
+  
+  // Log missing icons for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('🎯 Missing icon:', iconName, '- add to categoryIcons.js');
+  }
+  
+  return Circle;
 };
 
 /**
