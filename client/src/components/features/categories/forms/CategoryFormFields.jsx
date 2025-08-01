@@ -10,8 +10,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tag, Palette, Type, TrendingUp, TrendingDown, 
   ArrowUpDown, Eye, EyeOff, Pin, PinOff,
-  Search, Grid, List
+  Search, Grid, List,
+  // Icons for preview
+  Circle, Heart, DollarSign, ShoppingBag, Car, Home, Coffee,
+  Briefcase, Receipt, CreditCard, Plane, Music, Book, Pill, Utensils,
+  Building, Film, Code, Gamepad2, User, MoreHorizontal, Zap
 } from 'lucide-react';
+
+// Simple icon mapping for category types
+const typeIcons = {
+  'TrendingUp': TrendingUp,
+  'TrendingDown': TrendingDown
+};
+
+// Simple icon mapping for preview (same as SimpleIconSelector)
+const previewIcons = {
+  'Tag': Tag, 'Circle': Circle, 'Heart': Heart, 'DollarSign': DollarSign,
+  'ShoppingBag': ShoppingBag, 'Car': Car, 'Home': Home, 'Coffee': Coffee,
+  'Briefcase': Briefcase, 'Receipt': Receipt, 'CreditCard': CreditCard,
+  'Plane': Plane, 'Music': Music, 'Book': Book, 'Pill': Pill, 'Utensils': Utensils,
+  'TrendingUp': TrendingUp, 'Building': Building, 'Film': Film, 'Code': Code,
+  'Gamepad2': Gamepad2, 'User': User, 'MoreHorizontal': MoreHorizontal, 'Zap': Zap
+};
 
 // ✅ Import Zustand stores
 import { useTranslation } from '../../../../stores';
@@ -21,11 +41,9 @@ import { getFieldError } from './CategoryValidation';
 import { 
   CATEGORY_TYPES, 
   CATEGORY_TYPE_OPTIONS,
-  COLOR_PALETTE,
-  ICON_CATEGORIES,
-  getIconSuggestions
+  COLOR_PALETTE
 } from './CategoryHelpers';
-import { getIconComponent } from '../../../../config/categoryIcons';
+import SimpleIconSelector from './SimpleIconSelector';
 import { cn } from '../../../../utils/helpers';
 
 /**
@@ -103,193 +121,7 @@ const ColorPicker = ({ value, onChange, error }) => {
   );
 };
 
-/**
- * 🎯 Icon Selector Component
- */
-const IconSelector = ({ value, onChange, categoryName = '', error }) => {
-  const { t } = useTranslation('categories');
-  const [selectedCategory, setSelectedCategory] = useState('general');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // AI suggestions based on category name
-  const aiSuggestions = useMemo(() => {
-    return getIconSuggestions(categoryName);
-  }, [categoryName]);
-
-  // Filter icons
-  const filteredIcons = useMemo(() => {
-    let icons = ICON_CATEGORIES.find(cat => cat.id === selectedCategory)?.icons || [];
-
-    if (searchQuery) {
-      icons = icons.filter(icon => 
-        icon.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    return icons;
-  }, [selectedCategory, searchQuery]);
-
-  return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        {t('fields.icon.label')} *
-      </label>
-
-      {/* AI Suggestions */}
-      {aiSuggestions.length > 0 && categoryName && (
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-          <div className="flex items-center space-x-2 mb-2">
-            <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white">AI</span>
-            </div>
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              {t('fields.icon.suggestions')}
-            </span>
-          </div>
-          <div className="grid grid-cols-6 gap-2">
-            {aiSuggestions.map((iconName) => {
-              const IconComponent = getIconComponent(iconName);
-              const isValidIcon = IconComponent && typeof IconComponent === 'function';
-              
-              return (
-                <motion.button
-                  key={iconName}
-                  type="button"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => onChange(iconName)}
-                  className={cn(
-                    "p-3 rounded-xl border-2 transition-all min-h-[44px] flex items-center justify-center",
-                    value === iconName
-                      ? "border-blue-500 bg-blue-100 dark:bg-blue-800"
-                      : "border-blue-300 dark:border-blue-600 hover:border-blue-400"
-                  )}
-                  title={iconName}
-                >
-                  {isValidIcon ? (
-                    React.createElement(IconComponent, { 
-                      className: "w-5 h-5 text-blue-700 dark:text-blue-300",
-                      'data-icon': iconName
-                    })
-                  ) : (
-                    <div className="w-5 h-5 bg-blue-200 dark:bg-blue-800 rounded border border-blue-400 dark:border-blue-600 flex items-center justify-center">
-                      <span className="text-xs text-blue-600 dark:text-blue-400">?</span>
-                    </div>
-                  )}
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <Input
-          placeholder={t('fields.icon.search')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Icon Category Tabs */}
-      <div className="flex flex-wrap gap-1">
-        {ICON_CATEGORIES.map((category) => (
-          <Button
-            key={category.id}
-            variant={selectedCategory === category.id ? "primary" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedCategory(category.id)}
-            className="text-xs"
-          >
-            {t(`iconCategories.${category.id}`)}
-          </Button>
-        ))}
-      </div>
-
-      {/* Icon Grid */}
-      <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-3 max-h-64 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-dashed border-gray-200 dark:border-gray-700">
-        {filteredIcons.length > 0 ? (
-          filteredIcons.map((iconName) => {
-            const IconComponent = getIconComponent(iconName);
-            // Simple validation - getIconComponent always returns a function
-            const isValidIcon = typeof IconComponent === 'function';
-            
-            return (
-              <motion.button
-                key={iconName}
-                type="button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onChange(iconName)}
-                className={cn(
-                  "relative p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center min-h-[52px] min-w-[52px]",
-                  value === iconName
-                    ? "border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105"
-                    : "border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md",
-                  !isValidIcon && "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
-                )}
-                title={`${iconName} ${isValidIcon ? '' : '(Invalid)'}`}
-              >
-                {isValidIcon ? (
-                  React.createElement(IconComponent, { 
-                    className: "w-6 h-6",
-                    'data-icon': iconName,
-                    key: iconName
-                  })
-                ) : (
-                  <div className="w-6 h-6 bg-red-200 dark:bg-red-800 rounded border-2 border-red-400 dark:border-red-600 flex items-center justify-center">
-                    <span className="text-xs text-red-600 dark:text-red-400 font-bold">?</span>
-                  </div>
-                )}
-                
-                {value === iconName && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                )}
-              </motion.button>
-            );
-          })
-        ) : (
-          <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-            <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">{t('fields.icon.noResults', 'No icons found')}</p>
-            <p className="text-xs mt-1 opacity-75">Try a different category or search term</p>
-          </div>
-        )}
-      </div>
-
-      {/* Icon validation feedback */}
-      {value && (() => {
-        // Use the same validation logic as CategoryValidation.js
-        try {
-          const IconComponent = getIconComponent(value);
-          return !(typeof IconComponent === 'function');
-        } catch {
-          return true; // Show error if validation fails
-        }
-      })() && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg"
-        >
-          <p className="text-sm text-red-600 dark:text-red-400 flex items-center space-x-2">
-            <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">!</span>
-            <span>{t('fields.icon.invalidIcon', 'Selected icon is not valid')}</span>
-          </p>
-        </motion.div>
-      )}
-
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      )}
-    </div>
-  );
-};
+// Old IconSelector completely removed - using SimpleIconSelector now
 
 /**
  * 🏷️ Category Form Fields Component
@@ -381,7 +213,7 @@ const CategoryFormFields = ({
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {CATEGORY_TYPE_OPTIONS.map((option) => {
-              const IconComponent = getIconComponent(option.icon);
+              const IconComponent = typeIcons[option.icon] || TrendingUp;
               return (
                 <motion.button
                   key={option.value}
@@ -430,10 +262,9 @@ const CategoryFormFields = ({
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Icon Selector */}
           <motion.div variants={fieldVariants} className="lg:col-span-1">
-            <IconSelector
+            <SimpleIconSelector
               value={formData.icon}
               onChange={(icon) => handleFieldChange('icon', icon)}
-              categoryName={formData.name}
               error={getFieldError('icon', validationErrors)}
             />
           </motion.div>
@@ -514,7 +345,7 @@ const CategoryFormFields = ({
               style={{ backgroundColor: formData.color }}
             >
               {React.createElement(
-                getIconComponent(formData.icon),
+                previewIcons[formData.icon] || Tag,
                 { className: "w-5 h-5 text-white" }
               )}
             </div>

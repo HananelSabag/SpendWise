@@ -24,14 +24,8 @@ const VALIDATION_RULES = {
   icon: {
     required: true,
     validator: (icon) => {
-      // Check if icon is valid by trying to get the component
-      try {
-        const IconComponent = getIconComponent(icon);
-        // A valid icon should be a function (React component)
-        return typeof IconComponent === 'function';
-      } catch {
-        return false;
-      }
+      // Icon validation simplified - getIconComponent always returns a valid component
+      return !!icon;
     }
   },
   color: {

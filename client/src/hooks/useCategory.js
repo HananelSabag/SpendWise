@@ -387,14 +387,19 @@ export const useCategory = (type = null) => {
     cacheTime: 30 * 60 * 1000, // 30 minutes
   });
 
-  // ✅ Category analytics query
+  // ✅ Category analytics query - temporarily disabled to prevent crashes
   const analyticsQuery = useQuery({
     queryKey: ['category-analytics', user?.id],
     queryFn: async () => {
-      const response = await api.analytics.getUserAnalytics();
-      return response.data;
+      try {
+        const response = await api.analytics.getUserAnalytics();
+        return Array.isArray(response.data) ? response.data : [];
+      } catch (error) {
+        console.warn('Analytics API not available:', error.message);
+        return [];
+      }
     },
-    enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
+    enabled: false, // Temporarily disabled until analytics endpoint is implemented
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
@@ -527,7 +532,8 @@ export const useCategory = (type = null) => {
 
     return categories.map(category => {
       // Add analytics data if available
-      const analytics = analyticsQuery.data?.find(a => a.categoryId === category.id) || {
+      const analyticsData = analyticsQuery.data;
+      const analytics = (Array.isArray(analyticsData) ? analyticsData.find(a => a.categoryId === category.id) : null) || {
         transactionCount: 0,
         totalAmount: 0,
         averageAmount: 0,
