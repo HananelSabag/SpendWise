@@ -58,6 +58,10 @@ import EditTransactionModal from '../components/features/transactions/modals/Edi
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 
+// ✅ NEW: Upcoming Transactions System
+import UpcomingTransactionsSection from '../components/features/transactions/UpcomingTransactionsSection';
+import useAutoRegeneration from '../hooks/useAutoRegeneration';
+
 import { cn } from '../utils/helpers';
 
 const Transactions = () => {
@@ -121,6 +125,13 @@ const Transactions = () => {
     bulkActions,
     isLoading: actionsLoading
   } = useTransactionActions();
+
+  // ✅ Auto-regeneration system
+  const {
+    regenerationStatus,
+    isRegenerating,
+    triggerRegeneration
+  } = useAutoRegeneration();
 
   // ✅ Derived data - FIXED since transactionsData is now already the transactions array
   const transactions = React.useMemo(() => {
@@ -306,6 +317,20 @@ const Transactions = () => {
                   <RefreshCw className={cn("w-4 h-4", transactionsLoading && "animate-spin")} />
                 </Button>
               </motion.div>
+
+              {/* Auto-Regeneration Status */}
+              {isRegenerating && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/20 rounded-xl"
+                >
+                  <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                    Auto-generating...
+                  </span>
+                </motion.div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -418,6 +443,9 @@ const Transactions = () => {
             </motion.div>
           )}
         </Card>
+
+        {/* ✅ UPCOMING TRANSACTIONS SECTION */}
+        <UpcomingTransactionsSection />
 
         {/* Transactions List */}
         <Card>

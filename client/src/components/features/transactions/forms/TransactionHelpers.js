@@ -117,18 +117,41 @@ export const formatAmountDisplay = (amount, currency = 'USD') => {
 };
 
 /**
- * 📊 Format Transaction for API
+ * 📊 Format Transaction for API - SUPPORTS RECURRING TEMPLATES
  */
 export const formatTransactionForAPI = (formData, mode = 'create') => {
   const amount = parseFloat(formData.amount);
   // ✅ FIX: Server expects positive amounts for both income and expense
   const finalAmount = Math.abs(amount);
   
-  // Combine date and time
-  const combinedDateTime = formData.time 
-    ? `${formData.date}T${formData.time}:00`
-    : `${formData.date}T12:00:00`;
+  // ✅ CRITICAL: Check if this is a recurring transaction
+  if (formData.isRecurring) {
+    // ✅ Format for recurring template API
+    const recurringData = {
+      name: formData.name || formData.description?.trim() || 'Recurring Transaction',
+      description: formData.description?.trim() || null,
+      amount: finalAmount,
+      type: formData.type,
+      category_name: formData.categoryName || null,
+      interval_type: formData.recurringFrequency || 'monthly',
+      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || 1) : null,
+      day_of_week: formData.recurringFrequency === 'weekly' ? (formData.dayOfWeek || 1) : null,
+      is_active: true,
+      // Add marker to indicate this is recurring
+      _isRecurring: true
+    };
 
+    // Remove null/undefined values
+    Object.keys(recurringData).forEach(key => {
+      if (key !== 'name' && key !== '_isRecurring' && (recurringData[key] === null || recurringData[key] === undefined || recurringData[key] === '')) {
+        delete recurringData[key];
+      }
+    });
+
+    return recurringData;
+  }
+
+  // ✅ Regular transaction formatting (existing logic)
   const apiData = {
     type: formData.type,
     amount: finalAmount,

@@ -248,6 +248,65 @@ const transactionAPI = {
   },
 
   // ==========================================
+  // 📅 UPCOMING TRANSACTIONS MANAGEMENT
+  // ==========================================
+
+  /**
+   * Get upcoming transactions for user
+   * @returns {Promise<Object>} Upcoming transactions
+   */
+  async getUpcomingTransactions() {
+    try {
+      const response = await apiClient.client.get('/transactions/upcoming');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
+   * Delete specific upcoming transaction
+   * @param {string} id - Upcoming transaction ID
+   * @returns {Promise<Object>} Deletion result
+   */
+  async deleteUpcomingTransaction(id) {
+    try {
+      const response = await apiClient.client.delete(`/transactions/upcoming/${id}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
+   * Stop generating upcoming transactions for a template
+   * @param {string} templateId - Template ID
+   * @returns {Promise<Object>} Stop result
+   */
+  async stopTemplateGeneration(templateId) {
+    try {
+      const response = await apiClient.client.post(`/transactions/templates/${templateId}/stop`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
+   * Regenerate upcoming transactions for a specific template
+   * @param {string} templateId - Template ID
+   * @returns {Promise<Object>} Regeneration result
+   */
+  async regenerateUpcomingForTemplate(templateId) {
+    try {
+      const response = await apiClient.client.post(`/transactions/templates/${templateId}/regenerate`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  // ==========================================
   // 📊 ANALYTICS & DASHBOARD
   // ==========================================
 

@@ -80,7 +80,11 @@ const normalizeUserData = (user) => {
     
     // ✅ Account Status
     is_active: user.is_active !== false, // Default to true
-    isPremium: user.isPremium || false
+    isPremium: user.isPremium || false,
+    
+    // ✅ Password Status - CRITICAL for onboarding
+    has_password: !!user.password_hash, // True if user has a password set
+    hasPassword: !!user.password_hash    // Camel case version
   };
 };
 

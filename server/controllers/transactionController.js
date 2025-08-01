@@ -540,6 +540,107 @@ const transactionController = {
   }),
 
   /**
+   * Create recurring template - WITH AUTOMATIC 3-MONTH GENERATION
+   * @route POST /api/v1/transactions/templates
+   */
+  createRecurringTemplate: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const {
+      name,
+      description,
+      amount,
+      type,
+      category_name,
+      interval_type,
+      day_of_month,
+      day_of_week,
+      is_active
+    } = req.body;
+
+    try {
+      // Validate required fields
+      if (!name || !amount || !type || !interval_type) {
+        return res.status(400).json({
+          success: false,
+          error: 'Name, amount, type, and interval_type are required'
+        });
+      }
+
+      // Get or create category
+      let categoryId = null;
+      if (category_name) {
+        // Try to find existing category
+        const categoryQuery = `
+          SELECT id FROM categories 
+          WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
+          ORDER BY user_id DESC NULLS LAST
+          LIMIT 1
+        `;
+        const categoryResult = await db.query(categoryQuery, [category_name, userId]);
+        
+        if (categoryResult.rows.length > 0) {
+          categoryId = categoryResult.rows[0].id;
+        }
+      }
+
+      // Create recurring template
+      const insertQuery = `
+        INSERT INTO recurring_templates (
+          user_id, name, description, amount, type, category_id,
+          interval_type, day_of_month, day_of_week, is_active,
+          start_date, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_DATE, NOW(), NOW())
+        RETURNING *
+      `;
+
+      const values = [
+        userId,
+        name,
+        description || null,
+        amount,
+        type,
+        categoryId,
+        interval_type,
+        day_of_month || null,
+        day_of_week || null,
+        is_active !== false // Default to true
+      ];
+
+      const result = await db.query(insertQuery, values);
+      const template = result.rows[0];
+
+      // ✅ AUTO-GENERATE 3 MONTHS OF UPCOMING TRANSACTIONS
+      const upcomingTransactions = await generateUpcomingTransactions(template);
+
+      logger.info('Recurring template created with upcoming transactions', {
+        userId,
+        templateId: template.id,
+        name: template.name,
+        upcomingCount: upcomingTransactions.length
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          template,
+          upcomingTransactions
+        },
+        message: `Recurring template created with ${upcomingTransactions.length} upcoming transactions`
+      });
+    } catch (error) {
+      logger.error('Failed to create recurring template', {
+        userId,
+        error: error.message
+      });
+      throw error;
+    }
+  }),
+
+  /**
+   * Generate 3 months of upcoming transactions for a template
+   */
+  
+  /**
    * Generate recurring transactions - REAL IMPLEMENTATION
    * @route POST /api/v1/transactions/generate-recurring
    */
@@ -608,6 +709,213 @@ const transactionController = {
       });
     } catch (error) {
       logger.error('Get recent by type failed', { userId, type, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Get upcoming transactions for user
+   * @route GET /api/v1/transactions/upcoming
+   */
+  getUpcomingTransactions: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      const query = `
+        SELECT t.*, c.name as category_name, rt.name as template_name
+        FROM transactions t 
+        LEFT JOIN categories c ON t.category_id = c.id
+        LEFT JOIN recurring_templates rt ON t.template_id = rt.id
+        WHERE t.user_id = $1 AND t.status = 'upcoming' AND t.deleted_at IS NULL
+        ORDER BY t.date ASC, t.created_at ASC
+      `;
+      
+      const result = await db.query(query, [userId]);
+      
+      res.json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length
+      });
+    } catch (error) {
+      logger.error('Get upcoming transactions failed', { userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Delete specific upcoming transaction
+   * @route DELETE /api/v1/transactions/upcoming/:id
+   */
+  deleteUpcomingTransaction: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    try {
+      // Verify the upcoming transaction belongs to the user
+      const checkQuery = `
+        SELECT id FROM transactions 
+        WHERE id = $1 AND user_id = $2 AND status = 'upcoming' AND deleted_at IS NULL
+      `;
+      const checkResult = await db.query(checkQuery, [id, userId]);
+
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Upcoming transaction not found'
+        });
+      }
+
+      // Soft delete the upcoming transaction
+      const deleteQuery = `
+        UPDATE transactions 
+        SET deleted_at = NOW(), updated_at = NOW() 
+        WHERE id = $1 AND user_id = $2 AND status = 'upcoming'
+        RETURNING id
+      `;
+      const deleteResult = await db.query(deleteQuery, [id, userId]);
+
+      if (deleteResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Failed to delete upcoming transaction'
+        });
+      }
+
+      logger.info('Upcoming transaction deleted', { userId, transactionId: id });
+
+      res.json({
+        success: true,
+        message: 'Upcoming transaction deleted successfully'
+      });
+    } catch (error) {
+      logger.error('Delete upcoming transaction failed', { userId, transactionId: id, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Stop generating upcoming transactions for a template
+   * @route POST /api/v1/transactions/templates/:id/stop
+   */
+  stopTemplateGeneration: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    try {
+      // Verify the template belongs to the user
+      const checkQuery = `
+        SELECT id, name FROM recurring_templates 
+        WHERE id = $1 AND user_id = $2
+      `;
+      const checkResult = await db.query(checkQuery, [id, userId]);
+
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Recurring template not found'
+        });
+      }
+
+      const template = checkResult.rows[0];
+
+      // Deactivate the template
+      const updateQuery = `
+        UPDATE recurring_templates 
+        SET is_active = false, updated_at = NOW() 
+        WHERE id = $1 AND user_id = $2
+        RETURNING id, name, is_active
+      `;
+      const updateResult = await db.query(updateQuery, [id, userId]);
+
+      // Delete all future upcoming transactions for this template
+      const deleteUpcomingQuery = `
+        UPDATE transactions 
+        SET deleted_at = NOW(), updated_at = NOW() 
+        WHERE template_id = $1 AND user_id = $2 AND status = 'upcoming' AND date > CURRENT_DATE
+        RETURNING id
+      `;
+      const deletedResult = await db.query(deleteUpcomingQuery, [id, userId]);
+
+      logger.info('Template generation stopped', { 
+        userId, 
+        templateId: id, 
+        templateName: template.name,
+        deletedUpcomingCount: deletedResult.rows.length 
+      });
+
+      res.json({
+        success: true,
+        data: updateResult.rows[0],
+        deletedUpcomingCount: deletedResult.rows.length,
+        message: `Template generation stopped. ${deletedResult.rows.length} upcoming transactions removed.`
+      });
+    } catch (error) {
+      logger.error('Stop template generation failed', { userId, templateId: id, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Regenerate upcoming transactions for a specific template
+   * @route POST /api/v1/transactions/templates/:id/regenerate
+   */
+  regenerateTemplateUpcoming: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    try {
+      // Verify the template belongs to the user and is active
+      const templateQuery = `
+        SELECT * FROM recurring_templates 
+        WHERE id = $1 AND user_id = $2 AND is_active = true
+      `;
+      const templateResult = await db.query(templateQuery, [id, userId]);
+
+      if (templateResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Active recurring template not found'
+        });
+      }
+
+      const template = templateResult.rows[0];
+
+      // Remove existing upcoming transactions for this template
+      const deleteExistingQuery = `
+        UPDATE transactions 
+        SET deleted_at = NOW(), updated_at = NOW() 
+        WHERE template_id = $1 AND user_id = $2 AND status = 'upcoming'
+        RETURNING id
+      `;
+      const deletedResult = await db.query(deleteExistingQuery, [id, userId]);
+
+      // Generate new 3-month upcoming transactions
+      const upcomingTransactions = await generateUpcomingTransactions(template);
+
+      logger.info('Template upcoming transactions regenerated', { 
+        userId, 
+        templateId: id, 
+        templateName: template.name,
+        deletedCount: deletedResult.rows.length,
+        generatedCount: upcomingTransactions.length
+      });
+
+      res.json({
+        success: true,
+        data: {
+          template: {
+            id: template.id,
+            name: template.name
+          },
+          deletedCount: deletedResult.rows.length,
+          generatedCount: upcomingTransactions.length,
+          upcomingTransactions
+        },
+        message: `Regenerated ${upcomingTransactions.length} upcoming transactions for "${template.name}"`
+      });
+    } catch (error) {
+      logger.error('Regenerate template upcoming failed', { userId, templateId: id, error: error.message });
       throw error;
     }
   })
@@ -724,6 +1032,140 @@ function calculateRecurringDates(template, fromDate, daysLookAhead) {
     
     // Safety check to prevent infinite loops
     if (dates.length > 100) break;
+  }
+  
+  return dates;
+}
+
+/**
+ * ✅ SMART 3-MONTH UPCOMING GENERATION SYSTEM
+ * Generate upcoming transactions for next 3 months from template
+ */
+async function generateUpcomingTransactions(template) {
+  const upcomingTransactions = [];
+  const today = new Date();
+  const threeMonthsFromNow = new Date();
+  threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+  
+  try {
+    // Calculate upcoming dates based on interval_type
+    const upcomingDates = calculateUpcomingDates(template, today, threeMonthsFromNow);
+    
+    for (const dueDate of upcomingDates) {
+      // Check if upcoming transaction already exists for this date and template
+      const existsQuery = `
+        SELECT id FROM transactions 
+        WHERE template_id = $1 AND date = $2 AND status = 'upcoming' AND deleted_at IS NULL
+      `;
+      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      
+      if (existsResult.rows.length === 0) {
+        // Create new upcoming transaction
+        const transactionData = {
+          user_id: template.user_id,
+          category_id: template.category_id,
+          amount: template.amount,
+          type: template.type,
+          description: template.description || template.name,
+          notes: `Upcoming: ${template.name || 'Recurring Transaction'}`,
+          date: dueDate.toISOString().split('T')[0],
+          template_id: template.id,
+          status: 'upcoming' // ✅ Mark as upcoming
+        };
+
+        const insertQuery = `
+          INSERT INTO transactions (
+            user_id, category_id, amount, type, description, notes, date, template_id, status, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, status, created_at
+        `;
+
+        const values = [
+          transactionData.user_id,
+          transactionData.category_id,
+          transactionData.amount,
+          transactionData.type,
+          transactionData.description,
+          transactionData.notes,
+          transactionData.date,
+          transactionData.template_id,
+          transactionData.status
+        ];
+
+        const result = await db.query(insertQuery, values);
+        upcomingTransactions.push(result.rows[0]);
+      }
+    }
+    
+    return upcomingTransactions;
+  } catch (error) {
+    logger.error('Failed to generate upcoming transactions', { 
+      templateId: template.id, 
+      error: error.message 
+    });
+    return [];
+  }
+}
+
+/**
+ * Calculate upcoming dates for 3 months based on recurring template settings
+ */
+function calculateUpcomingDates(template, startDate, endDate) {
+  const dates = [];
+  const current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+  
+  // Set to template start date if it's in the future
+  if (template.start_date) {
+    const templateStart = new Date(template.start_date);
+    if (templateStart > current) {
+      current.setTime(templateStart.getTime());
+    }
+  }
+  
+  // Adjust to proper day for monthly/weekly intervals
+  if (template.interval_type === 'monthly' && template.day_of_month) {
+    current.setDate(template.day_of_month);
+    // If day is past this month, move to next month
+    if (current < startDate) {
+      current.setMonth(current.getMonth() + 1);
+    }
+  } else if (template.interval_type === 'weekly' && template.day_of_week !== null) {
+    // Adjust to the correct day of week (0 = Sunday, 1 = Monday, etc.)
+    const targetDay = template.day_of_week;
+    const currentDay = current.getDay();
+    const daysToAdd = (targetDay - currentDay + 7) % 7;
+    current.setDate(current.getDate() + daysToAdd);
+  }
+  
+  // Generate dates within 3-month window
+  while (current <= endDate) {
+    // Skip if date is in skip_dates array
+    const dateString = current.toISOString().split('T')[0];
+    if (!template.skip_dates || !template.skip_dates.includes(dateString)) {
+      dates.push(new Date(current));
+    }
+    
+    // Move to next occurrence
+    switch (template.interval_type) {
+      case 'daily':
+        current.setDate(current.getDate() + 1);
+        break;
+      case 'weekly':
+        current.setDate(current.getDate() + 7);
+        break;
+      case 'monthly':
+        current.setMonth(current.getMonth() + 1);
+        // Handle month-end dates (e.g., Jan 31 -> Feb 28)
+        if (template.day_of_month > 28) {
+          const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+          current.setDate(Math.min(template.day_of_month, lastDayOfMonth));
+        }
+        break;
+      default:
+        // Invalid interval type, break to avoid infinite loop
+        break;
+    }
   }
   
   return dates;

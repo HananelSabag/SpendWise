@@ -838,7 +838,7 @@ export const useTransactions = (options = {}) => {
     staleTime: 10 * 60 * 1000
   });
 
-  // ✅ Enhanced transaction creation mutation
+  // ✅ Enhanced transaction creation mutation - SUPPORTS RECURRING TEMPLATES
   const createTransactionMutation = useMutation({
     mutationFn: async (transactionData) => {
       performanceRef.current.recordMutation();
@@ -852,8 +852,19 @@ export const useTransactions = (options = {}) => {
         // Skip AI categorization for now
       }
 
-      const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
-      return response.data;
+      // ✅ CRITICAL FIX: Route to correct API based on transaction type
+      if (transactionData._isRecurring) {
+        console.log('🔄 Creating recurring template:', transactionData);
+        // Remove internal marker before sending to API
+        const cleanData = { ...transactionData };
+        delete cleanData._isRecurring;
+        const response = await api.transactions.createRecurringTemplate(cleanData);
+        return response.data;
+      } else {
+        console.log('💰 Creating regular transaction:', transactionData);
+        const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
+        return response.data;
+      }
     },
     onSuccess: (newTransaction) => {
       // ✅ FIXED: Safety check to ensure we have valid transaction data

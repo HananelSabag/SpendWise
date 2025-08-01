@@ -8,18 +8,17 @@
 import { useState, useCallback, useMemo } from 'react';
 import { 
   Sparkles, Heart, PieChart, Target, Check,
-  Smartphone, TrendingUp, Wallet
+  Smartphone, TrendingUp, Wallet, User
 } from 'lucide-react';
 
 // ✅ Import stores and components
 import { useTranslation, useAuth } from '../stores';
 
-// Import step components
-import WelcomeStep from '../components/features/onboarding/steps/WelcomeStep';
-import PreferencesStep from '../components/features/onboarding/steps/PreferencesStep';
-import CategoriesStep from '../components/features/onboarding/steps/CategoriesStep';
-import TemplatesStep from '../components/features/onboarding/steps/InitialTemplatesStep';
-import CompletionStep from '../components/features/onboarding/steps/CompletionStep';
+// Import NEW step components - REDESIGNED ONBOARDING
+import ProfileSetupStep from '../components/features/onboarding/steps/ProfileSetupStep';
+import TransactionEducationStep from '../components/features/onboarding/steps/TransactionEducationStep';
+import QuickRecurringSetupStep from '../components/features/onboarding/steps/QuickRecurringSetupStep';
+import NewCompletionStep from '../components/features/onboarding/steps/NewCompletionStep';
 
 /**
  * 🎯 Onboarding State Hook
@@ -61,51 +60,42 @@ export const useOnboardingState = (options = {}) => {
     templates: []
   });
 
-  // ✅ Step configuration
+  // ✅ NEW Step configuration - REDESIGNED ONBOARDING
   const steps = useMemo(() => [
     {
-      id: 'welcome',
-      component: WelcomeStep,
-      title: t('progress.welcome'),
-      icon: Sparkles,
+      id: 'profile',
+      component: ProfileSetupStep,
+      title: 'Profile Setup',
+      icon: User,
       canSkip: false,
-      required: false,
-      estimatedTime: 1
-    },
-    {
-      id: 'preferences', 
-      component: PreferencesStep,
-      title: t('progress.preferences'),
-      icon: Heart,
-      canSkip: true,
-      required: false,
+      required: true,
       estimatedTime: 3
     },
     {
-      id: 'categories',
-      component: CategoriesStep, 
-      title: t('progress.categories'),
+      id: 'education',
+      component: TransactionEducationStep,
+      title: 'Transaction Education',
       icon: PieChart,
-      canSkip: true,
-      required: false,
+      canSkip: false,
+      required: true,
       estimatedTime: 2
     },
     {
-      id: 'templates',
-      component: TemplatesStep,
-      title: t('progress.templates'),
+      id: 'recurring',
+      component: QuickRecurringSetupStep,
+      title: 'Quick Setup',
       icon: Target,
-      canSkip: true,
-      required: false,
-      estimatedTime: 4
+      canSkip: false,
+      required: true,
+      estimatedTime: 3
     },
     {
       id: 'completion',
-      component: CompletionStep,
-      title: t('progress.ready'),
+      component: NewCompletionStep,
+      title: 'Complete',
       icon: Check,
       canSkip: false,
-      required: false,
+      required: true,
       estimatedTime: 1
     }
   ], [t]);

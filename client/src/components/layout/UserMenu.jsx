@@ -2,15 +2,15 @@
  * 👤 USER MENU - Desktop User Dropdown Component
  * Extracted from Header.jsx for better performance and maintainability
  * Features: User profile, Admin options, Logout, Mobile-responsive
- * @version 2.0.0
+ * @version 2.1.0 - UX Simplified
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ChevronDown, User, Settings, LogOut, Shield, 
-  Download, Users, BarChart3, HelpCircle
+  ChevronDown, User, LogOut, Shield, 
+  Settings, HelpCircle
 } from 'lucide-react';
 
 // ✅ Import Zustand stores and hooks
@@ -23,6 +23,7 @@ import {
 } from '../../stores';
 import { Avatar, Button } from '../ui';
 import { cn } from '../../utils/helpers';
+import OnboardingModal from '../features/onboarding/OnboardingModal';
 
 const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
@@ -34,68 +35,90 @@ const UserMenu = ({ className = '' }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // ✅ Main user menu items
+  // ✅ Main user menu items - SIMPLIFIED
   const userMenuItems = [
     {
       name: t('nav.profile'),
       href: '/profile',
       icon: User,
-      description: t('nav.profileDesc')
-    },
-    {
-      name: t('nav.settings'),
-      href: '/settings',
-      icon: Settings,
-      description: t('nav.settingsDesc')
+      description: t('nav.profileDesc'),
+      action: 'navigate'
     },
     {
       name: t('nav.help'),
-      href: '/help',
       icon: HelpCircle,
-      description: t('nav.helpDesc')
+      description: 'Restart setup guide',
+      action: 'onboarding' // ✅ Special action to trigger onboarding
     }
   ];
 
-  // ✅ Admin menu items (only for admin users)
+  // ✅ Admin menu items - SIMPLIFIED PER USER REQUEST
   const adminMenuItems = (isAdmin || isSuperAdmin) ? [
     {
       name: t('nav.admin'),
       href: '/admin',
       icon: Shield,
-      description: 'Admin Dashboard'
+      description: 'Admin Dashboard',
+      action: 'navigate'
     },
-    {
-      name: t('nav.userManagement'),
-      href: '/admin/users',
-      icon: Users,
-      description: 'Manage Users'
-    },
-    {
-      name: t('nav.systemStats'),
-      href: '/admin/stats',
-      icon: BarChart3,
-      description: 'System Statistics'
-    },
-    {
-      name: t('nav.activityLog'),
-      href: '/admin/activity',
-      icon: Download,
-      description: 'Activity Log'
-    },
-    // ✅ System Settings - Only for super admin
+    // ✅ System Settings - Only for super admin (includes user management)
     ...(isSuperAdmin ? [{
-      name: t('nav.systemSettings'),
+      name: 'System Settings',
       href: '/admin/settings',
       icon: Settings,
-      description: 'System Settings'
+      description: 'Manage users & system settings',
+      action: 'navigate'
     }] : [])
   ] : [];
+
+  // ✅ State for onboarding trigger
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // ✅ Handle navigation
   const handleNavigation = useCallback((href) => {
     navigate(href);
     setShowDropdown(false);
   }, [navigate]);
+
+  // ✅ Handle onboarding trigger
+  const handleOnboardingTrigger = useCallback(() => {
+    console.log('🎯 UserMenu - Triggering onboarding from Help button');
+    setShowOnboarding(true);
+    setShowDropdown(false);
+    
+    addNotification({
+      type: 'info',
+      message: 'Starting setup guide...',
+      duration: 2000
+    });
+  }, [addNotification]);
+
+  // ✅ Handle onboarding completion
+  const handleOnboardingComplete = useCallback(() => {
+    console.log('🎯 UserMenu - Onboarding completed from Help trigger');
+    setShowOnboarding(false);
+    
+    addNotification({
+      type: 'success',
+      message: 'Setup guide completed!',
+      duration: 3000
+    });
+  }, [addNotification]);
+
+  // ✅ Handle onboarding close
+  const handleOnboardingClose = useCallback(() => {
+    console.log('🎯 UserMenu - Onboarding closed from Help trigger');
+    setShowOnboarding(false);
+  }, []);
+
+  // ✅ Handle menu item actions
+  const handleMenuItemClick = useCallback((item) => {
+    if (item.action === 'onboarding') {
+      handleOnboardingTrigger();
+    } else if (item.action === 'navigate' && item.href) {
+      handleNavigation(item.href);
+    }
+  }, [handleOnboardingTrigger, handleNavigation]);
 
   // ✅ Handle logout
   const handleLogout = useCallback(async () => {
@@ -204,7 +227,7 @@ const UserMenu = ({ className = '' }) => {
                     return (
                       <button
                         key={item.name}
-                        onClick={() => handleNavigation(item.href)}
+                        onClick={() => handleMenuItemClick(item)}
                         className="w-full flex items-center p-3 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <Icon className="w-5 h-5 text-gray-400 mr-3" />
@@ -235,7 +258,7 @@ const UserMenu = ({ className = '' }) => {
                       return (
                         <button
                           key={item.name}
-                          onClick={() => handleNavigation(item.href)}
+                          onClick={() => handleMenuItemClick(item)}
                           className="w-full flex items-center p-3 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           <Icon className="w-5 h-5 text-red-400 mr-3" />
@@ -275,6 +298,17 @@ const UserMenu = ({ className = '' }) => {
           </>
         )}
       </AnimatePresence>
+
+      {/* ✅ Onboarding Modal - Triggered from Help button */}
+      {showOnboarding && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onComplete={handleOnboardingComplete}
+          onClose={handleOnboardingClose}
+          onSkip={handleOnboardingClose}
+          forceShow={true} // Force show when triggered manually
+        />
+      )}
     </div>
   );
 };

@@ -143,6 +143,12 @@ router.get('/templates',
   transactionController.generateRecurring
 );
 
+// Create recurring template - CRITICAL FOR ONBOARDING
+router.post('/templates',
+  createTransactionLimiter,
+  transactionController.createRecurringTemplate
+);
+
 // Update recurring template
 router.put('/templates/:id',
   createTransactionLimiter,
@@ -165,6 +171,31 @@ router.post('/templates/:id/skip',
 router.post('/generate-recurring',
   generateRecurringLimiter,
   transactionController.generateRecurring
+);
+
+// ✅ UPCOMING TRANSACTIONS MANAGEMENT
+// Get upcoming transactions for user
+router.get('/upcoming',
+  getTransactionsLimiter,
+  transactionController.getUpcomingTransactions
+);
+
+// Delete specific upcoming transaction
+router.delete('/upcoming/:id',
+  createTransactionLimiter,
+  transactionController.deleteUpcomingTransaction
+);
+
+// Stop generating upcoming transactions for a template
+router.post('/templates/:id/stop',
+  createTransactionLimiter,
+  transactionController.stopTemplateGeneration
+);
+
+// Regenerate upcoming transactions for a template
+router.post('/templates/:id/regenerate',
+  createTransactionLimiter,
+  transactionController.regenerateTemplateUpcoming
 );
 
 /**
