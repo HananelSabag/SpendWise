@@ -24,7 +24,17 @@ export default {
     unauthorizedAccess: "Access denied. Please sign in to continue.",
     accountLocked: "Account temporarily locked due to security reasons.",
     invalidCredentials: "Invalid email or password. Please try again.",
-    networkError: "Network error. Please check your connection and try again."
+    networkError: "Network error. Please check your connection and try again.",
+    
+    // ✅ NEW: Connection Recovery Toasts
+    connectionIssue: "Connection issue detected...",
+    connectionRecovering: "Attempting to reconnect to server...",
+    connectionRestored: "Connection to server restored successfully! 🎉",
+    connectionFailed: "Failed to connect to server. Please try again.",
+    autoLogoutAuthFailure: "Automatically signed out due to authentication issues",
+    autoLogoutStuckState: "Automatically signed out due to connection issues",
+    autoLogoutRecoveryFailed: "Automatically signed out - unable to recover connection",
+    autoLogoutMultipleFailures: "Automatically signed out due to multiple failures"
   },
 
   // ✅ Profile Management Toasts

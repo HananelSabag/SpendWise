@@ -395,10 +395,20 @@ const userController = {
           }
         }
         
-        // Update profile info from Google if missing
-        if (picture && !user.profile_picture_url) {
+        // Update profile info from Google ONLY if no existing profile picture
+        if (picture && !user.profile_picture_url && !user.avatar) {
           updateData.profile_picture_url = picture;
           updateData.avatar = picture;
+          logger.info('🖼️ Setting Google profile picture for user without existing avatar', { 
+            userId: user.id,
+            googlePicture: picture 
+          });
+        } else if (picture && (user.profile_picture_url || user.avatar)) {
+          logger.info('🚫 Skipping Google profile picture - user already has profile picture', { 
+            userId: user.id,
+            hasProfilePictureUrl: !!user.profile_picture_url,
+            hasAvatar: !!user.avatar 
+          });
         }
         if (name && (!user.first_name || !user.last_name)) {
           updateData.first_name = name?.split(' ')[0] || user.first_name || '';

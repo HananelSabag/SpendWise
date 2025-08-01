@@ -23,6 +23,7 @@ import { StoreProvider, useAuth, useTranslation } from './stores';
 // ✅ Toast Provider
 import { ToastProvider } from './hooks/useToast';
 import AuthToastProvider from './components/common/AuthToastProvider';
+import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 
 // ✅ App Initializer
 import AppInitializer from './components/common/AppInitializer';
@@ -438,9 +439,11 @@ function App() {
         <StoreProvider>
           <ToastProvider>
             <AuthToastProvider>
-              <AppInitializer>
-                <AppContent />
-              </AppInitializer>
+              <AuthRecoveryProvider>
+                <AppInitializer>
+                  <AppContent />
+                </AppInitializer>
+              </AuthRecoveryProvider>
             </AuthToastProvider>
           </ToastProvider>
         </StoreProvider>

@@ -7,6 +7,7 @@
 
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import getAuthRecoveryManager from '../utils/authRecoveryManager';
 
 // ✅ API Configuration
 const config = {
@@ -121,6 +122,7 @@ class SpendWiseAPIClient {
     this.serverState = new ServerStateManager();
     this.cache = new CacheManager();
     this.deduplicator = new RequestDeduplicator();
+    this.authRecovery = getAuthRecoveryManager();
     
     // Create axios instance
     this.client = axios.create({
@@ -168,6 +170,9 @@ class SpendWiseAPIClient {
       (response) => {
         // Update server state on success
         this.serverState.updateSuccess();
+        
+        // Notify auth recovery manager of success
+        this.authRecovery.handleApiSuccess();
 
         // Log performance in development only
         if (import.meta.env.DEV && response.config.metadata) {
@@ -185,27 +190,36 @@ class SpendWiseAPIClient {
     );
   }
 
-  // ✅ Enhanced Error Handling with Cold Start Retry
+  // ✅ Enhanced Error Handling with Cold Start Retry + Auth Recovery
   async handleResponseError(error) {
     const { config: requestConfig } = error;
     
     // Update server state
     this.serverState.updateFailure();
+    
+    // Notify auth recovery manager of the error
+    const errorType = this.authRecovery.handleApiError(error, requestConfig);
 
     // Handle specific error types
     if (error.response?.status === 401) {
+      // Let auth recovery manager handle this, but still do legacy handling
       this.handleAuthError();
       return Promise.reject(error);
     }
 
-    // Retry for cold start issues
-    if (this.serverState.shouldRetryForColdStart(error) && requestConfig) {
+    // Retry for cold start issues (but only if not in recovery mode)
+    if (!this.authRecovery.healthState?.isRecovering && 
+        this.serverState.shouldRetryForColdStart(error) && 
+        requestConfig) {
       return this.retryColdStartRequest(requestConfig);
     }
 
     // Log error in debug mode
     if (config.DEBUG) {
-      console.error('❌ API Error:', error.response?.status, error.message);
+      console.error('❌ API Error:', error.response?.status, error.message, {
+        errorType,
+        recoveryState: this.authRecovery.getHealthStatus()
+      });
     }
 
     return Promise.reject(this.normalizeError(error));

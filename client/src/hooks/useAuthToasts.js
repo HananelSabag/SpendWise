@@ -101,6 +101,33 @@ export const useAuthToasts = () => {
       toast.error(t('auth.unauthorizedAccess', 'Access denied. Please sign in to continue.'));
     },
 
+    // ✅ NEW: Connection Recovery Toasts
+    connectionIssue: (message) => {
+      toast.warning(message || t('auth.connectionIssue', 'Connection issue detected...'));
+    },
+
+    connectionRecovering: (message) => {
+      return toast.loading(message || t('auth.connectionRecovering', 'Attempting to reconnect to server...'));
+    },
+
+    connectionRestored: (message) => {
+      toast.success(message || t('auth.connectionRestored', 'Connection to server restored successfully! 🎉'));
+    },
+
+    connectionFailed: (message) => {
+      toast.error(message || t('auth.connectionFailed', 'Failed to connect to server. Please try again.'));
+    },
+
+    autoLogout: (reason) => {
+      const messages = {
+        auth_failure: t('auth.autoLogoutAuthFailure', 'Automatically signed out due to authentication issues'),
+        stuck_state: t('auth.autoLogoutStuckState', 'Automatically signed out due to connection issues'),
+        recovery_failed: t('auth.autoLogoutRecoveryFailed', 'Automatically signed out - unable to recover connection'),
+        multiple_failures: t('auth.autoLogoutMultipleFailures', 'Automatically signed out due to multiple failures')
+      };
+      toast.error(messages[reason] || t('auth.sessionExpired', 'Your session has expired. Please sign in again.'));
+    },
+
     accountLocked: () => {
       toast.error(t('auth.accountLocked', 'Account temporarily locked due to security reasons.'));
     },

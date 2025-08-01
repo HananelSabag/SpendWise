@@ -24,7 +24,17 @@ export default {
     unauthorizedAccess: "הגישה נדחתה. אנא התחברו כדי להמשיך.",
     accountLocked: "החשבון נחסם זמנית מסיבות אבטחה.",
     invalidCredentials: "אימייל או סיסמה שגויים. אנא נסו שוב.",
-    networkError: "שגיאת רשת. אנא בדקו את החיבור שלכם ונסו שוב."
+    networkError: "שגיאת רשת. אנא בדקו את החיבור שלכם ונסו שוב.",
+    
+    // ✅ חדש: הודעות התאוששות חיבור
+    connectionIssue: "זוהתה בעיה בחיבור לשרת...",
+    connectionRecovering: "מנסה להתחבר מחדש לשרת...",
+    connectionRestored: "החיבור לשרת התאושש בהצלחה! 🎉",
+    connectionFailed: "נכשל בחיבור לשרת. אנא נסו שוב.",
+    autoLogoutAuthFailure: "נותקתם אוטומטית עקב בעיות אימות",
+    autoLogoutStuckState: "נותקתם אוטומטית עקב בעיות חיבור", 
+    autoLogoutRecoveryFailed: "נותקתם אוטומטית - לא ניתן לשחזר את החיבור",
+    autoLogoutMultipleFailures: "נותקתם אוטומטית עקב מספר כשלונות"
   },
 
   // ✅ Profile Management Toasts
