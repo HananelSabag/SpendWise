@@ -32,16 +32,19 @@ const Modal = ({
 
   const modalRef = useRef(null);
 
-  // ✅ Mobile-first size configurations
+  // ✅ Enhanced size configurations for better desktop experience
   const sizes = {
     xs: 'max-w-xs',
-    sm: 'max-w-sm',
+    sm: 'max-w-sm', 
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
     '3xl': 'max-w-3xl',
     '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
     full: 'max-w-full'
   };
 
@@ -132,25 +135,27 @@ const Modal = ({
               stiffness: 300
             }}
             className={cn(
-              'relative w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl',
-              'max-h-[90vh] overflow-hidden flex flex-col',
-              // Mobile-first responsive design
+              'relative w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl',
+              'max-h-[95vh] overflow-hidden flex flex-col',
+              // Enhanced mobile-first responsive design
               mobileFullScreen 
-                ? 'h-full sm:h-auto sm:max-h-[90vh] sm:rounded-lg' 
-                : 'max-h-[90vh]',
-              // Size configuration
+                ? 'h-full sm:h-auto sm:max-h-[95vh] sm:rounded-xl' 
+                : 'max-h-[95vh]',
+              // Size configuration with better desktop spacing
               !mobileFullScreen && sizes[size],
               // RTL support
               isRTL && 'text-right',
+              // Enhanced spacing for better desktop experience
+              'mx-auto',
               className
             )}
             {...props}
           >
-            {/* ✅ Header */}
+            {/* ✅ Enhanced Header */}
             {(title || closeable) && (
               <div className={cn(
-                'flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700',
-                'shrink-0',
+                'flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-gray-200 dark:border-gray-700',
+                'shrink-0 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900',
                 isRTL && 'flex-row-reverse'
               )}>
                 {/* Title */}
@@ -183,10 +188,10 @@ const Modal = ({
               </div>
             )}
 
-            {/* ✅ Content */}
+            {/* ✅ Enhanced Content */}
             <div className={cn(
               'flex-1 overflow-y-auto',
-              'p-4 sm:p-6',
+              'p-4 sm:p-6 lg:p-8',
               // Custom scrollbar for better mobile experience
               'scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600',
               'scrollbar-track-transparent'

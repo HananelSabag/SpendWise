@@ -19,6 +19,7 @@ import {
 import TransactionFormTabs from '../forms/TransactionFormTabs';
 import { Modal, Button } from '../../../ui';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
+import { cn } from '../../../../utils/helpers';
 
 /**
  * ➕ Add Transaction Modal Component
@@ -93,8 +94,9 @@ const AddTransactionModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      maxWidth="2xl"
-      className={className}
+      size="6xl"
+      className={cn("backdrop-blur-sm", className)}
+      mobileFullScreen={true}
     >
       <AnimatePresence mode="wait">
         {!showSuccess ? (
@@ -105,17 +107,17 @@ const AddTransactionModal = ({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            {/* Enhanced Modal Header */}
+            <div className="flex items-center justify-between p-6 md:p-8 lg:p-10 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                     {t('modals.add.title')}
                   </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
                     {t('modals.add.subtitle')}
                   </p>
                 </div>
@@ -132,15 +134,18 @@ const AddTransactionModal = ({
               </Button>
             </div>
 
-            {/* Modal Body - Transaction Form with Tabs */}
-            <div className="p-6">
-              <TransactionFormTabs
-                mode="create"
-                initialData={defaultFormData}
-                onSubmit={handleSubmit}
-                onCancel={handleClose}
-                isLoading={isSubmitting || isLoading}
-              />
+            {/* Enhanced Modal Body - Optimized for Desktop & Mobile */}
+            <div className="p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 min-h-[500px] md:min-h-[650px] lg:min-h-[700px]">
+              <div className="max-w-none mx-auto">
+                <TransactionFormTabs
+                  mode="create"
+                  initialData={defaultFormData}
+                  onSubmit={handleSubmit}
+                  onCancel={handleClose}
+                  isLoading={isSubmitting || isLoading}
+                  className="w-full"
+                />
+              </div>
             </div>
           </motion.div>
         ) : (

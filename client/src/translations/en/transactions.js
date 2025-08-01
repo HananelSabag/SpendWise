@@ -21,11 +21,14 @@ export default {
     },
     amount: {
       label: "Amount",
-      placeholder: "0.00"
+      placeholder: "0.00",
+      helper: "Enter the transaction amount"
     },
     category: {
       label: "Category", 
-      placeholder: "Select a category"
+      placeholder: "Select a category",
+      search: "Search categories...",
+      createNew: "Create new category"
     },
     date: {
       label: "Date",
@@ -49,11 +52,32 @@ export default {
     receipt: "Receipt",
     recurring: {
       title: "Recurring Transaction",
-      description: "Set up a transaction that repeats regularly"
+      description: "Set up a transaction that repeats regularly",
+      frequency: "Frequency",
+      interval: "Repeat Every",
+      endType: "End Type",
+      endDate: "End Date",
+      maxOccurrences: "Number of Occurrences"
     },
     advanced: {
       title: "Advanced Settings"
     }
+  },
+
+  // Frequencies
+  frequencies: {
+    daily: "Daily",
+    weekly: "Weekly", 
+    monthly: "Monthly",
+    quarterly: "Quarterly",
+    yearly: "Yearly"
+  },
+
+  // End types
+  endTypes: {
+    never: "Never",
+    date: "On Date",
+    occurrences: "After Count"
   },
 
   // Placeholders
@@ -216,7 +240,8 @@ export default {
       }
     },
     modal: {
-      createTitle: "Create Recurring Transaction"
+      createTitle: "Create Recurring Transaction",
+      editTitle: "Edit Recurring Transaction"
     },
     
     // Frequency
@@ -475,7 +500,31 @@ export default {
         title: "Edit Transaction",
         subtitle: "Update transaction details"
       }
+    },
+    delete: {
+      title: "Delete Transaction",
+      subtitle: "Are you sure you want to delete this transaction?",
+      warning: "This action cannot be undone."
     }
+  },
+
+  // Tabs
+  tabs: {
+    oneTime: {
+      title: "One-time Transaction",
+      subtitle: "Single transaction",
+      description: "Create a single transaction that will be executed once"
+    },
+    recurring: {
+      title: "Recurring Transaction", 
+      subtitle: "Automatic transaction",
+      description: "Create a template that will generate transactions automatically in the future"
+    }
+  },
+
+  // Badges
+  badges: {
+    advanced: "Advanced"
   },
 
   // Forms
@@ -484,7 +533,20 @@ export default {
     cancel: "Cancel",
     create: "Create Transaction",
     save: "Save Changes",
-    update: "Update Transaction"
+    update: "Update Transaction",
+    selectType: "Choose the type of transaction you want to create",
+    oneTimeSubtitle: "One-time transaction details",
+    recurringSubtitle: "Set up template for automatic transactions",
+    createTemplate: "Create Template",
+    updateTemplate: "Update Template",
+    editTransaction: "Edit Transaction",
+    editingTransaction: "Editing Transaction",
+    unsaved: "Unsaved",
+    invalid: "Invalid",
+    valid: "Valid",
+    saving: "Saving...",
+    createSuccess: "Transaction created successfully",
+    unsavedChanges: "You have unsaved changes"
   },
 
   // Date picker

@@ -126,16 +126,19 @@ export const useTransactionActions = (context = 'transactions') => {
   }, [queryClient, context]);
 
   /**
-   * Create Transaction - Optimized for infinite loading
+   * Create Transaction - Fixed parameter handling for forms
    * 
-   * @param {string} type - 'income' or 'expense'
-   * @param {object} data - Transaction data
+   * @param {object} data - Transaction data (includes type field)
    * @returns {Promise} - Transaction creation result
    */
-  const createTransaction = useCallback(async (type, data) => {
+  const createTransaction = useCallback(async (data) => {
     try {
-      logAction(`Creating ${type} transaction`, { amount: data.amount });
-      const result = await baseCreateTransaction(type, data);
+      // Extract type from data if not provided as separate parameter
+      const transactionType = data.type || 'expense';
+      logAction(`Creating ${transactionType} transaction`, { amount: data.amount });
+      
+      // ✅ FIX: baseCreateTransaction expects only the data object, not type and data
+      const result = await baseCreateTransaction(data);
       
       // ✅ ENHANCED: Context-aware invalidation
       await invalidateRelevantQueries(contextConfig.invalidationPriority);
@@ -147,10 +150,10 @@ export const useTransactionActions = (context = 'transactions') => {
         }, 500);
       }
       
-      logAction(`${type} transaction created successfully`);
+      logAction(`${transactionType} transaction created successfully`);
       return result;
     } catch (error) {
-      logAction(`Failed to create ${type} transaction`, { error: error.message });
+      logAction(`Failed to create transaction`, { error: error.message });
       throw error;
     }
   }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll, logAction]);

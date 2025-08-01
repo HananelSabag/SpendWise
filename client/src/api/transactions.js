@@ -22,11 +22,17 @@ const transactionAPI = {
    * @param {Object} data - Transaction data
    * @returns {Promise<Object>} Created transaction
    */
-  async create(type = 'transaction', data) {
+  async create(type = 'expense', data) {
     try {
-      const response = await apiClient.client.post(`/transactions/${type}`, data);
+      // ✅ FIX: Ensure proper endpoint structure for server routes
+      const endpoint = `/transactions/${type}`;
+      console.log('📤 Creating transaction:', { endpoint, type, data });
+      
+      const response = await apiClient.client.post(endpoint, data);
+      console.log('✅ Transaction created successfully:', response.data);
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('❌ Transaction creation failed:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

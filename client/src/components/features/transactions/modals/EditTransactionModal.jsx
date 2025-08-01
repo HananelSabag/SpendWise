@@ -22,6 +22,7 @@ import {
 import TransactionForm from '../forms/TransactionForm';
 import { Modal, Button, Dropdown } from '../../../ui';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
+import { cn } from '../../../../utils/helpers';
 
 /**
  * ✏️ Edit Transaction Modal Component
@@ -195,8 +196,9 @@ const EditTransactionModal = ({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        maxWidth="2xl"
-        className={className}
+        size="5xl"
+        className={cn("backdrop-blur-sm", className)}
+        mobileFullScreen={true}
       >
         <AnimatePresence mode="wait">
           {!showSuccess ? (
@@ -207,8 +209,8 @@ const EditTransactionModal = ({
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              {/* Enhanced Modal Header */}
+              <div className="flex items-center justify-between p-6 md:p-8 lg:p-10 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${modalConfig.bgColor}`}>
                     <IconComponent className={`w-5 h-5 ${modalConfig.color}`} />
@@ -254,17 +256,20 @@ const EditTransactionModal = ({
                 </div>
               </div>
 
-              {/* Modal Body - Transaction Form */}
-              <div className="p-6">
-                <TransactionForm
-                  mode={mode}
-                  initialData={transaction}
-                  onSubmit={handleSubmit}
-                  onCancel={handleClose}
-                  isLoading={isSubmitting || isLoading}
-                  showRecurring={mode !== 'view'}
-                  showAdvanced={mode !== 'view'}
-                />
+              {/* Enhanced Modal Body - Better Desktop Spacing */}
+              <div className="p-6 md:p-8 lg:p-10 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+                <div className="max-w-none mx-auto">
+                  <TransactionForm
+                    mode={mode}
+                    initialData={transaction}
+                    onSubmit={handleSubmit}
+                    onCancel={handleClose}
+                    isLoading={isSubmitting || isLoading}
+                    showRecurring={mode !== 'view'}
+                    showAdvanced={mode !== 'view'}
+                    className="w-full"
+                  />
+                </div>
               </div>
             </motion.div>
           ) : (

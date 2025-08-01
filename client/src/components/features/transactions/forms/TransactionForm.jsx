@@ -186,14 +186,15 @@ const TransactionForm = ({
       animate="visible"
       onSubmit={handleSubmit}
       className={cn(
-        "space-y-6 bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700",
+        "space-y-6 bg-white dark:bg-gray-800 p-4 sm:p-6 md:p-8 lg:p-10 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700",
         "backdrop-blur-sm bg-white/95 dark:bg-gray-800/95",
+        "max-w-none w-full",
         className
       )}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* Form Header */}
-      <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6">
+      {/* Enhanced Form Header - Better Mobile Layout */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6 space-y-4 sm:space-y-0">
         <div className="flex-1">
           <motion.h2 
             initial={{ opacity: 0, y: -10 }}
@@ -218,8 +219,8 @@ const TransactionForm = ({
           )}
         </div>
 
-        {/* Form Status */}
-        <div className="flex items-center gap-2 ml-4">
+        {/* Form Status - Better Mobile Layout */}
+        <div className="flex items-center gap-2 sm:ml-4">
           {isDirty && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -267,12 +268,12 @@ const TransactionForm = ({
         />
       </motion.div>
 
-      {/* Form Actions */}
+      {/* Enhanced Form Actions - Better Mobile Experience */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700"
+        className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700 space-y-4 sm:space-y-0"
       >
         {/* Left side - Additional info */}
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -288,15 +289,15 @@ const TransactionForm = ({
           )}
         </div>
 
-        {/* Right side - Action buttons */}
-        <div className="flex items-center gap-3">
+        {/* Action buttons - Enhanced Touch Targets */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <motion.div whileTap={{ scale: 0.95 }}>
             <Button
               type="button"
               variant="outline"
               onClick={handleCancel}
               disabled={isSubmitting || isLoading}
-              className="px-6 py-2.5 h-auto rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-6 py-3 h-auto text-base font-medium rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex-1 sm:flex-none"
             >
               <X className="w-4 h-4 mr-2" />
               {t('form.cancel')}
@@ -309,10 +310,10 @@ const TransactionForm = ({
               variant="primary"
               disabled={!isValid || isSubmitting || isLoading}
               className={cn(
-                "min-w-[140px] px-6 py-2.5 h-auto rounded-xl shadow-lg",
+                "min-w-[140px] px-6 py-3 h-auto text-base font-medium rounded-xl shadow-lg",
                 "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
                 "disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed",
-                "transition-all duration-200"
+                "transition-all duration-200 flex-1 sm:flex-none"
               )}
             >
               {isSubmitting || isLoading ? (

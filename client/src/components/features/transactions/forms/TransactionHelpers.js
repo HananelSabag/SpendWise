@@ -121,7 +121,8 @@ export const formatAmountDisplay = (amount, currency = 'USD') => {
  */
 export const formatTransactionForAPI = (formData, mode = 'create') => {
   const amount = parseFloat(formData.amount);
-  const finalAmount = formData.type === TRANSACTION_TYPES.EXPENSE ? -Math.abs(amount) : Math.abs(amount);
+  // ✅ FIX: Server expects positive amounts for both income and expense
+  const finalAmount = Math.abs(amount);
   
   // Combine date and time
   const combinedDateTime = formData.time 
@@ -131,15 +132,15 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
   const apiData = {
     type: formData.type,
     amount: finalAmount,
-    description: formData.description.trim(),
-    categoryId: formData.categoryId,
+    description: formData.description?.trim() || 'Transaction', // ✅ FIX: Ensure description is never empty
+    categoryId: formData.categoryId || null,
     date: formData.date,
     notes: formData.notes ? formData.notes.trim() : null
   };
 
-  // Remove null/undefined values
+  // Remove null/undefined values except description which is required
   Object.keys(apiData).forEach(key => {
-    if (apiData[key] === null || apiData[key] === undefined) {
+    if (key !== 'description' && (apiData[key] === null || apiData[key] === undefined || apiData[key] === '')) {
       delete apiData[key];
     }
   });

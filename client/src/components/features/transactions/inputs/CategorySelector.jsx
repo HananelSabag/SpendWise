@@ -95,10 +95,11 @@ const CategorySelector = ({
 
   // ✅ Handle category selection
   const handleCategorySelect = useCallback((categoryId) => {
+    console.log('🏷️ CategorySelector: Category selected:', { categoryId, transactionType });
     onChange?.(categoryId);
     setIsOpen(false);
     setSearchQuery('');
-  }, [onChange]);
+  }, [onChange, transactionType]);
 
   // ✅ Handle create new category
   const handleCreateCategory = useCallback(async () => {
@@ -150,8 +151,8 @@ const CategorySelector = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center justify-between px-4 py-3 text-left",
-          "border rounded-lg transition-all duration-200",
+          "w-full flex items-center justify-between px-5 py-4 md:py-5 text-left min-h-[70px] md:min-h-[80px]",
+          "border-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md",
           "bg-white dark:bg-gray-800",
           "text-gray-900 dark:text-white",
           
@@ -176,31 +177,41 @@ const CategorySelector = ({
             <>
               {/* Category Icon */}
               <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md"
                 style={{ backgroundColor: selectedCategory.color }}
               >
                 {React.createElement(
                   getIconComponent(selectedCategory.icon),
-                  { className: "w-4 h-4 text-white" }
+                  { className: "w-6 h-6 md:w-7 md:h-7 text-white" }
                 )}
               </div>
               
-              {/* Category Name */}
-              <span className="font-medium truncate">
-                {selectedCategory.name}
-              </span>
+              {/* Enhanced Category Name */}
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-lg md:text-xl truncate block">
+                  {selectedCategory.name}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {selectedCategory.type === 'income' ? 'קטגוריית הכנסה' : 'קטגוריית הוצאה'}
+                </span>
+              </div>
             </>
           ) : (
             <>
-              {/* Placeholder Icon */}
-              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                <Tag className="w-4 h-4 text-gray-400" />
+              {/* Enhanced Placeholder Icon */}
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                <Tag className="w-6 h-6 md:w-7 md:h-7 text-gray-400" />
               </div>
               
-              {/* Placeholder Text */}
-              <span className="text-gray-500 dark:text-gray-400 truncate">
-                {placeholder || t('fields.category.placeholder')}
-              </span>
+              {/* Enhanced Placeholder Text */}
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-500 dark:text-gray-400 truncate text-lg md:text-xl font-medium block">
+                  {placeholder || t('fields.category.placeholder')}
+                </span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">
+                  בחר קטגוריה מהרשימה או צור חדשה
+                </span>
+              </div>
             </>
           )}
         </div>
@@ -249,6 +260,7 @@ const CategorySelector = ({
                         return (
                           <button
                             key={category.id}
+                            type="button"
                             onClick={() => handleCategorySelect(category.id)}
                             className={cn(
                               "w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
@@ -284,6 +296,7 @@ const CategorySelector = ({
                 {/* Create New Button */}
                 <div className="p-2 border-t border-gray-200 dark:border-gray-700">
                   <button
+                    type="button"
                     onClick={() => setShowCreateForm(true)}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                   >
@@ -302,6 +315,7 @@ const CategorySelector = ({
                     {t('fields.category.newCategory')}
                   </h4>
                   <button
+                    type="button"
                     onClick={() => setShowCreateForm(false)}
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
@@ -328,6 +342,7 @@ const CategorySelector = ({
                     {colorOptions.map((color) => (
                       <button
                         key={color}
+                        type="button"
                         onClick={() => setNewCategoryColor(color)}
                         className={cn(
                           "w-8 h-8 rounded-lg border-2 transition-all",
@@ -351,6 +366,7 @@ const CategorySelector = ({
                       return (
                         <button
                           key={iconName}
+                          type="button"
                           onClick={() => setNewCategoryIcon(iconName)}
                           className={cn(
                             "w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all",

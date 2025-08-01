@@ -23,6 +23,8 @@ import pages from './pages.js';
 import actions from './actions.js';
 import summary from './summary.js';
 import search from './search.js';
+import empty from './empty.js';
+import filters from './filters.js';
 
 export default {
   common,
@@ -45,4 +47,6 @@ export default {
   actions,
   summary,
   search,
+  empty,
+  filters,
 }; 

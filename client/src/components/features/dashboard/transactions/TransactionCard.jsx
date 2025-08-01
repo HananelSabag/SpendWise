@@ -142,22 +142,36 @@ const TransactionCard = ({
       className={cn("group relative", className)}
     >
       <Card className={cn(
-        "p-5 hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl relative",
-        // עיצוב שונה לעסקאות חוזרות
+        "p-4 sm:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl relative overflow-visible",
+        // 🔄 Enhanced visual distinction for recurring transactions
         isRecurring ? [
-          "bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10",
+          "bg-gradient-to-r from-purple-50 via-purple-25 to-indigo-50 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-indigo-900/30",
           "border-l-4 border-l-purple-500 dark:border-l-purple-400",
-          "border border-purple-200 dark:border-purple-700",
-          "hover:bg-purple-100/70 dark:hover:bg-purple-800/30"
+          "border-2 border-purple-200 dark:border-purple-600",
+          "hover:shadow-purple-200/50 dark:hover:shadow-purple-800/30",
+          "hover:bg-gradient-to-r hover:from-purple-100/80 hover:to-indigo-100/80 dark:hover:from-purple-800/40 dark:hover:to-indigo-800/40",
+          "shadow-lg shadow-purple-100/50 dark:shadow-purple-900/30"
         ] : [
-          "border border-gray-200 dark:border-gray-700",
-          "bg-white dark:bg-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-750/50"
+          "border-2 border-gray-200 dark:border-gray-700",
+          "bg-white dark:bg-gray-800", 
+          "hover:bg-gray-50 dark:hover:bg-gray-750",
+          "hover:border-gray-300 dark:hover:border-gray-600"
         ],
         isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600",
         isExpanded && "shadow-xl ring-1 ring-gray-900/5 dark:ring-white/10"
       )}>
-        {/* Main transaction content */}
-        <div className="flex items-start gap-3 w-full">
+        {/* 🎨 Enhanced recurring transaction header */}
+        {isRecurring && (
+          <div className="absolute -top-2 -left-2 w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
+            <Repeat className="w-3 h-3 text-white" />
+          </div>
+        )}
+        
+        {/* Main transaction content - Enhanced Desktop Layout with RTL Support */}
+        <div className={cn(
+          "flex items-start gap-3 w-full",
+          isRTL ? "flex-row-reverse" : "flex-row"
+        )}>
           {/* Left side - Selection & Icon */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {onSelect && (
@@ -176,36 +190,41 @@ const TransactionCard = ({
               </motion.button>
             )}
 
-            {/* Category icon with recurring indicator */}
+            {/* 🎨 Enhanced category icon with better recurring indicator */}
             <div className="relative">
               <motion.div 
                 whileHover={{ scale: 1.05 }}
                 className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border",
+                  "w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center shadow-lg border-2",
                   "transition-all duration-200",
                   isRecurring ? [
-                    // עיצוב מיוחד לעסקאות חוזרות
+                    // 🔄 Enhanced styling for recurring transactions
                     isIncome 
-                      ? "bg-gradient-to-br from-green-100 to-purple-100 dark:from-green-900/40 dark:to-purple-900/40 text-green-600 dark:text-green-400 border-purple-300 dark:border-purple-600"
-                      : "bg-gradient-to-br from-red-100 to-purple-100 dark:from-red-900/40 dark:to-purple-900/40 text-red-600 dark:text-red-400 border-purple-300 dark:border-purple-600"
+                      ? "bg-gradient-to-br from-green-400 via-green-500 to-purple-500 text-white border-purple-300 dark:border-purple-500 shadow-green-200/50 dark:shadow-green-900/30"
+                      : "bg-gradient-to-br from-red-400 via-red-500 to-purple-500 text-white border-purple-300 dark:border-purple-500 shadow-red-200/50 dark:shadow-red-900/30"
                   ] : [
                     isIncome 
-                      ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
-                      : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                      ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700"
+                      : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700"
                   ]
                 )}
               >
-                {React.createElement(IconComponent, { className: "w-6 h-6" })}
+                {React.createElement(IconComponent, { className: "w-6 h-6 sm:w-7 sm:h-7" })}
               </motion.div>
               
-              {/* סמל חוזרת בפינה */}
+              {/* 🔄 Enhanced recurring indicator with pulse animation */}
               {isRecurring && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-6 h-6 bg-purple-500 dark:bg-purple-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800"
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800"
                 >
-                  <Repeat className="w-3 h-3 text-white" />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Repeat className="w-2.5 h-2.5 text-white" />
+                  </motion.div>
                 </motion.div>
               )}
             </div>
@@ -213,11 +232,14 @@ const TransactionCard = ({
 
           {/* Center - Transaction details */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between w-full">
-              <div className="flex-1 min-w-0 mr-3">
-                <div className="flex items-center gap-2 flex-wrap">
+            <div className={cn(
+              "flex items-start w-full",
+              isRTL ? "flex-row-reverse" : "flex-row"
+            )}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start flex-wrap gap-2">
                   <h4 className={cn(
-                    "font-semibold text-base truncate",
+                    "font-semibold text-base sm:text-lg leading-tight",
                     isRecurring 
                       ? "text-purple-900 dark:text-purple-100" 
                       : "text-gray-900 dark:text-white"
@@ -226,14 +248,20 @@ const TransactionCard = ({
                   </h4>
                   
                   {isRecurring && (
-                    <Badge 
-                      variant="secondary" 
-                      size="xs" 
-                      className="bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-600"
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.1 }}
                     >
-                      <Repeat className="w-3 h-3 mr-1" />
-                      {t('labels.recurring', { fallback: 'חוזר' })}
-                    </Badge>
+                      <Badge 
+                        variant="secondary" 
+                        size="sm" 
+                        className="bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-900/60 dark:to-purple-800/60 text-purple-800 dark:text-purple-200 border-2 border-purple-300 dark:border-purple-600 font-medium shadow-sm"
+                      >
+                        <Repeat className="w-3 h-3 mr-1 animate-pulse" />
+                        {t('labels.recurring', { fallback: 'חוזר' })}
+                      </Badge>
+                    </motion.div>
                   )}
                   
                   {aiInsights.length > 0 && (
@@ -257,48 +285,76 @@ const TransactionCard = ({
                 )}
               </div>
 
-              {/* Right side - Amount & Actions */}
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {/* Amount */}
-                <div className="text-right">
+              {/* 💰 Enhanced Amount & Actions Section - Proper RTL/LTR Positioning */}
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 flex-shrink-0 ml-4">
+                {/* Amount with enhanced styling - RTL Support */}
+                <div className={cn(
+                  isRTL ? "text-left" : "text-right"
+                )}>
                   <div className={cn(
-                    "font-bold text-lg leading-tight",
+                    "font-bold text-lg sm:text-xl leading-tight",
+                    isRecurring && "drop-shadow-sm",
                     isIncome 
-                      ? "text-green-600 dark:text-green-400" 
-                      : "text-red-600 dark:text-red-400"
+                      ? isRecurring
+                        ? "text-green-700 dark:text-green-300"
+                        : "text-green-600 dark:text-green-400" 
+                      : isRecurring
+                        ? "text-red-700 dark:text-red-300"
+                        : "text-red-600 dark:text-red-400"
                   )}>
                     {isIncome ? '+' : '-'}{formatCurrency(amount)}
                   </div>
+                  {isRecurring && (
+                    <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5">
+                      {t('labels.recurringAmount', { fallback: 'סכום חוזר' })}
+                    </div>
+                  )}
                 </div>
 
-                {/* Actions */}
+                {/* 🎛️ Enhanced Action Buttons */}
                 {showActions && (
                   <div className="flex items-center gap-1">
+                    {/* Summary/Expand Button */}
                     <motion.div whileTap={{ scale: 0.95 }}>
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant={isRecurring ? "outline" : "ghost"}
                         onClick={handleToggleExpand}
-                        className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
+                        className={cn(
+                          "h-8 w-8 p-0 transition-all duration-200 rounded-lg",
+                          isRecurring 
+                            ? "border-purple-300 dark:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:border-purple-400 dark:hover:border-purple-500"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
                         )}
+                      >
+                        <Tooltip content={isExpanded ? t('actions.collapseSummary', { fallback: 'הסתר סיכום' }) : t('actions.showSummary', { fallback: 'הצג סיכום' })}>
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Tooltip>
                       </Button>
                     </motion.div>
 
+                    {/* Edit Menu Button */}
                     <div className="relative">
                       <motion.div whileTap={{ scale: 0.95 }}>
                         <Button
                           ref={setButtonRef}
                           size="sm"
-                          variant="ghost"
+                          variant={isRecurring ? "outline" : "ghost"}
                           onClick={() => setShowActionsMenu(!showActionsMenu)}
-                          className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className={cn(
+                            "h-8 w-8 p-0 transition-all duration-200 rounded-lg",
+                            isRecurring 
+                              ? "border-purple-300 dark:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:border-purple-400 dark:hover:border-purple-500"
+                              : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
                         >
-                          <Edit className="w-4 h-4" />
+                          <Tooltip content={t('actions.editTransaction', { fallback: 'ערוך עסקה' })}>
+                            <Edit className="w-4 h-4" />
+                          </Tooltip>
                         </Button>
                       </motion.div>
 
@@ -321,7 +377,12 @@ const TransactionCard = ({
                               animate={{ opacity: 1, scale: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95, y: -5 }}
                               transition={{ duration: 0.15 }}
-                              className="fixed z-50 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/95 dark:bg-gray-800/95"
+                              className={cn(
+                                "fixed z-50 w-44 rounded-xl shadow-2xl border-2 backdrop-blur-md",
+                                isRecurring 
+                                  ? "bg-purple-50/95 dark:bg-purple-900/95 border-purple-200 dark:border-purple-700"
+                                  : "bg-white/95 dark:bg-gray-800/95 border-gray-200 dark:border-gray-700"
+                              )}
                               style={{
                                 top: 'auto',
                                 left: 'auto', 
@@ -368,7 +429,12 @@ const TransactionCard = ({
                                         action.action();
                                         setShowActionsMenu(false);
                                       }}
-                                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
+                                      className={cn(
+                                        "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 group",
+                                        isRecurring
+                                          ? "hover:bg-purple-100 dark:hover:bg-purple-800/50"
+                                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      )}
                                     >
                                       <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
                                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">

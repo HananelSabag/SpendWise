@@ -71,6 +71,7 @@ export default {
   // ✅ Transaction Management Toasts
   transactions: {
     transactionCreated: "Transaction created successfully!",
+    createSuccess: "Transaction created successfully!",
     transactionUpdated: "Transaction updated successfully!",
     transactionDeleted: "Transaction deleted successfully!",
     transactionCreateFailed: "Failed to create transaction. Please try again.",
@@ -82,7 +83,9 @@ export default {
     descriptionRequired: "Please enter a description",
     bulkImportCompleted: "Bulk import completed successfully!",
     bulkImportFailed: "Bulk import failed. Please check your file format.",
-    duplicateTransactionWarning: "This transaction might be a duplicate"
+    duplicateTransactionWarning: "This transaction might be a duplicate",
+    securityAlert: "Security Alert: Transaction flagged for review",
+    batchSecurityAlert: "Security Alert: Multiple transactions flagged for review"
   },
 
   // ✅ Category Management Toasts  

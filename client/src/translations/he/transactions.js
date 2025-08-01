@@ -21,11 +21,14 @@ export default {
     },
     amount: {
       label: "סכום",
-      placeholder: "0.00"
+      placeholder: "0.00",
+      helper: "הכניסו את סכום העסקה"
     },
     category: {
       label: "קטגוריה", 
-      placeholder: "בחרו קטגוריה"
+      placeholder: "בחרו קטגוריה",
+      search: "חפשו קטגוריות...",
+      createNew: "צרו קטגוריה חדשה"
     },
     date: {
       label: "תאריך",
@@ -49,11 +52,32 @@ export default {
     receipt: "קבלה",
     recurring: {
       title: "עסקה חוזרת",
-      description: "הגדר עסקה שחוזרת בקביעות"
+      description: "הגדר עסקה שחוזרת בקביעות",
+      frequency: "תדירות",
+      interval: "חזור כל",
+      endType: "סוג סיום",
+      endDate: "תאריך סיום",
+      maxOccurrences: "מספר מופעים"
     },
     advanced: {
       title: "הגדרות מתקדמות"
     }
+  },
+
+  // Frequencies
+  frequencies: {
+    daily: "יומית",
+    weekly: "שבועית", 
+    monthly: "חודשית",
+    quarterly: "רבעונית",
+    yearly: "שנתית"
+  },
+
+  // End types
+  endTypes: {
+    never: "לעולם לא",
+    date: "בתאריך",
+    occurrences: "אחרי מספר"
   },
 
   // Placeholders
@@ -216,7 +240,8 @@ export default {
       }
     },
     modal: {
-      createTitle: "צור עסקה חוזרת"
+      createTitle: "צור עסקה חוזרת",
+      editTitle: "ערוך עסקה חוזרת"
     },
     
     // Frequency
@@ -475,7 +500,31 @@ export default {
         title: "ערוך עסקה",
         subtitle: "עדכן פרטי העסקה"
       }
+    },
+    delete: {
+      title: "מחק עסקה",
+      subtitle: "האם אתם בטוחים שברצונכם למחוק את העסקה הזו?",
+      warning: "פעולה זו לא ניתנת לביטול."
     }
+  },
+
+  // Tabs
+  tabs: {
+    oneTime: {
+      title: "עסקה חד פעמית",
+      subtitle: "עסקה אחת בלבד",
+      description: "צור עסקה יחידה שתבוצע פעם אחת"
+    },
+    recurring: {
+      title: "עסקה חוזרת",
+      subtitle: "עסקה אוטומטית", 
+      description: "צור תבנית שתיצור עסקאות אוטומטית בעתיד"
+    }
+  },
+
+  // Badges
+  badges: {
+    advanced: "מתקדם"
   },
 
   // Forms
@@ -484,7 +533,20 @@ export default {
     cancel: "בטל",
     create: "צור עסקה",
     save: "שמור שינויים",
-    update: "עדכן עסקה"
+    update: "עדכן עסקה",
+    selectType: "בחר את סוג העסקה שברצונך ליצור",
+    oneTimeSubtitle: "פרטי העסקה החד-פעמית",
+    recurringSubtitle: "הגדר תבנית לעסקאות אוטומטיות",
+    createTemplate: "צור תבנית",
+    updateTemplate: "עדכן תבנית",
+    editTransaction: "ערוך עסקה",
+    editingTransaction: "עורך עסקה",
+    unsaved: "לא נשמר",
+    invalid: "לא תקין",
+    valid: "תקין",
+    saving: "שומר...",
+    createSuccess: "העסקה נוצרה בהצלחה",
+    unsavedChanges: "יש לך שינויים שלא נשמרו"
   },
 
   // Date picker

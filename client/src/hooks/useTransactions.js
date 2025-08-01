@@ -852,10 +852,19 @@ export const useTransactions = (options = {}) => {
         // Skip AI categorization for now
       }
 
-      const response = await api.transactions.createExpense(transactionData);
+      const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
       return response.data;
     },
     onSuccess: (newTransaction) => {
+      // ✅ FIXED: Safety check to ensure we have valid transaction data
+      if (!newTransaction) {
+        console.warn('⚠️ Transaction creation succeeded but returned no data');
+        toastService.error('transactions.createFailed');
+        return;
+      }
+
+      console.log('✅ Transaction created successfully:', newTransaction);
+
       // Invalidate relevant queries
       queryClient.invalidateQueries(['transactions']);
       queryClient.invalidateQueries(['transaction-analytics']);
@@ -866,8 +875,8 @@ export const useTransactions = (options = {}) => {
       
       toastService.success('transactions.createSuccess');
 
-      // Show AI insights if available
-      if (newTransaction.aiAnalysis && newTransaction.aiAnalysis.fraudProbability > 0.5) {
+      // Show AI insights if available (optional feature)
+      if (newTransaction?.aiAnalysis?.fraudProbability > 0.5) {
         toastService.warning('transactions.securityAlert', {
           details: 'Transaction flagged for review'
         });
@@ -884,9 +893,15 @@ export const useTransactions = (options = {}) => {
     mutationFn: async (transactionsData) => {
       performanceRef.current.recordMutation();
       
-      // Note: createBatch method needs to be updated to match server structure
-      const response = await api.transactions.createExpense(transactionsData);
-      return response.data;
+      // Process batch transactions individually for now
+      const results = [];
+      for (const transactionData of transactionsData) {
+        const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
+        if (response.success) {
+          results.push(response.data);
+        }
+      }
+      return { transactions: results };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries(['transactions']);
@@ -915,7 +930,7 @@ export const useTransactions = (options = {}) => {
     mutationFn: async ({ transactionId, updates }) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.update('expense', transactionId, updates);
+      const response = await api.transactions.update(updates.type || 'expense', transactionId, updates);
       return response.data;
     },
     onSuccess: (updatedTransaction) => {
@@ -936,7 +951,7 @@ export const useTransactions = (options = {}) => {
     mutationFn: async (transactionId) => {
       performanceRef.current.recordMutation();
       
-      const response = await api.transactions.delete('expense', transactionId);
+      const response = await api.transactions.delete('transaction', transactionId);
       return response.data;
     },
     onSuccess: () => {

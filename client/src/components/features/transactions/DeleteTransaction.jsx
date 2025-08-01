@@ -125,7 +125,9 @@ const DeleteTransaction = ({
       isOpen={isOpen}
       onClose={handleClose}
       title={transactionData.isRecurring ? t('delete.recurring.title') : t('delete.title')}
-      maxWidth="md"
+      size="lg"
+      className="backdrop-blur-sm"
+      mobileFullScreen={false}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -235,13 +237,13 @@ const DeleteTransaction = ({
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4">
+        {/* Enhanced Action buttons - Better Touch Targets */}
+        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-6">
           <Button
             variant="outline"
             onClick={handleClose}
             disabled={isDeleting}
-            className="flex-1"
+            className="flex-1 py-3 text-base font-medium"
           >
             {t('actions.cancel')}
           </Button>
@@ -251,7 +253,7 @@ const DeleteTransaction = ({
             onClick={handleDelete}
             disabled={isDeleting}
             loading={isDeleting}
-            className="flex-1"
+            className="flex-1 py-3 text-base font-medium"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             {isDeleting ? t('loading.deleting') : t('delete.confirm')}

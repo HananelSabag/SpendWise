@@ -71,6 +71,7 @@ export default {
   // ✅ Transaction Management Toasts
   transactions: {
     transactionCreated: "העסקה נוצרה בהצלחה!",
+    createSuccess: "העסקה נוצרה בהצלחה!",
     transactionUpdated: "העסקה עודכנה בהצלחה!",
     transactionDeleted: "העסקה נמחקה בהצלחה!",
     transactionCreateFailed: "יצירת העסקה נכשלה. אנא נסו שוב.",
@@ -82,7 +83,9 @@ export default {
     descriptionRequired: "אנא הזינו תיאור",
     bulkImportCompleted: "יבוא המוני הושלם בהצלחה!",
     bulkImportFailed: "היבוא ההמוני נכשל. אנא בדקו את פורמט הקובץ.",
-    duplicateTransactionWarning: "העסקה הזו עלולה להיות כפולה"
+    duplicateTransactionWarning: "העסקה הזו עלולה להיות כפולה",
+    securityAlert: "התראת אבטחה: העסקה סומנה לבדיקה",
+    batchSecurityAlert: "התראת אבטחה: מספר עסקאות סומנו לבדיקה"
   },
 
   // ✅ Category Management Toasts
