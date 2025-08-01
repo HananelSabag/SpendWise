@@ -544,18 +544,14 @@ class Category {
         icon: categoryData.icon || 'Tag',
         color: categoryData.color || this.generateColorFromName(categoryData.name),
         type: categoryData.type || 'expense',
-        is_active: true,
-        is_default: false,
-        sort_order: await this.getNextSortOrder(userId, categoryData.type)
+        is_default: false
       };
 
       const query = `
         INSERT INTO categories (
           name, description, icon, color, type, user_id,
-          is_active, is_default, sort_order, parent_id,
-          budget_amount, budget_period, tags,
-          created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+          is_default, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
         RETURNING *
       `;
 
@@ -566,25 +562,11 @@ class Category {
         defaults.color,
         defaults.type,
         userId,
-        defaults.is_active,
-        defaults.is_default,
-        defaults.sort_order,
-        categoryData.parentId || null,
-        categoryData.budgetAmount || null,
-        categoryData.budgetPeriod || 'monthly',
-        categoryData.tags ? JSON.stringify(categoryData.tags) : null
+        defaults.is_default
       ];
 
       const result = await db.query(query, values);
       const category = result.rows[0];
-
-      // Parse JSON fields
-      if (category.tags) {
-        category.tags = JSON.parse(category.tags);
-      }
-
-      // Initialize category analytics
-      await this.initializeCategoryAnalytics(category.id, userId);
 
       // Invalidate caches
       CategoryCache.invalidateUser(userId);
@@ -635,21 +617,14 @@ class Category {
       const query = `
         SELECT 
           id, name, description, icon, color, type, user_id,
-          is_active, is_default, sort_order, parent_id,
-          budget_amount, budget_period, tags,
-          created_at, updated_at
+          is_default, created_at
         FROM categories 
-        WHERE ${whereClause} AND is_active = true
-        ORDER BY sort_order ASC, name ASC
+        WHERE ${whereClause}
+        ORDER BY name ASC
       `;
 
       const result = await db.query(query, [userId]);
-      categories = result.rows.map(category => {
-        if (category.tags) {
-          category.tags = JSON.parse(category.tags);
-        }
-        return category;
-      });
+      categories = result.rows;
 
       // Add analytics if requested
       if (includeAnalytics) {
@@ -749,8 +724,7 @@ class Category {
     try {
       const allowedFields = [
         'name', 'description', 'icon', 'color', 'type',
-        'is_active', 'sort_order', 'parent_id', 'budget_amount',
-        'budget_period', 'tags'
+        'is_default'
       ];
 
       const updates = {};
@@ -760,7 +734,7 @@ class Category {
       for (const [key, value] of Object.entries(updateData)) {
         if (allowedFields.includes(key)) {
           updates[key] = `$${paramCount}`;
-          values.push(key === 'tags' ? JSON.stringify(value) : value);
+          values.push(value);
           paramCount++;
         }
       }
@@ -790,9 +764,6 @@ class Category {
       }
 
       const category = result.rows[0];
-      if (category.tags) {
-        category.tags = JSON.parse(category.tags);
-      }
 
       // Invalidate caches
       CategoryCache.invalidateUser(userId);
@@ -816,33 +787,9 @@ class Category {
   }
 
   // ✅ Helper methods
-  static async initializeCategoryAnalytics(categoryId, userId) {
-    try {
-      const query = `
-        INSERT INTO category_analytics (
-          category_id, user_id, 
-          transaction_count, total_amount, avg_amount,
-          usage_pattern, trends,
-          created_at, updated_at
-        ) VALUES ($1, $2, 0, 0, 0, '{}', '{}', NOW(), NOW())
-        ON CONFLICT (category_id, user_id) DO NOTHING
-      `;
+  // Removed initializeCategoryAnalytics - category_analytics table may not exist
 
-      await db.query(query, [categoryId, userId]);
-    } catch (error) {
-      logger.error('Failed to initialize category analytics', { categoryId, userId, error: error.message });
-    }
-  }
-
-  static async getNextSortOrder(userId, type) {
-    const result = await db.query(`
-      SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order
-      FROM categories
-      WHERE (user_id = $1 OR user_id IS NULL) AND type = $2
-    `, [userId, type]);
-    
-    return result.rows[0].next_order;
-  }
+  // Removed getNextSortOrder - sort_order column doesn't exist
 
   static generateColorFromName(name) {
     // Generate consistent color from category name
@@ -893,15 +840,11 @@ class Category {
   static async findById(categoryId, userId) {
     const query = `
       SELECT * FROM categories 
-      WHERE id = $1 AND (user_id = $2 OR user_id IS NULL) AND is_active = true
+      WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
     `;
     
     const result = await db.query(query, [categoryId, userId]);
     const category = result.rows[0];
-    
-    if (category?.tags) {
-      category.tags = JSON.parse(category.tags);
-    }
     
     return category;
   }
@@ -921,20 +864,11 @@ class Category {
       
       const hasTransactions = parseInt(transactionCheck.rows[0].count) > 0;
       
-      if (hasTransactions) {
-        // Soft delete - keep for data integrity
-        await client.query(`
-          UPDATE categories 
-          SET is_active = false, updated_at = NOW()
-          WHERE id = $1 AND user_id = $2
-        `, [categoryId, userId]);
-      } else {
-        // Hard delete if no transactions
-        await client.query(`
-          DELETE FROM categories 
-          WHERE id = $1 AND user_id = $2
-        `, [categoryId, userId]);
-      }
+      // Always hard delete since we don't have is_active column
+      await client.query(`
+        DELETE FROM categories 
+        WHERE id = $1 AND user_id = $2
+      `, [categoryId, userId]);
       
       await client.query('COMMIT');
       
@@ -957,31 +891,10 @@ class Category {
   }
 
   static async reorder(userId, categoryIds) {
-    const client = await db.getClient();
-    
-    try {
-      await client.query('BEGIN');
-      
-      for (let i = 0; i < categoryIds.length; i++) {
-        await client.query(`
-          UPDATE categories 
-          SET sort_order = $1, updated_at = NOW()
-          WHERE id = $2 AND user_id = $3
-        `, [i + 1, categoryIds[i], userId]);
-      }
-      
-      await client.query('COMMIT');
-      
-      // Invalidate cache
-      CategoryCache.invalidateUser(userId);
-      
-      return true;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    // Reordering not supported without sort_order column
+    // Categories will be ordered alphabetically by name
+    logger.warn('Category reordering not supported - sort_order column does not exist');
+    return true;
   }
 }
 

@@ -239,7 +239,7 @@ class CategoryAIEngine {
     try {
       // TODO: Implement smart suggestions or use categories directly
       const response = await api.categories.getAll();
-      return response.data;
+      return response.data || [];
     } catch (error) {
       console.warn('Failed to generate smart categories:', error);
       return [];

@@ -123,10 +123,7 @@ export const getDefaultCategoryData = (initialData = null, mode = 'create') => {
     description: '',
     icon: 'Tag',
     color: '#3B82F6',
-    type: CATEGORY_TYPES.EXPENSE,
-    isPinned: false,
-    isHidden: false,
-    sortOrder: 0
+    type: CATEGORY_TYPES.EXPENSE
   };
 
   // If no initial data, return defaults
@@ -141,10 +138,7 @@ export const getDefaultCategoryData = (initialData = null, mode = 'create') => {
     description: initialData.description || '',
     icon: initialData.icon || 'Tag',
     color: initialData.color || '#3B82F6',
-    type: initialData.type || CATEGORY_TYPES.EXPENSE,
-    isPinned: initialData.isPinned !== undefined ? initialData.isPinned : false,
-    isHidden: initialData.isHidden !== undefined ? initialData.isHidden : false,
-    sortOrder: initialData.sortOrder || 0
+    type: initialData.type || CATEGORY_TYPES.EXPENSE
   };
 
   // For duplicate mode, modify the name
@@ -164,10 +158,7 @@ export const formatCategoryForAPI = (formData, mode = 'create') => {
     description: formData.description ? formData.description.trim() : null,
     icon: formData.icon,
     color: formData.color,
-    type: formData.type,
-    is_pinned: formData.isPinned,
-    is_hidden: formData.isHidden,
-    sort_order: formData.sortOrder
+    type: formData.type
   };
 
   // Remove null/undefined values

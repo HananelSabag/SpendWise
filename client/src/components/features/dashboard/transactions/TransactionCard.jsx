@@ -46,6 +46,7 @@ const TransactionCard = ({
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [buttonRef, setButtonRef] = useState(null);
   const dragControls = useDragControls();
 
   // Transaction data processing
@@ -140,148 +141,213 @@ const TransactionCard = ({
       className={cn("group relative", className)}
     >
       <Card className={cn(
-        "p-4 hover:shadow-md transition-all cursor-pointer",
-        isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20",
-        isExpanded && "shadow-lg"
+        "p-5 hover:shadow-lg transition-all duration-300 cursor-pointer",
+        "border border-gray-200 dark:border-gray-700 rounded-2xl",
+        "bg-white dark:bg-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-750/50",
+        isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600",
+        isExpanded && "shadow-xl ring-1 ring-gray-900/5 dark:ring-white/10"
       )}>
         {/* Main transaction content */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start gap-3 w-full">
           {/* Left side - Selection & Icon */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {onSelect && (
-              <button
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSelect}
                 className={cn(
-                  "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                  "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
+                  "hover:shadow-sm active:shadow-inner",
                   isSelected 
-                    ? "bg-blue-500 border-blue-500 text-white" 
-                    : "border-gray-300 hover:border-blue-400"
+                    ? "bg-blue-500 border-blue-500 text-white shadow-md" 
+                    : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
                 )}
               >
-                {isSelected && <span className="text-xs">✓</span>}
-              </button>
+                {isSelected && <span className="text-xs font-bold">✓</span>}
+              </motion.button>
             )}
 
             {/* Category icon */}
-            <div className={cn(
-              "w-10 h-10 rounded-lg flex items-center justify-center",
-              isIncome 
-                ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-            )}>
-              {React.createElement(IconComponent, { className: "w-5 h-5" })}
-            </div>
-
-            {/* Transaction details */}
-            <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <h4 className="font-medium text-gray-900 dark:text-white">
-                  {transaction.description || t('transaction.noDescription')}
-                </h4>
-                
-                {transaction.is_recurring && (
-                  <Badge variant="outline" size="xs">
-                    {t('labels.recurring')}
-                  </Badge>
-                )}
-                
-                {aiInsights.length > 0 && (
-                  <Tooltip content={aiInsights[0].text}>
-                    <Brain className="w-4 h-4 text-blue-500" />
-                  </Tooltip>
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <span>{transaction.category_name || transaction.category?.name || t('category.uncategorized')}</span>
-                <span>•</span>
-                <span>{formattedDate}</span>
-              </div>
-            </div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border",
+                "transition-all duration-200",
+                isIncome 
+                  ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                  : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+              )}
+            >
+              {React.createElement(IconComponent, { className: "w-6 h-6" })}
+            </motion.div>
           </div>
 
-          {/* Right side - Amount & Actions */}
-          <div className="flex items-center space-x-3">
-            {/* Amount */}
-            <div className="text-right">
-              <div className={cn(
-                "font-bold text-lg",
-                isIncome 
-                  ? "text-green-600 dark:text-green-400" 
-                  : "text-red-600 dark:text-red-400"
-              )}>
-                {isIncome ? '+' : '-'}{formatCurrency(amount)}
-              </div>
-              
-              {transaction.location && (
-                <div className="flex items-center text-xs text-gray-500">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  {transaction.location}
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            {showActions && (
-              <div className="flex items-center space-x-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleToggleExpand}
-                  className="p-2"
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
+          {/* Center - Transaction details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between w-full">
+              <div className="flex-1 min-w-0 mr-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-base truncate">
+                    {transaction.description || t('transaction.noDescription')}
+                  </h4>
+                  
+                  {transaction.is_recurring && (
+                    <Badge variant="secondary" size="xs" className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                      {t('labels.recurring')}
+                    </Badge>
                   )}
-                </Button>
-
-                <div className="relative">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowActionsMenu(!showActionsMenu)}
-                    className="p-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-
-                  {/* Actions dropdown */}
-                  <AnimatePresence>
-                    {showActionsMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10"
-                      >
-                        <div className="p-2">
-                          {swipeActions.map((action) => {
-                            const Icon = action.icon;
-                            return (
-                              <button
-                                key={action.id}
-                                onClick={() => {
-                                  action.action();
-                                  setShowActionsMenu(false);
-                                }}
-                                className="w-full flex items-center space-x-3 px-3 py-2 text-left rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                              >
-                                <Icon className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
-                                  {action.label}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  
+                  {aiInsights.length > 0 && (
+                    <Tooltip content={aiInsights[0].text}>
+                      <Brain className="w-4 h-4 text-blue-500 cursor-help" />
+                    </Tooltip>
+                  )}
                 </div>
+                
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="truncate">{transaction.category_name || transaction.category?.name || t('category.uncategorized')}</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="flex-shrink-0">{formattedDate}</span>
+                </div>
+
+                {transaction.location && (
+                  <div className="flex items-center text-xs text-gray-500 mt-1">
+                    <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">{transaction.location}</span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Right side - Amount & Actions */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Amount */}
+                <div className="text-right">
+                  <div className={cn(
+                    "font-bold text-lg leading-tight",
+                    isIncome 
+                      ? "text-green-600 dark:text-green-400" 
+                      : "text-red-600 dark:text-red-400"
+                  )}>
+                    {isIncome ? '+' : '-'}{formatCurrency(amount)}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                {showActions && (
+                  <div className="flex items-center gap-1">
+                    <motion.div whileTap={{ scale: 0.95 }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleToggleExpand}
+                        className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </motion.div>
+
+                    <div className="relative">
+                      <motion.div whileTap={{ scale: 0.95 }}>
+                        <Button
+                          ref={setButtonRef}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowActionsMenu(!showActionsMenu)}
+                          className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </motion.div>
+
+                      {/* Actions dropdown - Portal-style positioning */}
+                      <AnimatePresence>
+                        {showActionsMenu && (
+                          <>
+                            {/* Full-screen backdrop */}
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="fixed inset-0 z-40 bg-transparent"
+                              onClick={() => setShowActionsMenu(false)}
+                            />
+                            
+                            {/* Dropdown menu - Fixed positioned portal */}
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                              transition={{ duration: 0.15 }}
+                              className="fixed z-50 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 backdrop-blur-md bg-white/95 dark:bg-gray-800/95"
+                              style={{
+                                top: 'auto',
+                                left: 'auto', 
+                                right: '1rem',
+                                transform: 'translateY(0.5rem)'
+                              }}
+                              ref={(el) => {
+                                if (el && buttonRef) {
+                                  // Get the trigger button position using direct ref
+                                  const rect = buttonRef.getBoundingClientRect();
+                                  const viewportWidth = window.innerWidth;
+                                  const viewportHeight = window.innerHeight;
+                                  const dropdownWidth = 176; // w-44 in pixels
+                                  const dropdownHeight = 120; // Approximate height
+                                  
+                                  let top = rect.bottom + 8;
+                                  let left = rect.right - dropdownWidth;
+                                  
+                                  // Adjust if dropdown would go off-screen
+                                  if (left < 8) left = 8;
+                                  if (left + dropdownWidth > viewportWidth - 8) {
+                                    left = viewportWidth - dropdownWidth - 8;
+                                  }
+                                  if (top + dropdownHeight > viewportHeight - 8) {
+                                    top = rect.top - dropdownHeight - 8;
+                                  }
+                                  
+                                  el.style.top = `${top}px`;
+                                  el.style.left = `${left}px`;
+                                  el.style.right = 'auto';
+                                  el.style.transform = 'none';
+                                }
+                              }}
+                            >
+                              <div className="p-1.5">
+                                {swipeActions.map((action) => {
+                                  const Icon = action.icon;
+                                  return (
+                                    <motion.button
+                                      key={action.id}
+                                      whileHover={{ scale: 1.02, x: 2 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      onClick={() => {
+                                        action.action();
+                                        setShowActionsMenu(false);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
+                                    >
+                                      <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                                        {action.label}
+                                      </span>
+                                    </motion.button>
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -312,7 +378,7 @@ const TransactionCard = ({
                     {t('labels.fullDate')}:
                   </span>
                   <span className="ml-2 text-gray-900 dark:text-white">
-                    {dateHelpers.format(transaction.date, 'full')}
+                    {dateHelpers.format(transaction.date, 'PPPP')}
                   </span>
                 </div>
 

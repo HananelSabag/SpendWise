@@ -75,6 +75,15 @@ export default {
     uncategorized: 'לא מקוטלג'
   },
 
+  // ✅ Labels for transaction details
+  labels: {
+    updated: 'עודכן',
+    transactionId: 'מזהה עסקה',
+    fullDate: 'תאריך מלא',
+    aiInsights: 'תובנות AI',
+    created: 'נוצר'
+  },
+
   // ✅ FIXED: Insights translations
   insights: {
     largeTransaction: 'עסקה גדולה',

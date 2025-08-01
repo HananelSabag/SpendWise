@@ -214,8 +214,8 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
         {filteredIcons.length > 0 ? (
           filteredIcons.map((iconName) => {
             const IconComponent = getIconComponent(iconName);
-            // More robust validation
-            const isValidIcon = IconComponent && typeof IconComponent === 'function';
+            // Simple validation - getIconComponent always returns a function
+            const isValidIcon = typeof IconComponent === 'function';
             
             return (
               <motion.button
@@ -267,7 +267,7 @@ const IconSelector = ({ value, onChange, categoryName = '', error }) => {
         // Use the same validation logic as CategoryValidation.js
         try {
           const IconComponent = getIconComponent(value);
-          return !(IconComponent && typeof IconComponent === 'function');
+          return !(typeof IconComponent === 'function');
         } catch {
           return true; // Show error if validation fails
         }

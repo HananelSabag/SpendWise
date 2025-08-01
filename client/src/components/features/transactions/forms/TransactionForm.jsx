@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, X, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Save, X, AlertCircle, CheckCircle, Clock, Calendar } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -186,29 +186,40 @@ const TransactionForm = ({
       animate="visible"
       onSubmit={handleSubmit}
       className={cn(
-        "space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg",
+        "space-y-6 bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700",
+        "backdrop-blur-sm bg-white/95 dark:bg-gray-800/95",
         className
       )}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       {/* Form Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+      <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6">
+        <div className="flex-1">
+          <motion.h2 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl font-bold text-gray-900 dark:text-white mb-2"
+          >
             {formTitle}
-          </h2>
+          </motion.h2>
           {mode === 'edit' && initialData && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
               {t('form.editingTransaction', { 
                 date: new Date(formData.date).toLocaleDateString(),
                 amount: formatCurrency(Math.abs(formData.amount)) 
               })}
-            </p>
+            </motion.p>
           )}
         </div>
 
         {/* Form Status */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 ml-4">
           {isDirty && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -257,36 +268,68 @@ const TransactionForm = ({
       </motion.div>
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleCancel}
-          disabled={isSubmitting || isLoading}
-        >
-          <X className="w-4 h-4 mr-2" />
-          {t('form.cancel')}
-        </Button>
-
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={!isValid || isSubmitting || isLoading}
-          className="min-w-[120px]"
-        >
-          {isSubmitting || isLoading ? (
-            <LoadingSpinner size="sm" className="mr-2" />
-          ) : (
-            <Save className="w-4 h-4 mr-2" />
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700"
+      >
+        {/* Left side - Additional info */}
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          {isDirty && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-1"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+              <span>{t('form.unsavedChanges')}</span>
+            </motion.div>
           )}
-          {isSubmitting 
-            ? t('form.saving')
-            : mode === 'create' 
-              ? t('form.create')
-              : t('form.update')
-          }
-        </Button>
-      </div>
+        </div>
+
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-3">
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isSubmitting || isLoading}
+              className="px-6 py-2.5 h-auto rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <X className="w-4 h-4 mr-2" />
+              {t('form.cancel')}
+            </Button>
+          </motion.div>
+
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!isValid || isSubmitting || isLoading}
+              className={cn(
+                "min-w-[140px] px-6 py-2.5 h-auto rounded-xl shadow-lg",
+                "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
+                "disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed",
+                "transition-all duration-200"
+              )}
+            >
+              {isSubmitting || isLoading ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {isSubmitting 
+                ? t('form.saving')
+                : mode === 'create' 
+                  ? t('form.create')
+                  : t('form.update')
+              }
+            </Button>
+          </motion.div>
+        </div>
+      </motion.div>
     </motion.form>
   );
 };

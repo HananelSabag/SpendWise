@@ -295,7 +295,7 @@ const TransactionList = ({
 
     return (
       <div style={style}>
-        <div className="px-6 py-2">
+        <div className="px-4 py-2 md:px-6 md:py-3">
           <TransactionCard
             transaction={transaction}
             index={index}
@@ -341,7 +341,7 @@ const TransactionList = ({
         </Card>
       ) : (
         // Regular list
-        <Card className="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden">
+        <Card className="divide-y divide-gray-200 dark:divide-gray-700 overflow-visible">
           <AnimatePresence mode="popLayout">
             {groupedTransactions.map((group) => (
               <div key={group.key}>
@@ -364,7 +364,7 @@ const TransactionList = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.2 }}
-                    className="px-6 py-4"
+                    className="px-4 py-3 md:px-6 md:py-4"
                   >
                     <TransactionCard
                       transaction={transaction}

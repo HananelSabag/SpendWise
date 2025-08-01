@@ -32,6 +32,15 @@ export default {
   loadingDashboard: 'Loading dashboard...',
   reloadPage: 'Try again',
 
+  // ✅ Labels for transaction details
+  labels: {
+    updated: 'Updated',
+    transactionId: 'Transaction ID',
+    fullDate: 'Full Date',
+    aiInsights: 'AI Insights', 
+    created: 'Created'
+  },
+
   // ✅ FIXED: Account-related translations
   accounts: {
     main: 'Main Account'

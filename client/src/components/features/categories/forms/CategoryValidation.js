@@ -27,9 +27,8 @@ const VALIDATION_RULES = {
       // Check if icon is valid by trying to get the component
       try {
         const IconComponent = getIconComponent(icon);
-        // A valid icon should not be the fallback Circle component
-        // and should not be undefined/null
-        return IconComponent && typeof IconComponent === 'function';
+        // A valid icon should be a function (React component)
+        return typeof IconComponent === 'function';
       } catch {
         return false;
       }

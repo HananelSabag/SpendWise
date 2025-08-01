@@ -225,127 +225,99 @@ const Transactions = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             {/* Page Title */}
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
+            <div className="flex items-center gap-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <DollarSign className="w-6 h-6 text-white" />
+              </motion.div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-3xl font-bold text-gray-900 dark:text-white"
+                >
                   {t('pages.transactions.title')}
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                >
                   {t('pages.transactions.subtitle', { count: summary.count })}
-                </p>
+                </motion.p>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center space-x-3">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-3"
+            >
               {/* Add Transaction Button */}
-              <Button
-                variant="primary"
-                onClick={handleAddTransaction}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('actions.addTransaction')}</span>
-              </Button>
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="primary"
+                  onClick={handleAddTransaction}
+                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline font-medium">{t('actions.addTransaction')}</span>
+                </Button>
+              </motion.div>
 
               {/* Recurring Setup Button */}
-              <Button
-                variant="outline"
-                onClick={() => handleRecurringSetup()}
-                className="flex items-center space-x-2"
-              >
-                <Calendar className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('actions.recurring')}</span>
-              </Button>
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  onClick={() => handleRecurringSetup()}
+                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline font-medium">{t('actions.recurring')}</span>
+                </Button>
+              </motion.div>
 
               {/* Refresh Button */}
-              <Button
-                variant="ghost"
-                onClick={refetchTransactions}
-                disabled={transactionsLoading}
-                className="p-2"
-              >
-                <RefreshCw className={cn("w-4 h-4", transactionsLoading && "animate-spin")} />
-              </Button>
-            </div>
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  onClick={refetchTransactions}
+                  disabled={transactionsLoading}
+                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <RefreshCw className={cn("w-4 h-4", transactionsLoading && "animate-spin")} />
+                </Button>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Summary Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          {/* Total Income */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('summary.totalIncome')}
-                </p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(summary.totalIncome)}
-                </p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-green-500" />
-            </div>
-          </Card>
-
-          {/* Total Expenses */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('summary.totalExpenses')}
-                </p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {formatCurrency(Math.abs(summary.totalExpenses))}
-                </p>
-              </div>
-              <TrendingDown className="w-8 h-8 text-red-500" />
-            </div>
-          </Card>
-
-          {/* Net Amount */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('summary.netAmount')}
-                </p>
-                <p className={cn(
-                  "text-2xl font-bold",
-                  summary.netAmount >= 0 
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400"
-                )}>
-                  {formatCurrency(summary.netAmount)}
-                </p>
-              </div>
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center",
-                summary.netAmount >= 0 
-                  ? "bg-green-100 dark:bg-green-900/30"
-                  : "bg-red-100 dark:bg-red-900/30"
-              )}>
-                <DollarSign className={cn(
-                  "w-5 h-5",
-                  summary.netAmount >= 0 
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400"
-                )} />
-              </div>
-            </div>
-          </Card>
-        </div>
+      {/* Main Content */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
 
         {/* Filters and Search */}
         <Card className="p-4 mb-6">
@@ -504,7 +476,7 @@ const Transactions = () => {
             />
           )}
         </Card>
-      </div>
+      </motion.div>
 
       {/* ✅ NEW: Clean Modal Architecture */}
       

@@ -48,9 +48,9 @@ export const useCategorySelection = (categories = [], options = {}) => {
       
       // Status breakdown
       byStatus: {
-        pinned: selected.filter(cat => cat.isPinned).length,
-        hidden: selected.filter(cat => cat.isHidden).length,
-        active: selected.filter(cat => !cat.isHidden).length
+            pinned: 0, // No pinning support with current DB schema
+    hidden: 0, // No hiding support with current DB schema 
+    active: selected.length
       }
     };
   }, [selectedCategories, maxSelection]);
@@ -218,8 +218,7 @@ export const useCategorySelection = (categories = [], options = {}) => {
     
     const matchingCategories = categories.filter(category => {
       if (criteria.type && category.type !== criteria.type) return false;
-      if (criteria.pinned !== undefined && category.isPinned !== criteria.pinned) return false;
-      if (criteria.hidden !== undefined && category.isHidden !== criteria.hidden) return false;
+          // Removed isPinned and isHidden checks - not supported in current DB schema
       if (criteria.namePattern && !category.name.toLowerCase().includes(criteria.namePattern.toLowerCase())) return false;
       return true;
     });
