@@ -196,6 +196,24 @@ const transactionAPI = {
   },
 
   /**
+   * Advanced delete for recurring transactions
+   * @param {string} transactionId - Transaction ID
+   * @param {Object} options - Delete options (deleteType, templateId)
+   * @returns {Promise<Object>} Deletion result
+   */
+  async deleteRecurringAdvanced(transactionId, options = {}) {
+    try {
+      const { deleteType = 'current', templateId } = options;
+      const response = await apiClient.client.delete(`/transactions/recurring/${transactionId}`, {
+        data: { deleteType, templateId }
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
    * Skip dates for a recurring template
    * @param {string} id - Template ID
    * @param {Array} dates - Array of dates to skip

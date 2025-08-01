@@ -16,7 +16,7 @@ import {
 } from '../../../../stores';
 
 // ✅ Import our new foundation
-import TransactionForm from '../forms/TransactionForm';
+import TransactionFormTabs from '../forms/TransactionFormTabs';
 import { Modal, Button } from '../../../ui';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 
@@ -132,16 +132,14 @@ const AddTransactionModal = ({
               </Button>
             </div>
 
-            {/* Modal Body - Transaction Form */}
+            {/* Modal Body - Transaction Form with Tabs */}
             <div className="p-6">
-              <TransactionForm
+              <TransactionFormTabs
                 mode="create"
                 initialData={defaultFormData}
                 onSubmit={handleSubmit}
                 onCancel={handleClose}
                 isLoading={isSubmitting || isLoading}
-                showRecurring={true}
-                showAdvanced={true}
               />
             </div>
           </motion.div>

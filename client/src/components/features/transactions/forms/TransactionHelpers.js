@@ -53,22 +53,15 @@ export const getDefaultFormData = (initialData = null, mode = 'create') => {
     categoryId: '',
     date: now.toISOString().split('T')[0],
     time: now.toTimeString().slice(0, 5),
-    tags: [],
     notes: '',
-    receiptUrl: null,
     
-    // Recurring fields
+    // Recurring fields (for future use)
     isRecurring: false,
     recurringFrequency: 'monthly',
     recurringInterval: 1,
-    recurringEndType: 'never', // never, date, occurrences
+    recurringEndType: 'never',
     recurringEndDate: '',
-    recurringMaxOccurrences: 12,
-    
-    // Advanced fields
-    isActive: true,
-    priority: 'normal',
-    source: 'manual'
+    recurringMaxOccurrences: 12
   };
 
   // If no initial data, return defaults
@@ -85,22 +78,15 @@ export const getDefaultFormData = (initialData = null, mode = 'create') => {
     categoryId: initialData.category_id || initialData.categoryId || '',
     date: initialData.date ? initialData.date.split('T')[0] : defaults.date,
     time: initialData.date ? new Date(initialData.date).toTimeString().slice(0, 5) : defaults.time,
-    tags: initialData.tags || [],
     notes: initialData.notes || '',
-    receiptUrl: initialData.receipt_url || initialData.receiptUrl,
     
-    // Recurring data
-    isRecurring: initialData.is_recurring || initialData.isRecurring || false,
-    recurringFrequency: initialData.recurring_frequency || initialData.recurringFrequency || 'monthly',
-    recurringInterval: initialData.recurring_interval || initialData.recurringInterval || 1,
-    recurringEndType: initialData.recurring_end_type || initialData.recurringEndType || 'never',
-    recurringEndDate: initialData.recurring_end_date || initialData.recurringEndDate || '',
-    recurringMaxOccurrences: initialData.recurring_max_occurrences || initialData.recurringMaxOccurrences || 12,
-    
-    // Advanced fields
-    isActive: initialData.is_active !== undefined ? initialData.is_active : (initialData.isActive !== undefined ? initialData.isActive : true),
-    priority: initialData.priority || 'normal',
-    source: initialData.source || 'manual'
+    // Recurring data (for future use)
+    isRecurring: false, // Simplified for now
+    recurringFrequency: 'monthly',
+    recurringInterval: 1,
+    recurringEndType: 'never',
+    recurringEndDate: '',
+    recurringMaxOccurrences: 12
   };
 
   // For duplicate mode, clear ID and update description
@@ -146,25 +132,9 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     type: formData.type,
     amount: finalAmount,
     description: formData.description.trim(),
-    category_id: formData.categoryId,
-    date: combinedDateTime,
-    tags: formData.tags,
-    notes: formData.notes ? formData.notes.trim() : null,
-    receipt_url: formData.receiptUrl,
-    
-    // Recurring fields
-    is_recurring: formData.isRecurring,
-    recurring_frequency: formData.isRecurring ? formData.recurringFrequency : null,
-    recurring_interval: formData.isRecurring ? parseInt(formData.recurringInterval) : null,
-    recurring_end_type: formData.isRecurring ? formData.recurringEndType : null,
-    recurring_end_date: formData.isRecurring && formData.recurringEndDate ? formData.recurringEndDate : null,
-    recurring_max_occurrences: formData.isRecurring && formData.recurringEndType === 'occurrences' 
-      ? parseInt(formData.recurringMaxOccurrences) : null,
-    
-    // Advanced fields
-    is_active: formData.isActive,
-    priority: formData.priority,
-    source: formData.source
+    categoryId: formData.categoryId,
+    date: formData.date,
+    notes: formData.notes ? formData.notes.trim() : null
   };
 
   // Remove null/undefined values

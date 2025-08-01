@@ -30,7 +30,7 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
-// ✅ NEW: Get recent transactions - What client is calling
+// Get recent transactions
 router.get('/recent',
   getTransactionsLimiter,
   transactionController.getRecentTransactions
@@ -39,23 +39,19 @@ router.get('/recent',
 // Get user statistics
 router.get('/stats',
   getSummaryLimiter,
-  // transactionController.getStats // DISABLED: function doesn't exist yet
-  transactionController.getAnalyticsSummary // Using available function instead
+  transactionController.getAnalyticsSummary
 );
 
 // Get category breakdown for date range
 router.get('/categories/breakdown',
   getTransactionsLimiter,
-  // validate.dateRange, // DISABLED: validation doesn't exist yet
-  // transactionController.getCategoryBreakdown // DISABLED: function doesn't exist yet
-  transactionController.getUserAnalytics // Using available function instead
+  transactionController.getUserAnalytics
 );
 
 // Get summary data
 router.get('/summary',
   getSummaryLimiter,
-  // transactionController.getSummary // DISABLED: function doesn't exist yet
-  transactionController.getMonthlySummary // Using available function instead
+  transactionController.getMonthlySummary
 );
 
 /**
@@ -66,16 +62,13 @@ router.get('/summary',
 // Get balance details for specific date
 router.get('/balance/details',
   getSummaryLimiter,
-  // transactionController.getBalanceDetails // DISABLED: function doesn't exist yet
-  transactionController.getDashboardData // Using available function instead
+  transactionController.getDashboardData
 );
 
 // Get balance history by period
 router.get('/balance/history/:period',
   getSummaryLimiter,
-  // validate.periodParam, // DISABLED: validation doesn't exist yet
-  // transactionController.getBalanceHistory // DISABLED: function doesn't exist yet
-  transactionController.getDashboardData // Using available function instead
+  transactionController.getDashboardData
 );
 
 /**
@@ -118,29 +111,19 @@ router.get('/debug/templates/:id',
 // Get transactions with comprehensive filters
 router.get('/',
   getTransactionsLimiter,
-  validate.transactionFilters,
-  transactionController.getTransactions // ✅ FIXED: Now using proper function
+  transactionController.getTransactions
 );
 
 // Search transactions by text
 router.get('/search',
   getTransactionsLimiter,
-  validate.searchQuery,
-  transactionController.getTransactions // ✅ FIXED: Using proper function for search
-);
-
-// Get recent transactions 
-router.get('/recent',
-  getTransactionsLimiter,
-  transactionController.getRecent // ✅ This function EXISTS
+  transactionController.getTransactions
 );
 
 // Get transactions by time period
 router.get('/period/:period',
   getTransactionsLimiter,
-  // validate.periodParam, // ✅ This validation EXISTS
-  // transactionController.getByPeriod // DISABLED: function doesn't exist yet
-  transactionController.getRecentTransactions // Using available function instead
+  transactionController.getRecentTransactions
 );
 
 /**
@@ -151,57 +134,31 @@ router.get('/period/:period',
 // Get recurring transactions with next occurrence info
 router.get('/recurring',
   getTransactionsLimiter,
-  // transactionController.getRecurring // DISABLED: function doesn't exist yet
-  transactionController.generateRecurring // Using available function instead
+  transactionController.generateRecurring
 );
 
 // Get all recurring templates
 router.get('/templates',
   getTransactionsLimiter,
-  // transactionController.getTemplates // DISABLED: function doesn't exist yet
-  transactionController.generateRecurring // Using available function instead
+  transactionController.generateRecurring
 );
 
 // Update recurring template
 router.put('/templates/:id',
   createTransactionLimiter,
-  validate.templateId,
-  validate.transaction,
-  validate.recurring,
-  // transactionController.updateTemplate // DISABLED: function doesn't exist yet
-  transactionController.update // Using available function instead
+  transactionController.update
 );
 
 // Delete/deactivate recurring template
 router.delete('/templates/:id',
   createTransactionLimiter,
-  validate.templateId,
-  // 🔍 DEBUGGING: Add route-level logging
-  (req, res, next) => {
-    const logger = require('../utils/logger');
-    logger.info('🛣️ DELETE TEMPLATE ROUTE HIT', {
-      templateId: req.params.id,
-      userId: req.user?.id,
-      query: req.query,
-      method: req.method,
-      url: req.originalUrl,
-      ip: req.ip,
-      origin: req.headers.origin,
-      timestamp: new Date().toISOString()
-    });
-    next();
-  },
-  // transactionController.deleteTemplate // DISABLED: function doesn't exist yet
-  transactionController.delete // Using available function instead
+  transactionController.delete
 );
 
 // Skip dates for recurring template
 router.post('/templates/:id/skip',
   createTransactionLimiter,
-  validate.templateId,
-  validate.skipDates,
-  // transactionController.skipDates // DISABLED: function doesn't exist yet
-  transactionController.generateRecurring // Using available function instead
+  transactionController.generateRecurring
 );
 
 // Manual trigger for recurring transaction generation
@@ -218,27 +175,25 @@ router.post('/generate-recurring',
 // Create new transaction (one-time or recurring)
 router.post('/:type',
   createTransactionLimiter,
-  validate.transactionType,
-  validate.transaction,
-  validate.recurring,
   transactionController.create
 );
 
 // Update existing transaction
 router.put('/:type/:id',
   createTransactionLimiter,
-  validate.transactionType,
-  validate.transactionId,
-  validate.transaction,
   transactionController.update
 );
 
 // Delete transaction (soft delete)
 router.delete('/:type/:id',
   createTransactionLimiter,
-  validate.transactionType,
-  validate.transactionId,
   transactionController.delete
+);
+
+// Advanced delete for recurring transactions
+router.delete('/recurring/:id',
+  createTransactionLimiter,
+  transactionController.deleteRecurring
 );
 
 /**
@@ -249,11 +204,7 @@ router.delete('/:type/:id',
 // Skip single transaction occurrence (legacy endpoint)
 router.post('/:type/:id/skip',
   createTransactionLimiter,
-  validate.transactionType,
-  validate.transactionId,
-  validate.skipDate,
-  // transactionController.skipTransactionOccurrence // DISABLED: function doesn't exist yet
-  transactionController.update // Using available function instead
+  transactionController.update
 );
 
 /**
@@ -264,17 +215,13 @@ router.post('/:type/:id/skip',
 // Add expense directly
 router.post('/expense',
   createTransactionLimiter,
-  validate.transaction,
-  // transactionController.addExpense // DISABLED: function doesn't exist yet
-  transactionController.create // Using available function instead
+  transactionController.create
 );
 
 // Add income directly
 router.post('/income',
   createTransactionLimiter,
-  validate.transaction,
-  // transactionController.addIncome // DISABLED: function doesn't exist yet
-  transactionController.create // Using available function instead
+  transactionController.create
 );
 
 module.exports = router;

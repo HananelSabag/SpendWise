@@ -53,6 +53,7 @@ const TransactionCard = ({
   const isIncome = transaction.type === 'income' || transaction.amount > 0;
   const amount = Math.abs(transaction.amount || 0);
   const formattedDate = dateHelpers.fromNow(transaction.date);
+  const isRecurring = transaction.template_id || transaction.is_recurring;
   
   // Get proper icon component using the mapping function
   const iconName = transaction.category_icon || transaction.category?.icon || 'Receipt';
@@ -141,9 +142,17 @@ const TransactionCard = ({
       className={cn("group relative", className)}
     >
       <Card className={cn(
-        "p-5 hover:shadow-lg transition-all duration-300 cursor-pointer",
-        "border border-gray-200 dark:border-gray-700 rounded-2xl",
-        "bg-white dark:bg-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-750/50",
+        "p-5 hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl relative",
+        // עיצוב שונה לעסקאות חוזרות
+        isRecurring ? [
+          "bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10",
+          "border-l-4 border-l-purple-500 dark:border-l-purple-400",
+          "border border-purple-200 dark:border-purple-700",
+          "hover:bg-purple-100/70 dark:hover:bg-purple-800/30"
+        ] : [
+          "border border-gray-200 dark:border-gray-700",
+          "bg-white dark:bg-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-750/50"
+        ],
         isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600",
         isExpanded && "shadow-xl ring-1 ring-gray-900/5 dark:ring-white/10"
       )}>
@@ -167,19 +176,39 @@ const TransactionCard = ({
               </motion.button>
             )}
 
-            {/* Category icon */}
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border",
-                "transition-all duration-200",
-                isIncome 
-                  ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
-                  : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+            {/* Category icon with recurring indicator */}
+            <div className="relative">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border",
+                  "transition-all duration-200",
+                  isRecurring ? [
+                    // עיצוב מיוחד לעסקאות חוזרות
+                    isIncome 
+                      ? "bg-gradient-to-br from-green-100 to-purple-100 dark:from-green-900/40 dark:to-purple-900/40 text-green-600 dark:text-green-400 border-purple-300 dark:border-purple-600"
+                      : "bg-gradient-to-br from-red-100 to-purple-100 dark:from-red-900/40 dark:to-purple-900/40 text-red-600 dark:text-red-400 border-purple-300 dark:border-purple-600"
+                  ] : [
+                    isIncome 
+                      ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                      : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                  ]
+                )}
+              >
+                {React.createElement(IconComponent, { className: "w-6 h-6" })}
+              </motion.div>
+              
+              {/* סמל חוזרת בפינה */}
+              {isRecurring && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-6 h-6 bg-purple-500 dark:bg-purple-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800"
+                >
+                  <Repeat className="w-3 h-3 text-white" />
+                </motion.div>
               )}
-            >
-              {React.createElement(IconComponent, { className: "w-6 h-6" })}
-            </motion.div>
+            </div>
           </div>
 
           {/* Center - Transaction details */}
@@ -187,13 +216,23 @@ const TransactionCard = ({
             <div className="flex items-start justify-between w-full">
               <div className="flex-1 min-w-0 mr-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-base truncate">
+                  <h4 className={cn(
+                    "font-semibold text-base truncate",
+                    isRecurring 
+                      ? "text-purple-900 dark:text-purple-100" 
+                      : "text-gray-900 dark:text-white"
+                  )}>
                     {transaction.description || t('transaction.noDescription')}
                   </h4>
                   
-                  {transaction.is_recurring && (
-                    <Badge variant="secondary" size="xs" className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
-                      {t('labels.recurring')}
+                  {isRecurring && (
+                    <Badge 
+                      variant="secondary" 
+                      size="xs" 
+                      className="bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-600"
+                    >
+                      <Repeat className="w-3 h-3 mr-1" />
+                      {t('labels.recurring', { fallback: 'חוזר' })}
                     </Badge>
                   )}
                   

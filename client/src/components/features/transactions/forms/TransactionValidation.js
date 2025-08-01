@@ -165,12 +165,10 @@ export const validateDate = (date, t) => {
 export const validateCategory = (categoryId, t) => {
   const errors = [];
   
-  if (!categoryId || categoryId === '') {
-    errors.push(t('validation.category.required', { 
-      fallback: 'Category is required' 
-    }));
-  }
-
+  // Category is optional in our database schema
+  // Users can create transactions without categories and categorize later
+  // No validation needed for category field
+  
   return errors;
 };
 
@@ -259,12 +257,12 @@ export const validateTransaction = (formData, t = (key, options) => options?.fal
     isValid = false;
   }
 
-  // Validate recurring fields if applicable
-  const recurringErrors = validateRecurring(formData, t);
-  if (Object.keys(recurringErrors).length > 0) {
-    Object.assign(errors, recurringErrors);
-    isValid = false;
-  }
+  // Recurring validation temporarily disabled for simplified system
+  // const recurringErrors = validateRecurring(formData, t);
+  // if (Object.keys(recurringErrors).length > 0) {
+  //   Object.assign(errors, recurringErrors);
+  //   isValid = false;
+  // }
 
   return {
     isValid,

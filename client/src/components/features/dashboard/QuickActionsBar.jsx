@@ -200,13 +200,12 @@ const QuickActionsBar = ({
   // ✅ Quick action handlers
   const handleQuickExpense = useCallback(async () => {
     try {
-      // Use language-appropriate quick expense category
-      const categoryId = isRTL ? 59 : 68; // Hebrew: 59, English: 68
-      
-      const result = await api.transactions.createQuickExpense({
-        amount: 100, // Default amount, user can change in modal
+      // Create quick expense with default values
+      const result = await api.transactions.create('expense', {
+        amount: 100, // Default amount, user can change later
         description: isRTL ? 'הוצאה מהירה' : 'Quick Expense',
-        categoryId: categoryId
+        categoryId: null, // User can categorize later
+        date: new Date().toISOString().split('T')[0]
       });
       
       if (result.success) {
@@ -232,13 +231,12 @@ const QuickActionsBar = ({
 
   const handleQuickIncome = useCallback(async () => {
     try {
-      // Use language-appropriate quick income category
-      const categoryId = isRTL ? 55 : 64; // Hebrew: 55, English: 64
-      
-      const result = await api.transactions.createQuickIncome({
+      // Create quick income with default values
+      const result = await api.transactions.create('income', {
         amount: 500, // Default amount for income
         description: isRTL ? 'הכנסה מהירה' : 'Quick Income',
-        categoryId: categoryId
+        categoryId: null, // User can categorize later
+        date: new Date().toISOString().split('T')[0]
       });
       
       if (result.success) {

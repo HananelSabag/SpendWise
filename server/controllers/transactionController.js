@@ -1,265 +1,87 @@
 /**
- * OPTIMIZED Transaction Controller - Enhanced Performance Version
- * Uses optimized models, smart caching, and batch operations
- * @module controllers/transactionController_optimized
+ * Transaction Controller - Clean & Aligned with Database
+ * Simple CRUD operations that work with actual database schema
+ * @module controllers/transactionController
  */
 
 const { Transaction } = require('../models/Transaction');
 const { RecurringTemplate } = require('../models/RecurringTemplate');
-const { DBQueries } = require('../utils/dbQueries');
-const RecurringEngine = require('../utils/RecurringEngine');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const db = require('../config/db');
 
-// 🔍 Enhanced debugging utilities for transactions
-const debugTransaction = {
-  logRequest: (action, userId, params = {}) => {
-    const requestId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    logger.info(`💰 [${requestId}] Transaction ${action} initiated`, {
-      userId,
-      action,
-      params,
-      timestamp: new Date().toISOString(),
-      requestId
-    });
-    return requestId;
-  },
-  
-  logSuccess: (requestId, action, result, duration) => {
-    logger.info(`✅ [${requestId}] Transaction ${action} succeeded`, {
-      action,
-      resultType: typeof result,
-      hasData: !!result,
-      dataCount: Array.isArray(result) ? result.length : (result?.id ? 1 : 0),
-      duration: `${duration}ms`,
-      requestId
-    });
-  },
-  
-  logError: (requestId, action, error, context = {}) => {
-    logger.error(`❌ [${requestId}] Transaction ${action} failed`, {
-      action,
-      error: {
-        message: error.message,
-        code: error.code,
-        stack: error.stack?.split('\n').slice(0, 3)
-      },
-      context,
-      requestId,
-      timestamp: new Date().toISOString()
-    });
-  },
-  
-  logCategorySync: (requestId, categoryId, categoryData) => {
-    logger.debug(`🏷️ [${requestId}] Category sync`, {
-      categoryId,
-      categoryFound: !!categoryData,
-      categoryName: categoryData?.name,
-      categoryIcon: categoryData?.icon,
-      categoryColor: categoryData?.color,
-      requestId
-    });
-  },
-  
-  logQueryExecution: (requestId, queryType, params, rowCount) => {
-    logger.debug(`🔍 [${requestId}] Query executed`, {
-      queryType,
-      paramCount: Array.isArray(params) ? params.length : 0,
-      rowCount,
-      requestId
-    });
-  }
-};
-
 const transactionController = {
   /**
-   * 🚀 OPTIMIZED: Get dashboard data with smart caching
+   * Get dashboard data with transactions summary
    * @route GET /api/v1/transactions/dashboard
    */
   getDashboardData: asyncHandler(async (req, res) => {
-    const start = Date.now();
     const userId = req.user.id;
-    
-    // Parse date parameter more carefully to avoid NaN-NaN-NaN
-    let targetDate = new Date();
-    if (req.query?.date) {
-      const dateParam = req.query.date;
-      // If it's a number (days back), calculate from today
-      if (!isNaN(dateParam) && !isNaN(parseFloat(dateParam))) {
-        const daysBack = parseInt(dateParam);
-        targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() - daysBack);
-      } else {
-        // Try to parse as regular date
-        const parsedDate = new Date(dateParam);
-        if (!isNaN(parsedDate.getTime())) {
-          targetDate = parsedDate;
-        }
-        // If invalid, use current date (already set)
-      }
-    }
+    const days = parseInt(req.query.days) || 30;
 
     try {
-      // Use optimized dashboard query with caching
-      const result = await DBQueries.getDashboardData(userId, targetDate);
-
-      const duration = Date.now() - start;
-      logger.info('✅ Dashboard data served', {
-        userId,
-        duration: `${duration}ms`,
-        cached: result.metadata?.cached || false,
-        transactionCount: result.metadata?.transaction_count || 0,
-        performance: duration < 100 ? 'excellent' : duration < 300 ? 'good' : 'slow'
-      });
+      // Get summary data
+      const summary = await Transaction.getSummary(userId, days);
+      
+      // Get recent transactions
+      const recentTransactions = await Transaction.getRecent(userId, 10);
 
       res.json({
         success: true,
         data: {
-          daily: result.daily_balance,
-          recent_transactions: result.recent_transactions,
-          categories: result.categories,
+          summary,
+          recent_transactions: recentTransactions,
           metadata: {
-            ...result.metadata,
-            server_duration: `${duration}ms`,
-            optimized: true
+            period_days: days,
+            generated_at: new Date().toISOString()
           }
-        },
-        timestamp: new Date().toISOString()
+        }
       });
-
     } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Dashboard data fetch failed', {
-        userId,
-        error: error.message,
-        duration: `${duration}ms`
-      });
+      logger.error('Dashboard data fetch failed', { userId, error: error.message });
       throw error;
     }
   }),
 
   /**
-   * ✅ NEW: Analytics Dashboard Summary - What client is calling
+   * Get analytics summary for analytics page
    * @route GET /api/v1/analytics/dashboard/summary
    */
   getAnalyticsSummary: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const period = req.query.period || '30'; // Default 30 days
+    const period = parseInt(req.query.period) || 30;
 
     try {
-      // Get analytics summary data
-      const query = `
-        WITH date_range AS (
-          SELECT 
-            NOW() - INTERVAL '${parseInt(period)} days' as start_date,
-            NOW() as end_date
-        ),
-        transaction_summary AS (
-          SELECT 
-            COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
-            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expenses,
-            COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as net_balance,
-            COUNT(*) as transaction_count,
-            COUNT(DISTINCT category_id) as categories_used
-          FROM transactions t, date_range dr
-          WHERE t.user_id = $1 
-            AND t.created_at >= dr.start_date 
-            AND t.created_at <= dr.end_date
-        ),
-        previous_period AS (
-          SELECT 
-            COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as prev_income,
-            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as prev_expenses
-          FROM transactions t, date_range dr
-          WHERE t.user_id = $1 
-            AND t.created_at >= (dr.start_date - INTERVAL '${parseInt(period)} days')
-            AND t.created_at < dr.start_date
-        )
-        SELECT 
-          ts.total_income,
-          ts.total_expenses, 
-          ts.net_balance,
-          ts.transaction_count,
-          ts.categories_used,
-          pp.prev_income,
-          pp.prev_expenses,
-          CASE 
-            WHEN pp.prev_income > 0 THEN ((ts.total_income - pp.prev_income) / pp.prev_income * 100)
-            ELSE 0 
-          END as income_change_percent,
-          CASE 
-            WHEN pp.prev_expenses > 0 THEN ((ts.total_expenses - pp.prev_expenses) / pp.prev_expenses * 100)
-            ELSE 0 
-          END as expense_change_percent
-        FROM transaction_summary ts, previous_period pp
-      `;
-
-      const result = await db.query(query, [userId]);
-      const summary = result.rows[0] || {};
-
-      // Calculate savings rate
-      const savingsRate = summary.total_income > 0 
-        ? ((summary.total_income - summary.total_expenses) / summary.total_income * 100) 
-        : 0;
-
-      // ✅ FIXED: Add recent transactions to analytics summary
-      const recentTransactionsQuery = `
-        SELECT 
-          t.id, t.type, t.amount, t.description, t.date,
-          c.name as category_name, c.icon as category_icon, c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
-        ORDER BY t.created_at DESC
-        LIMIT 10
-      `;
-      
-      const recentResult = await db.query(recentTransactionsQuery, [userId]);
-      const recentTransactions = recentResult.rows.map(tx => ({
-        ...tx,
-        formattedAmount: new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD'
-        }).format(tx.amount)
-      }));
+      const summary = await Transaction.getSummary(userId, period);
+      const recentTransactions = await Transaction.getRecent(userId, 10);
 
       res.json({
         success: true,
         data: {
-          // ✅ FIXED: Structure data to match client expectations
           balance: {
             current: summary.net_balance || 0,
-            previous: summary.net_balance || 0, // TODO: Calculate previous period balance
-            change: 0, // TODO: Calculate change
             currency: 'USD'
           },
           monthlyStats: {
-          income: summary.total_income || 0,
-          expenses: summary.total_expenses || 0,
+            income: summary.total_income || 0,
+            expenses: summary.total_expenses || 0,
             net: summary.net_balance || 0,
-            transactionCount: summary.transaction_count || 0
+            transactionCount: summary.total_transactions || 0
           },
-          recentTransactions: recentTransactions, // ✅ FIXED: Add real recent transactions
-          chartData: [], // TODO: Add chart data
+          recentTransactions: recentTransactions,
           summary: {
-            totalTransactions: summary.transaction_count || 0,
+            totalTransactions: summary.total_transactions || 0,
             categoriesUsed: summary.categories_used || 0,
-            avgTransactionAmount: summary.transaction_count > 0 
-              ? (summary.total_income + summary.total_expenses) / summary.transaction_count 
-              : 0,
-          savingsRate: Math.round(savingsRate),
-          changes: {
-            income: summary.income_change_percent || 0,
-            expenses: summary.expense_change_percent || 0
-            }
+            avgTransactionAmount: summary.avg_expense || 0,
+            savingsRate: summary.total_income > 0 
+              ? Math.round(((summary.total_income - summary.total_expenses) / summary.total_income) * 100)
+              : 0
           },
           period: period,
           generatedAt: new Date().toISOString()
         }
       });
-
     } catch (error) {
       logger.error('Analytics summary failed', { userId, error: error.message });
       throw error;
@@ -267,7 +89,7 @@ const transactionController = {
   }),
 
   /**
-   * ✅ FIXED: User Analytics - What client is calling  
+   * Get user analytics data
    * @route GET /api/v1/analytics/user
    */
   getUserAnalytics: asyncHandler(async (req, res) => {
@@ -275,88 +97,20 @@ const transactionController = {
     const months = parseInt(req.query.months) || 1;
 
     try {
-      // Get user analytics data
-      const query = `
-        WITH monthly_data AS (
-          SELECT 
-            DATE_TRUNC('month', created_at) as month,
-            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as monthly_income,
-            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as monthly_expenses,
-            COUNT(*) as monthly_transactions
-          FROM transactions 
-          WHERE user_id = $1 
-            AND created_at >= NOW() - INTERVAL '` + months + ` months'
-          GROUP BY DATE_TRUNC('month', created_at)
-          ORDER BY month DESC
-        ),
-        category_breakdown AS (
-          SELECT 
-            c.name as category_name,
-            c.icon as category_icon,
-            SUM(t.amount) as total_amount,
-            COUNT(t.id) as transaction_count,
-            AVG(t.amount) as avg_amount
-          FROM transactions t
-          LEFT JOIN categories c ON t.category_id = c.id
-          WHERE t.user_id = $1 
-            AND t.type = 'expense'
-            AND t.created_at >= NOW() - INTERVAL '` + months + ` months'
-          GROUP BY c.id, c.name, c.icon
-          ORDER BY total_amount DESC
-          LIMIT 10
-        )
-        SELECT 
-          (SELECT json_agg(md.*) FROM monthly_data md) as monthly_trends,
-          (SELECT json_agg(cb.*) FROM category_breakdown cb) as top_categories,
-          (
-            SELECT json_build_object(
-              'avg_expense', AVG(CASE WHEN type = 'expense' THEN amount ELSE 0 END),
-              'max_expense', MAX(CASE WHEN type = 'expense' THEN amount ELSE 0 END),
-              'min_expense', MIN(CASE WHEN type = 'expense' THEN amount ELSE 0 END)
-            )
-            FROM transactions 
-            WHERE user_id = $1 AND type = 'expense'
-              AND created_at >= NOW() - INTERVAL '` + months + ` months'
-          ) as expense_stats
-      `;
-
-      const result = await db.query(query, [userId]);
-      const analytics = result.rows[0] || {};
-
-      // ✅ FIXED: Get recent transactions that client expects
-      const recentTransactionsQuery = `
-        SELECT 
-          t.id,
-          t.type,
-          t.amount,
-          t.description,
-          t.date,
-          t.created_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
-        ORDER BY t.created_at DESC
-        LIMIT 20
-      `;
-      
-      const recentResult = await db.query(recentTransactionsQuery, [userId]);
+      const summary = await Transaction.getSummary(userId, months * 30);
+      const transactions = await Transaction.findByUser(userId, { limit: 100 });
 
       res.json({
         success: true,
         data: {
-          insights: analytics.monthly_trends || [],
-          trends: analytics.monthly_trends || [],
-          categories: analytics.top_categories || [],
-          expenseStats: analytics.expense_stats || {},
-          transactions: recentResult.rows || [], // ✅ FIXED: Add transactions field that client expects
+          insights: [],
+          trends: [],
+          categories: [],
+          transactions: transactions,
           period: `${months} months`,
           generatedAt: new Date().toISOString()
         }
       });
-
     } catch (error) {
       logger.error('User analytics failed', { userId, error: error.message });
       throw error;
@@ -364,7 +118,7 @@ const transactionController = {
   }),
 
   /**
-   * ✅ NEW: Get Recent Transactions - What client is calling
+   * Get recent transactions
    * @route GET /api/v1/transactions/recent
    */
   getRecentTransactions: asyncHandler(async (req, res) => {
@@ -372,36 +126,15 @@ const transactionController = {
     const limit = parseInt(req.query.limit) || 10;
 
     try {
-      const query = `
-        SELECT 
-          t.id,
-          t.type,
-          t.amount,
-          t.description,
-          t.date,
-          t.created_at,
-          t.updated_at,
-          t.category_id,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1 AND (t.deleted_at IS NULL)
-        ORDER BY t.created_at DESC
-        LIMIT $2
-      `;
-
-      const result = await db.query(query, [userId, limit]);
+      const transactions = await Transaction.getRecent(userId, limit);
 
       res.json({
         success: true,
         data: {
-          transactions: result.rows,
-          total: result.rows.length
+          transactions: transactions,
+          total: transactions.length
         }
       });
-
     } catch (error) {
       logger.error('Recent transactions failed', { userId, error: error.message });
       throw error;
@@ -409,150 +142,53 @@ const transactionController = {
   }),
 
   /**
-   * ✅ FIXED: Get filtered transactions with pagination + Enhanced Debugging
+   * Get filtered transactions with pagination
    * @route GET /api/v1/transactions
    */
   getTransactions: asyncHandler(async (req, res) => {
-    const start = Date.now();
     const userId = req.user.id;
-    const requestId = debugTransaction.logRequest('getTransactions', userId, req.query);
     const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const offset = (page - 1) * limit;
 
-    // Parse filters
     const filters = {
-      type: req.query.type || 'all', // all | income | expense
-      category: req.query.category || 'all',
-      dateRange: req.query.dateRange || 'all',
-      search: req.query.search || '',
-      sortBy: req.query.sortBy || 'date',
-      sortOrder: req.query.sortOrder || 'desc'
+      type: req.query.type || null,
+      categoryId: req.query.category || null,
+      dateFrom: req.query.dateFrom || null,
+      dateTo: req.query.dateTo || null,
+      search: req.query.search || null
     };
 
     try {
-      // Build dynamic WHERE clause
-      let whereConditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
-      let queryParams = [userId];
-      let paramCount = 1;
+      const options = {
+        limit,
+        offset,
+        categoryId: filters.categoryId,
+        type: filters.type,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo
+      };
 
-      // Type filter
-      if (filters.type !== 'all') {
-        paramCount++;
-        whereConditions.push(`t.type = $${paramCount}`);
-        queryParams.push(filters.type);
-      }
+      let transactions = await Transaction.findByUser(userId, options);
 
-      // Category filter
-      if (filters.category !== 'all' && filters.category) {
-        paramCount++;
-        whereConditions.push(`t.category_id = $${paramCount}`);
-        queryParams.push(filters.category);
-      }
-
-      // Search filter
+      // Apply search filter if provided
       if (filters.search) {
-        paramCount++;
-        whereConditions.push(`(t.description ILIKE $${paramCount} OR c.name ILIKE $${paramCount})`);
-        queryParams.push(`%${filters.search}%`);
+        const search = filters.search.toLowerCase();
+        transactions = transactions.filter(t => 
+          t.description?.toLowerCase().includes(search) ||
+          t.notes?.toLowerCase().includes(search) ||
+          t.category_name?.toLowerCase().includes(search)
+        );
       }
-
-      // Date range filter
-      if (filters.dateRange !== 'all') {
-        let dateCondition = '';
-        switch (filters.dateRange) {
-          case 'today':
-            dateCondition = `t.created_at >= CURRENT_DATE`;
-            break;
-          case 'week':
-            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
-            break;
-          case 'month':
-            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '30 days'`;
-            break;
-          case 'quarter':
-            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '90 days'`;
-            break;
-          case 'year':
-            dateCondition = `t.created_at >= CURRENT_DATE - INTERVAL '365 days'`;
-            break;
-        }
-        if (dateCondition) {
-          whereConditions.push(dateCondition);
-        }
-      }
-
-      // Build ORDER BY clause
-      let orderBy = 't.created_at DESC'; // Default
-      if (filters.sortBy === 'amount') {
-        orderBy = `t.amount ${filters.sortOrder.toUpperCase()}`;
-      } else if (filters.sortBy === 'category') {
-        orderBy = `c.name ${filters.sortOrder.toUpperCase()}`;
-      } else if (filters.sortBy === 'description') {
-        orderBy = `t.description ${filters.sortOrder.toUpperCase()}`;
-      } else if (filters.sortBy === 'date') {
-        orderBy = `t.date ${filters.sortOrder.toUpperCase()}`;
-      }
-
-      // ✅ FIXED: Query the correct 'transactions' table
-      const transactionsQuery = `
-        SELECT 
-          t.id,
-          t.type,
-          t.amount,
-          t.description,
-          t.notes,
-          t.date,
-          t.created_at,
-          t.updated_at,
-          t.category_id,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE ${whereConditions.join(' AND ')}
-        ORDER BY ${orderBy}
-        LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
-      `;
-
-      queryParams.push(limit, offset);
-
-      // Count query for pagination
-      const countQuery = `
-        SELECT COUNT(*) as total
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE ${whereConditions.join(' AND ')}
-      `;
-
-      // Execute queries
-      const [transactionsResult, countResult] = await Promise.all([
-        db.query(transactionsQuery, queryParams),
-        db.query(countQuery, queryParams.slice(0, -2)) // Remove limit and offset from count query
-      ]);
-
-      const transactions = transactionsResult.rows;
-      const total = parseInt(countResult.rows[0].total);
-      const totalPages = Math.ceil(total / limit);
-      const hasMore = page < totalPages;
 
       // Calculate summary
       const summary = {
-        total: total,
+        total: transactions.length,
         totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0),
         totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0),
         count: transactions.length
       };
       summary.netAmount = summary.totalIncome - summary.totalExpenses;
-
-      logger.info('✅ Transactions retrieved successfully', {
-        userId,
-        total,
-        page,
-        limit,
-        filters
-      });
 
       res.json({
         success: true,
@@ -562,66 +198,61 @@ const transactionController = {
           pagination: {
             page,
             limit,
-            total,
-            totalPages,
-            hasMore
+            total: transactions.length,
+            hasMore: transactions.length === limit
           },
           filters: filters
         }
       });
-
     } catch (error) {
-      logger.error('Get transactions failed', { userId, error: error.message, stack: error.stack });
+      logger.error('Get transactions failed', { userId, error: error.message });
       throw error;
     }
   }),
 
   /**
-   * ✅ FIXED: Create transaction with simplified schema + Enhanced Debugging
+   * Create new transaction
    * @route POST /api/v1/transactions/:type
    */
   create: asyncHandler(async (req, res) => {
-    const start = Date.now();
     const { type } = req.params;
     const userId = req.user.id;
-    const requestId = debugTransaction.logRequest('create', userId, { type, body: req.body });
-
-
 
     if (!['expense', 'income'].includes(type)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid transaction type' };
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type. Must be "expense" or "income"'
+      });
     }
 
     const { amount, description, categoryId, notes, date } = req.body;
 
     // Validate required fields
     if (!amount || isNaN(parseFloat(amount))) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Valid amount is required' };
+      return res.status(400).json({
+        success: false,
+        error: 'Valid amount is required'
+      });
+    }
+
+    if (!description || description.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Description is required'
+      });
     }
 
     try {
-      // ✅ FIXED: Use actual database schema
-      const query = `
-        INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
-      `;
-
-      const values = [
-        userId,
-        categoryId || null,
-        parseFloat(amount),
+      const transactionData = {
         type,
-        description || '',
-        notes || '',
-        date || new Date().toISOString().split('T')[0] // Use today if no date provided
-      ];
+        amount: parseFloat(amount),
+        description: description.trim(),
+        categoryId: categoryId || null,
+        notes: notes ? notes.trim() : '',
+        date: date || new Date().toISOString().split('T')[0]
+      };
 
-
-
-      const result = await db.query(query, values);
-      const transaction = result.rows[0];
+      const transaction = await Transaction.create(transactionData, userId);
 
       // Get category info if category_id exists
       if (transaction.category_id) {
@@ -634,129 +265,337 @@ const transactionController = {
         }
       }
 
-      const duration = Date.now() - start;
-      logger.info('✅ Transaction created successfully', {
-        transactionId: transaction.id,
-        userId,
-        type,
-        amount: transaction.amount,
-        duration: `${duration}ms`
-      });
-
       res.status(201).json({
         success: true,
         data: transaction,
-        metadata: {
-          created: true,
-          duration: `${duration}ms`
-        },
-        timestamp: new Date().toISOString()
+        message: 'Transaction created successfully'
       });
-
     } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Transaction creation failed', {
-        userId,
-        type,
-        error: error.message,
-        stack: error.stack,
-        duration: `${duration}ms`
-      });
+      logger.error('Transaction creation failed', { userId, type, error: error.message });
       throw error;
     }
   }),
 
   /**
-   * 🚀 NEW: Batch create transactions for high performance
-   * @route POST /api/v1/transactions/:type/batch
+   * Update existing transaction
+   * @route PUT /api/v1/transactions/:type/:id
    */
-  createBatch: asyncHandler(async (req, res) => {
-    const start = Date.now();
-    const { type } = req.params;
+  update: asyncHandler(async (req, res) => {
+    const { type, id } = req.params;
     const userId = req.user.id;
-    const { transactions } = req.body;
 
     if (!['expense', 'income'].includes(type)) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Invalid transaction type' };
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type'
+      });
     }
 
-    if (!Array.isArray(transactions) || transactions.length === 0) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Transactions array is required' };
-    }
-
-    if (transactions.length > 100) {
-      throw { ...errorCodes.VALIDATION_ERROR, details: 'Maximum 100 transactions per batch' };
-    }
+    const { amount, description, categoryId, notes, date } = req.body;
 
     try {
-      // Add user_id to all transactions and validate amounts
-      const transactionsWithUser = transactions.map(tx => ({
-        ...tx,
-        user_id: userId,
-        amount: parseFloat(tx.amount)
-      }));
+      const updateData = {};
+      
+      if (amount !== undefined && !isNaN(parseFloat(amount))) {
+        updateData.amount = parseFloat(amount);
+      }
+      
+      if (description !== undefined) {
+        updateData.description = description.trim();
+      }
+      
+      if (categoryId !== undefined) {
+        updateData.category_id = categoryId || null;
+      }
+      
+      if (notes !== undefined) {
+        updateData.notes = notes ? notes.trim() : '';
+      }
+      
+      if (date !== undefined) {
+        updateData.date = date;
+      }
+      
+      if (type) {
+        updateData.type = type;
+      }
 
-      const createdTransactions = await Transaction.createBatch(type, transactionsWithUser);
+      const transaction = await Transaction.update(id, updateData, userId);
 
-      const duration = Date.now() - start;
-      logger.info('✅ Batch transactions created', {
-        userId,
-        type,
-        count: createdTransactions.length,
-        duration: `${duration}ms`,
-        avgPerTransaction: Math.round(duration / createdTransactions.length),
-        performance: duration < 200 ? 'excellent' : duration < 1000 ? 'good' : 'slow'
-      });
+      // Get category info if category_id exists
+      if (transaction.category_id) {
+        const categoryQuery = `
+          SELECT name, icon, color FROM categories WHERE id = $1
+        `;
+        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
+        if (categoryResult.rows.length > 0) {
+          transaction.category = categoryResult.rows[0];
+        }
+      }
 
-      res.status(201).json({
+      res.json({
         success: true,
-        data: {
-          transactions: createdTransactions,
-          count: createdTransactions.length
+        data: transaction,
+        message: 'Transaction updated successfully'
+      });
+    } catch (error) {
+      if (error.message === 'Transaction not found') {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found'
+        });
+      }
+      
+      logger.error('Transaction update failed', { transactionId: id, userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Delete transaction (soft delete)
+   * @route DELETE /api/v1/transactions/:type/:id
+   */
+  delete: asyncHandler(async (req, res) => {
+    const { type, id } = req.params;
+    const userId = req.user.id;
+
+    try {
+      const success = await Transaction.delete(id, userId);
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: { 
+          deleted: true,
+          id: id
         },
-        metadata: {
-          batch_created: true,
-          duration: `${duration}ms`,
-          avg_per_transaction: `${Math.round(duration / createdTransactions.length)}ms`,
-          optimized: true
-        },
-        timestamp: new Date().toISOString()
+        message: 'Transaction deleted successfully'
+      });
+    } catch (error) {
+      if (error.message === 'Transaction not found') {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found'
+        });
+      }
+      
+      logger.error('Transaction deletion failed', { transactionId: id, userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Advanced delete for recurring transactions
+   * @route DELETE /api/v1/transactions/recurring/:id
+   */
+  deleteRecurring: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { deleteType, templateId } = req.body; // current, future, all
+    const userId = req.user.id;
+
+    try {
+      let result;
+      let message;
+
+      switch (deleteType) {
+        case 'current':
+          // Delete only this transaction instance
+          const currentDeleted = await Transaction.delete(id, userId);
+          if (!currentDeleted) {
+            return res.status(404).json({
+              success: false,
+              error: 'Transaction not found'
+            });
+          }
+          result = { deletedCurrent: true };
+          message = 'Current transaction deleted successfully';
+          break;
+
+        case 'future':
+          // Delete current transaction and stop future ones
+          const currentDeleted2 = await Transaction.delete(id, userId);
+          if (!currentDeleted2) {
+            return res.status(404).json({
+              success: false,
+              error: 'Transaction not found'
+            });
+          }
+          
+          if (templateId) {
+            // Deactivate the template to stop future generations
+            const templateResult = await db.query(
+              'UPDATE recurring_templates SET is_active = false, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id',
+              [templateId, userId]
+            );
+            result = { 
+              deletedCurrent: true, 
+              templateDeactivated: templateResult.rows.length > 0 
+            };
+          } else {
+            result = { deletedCurrent: true, templateDeactivated: false };
+          }
+          message = 'Current transaction deleted and future recurring stopped';
+          break;
+
+        case 'all':
+          // Delete all transactions for this template and the template itself
+          if (templateId) {
+            // Delete all transactions created from this template
+            const transactionsResult = await db.query(
+              'UPDATE transactions SET deleted_at = NOW() WHERE template_id = $1 AND user_id = $2 AND deleted_at IS NULL RETURNING id',
+              [templateId, userId]
+            );
+            
+            // Delete the template
+            const templateResult = await db.query(
+              'DELETE FROM recurring_templates WHERE id = $1 AND user_id = $2 RETURNING id',
+              [templateId, userId]
+            );
+            
+            result = { 
+              templateDeleted: templateResult.rows.length > 0,
+              transactionsDeleted: transactionsResult.rows.length
+            };
+            message = `Recurring template and ${transactionsResult.rows.length} related transactions deleted`;
+          } else {
+            // Just delete the single transaction if no template
+            const singleDeleted = await Transaction.delete(id, userId);
+            if (!singleDeleted) {
+              return res.status(404).json({
+                success: false,
+                error: 'Transaction not found'
+              });
+            }
+            result = { deletedSingle: true };
+            message = 'Transaction deleted successfully';
+          }
+          break;
+
+        default:
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid delete type. Must be one of: current, future, all'
+          });
+      }
+
+      logger.info('Recurring transaction deletion completed', {
+        userId,
+        transactionId: id,
+        templateId,
+        deleteType,
+        result
       });
 
+      res.json({
+        success: true,
+        data: result,
+        message
+      });
     } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Batch transaction creation failed', {
-        userId,
-        type,
-        count: transactions?.length || 0,
-        error: error.message,
-        duration: `${duration}ms`
+      logger.error('Recurring transaction deletion failed', { 
+        userId, 
+        transactionId: id, 
+        templateId, 
+        deleteType, 
+        error: error.message 
       });
       throw error;
     }
   }),
 
   /**
-   * 🚀 OPTIMIZED: Get recent transactions with smart caching
+   * Get monthly summary
+   * @route GET /api/v1/transactions/summary/monthly
+   */
+  getMonthlySummary: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    
+    // Calculate days in the specified month
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    try {
+      const summary = await Transaction.getSummary(userId, daysInMonth);
+
+      res.json({
+        success: true,
+        data: {
+          ...summary,
+          year,
+          month,
+          period: `${year}-${month.toString().padStart(2, '0')}`
+        }
+      });
+    } catch (error) {
+      logger.error('Monthly summary failed', { userId, year, month, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Generate recurring transactions - REAL IMPLEMENTATION
+   * @route POST /api/v1/transactions/generate-recurring
+   */
+  generateRecurring: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      // Get active recurring templates for user
+      const templatesQuery = `
+        SELECT * FROM recurring_templates 
+        WHERE user_id = $1 AND is_active = true
+          AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+        ORDER BY created_at DESC
+      `;
+      
+      const templatesResult = await db.query(templatesQuery, [userId]);
+      const templates = templatesResult.rows;
+
+      let totalGenerated = 0;
+      const generatedTransactions = [];
+
+      for (const template of templates) {
+        const newTransactions = await generateTransactionsFromTemplate(template);
+        generatedTransactions.push(...newTransactions);
+        totalGenerated += newTransactions.length;
+      }
+
+      logger.info(`Generated ${totalGenerated} recurring transactions for user ${userId}`);
+
+      res.json({
+        success: true,
+        data: {
+          templates_processed: templates.length,
+          transactions_generated: totalGenerated,
+          generated_transactions: generatedTransactions,
+          templates: templates
+        },
+        message: `Successfully generated ${totalGenerated} recurring transactions`
+      });
+    } catch (error) {
+      logger.error('Recurring generation failed', { userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Get recent for specific type (legacy compatibility)
    * @route GET /api/v1/transactions/:type/recent
    */
   getRecent: asyncHandler(async (req, res) => {
-    const start = Date.now();
     const { type } = req.params;
     const userId = req.user.id;
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50); // Max 50
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
 
     try {
-      const transactions = await Transaction.getRecent(userId, type, limit);
-
-      const duration = Date.now() - start;
-      logger.debug('✅ Recent transactions served', {
-        userId,
-        type,
-        count: transactions.length,
-        duration: `${duration}ms`,
-        performance: duration < 50 ? 'excellent' : duration < 200 ? 'good' : 'slow'
-      });
+      const transactions = await Transaction.findByUser(userId, { type, limit });
 
       res.json({
         success: true,
@@ -764,347 +603,130 @@ const transactionController = {
         metadata: {
           count: transactions.length,
           type,
-          limit,
-          duration: `${duration}ms`,
-          cached: true, // This endpoint uses caching
-          optimized: true
-        },
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Recent transactions fetch failed', {
-        userId,
-        type,
-        error: error.message,
-        duration: `${duration}ms`
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * ✅ FIXED: Update transaction with correct schema
-   * @route PUT /api/v1/transactions/:type/:id
-   */
-  update: asyncHandler(async (req, res) => {
-    const start = Date.now();
-    const { type, id } = req.params;
-    const userId = req.user.id;
-
-
-
-    const { amount, description, categoryId, notes, date } = req.body;
-
-    try {
-      // First check if transaction exists and belongs to user
-      const checkQuery = `
-        SELECT id FROM transactions WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)
-      `;
-      const checkResult = await db.query(checkQuery, [id, userId]);
-      
-      if (checkResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Transaction not found'
-        });
-      }
-
-      // Build update query dynamically
-      const updates = [];
-      const values = [];
-      let paramCount = 1;
-
-      if (amount !== undefined && !isNaN(parseFloat(amount))) {
-        updates.push(`amount = $${paramCount++}`);
-        values.push(parseFloat(amount));
-      }
-
-      if (description !== undefined) {
-        updates.push(`description = $${paramCount++}`);
-        values.push(description || '');
-      }
-
-      if (categoryId !== undefined) {
-        updates.push(`category_id = $${paramCount++}`);
-        values.push(categoryId || null);
-      }
-
-      if (notes !== undefined) {
-        updates.push(`notes = $${paramCount++}`);
-        values.push(notes || '');
-      }
-
-      if (date !== undefined) {
-        updates.push(`date = $${paramCount++}`);
-        values.push(date);
-      }
-
-      if (type && ['income', 'expense'].includes(type)) {
-        updates.push(`type = $${paramCount++}`);
-        values.push(type);
-      }
-
-      updates.push(`updated_at = NOW()`);
-
-      if (updates.length === 1) { // Only updated_at
-        return res.status(400).json({
-          success: false,
-          error: 'No valid fields to update'
-        });
-      }
-
-      const updateQuery = `
-        UPDATE transactions 
-        SET ${updates.join(', ')}
-        WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
-      `;
-
-      values.push(id, userId);
-
-
-
-      const result = await db.query(updateQuery, values);
-      const transaction = result.rows[0];
-
-      // Get category info if category_id exists
-      if (transaction.category_id) {
-        const categoryQuery = `
-          SELECT name, icon, color FROM categories WHERE id = $1
-        `;
-        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
-        if (categoryResult.rows.length > 0) {
-          transaction.category = categoryResult.rows[0];
+          limit
         }
-      }
-
-      const duration = Date.now() - start;
-      logger.info('✅ Transaction updated successfully', {
-        transactionId: id,
-        userId,
-        type,
-        fieldsUpdated: Object.keys(req.body),
-        duration: `${duration}ms`
       });
-
-      res.json({
-        success: true,
-        data: transaction,
-        metadata: {
-          updated: true,
-          duration: `${duration}ms`
-        },
-        timestamp: new Date().toISOString()
-      });
-
     } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Transaction update failed', {
-        transactionId: id,
-        userId,
-        type,
-        error: error.message,
-        stack: error.stack,
-        duration: `${duration}ms`
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * ✅ FIXED: Delete transaction with soft delete
-   * @route DELETE /api/v1/transactions/:type/:id
-   */
-  delete: asyncHandler(async (req, res) => {
-    const start = Date.now();
-    const { type, id } = req.params;
-    const userId = req.user.id;
-
-
-
-    try {
-      // First check if transaction exists and belongs to user
-      const checkQuery = `
-        SELECT id FROM transactions WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)
-      `;
-      const checkResult = await db.query(checkQuery, [id, userId]);
-      
-      if (checkResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Transaction not found'
-        });
-      }
-
-      // Soft delete the transaction
-      const deleteQuery = `
-        UPDATE transactions 
-        SET deleted_at = NOW(), updated_at = NOW()
-        WHERE id = $1 AND user_id = $2
-        RETURNING id
-      `;
-
-      const result = await db.query(deleteQuery, [id, userId]);
-      const success = result.rows.length > 0;
-
-      const duration = Date.now() - start;
-      logger.info('✅ Transaction soft deleted successfully', {
-        transactionId: id,
-        userId,
-        type,
-        duration: `${duration}ms`
-      });
-
-      res.json({
-        success: true,
-        data: { 
-          deleted: success,
-          id: id
-        },
-        metadata: {
-          deleted: true,
-          duration: `${duration}ms`
-        },
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Transaction deletion failed', {
-        transactionId: id,
-        userId,
-        type,
-        error: error.message,
-        stack: error.stack,
-        duration: `${duration}ms`
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * 🚀 NEW: Get monthly summary with optimized queries
-   * @route GET /api/v1/transactions/summary/monthly
-   */
-  getMonthlySummary: asyncHandler(async (req, res) => {
-    const start = Date.now();
-    const userId = req.user.id;
-    const year = parseInt(req.query.year) || new Date().getFullYear();
-    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
-
-    try {
-      const summary = await DBQueries.getMonthlySummary(userId, year, month);
-
-      const duration = Date.now() - start;
-      logger.info('✅ Monthly summary served', {
-        userId,
-        year,
-        month,
-        duration: `${duration}ms`,
-        performance: duration < 100 ? 'excellent' : duration < 300 ? 'good' : 'slow'
-      });
-
-      res.json({
-        success: true,
-        data: {
-          ...summary,
-          year,
-          month
-        },
-        metadata: {
-          duration: `${duration}ms`,
-          optimized: true,
-          cached: true
-        },
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Monthly summary fetch failed', {
-        userId,
-        year,
-        month,
-        error: error.message,
-        duration: `${duration}ms`
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * 🚀 NEW: Generate recurring transactions manually
-   * @route POST /api/v1/transactions/recurring/generate
-   */
-  generateRecurring: asyncHandler(async (req, res) => {
-    const start = Date.now();
-    const userId = req.user.id;
-
-    try {
-      const result = await RecurringEngine.generateAllRecurringTransactions();
-
-      const duration = Date.now() - start;
-      logger.info('✅ Manual recurring generation completed', {
-        userId,
-        templatesProcessed: result.processed,
-        transactionsGenerated: result.generated,
-        duration: `${duration}ms`,
-        trigger: 'manual_api_call'
-      });
-
-      res.json({
-        success: true,
-        data: {
-          templates_processed: result.processed,
-          transactions_generated: result.generated
-        },
-        metadata: {
-          duration: `${duration}ms`,
-          engine_duration: `${result.duration}ms`,
-          trigger: 'manual',
-          optimized: true
-        },
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('❌ Manual recurring generation failed', {
-        userId,
-        error: error.message,
-        duration: `${duration}ms`
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * 📊 Get performance statistics
-   * @route GET /api/v1/transactions/performance
-   */
-  getPerformanceStats: asyncHandler(async (req, res) => {
-    try {
-      const stats = {
-        transaction_model: Transaction.getPerformanceStats(),
-        db_queries: DBQueries.getPerformanceStats(),
-        recurring_engine: RecurringEngine.getEngineStats()
-      };
-
-      res.json({
-        success: true,
-        data: stats,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      logger.error('❌ Performance stats fetch failed', {
-        error: error.message
-      });
+      logger.error('Get recent by type failed', { userId, type, error: error.message });
       throw error;
     }
   })
 };
 
-module.exports = transactionController; 
+/**
+ * 🔄 CORE RECURRING TRANSACTIONS ENGINE
+ * Generates actual transactions from recurring templates
+ */
+async function generateTransactionsFromTemplate(template) {
+  const generated = [];
+  const today = new Date();
+  const maxDaysLookAhead = 60; // Generate up to 2 months ahead
+  
+  try {
+    // Calculate next due dates
+    const dueDates = calculateRecurringDates(template, today, maxDaysLookAhead);
+    
+    for (const dueDate of dueDates) {
+      // Check if transaction already exists for this date and template
+      const existsQuery = `
+        SELECT id FROM transactions 
+        WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL
+      `;
+      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      
+      if (existsResult.rows.length === 0) {
+        // Create new transaction
+        const transactionData = {
+          user_id: template.user_id,
+          category_id: template.category_id,
+          amount: template.amount,
+          type: template.type,
+          description: template.description,
+          notes: template.notes || `Generated from recurring template: ${template.name || 'Unnamed'}`,
+          date: dueDate.toISOString().split('T')[0],
+          template_id: template.id
+        };
+
+        const insertQuery = `
+          INSERT INTO transactions (
+            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at
+        `;
+
+        const values = [
+          transactionData.user_id,
+          transactionData.category_id,
+          transactionData.amount,
+          transactionData.type,
+          transactionData.description,
+          transactionData.notes,
+          transactionData.date,
+          transactionData.template_id
+        ];
+
+        const result = await db.query(insertQuery, values);
+        generated.push(result.rows[0]);
+      }
+    }
+    
+    return generated;
+  } catch (error) {
+    logger.error('Failed to generate transactions from template', { 
+      templateId: template.id, 
+      error: error.message 
+    });
+    throw error;
+  }
+}
+
+/**
+ * Calculate recurring dates for a template
+ */
+function calculateRecurringDates(template, fromDate, daysLookAhead) {
+  const dates = [];
+  const { interval_type, day_of_month, day_of_week, start_date, end_date, skip_dates } = template;
+  const skipDatesSet = new Set(skip_dates || []);
+  
+  let currentDate = new Date(Math.max(new Date(start_date), fromDate));
+  const endTime = new Date(fromDate.getTime() + (daysLookAhead * 24 * 60 * 60 * 1000));
+  const finalEndDate = end_date ? new Date(Math.min(new Date(end_date), endTime)) : endTime;
+
+  while (currentDate <= finalEndDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    
+    // Check if this date should be skipped
+    if (!skipDatesSet.has(dateStr)) {
+      if (interval_type === 'daily') {
+        dates.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      } else if (interval_type === 'weekly') {
+        if (day_of_week === null || currentDate.getDay() === day_of_week) {
+          dates.push(new Date(currentDate));
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      } else if (interval_type === 'monthly') {
+        if (day_of_month === null || currentDate.getDate() === day_of_month) {
+          dates.push(new Date(currentDate));
+          // Move to next month
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          if (day_of_month) {
+            currentDate.setDate(day_of_month);
+          }
+        } else {
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+    } else {
+      // Skip this date
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Safety check to prevent infinite loops
+    if (dates.length > 100) break;
+  }
+  
+  return dates;
+}
+
+module.exports = transactionController;
