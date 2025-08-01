@@ -493,7 +493,11 @@ export default {
   modals: {
     add: {
       title: "הוסף עסקה חדשה",
-      subtitle: "צור עסקה חדשה למעקב הוצאות והכנסות"
+      subtitle: "צור עסקה חדשה למעקב הוצאות והכנסות",
+      success: {
+        title: "העסקה נוספה",
+        message: "העסקה שלכם נוספה בהצלחה לחשבון."
+      }
     },
     edit: {
       edit: {

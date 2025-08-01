@@ -45,11 +45,18 @@ export const normalizeUserData = (user) => {
     
     // ✅ Optional Profile Data
     avatar: user.avatar || null,
+    profile_picture_url: user.profile_picture_url || null,
+    profilePicture: user.profile_picture_url || user.avatar || null, // Unified profile picture access
     phone: user.phone || '',
     bio: user.bio || '',
     location: user.location || '',
     website: user.website || '',
     birthday: user.birthday || null,
-    isPremium: user.isPremium || false
+    isPremium: user.isPremium || false,
+    
+    // ✅ OAuth Fields
+    oauth_provider: user.oauth_provider || null,
+    google_id: user.google_id || null,
+    oauth_provider_id: user.oauth_provider_id || null
   };
 };

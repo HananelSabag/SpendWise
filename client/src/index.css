@@ -307,6 +307,26 @@
     direction: ltr;
   }
 
+  /* Perfect RTL Mirroring for Transaction Card */
+  .transaction-card-rtl {
+    direction: rtl;
+    transform: scaleX(-1);
+  }
+
+  .transaction-card-rtl * {
+    transform: scaleX(-1);
+    direction: ltr;
+  }
+
+  /* Fix text direction in RTL mode */
+  .transaction-card-rtl .text-right {
+    text-align: left;
+  }
+
+  .transaction-card-rtl .text-left {
+    text-align: right;
+  }
+
   /* Hide scrollbar */
   .no-scrollbar {
     -ms-overflow-style: none;

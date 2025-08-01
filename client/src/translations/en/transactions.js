@@ -493,7 +493,11 @@ export default {
   modals: {
     add: {
       title: "Add New Transaction",
-      subtitle: "Create a new transaction to track expenses and income"
+      subtitle: "Create a new transaction to track expenses and income",
+      success: {
+        title: "Transaction Added",
+        message: "Your transaction has been successfully added to your account."
+      }
     },
     edit: {
       edit: {

@@ -133,8 +133,10 @@ class User {
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
           website, birthday, preferences,
-          language_preference, theme_preference, currency_preference
-        FROM users_old_messy 
+          language_preference, theme_preference, currency_preference,
+          oauth_provider, google_id, oauth_provider_id, profile_picture_url,
+          onboarding_completed, login_attempts, locked_until, verification_token
+        FROM users 
         WHERE id = $1 AND is_active = true
       `;
 
@@ -155,18 +157,25 @@ class User {
         }
       }
 
-      // Add computed fields that client expects
+      // Add computed fields that client expects (same as in findByEmail)
       user.isAdmin = ['admin', 'super_admin'].includes(user.role);
       user.isSuperAdmin = user.role === 'super_admin';
       user.name = user.username || user.first_name || 'User'; // Fallback for name field
       
-      // Normalize field names for client compatibility
+      // Normalize field names for client compatibility (same as in findByEmail)
       user.firstName = user.first_name || '';
       user.lastName = user.last_name || '';
       user.emailVerified = user.email_verified;
       user.createdAt = user.created_at;
       user.updatedAt = user.updated_at;
       user.lastLogin = user.last_login_at;
+
+      // Convert dates to ISO strings for consistency (same as in findByEmail)
+      if (user.created_at) user.created_at = user.created_at.toISOString();
+      if (user.updated_at) user.updated_at = user.updated_at.toISOString();
+      if (user.last_login_at) user.last_login_at = user.last_login_at.toISOString();
+      if (user.locked_until) user.locked_until = user.locked_until.toISOString();
+      if (user.birthday) user.birthday = user.birthday.toISOString();
 
       // Cache the result
       UserCache.set(cacheKey, user);
@@ -186,14 +195,6 @@ class User {
       let user = UserCache.get(cacheKey);
 
       if (user) {
-        // 🔍 DEBUG: Log what we got from cache
-        console.log('🔍 DEBUG: User from CACHE:', {
-          email: user?.email,
-          hasPasswordHash: !!user?.password_hash,
-          passwordHashLength: user?.password_hash?.length,
-          oauthProvider: user?.oauth_provider,
-          cacheKey: cacheKey
-        });
         return user;
       }
 
@@ -203,9 +204,10 @@ class User {
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
           website, birthday, preferences, login_attempts, locked_until,
-          oauth_provider, google_id, onboarding_completed,
+          oauth_provider, google_id, oauth_provider_id, profile_picture_url,
+          onboarding_completed, verification_token,
           language_preference, theme_preference, currency_preference
-        FROM users_old_messy 
+        FROM users 
         WHERE email = $1
       `;
 
@@ -216,15 +218,6 @@ class User {
       }
 
       user = result.rows[0];
-      
-      // 🔍 DEBUG: Log what we got from DATABASE
-      console.log('🔍 DEBUG: User from DATABASE:', {
-        email: user?.email,
-        hasPasswordHash: !!user?.password_hash,
-        passwordHashLength: user?.password_hash?.length,
-        oauthProvider: user?.oauth_provider,
-        willCacheKey: cacheKey
-      });
       
       // Parse JSON fields safely
       if (user.preferences) {
@@ -258,16 +251,6 @@ class User {
       // Cache the result
       UserCache.set(cacheKey, user);
       UserCache.set(`user:${user.id}`, user);
-      
-      // 🔍 DEBUG: Verify what was cached
-      const cachedAfterSet = UserCache.get(cacheKey);
-      console.log('🔍 DEBUG: User AFTER caching:', {
-        email: cachedAfterSet?.email,
-        hasPasswordHash: !!cachedAfterSet?.password_hash,
-        passwordHashLength: cachedAfterSet?.password_hash?.length,
-        oauthProvider: cachedAfterSet?.oauth_provider,
-        cacheKey: cacheKey
-      });
 
       return user;
     } catch (error) {
@@ -301,7 +284,7 @@ class User {
         throw new Error('Account is deactivated');
       }
 
-      // 🔍 DEBUG: Check user authentication methods
+      // 🔍 DEBUG: Check user authentication methods  
       const hasPassword = !!user.password_hash;
       const isGoogleUser = user.oauth_provider === 'google' || !!user.google_id;
       
@@ -311,6 +294,8 @@ class User {
         oauthProvider: user.oauth_provider,
         googleId: user.google_id ? 'EXISTS' : 'NULL'
       });
+
+      // ✅ HYBRID SYSTEM: Users with both password and Google ID can use either method
 
       // ✅ HYBRID LOGIN SUPPORT: Handle different authentication scenarios
       if (!password) {
@@ -634,7 +619,9 @@ class User {
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
           website, birthday, preferences, google_id, oauth_provider,
-          oauth_provider_id, profile_picture_url
+          oauth_provider_id, profile_picture_url, onboarding_completed,
+          login_attempts, locked_until, verification_token,
+          language_preference, theme_preference, currency_preference
         FROM users 
         WHERE google_id = $1 AND is_active = true
       `;
@@ -656,14 +643,14 @@ class User {
         }
       }
 
-      // Add computed fields
+      // Add computed fields (same as other methods)
       user.isAdmin = ['admin', 'super_admin'].includes(user.role);
       user.isSuperAdmin = user.role === 'super_admin';
       user.name = user.first_name && user.last_name ? 
         `${user.first_name} ${user.last_name}` : 
         user.username || user.first_name || 'User';
       
-      // Normalize field names for client compatibility
+      // Normalize field names for client compatibility (same as other methods)
       user.firstName = user.first_name || '';
       user.lastName = user.last_name || '';
       user.emailVerified = user.email_verified;
@@ -671,6 +658,13 @@ class User {
       user.updatedAt = user.updated_at;
       user.lastLogin = user.last_login_at;
       user.profilePicture = user.profile_picture_url || user.avatar;
+
+      // Convert dates to ISO strings for consistency (same as other methods)
+      if (user.created_at) user.created_at = user.created_at.toISOString();
+      if (user.updated_at) user.updated_at = user.updated_at.toISOString();
+      if (user.last_login_at) user.last_login_at = user.last_login_at.toISOString();
+      if (user.locked_until) user.locked_until = user.locked_until.toISOString();
+      if (user.birthday) user.birthday = user.birthday.toISOString();
 
       // Cache the result
       UserCache.set(cacheKey, user);

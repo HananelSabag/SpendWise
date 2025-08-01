@@ -95,6 +95,11 @@ const TransactionFormFields = ({
             type="text"
             value={formData.description}
             onChange={(e) => handleFieldChange('description', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
             placeholder={t('fields.description.placeholder')}
             className={cn(
               "w-full px-4 py-3 border rounded-lg",

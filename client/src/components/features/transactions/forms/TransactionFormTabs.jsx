@@ -143,6 +143,7 @@ const TransactionFormTabs = ({
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    console.log('🔒 Form submission triggered ONLY by explicit button click');
     setIsDirty(true);
 
     // Validate form

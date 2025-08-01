@@ -58,17 +58,25 @@ const normalizeUserData = (user) => {
     last_login: user.last_login_at || user.last_login,
     lastLogin: user.last_login_at || user.last_login,
     
+    // ✅ Profile Picture (unified access - prefer profile_picture_url over avatar)
+    avatar: user.avatar || null,
+    profile_picture_url: user.profile_picture_url || null,
+    profilePicture: user.profile_picture_url || user.avatar || null, // Unified access
+    
     // ✅ Optional Profile Data
-    avatar: user.avatar || user.profile_picture_url || null,
     phone: user.phone || '',
     bio: user.bio || '',
     location: user.location || '',
     website: user.website || '',
     birthday: user.birthday || null,
     
-    // ✅ OAuth Info
-    oauth_provider: user.oauth_provider || 'local',
+    // ✅ OAuth Info (comprehensive coverage)
+    oauth_provider: user.oauth_provider || null,
+    oauthProvider: user.oauth_provider || null,
     google_id: user.google_id || null,
+    googleId: user.google_id || null,
+    oauth_provider_id: user.oauth_provider_id || null,
+    oauthProviderId: user.oauth_provider_id || null,
     
     // ✅ Account Status
     is_active: user.is_active !== false, // Default to true

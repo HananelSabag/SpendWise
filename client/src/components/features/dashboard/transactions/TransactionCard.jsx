@@ -167,10 +167,10 @@ const TransactionCard = ({
           </div>
         )}
         
-        {/* Main transaction content - Enhanced Desktop Layout with RTL Support */}
+        {/* Main transaction content - Clean Layout with Perfect RTL Mirroring */}
         <div className={cn(
           "flex items-start gap-3 w-full",
-          isRTL ? "flex-row-reverse" : "flex-row"
+          isRTL && "transaction-card-rtl"
         )}>
           {/* Left side - Selection & Icon */}
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -232,10 +232,7 @@ const TransactionCard = ({
 
           {/* Center - Transaction details */}
           <div className="flex-1 min-w-0">
-            <div className={cn(
-              "flex items-start w-full",
-              isRTL ? "flex-row-reverse" : "flex-row"
-            )}>
+            <div className="flex items-start w-full">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start flex-wrap gap-2">
                   <h4 className={cn(
@@ -285,12 +282,10 @@ const TransactionCard = ({
                 )}
               </div>
 
-              {/* 💰 Enhanced Amount & Actions Section - Proper RTL/LTR Positioning */}
+              {/* 💰 Enhanced Amount & Actions Section */}
               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 flex-shrink-0 ml-4">
-                {/* Amount with enhanced styling - RTL Support */}
-                <div className={cn(
-                  isRTL ? "text-left" : "text-right"
-                )}>
+                {/* Amount with enhanced styling */}
+                <div className="text-right">
                   <div className={cn(
                     "font-bold text-lg sm:text-xl leading-tight",
                     isRecurring && "drop-shadow-sm",

@@ -109,8 +109,14 @@ const AmountInput = ({
 
   // ✅ Handle key press
   const handleKeyPress = useCallback((e) => {
+    // Prevent Enter from submitting form
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      return;
+    }
+    
     // Allow only numbers, decimal point, and control keys
-    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight'];
+    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'ArrowLeft', 'ArrowRight'];
     
     if (allowedKeys.includes(e.key)) return;
     
