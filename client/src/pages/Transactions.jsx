@@ -11,7 +11,6 @@ import {
   Plus, 
   Search, 
   Filter, 
-  Calendar, 
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -174,12 +173,6 @@ const Transactions = () => {
     setShowEditModal(true);
   }, []);
 
-  const handleRecurringSetup = useCallback((transaction = null) => {
-    setSelectedTransaction(transaction);
-    setModalMode(transaction ? 'edit' : 'create');
-    setShowRecurringModal(true);
-  }, []);
-
   const handleDeleteTransaction = useCallback((transaction) => {
     setSelectedTransaction(transaction);
     setShowDeleteModal(true);
@@ -291,18 +284,6 @@ const Transactions = () => {
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline font-medium">{t('actions.addTransaction')}</span>
-                </Button>
-              </motion.div>
-
-              {/* Recurring Setup Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  onClick={() => handleRecurringSetup()}
-                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span className="hidden sm:inline font-medium">{t('actions.recurring')}</span>
                 </Button>
               </motion.div>
 

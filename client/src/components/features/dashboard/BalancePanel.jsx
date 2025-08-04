@@ -32,11 +32,14 @@ const BalancePanel = ({
   const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
 
-  // ✅ Get real transactions data
-  const { transactions, loading: transactionsLoading } = useTransactions({
+  // ✅ Use transactions from Dashboard data if available, fallback to direct hook
+  const { transactions: hookTransactions, loading: transactionsLoading } = useTransactions({
     pageSize: 1000, // Get more data for accurate calculations
     enableAI: false // Disable AI for performance
   });
+
+  // Prefer transactions from props (Dashboard data), fallback to direct hook
+  const transactions = data?.transactions || hookTransactions || [];
 
 
 
@@ -91,7 +94,11 @@ const BalancePanel = ({
     
     const todayTransactions = transactions.filter(t => {
       const transactionDate = new Date(t.date || t.created_at);
-      const isToday = transactionDate >= today;
+      const today_start = new Date(today);
+      const today_end = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      
+      // Include transactions from today specifically
+      const isToday = transactionDate >= today_start && transactionDate < today_end;
 
       return isToday;
     });

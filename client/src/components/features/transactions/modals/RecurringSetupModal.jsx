@@ -202,7 +202,7 @@ const RecurringSetupModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      maxWidth="3xl"
+      size="3xl"
       className={className}
     >
       <AnimatePresence mode="wait">

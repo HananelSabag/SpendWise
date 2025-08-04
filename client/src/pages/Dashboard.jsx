@@ -168,59 +168,65 @@ const Dashboard = () => {
     handleRefresh();
   }, [quickAmount, addNotification, t, handleRefresh]);
 
-  // ✅ Enhanced data with translation support (replace with real data)
-  const enhancedData = useMemo(() => ({
-    balance: dashboardData?.balance?.current || 3870,
-    periods: {
-      daily: { income: 0, expenses: 120, net: -120 },
-      weekly: { income: 500, expenses: 840, net: -340 },
-      monthly: { income: 2200, expenses: 1650, net: 550 },
-      yearly: { income: 26400, expenses: 19800, net: 6600 }
-    },
-    stats: {
-      totalTransactions: 47,
-      avgTransaction: 285,
-      topCategory: t('common.categoryTypes.food', 'Food & Dining'),
-      growthRate: '+12.5%'
-    },
-    recentTransactions: dashboardData?.recentTransactions || [
-      { 
-        id: 1, 
-        description: t('common.transactions.groceries', 'Grocery Shopping'), 
-        amount: -120, 
-        category: t('common.categoryTypes.food', 'Food'), 
-        date: '2025-01-27' 
+  // ✅ REAL-TIME DATA: Combine dashboard data with actual transactions
+  const enhancedData = useMemo(() => {
+    if (!dashboardData || !transactions) {
+      // Return safe fallback while loading
+      return {
+        balance: { current: 0, currency: currency },
+        periods: {
+          daily: { income: 0, expenses: 0, net: 0 },
+          weekly: { income: 0, expenses: 0, net: 0 },
+          monthly: { income: 0, expenses: 0, net: 0 },
+          yearly: { income: 0, expenses: 0, net: 0 }
+        },
+        stats: {
+          totalTransactions: 0,
+          avgTransaction: 0,
+          topCategory: t('common.categoryTypes.food', 'Food & Dining'),
+          growthRate: '+0%'
+        },
+        recentTransactions: [],
+        transactions: []
+      };
+    }
+
+    // Use real transaction data for balance calculation
+    const transactionsList = Array.isArray(transactions) ? transactions : [];
+    
+    // Calculate actual balance from transactions
+    const actualBalance = transactionsList.reduce((balance, transaction) => {
+      const amount = parseFloat(transaction.amount) || 0;
+      return transaction.type === 'income' ? balance + amount : balance - amount;
+    }, 0);
+
+    // Use real recent transactions (latest 5)
+    const recentTransactions = transactionsList
+      .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
+      .slice(0, 5);
+
+    return {
+      balance: { 
+        current: actualBalance,
+        currency: currency 
       },
-      { 
-        id: 2, 
-        description: t('common.transactions.salary', 'Salary'), 
-        amount: 5000, 
-        category: t('common.categoryTypes.income', 'Income'), 
-        date: '2025-01-26' 
+      periods: dashboardData?.periods || {
+        daily: { income: 0, expenses: 0, net: 0 },
+        weekly: { income: 0, expenses: 0, net: 0 },
+        monthly: { income: 0, expenses: 0, net: 0 },
+        yearly: { income: 0, expenses: 0, net: 0 }
       },
-      { 
-        id: 3, 
-        description: t('common.transactions.fuel', 'Car Fuel'), 
-        amount: -200, 
-        category: t('common.categoryTypes.transport', 'Transportation'), 
-        date: '2025-01-25' 
+      stats: {
+        totalTransactions: transactionsList.length,
+        avgTransaction: transactionsList.length > 0 ? 
+          Math.abs(actualBalance) / transactionsList.length : 0,
+        topCategory: t('common.categoryTypes.food', 'Food & Dining'),
+        growthRate: '+12.5%'
       },
-      { 
-        id: 4, 
-        description: t('common.transactions.coffee', 'Coffee'), 
-        amount: -18, 
-        category: t('common.categoryTypes.entertainment', 'Entertainment'), 
-        date: '2025-01-25' 
-      },
-      { 
-        id: 5, 
-        description: t('common.transactions.electricity', 'Electricity Bill'), 
-        amount: -350, 
-        category: t('common.categoryTypes.bills', 'Bills'), 
-        date: '2025-01-24' 
-      }
-    ]
-  }), [dashboardData, t]);
+      recentTransactions,
+      transactions: transactionsList // Pass transactions to BalancePanel
+    };
+  }, [dashboardData, transactions, currency, t]);
 
   // ✅ CONDITIONAL RENDERING - AFTER ALL HOOKS
   if (isLoading && !dashboardData) {
@@ -300,9 +306,7 @@ const Dashboard = () => {
 
         {/* Balance Panel with Real Data */}
         <BalancePanel 
-          data={{
-            totalBalance: dashboardData?.balance?.current || 3870
-          }}
+          data={enhancedData}
           showDetails={true}
           className="mb-8"
         />
@@ -423,6 +427,7 @@ const Dashboard = () => {
 
                          {/* Recent Transactions with Real Data */}
              <RecentTransactions 
+               transactions={enhancedData.recentTransactions}
                maxItems={5}
                showFilters={false}
                showActions={false}

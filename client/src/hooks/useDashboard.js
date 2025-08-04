@@ -69,7 +69,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       // Removed debug logging to prevent re-renders
       
       try {
-        const result = await api.analytics.dashboard.getSummary(formattedDate);
+        const result = await api.transactions.getDashboardData({ date: formattedDate });
         
         // Removed debug logging to prevent re-renders
         
@@ -115,15 +115,35 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       // ✅ FIX: Handle both analytics and transactions endpoint formats
       let dashboardData;
       
-      // Check if this is the new analytics format
-      if (response.balance && typeof response.balance === 'object' && response.monthlyStats) {
+      // ✅ FIXED: Handle transactions dashboard endpoint format
+      if (response.data && response.data.summary) {
+        // This is the /transactions/dashboard format
+        const { summary, recent_transactions = [] } = response.data;
+        dashboardData = {
+          balance: { 
+            current: summary.net_balance || 0, 
+            currency: 'ILS' 
+          },
+          monthlyStats: { 
+            income: summary.total_income || 0, 
+            expenses: summary.total_expenses || 0, 
+            net: summary.net_balance || 0 
+          },
+          recentTransactions: recent_transactions,
+          chartData: [],
+          summary: summary,
+          isEmpty: (summary.total_transactions || 0) === 0
+        };
+      }
+      // Check if this is the analytics format
+      else if (response.balance && typeof response.balance === 'object' && response.monthlyStats) {
         dashboardData = response;
       }
       // Check if this is the old transactions format
       else if (response.daily || response.recent_transactions) {
         // Transform old format to new format
         dashboardData = {
-          balance: { current: 0, currency: 'USD' },
+          balance: { current: 0, currency: 'ILS' },
           monthlyStats: { income: 0, expenses: 0, net: 0 },
           recentTransactions: response.recent_transactions || [],
           chartData: [],

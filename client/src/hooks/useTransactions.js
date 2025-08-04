@@ -876,10 +876,14 @@ export const useTransactions = (options = {}) => {
 
       console.log('✅ Transaction created successfully:', newTransaction);
 
-      // Invalidate relevant queries
+      // ✅ ENHANCED: Invalidate ALL relevant queries to ensure balance panel updates
       queryClient.invalidateQueries(['transactions']);
       queryClient.invalidateQueries(['transaction-analytics']);
       queryClient.invalidateQueries(['dashboard']);
+      
+      // Force immediate refetch for dashboard and transactions
+      queryClient.refetchQueries(['transactions'], { active: true });
+      queryClient.refetchQueries(['dashboard'], { active: true });
       
       // Clear cache
       TransactionCacheManager.invalidatePattern('transactions');

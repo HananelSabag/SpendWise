@@ -181,8 +181,8 @@ const TransactionFormFields = ({
               exit={{ opacity: 0, height: 0 }}
               className="space-y-4 pl-7"
             >
-              {/* Frequency & Interval */}
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* Frequency Only (Interval removed - not supported by server) */}
+              <div className="grid gap-4 md:grid-cols-1">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('fields.recurring.frequency')}
@@ -195,106 +195,23 @@ const TransactionFormFields = ({
                     <option value="daily">{t('frequencies.daily')}</option>
                     <option value="weekly">{t('frequencies.weekly')}</option>
                     <option value="monthly">{t('frequencies.monthly')}</option>
+                    {/* ⚠️ DISABLED: yearly not properly supported by server 
                     <option value="yearly">{t('frequencies.yearly')}</option>
+                    */}
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('fields.recurring.interval')}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={formData.recurringInterval}
-                    onChange={(e) => handleFieldChange('recurringInterval', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
                 </div>
               </div>
 
-              {/* End Type */}
+              {/* ⚠️ DISABLED: End Type and End Date - not properly implemented in server
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('fields.recurring.endType')}
                 </label>
-                <div className="flex space-x-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="endType"
-                      value="never"
-                      checked={formData.recurringEndType === 'never'}
-                      onChange={(e) => handleFieldChange('recurringEndType', e.target.value)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {t('endTypes.never')}
-                    </span>
-                  </label>
-                  
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="endType"
-                      value="date"
-                      checked={formData.recurringEndType === 'date'}
-                      onChange={(e) => handleFieldChange('recurringEndType', e.target.value)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {t('endTypes.date')}
-                    </span>
-                  </label>
-                  
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="endType"
-                      value="occurrences"
-                      checked={formData.recurringEndType === 'occurrences'}
-                      onChange={(e) => handleFieldChange('recurringEndType', e.target.value)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {t('endTypes.occurrences')}
-                    </span>
-                  </label>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Currently, recurring transactions run indefinitely. End date functionality will be added in a future update.
                 </div>
               </div>
-
-              {/* End Date or Max Occurrences */}
-              {formData.recurringEndType === 'date' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('fields.recurring.endDate')}
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.recurringEndDate}
-                    onChange={(e) => handleFieldChange('recurringEndDate', e.target.value)}
-                    min={formData.date}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
-                </div>
-              )}
-
-              {formData.recurringEndType === 'occurrences' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('fields.recurring.maxOccurrences')}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="999"
-                    value={formData.recurringMaxOccurrences}
-                    onChange={(e) => handleFieldChange('recurringMaxOccurrences', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
-                </div>
-              )}
+              */}
             </motion.div>
           )}
         </div>
@@ -316,13 +233,14 @@ const TransactionFormFields = ({
             </h4>
           </div>
 
-          {/* Tags */}
+          {/* ⚠️ DISABLED: Tags not supported by current server API 
           <motion.div variants={fieldVariants}>
             <TagsInput
               value={formData.tags}
               onChange={(tags) => handleFieldChange('tags', tags)}
             />
           </motion.div>
+          */}
 
           {/* Notes */}
           <motion.div variants={fieldVariants}>

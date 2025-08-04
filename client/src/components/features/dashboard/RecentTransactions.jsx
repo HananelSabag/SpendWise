@@ -30,6 +30,7 @@ import { cn, dateHelpers } from '../../../utils/helpers';
  * 📋 Recent Transactions Main Component
  */
 const RecentTransactions = ({
+  transactions: propTransactions,
   onEdit,
   onDelete,
   onDuplicate,
@@ -46,15 +47,18 @@ const RecentTransactions = ({
   const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
 
-  // ✅ Get real transactions data
+  // ✅ Get real transactions data - prefer props over hook
   const { 
-    transactions, 
+    transactions: hookTransactions, 
     loading: isLoading, 
     refetch: refetchTransactions 
   } = useTransactions({
     pageSize: maxItems,
     enableAI: false // Disable AI for performance in dashboard
   });
+
+  // Use transactions from props if available (Dashboard data), fallback to hook
+  const transactions = propTransactions || hookTransactions || [];
 
   // ✅ State management
   const [searchQuery, setSearchQuery] = useState('');

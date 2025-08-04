@@ -54,14 +54,17 @@ export const getDefaultFormData = (initialData = null, mode = 'create') => {
     date: now.toISOString().split('T')[0],
     time: now.toTimeString().slice(0, 5),
     notes: '',
+    // ⚠️ DISABLED: tags not supported by current server API 
+    // tags: [],
     
-    // Recurring fields (for future use)
+    // Recurring fields (simplified - only what server supports)
     isRecurring: false,
-    recurringFrequency: 'monthly',
-    recurringInterval: 1,
-    recurringEndType: 'never',
-    recurringEndDate: '',
-    recurringMaxOccurrences: 12
+    recurringFrequency: 'monthly'
+    // ⚠️ DISABLED: Not supported by current server implementation
+    // recurringInterval: 1,
+    // recurringEndType: 'never', 
+    // recurringEndDate: '',
+    // recurringMaxOccurrences: 12
   };
 
   // If no initial data, return defaults
@@ -126,16 +129,19 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
   
   // ✅ CRITICAL: Check if this is a recurring transaction
   if (formData.isRecurring) {
-    // ✅ Format for recurring template API
+    // ✅ Format for recurring template API - FIXED TO MATCH SERVER EXPECTATIONS
     const recurringData = {
-      name: formData.name || formData.description?.trim() || 'Recurring Transaction',
+      name: formData.description?.trim() || 'Recurring Transaction', // Use description as name
       description: formData.description?.trim() || null,
       amount: finalAmount,
       type: formData.type,
-      category_name: formData.categoryName || null,
+      // ⚠️ DISABLED: category_name requires category lookup - for now use null
+      // category_name: formData.categoryName || null,
       interval_type: formData.recurringFrequency || 'monthly',
-      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || 1) : null,
-      day_of_week: formData.recurringFrequency === 'weekly' ? (formData.dayOfWeek || 1) : null,
+      // Only set day_of_month for monthly
+      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || new Date().getDate()) : null,
+      // Only set day_of_week for weekly  
+      day_of_week: formData.recurringFrequency === 'weekly' ? (formData.dayOfWeek || new Date().getDay()) : null,
       is_active: true,
       // Add marker to indicate this is recurring
       _isRecurring: true
@@ -159,6 +165,8 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     categoryId: formData.categoryId || null,
     date: formData.date,
     notes: formData.notes ? formData.notes.trim() : null
+    // ⚠️ DISABLED: tags not supported by current server API
+    // tags: formData.tags || []
   };
 
   // Remove null/undefined values except description which is required
