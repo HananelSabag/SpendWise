@@ -160,16 +160,28 @@ const transactionAPI = {
    * @returns {Promise<Object>} Created template
    */
   async createRecurringTemplate(data) {
-    // Add recurring-specific fields
-    const templateData = {
-      ...data,
-      intervalType: data.intervalType || 'monthly',
-      dayOfMonth: data.dayOfMonth || 1, // Default to 1st of month
-      startDate: data.startDate || new Date().toISOString().split('T')[0],
-      isActive: data.isActive !== undefined ? data.isActive : true
-    };
-    
-    return this.create('recurring', templateData);
+    try {
+      // ✅ FIX: Use correct server endpoint for recurring templates
+      const endpoint = `/transactions/templates`;
+      console.log('📤 Creating recurring template:', { endpoint, data });
+      
+      // Add recurring-specific fields
+      const templateData = {
+        ...data,
+        interval_type: data.interval_type || data.intervalType || 'monthly',
+        day_of_month: data.day_of_month || data.dayOfMonth || 1,
+        day_of_week: data.day_of_week || data.dayOfWeek || null,
+        start_date: data.start_date || data.startDate || new Date().toISOString().split('T')[0],
+        is_active: data.is_active !== undefined ? data.is_active : (data.isActive !== undefined ? data.isActive : true)
+      };
+      
+      const response = await apiClient.client.post(endpoint, templateData);
+      console.log('✅ Recurring template created successfully:', response.data);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Recurring template creation failed:', error);
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
   },
 
   /**

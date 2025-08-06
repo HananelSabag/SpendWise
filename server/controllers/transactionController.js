@@ -551,6 +551,7 @@ const transactionController = {
       amount,
       type,
       category_name,
+      categoryId,
       interval_type,
       day_of_month,
       day_of_week,
@@ -566,10 +567,14 @@ const transactionController = {
         });
       }
 
-      // Get or create category
-      let categoryId = null;
-      if (category_name) {
-        // Try to find existing category
+      // ✅ IMPROVED: Get or create category with better logic
+      let finalCategoryId = null;
+      
+      // If categoryId is provided, use it directly
+      if (categoryId) {
+        finalCategoryId = categoryId;
+      } else if (category_name) {
+        // Try to find existing category by name
         const categoryQuery = `
           SELECT id FROM categories 
           WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
@@ -579,7 +584,22 @@ const transactionController = {
         const categoryResult = await db.query(categoryQuery, [category_name, userId]);
         
         if (categoryResult.rows.length > 0) {
-          categoryId = categoryResult.rows[0].id;
+          finalCategoryId = categoryResult.rows[0].id;
+        } else {
+          // Create new category if not found
+          const createCategoryQuery = `
+            INSERT INTO categories (name, user_id, created_at, updated_at)
+            VALUES ($1, $2, NOW(), NOW())
+            RETURNING id
+          `;
+          const createResult = await db.query(createCategoryQuery, [category_name, userId]);
+          finalCategoryId = createResult.rows[0].id;
+          
+          logger.info('Created new category for recurring template', {
+            userId,
+            categoryName: category_name,
+            categoryId: finalCategoryId
+          });
         }
       }
 
@@ -599,7 +619,7 @@ const transactionController = {
         description || null,
         amount,
         type,
-        categoryId,
+        finalCategoryId,
         interval_type,
         day_of_month || null,
         day_of_week || null,
@@ -609,13 +629,21 @@ const transactionController = {
       const result = await db.query(insertQuery, values);
       const template = result.rows[0];
 
-      // ✅ AUTO-GENERATE 3 MONTHS OF UPCOMING TRANSACTIONS
+      // ✅ GENERATE BOTH CURRENT AND UPCOMING TRANSACTIONS
+      const today = new Date();
+      const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      // Generate current month transactions (actual transactions)
+      const currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
+      
+      // Generate upcoming transactions (status: 'upcoming')
       const upcomingTransactions = await generateUpcomingTransactions(template);
 
-      logger.info('Recurring template created with upcoming transactions', {
+      logger.info('Recurring template created with current and upcoming transactions', {
         userId,
         templateId: template.id,
         name: template.name,
+        currentCount: currentTransactions.length,
         upcomingCount: upcomingTransactions.length
       });
 
@@ -623,9 +651,10 @@ const transactionController = {
         success: true,
         data: {
           template,
+          currentTransactions,
           upcomingTransactions
         },
-        message: `Recurring template created with ${upcomingTransactions.length} upcoming transactions`
+        message: `Recurring template created with ${currentTransactions.length} current and ${upcomingTransactions.length} upcoming transactions`
       });
     } catch (error) {
       logger.error('Failed to create recurring template', {
@@ -1038,6 +1067,72 @@ function calculateRecurringDates(template, fromDate, daysLookAhead) {
 }
 
 /**
+ * 🏠 GENERATE CURRENT MONTH TRANSACTIONS
+ * Generate actual transactions for current month (not upcoming status)
+ */
+async function generateCurrentMonthTransactions(template, startDate, endDate) {
+  const currentTransactions = [];
+  
+  try {
+    // Calculate current month dates based on template settings
+    const currentDates = calculateRecurringDatesInRange(template, startDate, endDate);
+    
+    for (const dueDate of currentDates) {
+      // Check if transaction already exists for this date and template
+      const existsQuery = `
+        SELECT id FROM transactions 
+        WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL
+      `;
+      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      
+      if (existsResult.rows.length === 0) {
+        // Create new current transaction (normal status)
+        const transactionData = {
+          user_id: template.user_id,
+          category_id: template.category_id,
+          amount: template.amount,
+          type: template.type,
+          description: template.description || template.name,
+          notes: `Generated from recurring template: ${template.name}`,
+          date: dueDate.toISOString().split('T')[0],
+          template_id: template.id
+          // No status field = normal confirmed transaction
+        };
+
+        const insertQuery = `
+          INSERT INTO transactions (
+            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at
+        `;
+
+        const values = [
+          transactionData.user_id,
+          transactionData.category_id,
+          transactionData.amount,
+          transactionData.type,
+          transactionData.description,
+          transactionData.notes,
+          transactionData.date,
+          transactionData.template_id
+        ];
+
+        const result = await db.query(insertQuery, values);
+        currentTransactions.push(result.rows[0]);
+      }
+    }
+    
+    return currentTransactions;
+  } catch (error) {
+    logger.error('Failed to generate current month transactions', { 
+      templateId: template.id, 
+      error: error.message 
+    });
+    return [];
+  }
+}
+
+/**
  * ✅ SMART 3-MONTH UPCOMING GENERATION SYSTEM
  * Generate upcoming transactions for next 3 months from template
  */
@@ -1105,6 +1200,40 @@ async function generateUpcomingTransactions(template) {
     });
     return [];
   }
+}
+
+/**
+ * Calculate recurring dates within a specific date range
+ */
+function calculateRecurringDatesInRange(template, startDate, endDate) {
+  const dates = [];
+  const { interval_type, day_of_month, day_of_week } = template;
+  
+  let currentDate = new Date(startDate);
+  
+  while (currentDate <= endDate) {
+    let shouldAdd = false;
+    
+    if (interval_type === 'daily') {
+      shouldAdd = true;
+    } else if (interval_type === 'weekly') {
+      shouldAdd = (day_of_week === null || currentDate.getDay() === day_of_week);
+    } else if (interval_type === 'monthly') {
+      shouldAdd = (day_of_month === null || currentDate.getDate() === day_of_month);
+    }
+    
+    if (shouldAdd) {
+      dates.push(new Date(currentDate));
+    }
+    
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    // Safety check
+    if (dates.length > 50) break;
+  }
+  
+  return dates;
 }
 
 /**

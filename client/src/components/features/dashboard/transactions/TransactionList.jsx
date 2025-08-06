@@ -143,6 +143,15 @@ const TransactionList = ({
   const processedTransactions = useMemo(() => {
     let result = [...transactions];
 
+    // ✅ FILTER OUT FUTURE TRANSACTIONS - Only show past/present
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    result = result.filter(transaction => {
+      const transactionDate = new Date(transaction.date || transaction.created_at);
+      const transactionDay = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), transactionDate.getDate());
+      return transactionDay <= today; // Only show today and past transactions
+    });
+
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();

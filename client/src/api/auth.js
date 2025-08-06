@@ -223,24 +223,8 @@ export const authAPI = {
         throw new Error('Invalid server response: no user data');
       }
       
-      // ✅ DEBUG: Log raw user data from login before normalization
-      console.log('🔍 AUTH LOGIN - Raw user from server:', user);
-      console.log('🔍 AUTH LOGIN - User preferences before normalization:', {
-        language_preference: user?.language_preference,
-        theme_preference: user?.theme_preference,
-        currency_preference: user?.currency_preference
-      });
-      
-      // ✅ CLEANED: Use centralized user normalization
+      // ✅ Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
-      
-      // ✅ DEBUG: Log normalized user from login
-      console.log('🔍 AUTH LOGIN - Normalized user:', normalizedUser);
-      console.log('🔍 AUTH LOGIN - User preferences after normalization:', {
-        language_preference: normalizedUser?.language_preference,
-        theme_preference: normalizedUser?.theme_preference,
-        currency_preference: normalizedUser?.currency_preference
-      });
       
       // Store tokens if provided
       if (token) {

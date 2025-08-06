@@ -265,16 +265,8 @@ class User {
       // Find user by email
       const user = await this.findByEmail(email);
       
-      // 🔍 DEBUG: Log the exact user data we got
-      console.log('🔍 DEBUG: User found:', {
-        email: user?.email,
-        hasPasswordHash: !!user?.password_hash,
-        passwordHashLength: user?.password_hash?.length,
-        oauthProvider: user?.oauth_provider,
-        googleId: user?.google_id,
-        isActive: user?.is_active,
-        emailVerified: user?.email_verified
-      });
+      // ✅ Basic user validation logging
+      console.log('🔍 Authentication attempt for:', user?.email);
 
       if (!user) {
         throw new Error('Invalid email or password');
@@ -284,16 +276,10 @@ class User {
         throw new Error('Account is deactivated');
       }
 
-      // 🔍 DEBUG: Check user authentication methods  
-      const hasPassword = !!user.password_hash;
+      // ✅ Check user authentication methods  
+      const hasPassword = !!(user.password_hash && user.password_hash.length > 0);
       const isGoogleUser = user.oauth_provider === 'google' || !!user.google_id;
-      
-      console.log('🔍 DEBUG: Authentication methods available:', {
-        hasPassword: hasPassword,
-        isGoogleUser: isGoogleUser,
-        oauthProvider: user.oauth_provider,
-        googleId: user.google_id ? 'EXISTS' : 'NULL'
-      });
+      const isHybridUser = hasPassword && isGoogleUser;
 
       // ✅ HYBRID SYSTEM: Users with both password and Google ID can use either method
 
@@ -323,17 +309,16 @@ class User {
         }
       }
       
+      // ✅ Log authentication type for monitoring
+      if (isHybridUser) {
+        console.log('✅ Hybrid user authentication (Google + password)');
+      }
+      
       // ✅ HYBRID LOGIN SUCCESS: User has password, allow login regardless of OAuth provider
-      console.log('✅ Password authentication available - proceeding with login');
 
       // Password validation already handled above - proceed with password verification
 
-      // 🔍 DEBUG: About to compare passwords
-      console.log('🔍 DEBUG: About to compare passwords:', {
-        providedPasswordLength: password?.length,
-        storedHashLength: user.password_hash?.length,
-        hashStartsWith: user.password_hash?.substring(0, 7)
-      });
+      // ✅ Password verification
 
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
 

@@ -135,8 +135,9 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
       description: formData.description?.trim() || null,
       amount: finalAmount,
       type: formData.type,
-      // ⚠️ DISABLED: category_name requires category lookup - for now use null
-      // category_name: formData.categoryName || null,
+      // ✅ FIXED: Include category information for recurring templates
+      category_name: formData.categoryName || null,
+      categoryId: formData.categoryId || null,
       interval_type: formData.recurringFrequency || 'monthly',
       // Only set day_of_month for monthly
       day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || new Date().getDate()) : null,

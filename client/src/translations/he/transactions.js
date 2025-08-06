@@ -550,6 +550,7 @@ export default {
     valid: "תקין",
     saving: "שומר...",
     createSuccess: "העסקה נוצרה בהצלחה",
+    recurringCreateSuccess: "תבנית העסקה החוזרת נוצרה בהצלחה!",
     unsavedChanges: "יש לך שינויים שלא נשמרו"
   },
 

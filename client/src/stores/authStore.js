@@ -67,14 +67,7 @@ export const useAuthStore = create(
               if (result.success) {
                 const userData = result.user;
                 
-                // ✅ DEBUG: Log user data to understand structure
-                console.log('🔍 Auth Store - Login success, userData received:', userData);
-                console.log('🔍 Auth Store - Available user fields:', Object.keys(userData || {}));
-                console.log('🔍 Auth Store - User preferences:', {
-                  language_preference: userData?.language_preference,
-                  theme_preference: userData?.theme_preference,
-                  currency_preference: userData?.currency_preference
-                });
+                // ✅ Login success - user data received
                 
                 set((state) => {
                   state.isAuthenticated = true;

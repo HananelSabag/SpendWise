@@ -6,19 +6,16 @@
 
 import { useEffect } from 'react';
 import getAuthRecoveryManager from '../../utils/authRecoveryManager';
-import AuthRecoveryTestUtils from '../../utils/authRecoveryTestUtils';
 
 const AuthRecoveryProvider = ({ children }) => {
   useEffect(() => {
     // Initialize auth recovery manager
     const recoveryManager = getAuthRecoveryManager();
     
-    // Make it globally available for debugging
-    window.authRecoveryManager = recoveryManager;
-    window.AuthRecoveryTestUtils = AuthRecoveryTestUtils;
-    
-    console.log('🔄 Auth Recovery Manager initialized and globally available');
-    console.log('🧪 Test utilities available via: window.AuthRecoveryTestUtils');
+    // Make it globally available for debugging (only in development)
+    if (import.meta.env.DEV) {
+      window.authRecoveryManager = recoveryManager;
+    }
 
     // Cleanup on unmount
     return () => {

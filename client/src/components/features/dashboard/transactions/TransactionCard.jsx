@@ -11,7 +11,7 @@ import {
   TrendingUp, TrendingDown, Edit, Trash2, Copy, 
   ChevronDown, ChevronUp, Star, Tag, MapPin, 
   Calendar, Clock, Receipt, Sparkles, Brain,
-  AlertCircle, Info, Target
+  AlertCircle, Info, Target, Repeat
 } from 'lucide-react';
 
 // ✅ Import Zustand stores

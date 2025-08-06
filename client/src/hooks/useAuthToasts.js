@@ -21,10 +21,22 @@ export const useAuthToasts = () => {
     },
 
     loginFailed: (error) => {
-      // ✅ FIX: Always use English translation keys, never use error message as key
-      const message = error?.code === 'INVALID_CREDENTIALS'
-        ? t('auth.invalidCredentials', 'Invalid email or password. Please try again.')
-        : t('auth.loginFailed', 'Login failed. Please check your credentials.');
+      // ✅ FIX: Handle specific error types and avoid using raw error messages as translation keys
+      let message;
+      
+      if (error?.code === 'INVALID_CREDENTIALS') {
+        message = t('auth.invalidCredentials', 'Invalid email or password. Please try again.');
+      } else if (error?.message && error.message.includes('Google sign-in')) {
+        // Hybrid authentication error - use the server message directly
+        message = error.message;
+      } else if (error?.message && typeof error.message === 'string') {
+        // For other server errors, use the message directly (don't translate)
+        message = error.message;
+      } else {
+        // Default fallback
+        message = t('auth.loginFailed', 'Login failed. Please check your credentials.');
+      }
+      
       toast.error(message);
     },
 

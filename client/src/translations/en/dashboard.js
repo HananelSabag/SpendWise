@@ -38,7 +38,9 @@ export default {
     transactionId: 'Transaction ID',
     fullDate: 'Full Date',
     aiInsights: 'AI Insights', 
-    created: 'Created'
+    created: 'Created',
+    recurring: 'Recurring',
+    recurringAmount: 'Recurring Amount'
   },
 
   // ✅ FIXED: Account-related translations

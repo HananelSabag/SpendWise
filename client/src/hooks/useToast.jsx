@@ -284,9 +284,19 @@ export const useToast = () => {
   }, [showToast]);
 
   const error = useCallback((message, options = {}) => {
-    const errorMessage = typeof message === 'string' 
-      ? (t(message) || message)
-      : (message?.message || t('common.error') || 'An error occurred');
+    let errorMessage;
+    
+    if (typeof message === 'string') {
+      // Only try to translate if it looks like a translation key (contains dots and is short)
+      if (message.includes('.') && message.length < 100) {
+        errorMessage = t(message) || message;
+      } else {
+        // Raw error message - use as is, don't try to translate
+        errorMessage = message;
+      }
+    } else {
+      errorMessage = message?.message || t('common.error') || 'An error occurred';
+    }
     
     return showToast(errorMessage, 'error', { duration: 6000, ...options });
   }, [showToast, t]);

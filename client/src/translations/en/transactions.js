@@ -550,6 +550,7 @@ export default {
     valid: "Valid",
     saving: "Saving...",
     createSuccess: "Transaction created successfully",
+    recurringCreateSuccess: "Recurring transaction template created successfully!",
     unsavedChanges: "You have unsaved changes"
   },
 

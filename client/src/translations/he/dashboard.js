@@ -84,7 +84,9 @@ export default {
     transactionId: 'מזהה עסקה',
     fullDate: 'תאריך מלא',
     aiInsights: 'תובנות AI',
-    created: 'נוצר'
+    created: 'נוצר',
+    recurring: 'חוזר',
+    recurringAmount: 'סכום חוזר'
   },
 
   // ✅ FIXED: Insights translations
