@@ -30,18 +30,35 @@ class GoogleOAuthManager {
     this.isLoading = true;
     
     try {
-      console.log('🔍 Initializing Google OAuth with Client ID:', GOOGLE_CONFIG.CLIENT_ID);
+      // 🔍 PRODUCTION DEBUG: Enhanced Google OAuth debugging
+      console.log('🔍 Google OAuth Environment Debug:', {
+        clientId: GOOGLE_CONFIG.CLIENT_ID ? 'SET' : 'MISSING',
+        clientIdValue: GOOGLE_CONFIG.CLIENT_ID?.substring(0, 20) + '...',
+        environment: import.meta.env.MODE,
+        isDev: import.meta.env.DEV,
+        isProd: import.meta.env.PROD,
+        domain: window.location.hostname,
+        protocol: window.location.protocol,
+        allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('GOOGLE'))
+      });
       
       // Check if Client ID is configured
       if (!GOOGLE_CONFIG.CLIENT_ID || GOOGLE_CONFIG.CLIENT_ID === 'undefined') {
+        console.error('❌ Google Client ID not configured');
         throw new Error('Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID environment variable.');
       }
       
+      console.log('✅ Google Client ID configured, proceeding with initialization');
+      
       // Load Google Identity Services script
+      console.log('🔍 Loading Google script...');
       await this.loadGoogleScript();
+      console.log('✅ Google script loaded');
       
       // Initialize Google OAuth
       if (window.google?.accounts?.id) {
+        console.log('✅ Google Identity Services available');
+        
         const initConfig = {
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           callback: this.handleCredentialResponse.bind(this),
@@ -51,12 +68,18 @@ class GoogleOAuthManager {
           itp_support: true
         };
         
-        console.log('🔍 Google OAuth init config:', initConfig);
+        console.log('🔍 Google OAuth init config:', {
+          ...initConfig,
+          client_id: initConfig.client_id?.substring(0, 20) + '...' // Hide full client ID
+        });
+        
         window.google.accounts.id.initialize(initConfig);
         
         this.isInitialized = true;
         console.log('✅ Google OAuth initialized successfully');
       } else {
+        console.error('❌ Google Identity Services not available after script load');
+        console.error('Window.google:', window.google);
         throw new Error('Google Identity Services failed to load');
       }
     } catch (error) {
@@ -70,8 +93,11 @@ class GoogleOAuthManager {
   // Load Google Script dynamically
   loadGoogleScript() {
     return new Promise((resolve, reject) => {
+      console.log('🔍 Loading Google script from:', GOOGLE_CONFIG.SCRIPT_URL);
+      
       // Check if already loaded
       if (window.google?.accounts?.id) {
+        console.log('✅ Google script already loaded');
         resolve();
         return;
       }
@@ -79,20 +105,44 @@ class GoogleOAuthManager {
       // Check if script already exists
       const existingScript = document.querySelector(`script[src="${GOOGLE_CONFIG.SCRIPT_URL}"]`);
       if (existingScript) {
-        existingScript.addEventListener('load', resolve);
-        existingScript.addEventListener('error', reject);
+        console.log('🔍 Google script exists but not loaded yet, waiting...');
+        existingScript.addEventListener('load', () => {
+          console.log('✅ Existing Google script loaded');
+          resolve();
+        });
+        existingScript.addEventListener('error', (error) => {
+          console.error('❌ Existing Google script failed to load:', error);
+          reject(error);
+        });
         return;
       }
 
       // Create and load script
+      console.log('🔍 Creating new Google script element');
       const script = document.createElement('script');
       script.src = GOOGLE_CONFIG.SCRIPT_URL;
       script.async = true;
       script.defer = true;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load Google OAuth script'));
+      script.onload = () => {
+        console.log('✅ New Google script loaded successfully');
+        // Wait a bit for Google to initialize
+        setTimeout(() => {
+          if (window.google?.accounts?.id) {
+            console.log('✅ Google Identity Services ready');
+            resolve();
+          } else {
+            console.error('❌ Google Identity Services not available after script load');
+            reject(new Error('Google Identity Services not available after script load'));
+          }
+        }, 100);
+      };
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google OAuth script:', error);
+        reject(new Error('Failed to load Google OAuth script'));
+      };
       
       document.head.appendChild(script);
+      console.log('🔍 Google script appended to head');
     });
   }
 
@@ -116,37 +166,52 @@ class GoogleOAuthManager {
 
   // Trigger Google Sign-In
   async signIn() {
-    if (!this.isInitialized) {
-      console.log('🔍 Google OAuth not initialized, initializing now...');
-      await this.initialize();
-    }
+    try {
+      console.log('🔍 Google Sign-In requested');
+      
+      if (!this.isInitialized) {
+        console.log('🔍 Google OAuth not initialized, initializing now...');
+        await this.initialize();
+      }
 
-    return new Promise((resolve, reject) => {
-      try {
-        console.log('🔍 Starting Google Sign-In process...');
-        
-        // Store resolver for callback
-        this.credentialResolver = resolve;
-        
-        // ✅ Use prompt method with better error handling
-        window.google.accounts.id.prompt((notification) => {
-          console.log('🔍 Google Sign-In notification:', notification);
+      console.log('🔍 Google OAuth initialization status:', {
+        isInitialized: this.isInitialized,
+        windowGoogle: !!window.google,
+        accountsId: !!window.google?.accounts?.id,
+        prompt: !!window.google?.accounts?.id?.prompt
+      });
+
+      return new Promise((resolve, reject) => {
+        try {
+          console.log('🔍 Starting Google Sign-In process...');
           
-          if (notification.isNotDisplayed()) {
-            console.error('❌ Google Sign-In popup was blocked or dismissed');
-            this.credentialResolver = null;
-            reject(new Error('Google Sign-In popup was blocked. Please allow popups and try again.'));
-          } else if (notification.isSkippedMoment()) {
-            console.error('❌ Google Sign-In was skipped');
-            this.credentialResolver = null;
-            reject(new Error('Google Sign-In was skipped. Please try clicking the Google sign-in button again.'));
-          } else if (notification.isDismissedMoment()) {
-            console.error('❌ Google Sign-In was dismissed');
-            this.credentialResolver = null;
-            reject(new Error('Google Sign-In was dismissed. Please try again.'));
-          }
-          // If successful, handleCredentialResponse will be called
-        });
+          // Store resolver for callback
+          this.credentialResolver = resolve;
+          
+          // ✅ Use prompt method with better error handling
+          window.google.accounts.id.prompt((notification) => {
+            console.log('🔍 Google Sign-In notification:', {
+              type: notification.getMomentType(),
+              reason: notification.getNotDisplayedReason(),
+              skippedReason: notification.getSkippedReason(),
+              dismissedReason: notification.getDismissedReason()
+            });
+            
+            if (notification.isNotDisplayed()) {
+              console.error('❌ Google Sign-In popup was blocked or dismissed:', notification.getNotDisplayedReason());
+              this.credentialResolver = null;
+              reject(new Error(`Google Sign-In popup was blocked: ${notification.getNotDisplayedReason()}`));
+            } else if (notification.isSkippedMoment()) {
+              console.error('❌ Google Sign-In was skipped:', notification.getSkippedReason());
+              this.credentialResolver = null;
+              reject(new Error(`Google Sign-In was skipped: ${notification.getSkippedReason()}`));
+            } else if (notification.isDismissedMoment()) {
+              console.error('❌ Google Sign-In was dismissed:', notification.getDismissedReason());
+              this.credentialResolver = null;
+              reject(new Error(`Google Sign-In was dismissed: ${notification.getDismissedReason()}`));
+            }
+            // If successful, handleCredentialResponse will be called
+          });
         
         // Timeout after 60 seconds
         setTimeout(() => {
@@ -163,6 +228,10 @@ class GoogleOAuthManager {
         reject(new Error(`Google Sign-In failed: ${error.message}`));
       }
     });
+    } catch (error) {
+      console.error('❌ Google Sign-In outer error:', error);
+      throw new Error(`Google Sign-In initialization failed: ${error.message}`);
+    }
   }
 
   // ✅ Simplified popup method - no longer needed but keeping for compatibility

@@ -104,30 +104,37 @@ const Login = () => {
     }
   }, [validateForm, login, authToasts, t, location, navigate]);
 
-  // ✅ Handle Google login - FIXED
+  // ✅ Handle Google login - FIXED WITH DEBUG
   const handleGoogleLogin = useCallback(async () => {
+    console.log('🔍 Google login button clicked');
     setIsGoogleLoading(true);
     
     try {
+      console.log('🔍 Calling googleLogin from auth store...');
       // ✅ Use auth store method instead of API directly
       const result = await googleLogin();
       
+      console.log('🔍 Google login result:', result);
+      
       if (result.success) {
+        console.log('✅ Google login successful');
         authToasts.googleLoginSuccess(result.user);
         
         // ✅ FIXED: Navigate to dashboard with proper fallback
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
+        console.error('❌ Google login failed:', result.error);
         authToasts.googleLoginFailed();
         setErrors({ 
           general: result.error?.message || t('googleLoginFailed')
         });
       }
     } catch (error) {
+      console.error('❌ Google login error:', error);
       authToasts.googleLoginFailed();
       setErrors({ 
-        general: t('googleLoginError')
+        general: error.message || t('googleLoginError')
       });
     } finally {
       setIsGoogleLoading(false);
