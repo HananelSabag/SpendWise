@@ -280,6 +280,20 @@ class User {
       const hasPassword = !!(user.password_hash && user.password_hash.length > 0);
       const isGoogleUser = user.oauth_provider === 'google' || !!user.google_id;
       const isHybridUser = hasPassword && isGoogleUser;
+      
+      // 🔍 URGENT DEBUG: Check why hasPassword is false for hybrid user
+      console.log('🔍 URGENT DEBUG - Authentication Check:', {
+        email: user.email,
+        hasPasswordHash: !!user.password_hash,
+        passwordHashLength: user.password_hash?.length,
+        passwordHashType: typeof user.password_hash,
+        passwordHashPreview: user.password_hash ? user.password_hash.substring(0, 10) + '...' : 'NULL',
+        hasPassword: hasPassword,
+        isGoogleUser: isGoogleUser,
+        isHybridUser: isHybridUser,
+        oauthProvider: user.oauth_provider,
+        googleId: user.google_id ? 'EXISTS' : 'NULL'
+      });
 
       // ✅ HYBRID SYSTEM: Users with both password and Google ID can use either method
 
