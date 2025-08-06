@@ -10,7 +10,7 @@ class KeepAliveService {
 
   start() {
     if (!this.isEnabled || !this.appUrl) {
-      console.log('Keep-alive service disabled');
+      logger.info('Keep-alive service disabled');
       return;
     }
 
@@ -19,7 +19,7 @@ class KeepAliveService {
       this.pingServer();
     });
 
-    console.log('Keep-alive service started');
+    logger.info('Keep-alive service started');
   }
 
   pingServer() {
@@ -29,7 +29,7 @@ class KeepAliveService {
     const client = url.startsWith('https:') ? https : http;
     
     client.get(url, (res) => {
-      console.log(`Keep-alive ping: ${res.statusCode}`);
+      logger.debug(`Keep-alive ping: ${res.statusCode}`);
     }).on('error', (err) => {
       console.error('Keep-alive ping failed:', err.message);
     });

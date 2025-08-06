@@ -21,11 +21,11 @@ const transactionController = {
     const days = parseInt(req.query.days) || 30;
 
     try {
-      // Get summary data
-      const summary = await Transaction.getSummary(userId, days);
-      
-      // Get recent transactions
-      const recentTransactions = await Transaction.getRecent(userId, 10);
+      // ✅ PERFORMANCE FIX: Get all dashboard data in parallel
+      const [summary, recentTransactions] = await Promise.all([
+        Transaction.getSummary(userId, days),
+        Transaction.getRecent(userId, 10)
+      ]);
 
       res.json({
         success: true,
@@ -112,12 +112,14 @@ const transactionController = {
         };
       };
 
-      // Get recurring and one-time data
-      const recurring = await getRecurringMonthlyTotals();
-      const todayOneTime = await getOneTimeTransactions(startOfToday);
-      const weekOneTime = await getOneTimeTransactions(startOfWeek);
-      const monthOneTime = await getOneTimeTransactions(startOfMonth);
-      const yearOneTime = await getOneTimeTransactions(startOfYear);
+      // ✅ PERFORMANCE FIX: Get all data in parallel instead of sequential
+      const [recurring, todayOneTime, weekOneTime, monthOneTime, yearOneTime] = await Promise.all([
+        getRecurringMonthlyTotals(),
+        getOneTimeTransactions(startOfToday),
+        getOneTimeTransactions(startOfWeek),
+        getOneTimeTransactions(startOfMonth),
+        getOneTimeTransactions(startOfYear)
+      ]);
 
       // Calculate daily recurring rate
       const dailyRecurringIncome = recurring.monthlyIncome / daysInMonth;

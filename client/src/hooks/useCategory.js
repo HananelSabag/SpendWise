@@ -383,8 +383,8 @@ export const useCategory = (type = null) => {
       }
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 60 * 60 * 1000, // 1 hour - categories rarely change
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 
   // ✅ Category analytics query - temporarily disabled to prevent crashes
@@ -411,7 +411,7 @@ export const useCategory = (type = null) => {
       return response.data;
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes - transactions don't change frequently
   });
 
   // ✅ Smart category suggestions
@@ -424,7 +424,7 @@ export const useCategory = (type = null) => {
       return suggestions;
     },
     enabled: isAuthenticated && aiEnabled && !!user?.id && !!localStorage.getItem('accessToken'),
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 2 * 60 * 60 * 1000, // 2 hours - AI suggestions change rarely
   });
 
   // ✅ Enhanced category creation mutation

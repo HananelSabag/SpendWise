@@ -77,37 +77,7 @@ router.get('/balance/history/:period',
   transactionController.getDashboardData
 );
 
-/**
- * 🔍 DEBUGGING ENDPOINTS (REMOVE IN PRODUCTION)
- */
-
-// Debug endpoint to test template delete route
-router.get('/debug/templates/:id',
-  (req, res) => {
-    const logger = require('../utils/logger');
-    logger.info('🔍 DEBUG TEMPLATE ENDPOINT HIT', {
-      templateId: req.params.id,
-      userId: req.user?.id,
-      method: req.method,
-      url: req.originalUrl,
-      query: req.query,
-      headers: req.headers,
-      timestamp: new Date().toISOString()
-    });
-    
-    res.json({
-      success: true,
-      message: 'Debug endpoint working',
-      data: {
-        templateId: req.params.id,
-        userId: req.user?.id,
-        timestamp: new Date().toISOString(),
-        receivedQuery: req.query,
-        receivedHeaders: req.headers
-      }
-    });
-  }
-);
+// Debug endpoint removed for production security
 
 /**
  * Transaction Query Routes

@@ -196,36 +196,36 @@ app.get('/health', async (req, res) => {
 // API routes with versioning
 const API_VERSION = '/api/v1';
 try {
-  console.log('Loading user routes...');
+  logger.debug('Loading user routes...');
   app.use(`${API_VERSION}/users`, require('./routes/userRoutes'));
-  console.log('✅ User routes loaded');
+  logger.debug('✅ User routes loaded');
   
-  console.log('Loading transaction routes...');
+  logger.debug('Loading transaction routes...');
   app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
-  console.log('✅ Transaction routes loaded');
+  logger.debug('✅ Transaction routes loaded');
   
-  console.log('Loading category routes...');
+  logger.debug('Loading category routes...');
   app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
-  console.log('✅ Category routes loaded');
+  logger.debug('✅ Category routes loaded');
   
-  console.log('Loading export routes...');
+  logger.debug('Loading export routes...');
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
-  console.log('✅ Export routes loaded');
+  logger.debug('✅ Export routes loaded');
 
   // ✅ FIXED: Re-enable analytics routes 
   try {
-    console.log('Loading analytics routes...');
+    logger.debug('Loading analytics routes...');
     app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
-    console.log('✅ Analytics routes loaded');
+    logger.debug('✅ Analytics routes loaded');
   } catch (error) {
     console.error('❌ Analytics routes failed:', error.message);
   }
 
   // ✅ ADMIN ROUTES - Add missing admin routes
   try {
-    console.log('Loading admin routes...');
+    logger.debug('Loading admin routes...');
     app.use(`${API_VERSION}/admin`, require('./routes/adminRoutes'));
-    console.log('✅ Admin routes loaded');
+    logger.debug('✅ Admin routes loaded');
   } catch (error) {
     console.error('❌ Admin routes failed:', error.message);
   }
@@ -238,7 +238,7 @@ try {
 // Safe onboarding routes with error handling
 try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
-  console.log('✅ Onboarding routes loaded');
+  logger.debug('✅ Onboarding routes loaded');
 } catch (error) {
   console.error('❌ CRITICAL: Onboarding routes failed to load:', error.message);
   console.error('❌ CRITICAL: Onboarding route error stack:', error.stack);
@@ -402,7 +402,7 @@ const startServer = async () => {
   }
 };
 
-console.log('STARTING SERVER...');
+logger.info('STARTING SERVER...');
 startServer();
 
 module.exports = app;

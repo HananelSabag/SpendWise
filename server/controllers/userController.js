@@ -11,14 +11,10 @@ const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const emailService = require('../services/emailService');
-const crypto = require('crypto');
+const { generateVerificationToken, generateRandomPassword } = require('../utils/tokenGenerator');
 const db = require('../config/db');
 
-// Enhanced token generation with better entropy
-const generateVerificationToken = () => {
-  // Generate cryptographically secure token (32 chars)
-  return crypto.randomBytes(16).toString('hex');
-};
+// Token generation now handled by unified utility
 
 const userController = {
   /**
@@ -316,7 +312,7 @@ const userController = {
     }
 
     try {
-      // TODO: Verify Google ID token with Google's API
+      // NOTE: Consider implementing Google ID token verification for enhanced security
       // For now, we'll trust the frontend verification
       logger.info('🔐 Google OAuth attempt', { email, name });
 
@@ -337,7 +333,7 @@ const userController = {
         // ✅ EDGE CASE: New Google user - create with Google OAuth
         logger.info('🆕 Creating new Google OAuth user', { email });
         const username = name || email.split('@')[0];
-        const randomPassword = crypto.randomBytes(32).toString('hex');
+        const randomPassword = generateRandomPassword();
 
         user = await User.create(email, username, randomPassword);
         

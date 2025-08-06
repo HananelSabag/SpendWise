@@ -43,7 +43,7 @@ router.post('/complete', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    console.log('🚀 [ONBOARDING] Route called - attempting to complete onboarding', { 
+    logger.info('🚀 [ONBOARDING] Route called - attempting to complete onboarding', { 
       userId, 
       userObject: req.user,
       body: req.body 
@@ -63,12 +63,12 @@ router.post('/complete', auth, async (req, res) => {
       });
     }
 
-    console.log('🔍 [ONBOARDING] About to call User.markOnboardingComplete');
+    logger.info('🔍 [ONBOARDING] About to call User.markOnboardingComplete');
     
     // Mark onboarding as complete
     const updatedUser = await User.markOnboardingComplete(userId);
     
-    console.log('✅ [ONBOARDING] User.markOnboardingComplete returned:', updatedUser);
+    logger.info('✅ [ONBOARDING] User.markOnboardingComplete returned:', updatedUser);
     
     logger.info('✅ [ONBOARDING] User completed onboarding successfully', { 
       userId, 

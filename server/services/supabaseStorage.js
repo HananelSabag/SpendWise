@@ -4,7 +4,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const crypto = require('crypto');
+const { generateShortToken } = require('../utils/tokenGenerator');
 
 // Extract Supabase URL from DATABASE_URL if SUPABASE_URL is not set
 const getSupabaseUrl = () => {
@@ -49,7 +49,7 @@ const getSupabaseClient = () => {
 const uploadProfilePicture = async (file, userId) => {
   try {
     // Generate unique filename
-    const uniqueSuffix = crypto.randomBytes(16).toString('hex');
+    const uniqueSuffix = generateShortToken();
     const fileExtension = file.originalname.split('.').pop().toLowerCase();
     const fileName = `profile-${userId}-${uniqueSuffix}.${fileExtension}`;
     
@@ -72,7 +72,7 @@ const uploadProfilePicture = async (file, userId) => {
       .from('profiles')
       .getPublicUrl(fileName);
 
-    console.log('✅ [SUPABASE STORAGE] Profile picture uploaded:', {
+    logger.info('✅ [SUPABASE STORAGE] Profile picture uploaded:', {
       fileName,
       publicUrl: publicUrlData.publicUrl,
       userId
@@ -106,7 +106,7 @@ const deleteProfilePicture = async (fileName) => {
     if (error) {
       console.warn('⚠️ [SUPABASE STORAGE] Delete failed:', error.message);
     } else {
-      console.log('✅ [SUPABASE STORAGE] File deleted:', fileName);
+      logger.info('✅ [SUPABASE STORAGE] File deleted:', fileName);
     }
   } catch (error) {
     console.warn('⚠️ [SUPABASE STORAGE] Delete error:', error.message);

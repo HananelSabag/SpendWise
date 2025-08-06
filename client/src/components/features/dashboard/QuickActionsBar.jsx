@@ -142,10 +142,10 @@ const QuickActionsBar = ({ className = '' }) => {
       const smartCategory = getSmartCategory(description, activeType);
       const categoryId = await ensureCategory(smartCategory, activeType);
 
-      // Prepare transaction data - FIXED: Use correct field names
+      // Prepare transaction data - FIXED: Always send positive amounts, server differentiates by type
       const transactionData = {
         type: activeType,
-        amount: activeType === 'expense' ? -numericAmount : numericAmount,
+        amount: Math.abs(numericAmount), // ✅ FIXED: Always positive amount, server handles sign based on type
         description: description.trim() || (activeType === 'expense' ? 'Quick Expense' : 'Quick Income'),
         categoryId: categoryId, // ✅ FIXED: Use correct field name
         date: new Date().toISOString().split('T')[0], // ✅ FIXED: Use date format like regular form

@@ -13,7 +13,7 @@ import getAuthRecoveryManager from '../utils/authRecoveryManager';
 const config = {
   API_URL: import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com',
   API_VERSION: 'v1',
-  TIMEOUT: 30000,
+  TIMEOUT: 45000, // Increased timeout for better cold start handling
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   DEBUG: false // Debug completed - token extraction working

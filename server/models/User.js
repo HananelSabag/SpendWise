@@ -6,7 +6,7 @@
 
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const { generateVerificationToken } = require('../utils/tokenGenerator');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
@@ -65,7 +65,7 @@ class User {
       const hashedPassword = await bcrypt.hash(password, 12);
       
       // Generate verification token
-      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationToken = generateVerificationToken();
 
       const query = `
         INSERT INTO users (
@@ -266,7 +266,7 @@ class User {
       const user = await this.findByEmail(email);
       
       // ✅ Basic user validation logging
-      console.log('🔍 Authentication attempt for:', user?.email);
+      logger.debug('🔍 Authentication attempt for:', user?.email);
 
       if (!user) {
         throw new Error('Invalid email or password');
@@ -308,7 +308,7 @@ class User {
       
       // ✅ Log authentication type for monitoring
       if (isHybridUser) {
-        console.log('✅ Hybrid user authentication (Google + password)');
+        logger.debug('✅ Hybrid user authentication (Google + password)');
       }
       
       // ✅ HYBRID LOGIN SUCCESS: User has password, allow login regardless of OAuth provider
@@ -671,7 +671,7 @@ class User {
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       
       // Generate verification token
-      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationToken = generateVerificationToken();
 
       const query = `
         INSERT INTO users (
@@ -749,7 +749,7 @@ class User {
   // ✅ ADD: Mark onboarding as complete
   static async markOnboardingComplete(userId) {
     try {
-      console.log('🎯 User.markOnboardingComplete called for userId:', userId);
+      logger.debug('🎯 User.markOnboardingComplete called for userId:', userId);
       
       if (!userId) {
         throw new Error('User ID is required');
@@ -764,7 +764,7 @@ class User {
         throw new Error('Failed to update user - user not found');
       }
 
-      console.log('✅ User.markOnboardingComplete successful:', {
+      logger.debug('✅ User.markOnboardingComplete successful:', {
         userId,
         onboarding_completed: user.onboarding_completed
       });

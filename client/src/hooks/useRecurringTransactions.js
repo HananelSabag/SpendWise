@@ -21,8 +21,8 @@ export const useRecurringTransactions = (options = {}) => {
   
   const {
     enabled = true,
-    refetchInterval = 5 * 60 * 1000, // 5 minutes
-    staleTime = 2 * 60 * 1000, // 2 minutes
+    refetchInterval = 30 * 60 * 1000, // 30 minutes - recurring templates rarely change
+    staleTime = 60 * 60 * 1000, // 1 hour
   } = options;
 
   // ✅ Fetch recurring transactions
@@ -156,13 +156,14 @@ export const useRecurringTransactions = (options = {}) => {
     return refetch();
   }, [refetch]);
 
-  // ✅ Statistics
+  // ✅ Statistics - FIXED: Ensure recurringTransactions is always an array before filtering
+  const safeRecurringTransactions = Array.isArray(recurringTransactions) ? recurringTransactions : [];
   const stats = {
-    total: recurringTransactions?.length || 0,
-    active: recurringTransactions?.filter(r => r.status === 'active')?.length || 0,
-    paused: recurringTransactions?.filter(r => r.status === 'paused')?.length || 0,
-    income: recurringTransactions?.filter(r => r.type === 'income')?.length || 0,
-    expense: recurringTransactions?.filter(r => r.type === 'expense')?.length || 0,
+    total: safeRecurringTransactions.length || 0,
+    active: safeRecurringTransactions.filter(r => r.status === 'active')?.length || 0,
+    paused: safeRecurringTransactions.filter(r => r.status === 'paused')?.length || 0,
+    income: safeRecurringTransactions.filter(r => r.type === 'income')?.length || 0,
+    expense: safeRecurringTransactions.filter(r => r.type === 'expense')?.length || 0,
   };
 
   return {

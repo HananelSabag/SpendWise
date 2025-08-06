@@ -159,7 +159,7 @@ router.post('/upload-profile-picture',
         [req.supabaseUpload.publicUrl, req.supabaseUpload.publicUrl, req.user.id]
       );
       
-      console.log('✅ Profile picture - Database updated:', {
+      logger.info('✅ Profile picture - Database updated:', {
         userId: req.user.id,
         avatarUrl: req.supabaseUpload.publicUrl,
         updatedUser: result.rows[0],
@@ -221,7 +221,7 @@ router.post('/set-password',
  */
 router.get('/performance',
   auth,
-  // TODO: Add admin middleware in production
+  // NOTE: Admin middleware should be added for production security
   userController.getPerformanceStats
 );
 

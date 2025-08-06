@@ -75,7 +75,7 @@ const deleteOldProfilePicture = async (req, res, next) => {
         
         if (fileName) {
           await supabaseStorage.deleteProfilePicture(fileName);
-          console.log(`✅ [SUPABASE STORAGE] Deleted old profile picture: ${fileName}`);
+          logger.info(`✅ [SUPABASE STORAGE] Deleted old profile picture: ${fileName}`);
         }
       }
     } catch (error) {
