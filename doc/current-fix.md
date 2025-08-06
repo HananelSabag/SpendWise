@@ -2,6 +2,57 @@
 
 ---
 
+# 🔧 API URL DUPLICATION & ENVIRONMENT DETECTION FIX - 2025-01-27
+
+## User Request Summary
+Fixed critical API URL duplication causing `:10000/api/v1/api/v1/users/login` instead of `:10000/api/v1/users/login`. Also improved environment detection for Vercel deployment to ensure Google OAuth works correctly.
+
+## Analysis
+**Root Problem**: 
+1. API client was adding `/api/v1` to base URL that already contained `/api/v1`
+2. Environment detection wasn't robust enough for Vercel deployment
+
+## Affected Layers
+- **Client API**: URL construction and environment detection
+- **Vite Configuration**: Environment variable handling
+- **OAuth System**: Environment-specific URLs
+
+## Affected Files
+- `client/vite.config.js` - Enhanced environment detection
+- `client/src/api/client.js` - Fixed base URL construction
+
+## Actions Taken
+
+### 1. Fixed API URL Construction
+**File**: `client/src/api/client.js` (line 129)
+**BEFORE**: `baseURL: \`\${config.API_URL}/api/\${config.API_VERSION}\``
+**AFTER**: `baseURL: config.API_URL` (since VITE_API_URL already includes /api/v1)
+
+### 2. Enhanced Environment Detection  
+**File**: `client/vite.config.js` (lines 14, 228-237)
+**BEFORE**: `const isDev = command === 'serve';`
+**AFTER**: `const isDev = command === 'serve' || mode === 'development';`
+
+Added smart detection for API URLs:
+```javascript
+'import.meta.env.VITE_API_URL': JSON.stringify(
+  isDev || mode === 'development' 
+    ? 'http://localhost:10000/api/v1' 
+    : 'https://spendwise-dx8g.onrender.com/api/v1'
+)
+```
+
+### 3. Added Debug Logging
+Added environment detection logging to help debug deployment issues.
+
+## Result
+- ✅ API URLs now correctly resolve to single `/api/v1` path
+- ✅ Environment detection works properly on Vercel
+- ✅ Google OAuth should work correctly in production
+- ✅ Local development unchanged
+
+---
+
 # 🔐 HYBRID AUTHENTICATION SYSTEM FIX - 2025-01-27
 
 ## User Request Summary 

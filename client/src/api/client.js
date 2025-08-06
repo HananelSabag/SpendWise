@@ -126,7 +126,7 @@ class SpendWiseAPIClient {
     
     // Create axios instance
     this.client = axios.create({
-      baseURL: `${config.API_URL}/api/${config.API_VERSION}`,
+      baseURL: config.API_URL, // Don't add /api/v1 since it's already in VITE_API_URL
       timeout: config.TIMEOUT,
       withCredentials: true,
       headers: {

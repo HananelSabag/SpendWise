@@ -11,8 +11,17 @@ export default defineConfig(({ command, mode }) => {
   // Mode-specific configuration
   const isAdmin = mode === 'admin';
   const isAnalytics = mode === 'analytics';
-  const isDev = command === 'serve';
+  const isDev = command === 'serve' || mode === 'development';
   const isProd = command === 'build' && mode === 'production';
+  
+  // 🔍 Debug environment detection
+  console.log('🚀 Environment Detection:', { 
+    command, 
+    mode, 
+    isDev, 
+    isProd,
+    NODE_ENV: process.env.NODE_ENV 
+  });
   
   return {
     plugins: [
@@ -214,10 +223,18 @@ export default defineConfig(({ command, mode }) => {
       __ADMIN_MODE__: isAdmin,
       __ANALYTICS_MODE__: isAnalytics,
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
-      // 🔥 FORCED ENVIRONMENT VARIABLES - F*CK THE .ENV SYSTEM
+      // 🔥 FORCED ENVIRONMENT VARIABLES - SMART DETECTION
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'),
-      'import.meta.env.VITE_API_URL': JSON.stringify(isDev ? 'http://localhost:10000/api/v1' : 'https://spendwise-dx8g.onrender.com/api/v1'),
-      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(isDev ? 'http://localhost:5173' : 'https://spendwise-client.vercel.app'),
+      'import.meta.env.VITE_API_URL': JSON.stringify(
+        isDev || mode === 'development' 
+          ? 'http://localhost:10000/api/v1' 
+          : 'https://spendwise-dx8g.onrender.com/api/v1'
+      ),
+      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
+        isDev || mode === 'development' 
+          ? 'http://localhost:5173' 
+          : 'https://spendwise-client.vercel.app'
+      ),
       'import.meta.env.VITE_DEBUG_MODE': JSON.stringify('true'),
       'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(isDev ? 'development' : 'production'),
       'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
