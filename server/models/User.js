@@ -194,8 +194,8 @@ class User {
       const cacheKey = `user:email:${email.toLowerCase()}`;
       let user = null; // Force fresh DB lookup
       
-      // Clear any existing cache for this user
-      UserCache.delete(cacheKey);
+      // Clear any existing cache for this user (use correct method)
+      UserCache.del(cacheKey);
 
       const query = `
         SELECT 
