@@ -30,6 +30,9 @@ export {
   useCategoryBreakdown
 } from './useTransactions';
 
+// Balance Panel - DEDICATED BALANCE HOOK  
+export { default as useBalance } from './useBalance';
+
 // Categories
 export { 
   default as useCategories,

@@ -45,6 +45,145 @@ const transactionController = {
   }),
 
   /**
+   * Get balance panel data - DEDICATED ENDPOINT FOR BALANCE CALCULATIONS
+   * @route GET /api/v1/transactions/balance
+   */
+  getBalanceData: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      // Get current date info
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentDay = now.getDate();
+      const currentDayOfWeek = now.getDay(); // 0 = Sunday
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      
+      // Calculate periods
+      const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
+      const startOfYear = new Date(currentYear, 0, 1);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - currentDayOfWeek); // Go to Sunday
+      const startOfToday = new Date(currentYear, currentMonth - 1, currentDay);
+
+      // Get completed one-time transactions for each period
+      const getOneTimeTransactions = async (startDate, endDate = now) => {
+        const query = `
+          SELECT type, SUM(amount) as total
+          FROM transactions 
+          WHERE user_id = $1 
+            AND template_id IS NULL 
+            AND status = 'completed'
+            AND deleted_at IS NULL
+            AND date >= $2::date 
+            AND date <= $3::date
+          GROUP BY type
+        `;
+        const result = await db.query(query, [userId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]);
+        
+        const income = result.rows.find(r => r.type === 'income')?.total || 0;
+        const expenses = result.rows.find(r => r.type === 'expense')?.total || 0;
+        
+        return {
+          income: parseFloat(income),
+          expenses: parseFloat(expenses),
+          total: parseFloat(income) - parseFloat(expenses)
+        };
+      };
+
+      // Get monthly recurring totals from recurring_templates
+      const getRecurringMonthlyTotals = async () => {
+        const query = `
+          SELECT type, SUM(amount) as total
+          FROM recurring_templates 
+          WHERE user_id = $1 AND is_active = true
+          GROUP BY type
+        `;
+        const result = await db.query(query, [userId]);
+        
+        const income = result.rows.find(r => r.type === 'income')?.total || 0;
+        const expenses = result.rows.find(r => r.type === 'expense')?.total || 0;
+        
+        return {
+          monthlyIncome: parseFloat(income),
+          monthlyExpenses: parseFloat(expenses),
+          monthlyNet: parseFloat(income) - parseFloat(expenses)
+        };
+      };
+
+      // Get recurring and one-time data
+      const recurring = await getRecurringMonthlyTotals();
+      const todayOneTime = await getOneTimeTransactions(startOfToday);
+      const weekOneTime = await getOneTimeTransactions(startOfWeek);
+      const monthOneTime = await getOneTimeTransactions(startOfMonth);
+      const yearOneTime = await getOneTimeTransactions(startOfYear);
+
+      // Calculate daily recurring rate
+      const dailyRecurringIncome = recurring.monthlyIncome / daysInMonth;
+      const dailyRecurringExpenses = recurring.monthlyExpenses / daysInMonth;
+      const dailyRecurringNet = dailyRecurringIncome - dailyRecurringExpenses;
+
+      // Calculate days elapsed in week (Sunday = 0, so if Wednesday = 3, elapsed = 4 days)
+      const daysElapsedInWeek = currentDayOfWeek + 1;
+
+      // Calculate balance data according to user requirements
+      const balanceData = {
+        daily: {
+          income: dailyRecurringIncome + todayOneTime.income,
+          expenses: dailyRecurringExpenses + todayOneTime.expenses,
+          total: dailyRecurringNet + todayOneTime.total
+        },
+        weekly: {
+          income: (dailyRecurringIncome * daysElapsedInWeek) + weekOneTime.income,
+          expenses: (dailyRecurringExpenses * daysElapsedInWeek) + weekOneTime.expenses,
+          total: (dailyRecurringNet * daysElapsedInWeek) + weekOneTime.total
+        },
+        monthly: {
+          income: recurring.monthlyIncome + monthOneTime.income,
+          expenses: recurring.monthlyExpenses + monthOneTime.expenses,
+          total: recurring.monthlyNet + monthOneTime.total
+        },
+        yearly: {
+          income: (recurring.monthlyIncome * currentMonth) + yearOneTime.income,
+          expenses: (recurring.monthlyExpenses * currentMonth) + yearOneTime.expenses,
+          total: (recurring.monthlyNet * currentMonth) + yearOneTime.total
+        }
+      };
+
+      // Add metadata
+      const metadata = {
+        currentDate: now.toISOString(),
+        currentDay,
+        currentDayOfWeek,
+        daysInMonth,
+        daysElapsedInWeek,
+        currentMonth,
+        currentYear,
+        recurringMonthly: recurring,
+        oneTimeTransactions: {
+          today: todayOneTime,
+          week: weekOneTime,
+          month: monthOneTime,
+          year: yearOneTime
+        }
+      };
+
+      res.json({
+        success: true,
+        data: {
+          balance: balanceData,
+          metadata
+        }
+      });
+
+    } catch (error) {
+      logger.error('Balance data fetch failed', { userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
    * Get analytics summary for analytics page
    * @route GET /api/v1/analytics/dashboard/summary
    */

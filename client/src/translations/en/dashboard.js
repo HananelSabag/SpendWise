@@ -13,6 +13,34 @@ export default {
   balance: 'Balance',
   income: 'Income',
   expenses: 'Expenses',
+  
+  // ✅ Balance Panel translations
+  balance: {
+    title: 'Balance Overview',
+    loading: 'Loading balance data...',
+    error: 'Failed to load balance data',
+    noData: 'No balance data available',
+    refreshed: 'Balance Updated',
+    dataUpdated: 'Balance data has been refreshed',
+    refreshFailed: 'Refresh Failed',
+    tryAgain: 'Please try again',
+    hidden: 'Balance is hidden for privacy',
+    income: 'Income',
+    expenses: 'Expenses',
+    total: 'Net Balance',
+    currentDay: 'Day',
+    daysInMonth: 'Days/Month',
+    weekElapsed: 'Week Days',
+    lastUpdate: 'Updated'
+  },
+  
+  // ✅ Period translations
+  periods: {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly'
+  },
   transactions: 'Transactions',
   categories: 'Categories',
   reports: 'Reports',

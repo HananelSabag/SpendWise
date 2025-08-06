@@ -30,6 +30,12 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
+// Get balance panel data - DEDICATED BALANCE ENDPOINT
+router.get('/balance',
+  getSummaryLimiter,
+  transactionController.getBalanceData
+);
+
 // Get recent transactions
 router.get('/recent',
   getTransactionsLimiter,

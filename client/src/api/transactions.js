@@ -38,6 +38,24 @@ const transactionAPI = {
   },
 
   /**
+   * Get balance panel data - DEDICATED BALANCE ENDPOINT
+   * @returns {Promise<Object>} Balance data for all periods
+   */
+  async getBalanceData() {
+    try {
+      console.log('📊 Fetching balance panel data...');
+      
+      const response = await apiClient.client.get('/transactions/balance');
+      console.log('✅ Balance data fetched successfully:', response.data);
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Balance data fetch failed:', error);
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
    * Get transactions with filtering and pagination
    * @param {Object} params - Query parameters (filters, pagination)
    * @returns {Promise<Object>} Transactions list

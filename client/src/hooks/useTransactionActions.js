@@ -17,6 +17,7 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions, useTransactionTemplates } from './useTransactions';
 import { useToast } from './useToast';
+import { useBalanceRefresh } from '../contexts/BalanceContext';
 
 /**
  * ✅ ENHANCED: Context strategies optimized for infinite loading
@@ -63,6 +64,7 @@ export const useTransactionActions = (context = 'transactions') => {
   const queryClient = useQueryClient();
   const contextConfig = CONTEXT_STRATEGIES[context] || CONTEXT_STRATEGIES.transactions;
   const toastService = useToast();
+  const { refreshAll } = useBalanceRefresh();
   
   // ✅ SIMPLIFIED: Use the optimized useTransactions hook
   const {
@@ -72,7 +74,7 @@ export const useTransactionActions = (context = 'transactions') => {
     isCreating,
     isUpdating,
     isDeleting,
-    refreshAll
+    refetch: refetchTransactions
   } = useTransactions({ strategy: contextConfig.strategy });
 
   // ✅ FIX: Import deleteTemplate from useTransactionTemplates properly
@@ -146,9 +148,12 @@ export const useTransactionActions = (context = 'transactions') => {
       // ✅ NEW: Auto-refresh for high-priority contexts
       if (contextConfig.autoRefresh && (context === 'quickActions' || context === 'dashboard')) {
         setTimeout(() => {
-          refreshAll();
+          refetchTransactions();
         }, 500);
       }
+      
+      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
+      refreshAll();
       
       logAction(`${transactionType} transaction created successfully`);
       return result;
@@ -156,7 +161,7 @@ export const useTransactionActions = (context = 'transactions') => {
       logAction(`Failed to create transaction`, { error: error.message });
       throw error;
     }
-  }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll, logAction]);
+      }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll, refetchTransactions, logAction]);
 
   /**
    * Update Transaction - Context-aware immediate refresh
@@ -175,17 +180,21 @@ export const useTransactionActions = (context = 'transactions') => {
       
       if (contextConfig.autoRefresh) {
         setTimeout(() => {
-          refreshAll();
+          refetchTransactions();
         }, 300);
       }
       
       logAction(`Transaction ${id} updated successfully`);
+      
+      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
+      refreshAll();
+      
       return result;
     } catch (error) {
       logAction(`Failed to update transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, logAction]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, refetchTransactions, logAction]);
 
   /**
    * Delete Transaction - Fixed parameter handling
@@ -221,8 +230,11 @@ export const useTransactionActions = (context = 'transactions') => {
       }
       
       setTimeout(() => {
-        refreshAll();
+        refetchTransactions();
       }, 200);
+      
+      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
+      refreshAll();
       
       logAction(`Transaction ${id} deleted successfully`);
       return result;
@@ -230,7 +242,7 @@ export const useTransactionActions = (context = 'transactions') => {
       logAction(`Failed to delete transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, logAction]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, refetchTransactions, logAction]);
 
   /**
    * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading

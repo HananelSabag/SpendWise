@@ -25,6 +25,9 @@ import { ToastProvider } from './hooks/useToast';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 
+// ✅ Balance Provider  
+import { BalanceProvider } from './contexts/BalanceContext';
+
 // ✅ App Initializer
 import AppInitializer from './components/common/AppInitializer';
 
@@ -437,15 +440,17 @@ function App() {
         }}
       >
         <StoreProvider>
-          <ToastProvider>
-            <AuthToastProvider>
-              <AuthRecoveryProvider>
-                <AppInitializer>
-                  <AppContent />
-                </AppInitializer>
-              </AuthRecoveryProvider>
-            </AuthToastProvider>
-          </ToastProvider>
+          <BalanceProvider>
+            <ToastProvider>
+              <AuthToastProvider>
+                <AuthRecoveryProvider>
+                  <AppInitializer>
+                    <AppContent />
+                  </AppInitializer>
+                </AuthRecoveryProvider>
+              </AuthToastProvider>
+            </ToastProvider>
+          </BalanceProvider>
         </StoreProvider>
       </Router>
 

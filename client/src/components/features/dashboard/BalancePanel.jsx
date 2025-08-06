@@ -1,633 +1,267 @@
 /**
- * 💰 BALANCE PANEL - SIMPLIFIED ORCHESTRATOR!
- * 🚀 Mobile-first, Component-based, Clean architecture
- * Features: Component orchestration, View modes, Performance optimized
- * @version 2.0.0 - COMPLETE REFACTOR
+ * 💰 BALANCE PANEL - SIMPLIFIED & ALIGNED
+ * Clean balance panel using dedicated balance endpoint
+ * Features: Real-time data, Period switching, Server-calculated balances
+ * @version 3.0.0 - COMPLETE REWRITE
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { RefreshCw, Eye, EyeOff, TrendingUp, TrendingDown } from 'lucide-react';
 
-// ✅ Import Zustand stores
-import {
-  useTranslation,
-  useNotifications
-} from '../../../stores';
-
-import { Button, Card } from '../../ui';
+// ✅ Import stores and components
+import { useTranslation, useNotifications, useCurrency } from '../../../stores';
+import { Button, Card, LoadingSpinner } from '../../ui';
 import { cn } from '../../../utils/helpers';
 
-// ✅ Import hooks to get real transaction data
-import { useTransactions } from '../../../hooks/useTransactions';
+// ✅ Import the new dedicated balance hook
+import { useBalance } from '../../../hooks';
 
 /**
  * 💰 Balance Panel Main Component
  */
 const BalancePanel = ({
-  data = {},
+  className = '',
   showDetails = true,
-  onToggleDetails,
-  className = ''
+  onToggleDetails
 }) => {
-  // ✅ Zustand stores
+  // ✅ Stores
   const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
+  const { formatCurrency } = useCurrency();
 
-  // ✅ Use transactions from Dashboard data if available, fallback to direct hook
-  const { transactions: hookTransactions, loading: transactionsLoading } = useTransactions({
-    pageSize: 1000, // Get more data for accurate calculations
-    enableAI: false // Disable AI for performance
+  // ✅ Use the dedicated balance hook
+  const {
+    data: balanceData,
+    metadata,
+    loading,
+    error,
+    refresh,
+    isReady,
+    isEmpty
+  } = useBalance({
+    autoRefresh: true,
+    refreshInterval: 30000 // 30 seconds
   });
 
-  // Prefer transactions from props (Dashboard data), fallback to direct hook
-  const transactions = data?.transactions || hookTransactions || [];
-
-
-
   // ✅ State management
-  const [viewMode, setViewMode] = useState('daily'); // daily, weekly, monthly, yearly
+  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [showBalances, setShowBalances] = useState(true);
-  const [selectedAccount, setSelectedAccount] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ✅ REAL DATA: Calculate actual balances from transactions
-  const enhancedData = useMemo(() => {
-    if (!transactions || transactions.length === 0) {
-      // Return default structure while loading
-      return {
-        accounts: [{
-          id: 'main',
-          name: t('accounts.main'),
-          type: 'checking',
-          balance: 0,
-          change: 0,
-          trend: [],
-          isFavorite: true,
-          lastTransaction: t('account.noTransactions')
-        }],
-        summary: {
-          totalBalance: 0,
-          totalChange: 0,
-          trendData: [],
-          dailyBalance: 0,
-          weeklyBalance: 0,
-          monthlyBalance: 0,
-          yearlyBalance: 0,
-          income: 0,
-          expenses: 0,
-          savings: 0,
-          savingsRate: 0
-        }
-      };
-    }
-
-    // Calculate real daily balance data
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-
-
-
-    // Filter transactions by time periods
-
-    
-    const todayTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.date || t.created_at);
-      const today_start = new Date(today);
-      const today_end = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      
-      // Include transactions from today specifically
-      const isToday = transactionDate >= today_start && transactionDate < today_end;
-
-      return isToday;
-    });
-
-    const weekTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.date || t.created_at);
-      return transactionDate >= weekAgo;
-    });
-
-    const monthTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.date || t.created_at);
-      return transactionDate >= monthAgo;
-    });
-
-    const yearTransactions = transactions.filter(t => {
-      const transactionDate = new Date(t.date || t.created_at);
-      return transactionDate >= yearAgo;
-    });
-
-    
-
-    // Calculate balances for each period
-    const calculateBalance = (transactionList) => {
-      return transactionList.reduce((balance, transaction) => {
-        const amount = parseFloat(transaction.amount) || 0;
-        return transaction.type === 'income' ? balance + amount : balance - amount;
-      }, 0);
-    };
-
-    const calculateIncomeExpenses = (transactionList) => {
-      return transactionList.reduce((acc, transaction) => {
-        const amount = parseFloat(transaction.amount) || 0;
-        if (transaction.type === 'income') {
-          acc.income += amount;
-        } else {
-          acc.expenses += amount;
-        }
-        return acc;
-      }, { income: 0, expenses: 0 });
-    };
-
-    // ✅ NEW: Smart recurring transaction logic
-    const calculateSmartBalance = () => {
-      // Identify recurring transactions (monthly patterns)
-      const recurringTransactions = transactions.filter(t => 
-        t.description && (
-          t.description.toLowerCase().includes('monthly') ||
-          t.description.toLowerCase().includes('salary') ||
-          t.description.toLowerCase().includes('rent') ||
-          t.description.toLowerCase().includes('recurring')
-        )
-      );
-
-      // Identify one-time transactions  
-      const oneTimeTransactions = transactions.filter(t => 
-        !recurringTransactions.some(rt => rt.id === t.id)
-      );
-
-
-
-      // Calculate daily recurring rate
-      const recurringMonthlyIncome = recurringTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-      
-      const recurringMonthlyExpenses = recurringTransactions
-        .filter(t => t.type === 'expense') 
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-      const currentDate = new Date();
-      const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-      const currentDayOfMonth = currentDate.getDate();
-      const currentDayOfWeek = currentDate.getDay(); // 0 = Sunday
-      const daysElapsedInWeek = currentDayOfWeek === 0 ? 7 : currentDayOfWeek; // Treat Sunday as end of week
-
-      // Daily rates from recurring transactions
-      const dailyRecurringIncome = recurringMonthlyIncome / daysInMonth;
-      const dailyRecurringExpenses = recurringMonthlyExpenses / daysInMonth;
-      const dailyRecurringNet = dailyRecurringIncome - dailyRecurringExpenses;
-
-
-      
-      // ✅ FORCE CALCULATION: Treat "Monthly" transactions as recurring for user's logic
-      if (recurringTransactions.length === 0) {
-
-        
-        // Override: Treat "Monthly" transactions as recurring
-        const forcedRecurringIncome = transactions
-          .filter(t => t.type === 'income' && t.description && t.description.toLowerCase().includes('monthly'))
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-          
-        const forcedRecurringExpenses = transactions
-          .filter(t => t.type === 'expense' && t.description && t.description.toLowerCase().includes('monthly'))
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-          
-
-        
-        // Override the calculation with forced values
-        if (forcedRecurringIncome > 0 || forcedRecurringExpenses > 0) {
-          const forcedDailyNet = (forcedRecurringIncome - forcedRecurringExpenses) / daysInMonth;
-  
-          
-          // Use forced calculation
-          return {
-            dailyBalance: forcedDailyNet,
-            weeklyBalance: forcedDailyNet * daysElapsedInWeek,
-            monthlyBalance: forcedRecurringIncome - forcedRecurringExpenses,
-            yearlyBalance: (forcedRecurringIncome - forcedRecurringExpenses) * 12,
-            recurringDailyIncome: forcedRecurringIncome / daysInMonth,
-            recurringDailyExpenses: forcedRecurringExpenses / daysInMonth,
-            recurringDailyNet: forcedDailyNet,
-            oneTimeBalances: { today: 0, week: 0, month: 0, year: 0 }
-          };
-        }
-      }
-
-      // Filter one-time transactions by periods
-      const todayOneTime = oneTimeTransactions.filter(t => {
-        const transactionDate = new Date(t.date || t.created_at);
-        return transactionDate >= today;
-      });
-
-      const weekOneTime = oneTimeTransactions.filter(t => {
-        const transactionDate = new Date(t.date || t.created_at);
-        return transactionDate >= weekAgo;
-      });
-
-      const monthOneTime = oneTimeTransactions.filter(t => {
-        const transactionDate = new Date(t.date || t.created_at);
-        return transactionDate >= monthAgo;
-      });
-
-      const yearOneTime = oneTimeTransactions.filter(t => {
-        const transactionDate = new Date(t.date || t.created_at);
-        return transactionDate >= yearAgo;
-      });
-
-      // Calculate balances with your logic
-      const todayOneTimeBalance = calculateBalance(todayOneTime);
-      const weekOneTimeBalance = calculateBalance(weekOneTime);
-      const monthOneTimeBalance = calculateBalance(monthOneTime);
-      const yearOneTimeBalance = calculateBalance(yearOneTime);
-
-      return {
-        // Daily: Recurring daily rate + today's one-time transactions
-        dailyBalance: dailyRecurringNet + todayOneTimeBalance,
-        
-        // Weekly: Recurring daily rate × days elapsed in week + week's one-time transactions
-        weeklyBalance: (dailyRecurringNet * daysElapsedInWeek) + weekOneTimeBalance,
-        
-        // Monthly: Full recurring amounts + month's one-time transactions
-        monthlyBalance: (recurringMonthlyIncome - recurringMonthlyExpenses) + monthOneTimeBalance,
-        
-        // Yearly: Recurring × 12 months + year's one-time transactions  
-        yearlyBalance: ((recurringMonthlyIncome - recurringMonthlyExpenses) * 12) + yearOneTimeBalance,
-        
-        // For display/debugging
-        recurringDailyIncome: dailyRecurringIncome,
-        recurringDailyExpenses: dailyRecurringExpenses,
-        recurringDailyNet: dailyRecurringNet,
-        oneTimeBalances: {
-          today: todayOneTimeBalance,
-          week: weekOneTimeBalance, 
-          month: monthOneTimeBalance,
-          year: yearOneTimeBalance
-        }
-      };
-    };
-
-    // ✅ Use smart balance calculation
-    const smartBalances = calculateSmartBalance();
-
-    // Calculate for different periods
-    const dailyBalance = smartBalances.dailyBalance;
-    const weeklyBalance = smartBalances.weeklyBalance;
-    const monthlyBalance = smartBalances.monthlyBalance;
-    const yearlyBalance = smartBalances.yearlyBalance;
-    const totalBalance = calculateBalance(transactions);
-
-    
-
-    const monthlyStats = calculateIncomeExpenses(monthTransactions);
-    const yearlyStats = calculateIncomeExpenses(yearTransactions);
-
-    // Calculate daily trend for last 7 days
-    const dailyTrend = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-      const dayTransactions = transactions.filter(t => {
-        const transactionDate = new Date(t.date || t.created_at);
-        return transactionDate.toDateString() === date.toDateString();
-      });
-      const dayBalance = calculateBalance(dayTransactions);
-      dailyTrend.push(dayBalance);
-    }
-
-    // Main account with real data
-    const accounts = [{
-      id: 'main',
-      name: t('accounts.main'),
-      type: 'checking',
-      balance: totalBalance,
-      change: dailyBalance,
-      trend: dailyTrend,
-      isFavorite: true,
-      lastTransaction: transactions.length > 0 ? 
-        new Date(transactions[0]?.date || transactions[0]?.created_at).toLocaleDateString() : 
-        t('account.noTransactions')
-    }];
-
-    // Calculate stats for each period
-    const todayStats = calculateIncomeExpenses(todayTransactions);
-    const weekStats = calculateIncomeExpenses(weekTransactions);
-    const yearStats = calculateIncomeExpenses(yearTransactions);
-
-    // ✅ FIXED: Calculate proper income/expenses using recurring logic
-    const recurringTransactions = transactions.filter(t => {
-      const description = (t.description || '').toLowerCase();
-      return ['monthly', 'salary', 'rent', 'recurring'].some(keyword => description.includes(keyword));
-    });
-    
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const currentDayOfWeek = new Date().getDay();
-    const daysElapsedInWeek = currentDayOfWeek === 0 ? 7 : currentDayOfWeek;
-    
-    // Calculate recurring amounts
-    const recurringMonthlyIncome = recurringTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const recurringMonthlyExpenses = recurringTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    
-    // ✅ Daily amounts (prorated from monthly recurring per user's logic)
-    const proRatedDailyIncome = recurringMonthlyIncome / daysInMonth;  // ₪12,000 / 31 = ₪387.09
-    const proRatedDailyExpenses = recurringMonthlyExpenses / daysInMonth; // ₪5,000 / 31 = ₪161.29
-    
-    // ✅ Weekly amounts (daily × days elapsed in week per user's logic)
-    const proRatedWeeklyIncome = proRatedDailyIncome * daysElapsedInWeek;
-    const proRatedWeeklyExpenses = proRatedDailyExpenses * daysElapsedInWeek;
-    
-    // ✅ Yearly amounts (monthly × 12 per user's logic)
-    const proRatedYearlyIncome = recurringMonthlyIncome * 12;
-    const proRatedYearlyExpenses = recurringMonthlyExpenses * 12;
-
-
-
-    const summary = {
-      totalBalance,
-      totalChange: dailyBalance,
-      trendData: dailyTrend,
-      dailyBalance,
-      weeklyBalance,
-      monthlyBalance,
-      yearlyBalance,
-      // ✅ FIXED: Use pro-rated amounts per user's custom logic  
-      dailyIncome: proRatedDailyIncome,
-      dailyExpenses: proRatedDailyExpenses,
-      weeklyIncome: (recurringMonthlyIncome / daysInMonth) * daysElapsedInWeek, // Force weekly
-      weeklyExpenses: (recurringMonthlyExpenses / daysInMonth) * daysElapsedInWeek, // Force weekly
-      monthlyIncome: recurringMonthlyIncome, // Force ₪12,000
-      monthlyExpenses: recurringMonthlyExpenses, // Force ₪5,000
-      yearlyIncome: recurringMonthlyIncome * 12, // Force ₪144,000
-      yearlyExpenses: recurringMonthlyExpenses * 12, // Force ₪60,000
-      // Current selected period (will be updated based on viewMode)
-      income: monthlyStats.income,
-      expenses: monthlyStats.expenses,
-      savings: monthlyStats.income - monthlyStats.expenses,
-      savingsRate: monthlyStats.income > 0 ? ((monthlyStats.income - monthlyStats.expenses) / monthlyStats.income) * 100 : 0
-    };
-
-    return { accounts, summary };
-  }, [transactions, t, viewMode]); // Normal dependencies
-
-  // ✅ Get current period data based on selected viewMode
-  const currentPeriodData = useMemo(() => {
-    if (!enhancedData?.summary) return { income: 0, expenses: 0, balance: 0 };
-    
-    // ✅ Get period-specific income/expenses from enhanced data
-    const income = enhancedData.summary[`${viewMode}Income`] || 0;
-    const expenses = enhancedData.summary[`${viewMode}Expenses`] || 0;
-    const balance = enhancedData.summary[`${viewMode}Balance`] || 0;
-    
-    return { income, expenses, balance };
-  }, [enhancedData, viewMode]);
-
-  // ✅ Handle balance visibility toggle
-  const handleToggleVisibility = useCallback(() => {
-    setShowBalances(!showBalances);
-    addNotification({
-      type: 'info',
-      message: showBalances ? t('balance.balancesHidden') : t('balance.balancesShown'),
-      duration: 2000
-    });
-  }, [showBalances, addNotification, t]);
-
-  // ✅ Handle refresh
+  // ✅ Handle manual refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await refresh();
       addNotification({
         type: 'success',
-        message: t('balance.refreshed'),
-        duration: 2000
+        title: t('balance.refreshed'),
+        message: t('balance.dataUpdated'),
+        duration: 3000
       });
     } catch (error) {
       addNotification({
         type: 'error',
-        message: t('errors.refreshFailed'),
-        duration: 4000
+        title: t('balance.refreshFailed'),
+        message: error.message || t('balance.tryAgain'),
+        duration: 5000
       });
     } finally {
       setIsRefreshing(false);
     }
-  }, [addNotification, t]);
+  }, [refresh, addNotification, t]);
 
-  // ✅ Account management
-  const handleAccountSelect = useCallback((account) => {
-    setSelectedAccount(account);
-  }, []);
+  // ✅ Get current period data
+  const currentPeriodData = useMemo(() => {
+    if (!balanceData || !balanceData[selectedPeriod]) {
+      return { income: 0, expenses: 0, total: 0 };
+    }
+    return balanceData[selectedPeriod];
+  }, [balanceData, selectedPeriod]);
 
-  const handleAccountEdit = useCallback((account) => {
-    addNotification({
-      type: 'info',
-      message: t('account.editStarted', { name: account.name })
-    });
-    // TODO: Open account edit modal
-  }, [addNotification, t]);
+  // ✅ Period options
+  const periodOptions = [
+    { key: 'daily', label: t('periods.daily'), icon: '📅' },
+    { key: 'weekly', label: t('periods.weekly'), icon: '📆' },
+    { key: 'monthly', label: t('periods.monthly'), icon: '🗓️' },
+    { key: 'yearly', label: t('periods.yearly'), icon: '📊' }
+  ];
 
-  const handleToggleFavorite = useCallback((accountId) => {
-    addNotification({
-      type: 'success',
-      message: t('account.favoriteToggled')
-    });
-    // TODO: Update account favorite status
-  }, [addNotification, t]);
-
-  const handleAddAccount = useCallback(() => {
-    addNotification({
-      type: 'info',
-      message: t('account.addStarted')
-    });
-    // TODO: Open add account modal
-  }, [addNotification, t]);
-
-  // ✅ Insights management
-  const handleInsightAction = useCallback((insight) => {
-    addNotification({
-      type: 'info',
-      message: t('insights.actionStarted', { title: insight.title })
-    });
-    // TODO: Handle insight action
-  }, [addNotification, t]);
-
-  const handleInsightDismiss = useCallback((insightId) => {
-    addNotification({
-      type: 'success',
-      message: t('insights.dismissed')
-    });
-    // TODO: Dismiss insight
-  }, [addNotification, t]);
-
-  const handleGenerateInsights = useCallback(() => {
-    addNotification({
-      type: 'info',
-      message: t('insights.generating')
-    });
-    // TODO: Generate new insights
-  }, [addNotification, t]);
-
-  // ✅ AI recommendations
-  const handleRecommendationAccept = useCallback((recommendation) => {
-    addNotification({
-      type: 'success',
-      message: t('ai.recommendationAccepted', { title: recommendation.title })
-    });
-    // TODO: Implement recommendation
-  }, [addNotification, t]);
-
-  const handleRecommendationDecline = useCallback((recommendation) => {
-    addNotification({
-      type: 'info',
-      message: t('ai.recommendationDeclined')
-    });
-    // TODO: Decline recommendation
-  }, [addNotification, t]);
-
-  // ✅ Health management
-  const handleViewHealthReport = useCallback(() => {
-    addNotification({
-      type: 'info',
-      message: t('health.reportOpening')
-    });
-    // TODO: Open health report
-  }, [addNotification, t]);
-
-  const handleImproveScore = useCallback(() => {
-    addNotification({
-      type: 'info',
-      message: t('health.improvementStarted')
-    });
-    // TODO: Open improvement guide
-  }, [addNotification, t]);
-
-
-
-
-
+  // ✅ Loading state
+  if (loading && !balanceData) {
     return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          {t('balance.title')}
-        </h2>
-        <Button
-          variant="ghost"
-          onClick={handleToggleVisibility}
-          className="text-sm"
-        >
-          {showBalances ? t('common.hide') : t('common.show')}
-        </Button>
-      </div>
+      <Card className={cn('p-6', className)}>
+        <div className="flex items-center justify-center min-h-[200px]">
+          <LoadingSpinner size="lg" />
+          <span className="ml-3 text-lg">{t('balance.loading')}</span>
+        </div>
+      </Card>
+    );
+  }
 
-      {/* Period Tabs */}
-      <div className="flex space-x-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-        <button
-          onClick={() => setViewMode('daily')}
-          className={cn(
-            "px-4 py-2 rounded-md text-sm font-medium transition-all",
-            viewMode === 'daily'
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          )}
-        >
-          {t('timePeriods.daily')}
-        </button>
-        <button
-          onClick={() => setViewMode('weekly')}
-          className={cn(
-            "px-4 py-2 rounded-md text-sm font-medium transition-all",
-            viewMode === 'weekly'
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          )}
-        >
-          {t('timePeriods.weekly')}
-        </button>
-        <button
-          onClick={() => setViewMode('monthly')}
-          className={cn(
-            "px-4 py-2 rounded-md text-sm font-medium transition-all",
-            viewMode === 'monthly'
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          )}
-        >
-          {t('timePeriods.monthly')}
-        </button>
-        <button
-          onClick={() => setViewMode('yearly')}
-          className={cn(
-            "px-4 py-2 rounded-md text-sm font-medium transition-all",
-            viewMode === 'yearly'
-              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          )}
-        >
-          {t('timePeriods.yearly')}
-        </button>
-      </div>
+  // ✅ Error state
+  if (error && !balanceData) {
+    return (
+      <Card className={cn('p-6 border-red-200 bg-red-50', className)}>
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{t('balance.error')}</p>
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t('common.retry')}
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
-      {/* Balance Display for Selected Period */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* Income */}
-        <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700">
-          <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">
-            {t('balance.income')}
-          </div>
-          <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-            {showBalances ? `₪${currentPeriodData.income.toFixed(0)}` : '••••'}
+  // ✅ Empty state
+  if (isEmpty) {
+    return (
+      <Card className={cn('p-6', className)}>
+        <div className="text-center text-gray-500">
+          <p>{t('balance.noData')}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn('overflow-hidden', className)}>
+      {/* Header */}
+      <div className="p-6 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            {t('balance.title')}
+          </h2>
+          
+          <div className="flex items-center gap-2">
+            {/* Toggle visibility */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBalances(!showBalances)}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              {showBalances ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </Button>
+            
+            {/* Refresh button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <RefreshCw className={cn(
+                'w-4 h-4',
+                (isRefreshing || loading) && 'animate-spin'
+              )} />
+            </Button>
           </div>
         </div>
 
-        {/* Expenses */}
-        <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700">
-          <div className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">
-            {t('balance.expenses')}
-          </div>
-          <div className="text-2xl font-bold text-red-700 dark:text-red-300">
-            {showBalances ? `₪${currentPeriodData.expenses.toFixed(0)}` : '••••'}
-          </div>
-        </div>
-
-        {/* Net Total */}
-        <div className={cn(
-          "text-center p-4 rounded-xl border",
-          currentPeriodData.balance >= 0
-            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
-            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
-        )}>
-          <div className={cn(
-            "text-sm font-medium mb-1",
-            currentPeriodData.balance >= 0
-              ? "text-blue-600 dark:text-blue-400"
-              : "text-red-600 dark:text-red-400"
-          )}>
-            {t('balance.net')}
-          </div>
-          <div className={cn(
-            "text-2xl font-bold",
-            currentPeriodData.balance >= 0
-              ? "text-blue-700 dark:text-blue-300"
-              : "text-red-700 dark:text-red-300"
-          )}>
-            {showBalances ? `₪${currentPeriodData.balance.toFixed(0)}` : '••••'}
-          </div>
+        {/* Period Selector */}
+        <div className="flex flex-wrap gap-2">
+          {periodOptions.map((period) => (
+            <Button
+              key={period.key}
+              variant={selectedPeriod === period.key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPeriod(period.key)}
+              className="text-xs"
+            >
+              <span className="mr-1">{period.icon}</span>
+              {period.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Period Summary */}
-      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-          {viewMode === 'daily' && t('periodSummary.daily')}
-          {viewMode === 'weekly' && t('periodSummary.weekly')}
-          {viewMode === 'monthly' && t('periodSummary.monthly')}
-          {viewMode === 'yearly' && t('periodSummary.yearly')}
-        </div>
+      {/* Balance Display */}
+      <div className="px-6 pb-6">
+        {showBalances ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Income */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-green-700">
+                  {t('balance.income')}
+                </span>
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-900">
+                {formatCurrency(currentPeriodData.income)}
+              </div>
+            </div>
+
+            {/* Expenses */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-red-700">
+                  {t('balance.expenses')}
+                </span>
+                <TrendingDown className="w-4 h-4 text-red-600" />
+              </div>
+              <div className="text-2xl font-bold text-red-900">
+                {formatCurrency(currentPeriodData.expenses)}
+              </div>
+            </div>
+
+            {/* Total/Net */}
+            <div className={cn(
+              'border rounded-lg p-4',
+              currentPeriodData.total >= 0 
+                ? 'bg-blue-50 border-blue-200' 
+                : 'bg-orange-50 border-orange-200'
+            )}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={cn(
+                  'text-sm font-medium',
+                  currentPeriodData.total >= 0 ? 'text-blue-700' : 'text-orange-700'
+                )}>
+                  {t('balance.total')}
+                </span>
+                <div className={cn(
+                  'w-2 h-2 rounded-full',
+                  currentPeriodData.total >= 0 ? 'bg-blue-600' : 'bg-orange-600'
+                )} />
+              </div>
+              <div className={cn(
+                'text-2xl font-bold',
+                currentPeriodData.total >= 0 ? 'text-blue-900' : 'text-orange-900'
+              )}>
+                {formatCurrency(currentPeriodData.total)}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p>{t('balance.hidden')}</p>
+          </div>
+        )}
+
+        {/* Metadata Display (Debug Info) */}
+        {showDetails && metadata && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div>
+                <span className="font-medium">{t('balance.currentDay')}:</span> {metadata.currentDay}
+              </div>
+              <div>
+                <span className="font-medium">{t('balance.daysInMonth')}:</span> {metadata.daysInMonth}
+              </div>
+              <div>
+                <span className="font-medium">{t('balance.weekElapsed')}:</span> {metadata.daysElapsedInWeek}
+              </div>
+              <div>
+                <span className="font-medium">{t('balance.lastUpdate')}:</span> 
+                {new Date(metadata.currentDate).toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );

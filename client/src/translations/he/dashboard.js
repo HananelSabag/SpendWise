@@ -21,6 +21,34 @@ export default {
     noTransactions: 'אין תנועות עדיין'
   },
 
+  // ✅ Balance Panel translations
+  balance: {
+    title: 'סקירת יתרה',
+    loading: 'טוען נתוני יתרה...',
+    error: 'שגיאה בטעינת נתוני יתרה',
+    noData: 'אין נתוני יתרה זמינים',
+    refreshed: 'היתרה עודכנה',
+    dataUpdated: 'נתוני היתרה רוענו',
+    refreshFailed: 'רענון נכשל',
+    tryAgain: 'אנא נסה שוב',
+    hidden: 'היתרה מוסתרת לשמירת פרטיות',
+    income: 'הכנסות',
+    expenses: 'הוצאות',
+    total: 'יתרה נטו',
+    currentDay: 'יום',
+    daysInMonth: 'ימים/חודש',
+    weekElapsed: 'ימי שבוע',
+    lastUpdate: 'עודכן'
+  },
+  
+  // ✅ Period translations
+  periods: {
+    daily: 'יומי',
+    weekly: 'שבועי',
+    monthly: 'חודשי',
+    yearly: 'שנתי'
+  },
+
   // ✅ FIXED: Common UI translations (no duplicates)
   common: {
     hide: 'הסתר',

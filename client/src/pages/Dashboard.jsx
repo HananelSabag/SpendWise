@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 // ✅ Import components and hooks
-import { useTranslation, useNotifications, useAuth, useAuthStore, useCurrency } from '../stores';
+import { useTranslation, useNotifications, useAuth, useCurrency } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useTransactions } from '../hooks/useTransactions';
 import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
@@ -168,65 +168,14 @@ const Dashboard = () => {
     handleRefresh();
   }, [quickAmount, addNotification, t, handleRefresh]);
 
-  // ✅ REAL-TIME DATA: Combine dashboard data with actual transactions
-  const enhancedData = useMemo(() => {
-    if (!dashboardData || !transactions) {
-      // Return safe fallback while loading
-      return {
-        balance: { current: 0, currency: currency },
-        periods: {
-          daily: { income: 0, expenses: 0, net: 0 },
-          weekly: { income: 0, expenses: 0, net: 0 },
-          monthly: { income: 0, expenses: 0, net: 0 },
-          yearly: { income: 0, expenses: 0, net: 0 }
-        },
-        stats: {
-          totalTransactions: 0,
-          avgTransaction: 0,
-          topCategory: t('common.categoryTypes.food', 'Food & Dining'),
-          growthRate: '+0%'
-        },
-        recentTransactions: [],
-        transactions: []
-      };
-    }
-
-    // Use real transaction data for balance calculation
-    const transactionsList = Array.isArray(transactions) ? transactions : [];
+  // ✅ Recent transactions data for the RecentTransactions component
+  const recentTransactions = useMemo(() => {
+    if (!transactions || !Array.isArray(transactions)) return [];
     
-    // Calculate actual balance from transactions
-    const actualBalance = transactionsList.reduce((balance, transaction) => {
-      const amount = parseFloat(transaction.amount) || 0;
-      return transaction.type === 'income' ? balance + amount : balance - amount;
-    }, 0);
-
-    // Use real recent transactions (latest 5)
-    const recentTransactions = transactionsList
+    return transactions
       .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
       .slice(0, 5);
-
-    return {
-      balance: { 
-        current: actualBalance,
-        currency: currency 
-      },
-      periods: dashboardData?.periods || {
-        daily: { income: 0, expenses: 0, net: 0 },
-        weekly: { income: 0, expenses: 0, net: 0 },
-        monthly: { income: 0, expenses: 0, net: 0 },
-        yearly: { income: 0, expenses: 0, net: 0 }
-      },
-      stats: {
-        totalTransactions: transactionsList.length,
-        avgTransaction: transactionsList.length > 0 ? 
-          Math.abs(actualBalance) / transactionsList.length : 0,
-        topCategory: t('common.categoryTypes.food', 'Food & Dining'),
-        growthRate: '+12.5%'
-      },
-      recentTransactions,
-      transactions: transactionsList // Pass transactions to BalancePanel
-    };
-  }, [dashboardData, transactions, currency, t]);
+  }, [transactions]);
 
   // ✅ CONDITIONAL RENDERING - AFTER ALL HOOKS
   if (isLoading && !dashboardData) {
@@ -304,9 +253,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Balance Panel with Real Data */}
+        {/* Balance Panel with New Dedicated Hook */}
         <BalancePanel 
-          data={enhancedData}
           showDetails={true}
           className="mb-8"
         />
@@ -427,7 +375,7 @@ const Dashboard = () => {
 
                          {/* Recent Transactions with Real Data */}
              <RecentTransactions 
-               transactions={enhancedData.recentTransactions}
+               transactions={recentTransactions}
                maxItems={5}
                showFilters={false}
                showActions={false}
