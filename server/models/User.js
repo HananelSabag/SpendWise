@@ -195,7 +195,7 @@ class User {
       let user = null; // Force fresh DB lookup
       
       // Clear any existing cache for this user (use correct method)
-      UserCache.del(cacheKey);
+      UserCache.cache.delete(cacheKey);
 
       const query = `
         SELECT 
