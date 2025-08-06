@@ -845,7 +845,7 @@ export const useTransactions = (options = {}) => {
       
       // AI pre-processing
       if (enableAI && transactionData.description) {
-        // NOTE: AI categorization system pending - manual category selection available
+        // TODO: Add category suggestion logic or remove AI categorization
         // const categorySuggestion = await api.categories.getAll();
         // For now, skip AI categorization
 
@@ -987,7 +987,7 @@ export const useTransactions = (options = {}) => {
     mutationFn: async ({ operation, transactionIds, data = {} }) => {
       performanceRef.current.recordMutation();
       
-             // NOTE: Bulk operations feature planned for future release
+             // TODO: Implement bulk operations with new API structure
        // For now, handle operations individually
        const results = [];
        for (const id of transactionIds) {

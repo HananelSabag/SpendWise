@@ -18,7 +18,7 @@ export function cn(...inputs) {
     const result = twMerge(clsx(inputs));
     return result;
   } catch (error) {
-    // cn() error - fallback to empty string for graceful degradation
+    console.error('🎨 cn() error:', error);
     return '';
   }
 }

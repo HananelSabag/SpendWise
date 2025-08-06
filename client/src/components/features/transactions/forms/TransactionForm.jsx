@@ -140,7 +140,7 @@ const TransactionForm = ({
   // ✅ Handle cancel
   const handleCancel = useCallback(() => {
     if (isDirty) {
-      // NOTE: Confirmation dialog for large transactions could be added for safety
+      // TODO: Show confirmation dialog
       const confirmed = window.confirm(t('form.unsavedChanges'));
       if (!confirmed) return;
     }
