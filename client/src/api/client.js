@@ -11,7 +11,7 @@ import getAuthRecoveryManager from '../utils/authRecoveryManager';
 
 // ✅ API Configuration
 const config = {
-  API_URL: import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com',
+  API_URL: import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1',
   API_VERSION: 'v1',
   TIMEOUT: 45000, // Increased timeout for better cold start handling
   RETRY_ATTEMPTS: 3,
@@ -126,7 +126,7 @@ class SpendWiseAPIClient {
     
     // Create axios instance
     this.client = axios.create({
-      baseURL: config.API_URL, // Don't add /api/v1 since it's already in VITE_API_URL
+      baseURL: config.API_URL, // VITE_API_URL already includes /api/v1
       timeout: config.TIMEOUT,
       withCredentials: true,
       headers: {

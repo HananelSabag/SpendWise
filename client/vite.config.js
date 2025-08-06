@@ -1,39 +1,17 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  // Let Vite handle environment loading automatically
-  console.log('🔍 Vite Mode:', mode, 'Command:', command);
-  
-  // Mode-specific configuration
-  const isAdmin = mode === 'admin';
-  const isAnalytics = mode === 'analytics';
-  const isDev = command === 'serve' || mode === 'development';
-  const isProd = command === 'build' && mode === 'production';
-  
-  // 🔍 Debug environment detection
-  console.log('🚀 Environment Detection:', { 
-    command, 
-    mode, 
-    isDev, 
-    isProd,
-    NODE_ENV: process.env.NODE_ENV 
-  });
+  const isDev = command === 'serve';
+  const isProd = command === 'build';
   
   return {
     plugins: [
       react({
-        // ✅ Optimized React Fast Refresh for performance
         fastRefresh: true,
-        babel: {
-          plugins: [
-            // Add admin/analytics specific optimizations
-            ...(isAdmin ? [['@babel/plugin-transform-runtime']] : []),
-          ]
-        }
       }),
       VitePWA({
         registerType: 'autoUpdate',
@@ -41,7 +19,7 @@ export default defineConfig(({ command, mode }) => {
         manifest: {
           name: 'SpendWise - Financial Management Platform',
           short_name: 'SpendWise',
-          description: 'Smart financial management with analytics, admin system, and advanced features',
+          description: 'Smart financial management with analytics and advanced features',
           theme_color: '#3B82F6',
           background_color: '#ffffff',
           display: 'standalone',
@@ -60,39 +38,10 @@ export default defineConfig(({ command, mode }) => {
               type: 'image/png'
             }
           ]
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-          // ✅ Enhanced caching for admin and analytics
-          runtimeCaching: [
-            {
-              urlPattern: /^\/api\/v1\/admin\//,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'admin-api-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 5 * 60 // 5 minutes for admin data
-                }
-              }
-            },
-            {
-              urlPattern: /^\/api\/v1\/analytics\//,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'analytics-cache',
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 10 * 60 // 10 minutes for analytics
-                }
-              }
-            }
-          ]
         }
       })
     ],
     
-    // ✅ Enhanced path aliases for new architecture
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -102,7 +51,6 @@ export default defineConfig(({ command, mode }) => {
         '@utils': path.resolve(__dirname, './src/utils'),
         '@config': path.resolve(__dirname, './src/config'),
         '@assets': path.resolve(__dirname, './src/assets'),
-        // ✅ NEW: Admin system aliases
         '@admin': path.resolve(__dirname, './src/components/admin'),
         '@analytics': path.resolve(__dirname, './src/components/analytics'),
         '@api': path.resolve(__dirname, './src/api'),
@@ -113,12 +61,11 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     
-    // ✅ Enhanced server configuration
     server: {
       host: '0.0.0.0',
       port: 5173,
       strictPort: true,
-      open: false, // ✅ Disable auto-open - let dev-clean.js handle it
+      open: false,
       
       hmr: {
         host: 'localhost',
@@ -127,15 +74,7 @@ export default defineConfig(({ command, mode }) => {
         clientPort: 5174
       },
       
-      watch: {
-        usePolling: false,
-        interval: 1000,
-        ignored: ['**/node_modules/**', '**/dist/**'],
-        depth: 3
-      },
-      
-      cors: true,
-      middlewareMode: false
+      cors: true
     },
     
     preview: {
@@ -144,7 +83,6 @@ export default defineConfig(({ command, mode }) => {
       strictPort: true
     },
     
-    // ✅ Enhanced build optimization with admin/analytics chunking
     build: {
       target: 'es2020',
       minify: 'terser',
@@ -158,41 +96,20 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            // Core React chunks
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            
-            // UI and animation chunks
-            'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react', '@heroicons/react'],
-            
-            // Data and API chunks
+            'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react'],
             'data-vendor': ['@tanstack/react-query', 'axios', 'date-fns', 'zustand'],
-            
-            // Chart and analytics chunks
             'chart-vendor': ['recharts', 'react-chartjs-2', 'chart.js'],
-            
-            // ✅ NEW: Admin system chunks
-            'admin-vendor': ['react-table', 'react-window', 'react-virtualized-auto-sizer'],
-            
-            // ✅ NEW: OAuth and auth chunks
-                            // 'auth-vendor': ['@google-cloud/oauth2'], // Removed - not used in client
-            
-            // ✅ NEW: Performance and utilities chunks
-            'utils-vendor': ['react-error-boundary', 'use-debounce', 'react-intersection-observer', 'web-vitals'],
-            
-            // Form and validation chunks
             'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-            
-            // Styling chunks
             'style-vendor': ['clsx', 'classnames', 'tailwind-merge']
           }
         }
       },
       reportCompressedSize: true,
-      chunkSizeWarningLimit: isAdmin ? 1500 : 1000, // Larger limit for admin builds
+      chunkSizeWarningLimit: 1000,
       sourcemap: isProd ? 'hidden' : true
     },
     
-    // ✅ Enhanced dependency optimization
     optimizeDeps: {
       include: [
         'react',
@@ -204,80 +121,23 @@ export default defineConfig(({ command, mode }) => {
         'zustand',
         'framer-motion',
         'lucide-react',
-        'recharts',
-        // ✅ NEW: Admin dependencies
-        'react-table',
-        'react-window',
-        // ✅ NEW: Performance dependencies
-        'react-error-boundary',
-        'web-vitals'
+        'recharts'
       ],
       exclude: ['@vitejs/plugin-react'],
       force: isDev
     },
     
-    // ✅ Enhanced environment definitions + FORCED Google Client ID
+    // Clean environment handling - let .env files work naturally
     define: {
       global: 'globalThis',
       __DEV__: isDev,
-      __ADMIN_MODE__: isAdmin,
-      __ANALYTICS_MODE__: isAnalytics,
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
-      // 🔥 FORCED ENVIRONMENT VARIABLES - SMART DETECTION
-      'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'),
-      'import.meta.env.VITE_API_URL': JSON.stringify(
-        isDev || mode === 'development' 
-          ? 'http://localhost:10000/api/v1' 
-          : 'https://spendwise-dx8g.onrender.com/api/v1'
-      ),
-      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
-        isDev || mode === 'development' 
-          ? 'http://localhost:5173' 
-          : 'https://spendwise-client.vercel.app'
-      ),
-      'import.meta.env.VITE_DEBUG_MODE': JSON.stringify('true'),
-      'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(isDev ? 'development' : 'production'),
-      'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
-      'import.meta.env.DEV': JSON.stringify(isDev),
-      'import.meta.env.PROD': JSON.stringify(!isDev),
-      'import.meta.env.VITE_APP_NAME': JSON.stringify('SpendWise'),
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify('2.0.0')
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0')
     },
     
     clearScreen: false,
     
-    // ✅ Enhanced CSS configuration
     css: {
-      devSourcemap: isDev,
-      preprocessorOptions: {
-        css: {
-          charset: false
-        }
-      }
-    },
-    
-    // ✅ Mode-specific configurations
-    ...(isAdmin && {
-      // Admin-specific optimizations
-      build: {
-        ...this.build,
-        rollupOptions: {
-          ...this.build?.rollupOptions,
-          external: isDev ? [] : ['react-devtools-core']
-        }
-      }
-    }),
-    
-    ...(isAnalytics && {
-      // Analytics-specific optimizations
-      optimizeDeps: {
-        ...this.optimizeDeps,
-        include: [
-          ...this.optimizeDeps?.include || [],
-          'chart.js',
-          'react-chartjs-2'
-        ]
-      }
-    })
+      devSourcemap: isDev
+    }
   };
 });
