@@ -137,7 +137,7 @@ const Profile = () => {
         authToasts.avatarUploadFailed();
       }
     } catch (error) {
-      console.error('🔍 Profile Upload Error:', error);
+              // Profile upload error handled by toast notification
       authToasts.avatarUploadFailed();
     } finally {
       setIsUploadingAvatar(false);
@@ -232,11 +232,7 @@ const Profile = () => {
         // ✅ 4. Refresh user data to sync with database
         const refreshResult = await useAuthStore.getState().actions.getProfile();
         if (refreshResult.success) {
-          console.log('✅ Profile preferences updated and applied:', {
-            theme: preferencesData.theme_preference,
-            language: preferencesData.language_preference,
-            currency: preferencesData.currency_preference
-          });
+          // Profile preferences updated successfully - logged via toast notification
         }
 
         // ✅ 5. Show success notification

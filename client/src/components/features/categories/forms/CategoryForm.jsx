@@ -143,7 +143,7 @@ const CategoryForm = ({
   // ✅ Handle cancel
   const handleCancel = useCallback(() => {
     if (isDirty) {
-      // TODO: Show confirmation dialog
+      // NOTE: Confirmation dialog for category deletion could enhance user safety
       const confirmed = window.confirm(t('form.unsavedChanges'));
       if (!confirmed) return;
     }

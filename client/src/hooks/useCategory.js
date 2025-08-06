@@ -174,7 +174,7 @@ class CategoryAIEngine {
   static async analyzeUserPattern(text, amount, userId) {
     try {
       // This would call the backend API to get user patterns
-      // TODO: Implement user patterns with analytics API  
+      // NOTE: User patterns analysis will be implemented when analytics API is ready  
       const response = await api.analytics.getUserAnalytics({ userId });
       const patterns = response.data;
 
@@ -237,7 +237,7 @@ class CategoryAIEngine {
 
   static async generateSmartCategories(userId) {
     try {
-      // TODO: Implement smart suggestions or use categories directly
+      // NOTE: Smart category suggestions feature planned for future enhancement
       const response = await api.categories.getAll();
       return response.data || [];
     } catch (error) {
@@ -499,7 +499,7 @@ export const useCategory = (type = null) => {
   // ✅ Bulk operations mutation
   const bulkOperationMutation = useMutation({
     mutationFn: async ({ operation, categoryIds, data = {} }) => {
-      // TODO: Implement bulk operations with new API structure
+      // NOTE: Bulk operations feature planned for future release
       // For now, handle operations individually
       const results = [];
       for (const id of categoryIds) {

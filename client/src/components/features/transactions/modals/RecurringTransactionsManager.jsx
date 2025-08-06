@@ -276,9 +276,9 @@ const RecurringTransactionsManager = ({
     createRecurring
   } = useRecurringTransactions();
   
-  // ✅ Filtered recurring transactions
+  // ✅ Filtered recurring transactions - FIXED: Ensure array safety
   const filteredRecurring = useMemo(() => {
-    if (!recurringTransactions) return [];
+    if (!recurringTransactions || !Array.isArray(recurringTransactions)) return [];
     
     return recurringTransactions.filter(recurring => {
       // Search filter
@@ -304,9 +304,9 @@ const RecurringTransactionsManager = ({
     });
   }, [recurringTransactions, searchQuery, statusFilter, typeFilter]);
   
-  // ✅ Statistics
+  // ✅ Statistics - FIXED: Ensure array safety
   const stats = useMemo(() => {
-    if (!recurringTransactions) return { total: 0, active: 0, paused: 0 };
+    if (!recurringTransactions || !Array.isArray(recurringTransactions)) return { total: 0, active: 0, paused: 0 };
     
     return {
       total: recurringTransactions.length,

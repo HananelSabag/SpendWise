@@ -7,7 +7,7 @@
 import { api } from './client.js';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
-import { normalizeUserData } from '../utils/userNormalizer';
+// User normalization now handled server-side - no client normalization needed
 
 // ✅ Google OAuth Configuration
 const GOOGLE_CONFIG = {
@@ -664,8 +664,8 @@ export const authAPI = {
         // ✅ FIXED: Handle server response structure correctly
         const user = response.data?.data || response.data;
         
-        // ✅ CLEANED: Use centralized user normalization
-        const normalizedUser = normalizeUserData(user);
+        // ✅ CLEANED: Server already returns normalized user data
+        const normalizedUser = user;
         
         return {
           success: true,

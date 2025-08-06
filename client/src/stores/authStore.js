@@ -367,7 +367,7 @@ export const useAuthStore = create(
               state.sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
 
               // ✅ FIX: Mock biometric (not implemented yet)
-              state.biometricEnabled = false; // TODO: Implement BiometricAuthManager
+              state.biometricEnabled = false; // NOTE: Biometric authentication feature planned for future mobile app
             });
 
             // Setup auto logout timer

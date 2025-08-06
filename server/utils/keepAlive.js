@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const https = require('https');
 const http = require('http');
+const logger = require('./logger');
 
 class KeepAliveService {
   constructor() {
