@@ -66,7 +66,7 @@ class GoogleOAuthManager {
           callback: this.handleCredentialResponse.bind(this),
           auto_select: false,
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements
+          use_fedcm_for_prompt: false, // DISABLE FedCM - causing CORS issues with localhost->production
           itp_support: true,
           // ✅ Enhanced FedCM configuration
           ux_mode: 'popup', // Use popup mode for better FedCM compatibility

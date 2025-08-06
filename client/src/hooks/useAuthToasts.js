@@ -48,7 +48,9 @@ export const useAuthToasts = () => {
     },
 
     googleLoginFailed: () => {
-      toast.error(t('auth.googleLoginFailed', 'Google sign-in failed. Please try again.'));
+      // Use direct translation lookup to avoid fallback conflicts
+      const message = t('auth.googleLoginFailed') || 'Google sign-in failed. Please try again.';
+      toast.error(message);
     },
 
     // ✅ Logout Toasts
