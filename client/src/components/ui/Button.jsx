@@ -41,13 +41,14 @@ const Button = React.forwardRef(({
 
   // ✅ Enhanced variant configurations with mobile touch targets
   const variants = {
+    default: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white shadow-sm hover:shadow-md active:bg-blue-800 border-2 border-blue-600',
     primary: 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 text-white shadow-sm hover:shadow-md active:bg-primary-800',
     secondary: 'bg-gray-100 hover:bg-gray-200 focus:ring-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:focus:ring-gray-500',
     success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500 text-white shadow-sm hover:shadow-md active:bg-green-800',
     danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white shadow-sm hover:shadow-md active:bg-red-800',
     warning: 'bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400 text-white shadow-sm hover:shadow-md active:bg-yellow-700',
     info: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white shadow-sm hover:shadow-md active:bg-blue-800',
-    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
+    outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:ring-gray-600',
     ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-300 dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:ring-gray-600',
     link: 'text-primary-600 hover:text-primary-700 underline-offset-4 hover:underline focus:ring-primary-500 dark:text-primary-400 dark:hover:text-primary-300'
   };
@@ -169,6 +170,7 @@ const Button = React.forwardRef(({
 Button.displayName = 'Button';
 
 // ✅ Button variants for easy import
+export const DefaultButton = (props) => <Button variant="default" {...props} />;
 export const PrimaryButton = (props) => <Button variant="primary" {...props} />;
 export const SecondaryButton = (props) => <Button variant="secondary" {...props} />;
 export const SuccessButton = (props) => <Button variant="success" {...props} />;

@@ -1,10 +1,10 @@
 /**
  * Centralized Hooks Export
  * Makes imports cleaner and more consistent
+ * ✅ FIXED: Only exports that actually exist
  */
 
-// Core hooks
-export { default as useApi } from './useApi';
+// Core hooks - useApi only has named exports, no default
 export { 
   useApiQuery, 
   useApiMutation, 
@@ -13,38 +13,38 @@ export {
   useRealtimeQuery,
   useDependentQuery,
   usePrefetch,
-  useCacheManager
+  useCacheManager,
+  queryKeys,
+  mutationKeys,
+  useQueryPerformance
 } from './useApi';
 
-// Authentication
-export { default as useAuth } from './useAuth';
+// Authentication - useAuth only has named export
+export { useAuth } from './useAuth';
 
-// Transactions - Export all transaction-related hooks
+// Transactions - Only actual exports
 export { 
   default as useTransactions,
-  useTransactions,
-  useTransactionSearch,
-  useRecurringTransactions,
-  useTransactionTemplates,
-  useTransactionsByPeriod,
-  useCategoryBreakdown
+  useTransactionTemplates
 } from './useTransactions';
 
 // Balance Panel - DEDICATED BALANCE HOOK  
 export { default as useBalance } from './useBalance';
 
-// Categories
+// Categories - Only actual exports
 export { 
-  default as useCategories,
-  useCategories,
-  useCategoryStats,
-  useCategoriesWithCounts,
-  useCategoryIcons
+  default as useCategory
 } from './useCategory';
 
-// Other hooks
+// Transaction Actions
+export { default as useTransactionActions } from './useTransactionActions';
+
+// Other verified hooks with default exports
 export { default as useDashboard } from './useDashboard';
-export { default as useProfile } from './useProfile';
+export { default as useUpcomingTransactions } from './useUpcomingTransactions';
+export { default as useExport } from './useExport';
+export { default as useToast } from './useToast';
+export { default as useAutoRegeneration } from './useAutoRegeneration';
 
 // Translation hook (re-export from stores for convenience)
 export { useTranslation } from '../stores/translationStore';

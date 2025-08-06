@@ -44,7 +44,7 @@ const BalancePanel = ({
   });
 
   // ✅ State management
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
+  const [selectedPeriod, setSelectedPeriod] = useState('daily');
   const [showBalances, setShowBalances] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -131,8 +131,8 @@ const BalancePanel = ({
       <div className="p-6 pb-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">
-            {t('balance.title')}
-          </h2>
+          {t('balance.title')}
+        </h2>
           
           <div className="flex items-center gap-2">
             {/* Toggle visibility */}
@@ -146,8 +146,8 @@ const BalancePanel = ({
             </Button>
             
             {/* Refresh button */}
-            <Button
-              variant="ghost"
+        <Button
+          variant="ghost"
               size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -157,9 +157,9 @@ const BalancePanel = ({
                 'w-4 h-4',
                 (isRefreshing || loading) && 'animate-spin'
               )} />
-            </Button>
+        </Button>
           </div>
-        </div>
+      </div>
 
         {/* Period Selector */}
         <div className="flex flex-wrap gap-2">
@@ -182,34 +182,34 @@ const BalancePanel = ({
       <div className="px-6 pb-6">
         {showBalances ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Income */}
+        {/* Income */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-green-700">
-                  {t('balance.income')}
+            {t('balance.income')}
                 </span>
                 <TrendingUp className="w-4 h-4 text-green-600" />
-              </div>
+          </div>
               <div className="text-2xl font-bold text-green-900">
                 {formatCurrency(currentPeriodData.income)}
-              </div>
-            </div>
+          </div>
+        </div>
 
-            {/* Expenses */}
+        {/* Expenses */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-red-700">
-                  {t('balance.expenses')}
+            {t('balance.expenses')}
                 </span>
                 <TrendingDown className="w-4 h-4 text-red-600" />
-              </div>
+          </div>
               <div className="text-2xl font-bold text-red-900">
                 {formatCurrency(currentPeriodData.expenses)}
-              </div>
-            </div>
+          </div>
+        </div>
 
             {/* Total/Net */}
-            <div className={cn(
+        <div className={cn(
               'border rounded-lg p-4',
               currentPeriodData.total >= 0 
                 ? 'bg-blue-50 border-blue-200' 
@@ -227,7 +227,7 @@ const BalancePanel = ({
                   currentPeriodData.total >= 0 ? 'bg-blue-600' : 'bg-orange-600'
                 )} />
               </div>
-              <div className={cn(
+          <div className={cn(
                 'text-2xl font-bold',
                 currentPeriodData.total >= 0 ? 'text-blue-900' : 'text-orange-900'
               )}>
@@ -258,9 +258,9 @@ const BalancePanel = ({
               <div>
                 <span className="font-medium">{t('balance.lastUpdate')}:</span> 
                 {new Date(metadata.currentDate).toLocaleTimeString()}
-              </div>
-            </div>
-          </div>
+        </div>
+      </div>
+        </div>
         )}
       </div>
     </Card>

@@ -30,6 +30,7 @@ import { useUpcomingTransactions } from '../../../hooks/useUpcomingTransactions'
 import { useTranslation, useCurrency, useTheme } from '../../../stores';
 import { Button, Card, Badge, LoadingSpinner } from '../../ui';
 import { cn, dateHelpers } from '../../../utils/helpers';
+import TransactionCard from '../dashboard/transactions/TransactionCard';
 
 // Helper function for relative time
 const getRelativeTimeString = (date) => {
@@ -41,7 +42,7 @@ const UpcomingTransactionsSection = () => {
   const { formatCurrency } = useCurrency();
   const { isDark } = useTheme();
   
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [groupBy, setGroupBy] = useState('template'); // template | date | type
   const [showActions, setShowActions] = useState(true);
 
@@ -314,7 +315,7 @@ const UpcomingTransactionsSection = () => {
                   </div>
                 </div>
 
-                {/* ✨ BEAUTIFUL TRANSACTIONS LIST */}
+                {/* ✨ UPCOMING TRANSACTIONS LIST WITH PROPER TRANSACTIONCARD */}
                 <div className="space-y-3">
                   {group.transactions.map((transaction, transactionIndex) => (
                     <motion.div
@@ -322,77 +323,25 @@ const UpcomingTransactionsSection = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: transactionIndex * 0.05 }}
-                      whileHover={{ scale: 1.01, y: -1 }}
-                      className="relative overflow-hidden bg-gradient-to-r from-white to-gray-50/50 dark:from-gray-700 dark:to-gray-800/50 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200"
                     >
-                      {/* Transaction Type Indicator */}
-                      <div className={cn(
-                        "absolute left-0 top-0 bottom-0 w-1",
-                        transaction.type === 'income' 
-                          ? "bg-gradient-to-b from-emerald-400 to-green-500" 
-                          : "bg-gradient-to-b from-rose-400 to-red-500"
-                      )} />
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-10 h-10 rounded-lg flex items-center justify-center",
-                              transaction.type === 'income' 
-                                ? "bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30" 
-                                : "bg-gradient-to-br from-rose-100 to-red-100 dark:from-rose-900/30 dark:to-red-900/30"
-                            )}>
-                              {transaction.type === 'income' ? (
-                                <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <TrendingDown className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-800 dark:text-gray-200">
-                                {transaction.description || transaction.template_name || 'Transaction'}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                  {getRelativeTimeString(transaction.date)}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {dateHelpers.formatShort(transaction.date)}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className={cn(
-                              "font-bold text-lg",
-                              transaction.type === 'income' 
-                                ? "text-emerald-600 dark:text-emerald-400" 
-                                : "text-rose-600 dark:text-rose-400"
-                            )}>
-                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
-                            </p>
-                          </div>
-
-                          {/* Action Buttons */}
-                          {showActions && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteUpcoming(transaction.id)}
-                                disabled={isDeleting}
-                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 p-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <TransactionCard
+                        transaction={transaction}
+                        index={transactionIndex}
+                        showActions={showActions}
+                        onEdit={(tx) => {
+                          // Handle edit upcoming transaction
+                          console.log('Edit upcoming transaction:', tx);
+                        }}
+                        onDelete={(tx) => {
+                          deleteUpcoming(tx.id);
+                        }}
+                        onDuplicate={(tx) => {
+                          // Handle duplicate upcoming transaction
+                          console.log('Duplicate upcoming transaction:', tx);
+                        }}
+                        viewMode="card"
+                        className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-900/10"
+                      />
                     </motion.div>
                   ))}
                 </div>

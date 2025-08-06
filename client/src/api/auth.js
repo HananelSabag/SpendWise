@@ -811,6 +811,25 @@ export const authAPI = {
         error: api.normalizeError(error)
       };
     }
+  },
+
+  // ✅ Set Password (for OAuth users setting first password)
+  async setPassword(passwordData) {
+    try {
+      const response = await api.client.post('/users/set-password', passwordData);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: response.data?.message || 'Password set successfully. You can now use both OAuth and email/password login.'
+      };
+    } catch (error) {
+      console.error('❌ setPassword error:', error);
+      return {
+        success: false,
+        error: api.normalizeError(error)
+      };
+    }
   }
 };
 

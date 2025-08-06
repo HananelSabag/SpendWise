@@ -200,6 +200,17 @@ router.post('/change-password',
 );
 
 /**
+ * @route   POST /api/v1/users/set-password
+ * @desc    Set password for OAuth users (first-time setup)
+ * @access  Private
+ */
+router.post('/set-password',
+  auth,
+  validate.passwordSet,
+  userController.setPassword
+);
+
+/**
  * 🚀 NEW: Performance Monitoring Routes
  */
 

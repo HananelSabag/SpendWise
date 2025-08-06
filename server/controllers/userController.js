@@ -703,30 +703,27 @@ const userController = {
 
       const user = result.rows[0];
       
-      // Check if user has a password (not OAuth-only account)
+      // ✅ HYBRID SYSTEM: Allow password changes for all users
+      // If user doesn't have a password yet, they're setting their first password (OAuth users)
       if (!user.password_hash) {
-        if (user.oauth_provider) {
+        // For OAuth users setting their first password, skip current password verification
+        // This allows them to set up email/password login alongside their OAuth account
+        logger.info('🔑 OAuth user setting first password for hybrid login', {
+          userId,
+          email: user.email,
+          oauthProvider: user.oauth_provider
+        });
+      } else {
+        // Regular password change - verify current password
+        const bcrypt = require('bcrypt');
+        const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+        
+        if (!isValidPassword) {
           throw { 
-            ...errorCodes.FORBIDDEN, 
-            details: `This account uses ${user.oauth_provider} login. Please use ${user.oauth_provider} to manage your account.` 
-          };
-        } else {
-          throw { 
-            ...errorCodes.BAD_REQUEST, 
-            details: 'No password set for this account. Please reset your password.' 
+            ...errorCodes.UNAUTHORIZED, 
+            details: 'Current password is incorrect' 
           };
         }
-      }
-
-      // Verify current password
-      const bcrypt = require('bcrypt');
-      const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
-      
-      if (!isValidPassword) {
-        throw { 
-          ...errorCodes.UNAUTHORIZED, 
-          details: 'Current password is incorrect' 
-        };
       }
 
       // Hash new password
@@ -769,6 +766,99 @@ const userController = {
     } catch (error) {
       const duration = Date.now() - start;
       logger.error('❌ Password change failed', {
+        userId,
+        error: error.message,
+        duration: `${duration}ms`
+      });
+      throw error;
+    }
+  }),
+
+  /**
+   * 🔐 Set password for OAuth users (first-time password setup)
+   * @route POST /api/v1/users/set-password
+   */
+  setPassword: asyncHandler(async (req, res) => {
+    const start = Date.now();
+    const userId = req.user.id;
+    const { newPassword } = req.body;
+
+    try {
+      // Get user to check their current state
+      const query = `
+        SELECT id, email, password_hash, oauth_provider, google_id
+        FROM users 
+        WHERE id = $1 AND is_active = true
+      `;
+      
+      const result = await db.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
+      }
+
+      const user = result.rows[0];
+      
+      // Check if user already has a password
+      if (user.password_hash) {
+        throw { 
+          ...errorCodes.BAD_REQUEST, 
+          details: 'Password already set. Use change-password endpoint instead.' 
+        };
+      }
+      
+      // Only allow OAuth users to set password
+      if (!user.oauth_provider && !user.google_id) {
+        throw { 
+          ...errorCodes.BAD_REQUEST, 
+          details: 'This endpoint is for OAuth users setting their first password.' 
+        };
+      }
+
+      // Hash new password
+      const bcrypt = require('bcrypt');
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+      
+      // Update password in database
+      const updateQuery = `
+        UPDATE users 
+        SET password_hash = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING id, email, username, oauth_provider
+      `;
+      
+      const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
+      
+      const duration = Date.now() - start;
+      logger.info('✅ OAuth user set first password successfully', {
+        userId,
+        email: user.email,
+        oauthProvider: user.oauth_provider,
+        duration: `${duration}ms`,
+        performance: duration < 100 ? 'excellent' : duration < 300 ? 'good' : 'slow'
+      });
+
+      res.json({
+        success: true,
+        message: 'Password set successfully. You can now use both OAuth and email/password login.',
+        data: {
+          id: updateResult.rows[0].id,
+          email: updateResult.rows[0].email,
+          username: updateResult.rows[0].username,
+          hybridLoginEnabled: true
+        },
+        metadata: {
+          updated: true,
+          duration: `${duration}ms`,
+          security_enhanced: true,
+          login_methods: ['oauth', 'email_password']
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      const duration = Date.now() - start;
+      logger.error('❌ Set password failed', {
         userId,
         error: error.message,
         duration: `${duration}ms`

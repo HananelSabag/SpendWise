@@ -153,6 +153,35 @@ export const dateHelpers = {
     const day = String(dateObj.getDate()).padStart(2, '0');
     
     return `${year}-${month}-${day}`;
+  },
+
+  // ✅ ADD: Missing formatShort and formatMedium functions
+  formatShort: (date, locale = 'en') => {
+    if (!date) return '';
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'Invalid Date';
+      
+      const formatLocale = locale === 'he' ? he : enUS;
+      return format(dateObj, 'MMM d', { locale: formatLocale });
+    } catch (error) {
+      console.error('dateHelpers.formatShort error:', error);
+      return 'Invalid Date';
+    }
+  },
+
+  formatMedium: (date, locale = 'en') => {
+    if (!date) return '';
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'Invalid Date';
+      
+      const formatLocale = locale === 'he' ? he : enUS;
+      return format(dateObj, 'EEEE, MMMM d, yyyy', { locale: formatLocale });
+    } catch (error) {
+      console.error('dateHelpers.formatMedium error:', error);
+      return 'Invalid Date';
+    }
   }
 };
 

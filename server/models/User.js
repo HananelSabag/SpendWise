@@ -299,10 +299,7 @@ class User {
       if (!hasPassword) {
         if (isGoogleUser) {
           // Google user without password - provide helpful guidance
-          throw new Error(`This account was created with Google sign-in. To use email/password login, please:
-1. Sign in with Google first
-2. Go to Settings → Security → Set Password
-3. Then you can use either login method`);
+          throw new Error('This account uses Google sign-in. Please use the Google login button.');
         } else {
           // Regular user without password - account setup issue
           throw new Error('Password not set for this account. Please reset your password or contact support.');

@@ -817,6 +817,73 @@ const validate = {
     next();
   },
 
+  // ✅ Password Set Validation (for OAuth users setting first password)
+  passwordSet: (req, res, next) => {
+    const { newPassword } = req.body;
+
+    // Required fields check
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'New password is required',
+          details: {
+            newPassword: 'New password is required'
+          }
+        }
+      });
+    }
+
+    // Password strength validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Password must be at least 8 characters long',
+          details: { newPassword: 'Password too short' }
+        }
+      });
+    }
+
+    // Additional password strength checks
+    if (!/(?=.*[a-z])/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Password must contain at least one lowercase letter',
+          details: { newPassword: 'Missing lowercase letter' }
+        }
+      });
+    }
+
+    if (!/(?=.*[A-Z])/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Password must contain at least one uppercase letter',
+          details: { newPassword: 'Missing uppercase letter' }
+        }
+      });
+    }
+
+    if (!/(?=.*\d)/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Password must contain at least one number',
+          details: { newPassword: 'Missing number' }
+        }
+      });
+    }
+
+    next();
+  },
+
   // ✅ Password Change Validation
   passwordChange: (req, res, next) => {
     const { currentPassword, newPassword } = req.body;

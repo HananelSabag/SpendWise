@@ -225,18 +225,40 @@ const CategorySelector = ({
         </motion.div>
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown - Mobile Optimized */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-80 overflow-hidden"
-          >
+          <>
+            {/* Mobile Backdrop */}
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden" onClick={() => setIsOpen(false)} />
+            
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className={cn(
+                "z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden",
+                // Mobile: Full screen modal
+                "fixed inset-x-4 top-20 bottom-20 sm:relative sm:inset-auto sm:top-auto sm:bottom-auto",
+                // Desktop: Dropdown
+                "sm:absolute sm:w-full sm:mt-1 sm:max-h-80"
+              )}
+            >
             {!showCreateForm ? (
               <>
+                {/* Mobile Header */}
+                <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 sm:hidden">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select Category</h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
                 {/* Search Input */}
                 <div className="p-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="relative">
@@ -247,13 +269,13 @@ const CategorySelector = ({
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={t('fields.category.search')}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
                 {/* Categories List */}
-                <div className="max-h-48 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto sm:max-h-48">
                   {filteredCategories.length > 0 ? (
                     <div className="p-2">
                       {filteredCategories.map((category) => {
@@ -263,24 +285,30 @@ const CategorySelector = ({
                             type="button"
                             onClick={() => handleCategorySelect(category.id)}
                             className={cn(
-                              "w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-                              "hover:bg-gray-100 dark:hover:bg-gray-700",
+                              "w-full flex items-center space-x-3 px-3 py-4 sm:py-2 rounded-lg transition-colors text-left",
+                              "hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600",
+                              "touch-manipulation min-h-[60px] sm:min-h-auto",
                               value === category.id && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                             )}
                           >
                             <div 
-                              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                              className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                               style={{ backgroundColor: category.color }}
                             >
-                              {React.createElement(getIconComponent(category.icon), { className: "w-4 h-4 text-white" })}
+                              {React.createElement(getIconComponent(category.icon), { className: "w-5 h-5 sm:w-4 sm:h-4 text-white" })}
                             </div>
                             
-                            <span className="font-medium truncate">
-                              {category.name}
-                            </span>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium block truncate text-base sm:text-sm">
+                                {category.name}
+                              </span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400 block sm:hidden">
+                                {category.type === 'income' ? 'Income' : 'Expense'}
+                              </span>
+                            </div>
                             
                             {value === category.id && (
-                              <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 ml-auto flex-shrink-0" />
+                              <Check className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                             )}
                           </button>
                         );
@@ -293,15 +321,15 @@ const CategorySelector = ({
                   )}
                 </div>
 
-                {/* Create New Button */}
-                <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                {/* Create New Button - Mobile Optimized */}
+                <div className="p-3 sm:p-2 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setShowCreateForm(true)}
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-4 sm:py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors touch-manipulation min-h-[56px] sm:min-h-auto"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span className="font-medium">
+                    <Plus className="w-5 h-5 sm:w-4 sm:h-4" />
+                    <span className="font-medium text-base sm:text-sm">
                       {t('fields.category.createNew')}
                     </span>
                   </button>
@@ -403,6 +431,7 @@ const CategorySelector = ({
               </div>
             )}
           </motion.div>
+          </>
         )}
       </AnimatePresence>
 

@@ -5,21 +5,23 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { 
   RefreshCw, Plus, TrendingUp, TrendingDown, DollarSign, 
   Calendar, BarChart3, Target, Clock, User, PiggyBank,
-  Zap, ArrowUpRight, ArrowDownRight, Eye
+  ArrowUpRight, ArrowDownRight, Eye
 } from 'lucide-react';
 
 // ✅ Import components and hooks
 import { useTranslation, useNotifications, useAuth, useCurrency } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
-import { useTransactions } from '../hooks/useTransactions';
 import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
+import { cn } from '../utils/helpers';
 
 // ✅ Import real dashboard components
 import BalancePanel from '../components/features/dashboard/BalancePanel';
-import RecentTransactions from '../components/features/dashboard/RecentTransactions';
+import RecentTransactionsWidget from '../components/features/dashboard/RecentTransactionsWidget';
+import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
 
 /**
  * 📊 Beautiful Dashboard Component
@@ -34,10 +36,6 @@ const Dashboard = () => {
   // ✅ Local state hooks
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
-  const [showQuickAction, setShowQuickAction] = useState(false);
-  const [quickActionType, setQuickActionType] = useState('expense');
-  const [quickAmount, setQuickAmount] = useState('');
-  const [quickDescription, setQuickDescription] = useState('');
   
   // ✅ Data fetching hooks
   const { 
@@ -48,16 +46,6 @@ const Dashboard = () => {
     isEmpty,
     refresh: refreshDashboard 
   } = useDashboard();
-
-  // ✅ Real transactions data
-  const { 
-    transactions, 
-    loading: transactionsLoading,
-    refetch: refetchTransactions 
-  } = useTransactions({
-    pageSize: 10,
-    enableAI: false
-  });
 
   // ✅ Time-based greeting with proper language support
   const greeting = useMemo(() => {
@@ -151,32 +139,6 @@ const Dashboard = () => {
     }
   }, [refreshDashboard, addNotification, t]);
 
-  const handleQuickAction = useCallback(() => {
-    if (!quickAmount) return;
-    
-    // Here you would integrate with your transaction API
-    addNotification({
-      type: 'success',
-      message: t('quickActions.success'),
-      duration: 2000
-    });
-    
-    // Reset form
-    setQuickAmount('');
-    setQuickDescription('');
-    setShowQuickAction(false);
-    handleRefresh();
-  }, [quickAmount, addNotification, t, handleRefresh]);
-
-  // ✅ Recent transactions data for the RecentTransactions component
-  const recentTransactions = useMemo(() => {
-    if (!transactions || !Array.isArray(transactions)) return [];
-    
-    return transactions
-      .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
-      .slice(0, 5);
-  }, [transactions]);
-
   // ✅ CONDITIONAL RENDERING - AFTER ALL HOOKS
   if (isLoading && !dashboardData) {
     return (
@@ -210,48 +172,89 @@ const Dashboard = () => {
     );
   }
 
-  // ✅ Beautiful dashboard content with RTL support
+  // ✅ Beautiful dashboard content with unified header design
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        {/* Welcome Header with Profile */}
-        <div className="mb-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-blue-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-              <div className="relative">
-                <Avatar
-                  src={user?.avatar}
-                  alt={user?.name || user?.username || 'User'}
-                  name={user?.name || user?.username || 'User'}
-                  size="xl"
-                  className="border-4 border-blue-500 shadow-lg"
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Beautiful Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Page Title */}
+            <div className="flex items-center gap-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <BarChart3 className="w-6 h-6 text-white" />
+              </motion.div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  Dashboard
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                >
                   {greeting}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {t('overview', 'Overview')} • {formatDate(new Date())}
-                </p>
+                </motion.p>
               </div>
             </div>
-            
-            <Button 
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+
+            {/* Actions */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-3"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? t('loading') : t('refresh')}
-            </Button>
+              {/* Quick Action Button */}
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowQuickAction(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline font-medium">{t('quickActions.add', 'Quick Add')}</span>
+                </Button>
+              </motion.div>
+
+              {/* Refresh Button */}
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+                </Button>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
 
         {/* Balance Panel with New Dedicated Hook */}
         <BalancePanel 
@@ -261,79 +264,10 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Quick Actions Panel */}
-          <Card className="lg:col-span-1 shadow-xl">
+          {/* Quick Actions Panel - New Redesigned Component */}
+          <Card className="lg:col-span-1 shadow-xl" data-quick-actions>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t('quickActions.title')}
-                </h3>
-                <Zap className="w-6 h-6 text-yellow-500" />
-              </div>
-              
-              {!showQuickAction ? (
-                <div className="space-y-3">
-                  <button
-                    onClick={() => { setQuickActionType('expense'); setShowQuickAction(true); }}
-                    className="w-full flex items-center justify-between p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
-                  >
-                    <span className="font-medium text-red-700">{t('quickActions.addExpense')}</span>
-                    <Plus className="w-5 h-5 text-red-500" />
-                  </button>
-                  
-                  <button
-                    onClick={() => { setQuickActionType('income'); setShowQuickAction(true); }}
-                    className="w-full flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors"
-                  >
-                    <span className="font-medium text-green-700">{t('quickActions.addIncome')}</span>
-                    <Plus className="w-5 h-5 text-green-500" />
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className={`w-3 h-3 rounded-full ${quickActionType === 'expense' ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                    <span className="font-medium">
-                      {quickActionType === 'expense' ? t('quickActions.addExpense') : t('quickActions.addIncome')}
-                    </span>
-                  </div>
-                  
-                  <input
-                    type="number"
-                    placeholder={t('quickActions.placeholder.amount')}
-                    value={quickAmount}
-                    onChange={(e) => setQuickAmount(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  />
-                  
-                  <input
-                    type="text"
-                    placeholder={t('quickActions.placeholder.description')}
-                    value={quickDescription}
-                    onChange={(e) => setQuickDescription(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  />
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleQuickAction}
-                      disabled={!quickAmount}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                      {t('quickActions.add')}
-                    </Button>
-                    <Button
-                      onClick={() => setShowQuickAction(false)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {t('quickActions.cancel')}
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <QuickActionsBar />
             </div>
           </Card>
 
@@ -352,43 +286,40 @@ const Dashboard = () => {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{enhancedData.stats.totalTransactions}</div>
+                    <div className="text-2xl font-bold text-blue-600">0</div>
                     <div className="text-sm text-gray-600">{t('stats.totalTransactions')}</div>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency ? formatCurrency(enhancedData.stats.avgTransaction) : `${currencySymbol}${enhancedData.stats.avgTransaction}`}
-                </div>
+                      {formatCurrency ? formatCurrency(0) : `${currencySymbol}0`}
+                    </div>
                     <div className="text-sm text-gray-600">{t('stats.avgTransaction')}</div>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">{enhancedData.stats.topCategory}</div>
+                    <div className="text-lg font-bold text-purple-600">{t('common.categoryTypes.food', 'Food')}</div>
                     <div className="text-sm text-gray-600">{t('stats.topCategory')}</div>
                   </div>
                   <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-600">{enhancedData.stats.growthRate}</div>
+                    <div className="text-2xl font-bold text-yellow-600">+0%</div>
                     <div className="text-sm text-gray-600">{t('stats.thisMonth')}</div>
                   </div>
                 </div>
               </div>
             </Card>
 
-                         {/* Recent Transactions with Real Data */}
-             <RecentTransactions 
-               transactions={recentTransactions}
-               maxItems={5}
-               showFilters={false}
-               showActions={false}
-               onViewAll={() => {
-                 // Navigate to transactions page
-                 window.location.href = '/transactions';
-               }}
-               onAddTransaction={() => setShowQuickAction(true)}
-               onRefresh={() => {
-                 refreshDashboard();
-                 refetchTransactions();
-               }}
-             />
+            {/* Recent Transactions Widget - New Simple Component */}
+            <RecentTransactionsWidget 
+              onViewAll={() => {
+                // Navigate to transactions page
+                window.location.href = '/transactions';
+              }}
+              onAddTransaction={() => {
+                // Scroll to quick actions for better UX
+                document.querySelector('[data-quick-actions]')?.scrollIntoView({ 
+                  behavior: 'smooth' 
+                });
+              }}
+            />
 
             {/* Tips Panel */}
             <Card className="shadow-xl bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
@@ -414,7 +345,7 @@ const Dashboard = () => {
             </Card>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

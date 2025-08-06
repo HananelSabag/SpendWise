@@ -49,8 +49,18 @@ class StoreManager {
       await useAuthStore.getState().actions.initialize();
       
       // Initialize translation store with localStorage first (works immediately)
-      const savedLanguage = localStorage.getItem('spendwise-language') || 
-                           (navigator.language.startsWith('he') ? 'he' : 'en');
+      // ✅ FIXED: Force English as default to avoid Hebrew/English module mismatch
+      const savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+      
+      // ✅ DEBUG: Log language detection for troubleshooting
+      if (import.meta.env.DEV) {
+        console.log('🌐 Language detection:', {
+          savedLanguage,
+          browserLanguage: navigator.language,
+          finalLanguage: savedLanguage
+        });
+      }
+      
       await useTranslationStore.getState().actions.setLanguage(savedLanguage);
       
       // Initialize app store with defaults first

@@ -207,12 +207,25 @@ export const useTranslationStore = create(
             const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories', 'empty'];
             const { currentLanguage } = get();
             
-            const loadPromises = coreModules.map(module => 
-              get().actions.loadTranslationModule(module, currentLanguage)
+            // ✅ SAFETY: Always load English as fallback first
+            const englishPromises = coreModules.map(module => 
+              get().actions.loadTranslationModule(module, 'en')
             );
+            
+            // Then load current language if it's not English
+            const currentLangPromises = currentLanguage !== 'en' 
+              ? coreModules.map(module => get().actions.loadTranslationModule(module, currentLanguage))
+              : [];
 
             try {
-              await Promise.all(loadPromises);
+              // Load English first as fallback
+              await Promise.allSettled(englishPromises);
+              
+              // Then load current language
+              if (currentLangPromises.length > 0) {
+                await Promise.allSettled(currentLangPromises);
+              }
+              
               return true;
             } catch (error) {
               console.error('Failed to load core translation modules:', error);
@@ -308,6 +321,12 @@ export const useTranslationStore = create(
 
             // Try to get from loaded modules
             let translation = get().actions.getFromLoadedModule(moduleKey, translationKey);
+
+            // ✅ ENHANCED: If not found and not English, try English version
+            if (!translation && currentLanguage !== 'en') {
+              const englishModuleKey = `en.${moduleName}`;
+              translation = get().actions.getFromLoadedModule(englishModuleKey, translationKey);
+            }
 
             // Try fallback translations
             if (!translation) {
@@ -566,15 +585,23 @@ export const useNavTranslation = () => useTranslation('nav');
 
 // ✅ Initialize translation store
 if (typeof window !== 'undefined') {
-  // Set initial language from localStorage or browser
-  const savedLanguage = localStorage.getItem('spendwise-language') || 
-                       (navigator.language.startsWith('he') ? 'he' : 'en');
+  // ✅ FIXED: Always default to English to avoid module loading mismatch
+  const savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+  
+  // ✅ DEBUG: Log translation initialization
+  if (import.meta.env.DEV) {
+    console.log('🌐 Translation store init:', {
+      savedLanguage,
+      browserLanguage: navigator.language,
+      finalLanguage: savedLanguage
+    });
+  }
   
   const store = useTranslationStore.getState();
   store.actions.setLanguage(savedLanguage);
   
   // Subscribe to language changes for debugging
-  if (import.meta.env.VITE_DEBUG_MODE === 'true') {
+  if (import.meta.env.DEV) {
     useTranslationStore.subscribe(
       (state) => state.currentLanguage,
       (language) => {

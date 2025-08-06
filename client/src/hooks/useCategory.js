@@ -440,8 +440,12 @@ export const useCategory = (type = null) => {
       return response.data;
     },
     onSuccess: (newCategory) => {
+      // ✅ FIXED: Invalidate all related queries when category is created
       queryClient.invalidateQueries(['categories']);
       queryClient.invalidateQueries(['category-analytics']);
+      queryClient.invalidateQueries(['transactions']); // ✅ This fixes the category recognition issue!
+      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['balance']);
       toastService.success('categories.createSuccess', { name: newCategory.name });
     },
     onError: (error) => {
@@ -457,8 +461,12 @@ export const useCategory = (type = null) => {
       return response.data;
     },
     onSuccess: (updatedCategory) => {
+      // ✅ FIXED: Invalidate all related queries when category is updated
       queryClient.invalidateQueries(['categories']);
       queryClient.invalidateQueries(['category-analytics']);
+      queryClient.invalidateQueries(['transactions']);
+      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['balance']);
       toastService.success('categories.updateSuccess', { name: updatedCategory.name });
     },
     onError: (error) => {
@@ -474,8 +482,12 @@ export const useCategory = (type = null) => {
       return response.data;
     },
     onSuccess: () => {
+      // ✅ FIXED: Invalidate all related queries when category is deleted
       queryClient.invalidateQueries(['categories']);
       queryClient.invalidateQueries(['category-analytics']);
+      queryClient.invalidateQueries(['transactions']);
+      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['balance']);
       toastService.success('categories.deleteSuccess');
     },
     onError: (error) => {

@@ -11,7 +11,7 @@ import {
   Plus, 
   Search, 
   Filter, 
-  DollarSign,
+  ArrowLeftRight,
   TrendingUp,
   TrendingDown,
   RefreshCw,
@@ -58,7 +58,7 @@ import RecurringSetupModal from '../components/features/transactions/modals/Recu
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 
 // ✅ NEW: Upcoming Transactions System
-import UpcomingTransactionsSection from '../components/features/transactions/UpcomingTransactionsSection';
+import UpcomingTransactionsSimple from '../components/features/transactions/UpcomingTransactionsSimple';
 import useAutoRegeneration from '../hooks/useAutoRegeneration';
 
 import { cn } from '../utils/helpers';
@@ -244,9 +244,9 @@ const Transactions = () => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 }}
-                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg"
+                className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
               >
-                <DollarSign className="w-6 h-6 text-white" />
+                <ArrowLeftRight className="w-6 h-6 text-white" />
               </motion.div>
               <div>
                 <motion.h1 
@@ -425,8 +425,8 @@ const Transactions = () => {
           )}
         </Card>
 
-        {/* ✅ UPCOMING TRANSACTIONS SECTION */}
-        <UpcomingTransactionsSection />
+        {/* ✅ UPCOMING TRANSACTIONS - SIMPLIFIED */}
+        <UpcomingTransactionsSimple />
 
         {/* Transactions List */}
         <Card>

@@ -6,10 +6,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { 
   TrendingUp, TrendingDown, DollarSign, PieChart, 
   BarChart3, Calendar, Target, AlertCircle,
-  Coffee, Car, Home, ShoppingBag, Briefcase
+  Coffee, Car, Home, ShoppingBag, Briefcase,
+  RefreshCw, Download
 } from 'lucide-react';
 
 // Import stores and API
@@ -18,6 +20,7 @@ import analyticsAPI from '../api/analytics';
 
 // UI Components
 import { Card, Badge, Button } from '../components/ui';
+import { cn } from '../utils/helpers';
 
 const Analytics = () => {
   const { t } = useTranslation('analytics');
@@ -84,19 +87,89 @@ const Analytics = () => {
                      healthScore >= 40 ? 'fair' : 'poor';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Beautiful Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Page Title */}
+            <div className="flex items-center gap-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <BarChart3 className="w-6 h-6 text-white" />
+              </motion.div>
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  Analytics
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                >
+                  Real-time insights from your financial data
+                </motion.p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-3"
+            >
+              {/* Export Button */}
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="primary"
+                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline font-medium">Export</span>
+                </Button>
+              </motion.div>
+
+              {/* Refresh Button */}
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  onClick={() => analyticsQuery.refetch()}
+                  disabled={isLoading}
+                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+                </Button>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
+        {/* Period Selection */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Financial Analytics
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Real-time insights from your financial data
-              </p>
-            </div>
             
             {/* Period Selector */}
             <div className="flex gap-2">
@@ -379,7 +452,7 @@ const Analytics = () => {
             </span>
           </div>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 };

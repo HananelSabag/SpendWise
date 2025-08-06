@@ -8,7 +8,8 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Shield, Download, Camera, Edit2, Save, X,
-  Eye, EyeOff, Key, Mail, Calendar, MapPin, Settings
+  Eye, EyeOff, Key, Mail, Calendar, MapPin, Settings,
+  RefreshCw, Upload, ZoomIn, ImageIcon
 } from 'lucide-react';
 
 import { 
@@ -41,6 +42,8 @@ const Profile = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showPictureModal, setShowPictureModal] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Form data
   const [personalData, setPersonalData] = useState({
@@ -95,50 +98,64 @@ const Profile = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsUploadingAvatar(true);
     try {
       const formData = new FormData();
-      formData.append('profilePicture', file);  // ✅ FIXED: Use correct field name expected by server
+      formData.append('profilePicture', file);
       
       const response = await api.users.uploadAvatar(formData);
-      console.log('🔍 Profile Upload Response:', response);
-      console.log('🔍 Profile Upload - Avatar URL from server:', response.data?.data?.url || response.data?.url);
       
-      // ✅ FIXED: The upload endpoint already updates the user's avatar in database
-      // No need to call updateProfile again - it causes validation errors
-      // The upload-profile-picture endpoint handles both upload AND database update
-      
-      // Only refresh user data if upload was successful
       if (response.success) {
-        console.log('🔍 Profile Upload - About to refresh user profile...');
-        const refreshResult = await useAuthStore.getState().actions.getProfile();
-        console.log('🔍 Profile Upload - Profile refresh result:', refreshResult);
-      }
-      
-      // Only show success and refresh cache if upload was successful
-      if (response.success) {
-        // Force browser to refresh any cached images by updating avatar URLs
-        const avatarElements = document.querySelectorAll('img[src*="supabase"]');
+        // Get the new avatar URL from the response
+        const newAvatarUrl = response.data?.data?.url || response.data?.url || response.avatar_url;
+        
+        // Update only the avatar in the auth store WITHOUT syncing preferences
+        const currentUser = useAuthStore.getState().user;
+        const updatedUser = {
+          ...currentUser,
+          avatar: newAvatarUrl,
+          avatar_url: newAvatarUrl
+        };
+        
+        // Force update the store with new user object
+        useAuthStore.setState({
+          user: updatedUser
+        });
+        
+        // Force refresh all avatar images in the DOM immediately
+        const avatarElements = document.querySelectorAll('img[src*="supabase"], img[alt="Profile"], .avatar img, [class*="avatar"] img');
         avatarElements.forEach(img => {
-          if (img.src.includes('supabase')) {
-            const url = new URL(img.src);
-            url.searchParams.set('t', Date.now());
-            img.src = url.toString();
+          if (img.src && (img.src.includes('supabase') || img.alt === 'Profile' || img.alt?.includes('profile'))) {
+            // Use the new URL directly instead of adding timestamp
+            img.src = newAvatarUrl + '?t=' + Date.now();
           }
         });
         
         authToasts.avatarUploaded();
+        setShowPictureModal(false); // Close modal after successful upload
       } else {
-        // Upload failed, show error
         authToasts.avatarUploadFailed();
       }
     } catch (error) {
       console.error('🔍 Profile Upload Error:', error);
       authToasts.avatarUploadFailed();
     } finally {
-      setIsLoading(false);
+      setIsUploadingAvatar(false);
+      // Reset file input
+      if (event.target) {
+        event.target.value = '';
+      }
     }
-  }, [authToasts, updateProfile]);
+  }, [authToasts]);
+
+  // Handle picture view/change modal
+  const handlePictureClick = useCallback(() => {
+    setShowPictureModal(true);
+  }, []);
+
+  const handleClosePictureModal = useCallback(() => {
+    setShowPictureModal(false);
+  }, []);
 
   // ✅ ENHANCED: Update personal info with all fields
   const handlePersonalUpdate = useCallback(async () => {
@@ -235,7 +252,7 @@ const Profile = () => {
     }
   }, [preferencesData, updateProfile, authToasts, t, user]);
 
-  // Handle password change
+  // Handle password change/set
   const handlePasswordChange = useCallback(async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       authToasts.passwordMismatch();
@@ -247,12 +264,22 @@ const Profile = () => {
       return;
     }
 
+    const isGoogleOnlyUser = user?.oauth_provider === 'google' && !user?.hasPassword;
+
     setIsLoading(true);
     try {
-      await api.auth.changePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
-      });
+      if (isGoogleOnlyUser) {
+        // OAuth user setting first password - use setPassword endpoint
+        await api.auth.setPassword({
+          newPassword: passwordData.newPassword
+        });
+      } else {
+        // Regular user changing password - use changePassword endpoint
+        await api.auth.changePassword({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        });
+      }
       
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       authToasts.passwordChanged();
@@ -261,28 +288,59 @@ const Profile = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [passwordData, authToasts]);
+  }, [passwordData, authToasts, user]);
 
   const renderPersonalTab = () => (
     <Card className="p-6">
       {/* Profile Header */}
       <div className="flex items-center space-x-6 mb-6">
-        <div className="relative">
-          <Avatar
-            src={user?.avatar}
-            alt={user?.name || user?.email}
-            size="xl"
-            fallback={user?.name?.charAt(0) || user?.email?.charAt(0)}
-          />
-          <label className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors">
-            <Camera className="w-4 h-4 text-white" />
+        <div className="relative group">
+          {/* Profile Picture with Click to View */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="relative cursor-pointer"
+            onClick={handlePictureClick}
+          >
+            <div className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-green-100 dark:ring-green-800 group-hover:ring-green-200 dark:group-hover:ring-green-700 transition-all duration-200">
+              <Avatar
+                src={user?.avatar}
+                alt={user?.name || user?.email}
+                size="xl"
+                fallback={user?.name?.charAt(0) || user?.email?.charAt(0)}
+                className="w-full h-full transition-all duration-200 group-hover:brightness-110"
+              />
+              
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              </div>
+              
+              {/* Loading Overlay */}
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <LoadingSpinner size="sm" className="text-white" />
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Upload Button - Larger and More Prominent */}
+          <motion.label 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="absolute -bottom-1 -right-1 w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 border-4 border-white dark:border-gray-800"
+          >
+            <Upload className="w-5 h-5 text-white" />
             <input
               type="file"
               accept="image/*"
               onChange={handleAvatarUpload}
               className="hidden"
+              disabled={isUploadingAvatar}
             />
-          </label>
+          </motion.label>
         </div>
         
         <div>
@@ -675,17 +733,78 @@ const Profile = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account and preferences</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Beautiful Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Page Title */}
+            <div className="flex items-center gap-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <User className="w-6 h-6 text-white" />
+              </motion.div>
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  Profile
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                >
+                  Manage your account and preferences
+                </motion.p>
+              </div>
+            </div>
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-white dark:bg-gray-800 rounded-lg p-1 mb-8 shadow-sm">
+            {/* Actions */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-3"
+            >
+              {/* Save Button */}
+              {isEditing && (
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="primary"
+                    className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span className="hidden sm:inline font-medium">Save</span>
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
+        {/* Tab Navigation - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-1 sm:space-y-0 bg-white dark:bg-gray-800 rounded-lg p-1 mb-8 shadow-sm">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             return (
@@ -694,10 +813,10 @@ const Profile = () => {
                 variant={activeTab === tab.id ? "primary" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTab(tab.id)}
-                className="flex-1 justify-center"
+                className="flex-1 justify-center sm:justify-center px-3 py-3 sm:py-2 text-sm sm:text-base"
               >
-                <TabIcon className="w-4 h-4 mr-2" />
-                {tab.label}
+                <TabIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{tab.label}</span>
               </Button>
             );
           })}
@@ -719,6 +838,96 @@ const Profile = () => {
           </motion.div>
         </AnimatePresence>
 
+        {/* Picture Preview Modal */}
+        <AnimatePresence>
+          {showPictureModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+              onClick={handleClosePictureModal}
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Profile Picture</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClosePictureModal}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {/* Large Picture Display */}
+                <div className="flex flex-col items-center space-y-6">
+                  <div className="relative w-48 h-48 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile Picture"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="w-16 h-16 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 w-full">
+                    <label className="flex-1">
+                      <Button
+                        variant="primary"
+                        className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isUploadingAvatar}
+                      >
+                        {isUploadingAvatar ? (
+                          <>
+                            <LoadingSpinner size="sm" className="mr-2" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Change Picture
+                          </>
+                        )}
+                      </Button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                        disabled={isUploadingAvatar}
+                      />
+                    </label>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={handleClosePictureModal}
+                      className="flex-1 sm:flex-none px-6"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Export Modal */}
         {showExportModal && (
           <ExportModal
@@ -733,7 +942,7 @@ const Profile = () => {
             <LoadingSpinner size="lg" />
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

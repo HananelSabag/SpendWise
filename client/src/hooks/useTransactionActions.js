@@ -358,12 +358,66 @@ export const useTransactionActions = (context = 'transactions') => {
     }
   }, [queryClient]);
 
+  // ✅ NEW: Recurring template operations
+  const createRecurringTemplate = useCallback(async (data) => {
+    try {
+      logAction('Creating recurring template', { amount: data.amount });
+      
+      // Use the createTransaction method with _isRecurring flag
+      const recurringData = {
+        ...data,
+        _isRecurring: true
+      };
+      
+      const result = await baseCreateTransaction(recurringData);
+      
+      // Enhanced invalidation for recurring templates
+      await invalidateRelevantQueries('high');
+      queryClient.invalidateQueries(['recurringTransactions']);
+      queryClient.invalidateQueries(['upcomingTransactions']);
+      
+      refreshAll();
+      
+      logAction('Recurring template created successfully');
+      return result;
+    } catch (error) {
+      logAction('Failed to create recurring template', { error: error.message });
+      throw error;
+    }
+  }, [baseCreateTransaction, invalidateRelevantQueries, refreshAll, logAction, queryClient]);
+
+  const updateRecurringTemplate = useCallback(async (id, data) => {
+    try {
+      logAction('Updating recurring template', { id, amount: data.amount });
+      
+      // For now, use the regular update transaction - this might need server-side improvement
+      const result = await baseUpdateTransaction('expense', id, data);
+      
+      // Enhanced invalidation for recurring templates
+      await invalidateRelevantQueries('high');
+      queryClient.invalidateQueries(['recurringTransactions']);
+      queryClient.invalidateQueries(['upcomingTransactions']);
+      
+      refreshAll();
+      
+      logAction('Recurring template updated successfully');
+      return result;
+    } catch (error) {
+      logAction('Failed to update recurring template', { error: error.message });
+      throw error;
+    }
+  }, [baseUpdateTransaction, invalidateRelevantQueries, refreshAll, logAction, queryClient]);
+
   return {
     // ✅ PRESERVED: CRUD Operations (enhanced with infinite loading support)
     createTransaction,
     updateTransaction, 
     deleteTransaction,
     deleteTemplate: baseDeleteTemplate, // ✅ FIX: Add deleteTemplate
+    
+    // ✅ NEW: Recurring template operations
+    createRecurringTemplate,
+    updateRecurringTemplate,
     
     // ✅ PRESERVED: Loading States
     isCreating,

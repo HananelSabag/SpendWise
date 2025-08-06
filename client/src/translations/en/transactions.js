@@ -568,10 +568,67 @@ export default {
   notes: {
     suggestions: {
       receipt: "Has receipt",
-      business: "Business expense",
+      business: "Business expense", 
       personal: "Personal expense",
       gift: "Gift",
       emergency: "Emergency"
+    }
+  },
+
+  // Upcoming Transactions
+  upcoming: {
+    title: 'Upcoming Transactions',
+    loading: 'Loading upcoming transactions...',
+    noUpcoming: 'No Upcoming Transactions',
+    noUpcomingDesc: 'No future transactions scheduled. Set up recurring transactions to see them here.',
+    nextCount: 'Next {{count}} transactions',
+    manage: 'Manage',
+    manageRecurring: 'Manage Recurring',
+    transactions: 'transactions',
+    totalAmount: 'Total',
+    showingNext: 'Showing next {{count}} transactions',
+    viewAll: 'View All'
+  },
+
+  // Enhanced Recurring Manager
+  recurringManager: {
+    title: 'Recurring Transactions Manager',
+    subtitle: 'Manage your recurring transactions',
+    active: 'Active',
+    paused: 'Paused',
+    total: 'Total',
+    addNew: 'Add New',
+    addFirst: 'Add First Recurring',
+    created: 'Created',
+    totalRuns: 'Total Runs',
+    lastRun: 'Last Run',
+    nextRun: 'Next Run',
+    never: 'Never',
+    indefinite: 'Indefinite',
+    endDate: 'End Date',
+    confirmDelete: 'Delete "{{name}}"?',
+    deleteSuccess: 'Recurring transaction deleted',
+    deleteFailed: 'Failed to delete recurring transaction',
+    statusUpdated: 'Status updated',
+    statusUpdateFailed: 'Failed to update status',
+    noRecurring: 'No Recurring Transactions',
+    noRecurringDesc: 'Create recurring transactions to automate your finance tracking',
+    noMatches: 'No Matching Transactions',
+    noMatchesDesc: 'Try adjusting your filters',
+    loading: 'Loading recurring transactions...',
+    loadError: 'Failed to load recurring transactions',
+    searchPlaceholder: 'Search recurring transactions...',
+    filter: {
+      allStatus: 'All Status',
+      active: 'Active Only',
+      paused: 'Paused Only',
+      allTypes: 'All Types'
+    },
+    frequency: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
     }
   }
 }; 
