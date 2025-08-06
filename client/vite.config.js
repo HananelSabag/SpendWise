@@ -5,8 +5,8 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  // Load environment variables
-  const env = loadEnv(mode, process.cwd(), '');
+  // Let Vite handle environment loading automatically
+  console.log('🔍 Vite Mode:', mode, 'Command:', command);
   
   // Mode-specific configuration
   const isAdmin = mode === 'admin';
@@ -207,13 +207,24 @@ export default defineConfig(({ command, mode }) => {
       force: isDev
     },
     
-    // ✅ Enhanced environment definitions
+    // ✅ Enhanced environment definitions + FORCED Google Client ID
     define: {
       global: 'globalThis',
       __DEV__: isDev,
       __ADMIN_MODE__: isAdmin,
       __ANALYTICS_MODE__: isAnalytics,
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0')
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
+      // 🔥 FORCED ENVIRONMENT VARIABLES - F*CK THE .ENV SYSTEM
+      'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'),
+      'import.meta.env.VITE_API_URL': JSON.stringify(isDev ? 'http://localhost:10000/api/v1' : 'https://spendwise-dx8g.onrender.com/api/v1'),
+      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(isDev ? 'http://localhost:5173' : 'https://spendwise-client.vercel.app'),
+      'import.meta.env.VITE_DEBUG_MODE': JSON.stringify('true'),
+      'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(isDev ? 'development' : 'production'),
+      'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
+      'import.meta.env.DEV': JSON.stringify(isDev),
+      'import.meta.env.PROD': JSON.stringify(!isDev),
+      'import.meta.env.VITE_APP_NAME': JSON.stringify('SpendWise'),
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify('2.0.0')
     },
     
     clearScreen: false,

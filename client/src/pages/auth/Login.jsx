@@ -127,14 +127,14 @@ const Login = () => {
         console.error('❌ Google login failed:', result.error);
         authToasts.googleLoginFailed();
         setErrors({ 
-          general: result.error?.message || t('googleLoginFailed')
+          general: result.error?.message || 'Google login failed'
         });
       }
     } catch (error) {
       console.error('❌ Google login error:', error);
       authToasts.googleLoginFailed();
       setErrors({ 
-        general: error.message || t('googleLoginError')
+        general: error.message || 'Google login error'
       });
     } finally {
       setIsGoogleLoading(false);

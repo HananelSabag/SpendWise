@@ -3322,3 +3322,77 @@ date: new Date().toISOString().split('T')[0], // ✅ Date-only format like regul
 - ✅ **Mobile Optimized** - Touch-friendly tabs and inputs
 
 **The Quick Actions panel is now a one-click, always-ready transaction entry system with proper category recognition!**
+
+---
+
+# 🔐 GOOGLE OAUTH ORIGIN ERROR FIX - 2025-01-27
+
+## User Request Summary
+Fixed Google OAuth "unregistered_origin" error where Google Sign-In popup was blocked with 403 Forbidden and "invalid_client: no registered origin" errors. Also addressed FedCM compliance warnings.
+
+## Analysis
+**Root Cause**: Current domain origins not registered in Google Cloud Console OAuth configuration
+- Error: `GET https://accounts.google.com/gsi/status?client_id=680960783178... 403 (Forbidden)`
+- Error: `The given origin is not allowed for the given client ID`
+- Warning: `FedCM for One Tap will become mandatory starting Oct 2024`
+
+**Client ID**: `680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com`
+**Affected Origins**:
+- Development: `http://localhost:5173`
+- Production: `https://spendwise-client.vercel.app`
+
+## Affected Layers
+- **Frontend OAuth**: Google Identity Services configuration
+- **Google Cloud Console**: OAuth client authorized origins
+- **Security**: FedCM compliance requirements
+- **User Experience**: Google login functionality
+
+## Affected Files
+- `client/src/api/auth.js` - Updated FedCM settings
+- `doc/GOOGLE_OAUTH_ORIGIN_FIX_GUIDE.md` - Created comprehensive fix guide
+
+## Actions Taken
+
+### 1. Updated FedCM Compliance (client/src/api/auth.js line 69)
+**BEFORE**: `use_fedcm_for_prompt: false, // Disable FedCM to prevent redirect issues`
+**AFTER**: `use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements`
+
+### 2. Created Complete Fix Guide (doc/GOOGLE_OAUTH_ORIGIN_FIX_GUIDE.md)
+**REQUIRED GOOGLE CLOUD CONSOLE CHANGES**:
+
+**Authorized JavaScript Origins to Add**:
+```
+http://localhost:5173
+http://127.0.0.1:5173
+https://spendwise-client.vercel.app
+```
+
+**Authorized Redirect URIs to Add**:
+```
+http://localhost:5173/auth/callback
+http://127.0.0.1:5173/auth/callback
+https://spendwise-client.vercel.app/auth/callback
+```
+
+### 3. Enhanced Error Logging
+Existing debug logging will now capture FedCM-related errors and origin mismatches.
+
+## Required Manual Steps
+**⚠️ USER ACTION REQUIRED**: Update Google Cloud Console
+
+1. **Go to**: [Google Cloud Console](https://console.cloud.google.com)
+2. **Navigate**: APIs & Services → Credentials
+3. **Find**: OAuth 2.0 Client ID `680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com`
+4. **Add Origins**: Add all URLs from the guide to "Authorized JavaScript origins"
+5. **Add Redirects**: Add callback URLs to "Authorized redirect URIs"
+6. **Save & Wait**: Changes take 5-10 minutes to propagate
+
+---
+
+**🎯 EXPECTED RESULT**: After updating Google Cloud Console:
+- ✅ Google OAuth popup opens successfully
+- ✅ No "unregistered_origin" errors
+- ✅ FedCM compliance warnings disappear
+- ✅ Users can authenticate with Google in dev and production
+
+**🔄 Status**: GOOGLE OAUTH CONFIGURATION GUIDE PROVIDED - AWAITING MANUAL GOOGLE CLOUD CONSOLE UPDATE

@@ -197,13 +197,13 @@ const Register = () => {
       } else {
         authToasts.googleLoginFailed();
         setErrors({ 
-          general: result.error?.message || t('googleRegisterFailed')
+          general: result.error?.message || 'Google registration failed'
         });
       }
     } catch (error) {
       authToasts.googleLoginFailed();
       setErrors({ 
-        general: t('googleRegisterError')
+        general: 'Google registration error'
       });
     } finally {
       setIsGoogleLoading(false);

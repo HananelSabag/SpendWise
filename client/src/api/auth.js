@@ -34,12 +34,14 @@ class GoogleOAuthManager {
       console.log('🔍 Google OAuth Environment Debug:', {
         clientId: GOOGLE_CONFIG.CLIENT_ID ? 'SET' : 'MISSING',
         clientIdValue: GOOGLE_CONFIG.CLIENT_ID?.substring(0, 20) + '...',
+        rawEnvValue: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         environment: import.meta.env.MODE,
         isDev: import.meta.env.DEV,
         isProd: import.meta.env.PROD,
         domain: window.location.hostname,
         protocol: window.location.protocol,
-        allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('GOOGLE'))
+        allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('GOOGLE')),
+        allViteEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
       });
       
       // Check if Client ID is configured
@@ -64,7 +66,7 @@ class GoogleOAuthManager {
           callback: this.handleCredentialResponse.bind(this),
           auto_select: false,
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: false, // Disable FedCM to prevent redirect issues
+          use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements
           itp_support: true
         };
         
