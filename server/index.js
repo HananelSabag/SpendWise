@@ -191,7 +191,22 @@ app.get('/health', async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
     });
   }
+});
+
+// Root route - API info
+app.get('/', (req, res) => {
+  res.json({
+    name: 'SpendWise API',
+    version: '2.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      api: '/api/v1',
+      docs: '/api/v1/docs'
+    }
   });
+});
 
 // API routes with versioning
 const API_VERSION = '/api/v1';
