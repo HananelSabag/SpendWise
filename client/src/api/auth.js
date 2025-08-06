@@ -66,11 +66,10 @@ class GoogleOAuthManager {
           callback: this.handleCredentialResponse.bind(this),
           auto_select: false,
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: false, // DISABLE FedCM - causing CORS issues with localhost->production
+          use_fedcm_for_prompt: true, // Enable FedCM for production compatibility
           itp_support: true,
-          // ✅ Enhanced FedCM configuration
-          ux_mode: 'popup', // Use popup mode for better FedCM compatibility
-          hosted_domain: null // Allow any domain for consumer accounts
+          context: 'signin',
+          state_cookie_domain: import.meta.env.PROD ? 'spendwise-client.vercel.app' : 'localhost'
         };
         
         console.log('🔍 Google OAuth init config:', {
@@ -169,7 +168,7 @@ class GoogleOAuthManager {
     }
   }
 
-  // Trigger Google Sign-In
+  // Trigger Google Sign-In - Modern approach for production
   async signIn() {
     try {
       console.log('🔍 Google Sign-In requested');
@@ -179,13 +178,12 @@ class GoogleOAuthManager {
         await this.initialize();
       }
 
-      console.log('🔍 Google OAuth initialization status:', {
-        isInitialized: this.isInitialized,
-        windowGoogle: !!window.google,
-        accountsId: !!window.google?.accounts?.id,
-        prompt: !!window.google?.accounts?.id?.prompt
-      });
+      // For production (Vercel), use popup mode directly
+      if (import.meta.env.PROD) {
+        return this.signInWithPopup();
+      }
 
+      // For development, try One Tap first, fallback to popup
       return new Promise((resolve, reject) => {
         try {
           console.log('🔍 Starting Google Sign-In process...');
@@ -193,29 +191,13 @@ class GoogleOAuthManager {
           // Store resolver for callback
           this.credentialResolver = resolve;
           
-          // ✅ FedCM-compliant prompt method with updated error handling
+          // Try One Tap with immediate fallback to popup
           window.google.accounts.id.prompt((notification) => {
-            console.log('🔍 Google Sign-In notification:', {
-              type: notification.getMomentType(),
-              isSkippedMoment: notification.isSkippedMoment(),
-              isDismissedMoment: notification.isDismissedMoment(),
-              dismissedReason: notification.isDismissedMoment() ? notification.getDismissedReason() : null
-            });
+            console.log('🔍 Google Sign-In notification:', notification);
             
-            // ✅ FedCM Update: Removed deprecated isNotDisplayed() and getNotDisplayedReason() methods
-            // These methods are no longer available with FedCM to improve privacy
-            
-            if (notification.isSkippedMoment()) {
-              console.error('❌ Google Sign-In was skipped');
-              this.credentialResolver = null;
-              reject(new Error('Google Sign-In was skipped'));
-            } else if (notification.isDismissedMoment()) {
-              const reason = notification.getDismissedReason();
-              console.error('❌ Google Sign-In was dismissed:', reason);
-              this.credentialResolver = null;
-              reject(new Error(`Google Sign-In was dismissed: ${reason}`));
-            }
-            // If successful, handleCredentialResponse will be called
+            // Always fallback to popup for reliability
+            console.log('🔄 Falling back to popup sign-in');
+            this.signInWithPopup().then(resolve).catch(reject);
           });
         
         // ✅ Enhanced timeout handling for FedCM
@@ -248,9 +230,68 @@ class GoogleOAuthManager {
     }
   }
 
+  // Modern popup-based sign-in that works reliably in production
+  async signInWithPopup() {
+    return new Promise((resolve, reject) => {
+      try {
+        // Create a hidden div to render the Google button
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.position = 'absolute';
+        buttonContainer.style.top = '-9999px';
+        buttonContainer.style.left = '-9999px';
+        document.body.appendChild(buttonContainer);
+
+        // Store resolver
+        this.credentialResolver = resolve;
+
+        // Render Google sign-in button
+        window.google.accounts.id.renderButton(buttonContainer, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+          width: 300
+        });
+
+        // Auto-click the button after a short delay
+        setTimeout(() => {
+          const iframe = buttonContainer.querySelector('iframe');
+          if (iframe && iframe.contentWindow) {
+            // Simulate click on the iframe
+            iframe.click();
+            
+            // Clean up after 1 second
+            setTimeout(() => {
+              if (document.body.contains(buttonContainer)) {
+                document.body.removeChild(buttonContainer);
+              }
+            }, 1000);
+          } else {
+            document.body.removeChild(buttonContainer);
+            reject(new Error('Failed to create Google sign-in button'));
+          }
+        }, 100);
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          if (this.credentialResolver === resolve) {
+            if (document.body.contains(buttonContainer)) {
+              document.body.removeChild(buttonContainer);
+            }
+            this.credentialResolver = null;
+            reject(new Error('Google Sign-In timeout'));
+          }
+        }, 30000);
+
+      } catch (error) {
+        console.error('❌ Popup sign-in failed:', error);
+        reject(error);
+      }
+    });
+  }
+
   // ✅ Simplified popup method - no longer needed but keeping for compatibility
   async showPopup() {
-    throw new Error('Please try Google Sign-In again - popup method disabled');
+    return this.signInWithPopup();
   }
 }
 
