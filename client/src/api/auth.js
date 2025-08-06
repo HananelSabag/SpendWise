@@ -67,7 +67,10 @@ class GoogleOAuthManager {
           auto_select: false,
           cancel_on_tap_outside: true,
           use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements
-          itp_support: true
+          itp_support: true,
+          // ✅ Enhanced FedCM configuration
+          ux_mode: 'popup', // Use popup mode for better FedCM compatibility
+          hosted_domain: null // Allow any domain for consumer accounts
         };
         
         console.log('🔍 Google OAuth init config:', {
@@ -190,39 +193,48 @@ class GoogleOAuthManager {
           // Store resolver for callback
           this.credentialResolver = resolve;
           
-          // ✅ Use prompt method with better error handling
+          // ✅ FedCM-compliant prompt method with updated error handling
           window.google.accounts.id.prompt((notification) => {
             console.log('🔍 Google Sign-In notification:', {
               type: notification.getMomentType(),
-              reason: notification.getNotDisplayedReason(),
-              skippedReason: notification.getSkippedReason(),
-              dismissedReason: notification.getDismissedReason()
+              isSkippedMoment: notification.isSkippedMoment(),
+              isDismissedMoment: notification.isDismissedMoment(),
+              dismissedReason: notification.isDismissedMoment() ? notification.getDismissedReason() : null
             });
             
-            if (notification.isNotDisplayed()) {
-              console.error('❌ Google Sign-In popup was blocked or dismissed:', notification.getNotDisplayedReason());
+            // ✅ FedCM Update: Removed deprecated isNotDisplayed() and getNotDisplayedReason() methods
+            // These methods are no longer available with FedCM to improve privacy
+            
+            if (notification.isSkippedMoment()) {
+              console.error('❌ Google Sign-In was skipped');
               this.credentialResolver = null;
-              reject(new Error(`Google Sign-In popup was blocked: ${notification.getNotDisplayedReason()}`));
-            } else if (notification.isSkippedMoment()) {
-              console.error('❌ Google Sign-In was skipped:', notification.getSkippedReason());
-              this.credentialResolver = null;
-              reject(new Error(`Google Sign-In was skipped: ${notification.getSkippedReason()}`));
+              reject(new Error('Google Sign-In was skipped'));
             } else if (notification.isDismissedMoment()) {
-              console.error('❌ Google Sign-In was dismissed:', notification.getDismissedReason());
+              const reason = notification.getDismissedReason();
+              console.error('❌ Google Sign-In was dismissed:', reason);
               this.credentialResolver = null;
-              reject(new Error(`Google Sign-In was dismissed: ${notification.getDismissedReason()}`));
+              reject(new Error(`Google Sign-In was dismissed: ${reason}`));
             }
             // If successful, handleCredentialResponse will be called
           });
         
-        // Timeout after 60 seconds
-        setTimeout(() => {
+        // ✅ Enhanced timeout handling for FedCM
+        const timeoutId = setTimeout(() => {
           if (this.credentialResolver) {
-            console.error('❌ Google Sign-In timed out after 60 seconds');
+            console.error('❌ Google Sign-In timed out after 30 seconds');
             this.credentialResolver = null;
-            reject(new Error('Google Sign-In timed out. Please check your internet connection and try again.'));
+            reject(new Error('Google Sign-In timed out. Please try again or check your connection.'));
           }
-        }, 60000);
+        }, 30000); // Reduced timeout for better UX
+        
+        // ✅ Clear timeout if resolved early
+        const originalResolver = this.credentialResolver;
+        this.credentialResolver = (credential) => {
+          clearTimeout(timeoutId);
+          if (originalResolver) {
+            originalResolver(credential);
+          }
+        };
         
       } catch (error) {
         console.error('❌ Google Sign-In error:', error);

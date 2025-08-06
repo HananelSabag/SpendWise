@@ -3353,9 +3353,25 @@ Fixed Google OAuth "unregistered_origin" error where Google Sign-In popup was bl
 
 ## Actions Taken
 
-### 1. Updated FedCM Compliance (client/src/api/auth.js line 69)
-**BEFORE**: `use_fedcm_for_prompt: false, // Disable FedCM to prevent redirect issues`
-**AFTER**: `use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements`
+### 1. Complete FedCM Compliance Update (client/src/api/auth.js)
+
+**A. Enabled FedCM (line 69)**:
+- **BEFORE**: `use_fedcm_for_prompt: false, // Disable FedCM to prevent redirect issues`
+- **AFTER**: `use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements`
+
+**B. Enhanced Configuration (lines 72-73)**:
+```javascript
+ux_mode: 'popup', // Use popup mode for better FedCM compatibility  
+hosted_domain: null // Allow any domain for consumer accounts
+```
+
+**C. Fixed Deprecated Methods (lines 194-216)**:
+- **REMOVED**: `notification.isNotDisplayed()` and `notification.getNotDisplayedReason()` (deprecated in FedCM)
+- **KEPT**: Only FedCM-compliant methods: `isSkippedMoment()`, `isDismissedMoment()`, `getDismissedReason()`
+
+**D. Enhanced Timeout Handling (lines 221-237)**:
+- Reduced timeout from 60s to 30s for better UX
+- Added proper timeout cleanup with `clearTimeout()`
 
 ### 2. Created Complete Fix Guide (doc/GOOGLE_OAUTH_ORIGIN_FIX_GUIDE.md)
 **REQUIRED GOOGLE CLOUD CONSOLE CHANGES**:

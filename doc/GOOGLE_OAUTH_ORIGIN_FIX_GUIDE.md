@@ -58,14 +58,38 @@ https://spendwise-client.vercel.app/auth/callback
 
 ## 📝 Code Changes Made
 
-### 1. Enabled FedCM Compliance
-Updated `client/src/api/auth.js` line 69:
+### 1. Full FedCM Compliance Update
+Updated `client/src/api/auth.js` with multiple improvements:
+
+**Line 69**: Enabled FedCM:
 ```javascript
 use_fedcm_for_prompt: true, // Enable FedCM for compliance with Google's new requirements
 ```
 
-### 2. Enhanced Error Handling
-The existing error handling will now properly catch and display origin-related errors.
+**Lines 72-73**: Enhanced configuration:
+```javascript
+ux_mode: 'popup', // Use popup mode for better FedCM compatibility
+hosted_domain: null // Allow any domain for consumer accounts
+```
+
+**Lines 194-216**: Fixed deprecated methods:
+```javascript
+// ✅ FedCM Update: Removed deprecated isNotDisplayed() and getNotDisplayedReason() methods
+// These methods are no longer available with FedCM to improve privacy
+```
+
+**Lines 221-237**: Enhanced timeout handling:
+```javascript
+// ✅ Enhanced timeout handling for FedCM
+const timeoutId = setTimeout(() => {
+  // 30-second timeout with proper cleanup
+}, 30000);
+```
+
+### 2. Removed Deprecated Methods
+- ❌ Removed `notification.isNotDisplayed()`
+- ❌ Removed `notification.getNotDisplayedReason()`
+- ✅ Kept only FedCM-compliant methods: `isSkippedMoment()`, `isDismissedMoment()`, `getDismissedReason()`
 
 ## 🔧 Alternative Domains (if needed)
 
