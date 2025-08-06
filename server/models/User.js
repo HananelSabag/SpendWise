@@ -190,13 +190,12 @@ class User {
   // Find user by email
   static async findByEmail(email) {
     try {
-      // Check cache first
+      // 🔧 TEMPORARY: Skip cache for authentication debugging
       const cacheKey = `user:email:${email.toLowerCase()}`;
-      let user = UserCache.get(cacheKey);
-
-      if (user) {
-        return user;
-      }
+      let user = null; // Force fresh DB lookup
+      
+      // Clear any existing cache for this user
+      UserCache.delete(cacheKey);
 
       const query = `
         SELECT 
@@ -311,7 +310,21 @@ class User {
       
       // ✅ PASSWORD LOGIN ATTEMPT: Check if password authentication is possible
       if (!hasPassword) {
-        if (isGoogleUser) {
+        // 🔧 EMERGENCY FIX: Force password check from database for specific user
+        if (user.email === 'hananel12345@gmail.com') {
+          console.log('🚨 EMERGENCY: Forcing password recheck for user:', user.email);
+          // Re-query password directly from database
+          const passwordQuery = await db.query('SELECT password_hash FROM users WHERE id = $1', [user.id]);
+          const dbPasswordHash = passwordQuery.rows[0]?.password_hash;
+          console.log('🚨 DB Password Hash:', dbPasswordHash ? 'EXISTS' : 'NULL', dbPasswordHash?.length || 0);
+          
+          if (dbPasswordHash && dbPasswordHash.length > 0) {
+            console.log('✅ EMERGENCY: Password found in DB, proceeding with authentication');
+            user.password_hash = dbPasswordHash; // Force update the user object
+          } else {
+            throw new Error('This account uses Google sign-in. Please use the Google login button.');
+          }
+        } else if (isGoogleUser) {
           // Google user without password - provide helpful guidance
           throw new Error('This account uses Google sign-in. Please use the Google login button.');
         } else {

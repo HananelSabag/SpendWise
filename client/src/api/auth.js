@@ -265,10 +265,11 @@ export const authAPI = {
         const data = error.response.data;
         
         if (status === 401) {
-          errorMessage = 'Invalid email or password';
+          // ✅ FIXED: Preserve server's specific error messages (e.g., hybrid auth guidance)
+          errorMessage = data.message || data.error || 'Invalid email or password';
           errorCode = 'INVALID_CREDENTIALS';
         } else if (status === 403) {
-          errorMessage = 'Account is locked or suspended';
+          errorMessage = data.message || data.error || 'Account is locked or suspended';
           errorCode = 'ACCOUNT_LOCKED';
         } else if (status === 422) {
           errorMessage = data.message || 'Invalid input data';
