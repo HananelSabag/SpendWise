@@ -15,284 +15,139 @@ const GOOGLE_CONFIG = {
   SCRIPT_URL: 'https://accounts.google.com/gsi/client'
 };
 
-// ✅ Google OAuth Manager
+// ✅ Google OAuth Manager - CLEAN SIMPLE VERSION
 class GoogleOAuthManager {
   constructor() {
-    this.isInitialized = false;
-    this.isLoading = false;
-    this.credentialResolver = null;
+    this.isReady = false;
   }
 
-  // Initialize Google Identity Services
-  async initialize() {
-    if (this.isInitialized || this.isLoading) return;
+  // Simple Google script loading
+  async loadScript() {
+    if (window.google?.accounts?.id) return;
     
-    this.isLoading = true;
-    
-    try {
-      // 🔍 PRODUCTION DEBUG: Enhanced Google OAuth debugging
-      console.log('🔍 Google OAuth Environment Debug:', {
-        clientId: GOOGLE_CONFIG.CLIENT_ID ? 'SET' : 'MISSING',
-        clientIdValue: GOOGLE_CONFIG.CLIENT_ID?.substring(0, 20) + '...',
-        rawEnvValue: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        environment: import.meta.env.MODE,
-        isDev: import.meta.env.DEV,
-        isProd: import.meta.env.PROD,
-        domain: window.location.hostname,
-        protocol: window.location.protocol,
-        allEnvVars: Object.keys(import.meta.env).filter(key => key.includes('GOOGLE')),
-        allViteEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-      });
-      
-      // Check if Client ID is configured
-      if (!GOOGLE_CONFIG.CLIENT_ID || GOOGLE_CONFIG.CLIENT_ID === 'undefined') {
-        console.error('❌ Google Client ID not configured');
-        throw new Error('Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID environment variable.');
-      }
-      
-      console.log('✅ Google Client ID configured, proceeding with initialization');
-      
-      // Load Google Identity Services script
-      console.log('🔍 Loading Google script...');
-      await this.loadGoogleScript();
-      console.log('✅ Google script loaded');
-      
-      // Initialize Google OAuth
-      if (window.google?.accounts?.id) {
-        console.log('✅ Google Identity Services available');
-        
-        const initConfig = {
-          client_id: GOOGLE_CONFIG.CLIENT_ID,
-          callback: this.handleCredentialResponse.bind(this),
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: true, // Enable FedCM for production compatibility
-          itp_support: true,
-          context: 'signin',
-          ux_mode: 'popup', // Force popup mode for better compatibility
-          state_cookie_domain: import.meta.env.PROD ? 'spend-wise-kappa.vercel.app' : 'localhost'
-        };
-        
-        console.log('🔍 Google OAuth init config:', {
-          ...initConfig,
-          client_id: initConfig.client_id?.substring(0, 20) + '...' // Hide full client ID
-        });
-        
-        window.google.accounts.id.initialize(initConfig);
-        
-        this.isInitialized = true;
-        console.log('✅ Google OAuth initialized successfully');
-      } else {
-        console.error('❌ Google Identity Services not available after script load');
-        console.error('Window.google:', window.google);
-        throw new Error('Google Identity Services failed to load');
-      }
-    } catch (error) {
-      console.error('❌ Failed to initialize Google OAuth:', error);
-      throw new Error(`Google Sign-In is currently unavailable: ${error.message}`);
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  // Load Google Script dynamically
-  loadGoogleScript() {
     return new Promise((resolve, reject) => {
-      console.log('🔍 Loading Google script from:', GOOGLE_CONFIG.SCRIPT_URL);
-      
-      // Check if already loaded
-      if (window.google?.accounts?.id) {
-        console.log('✅ Google script already loaded');
-        resolve();
-        return;
-      }
-
-      // Check if script already exists
-      const existingScript = document.querySelector(`script[src="${GOOGLE_CONFIG.SCRIPT_URL}"]`);
-      if (existingScript) {
-        console.log('🔍 Google script exists but not loaded yet, waiting...');
-        existingScript.addEventListener('load', () => {
-          console.log('✅ Existing Google script loaded');
-          resolve();
-        });
-        existingScript.addEventListener('error', (error) => {
-          console.error('❌ Existing Google script failed to load:', error);
-          reject(error);
-        });
-        return;
-      }
-
-      // Create and load script
-      console.log('🔍 Creating new Google script element');
       const script = document.createElement('script');
-      script.src = GOOGLE_CONFIG.SCRIPT_URL;
+      script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
-      script.defer = true;
       script.onload = () => {
-        console.log('✅ New Google script loaded successfully');
-        // Wait a bit for Google to initialize
         setTimeout(() => {
           if (window.google?.accounts?.id) {
-            console.log('✅ Google Identity Services ready');
             resolve();
           } else {
-            console.error('❌ Google Identity Services not available after script load');
-            reject(new Error('Google Identity Services not available after script load'));
+            reject(new Error('Google services not available'));
           }
         }, 100);
       };
-      script.onerror = (error) => {
-        console.error('❌ Failed to load Google OAuth script:', error);
-        reject(new Error('Failed to load Google OAuth script'));
-      };
-      
+      script.onerror = () => reject(new Error('Failed to load Google script'));
       document.head.appendChild(script);
-      console.log('🔍 Google script appended to head');
     });
   }
 
-  // Handle Google credential response
-  handleCredentialResponse(response) {
-    console.log('🔍 Google credential response received:', response);
-    
-    if (this.credentialResolver) {
-      if (response && response.credential) {
-        console.log('✅ Valid Google credential received');
-        this.credentialResolver(response.credential);
-      } else {
-        console.error('❌ Invalid Google credential response:', response);
-        this.credentialResolver(null);
-      }
-      this.credentialResolver = null;
+  // Simple initialization
+  async initialize() {
+    if (this.isReady) return;
+
+    if (!GOOGLE_CONFIG.CLIENT_ID) {
+      throw new Error('Google Client ID not configured');
+    }
+
+    await this.loadScript();
+
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CONFIG.CLIENT_ID,
+      callback: this.handleResponse.bind(this)
+    });
+
+    this.isReady = true;
+    console.log('✅ Google OAuth ready');
+  }
+
+  // Handle Google response
+  handleResponse(response) {
+    console.log('🎯 Google response received:', response);
+    if (this.resolver) {
+      console.log('✅ Resolving with response');
+      this.resolver(response);
+      this.resolver = null;
     } else {
-      console.warn('⚠️ Google credential response received but no resolver available');
+      console.log('⚠️ No resolver available');
     }
   }
 
-  // Trigger Google Sign-In - Modern approach for production
+  // Simple sign-in - Direct popup approach
   async signIn() {
-    try {
-      console.log('🔍 Google Sign-In requested');
-      
-      if (!this.isInitialized) {
-        console.log('🔍 Google OAuth not initialized, initializing now...');
-        await this.initialize();
-      }
-
-      // For production (Vercel), use popup mode directly
-      if (import.meta.env.PROD) {
-        return this.signInWithPopup();
-      }
-
-      // For development, try One Tap first, fallback to popup
-      return new Promise((resolve, reject) => {
-        try {
-          console.log('🔍 Starting Google Sign-In process...');
-          
-          // Store resolver for callback
-          this.credentialResolver = resolve;
-          
-          // Try One Tap with immediate fallback to popup
-          window.google.accounts.id.prompt((notification) => {
-            console.log('🔍 Google Sign-In notification:', notification);
-            
-            // Always fallback to popup for reliability
-            console.log('🔄 Falling back to popup sign-in');
-            this.signInWithPopup().then(resolve).catch(reject);
-          });
-        
-        // ✅ Enhanced timeout handling for FedCM
-        const timeoutId = setTimeout(() => {
-          if (this.credentialResolver) {
-            console.error('❌ Google Sign-In timed out after 30 seconds');
-            this.credentialResolver = null;
-            reject(new Error('Google Sign-In timed out. Please try again or check your connection.'));
-          }
-        }, 30000); // Reduced timeout for better UX
-        
-        // ✅ Clear timeout if resolved early
-        const originalResolver = this.credentialResolver;
-        this.credentialResolver = (credential) => {
-          clearTimeout(timeoutId);
-          if (originalResolver) {
-            originalResolver(credential);
-          }
-        };
-        
-      } catch (error) {
-        console.error('❌ Google Sign-In error:', error);
-        this.credentialResolver = null;
-        reject(new Error(`Google Sign-In failed: ${error.message}`));
-      }
-    });
-    } catch (error) {
-      console.error('❌ Google Sign-In outer error:', error);
-      throw new Error(`Google Sign-In initialization failed: ${error.message}`);
+    if (!this.isReady) {
+      await this.initialize();
     }
-  }
 
-  // Modern popup-based sign-in that works reliably in production
-  async signInWithPopup() {
     return new Promise((resolve, reject) => {
-      try {
-        // Create a hidden div to render the Google button
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.position = 'absolute';
-        buttonContainer.style.top = '-9999px';
-        buttonContainer.style.left = '-9999px';
-        document.body.appendChild(buttonContainer);
+      // Set the main resolver
+      this.resolver = resolve;
+      let timeoutId;
 
-        // Store resolver
-        this.credentialResolver = resolve;
+      console.log('🚀 Using direct popup approach (skipping One Tap)');
+      
+      // Go directly to popup - skip One Tap completely
+      this.renderButton().catch(reject);
 
-        // Render Google sign-in button
-        window.google.accounts.id.renderButton(buttonContainer, {
-          theme: 'outline',
-          size: 'large',
-          type: 'standard',
-          width: 300
-        });
+      // Extended timeout to allow for user interaction
+      timeoutId = setTimeout(() => {
+        if (this.resolver) {
+          console.log('⏰ OAuth timeout reached');
+          this.resolver = null;
+          reject(new Error('Google sign-in timeout'));
+        }
+      }, 60000); // 60 seconds
 
-        // Auto-click the button after a short delay
-        setTimeout(() => {
-          const iframe = buttonContainer.querySelector('iframe');
-          if (iframe && iframe.contentWindow) {
-            // Simulate click on the iframe
-            iframe.click();
-            
-            // Clean up after 1 second
-            setTimeout(() => {
-              if (document.body.contains(buttonContainer)) {
-                document.body.removeChild(buttonContainer);
-              }
-            }, 1000);
-          } else {
-            document.body.removeChild(buttonContainer);
-            reject(new Error('Failed to create Google sign-in button'));
-          }
-        }, 100);
-
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          if (this.credentialResolver === resolve) {
-            if (document.body.contains(buttonContainer)) {
-              document.body.removeChild(buttonContainer);
-            }
-            this.credentialResolver = null;
-            reject(new Error('Google Sign-In timeout'));
-          }
-        }, 30000);
-
-      } catch (error) {
-        console.error('❌ Popup sign-in failed:', error);
-        reject(error);
-      }
+      // Wrap original resolver to clear timeout
+      const originalResolver = this.resolver;
+      this.resolver = (response) => {
+        clearTimeout(timeoutId);
+        if (originalResolver) {
+          originalResolver(response);
+        }
+      };
     });
   }
 
-  // ✅ Simplified popup method - no longer needed but keeping for compatibility
-  async showPopup() {
-    return this.signInWithPopup();
+  // Render button approach - simplified
+  async renderButton() {
+    console.log('🔍 Creating invisible button...');
+    
+    // Create invisible button container
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.top = '-9999px';
+    container.style.visibility = 'hidden';
+    document.body.appendChild(container);
+
+    // Render Google button
+    window.google.accounts.id.renderButton(container, {
+      theme: 'outline',
+      size: 'large',
+      type: 'standard'
+    });
+
+    console.log('🔍 Button rendered, attempting auto-click...');
+    
+    // Auto-click after short delay
+    setTimeout(() => {
+      const button = container.querySelector('[role="button"]');
+      if (button) {
+        console.log('✅ Button found, clicking...');
+        button.click();
+      } else {
+        console.log('❌ Button not found');
+      }
+    }, 500);
+    
+    // Cleanup after delay
+    setTimeout(() => {
+      if (document.body.contains(container)) {
+        console.log('🧹 Cleaning up button container');
+        document.body.removeChild(container);
+      }
+    }, 5000);
   }
 }
 
@@ -430,7 +285,10 @@ export const authAPI = {
       }
       
       // Get Google credential
-      const credential = await googleOAuth.signIn();
+      const googleResponse = await googleOAuth.signIn();
+      
+      // ✅ Extract credential from Google response object
+      const credential = googleResponse?.credential || googleResponse;
       
       // ✅ Validate that we received a proper JWT token
       if (!credential || typeof credential !== 'string') {
