@@ -69,7 +69,8 @@ class GoogleOAuthManager {
           use_fedcm_for_prompt: true, // Enable FedCM for production compatibility
           itp_support: true,
           context: 'signin',
-          state_cookie_domain: import.meta.env.PROD ? 'spendwise-client.vercel.app' : 'localhost'
+          ux_mode: 'popup', // Force popup mode for better compatibility
+          state_cookie_domain: import.meta.env.PROD ? 'spend-wise-kappa.vercel.app' : 'localhost'
         };
         
         console.log('🔍 Google OAuth init config:', {

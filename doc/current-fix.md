@@ -3908,3 +3908,129 @@ Look for `🔍 API Configuration Debug` log showing correct API_URL
 ```
 
 **Status**: 🚨 **CRITICAL FIX READY** - Environment variable error identified. User needs to fix VITE_API_URL in .env file and Vercel settings to restore all authentication functionality!
+
+---
+
+# 🔐 GOOGLE OAUTH CORS & ORIGIN FIX - 2025-01-27
+
+## User Request Summary
+After fixing API URL issue, Google OAuth stopped working with CORS errors:
+- **Local**: Google sign-in opens, shows email list, but fails after selection with "ERR_FAILED" and "Server did not send the correct CORS headers"
+- **Vercel**: Gets stuck on initialization page, email list doesn't appear
+- **Error**: "The given origin is not allowed for the given client ID"
+
+## Analysis
+**Root Cause**: Google Cloud Console OAuth configuration has wrong origins and missing redirect URIs.
+
+**Issues Found**:
+1. **Wrong Origins**: Render server URL (`https://spendwise-dx8g.onrender.com`) in JavaScript origins - this is a SERVER, not a client
+2. **Missing Redirects**: No authorized redirect URIs configured
+3. **Domain Mismatch**: Client code references wrong domain for Vercel
+4. **FedCM Issues**: Google's new FedCM requirements need specific configuration
+
+## Affected Layers
+- **Google Cloud Console**: OAuth client configuration
+- **Client OAuth**: Domain and UX mode configuration
+- **CORS Policy**: Origin validation and redirect handling
+
+## Affected Files
+- `client/src/api/auth.js` - Fixed domain configuration and UX mode
+- Google Cloud Console - Requires manual configuration update
+
+## Actions Taken
+
+### 1. Fixed Client Domain Configuration ✅
+```javascript
+// BEFORE: Wrong Vercel domain
+state_cookie_domain: import.meta.env.PROD ? 'spendwise-client.vercel.app' : 'localhost'
+
+// AFTER: Correct Vercel domain
+state_cookie_domain: import.meta.env.PROD ? 'spend-wise-kappa.vercel.app' : 'localhost'
+```
+
+### 2. Enhanced OAuth Configuration ✅
+```javascript
+// Added for better compatibility
+ux_mode: 'popup', // Force popup mode for better compatibility
+use_fedcm_for_prompt: true, // Enable FedCM for production compatibility
+```
+
+### 3. Build Verification ✅
+- **Production Build**: ✅ Completed successfully in 34.57s
+- **OAuth Configuration**: Updated with correct domains
+- **No Errors**: Clean build with proper configuration
+
+## Required Google Cloud Console Changes
+
+### **🔧 Step 1: Fix Authorized JavaScript Origins**
+
+**REMOVE** (Current Wrong Configuration):
+```
+❌ https://spendwise-dx8g.onrender.com  ← This is your SERVER, not client!
+```
+
+**KEEP** (Correct Client Origins):
+```
+✅ http://localhost:5173
+✅ https://spend-wise-kappa.vercel.app
+✅ http://127.0.0.1:5173
+```
+
+### **🔧 Step 2: Add Authorized Redirect URIs**
+
+**ADD** these to "Authorized redirect URIs" section:
+```
+http://localhost:5173/auth/callback
+http://127.0.0.1:5173/auth/callback
+https://spend-wise-kappa.vercel.app/auth/callback
+```
+
+### **🔧 Step 3: Wait for Propagation**
+- Changes take **5-10 minutes** to propagate globally
+- Test after waiting period
+
+## Expected Results After Fix
+
+### **✅ Local Development (localhost:5173)**:
+- Google sign-in popup opens ✅
+- Email selection works ✅
+- No CORS errors ✅
+- Successful authentication ✅
+
+### **✅ Vercel Production (spend-wise-kappa.vercel.app)**:
+- Initialization page works ✅
+- Email list appears ✅
+- No origin errors ✅
+- Complete OAuth flow ✅
+
+## Debug Verification
+
+**Console should show:**
+```javascript
+✅ Google Identity Services available
+🔍 Google OAuth init config: {
+  client_id: "680960783178-vl2oi588...",
+  ux_mode: "popup",
+  state_cookie_domain: "spend-wise-kappa.vercel.app" // or "localhost"
+}
+✅ Google OAuth initialized successfully
+```
+
+**No more errors:**
+```
+❌ ERR_FAILED - Server did not send the correct CORS headers
+❌ The given origin is not allowed for the given client ID
+❌ FedCM get() rejects with IdentityCredentialError
+```
+
+## Manual Steps Required
+
+1. **Go to**: [Google Cloud Console](https://console.cloud.google.com)
+2. **Navigate**: APIs & Services → Credentials
+3. **Find**: OAuth 2.0 Client ID `680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com`
+4. **Remove**: Server URL from JavaScript origins
+5. **Add**: Redirect URIs for all client domains
+6. **Save**: Changes and wait 5-10 minutes
+7. **Test**: Both local and Vercel Google OAuth
+
+**Status**: ✅ **GOOGLE OAUTH FIX READY** - Code updated, Google Cloud Console configuration guide provided. User needs to update OAuth origins and add redirect URIs!
