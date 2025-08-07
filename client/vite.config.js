@@ -5,8 +5,8 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  const isDev = command === 'serve';
-  const isProd = command === 'build';
+  const isDev = command === 'serve' || mode === 'development';
+  const isProd = command === 'build' || mode === 'production';
   
   return {
     plugins: [
@@ -127,11 +127,29 @@ export default defineConfig(({ command, mode }) => {
       force: isDev
     },
     
-    // Clean environment handling - let .env files work naturally
+    // ✅ Production-Ready Environment Configuration
     define: {
       global: 'globalThis',
       __DEV__: isDev,
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0')
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
+      // Environment variables for runtime access
+      'import.meta.env.VITE_API_URL': JSON.stringify(
+        process.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1'
+      ),
+      'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
+        process.env.VITE_GOOGLE_CLIENT_ID || '680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'
+      ),
+      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
+        process.env.VITE_CLIENT_URL || (isDev 
+          ? 'http://localhost:5173' 
+          : 'https://spend-wise-kappa.vercel.app')
+      ),
+      'import.meta.env.VITE_DEBUG_MODE': JSON.stringify(
+        process.env.VITE_DEBUG_MODE || (isDev ? 'true' : 'false')
+      ),
+      'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(
+        process.env.VITE_ENVIRONMENT || (isDev ? 'development' : 'production')
+      )
     },
     
     clearScreen: false,
