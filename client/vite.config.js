@@ -134,7 +134,9 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
       // Environment variables for runtime access
       'import.meta.env.VITE_API_URL': JSON.stringify(
-        process.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1'
+        (process.env.VITE_API_URL && process.env.VITE_API_URL.startsWith('http')) 
+          ? process.env.VITE_API_URL 
+          : 'https://spendwise-dx8g.onrender.com/api/v1'
       ),
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
         process.env.VITE_GOOGLE_CLIENT_ID || '680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'

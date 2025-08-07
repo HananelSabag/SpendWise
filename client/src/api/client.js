@@ -19,6 +19,14 @@ const config = {
   DEBUG: false // Debug completed - token extraction working
 };
 
+// 🔍 Debug API configuration
+console.log('🔍 API Configuration Debug:', {
+  API_URL: config.API_URL,
+  VITE_API_URL_ENV: import.meta.env.VITE_API_URL,
+  MODE: import.meta.env.MODE,
+  ALL_VITE_VARS: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+});
+
 // ✅ Server State Management
 class ServerStateManager {
   constructor() {

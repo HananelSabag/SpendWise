@@ -3792,3 +3792,119 @@ Vercel Client (spend-wise-kappa.vercel.app) ──> Render Server (Production) �
 - 🟢 **Simplified**: Single server endpoint, less configuration
 
 **Status**: ✅ **HYBRID ARCHITECTURE OPTIMIZED** - Configuration now matches your actual development workflow with both clients connecting to production Render server!
+
+---
+
+# 🚨 CRITICAL RENDER SERVER 404 ISSUE FIX - 2025-01-27
+
+## User Request Summary
+User reported critical 404 errors preventing all authentication:
+- **Error**: `POST https://spendwise-dx8g.onrender.com/users/login 404 (Not Found)`
+- **Issue**: Both local and Vercel clients cannot access login endpoint
+- **Render logs**: Server running but no request logs appearing
+- **Root URL**: Returns route not found error
+
+## Analysis
+**Root Cause Found**: Environment variable configuration error causing wrong API URLs.
+
+**Evidence**:
+1. **Wrong URL Pattern**: Client calling `/users/login` instead of `/api/v1/users/login`
+2. **Environment Mix-up**: User's `VITE_API_URL` contains Google Client ID instead of API URL
+3. **Server Configuration**: Server correctly mounted on `/api/v1/*` routes
+4. **Client Fallback**: Not working due to invalid environment variable
+
+**From User's .env Screenshot**:
+```bash
+VITE_API_URL=680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com  # ❌ WRONG!
+# Should be: VITE_API_URL=https://spendwise-dx8g.onrender.com/api/v1
+```
+
+## Affected Layers
+- **Environment Configuration**: Mixed up API URL and Google Client ID
+- **Client API**: Falling back to wrong base URL  
+- **Server Communication**: 404 errors preventing all authentication
+- **Production Deployment**: Both local and Vercel affected
+
+## Affected Files
+- `client/vite.config.js` - Enhanced environment variable validation
+- `client/src/api/client.js` - Added debug logging for API configuration
+- User's `.env` file - Needs correction of VITE_API_URL value
+
+## Actions Taken
+
+### 1. Enhanced Environment Variable Validation ✅
+**Problem**: Invalid VITE_API_URL value breaks entire API communication
+**Solution**: Added smart validation to detect invalid API URLs
+```javascript
+// Enhanced validation in vite.config.js
+'import.meta.env.VITE_API_URL': JSON.stringify(
+  (process.env.VITE_API_URL && process.env.VITE_API_URL.startsWith('http')) 
+    ? process.env.VITE_API_URL 
+    : 'https://spendwise-dx8g.onrender.com/api/v1'
+),
+```
+
+### 2. Added API Configuration Debug Logging ✅
+**Added to client/src/api/client.js:**
+```javascript
+console.log('🔍 API Configuration Debug:', {
+  API_URL: config.API_URL,
+  VITE_API_URL_ENV: import.meta.env.VITE_API_URL,
+  MODE: import.meta.env.MODE,
+  ALL_VITE_VARS: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+});
+```
+
+### 3. Verified Server Route Configuration ✅
+**Confirmed server routes are correctly mounted:**
+- `API_VERSION = '/api/v1'`
+- User routes: `/api/v1/users/*`
+- Login endpoint: `/api/v1/users/login` ✅
+- Health check: `/health` ✅
+
+## Required User Actions
+
+### **🔧 Fix Your Environment Variables:**
+
+**1. Update `client/.env` file:**
+```bash
+# WRONG (current):
+VITE_API_URL=680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com
+
+# CORRECT (should be):
+VITE_API_URL=https://spendwise-dx8g.onrender.com/api/v1
+VITE_GOOGLE_CLIENT_ID=680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com
+```
+
+**2. Update Vercel Environment Variables:**
+- Set `VITE_API_URL` = `https://spendwise-dx8g.onrender.com/api/v1`
+- Set `VITE_GOOGLE_CLIENT_ID` = `680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com`
+
+**3. Restart Development Server:**
+```bash
+cd client
+npm run dev
+```
+
+**4. Check Debug Console:**
+Look for `🔍 API Configuration Debug` log showing correct API_URL
+
+## Expected Results After Fix
+- ✅ Client connects to `https://spendwise-dx8g.onrender.com/api/v1/users/login`
+- ✅ Render server logs show incoming requests
+- ✅ Google OAuth initializes with correct Client ID
+- ✅ Regular login works correctly
+- ✅ Both local and Vercel clients functional
+
+## Debug Verification
+**After fixing environment variables, console should show:**
+```javascript
+🔍 API Configuration Debug: {
+  API_URL: "https://spendwise-dx8g.onrender.com/api/v1",  // ✅ Correct
+  VITE_API_URL_ENV: "https://spendwise-dx8g.onrender.com/api/v1",
+  MODE: "development",
+  ALL_VITE_VARS: ["VITE_API_URL", "VITE_GOOGLE_CLIENT_ID", ...]
+}
+```
+
+**Status**: 🚨 **CRITICAL FIX READY** - Environment variable error identified. User needs to fix VITE_API_URL in .env file and Vercel settings to restore all authentication functionality!
