@@ -13,6 +13,7 @@ export default {
   profile: 'Profile',
   settings: 'Settings',
   admin: 'Admin',
+  contactSupport: 'Contact Support',
   
   // Admin navigation
   adminDashboard: 'Admin Dashboard',
@@ -34,6 +35,7 @@ export default {
   // Breadcrumbs
   home: 'Home',
   back: 'Back',
+  backToDashboard: 'Back to Dashboard',
   
   // Quick navigation
   overview: 'Overview',

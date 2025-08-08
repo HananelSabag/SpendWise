@@ -31,6 +31,8 @@ export default {
   hide: 'Hide',
   duplicate: 'Duplicate',
   selectOption: 'Select an option',
+  goBack: 'Go Back',
+  needHelp: 'Need help?',
 
   // Password actions
   showPassword: 'Show Password',

@@ -10,6 +10,10 @@ export default {
   tryAgain: 'Please try again',
   contactSupport: 'Please contact support if the problem persists',
   
+  // Not Found page
+  pageNotFound: 'Page Not Found',
+  pageNotFoundDesc: "The page you're looking for doesn't exist or has been moved.",
+  
   // Network errors
   networkError: 'Network error. Please check your connection.',
   connectionError: 'Unable to connect to server',

@@ -60,7 +60,9 @@ const OnboardingModal = ({
     setIsCompleting,
     isCompleting,
     hasChanges,
-    isValid
+    isValid,
+    getStepData,
+    updateStepData
   } = onboardingState;
 
   // ✅ Navigation logic with enhanced UX
@@ -80,8 +82,7 @@ const OnboardingModal = ({
   });
 
   // ✅ Completion logic with fallback strategies
-  const { completeOnboarding } = useOnboardingCompletion({
-    setIsCompleting,
+  const { completeOnboarding } = useOnboardingCompletion(stepData, {
     onSuccess: onComplete,
     onError: (error) => {
       console.error('Onboarding completion failed:', error);
@@ -93,7 +94,7 @@ const OnboardingModal = ({
     console.log('🎯 OnboardingModal - Handling completion');
     try {
       setIsCompleting(true);
-      const result = await completeOnboarding(stepData);
+      const result = await completeOnboarding();
       if (result) {
         console.log('✅ OnboardingModal - Completion successful');
         onComplete?.();
@@ -229,7 +230,18 @@ const OnboardingModal = ({
                   }}
                   className="w-full h-full"
                 >
-                  {currentStepConfig?.component}
+                  {(() => {
+                    const StepComponent = currentStepConfig?.component;
+                    if (!StepComponent) return null;
+                    return (
+                      <StepComponent
+                        data={getStepData(currentStepConfig.id)}
+                        onDataUpdate={(data) => updateStepData(currentStepConfig.id, data)}
+                        onNext={goNext}
+                        onBack={goPrevious}
+                      />
+                    );
+                  })()}
                 </motion.div>
               </AnimatePresence>
             </div>
