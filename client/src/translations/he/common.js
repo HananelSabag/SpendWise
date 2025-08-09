@@ -204,6 +204,9 @@ export default {
   login: 'התחבר',
   register: 'הרשם',
   user: 'משתמש',
+  guestMode: 'מצב אורח',
+  hebrew: 'עברית',
+  english: 'English',
 
   // Quick panels
   quickPanelsTip: 'לחצו על האייקון כדי לפתוח פאנל פעולות מהיר'

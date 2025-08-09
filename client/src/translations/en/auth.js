@@ -75,6 +75,10 @@ export default {
   // Register page
   createAccount: "Create Account",
   joinSpendWise: "Join SpendWise to manage your finances",
+  account: "Account",
+  security: "Security",
+  profile: "Profile",
+  complete: "Complete",
   name: "Full Name",
   namePlaceholder: "Enter your full name",
   confirmPassword: "Confirm Password", 
@@ -165,6 +169,7 @@ export default {
   completeProfileToGetStarted: 'Complete your profile to get started',
   termsRequired: "You must agree to the terms and conditions",
   acceptTermsRequired: "You must accept the terms and conditions",
+  acceptTerms: "I accept the terms and conditions",
   
   // ✅ ADD: Additional registration translations
   registrationSuccess: "Registration successful! Please check your email for verification.",

@@ -1,3 +1,39 @@
+- Added `common.and` (en) to satisfy missing `auth.and` usage fallback during registration form rendering.
+- Added missing translations:
+  - `common.guestMode`, `common.hebrew`, `common.english` (en/he)
+  - `auth.account`, `auth.security`, `auth.profile`, `auth.complete` (en/he)
+  - `auth.acceptTerms` (en/he)
+  - Ensures GuestSettings and Register steps render without warnings and toasts use proper keys.
+- Google buttons: Replaced generic globe icon with Google “G” logo SVG on Login and Register Google actions.
+- Auth branding: Replaced shield/user icons on Login/Register headers with the header-style logo tile (gradient square with "S"). Files: `client/src/pages/auth/Login.jsx`, `client/src/pages/auth/Register.jsx`.
+- Profile translations: Added `profile.actions.success` in both English and Hebrew to satisfy usage.
+- Amount input fix: Prevent negative signs and sanitize decimal input in `ExchangeCalculator` by switching to `type="text"` with `inputMode="decimal"` and filtering `-`/`+`.
+- Exchange UI options fix: Updated `ExchangeCalculator` to use `Dropdown` with `options/value/onChange` so currency selectors work properly.
+- UI nesting fix: Avoid nested <button> by forcing `Card` to render as `div` with button semantics when clickable.
+- Exchange fetch hardening: Added minimal retry and validation for exchange rates response in `updateExchangeRates`.
+\n### Exchange translations and refetch cadence fix
+- User request: Add missing translations under `exchange.*` and make Exchange Calculator stop refetching every second; set to 5 minutes with manual refresh.
+- Analysis: `en/exchange.js` and `he/exchange.js` already include required keys; module wasn’t preloaded, leading to missing warnings. ExchangeCalculator ran background update only on stale check; frequent refetch likely from repeated renders without interval control.
+- Affected layers: Client translations preload; Exchange UI behavior.
+- Affected files: `client/src/stores/translationStore.js`, `client/src/components/features/exchange/ExchangeCalculator.jsx`.
+- Actions taken:
+  - Added `exchange` to `coreModules` preload to ensure both `en.exchange` and `he.exchange` are available immediately.
+  - Introduced a 5-minute `setInterval` with cleanup in `ExchangeCalculator` to refresh rates periodically and removed tight refetch behavior. Manual refresh via the existing button retained.
+- User request: Fix translation count rendering on Transactions page for Upcoming Transactions and Showing counts.
+- Analysis: Placeholders like {{count}} were not being replaced when t() was called with non-object options or keys expecting different param names. Also, footer used 'recentTransactions.showing' with wrong params; correct key is 'recentTransactions.showingCount'.
+- Affected layers: Client (translations store, transactions list UI)
+- Affected files: `client/src/stores/translationStore.js`, `client/src/components/features/dashboard/transactions/TransactionList.jsx`
+- Actions taken:
+  - Enhanced `translate()` to normalize non-object options and support root-level param replacements alongside `options.params`.
+  - Updated Transactions list footer to use `recentTransactions.showingCount` with `{ count, total }` params so it displays "Showing X of Y" correctly.
+  - Verified no linter errors.
+
+\n### Add missing translations for filters module
+- User request: Missing translations warnings for `filters.dateRange.*`, `filters.type.*`, `filters.sortBy.*`, and `filters.descending` when rendering `Transactions` page in Hebrew.
+- Analysis: The Hebrew `filters.js` already contains the required keys. The issue was that the `filters` module wasn't part of the preloaded core modules, so it wasn't guaranteed to be loaded for non-English before `Transactions` accessed keys.
+- Affected layers: Client translations store.
+- Affected files: `client/src/stores/translationStore.js`.
+- Actions taken: Added `filters` to the `coreModules` array in `loadCoreModules` to ensure both English fallback and current language `filters` are preloaded.
 
 ### Task: Transactions Page Rebuild – Blueprint Submitted
 

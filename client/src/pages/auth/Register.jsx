@@ -9,7 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, Globe, ChevronLeft, ChevronRight
+  Globe, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API
@@ -322,13 +322,11 @@ const Register = () => {
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-8">
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
+          <div
+            className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
           >
-            <User className="w-8 h-8 text-white" />
-          </motion.div>
+            <span className="text-white font-bold text-3xl">S</span>
+          </div>
           
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {registrationStep === 'form' ? t('createAccount') :

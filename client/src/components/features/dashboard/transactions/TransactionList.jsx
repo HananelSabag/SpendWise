@@ -395,9 +395,9 @@ const TransactionList = ({
       {processedTransactions.length > 0 && (
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <span>
-            {t('recentTransactions.showing', { 
-              shown: processedTransactions.length,
-              total: transactions.length 
+            {t('recentTransactions.showingCount', {
+              count: processedTransactions.length,
+              total: transactions.length
             })}
           </span>
           

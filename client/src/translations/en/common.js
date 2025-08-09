@@ -204,6 +204,10 @@ export default {
   login: 'Login',
   register: 'Register',
   user: 'User',
+  guestMode: 'Guest Mode',
+  hebrew: 'עברית',
+  english: 'English',
+  and: 'and',
 
   // Quick panels
   quickPanelsTip: 'Click the icon to open quick actions panel'

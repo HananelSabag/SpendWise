@@ -105,6 +105,21 @@ const ExchangeCalculator = ({
     }
   }, [amount, fromCurrency, toCurrency, getExchangeRate, addNotification, t]);
 
+  // Sanitize amount input (no negatives, allow one decimal separator)
+  const onAmountChange = useCallback((value) => {
+    if (typeof value !== 'string') {
+      setAmount('');
+      return;
+    }
+    let sanitized = value.replace(/[^0-9.,]/g, '');
+    sanitized = sanitized.replace(',', '.');
+    const parts = sanitized.split('.');
+    if (parts.length > 2) {
+      sanitized = parts[0] + '.' + parts.slice(1).join('');
+    }
+    setAmount(sanitized);
+  }, []);
+
   // Auto-calculate on changes (debounced input), throttle full rate refresh to 5 minutes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -116,14 +131,22 @@ const ExchangeCalculator = ({
     return () => clearTimeout(timer);
   }, [amount, fromCurrency, toCurrency, calculateConversion]);
 
-  // Throttle background rates update to every 5 minutes
+  // Throttle background rates update to every 5 minutes and avoid tight loops
   useEffect(() => {
     const fiveMinutes = 5 * 60 * 1000;
+
+    // Initial fetch if stale
     const now = Date.now();
     if (!exchangeRatesUpdatedAt || now - exchangeRatesUpdatedAt > fiveMinutes) {
-      // fire and forget; calculateConversion will pick latest
       updateExchangeRates().catch(() => {});
     }
+
+    // Interval refetch every 5 minutes
+    const interval = setInterval(() => {
+      updateExchangeRates().catch(() => {});
+    }, fiveMinutes);
+
+    return () => clearInterval(interval);
   }, [exchangeRatesUpdatedAt, updateExchangeRates]);
 
   // Swap currencies
@@ -304,9 +327,15 @@ const ExchangeCalculator = ({
             </label>
             
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => onAmountChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === '+') {
+                  e.preventDefault();
+                }
+              }}
               placeholder="0.00"
               className="text-2xl font-bold text-center"
             />
@@ -338,40 +367,16 @@ const ExchangeCalculator = ({
               </label>
               
               <Dropdown
-                trigger={
-                  <Button variant="outline" className="w-full justify-between h-12">
-                    <div className="flex items-center">
-                      <span className="text-lg mr-2">
-                        {availableCurrencies.find(c => c.code === fromCurrency)?.flag}
-                      </span>
-                      <span className="font-medium">{fromCurrency}</span>
-                    </div>
-                    
-                    {favorites.includes(fromCurrency) && (
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    )}
-                  </Button>
-                }
-                items={[
-                  // Favorites first
-                  ...favorites.map(code => {
-                    const currency = availableCurrencies.find(c => c.code === code);
-                    return {
-                      label: `${currency?.flag} ${code} - ${currency?.name}`,
-                      onClick: () => setFromCurrency(code),
-                      active: fromCurrency === code
-                    };
-                  }),
-                  { type: 'separator' },
-                  // All currencies
-                  ...availableCurrencies
-                    .filter(currency => !favorites.includes(currency.code))
-                    .map(currency => ({
-                      label: `${currency.flag} ${currency.code} - ${currency.name}`,
-                      onClick: () => setFromCurrency(currency.code),
-                      active: fromCurrency === currency.code
-                    }))
-                ]}
+                options={availableCurrencies.map(currency => ({
+                  value: currency.code,
+                  label: `${currency.flag} ${currency.code} - ${currency.name}`
+                }))}
+                value={fromCurrency}
+                onChange={(val) => setFromCurrency(val)}
+                searchable
+                clearable={false}
+                variant="outline"
+                size="md"
               />
             </div>
 
@@ -382,40 +387,16 @@ const ExchangeCalculator = ({
               </label>
               
               <Dropdown
-                trigger={
-                  <Button variant="outline" className="w-full justify-between h-12">
-                    <div className="flex items-center">
-                      <span className="text-lg mr-2">
-                        {availableCurrencies.find(c => c.code === toCurrency)?.flag}
-                      </span>
-                      <span className="font-medium">{toCurrency}</span>
-                    </div>
-                    
-                    {favorites.includes(toCurrency) && (
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    )}
-                  </Button>
-                }
-                items={[
-                  // Favorites first
-                  ...favorites.map(code => {
-                    const currency = availableCurrencies.find(c => c.code === code);
-                    return {
-                      label: `${currency?.flag} ${code} - ${currency?.name}`,
-                      onClick: () => setToCurrency(code),
-                      active: toCurrency === code
-                    };
-                  }),
-                  { type: 'separator' },
-                  // All currencies
-                  ...availableCurrencies
-                    .filter(currency => !favorites.includes(currency.code))
-                    .map(currency => ({
-                      label: `${currency.flag} ${currency.code} - ${currency.name}`,
-                      onClick: () => setToCurrency(currency.code),
-                      active: toCurrency === currency.code
-                    }))
-                ]}
+                options={availableCurrencies.map(currency => ({
+                  value: currency.code,
+                  label: `${currency.flag} ${currency.code} - ${currency.name}`
+                }))}
+                value={toCurrency}
+                onChange={(val) => setToCurrency(val)}
+                searchable
+                clearable={false}
+                variant="outline"
+                size="md"
               />
             </div>
           </div>

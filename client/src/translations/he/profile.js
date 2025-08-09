@@ -206,7 +206,9 @@ export default {
     edit: 'ערוך',
     update: 'עדכן',
     confirm: 'אשר',
-    back: 'חזור'
+    back: 'חזור',
+    // תואם לשימוש t('profile.actions.success')
+    success: 'הצלחה'
   },
   
   // הודעות כלליות

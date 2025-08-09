@@ -228,7 +228,9 @@ export default {
     edit: 'Edit',
     update: 'Update',
     confirm: 'Confirm',
-    back: 'Back'
+    back: 'Back',
+    // Added to satisfy t('profile.actions.success') usage
+    success: 'Success'
   },
   
   // General messages

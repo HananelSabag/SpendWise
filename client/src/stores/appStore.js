@@ -103,6 +103,8 @@ export const useAppStore = create(
         exchangeRates: {}, // map of currency code -> rate against USD
         exchangeRatesBase: 'USD',
         exchangeRatesUpdatedAt: 0,
+        exchangeRatesBackoffUntil: 0,
+        exchangeRatesLastError: null,
         // Available currencies list for selectors/UI
         availableCurrencies: Object.values(CURRENCIES),
         
@@ -284,28 +286,75 @@ export const useAppStore = create(
 
           // Exchange rates: fetch and compute
           updateExchangeRates: async () => {
-            try {
-              const base = get().exchangeRatesBase || 'USD';
-              const url = `https://api.exchangerate.host/latest?base=${encodeURIComponent(base)}`;
-              const res = await fetch(url);
-              if (!res.ok) throw new Error('Failed to fetch exchange rates');
-              const data = await res.json();
-              if (!data || !data.rates) throw new Error('Invalid rates response');
-              set((state) => {
-                state.exchangeRates = data.rates;
-                state.exchangeRatesUpdatedAt = Date.now();
-              });
-              return true;
-            } catch (e) {
-              console.warn('updateExchangeRates error:', e);
-              throw e;
+            const now = Date.now();
+            const { exchangeRatesBackoffUntil, exchangeRatesBase } = get();
+            if (exchangeRatesBackoffUntil && now < exchangeRatesBackoffUntil) {
+              return false; // respect backoff, avoid spamming
             }
+
+            const base = exchangeRatesBase || 'USD';
+            const providers = [
+              `https://api.exchangerate.host/latest?base=${encodeURIComponent(base)}`,
+              `https://open.er-api.com/v6/latest/${encodeURIComponent(base)}`
+            ];
+            let attempt = 0;
+            const maxAttempts = 2;
+            let lastError = null;
+            while (attempt < maxAttempts) {
+              try {
+                // Try providers in order
+                let success = false;
+                for (const url of providers) {
+                  const res = await fetch(url);
+                  if (!res.ok) {
+                    lastError = new Error(`Failed to fetch exchange rates from provider: ${url}`);
+                    continue;
+                  }
+                  const data = await res.json();
+                  let rates = null;
+                  if (data && typeof data === 'object') {
+                    if (data.rates && typeof data.rates === 'object') {
+                      rates = data.rates;
+                    } else if (data.result === 'success' && data.rates && typeof data.rates === 'object') {
+                      rates = data.rates;
+                    }
+                  }
+                  if (rates && Object.keys(rates).length > 0) {
+                    set((state) => {
+                      state.exchangeRates = rates;
+                      state.exchangeRatesUpdatedAt = Date.now();
+                      state.exchangeRatesLastError = null;
+                      state.exchangeRatesBackoffUntil = 0;
+                    });
+                    success = true;
+                    break;
+                  }
+                }
+                if (success) return true;
+                throw new Error('Invalid rates response');
+              } catch (e) {
+                lastError = e;
+                attempt += 1;
+                if (attempt < maxAttempts) {
+                  await new Promise((r) => setTimeout(r, 1000 * attempt));
+                }
+              }
+            }
+            // Set backoff for 5 minutes to prevent loops; don't throw
+            set((state) => {
+              state.exchangeRatesLastError = lastError ? String(lastError.message || lastError) : 'Unknown error';
+              state.exchangeRatesBackoffUntil = Date.now() + 5 * 60 * 1000;
+            });
+            if (import.meta.env.DEV) {
+              console.warn('updateExchangeRates error:', lastError);
+            }
+            return false;
           },
 
           getExchangeRate: async (fromCurrency, toCurrency) => {
             if (!fromCurrency || !toCurrency) return 0;
             if (fromCurrency === toCurrency) return 1;
-            const { exchangeRates, exchangeRatesUpdatedAt, exchangeRatesBase } = get();
+            const { exchangeRates, exchangeRatesUpdatedAt, exchangeRatesBase, exchangeRatesBackoffUntil } = get();
             const isStale = Date.now() - (exchangeRatesUpdatedAt || 0) > 12 * 60 * 60 * 1000; // 12h
             if (!exchangeRates || Object.keys(exchangeRates).length === 0 || isStale) {
               await get().actions.updateExchangeRates();
@@ -317,13 +366,16 @@ export const useAppStore = create(
             const toRate = rates[toCurrency];
             const fromRate = rates[fromCurrency];
             if (!toRate || !fromRate) {
-              // Try to refetch once in case of missing code
-              await get().actions.updateExchangeRates();
+              // Respect backoff to avoid loops
+              const now = Date.now();
+              if (!exchangeRatesBackoffUntil || now >= exchangeRatesBackoffUntil) {
+                await get().actions.updateExchangeRates();
+              }
               const r2 = get().exchangeRates;
               const t2 = r2[toCurrency];
               const f2 = r2[fromCurrency];
               if (!t2 || !f2) {
-                throw new Error(`Missing exchange rate for ${fromCurrency} or ${toCurrency} (base ${base})`);
+                throw new Error(`Exchange rates temporarily unavailable. Please try again later.`);
               }
               return t2 / f2;
             }

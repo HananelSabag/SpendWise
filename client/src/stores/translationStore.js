@@ -204,7 +204,7 @@ export const useTranslationStore = create(
 
           // Load core translation modules (most commonly used)
           loadCoreModules: async () => {
-            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories', 'empty'];
+            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories', 'filters', 'exchange', 'empty'];
             const { currentLanguage } = get();
             
             // ✅ SAFETY: Always load English as fallback first
@@ -299,7 +299,14 @@ export const useTranslationStore = create(
           // Get translation with fallback support
           translate: (key, options = {}) => {
             const { currentLanguage, loadedModules, fallbackTranslations } = get();
-            const { params = {}, fallback = null, module = null } = options;
+
+            // Support calling t(key, 'fallback string') by normalizing non-object options
+            if (options && typeof options !== 'object') {
+              options = { fallback: String(options) };
+            }
+
+            // Destructure known fields and keep the rest as potential params
+            const { params = {}, fallback = null, module = null, ...rest } = options;
 
             // Parse key (module.section.key or section.key)
             const keyParts = key.split('.');
@@ -349,12 +356,15 @@ export const useTranslationStore = create(
               translation = fallback || key;
             }
 
-            // Replace parameters
-            if (params && typeof translation === 'string') {
-              Object.keys(params).forEach(param => {
-                const regex = new RegExp(`{{${param}}}`, 'g');
-                translation = translation.replace(regex, params[param]);
-              });
+            // Replace parameters (support both options.params and root-level options keys)
+            if (typeof translation === 'string') {
+              const replacementParams = Object.keys(params).length > 0 ? params : rest;
+              if (replacementParams && Object.keys(replacementParams).length > 0) {
+                Object.keys(replacementParams).forEach((param) => {
+                  const regex = new RegExp(`{{${param}}}`, 'g');
+                  translation = translation.replace(regex, replacementParams[param]);
+                });
+              }
             }
 
             return translation;

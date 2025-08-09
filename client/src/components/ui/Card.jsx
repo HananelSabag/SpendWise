@@ -52,7 +52,8 @@ const Card = React.forwardRef(({
     onClick && 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900'
   );
 
-  const CardComponent = clickable || onClick ? motion.button : motion.div;
+  // Use div for clickable to avoid nesting <button> inside <button> issues
+  const CardComponent = motion.div;
 
   return (
     <CardComponent
@@ -71,6 +72,8 @@ const Card = React.forwardRef(({
         clickable && 'touch-manipulation select-none',
         className
       )}
+      role={clickable || onClick ? 'button' : undefined}
+      tabIndex={clickable || onClick ? 0 : undefined}
       {...props}
     >
       {children}

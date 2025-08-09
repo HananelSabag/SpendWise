@@ -75,6 +75,10 @@ export default {
   // Register page
   createAccount: "צור חשבון",
   joinSpendWise: "הצטרפו ל-SpendWise כדי לנהל את הכספים שלכם",
+  account: "חשבון",
+  security: "אבטחה",
+  profile: "פרופיל",
+  complete: "השלמה",
   name: "שם מלא",
   namePlaceholder: "הכניסו את השם המלא שלכם",
   confirmPassword: "אשרו סיסמה",
@@ -166,6 +170,7 @@ export default {
   
   termsRequired: "עליכם להסכים לתנאים והתניות",
   acceptTermsRequired: "עליכם לקבל את התנאים והתניות",
+  acceptTerms: "אני מסכים לתנאים והתניות",
   
   // Additional errors
   signUpFailed: "ההרשמה נכשלה",
