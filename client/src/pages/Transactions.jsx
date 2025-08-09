@@ -294,27 +294,13 @@ const Transactions = () => {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions: Removed header-level refresh per UX decision */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
               className="flex items-center gap-3"
             >
-              {/* Removed: Add Transaction Button (replaced by FAB) */}
-
-              {/* Refresh Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  onClick={refetchTransactions}
-                  disabled={transactionsLoading}
-                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <RefreshCw className={cn("w-4 h-4", transactionsLoading && "animate-spin")} />
-                </Button>
-              </motion.div>
-
               {/* Auto-Regeneration Status */}
               {isRegenerating && (
                 <motion.div 

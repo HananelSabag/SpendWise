@@ -92,6 +92,7 @@ export default {
   checkEmail: "Check your email",
   checkEmailMessage: "We've sent password reset instructions to your email address.",
   backToLogin: "Back to Login",
+  goToLogin: "Go to Login",
   newPassword: "New Password",
   newPasswordPlaceholder: "Enter your new password",
   confirmNewPassword: "Confirm New Password",

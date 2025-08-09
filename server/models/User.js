@@ -398,7 +398,24 @@ class User {
       }
 
       if (Object.keys(updates).length === 0) {
-        throw new Error('No valid fields to update');
+        // Ignore empty updates gracefully for profile endpoint
+        logger.warn('No valid fields in update request, returning current user', { userId });
+        const current = await db.query(
+          `SELECT id, email, username, role, email_verified,
+                  first_name, last_name, avatar, phone, bio, location,
+                  website, birthday, preferences, created_at, updated_at,
+                  onboarding_completed, language_preference, theme_preference, currency_preference
+           FROM users WHERE id = $1`,
+          [userId]
+        );
+        if (current.rows.length === 0) {
+          throw new Error('User not found');
+        }
+        const user = current.rows[0];
+        if (user.preferences) {
+          try { user.preferences = typeof user.preferences === 'string' ? JSON.parse(user.preferences) : user.preferences; } catch {}
+        }
+        return user;
       }
 
       // Add updated_at

@@ -307,12 +307,12 @@ class AdminController {
       
       switch (action) {
         case 'block':
-          // Insert user restriction
+          // Insert or reactivate active block (aligned with partial unique index on (user_id, restriction_type) WHERE is_active)
           await db.query(`
             INSERT INTO user_restrictions (user_id, restriction_type, reason, applied_by, is_active, created_at)
             VALUES ($1, 'blocked', $2, $3, true, NOW())
-            ON CONFLICT (user_id, restriction_type, is_active) 
-            DO UPDATE SET is_active = true, updated_at = NOW(), reason = $2
+            ON CONFLICT (user_id, restriction_type) WHERE (is_active)
+            DO UPDATE SET is_active = true, updated_at = NOW(), reason = EXCLUDED.reason
           `, [userId, reason || 'Blocked by admin', adminId], 'admin_block_user');
           
           result = { action: 'blocked', userId, reason };
@@ -337,16 +337,20 @@ class AdminController {
               error: { code: 'INSUFFICIENT_PERMISSIONS', message: 'Super admin required for user deletion' }
             });
           }
-          
-          // Soft delete user (mark as deleted instead of actual deletion)
+
+          // Perform hard delete with ON DELETE CASCADE dependencies
           await db.query(`
-            UPDATE users 
-            SET email = email || '_deleted_' || EXTRACT(EPOCH FROM NOW()),
-                username = username || '_deleted_' || EXTRACT(EPOCH FROM NOW()),
-                updated_at = NOW()
-            WHERE id = $1
+            DELETE FROM users WHERE id = $1
           `, [userId], 'admin_delete_user');
-          
+
+          // Log a restriction record for historical audit (soft record only)
+          try {
+            await db.query(`
+              INSERT INTO user_restrictions (user_id, restriction_type, reason, applied_by, is_active, created_at)
+              VALUES ($1, 'deleted', $2, $3, true, NOW())
+            `, [userId, reason || 'Deleted by admin', adminId], 'admin_log_user_deleted');
+          } catch (_) {}
+
           result = { action: 'deleted', userId };
           break;
           

@@ -31,10 +31,10 @@ const QuickPanels = ({
   const { t, isRTL } = useTranslation();
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // ✅ Quick panel items
+  // ✅ Quick panel items (as requested: Category Manager, Recurring Manager, Calculator)
   const quickPanels = [
     {
-      name: t('common.categories'),
+      name: t('common.categoryManager', { fallback: t('common.categories') }),
       description: t('common.manageCategoriesDesc'),
       icon: Tag,
       color: 'blue',
@@ -44,22 +44,12 @@ const QuickPanels = ({
       }
     },
     {
-      name: t('common.recurring'),
+      name: t('common.recurringManager', { fallback: t('common.recurring') }),
       description: t('common.recurringTransactionsDesc'),
       icon: Clock,
       color: 'green',
       onClick: () => {
         onOpenModal?.('recurring');
-        setShowDropdown(false);
-      }
-    },
-    {
-      name: t('common.exchange'),
-      description: t('common.currencyExchangeDesc'),
-      icon: Activity,
-      color: 'purple',
-      onClick: () => {
-        onOpenModal?.('exchange');
         setShowDropdown(false);
       }
     },

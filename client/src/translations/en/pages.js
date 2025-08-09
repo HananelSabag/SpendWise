@@ -24,8 +24,39 @@ export default {
   // Analytics
   analytics: {
     title: 'Analytics',
-    subtitle: 'Deep insights into your spending and income',
-    description: 'Charts, reports and analysis'
+    subtitle: 'Real-time insights from your financial data',
+    description: 'Charts, reports and analysis',
+    healthTitle: 'Financial Health',
+    healthDesc: 'Comprehensive analysis of your financial well-being with personalized recommendations',
+    insightsTitle: 'Smart Insights',
+    insightsDesc: 'AI-powered insights and spending forecasts to help you make better financial decisions',
+    dataUpdated: 'Data updated:',
+    realTime: 'Real-time',
+    showingPeriod: 'Showing {{days}} day period',
+    period: { '7d': '7D', '30d': '30D', '3m': '3M', '1y': '1Y' },
+    errorTitle: 'Failed to Load Analytics',
+    errorMessage: 'Unable to fetch analytics data',
+    retry: 'Retry',
+    health: 'Financial Health',
+    level: {
+      excellent: 'Excellent',
+      good: 'Good',
+      fair: 'Fair',
+      poor: 'Poor'
+    },
+    savingsRate: 'Savings Rate',
+    lastNDays: 'Last {{days}} days',
+    categoriesUsed: 'Categories Used',
+    activeCategories: 'Active categories',
+    financialSummaryPeriod: 'Financial Summary ({{days}} days)',
+    income: 'Income',
+    expenses: 'Expenses',
+    netBalance: 'Net Balance',
+    transactionInsights: 'Transaction Insights',
+    totalTransactions: 'Total Transactions',
+    avgTransaction: 'Avg. Transaction',
+    recentTransactions: 'Recent Transactions',
+    transactionFallback: 'Transaction'
   },
 
   // Categories

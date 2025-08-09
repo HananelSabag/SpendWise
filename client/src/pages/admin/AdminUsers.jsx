@@ -96,7 +96,7 @@ const AdminUsers = () => {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: (userId) => api.admin.deleteUser(userId),
+    mutationFn: ({ userId, reason }) => api.admin.deleteUser({ userId, reason }),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin', 'users']);
       addNotification({
@@ -147,10 +147,12 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = (userId) => {
-    if (window.confirm(t('confirmations.deleteUser', { fallback: 'Are you sure you want to delete this user?' }))) {
-      setActionLoading(userId);
-      deleteUserMutation.mutate(userId);
-    }
+    const confirmed = window.confirm(t('confirmations.deleteUser', { fallback: 'Are you sure you want to delete this user?' }));
+    if (!confirmed) return;
+
+    const reason = prompt(t('admin.actions.deleteReason', { fallback: 'Please enter a reason for deletion (optional):' }), 'Policy violation');
+    setActionLoading(userId);
+    deleteUserMutation.mutate({ userId, reason: reason || undefined });
   };
 
   const getRoleBadge = (role) => {

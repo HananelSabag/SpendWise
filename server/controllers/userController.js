@@ -12,6 +12,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const emailService = require('../services/emailService');
 const { generateVerificationToken, generateRandomPassword } = require('../utils/tokenGenerator');
+const bcrypt = require('bcrypt');
 const db = require('../config/db');
 
 // Token generation now handled by unified utility
@@ -37,6 +38,20 @@ const userController = {
     }
 
     try {
+      // Respect system settings: user_registration
+      try {
+        const setting = await db.query(
+          `SELECT setting_value FROM system_settings WHERE setting_key = 'user_registration' LIMIT 1`
+        );
+        const enabled = setting.rows[0]?.setting_value !== false && setting.rows[0]?.setting_value !== 'false';
+        if (!enabled) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'REGISTRATION_DISABLED', message: 'User registration is currently disabled.' }
+          });
+        }
+      } catch (_) {}
+
       // Check if user exists (using optimized User model with caching)
       const existingUser = await User.findByEmail(email);
       if (existingUser) {
@@ -66,15 +81,29 @@ const userController = {
         VALUES ($1, $2, $3)
       `, [user.id, verificationToken, expiresAt], 'create_verification_token');
 
-      // Send verification email (async - don't wait)
-      emailService.sendVerificationEmail(user.email, user.username, verificationToken)
-        .catch(error => {
-          logger.error('Failed to send verification email', {
-            userId: user.id,
-            email: user.email,
-            error: error.message
+      // Respect email_verification_required: if false, auto-verify
+      let requireVerification = true;
+      try {
+        const ev = await db.query(
+          `SELECT setting_value FROM system_settings WHERE setting_key = 'email_verification_required' LIMIT 1`
+        );
+        requireVerification = ev.rows[0]?.setting_value !== false && ev.rows[0]?.setting_value !== 'false';
+      } catch (_) {}
+
+      if (requireVerification) {
+        // Send verification email (async - don't wait)
+        emailService.sendVerificationEmail(user.email, user.username, verificationToken)
+          .catch(error => {
+            logger.error('Failed to send verification email', {
+              userId: user.id,
+              email: user.email,
+              error: error.message
+            });
           });
-        });
+      } else {
+        // Auto-verify account
+        await db.query('UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1', [user.id]);
+      }
 
       const duration = Date.now() - start;
       logger.info('✅ User registered successfully', {
@@ -113,6 +142,122 @@ const userController = {
       });
       throw error;
     }
+  }),
+
+  /**
+   * 🔑 Request password reset
+   * @route POST /api/v1/users/password-reset
+   */
+  requestPasswordReset: asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_EMAIL', message: 'Email is required' } });
+    }
+
+    // Find user silently
+    const user = await User.findByEmail(email);
+    if (!user) {
+      // Do not disclose user existence
+      return res.json({ success: true, message: 'If the email exists, a reset link was sent' });
+    }
+
+    const token = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, token, expiresAt],
+      'create_password_reset_token'
+    );
+
+    await emailService.sendPasswordReset(user.email, token);
+
+    res.json({ success: true, message: 'If the email exists, a reset link was sent' });
+  }),
+
+  /**
+   * 🔍 Validate password reset token
+   * @route GET /api/v1/users/password-reset/validate/:token
+   */
+  validatePasswordResetToken: asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_TOKEN', message: 'Token is required' } });
+    }
+
+    const result = await db.query(
+      `SELECT prt.user_id, u.email
+       FROM password_reset_tokens prt
+       JOIN users u ON u.id = prt.user_id
+       WHERE prt.token = $1 AND prt.used = false AND prt.expires_at > NOW()`,
+      [token],
+      'validate_password_reset_token'
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'TOKEN_EXPIRED', message: 'Reset link is invalid or expired' } });
+    }
+
+    res.json({ success: true, email: result.rows[0].email });
+  }),
+
+  /**
+   * 🔒 Confirm password reset
+   * @route POST /api/v1/users/password-reset/confirm
+   */
+  confirmPasswordReset: asyncHandler(async (req, res) => {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Token and password are required' } });
+    }
+
+    // Validate token
+    const tok = await db.query(
+      `SELECT user_id FROM password_reset_tokens WHERE token = $1 AND used = false AND expires_at > NOW()`,
+      [token],
+      'confirm_password_reset_token'
+    );
+    if (tok.rows.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'TOKEN_EXPIRED', message: 'Reset link is invalid or expired' } });
+    }
+
+    const userId = tok.rows[0].user_id;
+    const hashed = await bcrypt.hash(password, 12);
+    await db.query(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, [hashed, userId], 'reset_password_update');
+    await db.query(`UPDATE password_reset_tokens SET used = true WHERE token = $1`, [token], 'reset_password_mark_used');
+
+    res.json({ success: true, message: 'Password has been reset successfully' });
+  }),
+
+  /**
+   * ✉️ Resend verification email
+   * @route POST /api/v1/users/resend-verification
+   */
+  resendVerification: asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_EMAIL', message: 'Email is required' } });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.json({ success: true, message: 'If the email exists, a verification email was sent' });
+    }
+
+    if (user.email_verified) {
+      return res.json({ success: true, message: 'Email already verified' });
+    }
+
+    const token = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.query(
+      `INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, token, expiresAt],
+      'create_verification_token_resend'
+    );
+
+    await emailService.sendVerificationEmail(user.email, user.username || user.email, token);
+    res.json({ success: true, message: 'Verification email sent' });
   }),
 
   /**

@@ -94,6 +94,11 @@ export const NotFound = createLazyComponent(
   'NotFound'
 );
 
+export const Maintenance = createLazyComponent(
+  () => import('../pages/Maintenance.jsx'),
+  'Maintenance'
+);
+
 // ✅ Feature Components - Conditional Loading
 export const CategoryManager = createLazyComponent(
   () => import('../components/features/categories/CategoryManager'),

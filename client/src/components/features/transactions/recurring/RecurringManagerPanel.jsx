@@ -33,6 +33,7 @@ import UpcomingList from './UpcomingList';
 
 const RecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
   const { t, isRTL } = useTranslation('transactions');
+  const { t: tCommon } = useTranslation('common');
   const { addNotification } = useNotifications();
   const { formatCurrency } = useCurrency();
 
@@ -173,7 +174,7 @@ const RecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
                 variant="outline"
                 size="sm"
                 onClick={() => { refetchTemplates(); refetchUpcoming(); }}
-                title={t('common.refresh', 'Refresh')}
+                title={tCommon('refresh', 'Refresh')}
               >
                 <RefreshCw className={cn('w-4 h-4', (templatesLoading || upcomingLoading) && 'animate-spin')} />
               </Button>
@@ -238,7 +239,7 @@ const RecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
             </select>
 
             {/* Tabs */}
-            <div className="ml-auto flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <div className="ml-auto flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 sticky top-2 z-10">
               <Button
                 variant={activeTab === 'templates' ? 'primary' : 'ghost'}
                 size="sm"
@@ -273,7 +274,7 @@ const RecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
               ) : templatesError ? (
                 <div className="text-center py-16">
                   <div className="text-red-600 mb-3">{t('recurring.loadError', 'Failed to load recurring transactions')}</div>
-                  <Button variant="outline" onClick={refetchTemplates}>{t('common.retry', 'Retry')}</Button>
+                  <Button variant="outline" onClick={refetchTemplates}>{tCommon('retry', 'Retry')}</Button>
                 </div>
               ) : filteredTemplates.length === 0 ? (
                 <div className="text-center py-24">
@@ -287,7 +288,7 @@ const RecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {filteredTemplates.map((tpl) => (
                     <TemplateCard
                       key={tpl.id}

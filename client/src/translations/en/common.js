@@ -4,6 +4,11 @@
  */
 
 export default {
+  maintenance: {
+    title: 'We’ll be back soon',
+    message: 'The service is under maintenance. Please try again later.',
+    thanks: 'Thank you for your patience.'
+  },
   // App info
   appName: 'SpendWise',
 
@@ -48,8 +53,10 @@ export default {
 
   // Features
   categories: 'Categories',
+  categoryManager: 'Category Manager',
   manageCategoriesDesc: 'Organize and manage your expense and income categories',
   recurring: 'Recurring',
+  recurringManager: 'Recurring Manager',
   recurringTransactionsDesc: 'Set up automatic recurring transactions',
   exchange: 'Exchange',
   currencyExchangeDesc: 'Convert between different currencies',

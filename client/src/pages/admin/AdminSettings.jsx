@@ -31,7 +31,10 @@ const AdminSettings = () => {
     googleOAuthEnabled: true,
     maintenanceMode: false,
     analyticsEnabled: true,
-    notificationsEnabled: true
+    notificationsEnabled: true,
+    supportEmail: '',
+    emailSenderName: 'SpendWise',
+    analyticsProvider: ''
   });
 
   // Settings categories
@@ -63,7 +66,10 @@ const AdminSettings = () => {
           googleOAuthEnabled: serverSettings.find(s => s.key === 'google_oauth_enabled')?.value !== false,
           maintenanceMode: serverSettings.find(s => s.key === 'maintenance_mode')?.value === true,
           analyticsEnabled: serverSettings.find(s => s.key === 'analytics_enabled')?.value !== false,
-          notificationsEnabled: serverSettings.find(s => s.key === 'notifications_enabled')?.value !== false
+          notificationsEnabled: serverSettings.find(s => s.key === 'notifications_enabled')?.value !== false,
+          supportEmail: serverSettings.find(s => s.key === 'support_email')?.value || '',
+          emailSenderName: serverSettings.find(s => s.key === 'email_sender_name')?.value || 'SpendWise',
+          analyticsProvider: serverSettings.find(s => s.key === 'analytics_provider')?.value || ''
         };
         setSettings(transformedSettings);
         
@@ -98,8 +104,13 @@ const AdminSettings = () => {
         { key: 'email_verification_required', value: settings.emailVerificationRequired, category: 'auth', description: 'Require email verification' },
         { key: 'google_oauth_enabled', value: settings.googleOAuthEnabled, category: 'auth', description: 'Enable Google OAuth' },
         { key: 'maintenance_mode', value: settings.maintenanceMode, category: 'system', description: 'System maintenance mode' },
+        { key: 'notifications_enabled', value: settings.notificationsEnabled, category: 'system', description: 'Enable system notifications' },
+        // Email settings
+        { key: 'support_email', value: settings.supportEmail, category: 'contact', description: 'Support email address' },
+        { key: 'email_sender_name', value: settings.emailSenderName, category: 'email', description: 'Email sender display name' },
+        // Analytics settings
         { key: 'analytics_enabled', value: settings.analyticsEnabled, category: 'system', description: 'Enable analytics tracking' },
-        { key: 'notifications_enabled', value: settings.notificationsEnabled, category: 'system', description: 'Enable system notifications' }
+        { key: 'analytics_provider', value: settings.analyticsProvider, category: 'analytics', description: 'Analytics provider identifier' }
       ];
 
       // Save each setting
@@ -310,14 +321,6 @@ const AdminSettings = () => {
 
                 {activeTab === 'features' && (
                   <>
-                    {/* Analytics */}
-                    <SettingToggle
-                      title={t('admin.settings.analytics', { fallback: 'Analytics Tracking' })}
-                      description={t('admin.settings.analyticsDesc', { fallback: 'Enable analytics and usage tracking' })}
-                      checked={settings.analyticsEnabled}
-                      onChange={() => handleToggle('analyticsEnabled')}
-                    />
-
                     {/* Notifications */}
                     <SettingToggle
                       title={t('admin.settings.notifications', { fallback: 'System Notifications' })}
@@ -328,17 +331,75 @@ const AdminSettings = () => {
                   </>
                 )}
 
-                {/* Placeholder for other tabs */}
-                {(activeTab === 'email' || activeTab === 'analytics') && (
-                  <div className="text-center py-8">
-                    <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Coming Soon
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} settings will be available in a future update.
-                    </p>
-                  </div>
+                {activeTab === 'email' && (
+                  <>
+                    {/* Support Email */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t('admin.settings.supportEmail', { fallback: 'Support Email' })}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('admin.settings.supportEmailDesc', { fallback: 'Primary support contact email address' })}
+                        </p>
+                      </div>
+                      <input
+                        type="email"
+                        value={settings.supportEmail || 'spendwise.verifiction@gmail.com'}
+                        onChange={(e) => handleInputChange('supportEmail', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Email Sender Name */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t('admin.settings.emailSenderName', { fallback: 'Email Sender Name' })}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('admin.settings.emailSenderNameDesc', { fallback: 'Display name used in system emails' })}
+                        </p>
+                      </div>
+                      <input
+                        type="text"
+                        value={settings.emailSenderName}
+                        onChange={(e) => handleInputChange('emailSenderName', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'analytics' && (
+                  <>
+                    {/* Analytics Enabled */}
+                    <SettingToggle
+                      title={t('admin.settings.analytics', { fallback: 'Analytics Tracking' })}
+                      description={t('admin.settings.analyticsDesc', { fallback: 'Enable analytics and usage tracking' })}
+                      checked={settings.analyticsEnabled}
+                      onChange={() => handleToggle('analyticsEnabled')}
+                    />
+
+                    {/* Analytics Provider */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t('admin.settings.analyticsProvider', { fallback: 'Analytics Provider' })}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('admin.settings.analyticsProviderDesc', { fallback: 'Identifier (e.g., plausible, ga4) for client integration' })}
+                        </p>
+                      </div>
+                      <input
+                        type="text"
+                        value={settings.analyticsProvider}
+                        onChange={(e) => handleInputChange('analyticsProvider', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="plausible"
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             </Card>

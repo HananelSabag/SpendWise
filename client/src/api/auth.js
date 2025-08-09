@@ -559,12 +559,9 @@ export const authAPI = {
   },
 
   // ✅ Password Reset Confirm
-  async resetPassword(token, newPassword) {
+  async resetPassword({ token, password, passwordStrength }) {
     try {
-      await api.client.post('/users/password-reset/confirm', {
-        token,
-        password: newPassword
-      });
+      await api.client.post('/users/password-reset/confirm', { token, password });
       
       return {
         success: true,
@@ -579,7 +576,7 @@ export const authAPI = {
   },
 
   // ✅ Email Verification
-  async verifyEmail(token) {
+  async verifyEmail({ token }) {
     try {
       const response = await api.client.post('/users/verify-email', { token });
       
@@ -597,7 +594,7 @@ export const authAPI = {
   },
 
   // ✅ Resend Verification Email
-  async resendVerification(email) {
+  async resendVerificationEmail({ email }) {
     try {
       await api.client.post('/users/resend-verification', { email });
       

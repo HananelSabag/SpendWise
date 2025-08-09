@@ -34,6 +34,8 @@ class ServerStateManager {
     this.lastRequest = Date.now();
     this.consecutiveFailures = 0;
     this.wakingUp = false;
+    // Retry gating to avoid immediate re-hits; 2s is enough to classify cold starts
+    this.COLD_START_THRESHOLD = 2000;
   }
 
   updateSuccess() {
@@ -53,8 +55,8 @@ class ServerStateManager {
     const isServerError = error.response?.status >= 500;
     const timeSinceLastRequest = Date.now() - this.lastRequest;
     
-    return !this.isWarm && 
-           (isTimeoutError || isServerError) && 
+    return !this.isWarm &&
+           (isTimeoutError || isServerError) &&
            timeSinceLastRequest > this.COLD_START_THRESHOLD &&
            this.consecutiveFailures < 3;
   }

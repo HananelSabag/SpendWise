@@ -50,7 +50,7 @@ const PasswordReset = () => {
     const validateToken = async () => {
       if (token) {
         try {
-          const result = await api.auth.validateResetToken(token);
+          const result = await api.client.get(`/users/password-reset/validate/${token}`).then(r => ({ success: true, email: r.data?.email })).catch(err => ({ success: false, error: api.client.normalizeError ? api.client.normalizeError(err) : err }));
           
           if (result.success) {
             if (result.email) {
@@ -120,11 +120,7 @@ const PasswordReset = () => {
     setErrors({});
 
     try {
-      const result = await api.auth.resetPassword({
-        token,
-        password: formData.password,
-        passwordStrength: formData.passwordAnalysis
-      });
+      const result = await api.auth.resetPassword({ token, password: formData.password, passwordStrength: formData.passwordAnalysis });
       
       if (result.success) {
         setStep('success');

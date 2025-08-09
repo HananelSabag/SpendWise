@@ -38,6 +38,18 @@ router.post('/login',
   validate.userLogin,
   userController.login
 );
+/**
+ * 🔑 Password Reset Flow
+ */
+router.post('/password-reset', authLimiter, userController.requestPasswordReset);
+router.get('/password-reset/validate/:token', authLimiter, userController.validatePasswordResetToken);
+router.post('/password-reset/confirm', authLimiter, userController.confirmPasswordReset);
+
+/**
+ * ✉️ Resend Verification
+ */
+router.post('/resend-verification', emailVerificationLimiter, userController.resendVerification);
+
 
 /**
  * 🚀 NEW: Google OAuth Authentication

@@ -216,25 +216,13 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions: Removed top-level refresh button per UX decision */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
               className="flex items-center gap-3"
-            >
-              {/* Refresh Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-                </Button>
-              </motion.div>
-            </motion.div>
+            />
           </div>
         </div>
       </motion.div>

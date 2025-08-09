@@ -400,6 +400,15 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          {/* ✅ Maintenance Route */}
+          <Route path="/maintenance" element={
+            <RouteErrorBoundary routeName="Maintenance">
+              <Suspense fallback={<RouteLoadingFallback route="maintenance" />}>
+                <LazyComponents.Maintenance />
+              </Suspense>
+            </RouteErrorBoundary>
+          } />
+
           {/* ✅ 404 Route */}
           <Route path="*" element={
             <RouteErrorBoundary routeName="NotFound">

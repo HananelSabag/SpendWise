@@ -224,6 +224,9 @@ export default {
 
   // Recurring transactions
   recurring: {
+    active: "פעיל",
+    paused: "מושהה",
+    nextRun: "הרצה הבאה",
     title: "עסקאות חוזרות",
     create: {
       title: "צור עסקה חוזרת",

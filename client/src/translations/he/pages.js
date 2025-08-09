@@ -24,8 +24,39 @@ export default {
   // Analytics
   analytics: {
     title: 'אנליטיקה',
-    subtitle: 'תובנות עמוקות על ההוצאות וההכנסות שלכם',
-    description: 'גרפים, דוחות וניתוחים'
+    subtitle: 'תובנות בזמן אמת מהנתונים הפיננסיים שלך',
+    description: 'גרפים, דוחות וניתוחים',
+    healthTitle: 'בריאות פיננסית',
+    healthDesc: 'ניתוח מקיף של מצבך הפיננסי עם המלצות מותאמות אישית',
+    insightsTitle: 'תובנות חכמות',
+    insightsDesc: 'תובנות ותחזיות מבוססות AI לקבלת החלטות פיננסיות טובות יותר',
+    dataUpdated: 'הנתונים עודכנו:',
+    realTime: 'בזמן אמת',
+    showingPeriod: 'מציג תקופה של {{days}} ימים',
+    period: { '7d': '7 ימים', '30d': '30 ימים', '3m': '3 חודשים', '1y': 'שנה' },
+    errorTitle: 'טעינת האנליטיקה נכשלה',
+    errorMessage: 'לא ניתן להביא את נתוני האנליטיקה',
+    retry: 'נסה שוב',
+    health: 'בריאות פיננסית',
+    level: {
+      excellent: 'מצוין',
+      good: 'טוב',
+      fair: 'סביר',
+      poor: 'חלש'
+    },
+    savingsRate: 'שיעור חיסכון',
+    lastNDays: 'ב-{{days}} הימים האחרונים',
+    categoriesUsed: 'קטגוריות בשימוש',
+    activeCategories: 'קטגוריות פעילות',
+    financialSummaryPeriod: 'סיכום פיננסי ({{days}} ימים)',
+    income: 'הכנסות',
+    expenses: 'הוצאות',
+    netBalance: 'יתרת נטו',
+    transactionInsights: 'תובנות עסקאות',
+    totalTransactions: 'סך כל העסקאות',
+    avgTransaction: 'ממוצע לעסקה',
+    recentTransactions: 'עסקאות אחרונות',
+    transactionFallback: 'עסקה'
   },
 
   // Categories

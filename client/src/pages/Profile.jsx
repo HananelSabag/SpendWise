@@ -82,10 +82,10 @@ const Profile = () => {
 
   // ENHANCED tabs - include preferences
   const tabs = [
-    { id: 'personal', label: t('tabs.personal', 'Personal Info'), icon: User },
-    { id: 'preferences', label: t('tabs.preferences', 'Preferences'), icon: Settings },
-    { id: 'security', label: t('tabs.security', 'Security'), icon: Shield },
-    { id: 'export', label: t('tabs.export', 'Export Data'), icon: Download }
+    { id: 'personal', label: t('tabs.personal', { fallback: 'Personal Info' }), icon: User },
+    { id: 'preferences', label: t('tabs.preferences', { fallback: 'Preferences' }), icon: Settings },
+    { id: 'security', label: t('tabs.security', { fallback: 'Security' }), icon: Shield },
+    { id: 'export', label: t('tabs.export', { fallback: 'Export Data' }), icon: Download }
   ];
 
   // Handle profile picture upload
@@ -357,7 +357,7 @@ const Profile = () => {
       {/* Personal Information Form */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('personal.title', { fallback: 'Personal Information' })}</h3>
           <div className="flex items-center space-x-2">
             {isEditing && (
               <Button
@@ -397,7 +397,7 @@ const Profile = () => {
               {isEditing ? (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Saving...' : 'Save Changes'}
+                  {isLoading ? t('messages.saving', { fallback: 'Saving...' }) : t('actions.update', { fallback: 'Save Changes' })}
                 </>
               ) : (
                 <>
@@ -411,28 +411,28 @@ const Profile = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="First Name"
+            label={t('personal.firstName', { fallback: 'First Name' })}
             value={personalData.firstName}
             onChange={(e) => setPersonalData(prev => ({ ...prev, firstName: e.target.value }))}
             disabled={!isEditing}
             required
           />
           <Input
-            label="Last Name"
+            label={t('personal.lastName', { fallback: 'Last Name' })}
             value={personalData.lastName}
             onChange={(e) => setPersonalData(prev => ({ ...prev, lastName: e.target.value }))}
             disabled={!isEditing}
             required
           />
           <Input
-            label="Email"
+            label={t('personal.email', { fallback: 'Email' })}
             type="email"
             value={personalData.email}
             disabled={true}
             className="opacity-50 cursor-not-allowed"
           />
           <Input
-            label="Phone"
+            label={t('personal.phone', { fallback: 'Phone' })}
             type="tel"
             value={personalData.phone}
             onChange={(e) => setPersonalData(prev => ({ ...prev, phone: e.target.value }))}
@@ -440,14 +440,14 @@ const Profile = () => {
             placeholder="+1234567890"
           />
           <Input
-            label="Location"
+            label={t('personal.location', { fallback: 'Location' })}
             value={personalData.location}
             onChange={(e) => setPersonalData(prev => ({ ...prev, location: e.target.value }))}
             disabled={!isEditing}
-            placeholder="City, Country"
+            placeholder={t('personal.location', { fallback: 'City, Country' })}
           />
           <Input
-            label="Website"
+            label={t('personal.website', { fallback: 'Website' })}
             type="url"
             value={personalData.website}
             onChange={(e) => setPersonalData(prev => ({ ...prev, website: e.target.value }))}
@@ -455,7 +455,7 @@ const Profile = () => {
             placeholder="https://..."
           />
           <Input
-            label="Birthday"
+            label={t('personal.birthday', { fallback: 'Birthday' })}
             type="date"
             value={personalData.birthday}
             onChange={(e) => setPersonalData(prev => ({ ...prev, birthday: e.target.value }))}
@@ -466,14 +466,14 @@ const Profile = () => {
         {/* Bio field - full width */}
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Bio
+            {t('personal.bio', { fallback: 'Bio' })}
           </label>
           <textarea
             value={personalData.bio}
             onChange={(e) => setPersonalData(prev => ({ ...prev, bio: e.target.value }))}
             disabled={!isEditing}
             rows={3}
-            placeholder="Tell us about yourself..."
+            placeholder={t('personal.bioPlaceholder', { fallback: 'Tell us about yourself...' })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -489,10 +489,10 @@ const Profile = () => {
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Application Preferences
+            {t('preferences.title', { fallback: 'Application Preferences' })}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Customize your SpendWise experience with these settings.
+            {t('preferences.subtitle', { fallback: 'Customize your SpendWise experience with these settings.' })}
           </p>
         </div>
 
@@ -500,7 +500,7 @@ const Profile = () => {
           {/* Language Preference */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Language
+              {t('preferences.language', { fallback: 'Language' })}
             </label>
             <select
               value={preferencesData.language_preference}
@@ -515,7 +515,7 @@ const Profile = () => {
           {/* Theme Preference */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Theme
+              {t('preferences.theme', { fallback: 'Theme' })}
             </label>
             <select
               value={preferencesData.theme_preference}
@@ -531,7 +531,7 @@ const Profile = () => {
           {/* Currency Preference */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Currency
+              {t('preferences.currency', { fallback: 'Currency' })}
             </label>
             <select
               value={preferencesData.currency_preference}
@@ -557,7 +557,7 @@ const Profile = () => {
             className="px-6"
           >
             <Save className="w-4 h-4 mr-2" />
-            Save Preferences
+            {t('preferences.savePreferences', { fallback: 'Save Preferences' })}
           </Button>
         </div>
       </div>
@@ -570,7 +570,7 @@ const Profile = () => {
     
     return (
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Change Password</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">{t('security.password.title', { fallback: 'Change Password' })}</h3>
         
         {/* ✅ Google OAuth User Notice */}
         {isGoogleOnlyUser ? (
@@ -579,19 +579,17 @@ const Profile = () => {
               <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div>
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                  Google Account Security
+                  {t('security.title', { fallback: 'Security & Account' })}
                 </h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                  Your account uses Google sign-in for authentication. To add password login as an option:
+                  {t('security.subtitle', { fallback: 'Manage your security settings' })}
                 </p>
                 <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-decimal">
-                  <li>Set a password below to enable hybrid login</li>
-                  <li>You can then use either Google or password to sign in</li>
-                  <li>Your Google sign-in will continue to work normally</li>
+                  <li>{t('security.password.requirements', { fallback: 'Password must be at least 8 characters' })}</li>
+                  <li>{t('actions.update', { fallback: 'Update' })}</li>
+                  <li>{t('actions.success', { fallback: 'Operation completed successfully' })}</li>
                 </ol>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-3 font-medium">
-                  ✨ This gives you more login flexibility without removing Google authentication
-                </p>
+                
               </div>
             </div>
           </div>
@@ -602,24 +600,24 @@ const Profile = () => {
 
         <div className="relative">
           <Input
-            label={isGoogleOnlyUser ? "Set Password" : "New Password"}
+            label={isGoogleOnlyUser ? t('security.password.new', { fallback: 'Set Password' }) : t('security.password.new', { fallback: 'New Password' })}
             type="password"
             value={passwordData.newPassword}
             onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
             icon={<Key className="w-5 h-5" />}
-            placeholder={isGoogleOnlyUser ? "Choose a secure password..." : "Enter new password..."}
+            placeholder={isGoogleOnlyUser ? t('security.password.new', { fallback: 'Choose a secure password...' }) : t('security.password.new', { fallback: 'Enter new password...' })}
             autoComplete="new-password"
             showPasswordToggle
           />
         </div>
 
         <Input
-          label={isGoogleOnlyUser ? "Confirm Password" : "Confirm New Password"}
+          label={isGoogleOnlyUser ? t('security.password.confirm', { fallback: 'Confirm Password' }) : t('security.password.confirm', { fallback: 'Confirm New Password' })}
           type="password"
           value={passwordData.confirmPassword}
           onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
           icon={<Key className="w-5 h-5" />}
-          placeholder={isGoogleOnlyUser ? "Confirm your password..." : "Confirm new password..."}
+          placeholder={isGoogleOnlyUser ? t('security.password.confirm', { fallback: 'Confirm your password...' }) : t('security.password.confirm', { fallback: 'Confirm new password...' })}
           autoComplete="new-password"
           showPasswordToggle
         />
@@ -636,8 +634,8 @@ const Profile = () => {
           className="w-full"
         >
           {isLoading 
-            ? (isGoogleOnlyUser ? 'Setting Password...' : 'Changing Password...') 
-            : (isGoogleOnlyUser ? 'Set Password' : 'Change Password')
+            ? (isGoogleOnlyUser ? t('messages.saving', { fallback: 'Saving...' }) : t('messages.saving', { fallback: 'Saving...' })) 
+            : (isGoogleOnlyUser ? t('security.password.change', { fallback: 'Set Password' }) : t('security.password.change', { fallback: 'Change Password' }))
           }
         </Button>
         </div>
@@ -647,9 +645,9 @@ const Profile = () => {
 
   const renderExportTab = () => (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Export Your Data</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('export.title', { fallback: 'Data Export' })}</h3>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Download all your financial data in various formats.
+        {t('export.subtitle', { fallback: 'Download your data' })}
       </p>
       
       <div className="space-y-4">
@@ -675,7 +673,7 @@ const Profile = () => {
             variant="outline"
           >
             <Download className="w-4 h-4 mr-2" />
-            Export as CSV
+            {t('export.actions.download', { fallback: 'Download Data' })} CSV
           </Button>
           
           <Button 
@@ -699,13 +697,13 @@ const Profile = () => {
             variant="outline"
           >
             <Download className="w-4 h-4 mr-2" />
-            Export as JSON
+            {t('export.actions.download', { fallback: 'Download Data' })} JSON
           </Button>
         </div>
         
         <Button onClick={() => setShowExportModal(true)} className="w-full">
           <Download className="w-4 h-4 mr-2" />
-          Advanced Export Options
+          {t('export.actions.preview', { fallback: 'Preview' })}
         </Button>
       </div>
     </Card>

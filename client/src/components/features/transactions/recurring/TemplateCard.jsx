@@ -12,7 +12,7 @@ const TemplateCard = ({ template, onEdit, onDelete, onPauseResume, onRegenerate,
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('rounded-lg border overflow-hidden', isActive ? 'border-green-200 bg-green-50/30 dark:border-green-700 dark:bg-green-900/10' : 'border-gray-200 bg-gray-50/30 dark:border-gray-700 dark:bg-gray-800/30')}>
-      <div className="p-4 flex items-center justify-between gap-3">
+      <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', isActive ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500')}>
             <Repeat className="w-6 h-6" />
@@ -44,7 +44,7 @@ const TemplateCard = ({ template, onEdit, onDelete, onPauseResume, onRegenerate,
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700" onClick={() => setExpanded((v) => !v)}>
             <Eye className="w-4 h-4" />
           </Button>

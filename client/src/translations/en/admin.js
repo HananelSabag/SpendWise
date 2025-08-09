@@ -159,6 +159,12 @@ export default {
     analyticsDesc: 'Enable analytics and usage tracking',
     notifications: 'System Notifications',
     notificationsDesc: 'Enable system-wide notifications',
+    supportEmail: 'Support Email',
+    supportEmailDesc: 'Primary support contact email address',
+    emailSenderName: 'Email Sender Name',
+    emailSenderNameDesc: 'Display name used in system emails',
+    analyticsProvider: 'Analytics Provider',
+    analyticsProviderDesc: 'Identifier (e.g., plausible, ga4) for client integration',
     
     // Actions
     save: 'Save Changes',

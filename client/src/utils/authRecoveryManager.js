@@ -314,7 +314,8 @@ class AuthRecoveryManager {
 
       // Build a safe health endpoint regardless of whether VITE_API_URL already includes /api/v1
       const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-      const healthUrl = base.endsWith('/api/v1') ? `${base}/health` : `${base}/api/v1/health`;
+      const baseRoot = base.endsWith('/api/v1') ? base.slice(0, -('/api/v1'.length)) : base;
+      const healthUrl = `${baseRoot}/health`;
 
       const response = await fetch(healthUrl, {
         method: 'GET',
@@ -481,7 +482,6 @@ class AuthRecoveryManager {
    * Perform periodic health check
    */
   async performHealthCheck() {
-    // Access auth store safely via global accessor to avoid circular deps
     const authStore = getAuthStore()?.getState?.();
 
     // Only perform health check if user is authenticated
@@ -500,7 +500,7 @@ class AuthRecoveryManager {
         if (token) {
           const authAPI = await getAuthAPI();
           await authAPI.validateToken(token);
-          // If successful, handleApiSuccess will typically be called by the interceptor
+          // If successful, handleApiSuccess will be called by the interceptor
         }
       } catch (error) {
         // If failed, handleApiError will be called by the interceptor

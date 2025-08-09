@@ -219,6 +219,7 @@ const LoginForm = ({
         </div>
 
         {/* Google Login */}
+        {window.__SW_GOOGLE_OAUTH_ENABLED__ !== false && (
         <Button
           type="button"
           variant="outline"
@@ -233,6 +234,7 @@ const LoginForm = ({
           )}
           {isGoogleLoading ? t('connecting') : t('continueWithGoogle')}
         </Button>
+        )}
       </form>
     </div>
   );

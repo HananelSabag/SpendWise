@@ -1,3 +1,124 @@
+## Admin Block/Unblock – Live DB Constraint Conflict Fix (2025-08-09)
+
+- User request summary: Fix admin block/unblock failing with duplicate key on `uniq_user_restrictions_user_type_active`. Verify against live DB, align server logic, and ensure client continues to work.
+- Analysis: Live DB has a unique index on `(user_id, restriction_type, is_active)` which conflicts when updating an active row to inactive if an inactive row already exists. Server used `ON CONFLICT (user_id, restriction_type, is_active)` and client calls `/admin/users/:id/manage` with `action` values `block`/`unblock`.
+- Affected layers: Database (index), Server (`server/controllers/adminController.js`), Client API contract (unchanged).
+- Affected files: `server/controllers/adminController.js` (edited); live DB `public.user_restrictions` (index changed).
+- Actions taken:
+  - Listed live tables and inspected `user_restrictions` constraints via Supabase MCP.
+  - Replaced unique index with partial unique index:
+    - Dropped `uniq_user_restrictions_user_type_active`.
+    - Created `uniq_active_user_restrictions` on `(user_id, restriction_type) WHERE is_active`.
+  - Updated server block logic to target the partial unique index correctly using: `ON CONFLICT (user_id, restriction_type) WHERE (is_active) DO UPDATE ...`.
+  - Unblock logic remains `UPDATE ... SET is_active=false` which now succeeds without duplicate-key errors.
+  - Verified no linter issues.
+
+- Added analytics period buttons i18n: replaced '7D/30D/3M/1Y' with `pages.analytics.period` keys; updated `en/he` pages translations.
+- Profile: replaced hardcoded English for tabs and sections (Personal Info, Preferences, Security, Export) with translation keys from `profile` module; updated labels/placeholders and actions; kept existing data flow.
+### Maintenance Mode UX
+- Added `client/src/pages/Maintenance.jsx` with EN/HE translations in `translations/en/common.js` and `translations/he/common.js`.
+- Middleware now redirects browsers to `/maintenance` when maintenance is on; API clients receive JSON 503.
+### Admin Settings review
+- UI tabs present: `general`, `security`, `features` (email/analytics tabs show Coming Soon).
+- Live settings in DB: `site_name`, `user_registration`, `email_verification_required`, `google_oauth_enabled`, `maintenance_mode`, `analytics_enabled`, `notifications_enabled`.
+- Server exposes `GET/PUT/DELETE /admin/settings` via `admin_manage_settings()`; values are JSONB stored in `system_settings` and are already present.
+
+## Refresh Buttons Audit – Discovery
+
+- **User request summary**: Audit refresh buttons on main pages (Dashboard, Transactions, Profile, Admin Dashboard); decide to wire them properly or remove if redundant.
+- **Analysis**:
+  - **Dashboard (`client/src/pages/Dashboard.jsx`)**: Header refresh called only dashboard refresh; didn’t refresh `BalancePanel` or `RecentTransactionsWidget` → inconsistent UX.
+  - **BalancePanel (`client/src/components/features/dashboard/BalancePanel.jsx`)**: Has its own working refresh.
+  - **RecentTransactionsWidget (`client/src/components/features/dashboard/RecentTransactionsWidget.jsx`)**: Has its own working refresh.
+  - **Transactions (`client/src/pages/Transactions.jsx`)**: Header refresh works.
+  - **Analytics (`client/src/pages/Analytics.jsx`)**: Header refresh works.
+  - **Admin Dashboard (`client/src/pages/admin/AdminDashboard.jsx`)**: Header refresh works; error variant exposes full page reload.
+  - **Admin Users (`client/src/pages/admin/AdminUsers.jsx`)**: Refresh works.
+  - **Profile (`client/src/pages/Profile.jsx`)**: No refresh; N/A.
+- **Affected layers**: Frontend UI (React), data fetching (TanStack Query), page headers.
+- **Affected files**: `client/src/pages/Dashboard.jsx`, `client/src/components/features/dashboard/BalancePanel.jsx`, `client/src/components/features/dashboard/RecentTransactionsWidget.jsx`, `client/src/pages/Transactions.jsx`, `client/src/pages/Analytics.jsx`, `client/src/pages/admin/AdminDashboard.jsx`, `client/src/pages/admin/AdminUsers.jsx`.
+
+### Actions Taken – Implementation
+- Updated `client/src/pages/Dashboard.jsx`:
+  - Imported `useTransactionActions('dashboard')` and used `forceRefreshAll()`.
+  - `handleRefresh` now runs `Promise.all([refreshDashboard(), forceRefreshAll()])` to refresh dashboard, balance, transactions (including infinite), and related keys together.
+- Lint: Clean.
+
+### Refresh Buttons Removal – UX Simplification
+- Removed header refresh buttons from:
+  - `client/src/pages/Dashboard.jsx`
+  - `client/src/pages/Transactions.jsx`
+  - `client/src/pages/Analytics.jsx`
+  - `client/src/pages/admin/AdminDashboard.jsx`
+- Reason: simplify UI, rely on background auto-refresh and per-widget updates; avoid redundant manual refresh in headers.
+- Verified no linter issues after edits.
+
+### Impact notes
+- Site name: changing `site_name` updates only DB; client does not yet read and render it globally (safe to change in production; no external dependency). Future: wire header/title to use it.
+- Maintenance mode: server provides flag; enforcement middleware not yet implemented across routes. Future: add global gate to return 503 for non-admins when enabled.
+- Google OAuth enabled: toggles are stored; actual OAuth enablement depends on env config; safe to toggle but may not auto-propagate to frontend button visibility yet.
+- Analytics/Notifications: stored only; placeholders in UI. No runtime side-effects implemented (safe to toggle; no-ops currently).
+- Email verification required/user registration: stored; current registration flow does not read these flags yet (no-ops unless we wire checks in controllers).
+
+### Next steps proposed (low-risk wiring)
+- Read `site_name` on client app initialization and render in `Header`.
+- Enforce `maintenance_mode` in a lightweight middleware that blocks non-admin routes.
+- Gate Registration route and controller using `user_registration` and `email_verification_required`.
+- Hide Google button on client if `google_oauth_enabled` is false.
+## Task: Admin block/delete not working; profile update failed
+
+### Summary
+- Fixed admin block error due to missing `applied_by` by adding column in Supabase and a unique index on active restrictions.
+- Implemented hard delete (cascading) for admin user deletion and wired reason logging.
+- Corrected auth restriction handling to specifically detect `blocked` status.
+- Improved `User.update` to return current user when no valid fields provided, resolving profile update error.
+- Updated client admin delete flow to prompt for reason and send it to the server.
+
+### Analysis
+- Logs showed: “column "applied_by" of relation "user_restrictions" does not exist” when POST /admin/users/:id/manage (block).
+- DB inspection confirmed `user_restrictions` lacked `applied_by` and unique constraint; FKs pointed to legacy `users_old_messy`.
+- Profile PUT failed with “No valid fields to update” because the body had no allowed fields; UX should not 500 in that case.
+- Admin delete only soft-updated email; requirement is full delete and cascade in DB.
+
+### Affected layers
+- Database (Supabase): schema for `user_restrictions`, FKs for related tables.
+- Server: `adminController.js`, `middleware/auth.js`, `models/User.js`.
+- Client: `client/src/api/admin.js`, `client/src/pages/admin/AdminUsers.jsx`.
+
+### Files edited
+- `server/controllers/adminController.js`: switch delete to hard delete + audit insert; keep block/unblock.
+- `server/middleware/auth.js`: precise blocked detection; attach correct restrictions.
+- `server/models/User.js`: graceful no-op update returns current user.
+- `client/src/api/admin.js`: deleteUser now accepts `{ userId, reason }` and forwards reason.
+- `client/src/pages/admin/AdminUsers.jsx`: delete flow prompts for reason and passes it.
+
+### DB actions (applied)
+- Added `applied_by` to `public.user_restrictions`; created unique index `(user_id, restriction_type, is_active)`; removed default from `restriction_type`.
+- Repointed FKs to `public.users` with `ON DELETE CASCADE` (categories, recurring_templates, transactions, password/email tokens, user_restrictions) and `ON DELETE SET NULL` for admin_activity_log, system_settings.updated_by.
+
+### Outcome
+- Admin block/unblock now writes to `user_restrictions` without errors.
+- Admin delete removes user and related data; UI prompts for reason; audit preserved.
+- Profile update no longer errors when empty; returns current user.
+
+- Translations and Mobile UX fixes
+  - Fixed missing keys: `en.auth.goToLogin`, `he.transactions.recurring.active`, `he.transactions.recurring.paused`, `he.transactions.recurring.nextRun`.
+  - Made `RecurringManagerPanel` mobile-friendly: grid layout for cards on mobile/tablet, sticky tabs, better button wrapping in `TemplateCard`.
+  - Files: `client/src/translations/en/auth.js`, `client/src/translations/he/transactions.js`, `client/src/components/features/transactions/recurring/RecurringManagerPanel.jsx`, `client/src/components/features/transactions/recurring/TemplateCard.jsx`.
+- 2025-08-09 – Login timeout after click (no server logs)
+  - (1) User request: Login stuck on initializing; timeout; no server logs; client shows POST /users/login then timeout.
+  - (2) Analysis: Client timed out before server warmed; cold-start retry gating used undefined threshold causing no retry; added explicit `COLD_START_THRESHOLD` and ensured retry path.
+  - (3) Affected layers: Client API client.
+  - (4) Affected files: `client/src/api/client.js`.
+  - (5) Actions: Defined `COLD_START_THRESHOLD = 2000` in `ServerStateManager`; verified linter.
+
+### 2025-08-09 – AuthRecoveryManager health-check fix
+- (1) User request: Login failing due to runtime error in `authRecoveryManager.js`.
+- (2) Analysis: `performHealthCheck()` referenced `useAuthStore` and `authAPI` directly, violating lazy-loading pattern and causing `ReferenceError: useAuthStore is not defined`.
+- (3) Affected layers: Client utilities (auth recovery/health monitor).
+- (4) Affected files: `client/src/utils/authRecoveryManager.js`.
+- (5) Actions taken: Replaced direct store/API references with lazy accessors `getAuthStore()?.getState?.()` and `await getAuthAPI()` inside `performHealthCheck()`. Ran linter – no issues found.
+
 - Recurring Manager UX Overhaul – Plan added
 - Recurring Manager Implementation – Phase 1
   - Replaced old modal entry points with new full-screen `RecurringManagerPanel` from header quick panels and upcoming widget.
@@ -4237,11 +4358,3 @@ User requested complete removal of all broken Google OAuth code and rebuild from
   - Creates the template, then generates current-month transactions and 3 months of upcoming items.
 - Ensured amounts and types mapping are correct; category is resolved/created server-side when only `category_name` is provided.
 - No code change required for functionality; behavior already matches requirements. Lint OK.
-
-## Fix: authRecoveryManager ReferenceError (useAuthStore undefined)
-- Issue: `authRecoveryManager.js:484 ReferenceError: useAuthStore is not defined` during periodic health check.
-- Cause: Direct reference to `useAuthStore` (not imported here to avoid circular deps). File already uses a safe global accessor `getAuthStore()` elsewhere.
-- Change: Updated `performHealthCheck()` to use `getAuthStore()?.getState?.()` and lazily import `authAPI` via `getAuthAPI()` before `validateToken()`.
-- Files updated:
-  - `client/src/utils/authRecoveryManager.js`
-- Lint: clean.

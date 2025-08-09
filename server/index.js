@@ -16,6 +16,7 @@ dotenv.config();
 const logger = require('./utils/logger');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
+const { maintenanceGate } = require('./middleware/maintenance');
 const scheduler = require('./utils/scheduler');
 const db = require('./config/db');
 const keepAlive = require('./utils/keepAlive');
@@ -139,6 +140,9 @@ app.use(requestId);
 // Set up API rate limiter
 // API rate limiter
 app.use('/api', apiLimiter);
+
+// Global maintenance gate (place before route handlers)
+app.use(maintenanceGate);
 
 // Set up request logging
 // Request logging (production-safe)

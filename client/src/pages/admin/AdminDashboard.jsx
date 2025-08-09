@@ -146,7 +146,7 @@ const AdminDashboard = () => {
       'min-h-screen bg-gray-50 dark:bg-gray-900',
       isRTL && 'rtl'
     )}
-    dir={isRTL ? 'rtl' : 'ltr'}>
+    dir={isRTL ? 'rtl' : 'ltr'} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div 
@@ -156,7 +156,7 @@ const AdminDashboard = () => {
         >
           <div className={cn(
             'flex items-center justify-between mb-4',
-            isRTL && 'flex-row-reverse'
+            isRTL ? 'flex-row-reverse text-right' : ''
           )}
           dir={isRTL ? 'rtl' : 'ltr'}>
                         <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -173,15 +173,7 @@ const AdminDashboard = () => {
               {t('dashboardPage.subtitle', { fallback: 'Complete system administration and user management' })}
             </p>
             </div>
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Activity className="w-4 h-4" />
-              {t('common.refresh', { fallback: 'Refresh' })}
-            </Button>
+            {/* Removed header-level refresh per UX decision */}
           </div>
           
           {/* Welcome message with real name */}

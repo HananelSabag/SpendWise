@@ -23,7 +23,7 @@ import { Card, Badge, Button } from '../components/ui';
 import { cn } from '../utils/helpers';
 
 const Analytics = () => {
-  const { t } = useTranslation('analytics');
+  const { t } = useTranslation('pages');
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
   const [selectedPeriod, setSelectedPeriod] = useState(30);
@@ -113,7 +113,7 @@ const Analytics = () => {
                   transition={{ delay: 0.2 }}
                   className="text-3xl font-bold text-gray-900 dark:text-white"
                 >
-                  Analytics
+                  {t('analytics.title', { fallback: 'Analytics' })}
                 </motion.h1>
                 <motion.p 
                   initial={{ opacity: 0, x: -20 }}
@@ -121,30 +121,18 @@ const Analytics = () => {
                   transition={{ delay: 0.3 }}
                   className="text-sm text-gray-600 dark:text-gray-400 mt-1"
                 >
-                  Real-time insights from your financial data
+                  {t('analytics.subtitle', { fallback: 'Real-time insights from your financial data' })}
                 </motion.p>
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions: Removed header-level refresh per UX decision */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
               className="flex items-center gap-3"
-            >
-              {/* Refresh Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  onClick={() => analyticsQuery.refetch()}
-                  disabled={isLoading}
-                  className="p-2.5 h-auto rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-                </Button>
-              </motion.div>
-            </motion.div>
+            />
           </div>
         </div>
       </motion.div>
@@ -169,7 +157,10 @@ const Analytics = () => {
                   size="sm"
                   onClick={() => setSelectedPeriod(days)}
                 >
-                  {days === 7 ? '7D' : days === 30 ? '30D' : days === 90 ? '3M' : '1Y'}
+                  {days === 7 && t('analytics.period.7d', { fallback: '7D' })}
+                  {days === 30 && t('analytics.period.30d', { fallback: '30D' })}
+                  {days === 90 && t('analytics.period.3m', { fallback: '3M' })}
+                  {days === 365 && t('analytics.period.1y', { fallback: '1Y' })}
                 </Button>
               ))}
             </div>
@@ -196,10 +187,10 @@ const Analytics = () => {
               <AlertCircle className="w-6 h-6 text-red-600" />
               <div>
                 <h3 className="font-semibold text-red-900 dark:text-red-100">
-                  Failed to Load Analytics
+                  {t('analytics.errorTitle', { fallback: 'Failed to Load Analytics' })}
                 </h3>
                 <p className="text-red-700 dark:text-red-300">
-                  {analyticsQuery.error?.message || 'Unable to fetch analytics data'}
+                  {analyticsQuery.error?.message || t('analytics.errorMessage', { fallback: 'Unable to fetch analytics data' })}
                 </p>
                 <Button 
                   variant="outline" 
@@ -207,7 +198,7 @@ const Analytics = () => {
                   className="mt-2"
                   onClick={() => analyticsQuery.refetch()}
                 >
-                  Retry
+                  {t('analytics.retry', { fallback: 'Retry' })}
                 </Button>
               </div>
             </div>
@@ -234,7 +225,7 @@ const Analytics = () => {
                     }`} />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Financial Health</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('analytics.health', { fallback: 'Financial Health' })}</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {healthScore}/100
                     </p>
@@ -243,7 +234,10 @@ const Analytics = () => {
                       healthLevel === 'good' ? 'info' :
                       healthLevel === 'fair' ? 'warning' : 'danger'
                     }>
-                      {healthLevel.charAt(0).toUpperCase() + healthLevel.slice(1)}
+                      {healthLevel === 'excellent' && t('analytics.level.excellent', { fallback: 'Excellent' })}
+                      {healthLevel === 'good' && t('analytics.level.good', { fallback: 'Good' })}
+                      {healthLevel === 'fair' && t('analytics.level.fair', { fallback: 'Fair' })}
+                      {healthLevel === 'poor' && t('analytics.level.poor', { fallback: 'Poor' })}
                     </Badge>
                   </div>
                 </div>
@@ -256,11 +250,11 @@ const Analytics = () => {
                     <Target className="w-8 h-8 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Savings Rate</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('analytics.savingsRate', { fallback: 'Savings Rate' })}</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {data.summary?.savingsRate || 0}%
                     </p>
-                    <p className="text-sm text-gray-500">Last {selectedPeriod} days</p>
+                    <p className="text-sm text-gray-500">{t('analytics.lastNDays', { fallback: 'Last {{days}} days', days: selectedPeriod })}</p>
                   </div>
                 </div>
               </Card>
@@ -272,11 +266,11 @@ const Analytics = () => {
                     <PieChart className="w-8 h-8 text-purple-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Categories Used</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('analytics.categoriesUsed', { fallback: 'Categories Used' })}</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {data.summary?.categoriesUsed || 0}
                     </p>
-                    <p className="text-sm text-gray-500">Active categories</p>
+                    <p className="text-sm text-gray-500">{t('analytics.activeCategories', { fallback: 'Active categories' })}</p>
                   </div>
                 </div>
               </Card>
@@ -287,13 +281,13 @@ const Analytics = () => {
               {/* Monthly Stats */}
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Financial Summary ({selectedPeriod} days)
+                  {t('analytics.financialSummaryPeriod', { fallback: 'Financial Summary ({{days}} days)', days: selectedPeriod })}
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <TrendingUp className="w-5 h-5 text-green-600" />
-                      <span className="text-gray-600 dark:text-gray-400">Income</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('analytics.income', { fallback: 'Income' })}</span>
                     </div>
                     <span className="font-semibold text-green-600">
                       {formatCurrency(data.monthlyStats?.income || 0)}
@@ -303,7 +297,7 @@ const Analytics = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <TrendingDown className="w-5 h-5 text-red-600" />
-                      <span className="text-gray-600 dark:text-gray-400">Expenses</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('analytics.expenses', { fallback: 'Expenses' })}</span>
                     </div>
                     <span className="font-semibold text-red-600">
                       -{formatCurrency(data.monthlyStats?.expenses || 0)}
@@ -314,7 +308,7 @@ const Analytics = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <DollarSign className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium text-gray-900 dark:text-white">Net Balance</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{t('analytics.netBalance', { fallback: 'Net Balance' })}</span>
                       </div>
                       <span className={`font-bold text-lg ${
                         (data.monthlyStats?.net || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -329,25 +323,25 @@ const Analytics = () => {
               {/* Transaction Insights */}
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Transaction Insights
+                  {t('analytics.transactionInsights', { fallback: 'Transaction Insights' })}
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Total Transactions</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('analytics.totalTransactions', { fallback: 'Total Transactions' })}</span>
                     <span className="font-semibold">
                       {data.summary?.totalTransactions || 0}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Avg. Transaction</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('analytics.avgTransaction', { fallback: 'Avg. Transaction' })}</span>
                     <span className="font-semibold">
                       {formatCurrency(data.summary?.avgTransactionAmount || 0)}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Categories Used</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('analytics.categoriesUsed', { fallback: 'Categories Used' })}</span>
                     <span className="font-semibold">
                       {data.summary?.categoriesUsed || 0}
                     </span>
@@ -360,7 +354,7 @@ const Analytics = () => {
             {data.recentTransactions && data.recentTransactions.length > 0 && (
               <Card className="p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Recent Transactions
+                  {t('analytics.recentTransactions', { fallback: 'Recent Transactions' })}
                 </h3>
                 <div className="space-y-3">
                   {data.recentTransactions.slice(0, 5).map((transaction) => {
@@ -373,7 +367,7 @@ const Analytics = () => {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">
-                              {transaction.description || 'Transaction'}
+                              {transaction.description || t('analytics.transactionFallback', { fallback: 'Transaction' })}
                             </p>
                             <p className="text-sm text-gray-500">
                               {transaction.category_name} • {new Date(transaction.date).toLocaleDateString()}
@@ -406,10 +400,10 @@ const Analytics = () => {
               </div>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Financial Health
+              {t('analytics.healthTitle', { fallback: 'Financial Health' })}
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Comprehensive analysis of your financial well-being with personalized recommendations
+              {t('analytics.healthDesc', { fallback: 'Comprehensive analysis of your financial well-being with personalized recommendations' })}
             </p>
           </Link>
 
@@ -423,10 +417,10 @@ const Analytics = () => {
               </div>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Smart Insights
+              {t('analytics.insightsTitle', { fallback: 'Smart Insights' })}
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              AI-powered insights and spending forecasts to help you make better financial decisions
+              {t('analytics.insightsDesc', { fallback: 'AI-powered insights and spending forecasts to help you make better financial decisions' })}
             </p>
           </Link>
         </div>
@@ -436,8 +430,8 @@ const Analytics = () => {
           <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
             <Calendar className="w-4 h-4" />
             <span>
-              Data updated: {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'Real-time'}
-              {data && ` • Showing ${selectedPeriod} day period`}
+              {t('analytics.dataUpdated', { fallback: 'Data updated:' })} {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : t('analytics.realTime', { fallback: 'Real-time' })}
+              {data && ` • ${t('analytics.showingPeriod', { fallback: 'Showing {{days}} day period', days: selectedPeriod })}`}
             </span>
           </div>
         </Card>

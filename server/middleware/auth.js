@@ -102,10 +102,11 @@ const auth = async (req, res, next) => {
           [userId],
           'auth_user_restrictions'
         );
-        
-        if (restrictionsResult.rows.length > 0) {
-          isRestricted = true;
-          restrictionReason = restrictionsResult.rows[0].reason || 'Account restricted';
+
+        const activeRestrictions = restrictionsResult.rows || [];
+        if (activeRestrictions.length > 0) {
+          isRestricted = activeRestrictions.some(r => r.restriction_type === 'blocked');
+          restrictionReason = activeRestrictions.find(r => r.restriction_type === 'blocked')?.reason || activeRestrictions[0].reason || 'Account restricted';
         }
       } catch (restrictionError) {
         // Log the error but don't block authentication if restrictions table doesn't exist
@@ -118,7 +119,7 @@ const auth = async (req, res, next) => {
       }
 
       // Add restrictions to user object (error-safe)
-      user.restrictions = isRestricted ? [{ restriction_type: 'active', reason: restrictionReason }] : [];
+      user.restrictions = isRestricted ? [{ restriction_type: 'blocked', reason: restrictionReason }] : [];
       user.isBlocked = isRestricted;
       user.isDeleted = false; // Only set to true if specifically deleted
 

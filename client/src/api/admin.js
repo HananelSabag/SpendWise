@@ -276,10 +276,11 @@ export const adminAPI = {
     }
   },
 
-  async deleteUser(userId) {
+  async deleteUser({ userId, reason } = {}) {
     try {
       const response = await api.client.post(`/admin/users/${userId}/manage`, {
-        action: 'delete'
+        action: 'delete',
+        reason
       });
       
       return {

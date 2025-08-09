@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Mail, Heart, Info, Github, Twitter, Shield } from 'lucide-react';
+import { ExternalLink, Mail, Heart, Info, Github, Shield } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores (replaces Context API!)
 import { useTranslation, useAuth } from '../../stores';
@@ -67,18 +67,10 @@ const Footer = () => {
       },
     ],
     support: [
-      { 
-        name: t('footer.help', { fallback: 'Help Center' }), 
-        href: '/help'
-      },
-      { 
-        name: t('footer.contact', { fallback: 'Contact Us' }), 
-        href: 'mailto:support@spendwise.app',
+      {
+        name: t('footer.contact', { fallback: 'Contact Us' }),
+        href: `mailto:${window.__SW_SUPPORT_EMAIL__ || 'spendwise.verifiction@gmail.com'}`,
         external: true
-      },
-      { 
-        name: t('footer.documentation', { fallback: 'Documentation' }), 
-        href: '/docs'
       }
     ]
   };
@@ -87,13 +79,8 @@ const Footer = () => {
   const socialLinks = [
     {
       name: 'GitHub',
-      href: 'https://github.com/spendwise',
+      href: 'https://github.com/HananelSabag/SpendWise',
       icon: Github
-    },
-    {
-      name: 'Twitter',
-      href: 'https://twitter.com/spendwise',
-      icon: Twitter
     }
   ];
 

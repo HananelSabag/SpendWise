@@ -4,6 +4,11 @@
  */
 
 export default {
+  maintenance: {
+    title: 'נחזור בקרוב',
+    message: 'המערכת נמצאת בתחזוקה. נסו שוב מאוחר יותר.',
+    thanks: 'תודה על הסבלנות.'
+  },
   // מידע על האפליקציה
   appName: 'SpendWise',
 
@@ -48,8 +53,10 @@ export default {
 
   // תכונות
   categories: 'קטגוריות',
+  categoryManager: 'מנהל קטגוריות',
   manageCategoriesDesc: 'ארגן ונהל את קטגוריות ההוצאות וההכנסות שלך',
   recurring: 'חוזר',
+  recurringManager: 'מנהל עסקאות חוזרות',
   recurringTransactionsDesc: 'הגדר עסקאות חוזרות אוטומטיות',
   exchange: 'המרה',
   currencyExchangeDesc: 'המר בין מטבעות שונים',

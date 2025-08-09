@@ -68,7 +68,7 @@ export default {
   // Users Management
   users: {
     title: 'ניהול משתמשים',
-    subtitle: 'ניהול חשבונות משתמשים והרשאות',
+    subtitle: 'נהל {{total}} משתמשים ברחבי המערכת',
     searchPlaceholder: 'חפש משתמשים...',
     noUsers: 'לא נמצאו משתמשים',
     noUsersDesc: 'אין משתמשים התואמים לקריטריונים שלך',
@@ -176,6 +176,12 @@ export default {
     analyticsDesc: 'הפעל אנליטיקה ומעקב שימוש',
     notifications: 'התראות מערכת',
     notificationsDesc: 'הפעל התראות כלל-מערכתיות',
+    supportEmail: 'דוא"ל תמיכה',
+    supportEmailDesc: 'כתובת הדוא"ל המרכזית לתמיכה',
+    emailSenderName: 'שם שולח הדוא"ל',
+    emailSenderNameDesc: 'שם התצוגה בהודעות דוא"ל מערכת',
+    analyticsProvider: 'ספק אנליטיקה',
+    analyticsProviderDesc: 'מזהה (למשל plausible, ga4) לשילוב בצד הלקוח',
     
     // Status Messages
     loaded: 'הגדרות נטענו בהצלחה',
