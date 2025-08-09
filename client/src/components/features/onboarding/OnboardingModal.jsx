@@ -195,8 +195,8 @@ const OnboardingModal = ({
               className
             )}
           >
-            {/* ✅ ENHANCED: SHORTER Header with minimal padding */}
-            <div className="flex-shrink-0 p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+            {/* Compact header padding */}
+            <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200 dark:border-gray-700">
               <OnboardingHeader
                 currentStep={currentStep}
                 totalSteps={steps.length}
@@ -213,11 +213,13 @@ const OnboardingModal = ({
             {/* ✅ ENHANCED: Content area with MORE horizontal space */}
             <div className={cn(
               "flex-1 overflow-y-auto",
-              "p-8 sm:p-12 lg:p-16 xl:p-20", // ✅ MUCH MORE padding for wider content
+              // Much tighter content padding to maximize vertical space
+              "p-4 sm:p-6 md:p-8",
               "min-h-0", // Important for flex child scrolling
               // ✅ ENHANCED: Better spacing for wider content
               "space-y-8"
             )}>
+              {/* Single child only to satisfy AnimatePresence with mode="wait" */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentStep}
@@ -246,8 +248,8 @@ const OnboardingModal = ({
               </AnimatePresence>
             </div>
 
-            {/* ✅ ENHANCED: Footer with consistent padding */}
-            <div className="flex-shrink-0 p-6 sm:p-8 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            {/* Compact footer padding */}
+            <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
               <OnboardingFooter
                 canGoPrevious={canGoPrevious}
                 canGoNext={canGoNext}

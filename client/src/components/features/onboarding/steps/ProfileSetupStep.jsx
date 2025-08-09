@@ -41,9 +41,9 @@ const ProfileSetupStep = ({
 
   // ✅ Local state
   const [profileData, setProfileData] = useState({
-    profilePicture: data.profilePicture || user?.profilePicture || null,
-    firstName: data.firstName || user?.first_name || '',
-    lastName: data.lastName || user?.last_name || '',
+    profilePicture: data.profilePicture || user?.profilePicture || user?.profile_picture_url || user?.avatar || null,
+    firstName: data.firstName || user?.firstName || user?.first_name || '',
+    lastName: data.lastName || user?.lastName || user?.last_name || '',
     password: data.password || '',
     confirmPassword: data.confirmPassword || '',
     language: data.language || currentLanguage || 'en',
@@ -60,8 +60,10 @@ const ProfileSetupStep = ({
 
   // ✅ Check if user needs password - FIXED LOGIC
   // Google users without passwords need to set one for hybrid auth
-  const needsPassword = user?.google_id && !user?.has_password && !user?.hasPassword;
-  const isHybridAuth = user?.google_id && (user?.has_password || user?.hasPassword);
+  const isGoogleUser = !!(user?.oauth_provider === 'google' || user?.google_id);
+  const hasPassword = !!(user?.hasPassword || user?.has_password);
+  const needsPassword = isGoogleUser && !hasPassword;
+  const isHybridAuth = isGoogleUser && hasPassword;
 
   // ✅ Handle profile picture upload
   const handleProfilePictureUpload = useCallback(async (file) => {
@@ -251,33 +253,35 @@ const ProfileSetupStep = ({
           </div>
 
           {/* Name Fields */}
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                First Name *
-              </label>
-              <Input
-                value={profileData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                placeholder="Enter your first name"
-                error={errors.firstName}
-                className="w-full"
-              />
+          {!isGoogleUser && (
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  First Name *
+                </label>
+                <Input
+                  value={profileData.firstName}
+                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  placeholder="Enter your first name"
+                  error={errors.firstName}
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Last Name *
+                </label>
+                <Input
+                  value={profileData.lastName}
+                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  placeholder="Enter your last name"
+                  error={errors.lastName}
+                  className="w-full"
+                />
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Last Name *
-              </label>
-              <Input
-                value={profileData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                placeholder="Enter your last name"
-                error={errors.lastName}
-                className="w-full"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Hybrid Authentication Setup */}
           {needsPassword && (
@@ -293,41 +297,27 @@ const ProfileSetupStep = ({
                   </p>
                   
                   <div className="space-y-3">
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        value={profileData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        placeholder="Create a password"
-                        error={errors.password}
-                        className="w-full pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                    <Input
+                      label="Set Password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={profileData.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      placeholder="Create a password"
+                      error={errors.password}
+                      className="w-full"
+                      autoComplete="new-password"
+                    />
                     
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={profileData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                        placeholder="Confirm password"
-                        error={errors.confirmPassword}
-                        className="w-full pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                    <Input
+                      label="Confirm Password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={profileData.confirmPassword}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm password"
+                      error={errors.confirmPassword}
+                      className="w-full"
+                      autoComplete="new-password"
+                    />
                   </div>
                 </div>
               </div>
@@ -446,30 +436,7 @@ const ProfileSetupStep = ({
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between items-center mt-8">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          disabled={!onBack}
-          className="min-w-[120px]"
-        >
-          Back
-        </Button>
-        
-        <div className="text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Step 1 of 3 • Profile Setup
-          </p>
-        </div>
-        
-        <Button
-          variant="primary"
-          onClick={handleNext}
-          className="min-w-[120px]"
-        >
-          Next: Learn About Transactions
-        </Button>
-      </div>
+      {/* Navigation buttons are handled by the modal footer; keep a single source of controls */}
     </motion.div>
   );
 };

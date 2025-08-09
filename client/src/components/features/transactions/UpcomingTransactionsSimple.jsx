@@ -115,7 +115,7 @@ const UpcomingTransactionsSimple = () => {
                   {t('upcoming.title', 'Upcoming Transactions')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {t('upcoming.nextCount', 'Next {{count}} transactions', { count: summary.count })}
+                  {t('upcoming.nextCount', { count: summary.count })}
                 </p>
               </div>
             </div>
@@ -212,7 +212,7 @@ const UpcomingTransactionsSimple = () => {
               <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">
-                    {t('upcoming.showingNext', 'Showing next {{count}} transactions', { count: futureTransactions.length })}
+                    {t('upcoming.showingNext', { count: futureTransactions.length })}
                   </span>
                   
                   <Button

@@ -87,7 +87,9 @@ export default {
   
   // Bulk actions
   selectAll: 'בחר הכל',
+  deselectAll: 'בטל בחירת הכל',
   selectNone: 'בטל בחירה',
+  bulkActions: 'פעולות מרובות',
   bulkEdit: 'עריכה קבוצתית',
   bulkDelete: 'מחיקה קבוצתית'
 }; 

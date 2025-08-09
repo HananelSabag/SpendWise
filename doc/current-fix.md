@@ -1,3 +1,31 @@
+### Task: TransactionsList bulk selection not working
+
+- User request: Fix or remove the non-working bulk selection checkbox in the transactions list; ensure correct behavior for one-time and recurring transactions; verify server support for bulk ops.
+- Analysis: The UI selection existed in `TransactionCard`/`TransactionList` but page-level state was not wired, so toggles never persisted. Server lacks a dedicated bulk endpoint, but client has `bulkOperations` that iterates per-id safely. Recurring deletions are handled via advanced delete endpoint individually; bulk path will use single deletes per id.
+- Affected layers: Frontend page (`client/src/pages/Transactions.jsx`), no server changes required.
+- Affected files: `client/src/pages/Transactions.jsx`.
+- Actions taken:
+  - Implemented page-level selection state `selectedIds` with handlers: `onTransactionSelect`, `Select All`, `Deselect All`, and `Bulk Delete`.
+  - Passed `selectedTransactions` and `onTransactionSelect` to `TransactionList` so per-row checkboxes work.
+  - Hooked `Bulk Delete` to `useTransactionActions().bulkOperations('delete', ids)`; refreshes after completion.
+  - Verified server supports per-id delete; recurring advanced delete remains per-id, outside bulk toolbar.
+
+- Further compacted onboarding header/footer paddings: `OnboardingModal.jsx`, `OnboardingHeader.jsx`, `OnboardingFooter.jsx` to free vertical space (~45% → significantly reduced).
+- Onboarding password UI for Google users now labeled and uses proper autocomplete; still rendered only when `oauth_provider==='google' && !hasPassword`.
+- Profile Security tab UI/UX updated: clearer header, labeled password fields with autocomplete, visibility toggles; shows Current Password only when applicable. Client submits to `/users/set-password` for OAuth-only or `/users/change-password` for password users.
+## Entry - Onboarding translations and UI cleanup
+
+- User request summary: Fix onboarding translation placeholders for step counter, resolve AnimatePresence warning, remove duplicate per-step buttons leaving only modal footer controls, compact modal header/footer, and align Profile step with hybrid auth (Google vs email) including password setup for Google users. Investigate completion error.
+- Analysis: The step text uses `t('progress.step', { current, total })` but our translation store expects params under `options.params`. Also, per-step components rendered their own navigation bars causing duplicated buttons. AnimatePresence warning came from multiple children under mode="wait"; we ensure a single child. Profile step needed conditional fields and better defaults based on auth provider. Completion error originates from `NewCompletionStep` failing when profile update returns `success: false`; keep monitoring after fixes.
+- Affected layers: client (onboarding components, translation usage), server untouched; documentation log updated.
+- Affected files: `client/src/components/features/onboarding/components/OnboardingHeader.jsx`, `OnboardingFooter.jsx`, `steps/ProfileSetupStep.jsx`, `steps/TransactionEducationStep.jsx`, `steps/QuickRecurringSetupStep.jsx`.
+- Actions taken:
+  - Pass step params correctly and 1-based: updated header to use `t('progress.step', { params: { current, total } })` and fallback string.
+  - Removed in-step navigation bars from all three steps to avoid duplicate buttons; rely solely on modal footer.
+  - Made header/footer more compact (reduced paddings and button sizes).
+  - Fixed Google-vs-email logic in `ProfileSetupStep`: hide name fields for Google users (names come from Google), detect `isGoogleUser`/`hasPassword`, show password setup section only when needed; improved initial picture/name fallbacks.
+  - Ensured AnimatePresence wraps a single child in `OnboardingModal`.
+  - Ran lints on touched files (no errors).
 # SpendWise Session Log
 
 ---

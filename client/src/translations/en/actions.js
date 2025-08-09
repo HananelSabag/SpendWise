@@ -87,7 +87,9 @@ export default {
   
   // Bulk actions
   selectAll: 'Select All',
+  deselectAll: 'Deselect All',
   selectNone: 'Select None',
+  bulkActions: 'Bulk Actions',
   bulkEdit: 'Bulk Edit',
   bulkDelete: 'Bulk Delete'
 }; 

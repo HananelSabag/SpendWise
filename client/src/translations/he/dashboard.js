@@ -227,7 +227,8 @@ export default {
     date: 'תאריך',
     category: 'קטגוריה',
     lastUpdate: 'עודכן לאחרונה {time}',
-    showing: 'מציג {count} תנועות'
+    showing: 'מציג {count} תנועות',
+    selected: 'נבחרו {{count}}'
   },
   
   // Stats and Tips

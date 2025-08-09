@@ -965,8 +965,20 @@ export const useTransactions = (options = {}) => {
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId) => {
       performanceRef.current.recordMutation();
-      
-      const response = await api.transactions.delete('transaction', transactionId);
+
+      // Determine correct type for server route ('income' | 'expense')
+      let typeForDelete = 'expense';
+      try {
+        const allTx = transactionsQuery.data?.pages?.flatMap(p => p?.transactions || []) || [];
+        const tx = allTx.find(t => t.id === transactionId);
+        if (tx?.type === 'income' || tx?.type === 'expense') {
+          typeForDelete = tx.type;
+        } else if (typeof tx?.amount === 'number') {
+          typeForDelete = tx.amount > 0 ? 'income' : 'expense';
+        }
+      } catch {}
+
+      const response = await api.transactions.delete(typeForDelete, transactionId);
       return response.data;
     },
     onSuccess: () => {
@@ -986,17 +998,24 @@ export const useTransactions = (options = {}) => {
   const bulkOperationMutation = useMutation({
     mutationFn: async ({ operation, transactionIds, data = {} }) => {
       performanceRef.current.recordMutation();
-      
-             // TODO: Implement bulk operations with new API structure
-       // For now, handle operations individually
-       const results = [];
-       for (const id of transactionIds) {
-         if (operation === 'delete') {
-           const result = await api.transactions.delete('expense', id);
-           results.push(result);
-         }
-       }
-       return { data: results };
+
+      const allTx = transactionsQuery.data?.pages?.flatMap(p => p?.transactions || []) || [];
+
+      const results = [];
+      for (const id of transactionIds) {
+        if (operation === 'delete') {
+          let typeForDelete = 'expense';
+          const tx = allTx.find(t => t.id === id);
+          if (tx?.type === 'income' || tx?.type === 'expense') {
+            typeForDelete = tx.type;
+          } else if (typeof tx?.amount === 'number') {
+            typeForDelete = tx.amount > 0 ? 'income' : 'expense';
+          }
+          const result = await api.transactions.delete(typeForDelete, id);
+          results.push(result);
+        }
+      }
+      return { data: results };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries(['transactions']);

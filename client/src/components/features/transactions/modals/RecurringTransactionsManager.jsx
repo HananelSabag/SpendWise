@@ -414,7 +414,7 @@ const RecurringTransactionsManager = ({
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                {t('recurring.addNew', 'Add New')}
+                {t('recurringManager.addNew', { fallback: 'Add New' })}
               </Button>
               
               <Button
@@ -431,17 +431,17 @@ const RecurringTransactionsManager = ({
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-500">{t('recurring.total')}</div>
+              <div className="text-sm text-gray-500">{t('recurringManager.total', { fallback: 'Total' })}</div>
             </Card>
             
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-              <div className="text-sm text-gray-500">{t('recurring.active')}</div>
+              <div className="text-sm text-gray-500">{t('recurringManager.active', { fallback: 'Active' })}</div>
             </Card>
             
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-orange-600">{stats.paused}</div>
-              <div className="text-sm text-gray-500">{t('recurring.paused')}</div>
+              <div className="text-sm text-gray-500">{t('recurringManager.paused', { fallback: 'Paused' })}</div>
             </Card>
           </div>
           
@@ -450,7 +450,7 @@ const RecurringTransactionsManager = ({
             <div className="flex-1 min-w-64">
               <Input
                 type="text"
-                placeholder={t('recurring.searchPlaceholder', 'Search recurring transactions...')}
+                placeholder={t('recurringManager.searchPlaceholder', { fallback: 'Search recurring transactions...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full"
@@ -463,9 +463,9 @@ const RecurringTransactionsManager = ({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"
             >
-              <option value="all">{t('recurring.filter.allStatus')}</option>
-              <option value="active">{t('recurring.filter.active')}</option>
-              <option value="paused">{t('recurring.filter.paused')}</option>
+              <option value="all">{t('recurringManager.filter.allStatus', { fallback: 'All Status' })}</option>
+              <option value="active">{t('recurringManager.filter.active', { fallback: 'Active Only' })}</option>
+              <option value="paused">{t('recurringManager.filter.paused', { fallback: 'Paused Only' })}</option>
             </select>
             
             <select
@@ -473,18 +473,18 @@ const RecurringTransactionsManager = ({
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md bg-white dark:bg-gray-700 dark:border-gray-600"
             >
-              <option value="all">{t('recurring.filter.allTypes')}</option>
-              <option value="income">{t('transaction.type.income')}</option>
-              <option value="expense">{t('transaction.type.expense')}</option>
+              <option value="all">{t('recurringManager.filter.allTypes', { fallback: 'All Types' })}</option>
+              <option value="income">{t('transaction.type.income', { fallback: t('types.income', 'Income') })}</option>
+              <option value="expense">{t('transaction.type.expense', { fallback: t('types.expense', 'Expense') })}</option>
             </select>
           </div>
           
           {/* Content */}
-          {loading ? (
+            {loading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
               <span className="ml-3 text-gray-500">
-                {t('recurring.loading', 'Loading recurring transactions...')}
+                {t('recurringManager.loading', { fallback: 'Loading recurring transactions...' })}
               </span>
             </div>
           ) : error ? (
@@ -501,19 +501,19 @@ const RecurringTransactionsManager = ({
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? t('recurring.noMatches')
-                  : t('recurring.noRecurring')
+                  ? t('recurringManager.noMatches', { fallback: 'No Matching Transactions' })
+                  : t('recurringManager.noRecurring', { fallback: 'No Recurring Transactions' })
                 }
               </h3>
               <p className="text-gray-500 mb-4">
                 {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? t('recurring.noMatchesDesc')
-                  : t('recurring.noRecurringDesc')
+                  ? t('recurringManager.noMatchesDesc', { fallback: 'Try adjusting your filters' })
+                  : t('recurringManager.noRecurringDesc', { fallback: 'Create recurring transactions to automate your finance tracking' })
                 }
               </p>
               <Button onClick={handleAddNew} variant="primary">
                 <Plus className="w-4 h-4 mr-2" />
-                {t('recurring.addFirst')}
+                {t('recurringManager.addFirst', { fallback: 'Add First Recurring' })}
               </Button>
             </div>
           ) : (

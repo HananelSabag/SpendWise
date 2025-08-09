@@ -549,31 +549,7 @@ const TransactionEducationStep = ({
         </div>
       </Card>
 
-      {/* Navigation */}
-      <div className="flex justify-between items-center mt-8">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className="min-w-[120px]"
-        >
-          Back
-        </Button>
-        
-        <div className="text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Step 2 of 3 • Transaction Education
-          </p>
-        </div>
-        
-        <Button
-          variant="primary"
-          onClick={handleNext}
-          className="min-w-[120px] bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-        >
-          Next: Quick Setup
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
+      {/* Navigation buttons are handled by the modal footer; keep a single source of controls */}
     </motion.div>
   );
 };

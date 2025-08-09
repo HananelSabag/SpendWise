@@ -12,6 +12,13 @@ export default {
     transfer: "Transfer",
     all: "All Types"
   },
+  // Aliases for legacy keys used in some components
+  transaction: {
+    type: {
+      income: "Income",
+      expense: "Expense"
+    }
+  },
 
   // Transaction fields
   fields: {
@@ -309,6 +316,11 @@ export default {
     // Count
     occurrencesCount: "{{count}} occurrence",
     occurrencesCount_plural: "{{count}} occurrences"
+  },
+
+  // Short keys used by RecurringTransactionsManager
+  recurringShort: {
+    loading: "Loading recurring transactions..."
   },
 
   // Delete confirmations

@@ -15,6 +15,7 @@ import {
   TrendingUp,
   TrendingDown,
   RefreshCw,
+  DollarSign,
   Download,
   Edit,
   Trash2,
@@ -81,6 +82,7 @@ const Transactions = () => {
   const [viewMode, setViewMode] = useState('list'); // list | grid | cards
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -121,8 +123,7 @@ const Transactions = () => {
     createTransaction,
     updateTransaction,
     deleteTransaction,
-    bulkActions,
-    isLoading: actionsLoading
+    bulkOperations
   } = useTransactionActions();
 
   // ✅ Auto-regeneration system
@@ -188,6 +189,30 @@ const Transactions = () => {
       throw error;
     }
   }, [createTransaction, handleTransactionSuccess]);
+
+  // ✅ Selection handlers
+  const handleTransactionSelect = useCallback((id, isSelected) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (isSelected) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(transactions.map(t => t.id)));
+  }, [transactions]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    await bulkOperations('delete', Array.from(selectedIds));
+    setSelectedIds(new Set());
+    refetchTransactions();
+  }, [selectedIds, bulkOperations, refetchTransactions]);
 
   // ✅ Close all modals
   const closeAllModals = useCallback(() => {
@@ -472,17 +497,50 @@ const Transactions = () => {
               </div>
             </div>
           ) : (
-            <TransactionList
-              transactions={transactions}
-              onEdit={(transaction) => handleEditTransaction(transaction, 'edit')}
-              onDuplicate={(transaction) => handleEditTransaction(transaction, 'duplicate')}
-              onDelete={handleDeleteTransaction}
-              onView={(transaction) => handleEditTransaction(transaction, 'view')}
-              loading={transactionsLoading}
-              hasMore={hasMore}
-              loadMore={loadMore}
-              viewMode={viewMode}
-            />
+            <>
+              {/* Bulk selection toolbar */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  {t('actions.bulkActions')}
+                  {selectedIds.size > 0 && (
+                    <span className="ml-2 font-medium">{t('selection.count', { count: selectedIds.size })}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedIds.size === transactions.length && transactions.length > 0 ? (
+                    <Button variant="ghost" onClick={handleClearSelection} className="h-8 px-3">
+                      {t('actions.deselectAll')}
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" onClick={handleSelectAll} className="h-8 px-3" disabled={transactions.length === 0}>
+                      {t('actions.selectAll')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="destructive"
+                    onClick={handleBulkDelete}
+                    disabled={selectedIds.size === 0}
+                    className="h-8 px-3"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" /> {t('actions.delete')}
+                  </Button>
+                </div>
+              </div>
+
+              <TransactionList
+                transactions={transactions}
+                onEdit={(transaction) => handleEditTransaction(transaction, 'edit')}
+                onDuplicate={(transaction) => handleEditTransaction(transaction, 'duplicate')}
+                onDelete={handleDeleteTransaction}
+                onView={(transaction) => handleEditTransaction(transaction, 'view')}
+                loading={transactionsLoading}
+                hasMore={hasMore}
+                loadMore={loadMore}
+                viewMode={viewMode}
+                selectedTransactions={selectedIds}
+                onTransactionSelect={handleTransactionSelect}
+              />
+            </>
           )}
         </Card>
       </motion.div>

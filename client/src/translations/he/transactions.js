@@ -12,6 +12,13 @@ export default {
     transfer: "העברה",
     all: "כל הסוגים"
   },
+  // Aliases for legacy keys
+  transaction: {
+    type: {
+      income: "הכנסה",
+      expense: "הוצאה"
+    }
+  },
 
   // Transaction fields
   fields: {
@@ -309,6 +316,11 @@ export default {
     // Count
     occurrencesCount: "מופע {{count}}",
     occurrencesCount_plural: "{{count}} מופעים"
+  },
+
+  // Short keys used by RecurringTransactionsManager
+  recurringShort: {
+    loading: "טוען עסקאות חוזרות..."
   },
 
   // Delete confirmations

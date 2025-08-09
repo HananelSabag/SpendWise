@@ -795,15 +795,8 @@ const userController = {
 
       const user = result.rows[0];
       
-      // Check if user already has a password
-      if (user.password_hash) {
-        throw { 
-          ...errorCodes.BAD_REQUEST, 
-          details: 'Password already set. Use change-password endpoint instead.' 
-        };
-      }
-      
-      // Only allow OAuth users to set password
+      // Allow any OAuth user (Google, etc.) to set a password without current password.
+      // This enables hybrid login even if a placeholder password was created during registration.
       if (!user.oauth_provider && !user.google_id) {
         throw { 
           ...errorCodes.BAD_REQUEST, 

@@ -598,42 +598,19 @@ const Profile = () => {
         ) : null}
         
         <div className="space-y-4 max-w-md">
-        {/* ✅ Current Password - Only show for users with existing passwords */}
-        {!isGoogleOnlyUser && (
-          <div className="relative">
-            <Input
-              label="Current Password"
-              type={showCurrentPassword ? "text" : "password"}
-              value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-              icon={<Key className="w-5 h-5" />}
-            />
-            <button
-              type="button"
-              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              className="absolute right-3 top-8 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-            >
-              {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-        )}
+        {/* Current password field removed per request */}
 
         <div className="relative">
           <Input
             label={isGoogleOnlyUser ? "Set Password" : "New Password"}
-            type={showNewPassword ? "text" : "password"}
+            type="password"
             value={passwordData.newPassword}
             onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
             icon={<Key className="w-5 h-5" />}
             placeholder={isGoogleOnlyUser ? "Choose a secure password..." : "Enter new password..."}
+            autoComplete="new-password"
+            showPasswordToggle
           />
-          <button
-            type="button"
-            onClick={() => setShowNewPassword(!showNewPassword)}
-            className="absolute right-3 top-8 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-          >
-            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
         </div>
 
         <Input
@@ -643,6 +620,8 @@ const Profile = () => {
           onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
           icon={<Key className="w-5 h-5" />}
           placeholder={isGoogleOnlyUser ? "Confirm your password..." : "Confirm new password..."}
+          autoComplete="new-password"
+          showPasswordToggle
         />
 
         <Button 
@@ -652,7 +631,7 @@ const Profile = () => {
             // ✅ For regular users: need current password + new password + confirm
             isGoogleOnlyUser 
               ? (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
-              : (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+              : (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
           }
           className="w-full"
         >

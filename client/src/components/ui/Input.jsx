@@ -71,8 +71,21 @@ const Input = forwardRef(({
   };
 
   // ✅ Icon positioning based on RTL
-  const showLeftIcon = icon && (iconPosition === 'left' && !isRTL) || (iconPosition === 'right' && isRTL);
-  const showRightIcon = icon && (iconPosition === 'right' && !isRTL) || (iconPosition === 'left' && isRTL);
+  const showLeftIcon = !!icon && ((iconPosition === 'left' && !isRTL) || (iconPosition === 'right' && isRTL));
+  const showRightIcon = !!icon && ((iconPosition === 'right' && !isRTL) || (iconPosition === 'left' && isRTL));
+
+  // ✅ Helper to safely render icon whether it's an element, function component, or forwardRef
+  const renderIcon = (Icon) => {
+    if (!Icon) return null;
+    if (React.isValidElement(Icon)) {
+      return React.cloneElement(Icon, { className: cn('w-5 h-5 text-gray-400', Icon.props.className) });
+    }
+    // Handle function components and forwardRef objects (have $$typeof/render)
+    if (typeof Icon === 'function' || (typeof Icon === 'object' && (Icon.$$typeof || Icon.render))) {
+      return React.createElement(Icon, { className: 'w-5 h-5 text-gray-400' });
+    }
+    return null;
+  };
 
   // ✅ Handle password toggle
   const togglePasswordVisibility = () => {
@@ -113,14 +126,7 @@ const Input = forwardRef(({
             'absolute inset-y-0 flex items-center pointer-events-none',
             isRTL ? 'right-0 pr-3' : 'left-0 pl-3'
           )}>
-            {React.isValidElement(icon) 
-              ? React.cloneElement(icon, {
-                  className: cn('w-5 h-5 text-gray-400', icon.props.className)
-                })
-              : typeof icon === 'function' 
-                ? React.createElement(icon, { className: 'w-5 h-5 text-gray-400' })
-                : icon
-            }
+            {renderIcon(icon)}
           </div>
         )}
 
@@ -178,16 +184,7 @@ const Input = forwardRef(({
 
               {/* End icon */}
               {endIcon && !isPassword && (
-                <div>
-                  {React.isValidElement(endIcon) 
-                    ? React.cloneElement(endIcon, {
-                        className: cn('w-5 h-5 text-gray-400', endIcon.props.className)
-                      })
-                    : typeof endIcon === 'function' 
-                      ? React.createElement(endIcon, { className: 'w-5 h-5 text-gray-400' })
-                      : endIcon
-                  }
-                </div>
+                <div>{renderIcon(endIcon)}</div>
               )}
 
               {/* Password toggle */}

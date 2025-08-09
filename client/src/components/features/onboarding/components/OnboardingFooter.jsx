@@ -84,9 +84,9 @@ const OnboardingFooter = ({
 
   return (
     <div className={cn(
-      "flex items-center justify-between gap-4",
+      "flex items-center justify-between gap-2",
       "w-full",
-      // ✅ ENHANCED: Better responsive spacing
+      // ultra compact footer height
       "flex-wrap sm:flex-nowrap"
     )}>
       
@@ -107,8 +107,8 @@ const OnboardingFooter = ({
               className={cn(
                 "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
                 "transition-colors duration-200",
-                // ✅ ENHANCED: Better button sizing
-                "px-4 py-2 sm:px-6 sm:py-3"
+                // ultra compact sizing
+                "px-2.5 py-1.5 sm:px-3.5 sm:py-1.5"
               )}
             >
               {isRTL ? (
@@ -148,8 +148,8 @@ const OnboardingFooter = ({
                 "border border-gray-300 dark:border-gray-600",
                 "hover:border-gray-400 dark:hover:border-gray-500",
                 "transition-all duration-200",
-                // ✅ ENHANCED: Better button sizing
-                "px-4 py-2 sm:px-6 sm:py-3"
+                // ultra compact sizing
+                "px-2.5 py-1.5 sm:px-3.5 sm:py-1.5"
               )}
             >
               <SkipForward className="w-4 h-4 mr-2" />
@@ -176,8 +176,8 @@ const OnboardingFooter = ({
                 "border-primary-300 hover:border-primary-400 dark:border-primary-600 dark:hover:border-primary-500",
                 "bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/20 dark:hover:bg-primary-900/30",
                 "transition-all duration-200",
-                // ✅ ENHANCED: Better button sizing
-                "px-4 py-2 sm:px-6 sm:py-3"
+                // ultra compact sizing
+                "px-2.5 py-1.5 sm:px-3.5 sm:py-1.5"
               )}
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -208,7 +208,8 @@ const OnboardingFooter = ({
               "text-white font-semibold",
               "shadow-lg hover:shadow-xl",
               "transition-all duration-200",
-              "px-6 py-3 sm:px-8 sm:py-3",
+              // ultra compact sizing
+              "px-4 py-2 sm:px-5 sm:py-2",
               // ✅ ENHANCED: Loading state
               isCompleting && "opacity-75 cursor-not-allowed"
             )}

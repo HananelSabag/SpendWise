@@ -506,31 +506,7 @@ const QuickRecurringSetupStep = ({
         </div>
       </Card>
 
-      {/* Navigation */}
-      <div className="flex justify-between items-center mt-8">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className="min-w-[120px]"
-        >
-          Back
-        </Button>
-        
-        <div className="text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Step 3 of 3 • Quick Setup
-          </p>
-        </div>
-        
-        <Button
-          variant="primary"
-          onClick={handleComplete}
-          className="min-w-[120px] bg-gradient-to-r from-purple-600 to-green-600 hover:from-purple-700 hover:to-green-700"
-        >
-          Complete Setup
-          <CheckCircle className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
+      {/* Navigation buttons are handled by the modal footer; keep a single source of controls */}
     </motion.div>
   );
 };

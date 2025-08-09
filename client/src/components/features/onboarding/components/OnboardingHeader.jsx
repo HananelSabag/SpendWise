@@ -42,20 +42,23 @@ const OnboardingHeader = ({
   // ✅ Fallback texts
   const displayTitle = title || t('title') || 'Welcome to SpendWise';
   const displaySubtitle = subtitle || t('subtitle') || 'Let\'s set up your account';
-  const stepText = t('progress.step', { current: currentStep, total: totalSteps }) || `Step ${currentStep} of ${totalSteps}`;
+  // Ensure step is 1-based and pass params correctly to translation system
+  const currentStepNumber = Math.min((currentStep || 0) + 1, totalSteps || 1);
+  const stepText = t('progress.step', { params: { current: currentStepNumber, total: totalSteps } }) 
+    || `Step ${currentStepNumber} of ${totalSteps}`;
 
   return (
     <div className={cn(
       "relative w-full",
-      // ✅ COMPACT: Much less vertical padding
-      compact ? "py-2" : "py-4",
+      // Compact vertical padding
+      compact ? "py-1.5" : "py-2.5",
       "transition-all duration-200"
     )}>
       
       {/* ✅ COMPACT: Progress bar with minimal spacing */}
       <div className={cn(
         "w-full bg-gray-200 dark:bg-gray-700 rounded-full",
-        compact ? "h-1.5 mb-3" : "h-2 mb-4" // ✅ Thinner progress bar in compact mode
+        compact ? "h-1 mb-1.5" : "h-1.5 mb-2.5" // very thin bar
       )}>
         <motion.div
           className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
@@ -68,7 +71,7 @@ const OnboardingHeader = ({
       {/* ✅ Header Content */}
       <div className={cn(
         "flex items-start justify-between",
-        compact ? "gap-2" : "gap-4" // ✅ Less gap in compact mode
+        compact ? "gap-1.5" : "gap-2.5"
       )}>
         
         {/* ✅ Left: Title & Subtitle */}
@@ -80,7 +83,7 @@ const OnboardingHeader = ({
             animate={{ opacity: 1, y: 0 }}
             className={cn(
               "text-sm font-medium text-primary-600 dark:text-primary-400",
-              compact ? "mb-1" : "mb-2" // ✅ Less margin in compact mode
+              compact ? "mb-0.5" : "mb-1"
             )}
           >
             {stepText}
@@ -94,7 +97,7 @@ const OnboardingHeader = ({
             className={cn(
               "font-bold text-gray-900 dark:text-white",
               "leading-tight",
-              compact ? "text-xl mb-1" : "text-2xl sm:text-3xl mb-2" // ✅ Much smaller in compact mode
+              compact ? "text-lg mb-0" : "text-2xl sm:text-3xl mb-1"
             )}
           >
             {displayTitle}
@@ -108,7 +111,7 @@ const OnboardingHeader = ({
             className={cn(
               "text-gray-600 dark:text-gray-300",
               "leading-relaxed",
-              compact ? "text-sm" : "text-base sm:text-lg" // ✅ Much smaller in compact mode
+              compact ? "text-xs" : "text-base sm:text-lg"
             )}
           >
             {displaySubtitle}
