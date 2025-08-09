@@ -59,7 +59,8 @@ const QuickPanels = ({
       icon: Calculator,
       color: 'orange',
       onClick: () => {
-        onOpenModal?.('calculator');
+        // Align key with Header.jsx which expects 'exchange'
+        onOpenModal?.('exchange');
         setShowDropdown(false);
       }
     }

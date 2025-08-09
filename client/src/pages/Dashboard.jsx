@@ -15,6 +15,8 @@ import {
 // ✅ Import components and hooks
 import { useTranslation, useNotifications, useAuth, useCurrency } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
+import { useTransactionActions } from '../hooks/useTransactionActions';
+import { useCategory } from '../hooks/useCategory';
 import { LoadingSpinner, Button, Card, Avatar } from '../components/ui';
 import { cn } from '../utils/helpers';
 
@@ -22,6 +24,7 @@ import { cn } from '../utils/helpers';
 import BalancePanel from '../components/features/dashboard/BalancePanel';
 import RecentTransactionsWidget from '../components/features/dashboard/RecentTransactionsWidget';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
+import SmartSuggestions from '../components/features/dashboard/actions/SmartSuggestions';
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 
@@ -34,6 +37,8 @@ const Dashboard = () => {
   const { addNotification } = useNotifications();
   const { user } = useAuth();
   const { currency, formatCurrency } = useCurrency();
+  const { createTransaction } = useTransactionActions('quickActions');
+  const { categories, createCategory } = useCategory();
   
   // ✅ Local state hooks
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -120,6 +125,40 @@ const Dashboard = () => {
     USD: '$', EUR: '€', ILS: '₪', GBP: '£', JPY: '¥',
     CAD: 'C$', AUD: 'A$', CHF: 'CHF'
   }[currency] || '$';
+
+  // Create category if missing and return its id
+  const ensureCategory = useCallback(async (name, type = 'expense') => {
+    if (!name) return null;
+    const byName = (c) => String(c?.name || '').toLowerCase() === String(name).toLowerCase();
+    const existing = Array.isArray(categories) ? categories.find(byName) : null;
+    if (existing?.id) return existing.id;
+    try {
+      const created = await createCategory({ name, icon: 'Tag', color: '#3B82F6', type });
+      return created?.id || null;
+    } catch (_) {
+      return null;
+    }
+  }, [categories, createCategory]);
+
+  // Accept a suggestion and create a transaction immediately
+  const handleAcceptSuggestion = useCallback(async (suggestion) => {
+    try {
+      const type = 'expense';
+      const categoryName = suggestion.category || t('common.categoryTypes.food', 'Food');
+      const categoryId = await ensureCategory(categoryName, type);
+      const data = {
+        type,
+        amount: Math.abs(Number(suggestion.amount || 0)) || 0,
+        description: suggestion.title || suggestion.description || 'Suggested expense',
+        categoryId,
+        date: new Date().toISOString().split('T')[0]
+      };
+      await createTransaction(data);
+      addNotification({ type: 'success', message: t('suggestions.transactionCreated', 'Transaction added from suggestion'), duration: 2500 });
+    } catch (error) {
+      addNotification({ type: 'error', message: error?.message || t('suggestions.failed', 'Could not apply suggestion'), duration: 3500 });
+    }
+  }, [createTransaction, ensureCategory, addNotification, t]);
 
   // ✅ Event handlers - ALL useCallback at top level
   const handleRefresh = useCallback(async () => {
@@ -244,9 +283,13 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Quick Actions Panel - New Redesigned Component */}
-          <Card className="lg:col-span-1 shadow-xl" data-quick-actions>
-            <div className="p-6">
+          <Card className="lg:col-span-1 shadow-xl lg:min-h-[460px] xl:sticky xl:top-4" data-quick-actions>
+            <div className="p-6 space-y-6">
               <QuickActionsBar />
+              {/* Compact Suggestions: only on xl+ to fill vertical gap gracefully */}
+              <div className="hidden xl:block">
+                <SmartSuggestions maxSuggestions={3} onAccept={handleAcceptSuggestion} />
+              </div>
             </div>
           </Card>
 

@@ -92,5 +92,15 @@ export default {
     title: 'תקציב',
     subtitle: 'תכננו ונהלו את התקציב שלכם',
     description: 'הגבלות הוצאות וניטור'
+  },
+
+  // Blocked page
+  blocked: {
+    title: 'החשבון שלך נחסם',
+    description: 'החשבון שלך נחסם זמנית. אם זו טעות, אנא פנה לתמיכה.',
+    reasonTitle: 'סיבה',
+    expiresAt: 'תוקף החסימה עד: {{date}}',
+    logout: 'התנתק',
+    contact: 'צור קשר עם התמיכה'
   }
 }; 

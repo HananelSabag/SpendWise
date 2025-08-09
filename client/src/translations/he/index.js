@@ -25,6 +25,7 @@ import summary from './summary.js';
 import search from './search.js';
 import empty from './empty.js';
 import filters from './filters.js';
+import exchange from './exchange.js';
 
 export default {
   common,
@@ -49,4 +50,5 @@ export default {
   search,
   empty,
   filters,
+  exchange,
 }; 

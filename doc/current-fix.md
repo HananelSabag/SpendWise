@@ -1,3 +1,47 @@
+### Task: Exchange Calculator modal + API integration and modal alignment
+
+- User request summary: Connect the exchange calculator (מחשבון המרה) from Header quick panels to a real external API, and align its window size/design to match Category Manager and Recurring Manager. Fix current crash.
+- Analysis: QuickPanels opened a mismatched modal key (`calculator`) while `Header.jsx` expects `exchange`, causing the modal not to render properly. `ExchangeCalculator` was not wrapped in a modal container like Category/Recurring, leading to inconsistent sizing and potential overlay issues. The currency store lacked real-time exchange rates (`getExchangeRate`, `updateExchangeRates`) and richer currency metadata for the calculator UI.
+- Affected layers: Frontend UI (Header quick panels + ExchangeCalculator), State store (currency in `appStore.js`), Documentation.
+- Affected files: `client/src/components/layout/QuickPanels.jsx`, `client/src/components/features/exchange/ExchangeCalculator.jsx`, `client/src/stores/appStore.js`.
+- Actions taken:
+  - Fixed QuickPanels to open `'exchange'` modal key to match `Header.jsx`.
+  - Wrapped `ExchangeCalculator` in a full-screen modal overlay with backdrop, header, and content area using the same sizing (`inset-4 sm:inset-8`, rounded-xl) as Category/Recurring managers.
+  - Implemented real exchange rates in the store via `updateExchangeRates` and `getExchangeRate` using `https://api.exchangerate.host/latest` with caching and fallback, plus exposed `availableCurrencies`.
+  - Enhanced `CURRENCIES` with flags and added common currencies used by the calculator presets.
+  - Made `formatCurrency` tolerate legacy signature and added guard defaults.
+
+\n### Dashboard layout tweak – move Tips under Quick Actions
+- User request: Fill the empty vertical gap below the quick actions widget by moving the tips panel to the same left column, stacking it directly beneath.
+- Analysis: `client/src/pages/Dashboard.jsx` rendered Tips inside the right two-column area. Quick actions (small height) left an empty area; moving Tips under it will utilize the space and maintain responsiveness.
+- Affected layers: Frontend layout only.
+- Affected files: `client/src/pages/Dashboard.jsx`.
+- Actions taken: Reworked the grid to a left-column stack (Quick Actions + Tips) and right-column (Stats + Recent Transactions). No logic changed, only layout and classes.
+- Client alignment for blocked/maintenance flow:
+  - Added `client/src/pages/Blocked.jsx` with logout button and i18n (`en/he` under `pages.blocked.*`).
+  - Added lazy load and route `/blocked` in `client/src/components/LazyComponents.jsx` and `client/src/app.jsx`.
+  - Interceptor redirects on 403 `USER_BLOCKED` to `/blocked` and on 503 `MAINTENANCE_MODE` to `/maintenance`.
+  - Added logout button to `client/src/pages/Maintenance.jsx`.
+  - `ProtectedRoute` now guards and redirects blocked users to `/blocked` if needed.
+### Admin Dashboard Redesign – Phase 1
+
+- User request summary: Redesign the main admin dashboard UI/UX for mobile and desktop, preserving all existing functionality, data, and translations. Inner tabs (users, settings, activity) to follow next.
+- Analysis: Existing `AdminDashboard.jsx` mixed gradients and heavy visuals. Kept data flow (`react-query`, `api.admin.getDashboard`), translations, RTL, and role logic intact. Replaced visuals with a cleaner, responsive card system using existing `Button`, `Card`, and `Badge` components.
+- Affected layers: Frontend UI only.
+- Affected files: `client/src/pages/admin/AdminDashboard.jsx`.
+- Actions taken: Simplified header, added refresh action, rebuilt KPI grid, added recent activity and recent users panels, and a lightweight system status section. Preserved all links, i18n keys, and RTL support. No API or behavioral changes.
+
+— Update: Applied user request to remove RTL/LTR logic entirely, compacted KPI boxes, and redesigned quick navigation tiles as bold, animated button-like cards with clear affordance and distinct colors. Kept all data and translations intact.
+
+— Phase 2: Inner Admin Pages Redesign
+- Users: Removed RTL/LTR. Mobile-first card list (no horizontal scroll) plus desktop table; actions preserved (view, block/unblock, delete), filters/search intact.
+  - Update: Addressed small-desktop horizontal scroll by switching to `table-fixed`, reducing padding, hiding non-essential columns at `lg` breakpoint, and adding a single compact header banner (removed duplicate header).
+ - Settings & Activity: Added gradient header banners matching the dashboard style; removed old headers to avoid duplication.
+ - Color alignment: Settings now uses emerald (green) accents for active tabs, buttons, toggles, and notices. Activity uses purple accents for headings, table headers, and mobile cards.
+- Settings: Removed RTL/LTR. Compact category nav with clear active state, responsive setting rows that stack on mobile, save flow unchanged.
+- Activity: Removed RTL/LTR. Mobile card list + desktop table, clean typography, no horizontal scroll on mobile.
+- Files: `client/src/pages/admin/AdminUsers.jsx`, `client/src/pages/admin/AdminSettings.jsx`, `client/src/pages/admin/AdminActivity.jsx`.
+
 ## Admin Block/Unblock – Live DB Constraint Conflict Fix (2025-08-09)
 
 - User request summary: Fix admin block/unblock failing with duplicate key on `uniq_user_restrictions_user_type_active`. Verify against live DB, align server logic, and ensure client continues to work.

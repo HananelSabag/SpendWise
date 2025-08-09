@@ -12,7 +12,7 @@ import { api } from '../../api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 const AdminActivity = () => {
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -35,43 +35,23 @@ const AdminActivity = () => {
   }, []);
 
   return (
-    <div className={cn(
-      "min-h-screen bg-gray-50 dark:bg-gray-900",
-      isRTL && 'rtl'
-    )}
-    dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={cn("min-h-screen bg-gray-50 dark:bg-gray-900") }>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header banner */}
         <div className="mb-8">
-          <div className={cn(
-            'flex items-center mb-4',
-            isRTL && 'flex-row-reverse'
-          )}
-          dir={isRTL ? 'rtl' : 'ltr'}>
-            <Link 
-              to="/admin" 
-              className={cn(
-                'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4',
-                isRTL && 'ml-4 mr-0'
-              )}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
-              <h1 className={cn(
-                "text-3xl font-bold text-gray-900 dark:text-white",
-                isRTL && "text-right"
-              )}>
-                {t('admin.activityLog', { fallback: 'Activity Log' })}
-              </h1>
+          <div className="overflow-hidden rounded-lg">
+            <div className="bg-gradient-to-r from-purple-600 to-fuchsia-600 p-5 text-white">
+              <div className="flex items-center gap-3">
+                <Link to="/admin" className="text-white/90 hover:text-white">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-semibold">{t('admin.activityLog', { fallback: 'Activity Log' })}</h1>
+                  <p className="text-white/90 text-sm mt-1">{t('admin.activityDescription', { fallback: 'Monitor admin actions and system activity' })}</p>
+                </div>
+              </div>
             </div>
           </div>
-          <p className={cn(
-            "text-gray-600 dark:text-gray-400",
-            isRTL && "text-right"
-          )} dir={isRTL ? 'rtl' : 'ltr'}>
-            {t('admin.activityDescription', { fallback: 'Monitor admin actions and system activity' })}
-          </p>
         </div>
 
         {/* Filters */}
@@ -122,10 +102,10 @@ const AdminActivity = () => {
           </div>
         </div>
 
-        {/* Activity Table */}
+        {/* Activity List (mobile) + Table (desktop) */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-purple-700 dark:text-purple-300">
               Recent Activity
             </h2>
           </div>
@@ -138,28 +118,48 @@ const AdminActivity = () => {
             ) : activities.length === 0 ? (
               <div className="text-center text-gray-600 dark:text-gray-400 py-8">No activity yet</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900/40">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">When</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {activities.map((a) => (
-                      <tr key={a.id}>
-                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{new Date(a.created_at).toLocaleString()}</td>
-                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.admin_username || a.admin_email || 'Admin'}</td>
-                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.action_type}</td>
-                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.target_user?.email || '-'}</td>
+              <>
+                {/* Mobile cards */}
+                <div className="grid grid-cols-1 gap-3 md:hidden">
+                  {activities.map((a) => (
+                    <div key={a.id} className="rounded-lg border border-purple-200 dark:border-purple-800 p-4">
+                      <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        {a.action_type?.replace(/_/g, ' ')}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                        {a.admin_username || a.admin_email || 'Admin'} • {new Date(a.created_at).toLocaleString()}
+                      </div>
+                      <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                        {a.target_user?.email || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-purple-50 dark:bg-gray-900/40">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">When</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Admin</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Action</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Target</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {activities.map((a) => (
+                        <tr key={a.id}>
+                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{new Date(a.created_at).toLocaleString()}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.admin_username || a.admin_email || 'Admin'}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.action_type}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.target_user?.email || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>

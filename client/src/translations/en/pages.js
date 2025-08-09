@@ -92,5 +92,15 @@ export default {
     title: 'Budget',
     subtitle: 'Plan and manage your budget',
     description: 'Spending limits and monitoring'
+  },
+
+  // Blocked page
+  blocked: {
+    title: 'Your account is blocked',
+    description: 'Your account has been temporarily blocked. If this is a mistake, please contact support.',
+    reasonTitle: 'Reason',
+    expiresAt: 'Block active until: {{date}}',
+    logout: 'Log out',
+    contact: 'Contact Support'
   }
 }; 

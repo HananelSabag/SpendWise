@@ -18,6 +18,16 @@ const AppInitializer = ({ children }) => {
       try {
         // Initialize auth store synchronously
         authActions.initialize();
+
+        // If already authenticated (token in storage), fetch fresh profile and sync preferences immediately
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (token && typeof authActions.getProfile === 'function') {
+            await authActions.getProfile();
+          }
+        } catch (e) {
+          console.warn('Profile preload failed on init (non-fatal):', e?.message);
+        }
         
         // Load system settings to wire app name and client switches
         try {

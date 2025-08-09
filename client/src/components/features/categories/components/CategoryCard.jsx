@@ -1,3 +1,4 @@
+
 /**
  * 🏷️ CATEGORY CARD - Individual Category Display
  * Extracted from massive CategoryManager.jsx for reusability

@@ -217,6 +217,37 @@ class SpendWiseAPIClient {
       return Promise.reject(error);
     }
 
+    // Blocked user handling (403 USER_BLOCKED)
+    if (error.response?.status === 403) {
+      const err = error.response?.data?.error || {};
+      if (err.code === 'USER_BLOCKED') {
+        const state = { reason: err.reason, expires_at: err.expires_at };
+        try {
+          if (window.spendWiseNavigate) {
+            window.spendWiseNavigate('/blocked', { replace: true, state });
+          } else {
+            // Fallback: basic redirect without state
+            window.location.replace('/blocked');
+          }
+        } catch (_) {}
+        return Promise.reject(this.normalizeError(error));
+      }
+    }
+
+    // Maintenance handling (503 MAINTENANCE_MODE)
+    if (error.response?.status === 503) {
+      const err = error.response?.data?.error || {};
+      if (err.code === 'MAINTENANCE_MODE') {
+        try {
+          if (window.spendWiseNavigate) {
+            window.spendWiseNavigate('/maintenance', { replace: true });
+          } else {
+            window.location.replace('/maintenance');
+          }
+        } catch (_) {}
+      }
+    }
+
     // Retry for cold start issues (but only if not in recovery mode)
     if (!this.authRecovery.healthState?.isRecovering && 
         this.serverState.shouldRetryForColdStart(error) && 

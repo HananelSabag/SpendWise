@@ -247,6 +247,46 @@ export default {
     budgetTip: 'עקבו אחר הוצאות יומיות כדי לשלוט טוב יותר בתקציב',
     categoryTip: 'חלקו הוצאות לקטגוריות יעזור לכם לזהות דפוסי הוצאה'
   },
+
+  // הצעות חכמות
+  suggestions: {
+    title: 'הצעות חכמות',
+    subtitle: 'פעולות מהירות לפי הפעילות שלכם',
+    accept: 'החל',
+    category: 'קטגוריה',
+    generateNew: 'צור חדשות',
+    showing: 'מציג {{count}} מתוך {{total}}',
+    transactionCreated: 'תנועה נוספה מהצעה',
+    failed: 'לא ניתן ליישם את ההצעה',
+    // טקסטים ברירת מחדל להצעות
+    morningCoffee: 'קפה של הבוקר',
+    morningCoffeeDesc: 'אתם קונים קפה בבוקר לעיתים קרובות — לרשום את זה?',
+    lunchRecurring: 'הגדר ארוחת צהריים כחוזרת',
+    lunchRecurringDesc: 'הפכו את ארוחת הצהריים הקבועה להוצאה חוזרת לנוחות המעקב',
+    emergencyFund: 'חיזוק קרן החירום',
+    emergencyFundDesc: 'העבירו סכום קטן לחיסכון כדי להתקדם במטרה מהר יותר',
+    types: {
+      transaction: 'תנועה',
+      recurring: 'חוזר',
+      budget: 'תקציב',
+      savings: 'חיסכון',
+      insight: 'תובנה'
+    }
+  },
+
+  // אמון/רמת ביטחון
+  confidence: {
+    high: 'גבוה',
+    medium: 'בינוני',
+    low: 'נמוך',
+    explanation: 'רמת ביטחון: {{value}}%'
+  },
+
+  // קטגוריות מינימליות לשימוש ההצעות
+  categories: {
+    food: 'מזון ומסעדות',
+    savings: 'חיסכון'
+  },
   
   // Navigation and actions
   refresh: 'רענן',

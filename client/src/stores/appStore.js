@@ -41,11 +41,15 @@ export const THEMES = {
 
 // ✅ Currency Configuration
 export const CURRENCIES = {
-  USD: { code: 'USD', symbol: '$', name: 'US Dollar' },
-  EUR: { code: 'EUR', symbol: '€', name: 'Euro' },
-  GBP: { code: 'GBP', symbol: '£', name: 'British Pound' },
-  ILS: { code: 'ILS', symbol: '₪', name: 'Israeli Shekel' },
-  JPY: { code: 'JPY', symbol: '¥', name: 'Japanese Yen' }
+  USD: { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  EUR: { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  GBP: { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  ILS: { code: 'ILS', symbol: '₪', name: 'Israeli Shekel', flag: '🇮🇱' },
+  JPY: { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
+  CAD: { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  AUD: { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
+  CHF: { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
+  CNY: { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳' }
 };
 
 // ✅ Date Management State
@@ -95,6 +99,12 @@ export const useAppStore = create(
         decimalPlaces: 2,
         thousandSeparator: ',',
         decimalSeparator: '.',
+        // Exchange rates cache (base USD)
+        exchangeRates: {}, // map of currency code -> rate against USD
+        exchangeRatesBase: 'USD',
+        exchangeRatesUpdatedAt: 0,
+        // Available currencies list for selectors/UI
+        availableCurrencies: Object.values(CURRENCIES),
         
         // ✅ Date/Time State
         dateFormat: 'MM/DD/YYYY',
@@ -229,6 +239,13 @@ export const useAppStore = create(
           },
 
           formatCurrency: (amount, options = {}) => {
+            // Backward compatibility: allow passing currency code as second positional arg
+            let resolvedOptions = options;
+            if (typeof options === 'string') {
+              resolvedOptions = { currency: options };
+            } else if (options == null || typeof options !== 'object') {
+              resolvedOptions = {};
+            }
             const {
               currency,
               currencyPosition,
@@ -241,7 +258,7 @@ export const useAppStore = create(
               currency: overrideCurrency = currency,
               showSymbol = true,
               compact = false
-            } = options;
+            } = resolvedOptions;
             
             const currencyData = CURRENCIES[overrideCurrency];
             if (!currencyData) return amount.toString();
@@ -263,6 +280,54 @@ export const useAppStore = create(
             }
             
             return formatted;
+          },
+
+          // Exchange rates: fetch and compute
+          updateExchangeRates: async () => {
+            try {
+              const base = get().exchangeRatesBase || 'USD';
+              const url = `https://api.exchangerate.host/latest?base=${encodeURIComponent(base)}`;
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('Failed to fetch exchange rates');
+              const data = await res.json();
+              if (!data || !data.rates) throw new Error('Invalid rates response');
+              set((state) => {
+                state.exchangeRates = data.rates;
+                state.exchangeRatesUpdatedAt = Date.now();
+              });
+              return true;
+            } catch (e) {
+              console.warn('updateExchangeRates error:', e);
+              throw e;
+            }
+          },
+
+          getExchangeRate: async (fromCurrency, toCurrency) => {
+            if (!fromCurrency || !toCurrency) return 0;
+            if (fromCurrency === toCurrency) return 1;
+            const { exchangeRates, exchangeRatesUpdatedAt, exchangeRatesBase } = get();
+            const isStale = Date.now() - (exchangeRatesUpdatedAt || 0) > 12 * 60 * 60 * 1000; // 12h
+            if (!exchangeRates || Object.keys(exchangeRates).length === 0 || isStale) {
+              await get().actions.updateExchangeRates();
+            }
+            const rates = get().exchangeRates;
+            const base = exchangeRatesBase || 'USD';
+            // rates map is base -> X. Example: USD->EUR = rates['EUR']
+            // To compute A->B: (base->B) / (base->A)
+            const toRate = rates[toCurrency];
+            const fromRate = rates[fromCurrency];
+            if (!toRate || !fromRate) {
+              // Try to refetch once in case of missing code
+              await get().actions.updateExchangeRates();
+              const r2 = get().exchangeRates;
+              const t2 = r2[toCurrency];
+              const f2 = r2[fromCurrency];
+              if (!t2 || !f2) {
+                throw new Error(`Missing exchange rate for ${fromCurrency} or ${toCurrency} (base ${base})`);
+              }
+              return t2 / f2;
+            }
+            return toRate / fromRate;
           },
 
           // ✅ Guest preference management (session-only storage)
@@ -562,7 +627,12 @@ export const useAccessibility = () => useAppStore((state) => ({
 export const useCurrency = () => useAppStore((state) => ({
   currency: state.currency,
   formatCurrency: state.actions.formatCurrency,
-  setCurrency: state.actions.setCurrency
+  setCurrency: state.actions.setCurrency,
+  availableCurrencies: state.availableCurrencies,
+  getExchangeRate: state.actions.getExchangeRate,
+  updateExchangeRates: state.actions.updateExchangeRates,
+  exchangeRates: state.exchangeRates,
+  exchangeRatesUpdatedAt: state.exchangeRatesUpdatedAt
 }));
 
 export const useNotifications = () => useAppStore((state) => ({

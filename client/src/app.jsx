@@ -181,6 +181,11 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
     );
   }
   
+  // If blocked user somehow passed auth middleware (e.g., cached token), route to blocked page
+  if (user?.isBlocked || (Array.isArray(user?.restrictions) && user.restrictions.some(r => r.restriction_type === 'blocked'))) {
+    return <Navigate to="/blocked" replace state={{ reason: user?.restrictions?.[0]?.reason }} />;
+  }
+
   return children;
 };
 
@@ -317,6 +322,15 @@ const AppContent = () => {
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>
+          } />
+
+          {/* ✅ Blocked route (public, for redirected blocked users) */}
+          <Route path="/blocked" element={
+            <RouteErrorBoundary routeName="Blocked">
+              <Suspense fallback={<RouteLoadingFallback route="blocked" />}>
+                <LazyComponents.Blocked />
+              </Suspense>
+            </RouteErrorBoundary>
           } />
           
           <Route path="/transactions" element={

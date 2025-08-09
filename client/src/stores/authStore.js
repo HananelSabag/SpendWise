@@ -83,6 +83,13 @@ export const useAuthStore = create(
                 // ✅ FIX: Start token refresh monitoring for regular login
                 get().actions.startTokenRefreshTimer();
 
+                // ✅ NEW: Apply user preferences immediately (theme, language, currency)
+                try {
+                  get().actions.syncUserPreferences(userData);
+                } catch (e) {
+                  console.warn('Preference sync after login failed (continuing):', e?.message);
+                }
+
                 return { success: true, user: userData };
               } else {
                 set((state) => {
@@ -133,6 +140,13 @@ export const useAuthStore = create(
 
                 // ✅ FIX: Start token refresh monitoring for Google login
                 get().actions.startTokenRefreshTimer();
+
+                // ✅ NEW: Apply user preferences immediately
+                try {
+                  get().actions.syncUserPreferences(userData);
+                } catch (e) {
+                  console.warn('Preference sync after Google login failed (continuing):', e?.message);
+                }
 
                 return { success: true, user: userData };
               } else {

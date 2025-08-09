@@ -1,8 +1,9 @@
 import React from 'react';
-import { useTranslation } from '../stores';
+import { useTranslation, useAuth } from '../stores';
 
 const Maintenance = () => {
   const { t, isRTL } = useTranslation('common');
+  const { logout } = useAuth();
   return (
     <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 ${isRTL ? 'rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-md mx-auto text-center p-8 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
@@ -13,7 +14,13 @@ const Maintenance = () => {
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('maintenance.title', { fallback: 'We’ll be back soon' })}</h1>
         <p className="text-gray-600 dark:text-gray-300 mb-4">{t('maintenance.message', { fallback: 'The service is under maintenance. Please try again later.' })}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('maintenance.thanks', { fallback: 'Thank you for your patience.' })}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('maintenance.thanks', { fallback: 'Thank you for your patience.' })}</p>
+        <button
+          onClick={() => logout(true)}
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
+        >
+          {t('common.logout', { fallback: 'Log out' })}
+        </button>
       </div>
     </div>
   );

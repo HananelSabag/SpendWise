@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeftRight, TrendingUp, TrendingDown, RefreshCw,
   Clock, Star, History, Calculator, Globe, Zap,
-  BookmarkPlus, Bookmark, AlertCircle, CheckCircle
+  BookmarkPlus, Bookmark, AlertCircle, CheckCircle, X
 } from 'lucide-react';
 
 // ✅ NEW: Import from Zustand stores instead of Context
@@ -25,6 +25,8 @@ import { Button, Card, Input, Badge, Dropdown, Tooltip } from '../../ui';
 import { cn } from '../../../utils/helpers';
 
 const ExchangeCalculator = ({
+  isOpen = false,
+  onClose = () => {},
   onAddToTransaction,
   showHistory = true,
   className = ''
@@ -36,7 +38,8 @@ const ExchangeCalculator = ({
     availableCurrencies,
     formatCurrency,
     getExchangeRate,
-    updateExchangeRates
+    updateExchangeRates,
+    exchangeRatesUpdatedAt
   } = useCurrency();
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
@@ -102,7 +105,7 @@ const ExchangeCalculator = ({
     }
   }, [amount, fromCurrency, toCurrency, getExchangeRate, addNotification, t]);
 
-  // Auto-calculate on changes
+  // Auto-calculate on changes (debounced input), throttle full rate refresh to 5 minutes
   useEffect(() => {
     const timer = setTimeout(() => {
       if (amount && fromCurrency && toCurrency) {
@@ -112,6 +115,16 @@ const ExchangeCalculator = ({
 
     return () => clearTimeout(timer);
   }, [amount, fromCurrency, toCurrency, calculateConversion]);
+
+  // Throttle background rates update to every 5 minutes
+  useEffect(() => {
+    const fiveMinutes = 5 * 60 * 1000;
+    const now = Date.now();
+    if (!exchangeRatesUpdatedAt || now - exchangeRatesUpdatedAt > fiveMinutes) {
+      // fire and forget; calculateConversion will pick latest
+      updateExchangeRates().catch(() => {});
+    }
+  }, [exchangeRatesUpdatedAt, updateExchangeRates]);
 
   // Swap currencies
   const swapCurrencies = useCallback(() => {
@@ -218,14 +231,55 @@ const ExchangeCalculator = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <motion.div
+    <div className="fixed inset-0 z-50" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal container same sizing as Category/Recurring managers */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="absolute inset-4 sm:inset-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <Calculator className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('exchange.title')}</h2>
+              <p className="text-gray-600 dark:text-gray-400">{t('exchange.subtitle')}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
+          <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className={cn("space-y-6", className)}
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
+        className={cn("space-y-6", className)}
+      >
       {/* Header */}
       <motion.div variants={itemVariants} className="text-center">
         <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
@@ -455,10 +509,10 @@ const ExchangeCalculator = ({
             )}
           </div>
         </Card>
-      </motion.div>
+          </motion.div>
 
-      {/* Popular currencies */}
-      <motion.div variants={itemVariants}>
+          {/* Popular currencies */}
+          <motion.div variants={itemVariants}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           {t('exchange.popularCurrencies')}
         </h3>
@@ -511,11 +565,11 @@ const ExchangeCalculator = ({
             </Card>
           ))}
         </div>
-      </motion.div>
+          </motion.div>
 
-      {/* History */}
-      {showHistory && history.length > 0 && (
-        <motion.div variants={itemVariants}>
+          {/* History */}
+          {showHistory && history.length > 0 && (
+            <motion.div variants={itemVariants}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             {t('exchange.history')}
           </h3>
@@ -557,10 +611,14 @@ const ExchangeCalculator = ({
                 </div>
               ))}
             </div>
-          </Card>
-        </motion.div>
-      )}
-    </motion.div>
+              </Card>
+            </motion.div>
+          )}
+          {/* Close container motion.div */}
+          </motion.div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

@@ -17,7 +17,7 @@ import { cn } from '../../utils/helpers';
 import { api } from '../../api';
 
 const AdminSettings = () => {
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { addNotification } = useNotifications();
   
   // State management
@@ -158,49 +158,24 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className={cn(
-      "min-h-screen bg-gray-50 dark:bg-gray-900",
-      isRTL && 'rtl'
-    )}
-    dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={cn("min-h-screen bg-gray-50 dark:bg-gray-900") }>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <motion.div 
-          className="mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className={cn(
-            'flex items-center mb-4',
-            isRTL && 'flex-row-reverse'
-          )}
-          dir={isRTL ? 'rtl' : 'ltr'}>
-            <Link 
-              to="/admin" 
-              className={cn(
-                'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4',
-                isRTL && 'ml-4 mr-0'
-              )}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
-              <h1 className={cn(
-                "text-3xl font-bold text-gray-900 dark:text-white",
-                isRTL && "text-right"
-              )}>
-                {t('admin.settings.title', { fallback: 'System Settings' })}
-              </h1>
+        {/* Header banner */}
+        <div className="mb-8">
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-5 text-white">
+              <div className="flex items-center gap-3">
+                <Link to="/admin" className="text-white/90 hover:text-white">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-semibold">{t('admin.settings.title', { fallback: 'System Settings' })}</h1>
+                  <p className="text-white/90 text-sm mt-1">{t('admin.settings.description', { fallback: 'Configure system-wide settings and preferences (Super Admin Only)' })}</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <p className={cn(
-            "text-gray-600 dark:text-gray-400",
-            isRTL && "text-right"
-          )} dir={isRTL ? 'rtl' : 'ltr'}>
-            {t('admin.settings.description', { fallback: 'Configure system-wide settings and preferences (Super Admin Only)' })}
-          </p>
-        </motion.div>
+          </Card>
+        </div>
 
         {/* Settings Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -211,24 +186,26 @@ const AdminSettings = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <Card className="p-6">
+            <Card className="p-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 {t('admin.settings.categories', { fallback: 'Categories' })}
               </h2>
-              <nav className="space-y-2">
+              <nav className="grid grid-cols-2 sm:grid-cols-1 gap-2">
                 {categories.map((category) => {
                   const Icon = category.icon;
                   return (
                     <button
                       key={category.id}
                       onClick={() => setActiveTab(category.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors flex items-center ${
+                      className={`w-full text-left px-4 py-3 rounded-lg font-medium transition flex items-center gap-3 ${
                         activeTab === category.id
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'bg-emerald-600 text-white shadow hover:shadow-md'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                       }`}
                     >
-                      <Icon className="w-5 h-5 mr-3" />
+                      <span className={`inline-flex items-center justify-center rounded-md ${activeTab === category.id ? 'bg-white/20' : 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-400'} p-2`}>
+                        <Icon className="w-5 h-5" />
+                      </span>
                       {category.name}
                     </button>
                   );
@@ -244,7 +221,7 @@ const AdminSettings = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="p-6">
+            <Card className="p-4">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {categories.find(cat => cat.id === activeTab)?.name} Settings
@@ -252,7 +229,7 @@ const AdminSettings = () => {
                 <Button
                   onClick={saveSettings}
                   loading={saving}
-                  className="flex items-center"
+                  className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? t('common.saving', { fallback: 'Saving...' }) : t('common.save', { fallback: 'Save Changes' })}
@@ -263,7 +240,7 @@ const AdminSettings = () => {
                 {activeTab === 'general' && (
                   <>
                     {/* Site Name */}
-                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
                       <div>
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                           {t('admin.settings.siteName', { fallback: 'Site Name' })}
@@ -334,7 +311,7 @@ const AdminSettings = () => {
                 {activeTab === 'email' && (
                   <>
                     {/* Support Email */}
-                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
                       <div>
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                           {t('admin.settings.supportEmail', { fallback: 'Support Email' })}
@@ -352,7 +329,7 @@ const AdminSettings = () => {
                     </div>
 
                     {/* Email Sender Name */}
-                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
                       <div>
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                           {t('admin.settings.emailSenderName', { fallback: 'Email Sender Name' })}
@@ -405,14 +382,14 @@ const AdminSettings = () => {
             </Card>
 
             {/* API Integration Notice */}
-            <Card className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <Card className="mt-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
               <div className="p-4 flex items-center">
-                <CheckCircle className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-emerald-600 mr-3 flex-shrink-0" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  <h4 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
                     {t('admin.settings.apiReady', { fallback: 'Settings System Ready' })}
                   </h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
                     {t('admin.settings.apiDesc', { fallback: 'This interface is ready for backend API integration. Settings are currently in demo mode.' })}
                   </p>
                 </div>
@@ -428,7 +405,7 @@ const AdminSettings = () => {
 // ✅ Reusable Setting Toggle Component
 const SettingToggle = ({ title, description, checked, onChange, variant = 'default' }) => {
   const variantClasses = {
-    default: 'peer-checked:bg-blue-600',
+    default: 'peer-checked:bg-emerald-600',
     warning: 'peer-checked:bg-yellow-500'
   };
 
@@ -449,7 +426,7 @@ const SettingToggle = ({ title, description, checked, onChange, variant = 'defau
           checked={checked}
           onChange={onChange}
         />
-        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 ${variantClasses[variant]}`}></div>
+        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 ${variantClasses[variant]}`}></div>
       </label>
     </div>
   );

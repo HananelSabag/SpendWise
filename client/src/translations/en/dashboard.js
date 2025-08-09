@@ -275,5 +275,45 @@ export default {
     savingTip: 'Saving 20% of your income will help you reach your savings goal faster',
     budgetTip: 'Track daily expenses to better control your budget',
     categoryTip: 'Dividing expenses into categories will help you identify spending patterns'
+  },
+
+  // Smart Suggestions
+  suggestions: {
+    title: 'Smart Suggestions',
+    subtitle: 'Quick actions based on your activity',
+    accept: 'Apply',
+    category: 'Category',
+    generateNew: 'Generate new',
+    showing: 'Showing {{count}} of {{total}}',
+    transactionCreated: 'Transaction added from suggestion',
+    failed: 'Could not apply suggestion',
+    // default suggestion texts
+    morningCoffee: 'Morning coffee',
+    morningCoffeeDesc: 'You often buy coffee in the morning — want to log it?',
+    lunchRecurring: 'Set lunch as recurring',
+    lunchRecurringDesc: 'Make your typical lunch a recurring expense for easier tracking',
+    emergencyFund: 'Boost your emergency fund',
+    emergencyFundDesc: 'Transfer a small amount to savings to reach your goal faster',
+    types: {
+      transaction: 'Transaction',
+      recurring: 'Recurring',
+      budget: 'Budget',
+      savings: 'Savings',
+      insight: 'Insight'
+    }
+  },
+
+  // Confidence labels for suggestions
+  confidence: {
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+    explanation: 'Confidence: {{value}}%'
+  },
+
+  // Minimal categories map used by suggestions
+  categories: {
+    food: 'Food & Dining',
+    savings: 'Savings'
   }
 }; 

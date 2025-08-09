@@ -23,7 +23,7 @@ import { cn } from '../../utils/helpers';
 const AdminUsers = () => {
   // ✅ Zustand stores
   const { user: currentUser, isSuperAdmin } = useAuth();
-  const { t, isRTL } = useTranslation('admin');
+  const { t } = useTranslation('admin');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
 
@@ -188,51 +188,29 @@ const AdminUsers = () => {
   }
 
   return (
-    <div className={cn(
-      'min-h-screen bg-gray-50 dark:bg-gray-900',
-      isRTL && 'rtl'
-    )}
-    dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={cn('min-h-screen bg-gray-50 dark:bg-gray-900')}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className={cn(
-            'flex items-center mb-4',
-            isRTL && 'flex-row-reverse'
-          )}
-          dir={isRTL ? 'rtl' : 'ltr'}>
-            <Link 
-              to="/admin" 
-              className={cn(
-                'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mr-4',
-                isRTL && 'ml-4 mr-0'
-              )}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className={cn(isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
-              <h1 className={cn(
-                "text-3xl font-bold text-gray-900 dark:text-white",
-                isRTL && "text-right"
-              )}>
-                {t('users.title', { fallback: 'User Management' })}
-              </h1>
+        {/* Header banner (replaces old header) */}
+        <Card className="mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link to="/admin" className="text-white/90 hover:text-white">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-semibold">{t('users.title', { fallback: 'User Management' })}</h1>
+                  <p className="text-white/90 text-sm mt-1">
+                    {t('users.subtitle', { fallback: 'Manage {{total}} users across the platform', total: totalUsers.toLocaleString() })}
+                  </p>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <Badge variant="secondary">{totalUsers.toLocaleString()}</Badge>
+              </div>
             </div>
           </div>
-          <p className={cn(
-            "text-gray-600 dark:text-gray-400",
-            isRTL && "text-right"
-          )} dir={isRTL ? 'rtl' : 'ltr'}>
-            {t('users.subtitle', { 
-              fallback: 'Manage {{total}} users across the platform',
-              total: totalUsers.toLocaleString()
-            })}
-          </p>
-        </motion.div>
+        </Card>
 
         {/* Search and Filters */}
         <motion.div 
@@ -241,10 +219,7 @@ const AdminUsers = () => {
           className="mb-6"
         >
           <Card className="p-4">
-            <div className={cn(
-              'flex flex-col sm:flex-row gap-4',
-              isRTL && 'sm:flex-row-reverse'
-            )}>
+            <div className={cn('flex flex-col sm:flex-row gap-4')}>
               <div className="flex-1">
                 <Input
                   icon={Search}
@@ -280,156 +255,132 @@ const AdminUsers = () => {
           </Card>
         </motion.div>
 
-        {/* Users Table */}
+        {/* Users List (mobile) + Table (desktop) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('table.user', { fallback: 'User' })}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('table.role', { fallback: 'Role' })}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('table.status', { fallback: 'Status' })}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('table.joinDate', { fallback: 'Join Date' })}
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('table.actions', { fallback: 'Actions' })}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  <AnimatePresence>
-                    {safeUsers.length > 0 ? safeUsers.map((user) => (
-                      <motion.tr
-                        key={user.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <img 
-                                className="h-10 w-10 rounded-full" 
-                                src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`}
-                                alt={(user.first_name || '') + ' ' + (user.last_name || '')}
-                                onError={(e) => {
-                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`;
-                                }}
-                              />
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {user.first_name || user.username || 'Unknown'} {user.last_name || ''}
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {user.email}
-                              </div>
-                            </div>
+          {/* Mobile cards */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {safeUsers.length > 0 ? (
+              safeUsers.map((user) => (
+                <Card key={user.id} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <img
+                      className="h-10 w-10 rounded-full"
+                      src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`}
+                      alt={(user.first_name || '') + ' ' + (user.last_name || '')}
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`;
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {user.first_name || user.username || 'Unknown'} {user.last_name || ''}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedUser(user); setShowUserModal(true); }}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {user.status === 'active' ? (
+                        <Button size="sm" variant="outline" onClick={() => handleBlockUser(user.id)} disabled={actionLoading === user.id || user.id === currentUser?.id} loading={actionLoading === user.id}>
+                          <Ban className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => handleUnblockUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id}>
+                          <UserCheck className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-2">
+                      {getRoleBadge(user.role)}
+                      {getStatusBadge(user.status)}
+                    </div>
+                    <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {isSuperAdmin && user.id !== currentUser?.id && (
+                    <div className="mt-3 flex justify-end">
+                      <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id} className="text-red-600 hover:text-red-700">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              ))
+            ) : (
+              <Card className="p-6 text-center text-gray-500 dark:text-gray-400">
+                <Users className="mx-auto h-10 w-10 mb-2" />
+                {t('users.noUsers', { fallback: 'No users found' })}
+              </Card>
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="overflow-hidden hidden md:block">
+            <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[45%]">{t('table.user', { fallback: 'User' })}</th>
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell w-[15%]">{t('table.role', { fallback: 'Role' })}</th>
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[20%]">{t('table.status', { fallback: 'Status' })}</th>
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell w-[10%]">{t('table.joinDate', { fallback: 'Join Date' })}</th>
+                  <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[10%]">{t('table.actions', { fallback: 'Actions' })}</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {safeUsers.length > 0 ? (
+                  safeUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap">
+                        <div className="flex items-center min-w-0">
+                          <img className="h-10 w-10 rounded-full flex-shrink-0" src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`} alt={(user.first_name || '') + ' ' + (user.last_name || '')} onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`; }} />
+                          <div className="ml-4 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.first_name || user.username || 'Unknown'} {user.last_name || ''}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(user.role)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(user.status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowUserModal(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
+                        </div>
+                      </td>
+                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap hidden lg:table-cell">{getRoleBadge(user.role)}</td>
+                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap">{getStatusBadge(user.status)}</td>
+                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">{new Date(user.created_at).toLocaleDateString()}</td>
+                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedUser(user); setShowUserModal(true); }}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {user.status === 'active' ? (
+                            <Button size="sm" variant="outline" onClick={() => handleBlockUser(user.id)} disabled={actionLoading === user.id || user.id === currentUser?.id} loading={actionLoading === user.id}>
+                              <Ban className="w-4 h-4" />
                             </Button>
-                            
-                            {user.status === 'active' ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleBlockUser(user.id)}
-                                disabled={actionLoading === user.id || user.id === currentUser?.id}
-                                loading={actionLoading === user.id}
-                              >
-                                <Ban className="w-4 h-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUnblockUser(user.id)}
-                                disabled={actionLoading === user.id}
-                                loading={actionLoading === user.id}
-                              >
-                                <UserCheck className="w-4 h-4" />
-                              </Button>
-                            )}
-                            
-                            {isSuperAdmin && user.id !== currentUser?.id && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteUser(user.id)}
-                                disabled={actionLoading === user.id}
-                                loading={actionLoading === user.id}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </motion.tr>
-                    )) : (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center">
-                          <div className="text-gray-500 dark:text-gray-400">
-                            <Users className="mx-auto h-12 w-12 mb-4" />
-                            <h3 className="text-lg font-medium mb-2">
-                              {t('users.noUsers', { fallback: 'No users found' })}
-                            </h3>
-                            <p className="text-sm">
-                              {t('users.noUsersDesc', { fallback: 'No users match your search criteria' })}
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-              
-              {safeUsers.length === 0 && (
-                <div className="text-center py-12">
-                  <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    {t('users.noUsers', { fallback: 'No users found' })}
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {t('users.noUsersDesc', { fallback: 'Try adjusting your search or filters' })}
-                  </p>
-                </div>
-              )}
-            </div>
+                          ) : (
+                            <Button size="sm" variant="outline" onClick={() => handleUnblockUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id}>
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {isSuperAdmin && user.id !== currentUser?.id && (
+                            <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id} className="text-red-600 hover:text-red-700">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                      <Users className="mx-auto h-12 w-12 mb-4" />
+                      {t('users.noUsers', { fallback: 'No users found' })}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </Card>
         </motion.div>
 
