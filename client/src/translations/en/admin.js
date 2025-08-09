@@ -43,6 +43,92 @@ export default {
     security: 'Security'
   },
   
+  // Actions (for quick links/cards inside admin pages)
+  actions: {
+    manageUsers: 'Manage Users',
+    manageUsersDesc: 'View, edit, and manage user accounts',
+    systemSettings: 'System Settings',
+    systemSettingsDesc: 'Configure system-wide settings',
+    activityLog: 'Activity Log',
+    activityLogDesc: 'Monitor system activity and logs',
+    userBlocked: 'User blocked successfully',
+    userUnblocked: 'User unblocked successfully',
+    userDeleted: 'User deleted successfully'
+  },
+
+  // Users Management
+  users: {
+    title: 'User Management',
+    subtitle: 'Manage {{total}} users across the platform',
+    searchPlaceholder: 'Search users by name, email...',
+    noUsers: 'No users found',
+    noUsersDesc: 'No users match your search criteria',
+    userDetails: 'User Details'
+  },
+
+  // Table labels
+  table: {
+    user: 'User',
+    role: 'Role',
+    status: 'Status',
+    joinDate: 'Join Date',
+    actions: 'Actions'
+  },
+
+  // Filters
+  filters: {
+    allRoles: 'All Roles',
+    filterByRole: 'Filter by role'
+  },
+
+  // Roles
+  roles: {
+    user: 'User',
+    admin: 'Admin',
+    superAdmin: 'Super Admin'
+  },
+
+  // Confirmations
+  confirmations: {
+    deleteUser: 'Are you sure you want to delete this user?'
+  },
+
+  // Status values for users
+  status: {
+    active: 'Active',
+    blocked: 'Blocked',
+    pending: 'Pending',
+    inactive: 'Inactive'
+  },
+
+  // Fields in user modal/details
+  fields: {
+    joinDate: 'Join Date',
+    lastLogin: 'Last Login',
+    transactionCount: 'Transactions',
+    totalSpent: 'Total Spent'
+  },
+
+  // Common strings when using admin-scoped translator
+  common: {
+    refresh: 'Refresh',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    never: 'Never'
+  },
+
+  // Errors shown in admin pages
+  errors: {
+    statsLoadFailed: 'Failed to load admin statistics',
+    usersLoadFailed: 'Failed to load users',
+    actionFailed: 'Action failed',
+    accessDenied: 'Access Denied',
+    adminRequired: 'Admin privileges required to access this page',
+    loadFailed: 'Failed to Load Data',
+    generic: 'Something went wrong'
+  },
+
   // Admin Settings
   settings: {
     title: 'System Settings',

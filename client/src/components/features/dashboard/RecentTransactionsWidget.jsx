@@ -111,7 +111,8 @@ const RecentTransactionsWidget = ({
   } = useTransactions({
     pageSize: 20, // Get more to filter properly
     enableAI: false,
-    context: 'dashboard' // This ensures updates from quick actions
+    context: 'dashboard', // This ensures updates from quick actions
+    autoRefresh: true
   });
 
   // ✅ Filter and process recent transactions

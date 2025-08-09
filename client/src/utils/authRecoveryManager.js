@@ -2,11 +2,27 @@
  * 🔄 AUTHENTICATION RECOVERY MANAGER
  * Handles automatic authentication recovery, connection health monitoring,
  * and prevents "stuck" authentication states during development and production
- * @version 1.0.0
+ * @version 1.1.0
+ *
+ * Changes:
+ * - Removed static imports that created a circular dependency with the API client
+ * - Lazy-loads `authAPI` and accesses auth store via window to avoid TDZ errors during HMR
+ * - De-duplicates recovery toasts and ensures proper dismissal on resolve/error
  */
 
-import { useAuthStore } from '../stores/authStore';
-import { authAPI } from '../api/auth';
+// IMPORTANT: Do NOT statically import the auth store or auth API here.
+// They import the API client which imports this file, causing a circular import.
+// We'll resolve them lazily when needed.
+
+const getAuthStore = () => {
+  // Prefer global accessor set by `client/src/stores/index.jsx`
+  return typeof window !== 'undefined' ? window.spendWiseStores?.auth : undefined;
+};
+
+const getAuthAPI = async () => {
+  const mod = await import('../api/auth');
+  return mod.authAPI || mod.default;
+};
 
 class AuthRecoveryManager {
   constructor() {
@@ -33,6 +49,9 @@ class AuthRecoveryManager {
       maxRecoveryAttempts: 3,             // Max recovery attempts before giving up
       stuckStateTimeout: 15000            // 15 seconds to detect stuck state
     };
+
+    // Toast tracking (to de-duplicate loading/info toasts)
+    this.recoveryToastId = null;
 
     // Bind methods
     this.handleApiError = this.handleApiError.bind(this);
@@ -116,8 +135,13 @@ class AuthRecoveryManager {
       isRecovering: false
     };
 
-    // Show recovery success message if we were recovering
+    // Dismiss loading toast and show recovery success message if we were recovering
     if (wasRecovering) {
+      // Dismiss any ongoing recovery toast
+      if (this.recoveryToastId && window.authToasts?.dismiss) {
+        window.authToasts.dismiss(this.recoveryToastId);
+        this.recoveryToastId = null;
+      }
       this.showRecoveryNotification('success', 'החיבור לשרת התאושש בהצלחה! 🎉');
       console.log('✅ Auth Recovery: Connection restored successfully');
     }
@@ -178,11 +202,12 @@ class AuthRecoveryManager {
   isInStuckState() {
     const { lastSuccessTime, consecutiveFailures } = this.healthState;
     const timeSinceLastSuccess = Date.now() - lastSuccessTime;
-    
+
     // User is authenticated but no successful API calls for a while with failures
-    const authStore = useAuthStore.getState();
+    const authStore = getAuthStore()?.getState?.();
+    const isAuthenticated = !!authStore?.isAuthenticated;
     return (
-      authStore.isAuthenticated &&
+      isAuthenticated &&
       consecutiveFailures > 0 &&
       timeSinceLastSuccess > this.config.stuckStateTimeout
     );
@@ -200,6 +225,7 @@ class AuthRecoveryManager {
     const token = localStorage.getItem('accessToken');
     if (token) {
       try {
+        const authAPI = await getAuthAPI();
         const validation = await authAPI.validateToken(token);
         if (validation.success) {
           console.log('✅ Token validation successful - recovering from stuck state');
@@ -258,6 +284,7 @@ class AuthRecoveryManager {
 
     // Try token refresh first
     try {
+      const authAPI = await getAuthAPI();
       const refreshResult = await authAPI.refreshToken();
       if (refreshResult.success) {
         console.log('✅ Token refresh successful');
@@ -284,8 +311,12 @@ class AuthRecoveryManager {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/health`, {
+
+      // Build a safe health endpoint regardless of whether VITE_API_URL already includes /api/v1
+      const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+      const healthUrl = base.endsWith('/api/v1') ? `${base}/health` : `${base}/api/v1/health`;
+
+      const response = await fetch(healthUrl, {
         method: 'GET',
         signal: controller.signal,
         headers: {
@@ -331,6 +362,7 @@ class AuthRecoveryManager {
     try {
       const token = localStorage.getItem('accessToken');
       if (token) {
+        const authAPI = await getAuthAPI();
         const validation = await authAPI.validateToken(token);
         if (validation.success) {
           this.handleApiSuccess();
@@ -350,7 +382,7 @@ class AuthRecoveryManager {
   async forceLogoutAndRecovery(reason) {
     console.log(`🚪 Force logout due to: ${reason}`);
     
-    const authStore = useAuthStore.getState();
+    const authStore = getAuthStore()?.getState?.();
     
     try {
       // Show user-friendly message and trigger auto logout
@@ -362,8 +394,8 @@ class AuthRecoveryManager {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       
-      // Reset auth store
-      authStore.actions.reset();
+      // Reset auth store if available
+      authStore?.actions?.reset?.();
       
       // Wait a moment for state to settle
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -392,16 +424,27 @@ class AuthRecoveryManager {
     if (window.authToasts) {
       switch (type) {
         case 'success':
+          if (this.recoveryToastId && window.authToasts.dismiss) {
+            window.authToasts.dismiss(this.recoveryToastId);
+            this.recoveryToastId = null;
+          }
           window.authToasts.connectionRestored?.(message);
           break;
         case 'warning':
           window.authToasts.connectionIssue?.(message);
           break;
         case 'error':
+          if (this.recoveryToastId && window.authToasts.dismiss) {
+            window.authToasts.dismiss(this.recoveryToastId);
+            this.recoveryToastId = null;
+          }
           window.authToasts.connectionFailed?.(message);
           break;
         case 'info':
-          window.authToasts.connectionRecovering?.(message);
+          // Avoid stacking multiple loading toasts
+          if (!this.recoveryToastId) {
+            this.recoveryToastId = window.authToasts.connectionRecovering?.(message);
+          }
           break;
       }
     }
@@ -518,7 +561,16 @@ export const getAuthRecoveryManager = () => {
 // Export for easy access
 export default getAuthRecoveryManager;
 
-// Make available globally for debugging
+// Make available globally for debugging – lazily, to avoid early initialization
 if (typeof window !== 'undefined') {
-  window.authRecoveryManager = getAuthRecoveryManager();
+  try {
+    Object.defineProperty(window, 'authRecoveryManager', {
+      configurable: true,
+      get() {
+        return getAuthRecoveryManager();
+      }
+    });
+  } catch (_) {
+    // Fallback: do nothing if defineProperty fails
+  }
 }

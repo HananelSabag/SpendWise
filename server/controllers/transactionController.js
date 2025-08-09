@@ -186,6 +186,52 @@ const transactionController = {
   }),
 
   /**
+   * Get user's recurring templates list
+   * @route GET /api/v1/transactions/templates
+   */
+  getRecurringTemplates: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    try {
+      const query = `
+        SELECT rt.*, c.name AS category_name
+        FROM recurring_templates rt
+        LEFT JOIN categories c ON rt.category_id = c.id
+        WHERE rt.user_id = $1
+        ORDER BY rt.created_at DESC
+      `;
+      const result = await db.query(query, [userId]);
+
+      // Compute simple derived fields expected by client
+      const now = new Date();
+      const threeMonthsFromNow = new Date();
+      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+
+      const templates = (result.rows || []).map((row) => {
+        // Compute next_run_date using existing helper
+        let nextRun = null;
+        try {
+          const dates = calculateUpcomingDates(row, now, threeMonthsFromNow);
+          nextRun = dates && dates.length > 0 ? dates[0].toISOString().split('T')[0] : null;
+        } catch (e) {
+          nextRun = null;
+        }
+
+        return {
+          ...row,
+          status: row.is_active ? 'active' : 'paused',
+          frequency: row.interval_type,
+          next_run_date: nextRun
+        };
+      });
+
+      res.json({ success: true, data: templates, count: templates.length });
+    } catch (error) {
+      logger.error('Get recurring templates failed', { userId, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
    * Get analytics summary for analytics page
    * @route GET /api/v1/analytics/dashboard/summary
    */

@@ -17,7 +17,7 @@ import { useTranslation, useCurrency } from '../../../stores';
 import { useUpcomingTransactions } from '../../../hooks/useUpcomingTransactions';
 import { Button, Card, LoadingSpinner } from '../../ui';
 import TransactionCard from '../dashboard/transactions/TransactionCard';
-import RecurringTransactionsManager from './modals/RecurringTransactionsManager';
+import { RecurringManagerPanel } from '../../LazyComponents';
 import { cn, dateHelpers } from '../../../utils/helpers';
 
 /**
@@ -231,10 +231,7 @@ const UpcomingTransactionsSimple = () => {
       </Card>
       
       {/* Recurring Transactions Manager Modal */}
-      <RecurringTransactionsManager
-        isOpen={showManager}
-        onClose={() => setShowManager(false)}
-      />
+      <RecurringManagerPanel isOpen={showManager} onClose={() => setShowManager(false)} />
     </>
   );
 };

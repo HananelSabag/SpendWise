@@ -22,6 +22,8 @@ import { cn } from '../utils/helpers';
 import BalancePanel from '../components/features/dashboard/BalancePanel';
 import RecentTransactionsWidget from '../components/features/dashboard/RecentTransactionsWidget';
 import QuickActionsBar from '../components/features/dashboard/QuickActionsBar';
+import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
+import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 
 /**
  * 📊 Beautiful Dashboard Component
@@ -36,6 +38,7 @@ const Dashboard = () => {
   // ✅ Local state hooks
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
   
   // ✅ Data fetching hooks
   const { 
@@ -164,7 +167,7 @@ const Dashboard = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {t('dashboardErrorMessage')}
           </p>
-          <Button onClick={() => window.location.reload()}>
+          <Button onClick={handleRefresh}>
             {t('reloadPage')}
           </Button>
         </Card>
@@ -220,18 +223,6 @@ const Dashboard = () => {
               transition={{ delay: 0.4 }}
               className="flex items-center gap-3"
             >
-              {/* Quick Action Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowQuickAction(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline font-medium">{t('quickActions.add', 'Quick Add')}</span>
-                </Button>
-              </motion.div>
-
               {/* Refresh Button */}
               <motion.div whileTap={{ scale: 0.95 }}>
                 <Button
@@ -346,6 +337,22 @@ const Dashboard = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Add Transaction Modal */}
+      <AddTransactionModal
+        isOpen={showAddTransaction}
+        onClose={() => setShowAddTransaction(false)}
+        onSuccess={async () => {
+          // Trigger dashboard refresh without full page reload
+          try {
+            // Dispatch a dashboard refresh event used by useDashboard
+            window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
+          } catch (_) {}
+        }}
+      />
+
+      {/* Floating FAB bottom-left */}
+      <FloatingAddTransactionButton onClick={() => setShowAddTransaction(true)} />
     </div>
   );
 };

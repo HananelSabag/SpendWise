@@ -1,3 +1,69 @@
+- Recurring Manager UX Overhaul – Plan added
+- Recurring Manager Implementation – Phase 1
+  - Replaced old modal entry points with new full-screen `RecurringManagerPanel` from header quick panels and upcoming widget.
+  - New files: `RecurringManagerPanel.jsx`, `TemplateCard.jsx`, `UpcomingList.jsx`. Old `RecurringTransactionsManager.jsx` marked deprecated.
+  - Wired to server endpoints: templates CRUD, stop/regenerate, upcoming list/delete. Verified DB tables/columns and presence of upcoming data via Supabase tools.
+  - User request: Transform recurring manager into full control center (templates + upcoming), inspired by Category Manager.
+  - Analysis: Existing `RecurringTransactionsManager.jsx` modal + hooks cover core operations; propose full-screen panel with tabs, rich filters, bulk actions, and inline controls; reuse server endpoints already available.
+  - Affected layers: Client (UI, hooks, translations); Server unchanged.
+  - Planned files: new `recurring/RecurringManagerPanel.jsx`, `TemplateCard.jsx`, `UpcomingList.jsx`; updates to hooks and translations.
+  - Action: Documented detailed blueprint in `doc/workflow_state.md` and awaiting approval before implementation.
+### Dashboard real-time sync: analysis and fixes
+
+- User request: Ensure `BalancePanel`, `RecentTransactionsWidget`, quick stats, and `QuickActionsBar` reflect create/update/delete instantly without F5. Avoid cache conflicts; keep performance tight; clean up legacy code.
+- Analysis: Identified missing/weak invalidation and reliance on page reloads. `useTransactionActions` invalidated some keys but didn't refetch `balance`; `Dashboard` modal used `window.location.reload`; `BalanceContext` assumed registered refresh was a plain function, not the `{ normal, silent }` object our `useBalance` registers; `RecentTransactionsWidget` didn't auto-refresh.
+- Affected layers: React Query cache, dashboard hooks, context refresh bus, dashboard components.
+- Affected files: `client/src/contexts/BalanceContext.jsx`, `client/src/hooks/useTransactionActions.js`, `client/src/pages/Dashboard.jsx`, `client/src/components/features/dashboard/RecentTransactionsWidget.jsx`.
+- Actions taken:
+  - BalanceContext: accept both function and `{ normal, silent }`; robustly trigger `normal/silent` as available.
+  - useTransactionActions: broaden invalidation to include `balance` and `dashboard`; refetch both when priority is high/critical; parallelize invalidations.
+  - Dashboard: remove full page reload on modal success; dispatch dashboard refresh event instead; replace error-state reload button with `handleRefresh`.
+  - RecentTransactionsWidget: enable `autoRefresh` via `useTransactions` to stay fresh automatically.
+  - Verified no linter errors and kept defaults that avoid window focus refetch for performance.
+### Analytics Page Real-Data Alignment (Server + Client)
+
+- User request: Align analytics page to real data; ensure period tabs work; verify data for user `hananel12345@gmail.com`.
+- Analysis: Server exposes `GET /api/v1/analytics/dashboard/summary?period=<days>` handled by `transactionController.getAnalyticsSummary` using `Transaction.getSummary(userId, period)`. Client page `client/src/pages/Analytics.jsx` was not passing the selected period, always defaulting, resulting in zeros. DB check confirms user has data in the last 30 days (20 tx; income ~40202; expenses ~16346.99).
+- Affected layers: Client (API module and page), Server already aligned, DB verified.
+- Affected files:
+  - `client/src/api/analytics.js`
+  - `client/src/pages/Analytics.jsx`
+- Actions taken:
+  - Modified `analyticsAPI.dashboard.getSummary(periodDays)` to send `period` query param and to use `days` on fallback endpoint.
+  - Updated `Analytics.jsx` to pass `selectedPeriod` into `getSummary` so UI tabs drive server query.
+  - Verified no lints; DB tables confirmed via Supabase tools; observed non-zero recent activity for the target user.
+
+### Task: Auth recovery manager – remove window setter conflict and finalize toast dedup
+
+- User request summary: Ensure a single, production-grade component handles reconnection/recovery and toasts without duplicates; fix runtime error from setting `window.authRecoveryManager`.
+- Analysis: A getter for `window.authRecoveryManager` was defined in `authRecoveryManager.js`. `AuthRecoveryProvider.jsx` also attempted to assign to the same property, causing `Cannot set property authRecoveryManager of #<Window> which has only a getter`.
+- Affected layers: Frontend providers, auth recovery utility.
+- Affected files:
+  - `client/src/components/common/AuthRecoveryProvider.jsx`
+  - `client/src/utils/authRecoveryManager.js`
+- Actions taken:
+  1) Removed the dev-only assignment from `AuthRecoveryProvider.jsx` to avoid clobbering the getter.
+  2) Kept a lazy `window.authRecoveryManager` getter in `authRecoveryManager.js` so devs can access the singleton without early initialization.
+  3) Health endpoint composition hardened to respect both with/without `/api/v1` on `VITE_API_URL`.
+  4) Confirmed toast de-dup remains (single loading toast; dismissed on success/error).
+
+- Task: Fix missing translations in Admin Dashboard tabs/cards
+- Analysis: Admin components (`AdminDashboard.jsx`, `AdminUsers.jsx`) referenced keys under `admin.actions.*`, `admin.common.refresh`, etc. English `admin.js` lacked these sections; Hebrew already had them. This caused runtime "Translation missing" logs.
+- Affected layers: Frontend translations
+- Affected files: `client/src/translations/en/admin.js`
+- Actions taken: Added `actions`, `users`, `table`, `filters`, `roles`, `confirmations`, `status`, `fields`, `common`, and `errors` sections to English `admin.js` to align with usages. Ran lints and built client successfully.
+### Admin dashboard wiring: DB alignment and endpoint fixes (date: now)
+- User request: Admin dashboard UI works but DB actions do nothing; cannot delete/block users; system settings don't affect production; activity log shows nothing. Verify Render+Vercel clients against Supabase and fix each tab.
+- Analysis: Server routes exist and call DB directly. Supabase has tables and functions except `admin_manage_user`. `user_restrictions` has UNIQUE(user_id, restriction_type, is_active) so server ON CONFLICT key was mismatched. Client admin API had params/shape mismatches (users used page instead of offset; settings/get parsing; activity response shape). `AdminActivity` page wasn't fetching.
+- Affected layers: server (controllers), client (api module, admin pages), database (verify functions), docs.
+- Affected files: `server/controllers/adminController.js`, `client/src/api/admin.js`, `client/src/pages/admin/AdminActivity.jsx`, `client/src/pages/admin/AdminSettings.jsx`, `client/src/pages/admin/AdminUsers.jsx`.
+- Actions taken:
+  - Server: fixed ON CONFLICT to `(user_id, restriction_type, is_active)` in `manageUser` block case to match DB constraint; ensures block/unblock works and logs to `admin_activity_log`.
+  - Client API: normalized admin settings API (`get` returns `data` array; `update({key,value,...})`), added cached `getAll`, mapped users `page`→`offset`, corrected activity parsing to use `response.data.data.activities/total_count`.
+  - UI: `AdminActivity.jsx` now fetches from API and renders a table; `AdminSettings.jsx` reads `data` array from server and saves via unified `update`; ensured users page relies on API outputs; cache invalidations kept.
+  - DB: Verified existence of `users`, `user_restrictions`, `system_settings`, `admin_activity_log`, functions `admin_manage_settings`, `get_admin_activity_log`; confirmed missing `admin_manage_user` (server uses direct SQL instead).
+  - Production alignment: Confirmed API base points to Render (`VITE_API_URL` or default onrender URL). Verified super admin exists (`hananel12345@gmail.com`). Activity table currently empty; will populate as actions are performed.
+
 ### Task: TransactionsList bulk selection not working
 
 - User request: Fix or remove the non-working bulk selection checkbox in the transactions list; ensure correct behavior for one-time and recurring transactions; verify server support for bulk ops.
@@ -4140,3 +4206,34 @@ User requested complete removal of all broken Google OAuth code and rebuild from
 ✅ **Ready for Testing**: Will work once origins propagate
 
 **Status**: 🎯 **CLEAN GOOGLE OAUTH READY** - Complete rebuild successful. Simple, maintainable code ready for testing. Will work automatically once Google origin cache updates (15-30 minutes).
+
+## Task: Align Onboarding Modal Size with Quick Panel Managers
+
+- User request: Make the onboarding modal the same wide and tall window size as the Recurring Manager and Category Manager shown from the header quick panels.
+- Analysis: Recurring (`RecurringManagerPanel.jsx`) and Category (`CategoryManager.jsx`) managers both use a full-panel layout with `absolute inset-4 sm:inset-8` inside a fixed overlay. The onboarding modal used a centered container with max-width/height. To match, we should switch the onboarding container to the same inset panel layout.
+- Affected layers: Frontend UI (React components)
+- Affected files:
+  - `client/src/components/features/onboarding/OnboardingModal.jsx`
+- Actions taken:
+  - Updated onboarding modal container from centered max-w layout to panel-style container: `absolute inset-4 sm:inset-8 rounded-xl overflow-hidden shadow-2xl bg-white dark:bg-gray-900 flex flex-col`, matching Category/Recurring managers.
+  - Kept backdrop and animations; preserved functionality and content.
+  - Lint check: passed with no new errors.
+
+## Task: Onboarding header/footer refinements and completion close fix
+- User request: Make header much smaller by putting step, title and subtitle on one row with spacing; add subtle light blue header background; show Back button on steps 2+; ensure completion closes modal and marks DB complete.
+- Analysis: Header already had compact mode but stacked; Footer supported Back button but depends on navigation props. Navigation exposes `goBack` and `canGoBack`. Completion path should call `onClose` after success.
+- Affected files:
+  - `client/src/components/features/onboarding/components/OnboardingHeader.jsx`
+  - `client/src/components/features/onboarding/OnboardingModal.jsx`
+- Actions taken:
+  - Header: Implemented ultra-compact single-row layout in `compact` mode (Step • Title • Subtitle) with truncation and kept close button; added subtle light-blue header background from modal container.
+  - Modal: Applied light blue header background (`bg-blue-50/60` + dark mode); switched navigation to use `goBack`; passed Back capability to footer and step components; on successful completion now also calls `onClose()` to ensure the modal closes.
+  - Lint: No errors.
+
+## Verification: Quick Recurring Setup step -> server alignment
+- Reviewed `QuickRecurringSetupStep.jsx` data flow and `NewCompletionStep.jsx` template creation.
+- Client calls `api.transactions.createRecurringTemplate` which POSTs to `/transactions/templates`.
+- Server `transactionRoutes.js` and `transactionController.createRecurringTemplate` confirm:
+  - Creates the template, then generates current-month transactions and 3 months of upcoming items.
+- Ensured amounts and types mapping are correct; category is resolved/created server-side when only `category_name` is provided.
+- No code change required for functionality; behavior already matches requirements. Lint OK.

@@ -311,7 +311,7 @@ class AdminController {
           await db.query(`
             INSERT INTO user_restrictions (user_id, restriction_type, reason, applied_by, is_active, created_at)
             VALUES ($1, 'blocked', $2, $3, true, NOW())
-            ON CONFLICT (user_id, restriction_type) 
+            ON CONFLICT (user_id, restriction_type, is_active) 
             DO UPDATE SET is_active = true, updated_at = NOW(), reason = $2
           `, [userId, reason || 'Blocked by admin', adminId], 'admin_block_user');
           

@@ -101,6 +101,7 @@ export default {
   // Actions
   actions: {
     add: "הוסף עסקה",
+    addTransaction: "הוסף עסקה",
     edit: "ערוך עסקה",
     delete: "מחק עסקה",
     duplicate: "שכפל",

@@ -11,18 +11,12 @@ const AuthRecoveryProvider = ({ children }) => {
   useEffect(() => {
     // Initialize auth recovery manager
     const recoveryManager = getAuthRecoveryManager();
-    
-    // Make it globally available for debugging (only in development)
-    if (import.meta.env.DEV) {
-      window.authRecoveryManager = recoveryManager;
-    }
 
     // Cleanup on unmount
     return () => {
       if (recoveryManager.stopHealthMonitoring) {
         recoveryManager.stopHealthMonitoring();
       }
-      delete window.authRecoveryManager;
     };
   }, []);
 

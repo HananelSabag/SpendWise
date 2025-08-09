@@ -28,15 +28,16 @@ export const adminAPI = {
     }
   },
 
-  // ✅ Admin Settings API
+  // ✅ Admin Settings API (unified)
   settings: {
-    // Get current system settings
-    async get() {
+    // Get current system settings (optionally by category)
+    async get(category = null) {
       try {
-        const response = await api.client.get('/admin/settings');
+        const response = await api.client.get('/admin/settings', { params: category ? { category } : {} });
+        // Server responds with { success, data, categories }
         return {
           success: true,
-          data: response.data
+          data: response.data?.data || []
         };
       } catch (error) {
         return {
@@ -46,20 +47,47 @@ export const adminAPI = {
       }
     },
 
-    // Update system settings
-    async update(settings) {
+    // Get all settings or by category (cached)
+    async getAll(category = null) {
       try {
-        const response = await api.client.put('/admin/settings', settings);
+        const params = category ? { category } : {};
+        const cacheKey = category ? `admin-settings-${category}` : 'admin-settings-all';
+        const response = await api.cachedRequest('/admin/settings', { method: 'GET', params }, cacheKey, 10 * 60 * 1000);
         return {
           success: true,
-          data: response.data
+          data: response.data?.data || []
         };
       } catch (error) {
-        return {
-          success: false,
-          error: api.normalizeError(error)
-        };
+        return { success: false, error: api.normalizeError(error) };
       }
+    },
+
+    // Update system setting
+    async update({ key, value, description = null, category = 'general' }) {
+      try {
+        const response = await api.client.put('/admin/settings', { key, value, description, category });
+        // Invalidate caches
+        api.clearCache('admin-settings');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: api.normalizeError(error) };
+      }
+    },
+
+    // Delete a setting (super admin only)
+    async delete(key) {
+      try {
+        const response = await api.client.delete(`/admin/settings/${key}`);
+        api.clearCache('admin-settings');
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: api.normalizeError(error) };
+      }
+    },
+
+    // Alias
+    async getByCategory(category) {
+      return this.getAll(category);
     }
   },
 
@@ -78,12 +106,13 @@ export const adminAPI = {
       } = params;
 
       try {
+        // Map page -> offset for server
+        const offset = Math.max(0, (Number(page) - 1) * Number(limit));
         const response = await api.client.get('/admin/users', {
           params: {
-            page,
             limit,
+            offset,
             search,
-            status,
             role,
             sortBy,
             sortOrder
@@ -265,83 +294,7 @@ export const adminAPI = {
     }
   },
 
-  // ✅ System Settings APIs
-  settings: {
-    // Get all settings or by category
-    async getAll(category = null) {
-      try {
-        const params = category ? { category } : {};
-        const cacheKey = category ? `admin-settings-${category}` : 'admin-settings-all';
-        
-        const response = await api.cachedRequest('/admin/settings', {
-          method: 'GET',
-          params
-        }, cacheKey, 10 * 60 * 1000); // 10 minute cache
-
-        return {
-          success: true,
-          data: response.data || []
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: api.normalizeError(error)
-        };
-      }
-    },
-
-    // Update a setting
-    async update(key, value, description = null, category = 'general') {
-      try {
-        const response = await api.client.put('/admin/settings', {
-          key,
-          value,
-          description,
-          category
-        });
-
-        // Clear settings cache
-        api.clearCache('admin-settings');
-
-        return {
-          success: true,
-          message: 'Setting updated successfully',
-          data: response.data
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: api.normalizeError(error)
-        };
-      }
-    },
-
-    // Delete a setting (super admin only)
-    async delete(key) {
-      try {
-        const response = await api.client.delete(`/admin/settings/${key}`);
-
-        // Clear settings cache
-        api.clearCache('admin-settings');
-
-        return {
-          success: true,
-          message: 'Setting deleted successfully',
-          data: response.data
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: api.normalizeError(error)
-        };
-      }
-    },
-
-    // Get settings by category
-    async getByCategory(category) {
-      return this.getAll(category);
-    }
-  },
+  
 
   // ✅ Activity Log APIs
   activity: {
@@ -357,10 +310,11 @@ export const adminAPI = {
       } = params;
 
       try {
+        const offset = Math.max(0, (Number(page) - 1) * Number(limit));
         const response = await api.client.get('/admin/activity', {
           params: {
-            page,
             limit,
+            offset,
             adminId,
             actionType,
             startDate,
@@ -368,14 +322,18 @@ export const adminAPI = {
           }
         });
 
+        // Server shape: { success, data: { activities, total_count } }
+        const payload = response.data?.data || {};
+        const activities = payload.activities || [];
+        const total = payload.total_count || 0;
         return {
           success: true,
-          data: response.data.activities || [],
+          data: activities,
           pagination: {
             page,
             limit,
-            total: response.data.total_count || 0,
-            pages: Math.ceil((response.data.total_count || 0) / limit)
+            total,
+            pages: Math.ceil(total / limit)
           }
         };
       } catch (error) {

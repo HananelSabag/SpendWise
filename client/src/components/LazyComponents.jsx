@@ -82,6 +82,12 @@ export const Analytics = createLazyComponent(
   'Analytics'
 );
 
+// ✅ Recurring Manager Panel
+export const RecurringManagerPanel = createLazyComponent(
+  () => import('../components/features/transactions/recurring/RecurringManagerPanel.jsx'),
+  'RecurringManagerPanel'
+);
+
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
   () => import('../pages/NotFound.jsx'),

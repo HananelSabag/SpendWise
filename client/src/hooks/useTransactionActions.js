@@ -100,30 +100,40 @@ export const useTransactionActions = (context = 'transactions') => {
     
     const queriesToInvalidate = priorityMap[priority] || priorityMap.high;
     
-    // ✅ FIXED: Invalidate infinite queries properly
-    for (const queryKey of queriesToInvalidate) {
-      await queryClient.invalidateQueries({ 
+    // ✅ FIXED: Invalidate infinite queries properly + balance/dashboard keys
+    const invalidatePromises = queriesToInvalidate.map((queryKey) => {
+      return queryClient.invalidateQueries({
         queryKey: [queryKey],
-        exact: false // This ensures infinite queries are also invalidated
+        exact: false
       });
-    }
+    });
+    // Also ensure balance and dashboard are included for UI sync
+    invalidatePromises.push(
+      queryClient.invalidateQueries({ queryKey: ['balance'], exact: false }),
+      queryClient.invalidateQueries({ queryKey: ['dashboard'], exact: false })
+    );
+    await Promise.allSettled(invalidatePromises);
     
     // ✅ NEW: For high priority operations, force immediate refresh
     if (priority === 'critical' || priority === 'high') {
-      // Refetch infinite transaction queries
+      // Refetch active transaction queries
       await queryClient.refetchQueries({ 
-        queryKey: ['transactions', 'infinite'], 
+        queryKey: ['transactions'], 
         type: 'active',
         exact: false
       });
       
-      if (context === 'quickActions' || context === 'dashboard') {
-        await queryClient.refetchQueries({ 
-          queryKey: ['dashboard'], 
-          type: 'active',
-          exact: false
-        });
-      }
+      // Always refetch dashboard and balance when visible
+      await queryClient.refetchQueries({ 
+        queryKey: ['dashboard'], 
+        type: 'active',
+        exact: false
+      });
+      await queryClient.refetchQueries({ 
+        queryKey: ['balance'], 
+        type: 'active',
+        exact: false
+      });
     }
   }, [queryClient, context]);
 

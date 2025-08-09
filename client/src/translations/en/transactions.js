@@ -101,6 +101,7 @@ export default {
   // Actions
   actions: {
     add: "Add Transaction",
+    addTransaction: "Add Transaction",
     edit: "Edit Transaction",
     delete: "Delete Transaction",
     duplicate: "Duplicate",

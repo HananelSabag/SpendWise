@@ -373,34 +373,74 @@ export const analyticsAPI = {
   // ✅ Dashboard Analytics APIs
   dashboard: {
     // Get dashboard summary
-    async getSummary(date = null) {
+    async getSummary(periodDays = 30) {
       try {
-        const params = date ? { date } : {};
+        const params = { period: periodDays };
         
         const response = await api.cachedRequest('/analytics/dashboard/summary', {
           method: 'GET',
           params
-        }, `dashboard-summary-${date || 'current'}`, 5 * 60 * 1000); // 5 minute cache
+        }, `dashboard-summary-${periodDays}d`, 5 * 60 * 1000); // 5 minute cache
+
+        // Normalize server payload: unwrap nested { success, data }
+        const body = response.data;
+        const normalized = body && typeof body === 'object' && 'data' in body ? body.data : body;
 
         return {
           success: true,
-          data: response.data
+          data: normalized
         };
       } catch (error) {
         console.warn('📊 Analytics endpoint failed, trying fallback:', error.message);
         
         // ✅ FALLBACK: Try the existing transactions/dashboard endpoint
         try {
-          const endpoint = date ? `/transactions/dashboard?date=${date}` : '/transactions/dashboard';
+          const endpoint = periodDays ? `/transactions/dashboard?days=${periodDays}` : '/transactions/dashboard';
           
           const response = await api.cachedRequest(endpoint, {
             method: 'GET'
-          }, `dashboard-fallback-${date || 'current'}`, 5 * 60 * 1000);
+          }, `dashboard-fallback-${periodDays}d`, 5 * 60 * 1000);
+
+          // Normalize fallback shape to match Analytics page expectations
+          const body = response.data;
+          const fb = body && typeof body === 'object' && 'data' in body ? body.data : body;
+
+          let normalized;
+          if (fb && typeof fb === 'object' && fb.summary && fb.recent_transactions) {
+            const s = fb.summary;
+            const savingsRate = s.total_income > 0
+              ? Math.round(((Number(s.total_income || 0) - Number(s.total_expenses || 0)) / Number(s.total_income || 0)) * 100)
+              : 0;
+            normalized = {
+              balance: {
+                current: Number(s.net_balance || 0),
+                currency: 'USD'
+              },
+              monthlyStats: {
+                income: Number(s.total_income || 0),
+                expenses: Number(s.total_expenses || 0),
+                net: Number(s.net_balance || 0),
+                transactionCount: Number(s.total_transactions || 0)
+              },
+              recentTransactions: fb.recent_transactions,
+              summary: {
+                totalTransactions: Number(s.total_transactions || 0),
+                categoriesUsed: Number(s.categories_used || 0),
+                avgTransactionAmount: Number(s.avg_expense || 0),
+                savingsRate
+              },
+              period: periodDays,
+              generatedAt: fb.metadata?.generated_at || new Date().toISOString()
+            };
+          } else {
+            // If structure already matches expected shape
+            normalized = fb;
+          }
 
           console.log('📊 Fallback dashboard endpoint worked');
           return {
             success: true,
-            data: response.data
+            data: normalized
           };
         } catch (fallbackError) {
           console.error('📊 Both dashboard endpoints failed:', fallbackError);

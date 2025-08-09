@@ -57,6 +57,7 @@ import AddTransactionModal from '../components/features/transactions/modals/AddT
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
+import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 
 // ✅ NEW: Upcoming Transactions System
 import UpcomingTransactionsSimple from '../components/features/transactions/UpcomingTransactionsSimple';
@@ -300,17 +301,7 @@ const Transactions = () => {
               transition={{ delay: 0.4 }}
               className="flex items-center gap-3"
             >
-              {/* Add Transaction Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="primary"
-                  onClick={handleAddTransaction}
-                  className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline font-medium">{t('actions.addTransaction')}</span>
-                </Button>
-              </motion.div>
+              {/* Removed: Add Transaction Button (replaced by FAB) */}
 
               {/* Refresh Button */}
               <motion.div whileTap={{ scale: 0.95 }}>
@@ -592,6 +583,9 @@ const Transactions = () => {
           onSuccess={handleTransactionSuccess}
         />
       )}
+
+      {/* Floating Add Transaction Button (bottom-left) */}
+      <FloatingAddTransactionButton onClick={handleAddTransaction} />
     </div>
   );
 };

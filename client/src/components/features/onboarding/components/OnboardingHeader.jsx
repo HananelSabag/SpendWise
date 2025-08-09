@@ -69,79 +69,132 @@ const OnboardingHeader = ({
       </div>
 
       {/* ✅ Header Content */}
-      <div className={cn(
-        "flex items-start justify-between",
-        compact ? "gap-1.5" : "gap-2.5"
-      )}>
-        
-        {/* ✅ Left: Title & Subtitle */}
-        <div className="flex-1 min-w-0">
-          
-          {/* ✅ Step indicator */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "text-sm font-medium text-primary-600 dark:text-primary-400",
-              compact ? "mb-0.5" : "mb-1"
-            )}
-          >
-            {stepText}
-          </motion.div>
-
-          {/* ✅ COMPACT: Smaller title */}
-          <motion.h2
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className={cn(
-              "font-bold text-gray-900 dark:text-white",
-              "leading-tight",
-              compact ? "text-lg mb-0" : "text-2xl sm:text-3xl mb-1"
-            )}
-          >
-            {displayTitle}
-          </motion.h2>
-
-          {/* ✅ COMPACT: Smaller subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className={cn(
-              "text-gray-600 dark:text-gray-300",
-              "leading-relaxed",
-              compact ? "text-xs" : "text-base sm:text-lg"
-            )}
-          >
-            {displaySubtitle}
-          </motion.p>
-        </div>
-
-        {/* ✅ Right: Close button */}
-        {canClose && onClose && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Button
-              variant="ghost"
-              size={compact ? "sm" : "md"} // ✅ Smaller button in compact mode
-              onClick={onClose}
-              className={cn(
-                "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
-                "hover:bg-gray-100 dark:hover:bg-gray-800",
-                "transition-colors",
-                compact ? "p-2" : "p-3" // ✅ Less padding in compact mode
-              )}
-              aria-label="Close onboarding"
+      {compact ? (
+        // Ultra-compact single-row header: Step • Title • Subtitle
+        <div className={cn("flex items-center justify-between gap-2")}> 
+          <div className="flex-1 min-w-0 flex items-center gap-2 text-gray-900 dark:text-white">
+            <motion.span
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 whitespace-nowrap"
             >
-              <X className={compact ? "w-4 h-4" : "w-5 h-5"} />
-            </Button>
-          </motion.div>
-        )}
-      </div>
+              {stepText}
+            </motion.span>
+
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+
+            <motion.span
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="font-semibold text-sm sm:text-base truncate"
+              title={displayTitle}
+            >
+              {displayTitle}
+            </motion.span>
+
+            <motion.span
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="hidden sm:inline text-xs text-gray-600 dark:text-gray-300 truncate"
+              title={displaySubtitle}
+            >
+              • {displaySubtitle}
+            </motion.span>
+          </div>
+
+          {/* Right: Close */}
+          {canClose && onClose && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className={cn(
+                  "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
+                  "hover:bg-gray-100 dark:hover:bg-gray-800",
+                  "transition-colors p-2"
+                )}
+                aria-label="Close onboarding"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </div>
+      ) : (
+        <div className={cn(
+          "flex items-start justify-between",
+          "gap-2.5"
+        )}>
+          {/* Left: Title & Subtitle */}
+          <div className="flex-1 min-w-0">
+            {/* Step indicator */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                "text-sm font-medium text-primary-600 dark:text-primary-400",
+                "mb-1"
+              )}
+            >
+              {stepText}
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className={cn(
+                "font-bold text-gray-900 dark:text-white",
+                "leading-tight text-2xl sm:text-3xl mb-1"
+              )}
+            >
+              {displayTitle}
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className={cn(
+                "text-gray-600 dark:text-gray-300",
+                "leading-relaxed text-base sm:text-lg"
+              )}
+            >
+              {displaySubtitle}
+            </motion.p>
+          </div>
+
+          {/* Right: Close button */}
+          {canClose && onClose && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={onClose}
+                className={cn(
+                  "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
+                  "hover:bg-gray-100 dark:hover:bg-gray-800",
+                  "transition-colors p-3"
+                )}
+                aria-label="Close onboarding"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </motion.div>
+          )}
+        </div>
+      )}
 
       {/* ✅ COMPACT: Optional progress percentage (smaller) */}
       {!compact && (

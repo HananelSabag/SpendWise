@@ -3,14 +3,36 @@
  * @version 2.0.0
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../../stores';
 import { cn } from '../../utils/helpers';
+import { api } from '../../api';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 const AdminActivity = () => {
   const { t, isRTL } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      const res = await api.admin.activity.getLog({ limit: 100 });
+      if (!mounted) return;
+      if (res.success) {
+        setActivities(res.data || []);
+        setError(null);
+      } else {
+        setError(res.error?.message || 'Failed to load activity');
+      }
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className={cn(
@@ -109,28 +131,36 @@ const AdminActivity = () => {
           </div>
           
           <div className="p-6">
-            <div className="text-center py-12">
-              <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Activity Monitoring System
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Real-time activity logging connected to the admin API system.
-              </p>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Features being implemented:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Real-time activity feed from admin API</li>
-                  <li>Advanced filtering and search</li>
-                  <li>Activity timeline visualization</li>
-                  <li>Admin action tracking</li>
-                  <li>Security event monitoring</li>
-                  <li>Export activity reports</li>
-                </ul>
+            {loading ? (
+              <div className="flex justify-center py-8"><LoadingSpinner size="large" /></div>
+            ) : error ? (
+              <div className="text-center text-red-600 dark:text-red-400">{error}</div>
+            ) : activities.length === 0 ? (
+              <div className="text-center text-gray-600 dark:text-gray-400 py-8">No activity yet</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900/40">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">When</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {activities.map((a) => (
+                      <tr key={a.id}>
+                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{new Date(a.created_at).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.admin_username || a.admin_email || 'Admin'}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.action_type}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.target_user?.email || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

@@ -257,3 +257,81 @@ LANGUAGE CONTEXT: ✅ PERFECTED
 - ✅ Server 404/500 errors handled gracefully - RESOLVED
 
 **All critical and secondary errors have been completely resolved. Application is now robust and handles both client and server-side failures gracefully.**
+
+---
+
+## Plan – Recurring Manager UX Overhaul (Blueprint)
+
+Goal: Redesign the Recurring Transactions Manager into a full-screen, high-UX control center (inspired by `CategoryManager`) where users can manage all recurring templates and upcoming instances in one place: create, edit, pause/resume, delete, skip dates, stop/regenerate, and preview future runs.
+
+Scope
+- Replace the current modal flow with a full-screen responsive panel.
+- Consolidate templates and upcoming instances with two synchronized views: Templates, Upcoming.
+- Add rich filters, search, sorting, bulk actions, and inline actions.
+- Ensure a11y, RTL, i18n, and theming parity with Category Manager.
+
+Primary Views/Tabs
+- Templates: list/grid of recurring templates with status, amount, type, cadence, next/last run, counts; inline actions.
+- Upcoming: grouped by template; supports delete-single, stop generation, regenerate for template; quick filters for next 7/30/90 days.
+- Create/Edit: side panel form with live preview of next 3 runs; reuses existing setup modal logic.
+
+Top Bar
+- Title, stats (total/active/paused), search, filters (status, type, cadence), sort, refresh.
+- Global actions: Generate upcoming (all), Stop all (safety confirm), New recurring, Export (CSV/JSON).
+
+Inline Actions (per template)
+- Edit, Pause/Resume, Delete, Preview (expand), Regenerate upcoming, Stop generation, Skip dates.
+
+Data & API Mapping
+- Templates: `api.transactions.getRecurringTemplates()`, `createRecurringTemplate()`, `updateRecurringTemplate()`, `deleteRecurringTemplate()`.
+- Upcoming: `api.transactions.getUpcomingTransactions()`, `deleteUpcomingTransaction(id)`.
+- Generation controls: `generateRecurring()`, `stopTemplateGeneration(templateId)`, `regenerateUpcomingForTemplate(templateId)`, `skipRecurringDates(id, dates)`.
+
+State & Caching
+- Query Keys: `['recurringTemplates']`, `['upcomingTransactions']` with optimistic updates; invalidate on mutations.
+- Local UI state: activeTab, filters, selection, editor state, preview.
+
+UX Details
+- Full-screen overlay like `CategoryManager` with large header and control row.
+- Smooth transitions (framer-motion), keyboard support, focus traps.
+- Badge indicators for status/type; color-coded amounts; RTL-aware layout.
+
+Pseudocode (high level)
+- Component `RecurringManagerPanel`:
+  - Header (title, stats, actions)
+  - Controls (search, filters, sort)
+  - Tabs: Templates | Upcoming
+  - Content:
+    - Templates: list/grid of TemplateCard rows; inline actions; expandable details
+    - Upcoming: grouped list by template; date range quick filters; inline delete
+  - SidePanel: Create/Edit recurring (reuses `RecurringSetupModal` logic embedded)
+
+Accessibility & i18n
+- All interactive elements focusable, aria labels; all text via `t()`.
+
+Performance
+- Virtualize long lists; debounce search; memoized selectors.
+
+Files (planned)
+- New: `client/src/components/features/transactions/recurring/RecurringManagerPanel.jsx`
+- New: `client/src/components/features/transactions/recurring/TemplateCard.jsx`
+- New: `client/src/components/features/transactions/recurring/UpcomingList.jsx`
+- Update: `client/src/hooks/useRecurringTransactions.js` (bulk actions helpers)
+- Update: `client/src/hooks/useUpcomingTransactions.js` (range filters/grouping)
+- Update: `client/src/pages/Dashboard.jsx` (open panel entry point)
+- Update: translations `en/he` under `transactions.recurringManager` keys
+
+Rollout
+1) Implement panel behind a feature-flag prop; 2) keep old modal accessible; 3) swap after verification.
+
+Verification
+- Unit test data transforms; manual E2E for create/edit/delete/pause/resume/stop/regenerate/skip; RTL checks.
+
+Security
+- Honor auth/role; prevent actions when unauthenticated; graceful error toasts.
+
+Approval Needed
+- Confirm full-screen replacement and tab structure; proceed to implementation on approval.
+
+## Log
+- 2025-08-09: Drafted UX overhaul plan for Recurring Manager; awaiting approval before implementation.

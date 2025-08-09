@@ -113,10 +113,10 @@ router.get('/recurring',
   transactionController.generateRecurring
 );
 
-// Get all recurring templates
+// Get all recurring templates (list)
 router.get('/templates',
   getTransactionsLimiter,
-  transactionController.generateRecurring
+  transactionController.getRecurringTemplates
 );
 
 // Create recurring template - CRITICAL FOR ONBOARDING

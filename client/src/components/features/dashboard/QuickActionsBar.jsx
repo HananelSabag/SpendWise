@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Plus, Minus, DollarSign, Zap, TrendingUp, TrendingDown,
+  Plus, Minus, Zap, TrendingUp, TrendingDown,
   Eye, BarChart3, Target, Send, Loader2
 } from 'lucide-react';
 
@@ -16,7 +16,8 @@ import {
 import { 
   useTranslation, 
   useNotifications, 
-  useCurrency
+  useCurrency,
+  CURRENCIES
 } from '../../../stores';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { useCategory } from '../../../hooks/useCategory';
@@ -50,7 +51,8 @@ const QUICK_CATEGORIES = {
 const QuickActionsBar = ({ className = '' }) => {
   const { t } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
-  const { formatCurrency } = useCurrency();
+  const { currency } = useCurrency();
+  const currencySymbol = CURRENCIES[currency]?.symbol || '₪';
   
   // ✅ Hooks for transaction creation
   const { createTransaction, isCreating } = useTransactionActions('quickActions');
@@ -269,11 +271,14 @@ const QuickActionsBar = ({ className = '' }) => {
               step="0.01"
               min="0"
             />
-            <div className={cn(
-              'absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-bold',
-              activeType === 'expense' ? 'text-red-500' : 'text-green-500'
-            )}>
-              <DollarSign className="w-5 h-5" />
+            <div
+              className={cn(
+                'absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold',
+                activeType === 'expense' ? 'text-red-500' : 'text-green-500'
+              )}
+              aria-hidden="true"
+            >
+              {currencySymbol}
             </div>
           </div>
 

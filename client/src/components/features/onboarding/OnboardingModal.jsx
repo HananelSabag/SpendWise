@@ -72,7 +72,7 @@ const OnboardingModal = ({
     isLastStep,
     isFirstStep,
     goNext,
-    goPrevious,
+    goBack,
     goToStep,
     canSkip,
     handlePrimaryAction
@@ -98,6 +98,8 @@ const OnboardingModal = ({
       if (result) {
         console.log('✅ OnboardingModal - Completion successful');
         onComplete?.();
+        // Ensure the modal actually closes after finishing
+        onClose?.();
       }
     } catch (error) {
       console.error('❌ OnboardingModal - Completion failed:', error);
@@ -158,10 +160,7 @@ const OnboardingModal = ({
           exit="exit"
           className={cn(
             "fixed inset-0 z-50",
-            "bg-black/70 backdrop-blur-sm",
-            "flex items-center justify-center",
-            "p-4 sm:p-6 lg:p-8",
-            "overflow-hidden"
+            "bg-black/70 backdrop-blur-sm"
           )}
           onClick={(e) => {
             // Only close on backdrop click, not on modal content click
@@ -174,29 +173,15 @@ const OnboardingModal = ({
             variants={modalVariants}
             onClick={(e) => e.stopPropagation()} // Prevent backdrop click
             className={cn(
-              // ✅ ENHANCED: MUCH WIDER modal as requested
-              "relative w-full h-full max-w-7xl max-h-[95vh]",
+              "absolute inset-4 sm:inset-8",
+              "rounded-xl overflow-hidden shadow-2xl",
               "bg-white dark:bg-gray-900",
               "flex flex-col",
-              
-              // ✅ RESPONSIVE: Much wider across all screens
-              "sm:h-auto sm:max-h-[90vh] sm:rounded-2xl",
-              "md:max-w-6xl md:max-h-[85vh]",
-              "lg:max-w-7xl lg:max-h-[90vh]",
-              "xl:max-w-[90vw]", // ✅ SUPER WIDE on large screens
-              "2xl:max-w-[85vw]",
-              
-              // ✅ ENHANCED: Better shadows and borders
-              "shadow-2xl border border-gray-200 dark:border-gray-700",
-              "sm:shadow-xl",
-              
-              // ✅ ENHANCED: Prevent content overflow
-              "overflow-hidden",
               className
             )}
           >
-            {/* Compact header padding */}
-            <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200 dark:border-gray-700">
+            {/* Compact header padding with subtle light-blue background */}
+            <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-900/10">
               <OnboardingHeader
                 currentStep={currentStep}
                 totalSteps={steps.length}
@@ -240,7 +225,7 @@ const OnboardingModal = ({
                         data={getStepData(currentStepConfig.id)}
                         onDataUpdate={(data) => updateStepData(currentStepConfig.id, data)}
                         onNext={goNext}
-                        onBack={goPrevious}
+                        onBack={goBack}
                       />
                     );
                   })()}
@@ -257,7 +242,7 @@ const OnboardingModal = ({
                 isFirstStep={isFirstStep}
                 isLastStep={isLastStep}
                 isCompleting={isCompleting}
-                onPrevious={goPrevious}
+                onPrevious={goBack}
                 onNext={goNext}
                 onSkip={onSkip}
                 onComplete={handleComplete}

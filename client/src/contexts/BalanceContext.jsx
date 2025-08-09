@@ -24,6 +24,7 @@ export const BalanceProvider = ({ children }) => {
    * Called by useBalance hooks when they mount
    */
   const registerRefresh = useCallback((refreshFn) => {
+    // Support registering either a function or an object with { normal, silent }
     refreshFunctionsRef.current.add(refreshFn);
     
     // Return cleanup function
@@ -55,7 +56,16 @@ export const BalanceProvider = ({ children }) => {
     // Call all registered refresh functions
     refreshFunctionsRef.current.forEach((refreshFn) => {
       try {
-        refreshFn();
+        if (typeof refreshFn === 'function') {
+          // Backward compatibility: direct function
+          refreshFn();
+        } else if (refreshFn && typeof refreshFn.normal === 'function') {
+          // Preferred: object with normal refresher
+          refreshFn.normal();
+        } else if (refreshFn && typeof refreshFn.silent === 'function') {
+          // Fallback: use silent if normal not provided
+          refreshFn.silent();
+        }
       } catch (error) {
         console.error('❌ Balance refresh failed:', error);
       }
@@ -98,10 +108,12 @@ export const BalanceProvider = ({ children }) => {
     
     refreshFunctionsRef.current.forEach((refreshFn) => {
       try {
-        if (typeof refreshFn.silent === 'function') {
-          refreshFn.silent();
-        } else {
+        if (typeof refreshFn === 'function') {
           refreshFn();
+        } else if (refreshFn && typeof refreshFn.silent === 'function') {
+          refreshFn.silent();
+        } else if (refreshFn && typeof refreshFn.normal === 'function') {
+          refreshFn.normal();
         }
       } catch (error) {
         console.error('❌ Silent balance refresh failed:', error);
