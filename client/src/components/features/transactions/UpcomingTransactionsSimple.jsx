@@ -16,7 +16,7 @@ import {
 import { useTranslation, useCurrency } from '../../../stores';
 import { useUpcomingTransactions } from '../../../hooks/useUpcomingTransactions';
 import { Button, Card, LoadingSpinner } from '../../ui';
-import TransactionCard from '../dashboard/transactions/TransactionCard';
+import SimpleTransactionCard from '../transactions-v2/SimpleTransactionCard';
 import { RecurringManagerPanel } from '../../LazyComponents';
 import { cn, dateHelpers } from '../../../utils/helpers';
 
@@ -24,7 +24,7 @@ import { cn, dateHelpers } from '../../../utils/helpers';
  * 📅 Simple Upcoming Transactions Component
  */
 const UpcomingTransactionsSimple = () => {
-  const { t } = useTranslation('transactions');
+  const { t, isRTL } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -102,7 +102,7 @@ const UpcomingTransactionsSimple = () => {
 
   return (
     <>
-      <Card className="overflow-hidden shadow-lg">
+      <Card className="overflow-hidden shadow-lg" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         {/* Header */}
         <div className="p-6 pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
           <div className="flex items-center justify-between">
@@ -185,10 +185,10 @@ const UpcomingTransactionsSimple = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <TransactionCard
+                    <SimpleTransactionCard
                       transaction={transaction}
                       index={index}
-                      showActions={true}
+                      onSelect={undefined}
                       onEdit={() => {
                         // Open manager for editing
                         setShowManager(true);
@@ -201,7 +201,6 @@ const UpcomingTransactionsSimple = () => {
                         // Open manager for duplication
                         setShowManager(true);
                       }}
-                      viewMode="card"
                       className="border-l-4 border-l-blue-500 bg-blue-50/20 dark:bg-blue-900/10"
                     />
                   </motion.div>

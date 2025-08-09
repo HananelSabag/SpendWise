@@ -34,6 +34,7 @@ export default {
   update: 'Update',
   create: 'Create',
   duplicate: 'Duplicate',
+  select: 'Select',
   remove: 'Remove',
   restore: 'Restore',
   undo: 'Undo',

@@ -1,3 +1,33 @@
+
+### Task: Transactions Page Rebuild – Blueprint Submitted
+
+- User request summary: Fully recreate the Transactions page and inner components; preserve all functionality and make it more stable, performant, and user-friendly.
+- Analysis: Existing page mixes many concerns and is hard to stabilize. Rebuild using a modular `transactions-v2` component suite with clear state flow, instant filters, reliable dropdowns, robust icons, default Upcoming view, bulk actions with toggle, full i18n+RTL, and framer-motion animations. Keep existing hooks/modals to preserve backend contracts.
+- Affected layers: Frontend UI (React), i18n (reuse keys), state/hooks integration.
+- Affected files (planned):
+  - New under `client/src/components/features/transactions-v2/`: `TransactionsPageShell.jsx`, `ControlsBar.jsx`, `FiltersPanel.jsx`, `BulkActionsBar.jsx`, `UpcomingPreview.jsx`, `TransactionsList.jsx`, `TransactionItem.jsx`, `ActionsMenu.jsx`, `animations.js`.
+  - Update `client/src/pages/Transactions.jsx` to mount new shell.
+- Actions taken: Added detailed rebuild plan to `doc/workflow_state.md` under "Transactions Page Rebuild (Blueprint)". Awaiting approval to implement.
+### Task: Transactions Page – Complete UI/UX & Functional Upgrade
+
+- User request summary: Restore per-transaction dropdown (edit/delete), fix icon visibility, ensure Upcoming filters and default view, i18n fixes for he/en with RTL, add multi-select with bulk actions, reorder controls, add animations/responsiveness, and wire all actions to backend.
+- Analysis: Existing `TransactionCard.jsx` already had actions logic; dropdown trigger icon mismatched (Edit used as trigger) and icons missing likely due to stroke/size; selection existed but always active; Upcoming uses translations and shows future only; needed RTL direction for Upcoming card; ensure list respects onSelect only in multi-select mode; add translations for "Options". Backend wiring already handled via `useTransactionActions` and `useTransactions`.
+- Affected layers: Frontend UI (React), i18n, hooks integration.
+- Affected files:
+  - `client/src/components/features/dashboard/transactions/TransactionCard.jsx`
+  - `client/src/components/features/dashboard/transactions/TransactionList.jsx`
+  - `client/src/components/features/transactions/UpcomingTransactionsSimple.jsx`
+  - `client/src/pages/Transactions.jsx`
+  - `client/src/translations/en/actions.js`
+  - `client/src/translations/he/transactions.js`
+- Actions taken:
+  - Restored dropdown trigger with `MoreVertical` and tooltips; ensured action items (Edit/Duplicate/Delete) intact.
+  - Improved icon rendering by using `getIconComponent` and adding explicit `strokeWidth` and aria-hidden on the icon element.
+  - Added RTL direction to Upcoming card; ensured translations are used for upcoming text.
+  - Added multi-select toggle in Transactions header; only enables selection handlers when active; added bulk toolbar conditional rendering.
+  - Updated `TransactionList` to pass `onSelect` only if provided.
+  - Added missing i18n key for "options" in English and Hebrew.
+  - Maintained filters/search at top; animations are already present via framer-motion.
 ### Task: Exchange Calculator modal + API integration and modal alignment
 
 - User request summary: Connect the exchange calculator (מחשבון המרה) from Header quick panels to a real external API, and align its window size/design to match Category Manager and Recurring Manager. Fix current crash.
@@ -71,7 +101,7 @@
 
 - **User request summary**: Audit refresh buttons on main pages (Dashboard, Transactions, Profile, Admin Dashboard); decide to wire them properly or remove if redundant.
 - **Analysis**:
-  - **Dashboard (`client/src/pages/Dashboard.jsx`)**: Header refresh called only dashboard refresh; didn’t refresh `BalancePanel` or `RecentTransactionsWidget` → inconsistent UX.
+  - **Dashboard (`client/src/pages/Dashboard.jsx`)**: Header refresh called only dashboard refresh; didn't refresh `BalancePanel` or `RecentTransactionsWidget` → inconsistent UX.
   - **BalancePanel (`client/src/components/features/dashboard/BalancePanel.jsx`)**: Has its own working refresh.
   - **RecentTransactionsWidget (`client/src/components/features/dashboard/RecentTransactionsWidget.jsx`)**: Has its own working refresh.
   - **Transactions (`client/src/pages/Transactions.jsx`)**: Header refresh works.
@@ -119,9 +149,9 @@
 - Updated client admin delete flow to prompt for reason and send it to the server.
 
 ### Analysis
-- Logs showed: “column "applied_by" of relation "user_restrictions" does not exist” when POST /admin/users/:id/manage (block).
+- Logs showed: "column "applied_by" of relation "user_restrictions" does not exist" when POST /admin/users/:id/manage (block).
 - DB inspection confirmed `user_restrictions` lacked `applied_by` and unique constraint; FKs pointed to legacy `users_old_messy`.
-- Profile PUT failed with “No valid fields to update” because the body had no allowed fields; UX should not 500 in that case.
+- Profile PUT failed with "No valid fields to update" because the body had no allowed fields; UX should not 500 in that case.
 - Admin delete only soft-updated email; requirement is full delete and cascade in DB.
 
 ### Affected layers
@@ -4402,3 +4432,10 @@ User requested complete removal of all broken Google OAuth code and rebuild from
   - Creates the template, then generates current-month transactions and 3 months of upcoming items.
 - Ensured amounts and types mapping are correct; category is resolved/created server-side when only `category_name` is provided.
 - No code change required for functionality; behavior already matches requirements. Lint OK.
+
+## Entry: Transactions page multi-select checkbox visibility
+- User request: Show selection checkbox only when multi-select mode is enabled via the bulk actions button.
+- Analysis: `Transactions.jsx` already toggles `multiSelectMode` and conditionally passes `onTransactionSelect` to `TransactionList`. Inside `SimpleTransactionCard`, the checkbox renders only when `onSelect` is provided. We ensured `TransactionList` forwards `onSelect` only if selection mode is active.
+- Affected layers: Frontend UI (transactions list rendering)
+- Affected files: `client/src/components/features/dashboard/transactions/TransactionList.jsx`
+- Actions taken: Updated `onSelect` prop on `SimpleTransactionCard` to `onTransactionSelect ? handleTransactionSelect : undefined` so the checkbox appears only in multi-select mode. Ran lints; no issues.

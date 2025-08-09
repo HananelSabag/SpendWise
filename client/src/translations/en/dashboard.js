@@ -247,7 +247,7 @@ export default {
     category: 'Category',
     date: 'Date',
     lastUpdate: 'Last updated {time}',
-    showing: 'Showing {count} transactions',
+    showing: 'Showing {{count}} transactions',
     selected: 'Selected {{count}}'
   },
   

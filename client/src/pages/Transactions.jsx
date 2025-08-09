@@ -50,7 +50,6 @@ import {
 
 // ✅ UPDATED: Use new dashboard transaction components instead of old duplicates
 import TransactionList from '../components/features/dashboard/transactions/TransactionList';
-import TransactionCard from '../components/features/dashboard/transactions/TransactionCard';
 
 // ✅ NEW: Import clean modal architecture instead of massive files
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
@@ -81,6 +80,7 @@ const Transactions = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [modalMode, setModalMode] = useState('create'); // create, edit, duplicate, view
   const [viewMode, setViewMode] = useState('list'); // list | grid | cards
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -354,6 +354,19 @@ const Transactions = () => {
               <span>{t('actions.filters')}</span>
             </Button>
 
+            {/* Multi-select Toggle */}
+            <Button
+              variant={multiSelectMode ? 'secondary' : 'outline'}
+              onClick={() => {
+                setMultiSelectMode(!multiSelectMode);
+                if (!multiSelectMode) setSelectedIds(new Set());
+              }}
+              className="flex items-center space-x-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>{multiSelectMode ? t('actions.deselectAll') : t('actions.bulkActions')}</span>
+            </Button>
+
             {/* Clear Filters */}
             {(searchQuery || Object.values(filters).some(f => f !== 'all' && f !== '')) && (
               <Button
@@ -476,33 +489,35 @@ const Transactions = () => {
           ) : (
             <>
               {/* Bulk selection toolbar */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="text-sm text-gray-700 dark:text-gray-300">
-                  {t('actions.bulkActions')}
-                  {selectedIds.size > 0 && (
-                    <span className="ml-2 font-medium">{t('selection.count', { count: selectedIds.size })}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {selectedIds.size === transactions.length && transactions.length > 0 ? (
-                    <Button variant="ghost" onClick={handleClearSelection} className="h-8 px-3">
-                      {t('actions.deselectAll')}
+              {multiSelectMode && (
+                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {t('actions.bulkActions')}
+                    {selectedIds.size > 0 && (
+                      <span className="ml-2 font-medium">{t('selection.count', { count: selectedIds.size })}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedIds.size === transactions.length && transactions.length > 0 ? (
+                      <Button variant="ghost" onClick={handleClearSelection} className="h-8 px-3">
+                        {t('actions.deselectAll')}
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" onClick={handleSelectAll} className="h-8 px-3" disabled={transactions.length === 0}>
+                        {t('actions.selectAll')}
+                      </Button>
+                    )}
+                    <Button
+                      variant="destructive"
+                      onClick={handleBulkDelete}
+                      disabled={selectedIds.size === 0}
+                      className="h-8 px-3"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" /> {t('actions.delete')}
                     </Button>
-                  ) : (
-                    <Button variant="ghost" onClick={handleSelectAll} className="h-8 px-3" disabled={transactions.length === 0}>
-                      {t('actions.selectAll')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    onClick={handleBulkDelete}
-                    disabled={selectedIds.size === 0}
-                    className="h-8 px-3"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" /> {t('actions.delete')}
-                  </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <TransactionList
                 transactions={transactions}
@@ -515,7 +530,7 @@ const Transactions = () => {
                 loadMore={loadMore}
                 viewMode={viewMode}
                 selectedTransactions={selectedIds}
-                onTransactionSelect={handleTransactionSelect}
+                onTransactionSelect={multiSelectMode ? handleTransactionSelect : undefined}
               />
             </>
           )}

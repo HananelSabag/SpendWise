@@ -125,7 +125,8 @@ const Button = React.forwardRef(({
               size === 'xs' ? 'w-3 h-3' : 
               size === 'sm' ? 'w-4 h-4' : 
               size === 'md' ? 'w-4 h-4' : 
-              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6',
+              'text-current'
             )
           }) : icon}
         </span>
@@ -158,7 +159,8 @@ const Button = React.forwardRef(({
               size === 'xs' ? 'w-3 h-3' : 
               size === 'sm' ? 'w-4 h-4' : 
               size === 'md' ? 'w-4 h-4' : 
-              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6'
+              size === 'lg' ? 'w-5 h-5' : 'w-6 h-6',
+              'text-current'
             )
           }) : icon}
         </span>

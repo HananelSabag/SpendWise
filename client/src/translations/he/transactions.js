@@ -119,10 +119,12 @@ export default {
     import: "ייבא",
     refresh: "רענן",
     clearFilters: "נקה מסננים",
+    options: "אפשרויות",
     selectAll: "בחר הכל",
     deselectAll: "בטל בחירת הכל",
     bulkActions: "פעולות מרובות",
-    viewDetails: "הצג פרטים"
+    viewDetails: "הצג פרטים",
+    select: "בחר"
   },
 
   // Labels
@@ -589,5 +591,20 @@ export default {
       gift: "מתנה",
       emergency: "חירום"
     }
+  },
+
+  // Upcoming Transactions
+  upcoming: {
+    title: 'עסקאות קרובות',
+    loading: 'טוען עסקאות קרובות...',
+    noUpcoming: 'אין עסקאות קרובות',
+    noUpcomingDesc: 'אין עסקאות עתידיות מתוכננות. הגדירו עסקאות חוזרות כדי לראות אותן כאן.',
+    nextCount: 'הבאות {{count}} עסקאות',
+    manage: 'ניהול',
+    manageRecurring: 'ניהול חוזרות',
+    transactions: 'עסקאות',
+    totalAmount: 'סה"כ',
+    showingNext: 'מציג את {{count}} הקרובות',
+    viewAll: 'הצג הכל'
   }
 }; 

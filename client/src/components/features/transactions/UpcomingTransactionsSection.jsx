@@ -30,7 +30,7 @@ import { useUpcomingTransactions } from '../../../hooks/useUpcomingTransactions'
 import { useTranslation, useCurrency, useTheme } from '../../../stores';
 import { Button, Card, Badge, LoadingSpinner } from '../../ui';
 import { cn, dateHelpers } from '../../../utils/helpers';
-import TransactionCard from '../dashboard/transactions/TransactionCard';
+import SimpleTransactionCard from '../transactions-v2/SimpleTransactionCard';
 
 // Helper function for relative time
 const getRelativeTimeString = (date) => {
@@ -324,22 +324,18 @@ const UpcomingTransactionsSection = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: transactionIndex * 0.05 }}
                     >
-                      <TransactionCard
+                      <SimpleTransactionCard
                         transaction={transaction}
-                        index={transactionIndex}
-                        showActions={showActions}
+                        onSelect={undefined}
                         onEdit={(tx) => {
-                          // Handle edit upcoming transaction
                           console.log('Edit upcoming transaction:', tx);
                         }}
                         onDelete={(tx) => {
                           deleteUpcoming(tx.id);
                         }}
                         onDuplicate={(tx) => {
-                          // Handle duplicate upcoming transaction
                           console.log('Duplicate upcoming transaction:', tx);
                         }}
-                        viewMode="card"
                         className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-900/10"
                       />
                     </motion.div>

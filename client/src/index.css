@@ -59,6 +59,11 @@
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 
+  /* Ensure lucide-react SVG icons are visible by inheriting current text color */
+  svg {
+    color: currentColor;
+  }
+
   /* Headings */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', system-ui, sans-serif;

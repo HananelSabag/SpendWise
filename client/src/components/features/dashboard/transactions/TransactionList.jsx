@@ -15,7 +15,7 @@ import {
 // ✅ Import Zustand stores
 import { useTranslation } from '../../../../stores';
 
-import TransactionCard from './TransactionCard';
+import SimpleTransactionCard from '../../transactions-v2/SimpleTransactionCard';
 import { Button, Card, Badge } from '../../../ui';
 import { cn, dateHelpers } from '../../../../utils/helpers';
 
@@ -305,15 +305,14 @@ const TransactionList = ({
     return (
       <div style={style}>
         <div className="px-4 py-2 md:px-6 md:py-3">
-          <TransactionCard
+          <SimpleTransactionCard
             transaction={transaction}
             index={index}
-            isSelected={selectedTransactions.has(transaction.id)}
-            onSelect={handleTransactionSelect}
+             isSelected={selectedTransactions.has(transaction.id)}
+             onSelect={onTransactionSelect ? handleTransactionSelect : undefined}
             onEdit={onEdit}
             onDelete={onDelete}
             onDuplicate={onDuplicate}
-            viewMode={viewMode}
           />
         </div>
       </div>
@@ -375,15 +374,14 @@ const TransactionList = ({
                     transition={{ duration: 0.2 }}
                     className="px-4 py-3 md:px-6 md:py-4"
                   >
-                    <TransactionCard
+                    <SimpleTransactionCard
                       transaction={transaction}
                       index={index}
                       isSelected={selectedTransactions.has(transaction.id)}
-                      onSelect={handleTransactionSelect}
+                      onSelect={onTransactionSelect ? handleTransactionSelect : undefined}
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onDuplicate={onDuplicate}
-                      viewMode={viewMode}
                     />
                   </motion.div>
                 ))}

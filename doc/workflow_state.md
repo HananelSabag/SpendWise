@@ -162,6 +162,63 @@ LANGUAGE CONTEXT: ✅ PERFECTED
 
 ## Plan
 
+### Transactions Page Rebuild (Blueprint)
+
+Goal: Replace `pages/Transactions.jsx` and its brittle sub-tree with a clean, modular, high-UX implementation that preserves and improves all existing functionality: dropdown actions (edit/delete/duplicate), instant filters/search/sort, Upcoming-first view, full i18n (EN/HE) with RTL, multi-select with bulk actions, animations, responsiveness, and real-time backend integration via existing hooks.
+
+Scope and guarantees
+- Preserve data layer: continue using `useTransactions`, `useTransactionActions`, and `useUpcomingTransactions` so backend/API contracts remain unchanged.
+- Preserve translation keys: reuse existing `transactions.*`, `actions.*`, `pages.transactions.*`, and `upcoming.*` keys; add minimal new keys if a11y requires.
+- Preserve category icon mapping: continue using `getIconComponent()` from `config/categoryIcons.js`.
+- Preserve existing modals: `AddTransactionModal`, `EditTransactionModal`, `DeleteTransaction`, `RecurringSetupModal`.
+
+File structure (new)
+- `client/src/components/features/transactions-v2/`
+  - `TransactionsPageShell.jsx` — top-level composition and layout
+  - `ControlsBar.jsx` — search, filters toggle, sort, multi-select toggle, export
+  - `FiltersPanel.jsx` — date/type/category/amount/sort-order (instant apply)
+  - `BulkActionsBar.jsx` — shows when selection > 0; delete, mark as paid, select all/none
+  - `UpcomingPreview.jsx` — default visible, expandable, reuses `useUpcomingTransactions`
+  - `TransactionsList.jsx` — list/virtualized list, empty states, pagination/load-more
+  - `TransactionItem.jsx` — compact card/row view with category icon, amount, meta
+  - `ActionsMenu.jsx` — per-item dropdown (edit/duplicate/delete)
+  - `animations.js` — framer-motion variants (centralized for consistency)
+
+Page swap
+- Replace `client/src/pages/Transactions.jsx` to import the new v2 shell only; old list/card components remain in place but unused.
+- Keep a simple integration adapter layer so the page remains thin.
+
+State and interactions
+- Local state: `searchQuery`, `filters` (dateRange, type, category, amount range, sort by/order), `viewMode`, `multiSelectMode`, `selectedIds` Set, `showFilters`.
+- Data: fetched via `useTransactions({ search, filters, limit, ... })` and updated instantly on user input (no reload); list re-renders based on memoized transforms.
+- Upcoming: `useUpcomingTransactions()`; default-expanded summary at the top; toggle to view next N.
+- Actions: per-item edit/duplicate/delete wired to `useTransactionActions()`; bulk actions use `bulkOperations()`; “Mark as Paid” uses bulk update when `status` field is available, otherwise hidden (feature-detect via API response or config flag).
+
+UX specifics
+- Controls top-first layout: search, filter toggle, sort, multi-select toggle, export.
+- Filters panel animates in/out; instant apply on change; clear-all.
+- Dropdown menu trigger uses `MoreVertical`; menu items: Edit, Duplicate, Delete.
+- Animations: list item enter/exit, filters expand/collapse, bulk bar appear/disappear, menu popover.
+- RTL: container `dir` reflects `isRTL`; ensure logical order reverses correctly.
+- Mobile: touch targets ≥44px; wrap content; sticky controls; virtualized list for large datasets.
+
+Accessibility
+- Buttons and menus with `aria-label`, focus order, and keyboard navigation; no icon-only buttons without labels.
+
+Implementation steps
+1) Scaffold `transactions-v2` components and shared animations.
+2) Wire `TransactionsPageShell` into `pages/Transactions.jsx` (thin integration layer only).
+3) Implement `ControlsBar` + `FiltersPanel` with immediate state-to-query sync.
+4) Implement `UpcomingPreview` and summary.
+5) Implement `TransactionsList` (non-virtual first), then enable virtualization when item count > threshold.
+6) Implement `TransactionItem` + `ActionsMenu` using `getIconComponent` and hook callbacks.
+7) Implement `BulkActionsBar` with delete and optional mark-as-paid (feature-detected).
+8) Hook modals for add/edit/delete/recurring and verify success handlers refresh queries.
+9) Verify EN/HE, RTL, responsive; run build.
+
+Exit criteria
+- All actions functional (edit/delete/duplicate/bulk delete), instant filters, upcoming visible by default, icons visible, translations correct in EN/HE with RTL, no console errors, successful production build.
+
 ### ✅ CRITICAL BUG FIXES COMPLETED - Emergency Client Recovery
 
 **Issue**: Major client-side errors preventing application from loading after recent optimization updates.
@@ -335,3 +392,9 @@ Approval Needed
 
 ## Log
 - 2025-08-09: Drafted UX overhaul plan for Recurring Manager; awaiting approval before implementation.
+
+## Plan
+- Adjust transaction selection UI so item checkboxes render only when multi-select is enabled from the bulk actions button. Implementation detail: ensure `TransactionList` forwards `onSelect` to `SimpleTransactionCard` only when selection mode is active; otherwise pass `undefined` so the checkbox does not render.
+
+## Log
+- Implemented conditional `onSelect` forwarding in `client/src/components/features/dashboard/transactions/TransactionList.jsx` so checkboxes are visible only after the user clicks the multi-select (bulk actions) button. Lint clean.
