@@ -4237,3 +4237,11 @@ User requested complete removal of all broken Google OAuth code and rebuild from
   - Creates the template, then generates current-month transactions and 3 months of upcoming items.
 - Ensured amounts and types mapping are correct; category is resolved/created server-side when only `category_name` is provided.
 - No code change required for functionality; behavior already matches requirements. Lint OK.
+
+## Fix: authRecoveryManager ReferenceError (useAuthStore undefined)
+- Issue: `authRecoveryManager.js:484 ReferenceError: useAuthStore is not defined` during periodic health check.
+- Cause: Direct reference to `useAuthStore` (not imported here to avoid circular deps). File already uses a safe global accessor `getAuthStore()` elsewhere.
+- Change: Updated `performHealthCheck()` to use `getAuthStore()?.getState?.()` and lazily import `authAPI` via `getAuthAPI()` before `validateToken()`.
+- Files updated:
+  - `client/src/utils/authRecoveryManager.js`
+- Lint: clean.

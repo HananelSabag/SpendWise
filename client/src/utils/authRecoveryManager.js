@@ -481,24 +481,26 @@ class AuthRecoveryManager {
    * Perform periodic health check
    */
   async performHealthCheck() {
-    const authStore = useAuthStore.getState();
-    
+    // Access auth store safely via global accessor to avoid circular deps
+    const authStore = getAuthStore()?.getState?.();
+
     // Only perform health check if user is authenticated
-    if (!authStore.isAuthenticated) {
+    if (!authStore?.isAuthenticated) {
       return;
     }
 
     const timeSinceLastSuccess = Date.now() - this.healthState.lastSuccessTime;
-    
+
     // If it's been too long since last success, trigger a check
     if (timeSinceLastSuccess > this.config.healthCheckInterval * 2) {
       console.log('🏥 Performing health check - too long since last success');
-      
+
       try {
         const token = localStorage.getItem('accessToken');
         if (token) {
+          const authAPI = await getAuthAPI();
           await authAPI.validateToken(token);
-          // If successful, handleApiSuccess will be called by the interceptor
+          // If successful, handleApiSuccess will typically be called by the interceptor
         }
       } catch (error) {
         // If failed, handleApiError will be called by the interceptor
