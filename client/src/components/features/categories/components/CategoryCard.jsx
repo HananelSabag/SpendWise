@@ -16,7 +16,7 @@ import {
 
 // ✅ Import Zustand stores
 import { 
-  useTranslaheytion, 
+  useTranslation, 
   useCurrency, 
   useNotifications 
 } from '../../../../stores';

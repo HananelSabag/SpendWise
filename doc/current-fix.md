@@ -4,7 +4,7 @@
   - `auth.account`, `auth.security`, `auth.profile`, `auth.complete` (en/he)
   - `auth.acceptTerms` (en/he)
   - Ensures GuestSettings and Register steps render without warnings and toasts use proper keys.
-- Google buttons: Replaced generic globe icon with Google “G” logo SVG on Login and Register Google actions.
+- Google buttons: Replaced generic globe icon with Google "G" logo SVG on Login and Register Google actions.
 - Auth branding: Replaced shield/user icons on Login/Register headers with the header-style logo tile (gradient square with "S"). Files: `client/src/pages/auth/Login.jsx`, `client/src/pages/auth/Register.jsx`.
 - Profile translations: Added `profile.actions.success` in both English and Hebrew to satisfy usage.
 - Amount input fix: Prevent negative signs and sanitize decimal input in `ExchangeCalculator` by switching to `type="text"` with `inputMode="decimal"` and filtering `-`/`+`.
@@ -13,7 +13,7 @@
 - Exchange fetch hardening: Added minimal retry and validation for exchange rates response in `updateExchangeRates`.
 \n### Exchange translations and refetch cadence fix
 - User request: Add missing translations under `exchange.*` and make Exchange Calculator stop refetching every second; set to 5 minutes with manual refresh.
-- Analysis: `en/exchange.js` and `he/exchange.js` already include required keys; module wasn’t preloaded, leading to missing warnings. ExchangeCalculator ran background update only on stale check; frequent refetch likely from repeated renders without interval control.
+- Analysis: `en/exchange.js` and `he/exchange.js` already include required keys; module wasn't preloaded, leading to missing warnings. ExchangeCalculator ran background update only on stale check; frequent refetch likely from repeated renders without interval control.
 - Affected layers: Client translations preload; Exchange UI behavior.
 - Affected files: `client/src/stores/translationStore.js`, `client/src/components/features/exchange/ExchangeCalculator.jsx`.
 - Actions taken:
@@ -4475,3 +4475,18 @@ User requested complete removal of all broken Google OAuth code and rebuild from
 - Affected layers: Frontend UI (transactions list rendering)
 - Affected files: `client/src/components/features/dashboard/transactions/TransactionList.jsx`
 - Actions taken: Updated `onSelect` prop on `SimpleTransactionCard` to `onTransactionSelect ? handleTransactionSelect : undefined` so the checkbox appears only in multi-select mode. Ran lints; no issues.
+
+## Production hardening – .gitignore and env safety (2025-08-09)
+
+- User request: Restrict markdown files tracked by git to only `README.md`, ignore `doc/**`, `doc/current-fix.md`, and any workflow-related `.md`; verify no env secrets are exposed via code fallbacks; update `.gitignore` accordingly.
+- Analysis: No secrets found in code. One risky fallback existed: a real Google OAuth Client ID hardcoded in `client/vite.config.js` define block. Docs contain many sensitive strings; they are now ignored by git.
+- Affected layers: repo hygiene, build tooling (Vite define), client env usage.
+- Affected files: `.gitignore`, `client/vite.config.js`.
+- Actions taken:
+  - Tightened `.gitignore`:
+    - Ignored `doc/` and all `**/*.md` globally, while allowing `README.md` (`!**/README.md`).
+    - Explicitly ignored `doc/current-fix.md`, `**/*workflow*.md`, and `**/workflow_state.md`.
+    - Ignored stray diagnostic files: `how --name-only HEAD~1`, `t --oneline HEAD~5..HEAD`.
+  - Removed hardcoded Google Client ID fallback in `client/vite.config.js`; now requires `VITE_GOOGLE_CLIENT_ID` (falls back to empty string only, not a real ID).
+  - Scanned repo for common secret patterns (API keys, private keys, cloud tokens); none found in source.
+- Notes: Existing docs with secrets will be untracked going forward due to the new ignores. No runtime behavior changes expected beyond requiring `VITE_GOOGLE_CLIENT_ID` to be provided in environments that use Google OAuth.

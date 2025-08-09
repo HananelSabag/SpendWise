@@ -139,7 +139,7 @@ export default defineConfig(({ command, mode }) => {
           : 'https://spendwise-dx8g.onrender.com/api/v1'
       ),
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
-        process.env.VITE_GOOGLE_CLIENT_ID || '680960783178-vl2oi588lavo17vjd00p9kounnfam7kh.apps.googleusercontent.com'
+        process.env.VITE_GOOGLE_CLIENT_ID || ''
       ),
       'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
         process.env.VITE_CLIENT_URL || (isDev 

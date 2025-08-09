@@ -204,3 +204,22 @@ docker-compose.override.yml
 #   - Build outputs
 #   - Dependencies
 # ===================================
+
+# ===================================
+# 🧾 DOCUMENTATION & MARKDOWN FILES (RESTRICTED)
+# ===================================
+# Only allow README files. Ignore all other markdown docs and the entire doc/ folder.
+doc/
+doc/**
+**/*.md
+!README.md
+!**/README.md
+
+# Explicitly ignore session/workflow logs
+doc/current-fix.md
+**/*workflow*.md
+**/workflow_state.md
+
+# Stray debug files accidentally created during diagnostics
+how --name-only HEAD~1
+t --oneline HEAD~5..HEAD
