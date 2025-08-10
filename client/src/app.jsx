@@ -225,6 +225,16 @@ const AppContent = () => {
     if (isLoading) return;
     
     const path = location.pathname;
+    // If on blocked page, prevent any automatic redirects by early-returning
+    if (path === '/blocked') {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__SPENDWISE_BLOCKED__ = true;
+        }
+        localStorage.setItem('blockedSession', '1');
+      } catch (_) {}
+      return;
+    }
     
     // Handle legacy auth routes
     if (path.startsWith('/auth/')) {

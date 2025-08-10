@@ -1,3 +1,17 @@
+### Blocked user auto-logout fix
+
+- User request: Blocked users see the block page only for a moment; then auth recovery logs them out and sends them back to login.
+- Analysis: 403 USER_BLOCKED triggered redirect to `/blocked`, but global auth recovery and legacy auth error handler subsequently forced logout due to generic auth failure thresholds. The blocked page flashed because navigation to `/login` superseded it.
+- Affected layers: Frontend client error handling, auth recovery manager, routing, blocked page.
+- Affected files: `client/src/api/client.js`, `client/src/utils/authRecoveryManager.js`, `client/src/pages/Blocked.jsx`, `client/src/app.jsx`.
+- Actions taken:
+  - Mark a "blocked session" flag on redirect and on `/blocked` render using `localStorage.blockedSession` and `window.__SPENDWISE_BLOCKED__`.
+  - Teach the generic auth error handler to respect the blocked session and not redirect to login while on `/blocked`.
+  - Update auth recovery to no-op recovery/force-logout when in blocked session.
+  - Ensure navigation logic in `app.jsx` does not auto-redirect when on `/blocked` and sets the blocked flag.
+  - Clear the flag on manual logout from the blocked page.
+  - Added UX: periodic unblocked checks every 15s on `/blocked` and a manual "Check again" button. Auto-redirects to dashboard when unblocked.
+
 - Added `common.and` (en) to satisfy missing `auth.and` usage fallback during registration form rendering.
 - Added missing translations:
   - `common.guestMode`, `common.hebrew`, `common.english` (en/he)
@@ -4490,3 +4504,20 @@ User requested complete removal of all broken Google OAuth code and rebuild from
   - Removed hardcoded Google Client ID fallback in `client/vite.config.js`; now requires `VITE_GOOGLE_CLIENT_ID` (falls back to empty string only, not a real ID).
   - Scanned repo for common secret patterns (API keys, private keys, cloud tokens); none found in source.
 - Notes: Existing docs with secrets will be untracked going forward due to the new ignores. No runtime behavior changes expected beyond requiring `VITE_GOOGLE_CLIENT_ID` to be provided in environments that use Google OAuth.
+
+- Fixed a build error due to a misspelled hook import in `client/src/components/features/categories/components/CategoryCard.jsx`.
+  - Replaced `useTranslaheytion` with the correct `useTranslation` sourced from `client/src/stores/index.jsx`.
+
+## Admin delete 400 fix (2025-08-10T10:28:07.2256848+03:00)
+- User request: Fix admin UI delete error; DB inspect.
+- Analysis: 400 triggered by SQL-injection filter matching 'delete' in body (action).
+- Affected layers: client -> server security middleware -> admin controller.
+- Files: server/middleware/security.js.
+- Actions: Whitelisted safe keys (action, sortBy, sortOrder) in SQL-injection check; kept deletion super_admin-only; verified DB tables (users, user_restrictions, admin_activity_log) exist.
+
+
+## Admin hard-delete implementation (2025-08-10T10:33:05.1534568+03:00)
+- Implemented transactional hard delete for admin user removal.
+- Deletes: admin_activity_log (target/admin), tokens, user_restrictions (user/applied_by), transactions, recurring_templates, user-owned categories, nulls system_settings.updated_by, then deletes user.
+- Requires super_admin role; returns 404 if user missing.
+

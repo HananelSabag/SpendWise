@@ -338,18 +338,52 @@ class AdminController {
             });
           }
 
-          // Perform hard delete with ON DELETE CASCADE dependencies
-          await db.query(`
-            DELETE FROM users WHERE id = $1
-          `, [userId], 'admin_delete_user');
+          // Ensure user exists
+          const existing = await db.query('SELECT 1 FROM users WHERE id = $1', [userId], 'admin_check_user_exists');
+          if (existing.rowCount === 0) {
+            return res.status(404).json({
+              success: false,
+              error: { code: 'USER_NOT_FOUND', message: 'User not found' }
+            });
+          }
 
-          // Log a restriction record for historical audit (soft record only)
+          // Hard delete user and all related data in a single transaction
+          const client = await db.pool.connect();
           try {
-            await db.query(`
-              INSERT INTO user_restrictions (user_id, restriction_type, reason, applied_by, is_active, created_at)
-              VALUES ($1, 'deleted', $2, $3, true, NOW())
-            `, [userId, reason || 'Deleted by admin', adminId], 'admin_log_user_deleted');
-          } catch (_) {}
+            await client.query('BEGIN');
+
+            // Remove activity logs referencing the user (as target or as admin)
+            await client.query('DELETE FROM admin_activity_log WHERE target_user_id = $1', [userId]);
+            await client.query('DELETE FROM admin_activity_log WHERE admin_id = $1', [userId]);
+
+            // Remove tokens
+            await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM email_verification_tokens WHERE user_id = $1', [userId]);
+
+            // Remove restrictions created by or applied to the user
+            await client.query('DELETE FROM user_restrictions WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM user_restrictions WHERE applied_by = $1', [userId]);
+
+            // Remove transactional data
+            await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM recurring_templates WHERE user_id = $1', [userId]);
+
+            // Remove categories owned by the user (user-specific)
+            await client.query('DELETE FROM categories WHERE user_id = $1', [userId]);
+
+            // Null out references in settings to avoid FK violations
+            await client.query('UPDATE system_settings SET updated_by = NULL WHERE updated_by = $1', [userId]);
+
+            // Finally, remove the user row
+            await client.query('DELETE FROM users WHERE id = $1', [userId]);
+
+            await client.query('COMMIT');
+          } catch (txError) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            throw txError;
+          } finally {
+            client.release();
+          }
 
           result = { action: 'deleted', userId };
           break;

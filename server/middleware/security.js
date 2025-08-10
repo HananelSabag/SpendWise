@@ -104,25 +104,36 @@ const inputSanitization = {
   
   // SQL injection prevention
   sqlInjectionProtection: (req, res, next) => {
-    const checkForSQLInjection = (value) => {
+    // Allow-list of keys that may legitimately contain SQL keywords as values, e.g., action: 'delete'
+    const SAFE_KEYS_ALLOWING_SQL_WORDS = new Set(['action', 'sortBy', 'sortOrder']);
+
+    const checkForSQLInjection = (value, keyPath = []) => {
       if (typeof value !== 'string') return false;
       
       const sqlPatterns = [
         /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/gi,
-        /(--|#|\/\*|\*\/)/g,
+        /(--)|(#)|(\/\*)|(\*\/)/g,
         /('|(\\)|(;)|(,)|(\|)|(\*)|(%)|(<)|(>)|(\?)|(\[)|(\]))/g
       ];
       
-      return sqlPatterns.some(pattern => pattern.test(value));
+      const containsSqlish = sqlPatterns.some(pattern => pattern.test(value));
+      if (!containsSqlish) return false;
+
+      const lastKey = keyPath[keyPath.length - 1];
+      if (lastKey && SAFE_KEYS_ALLOWING_SQL_WORDS.has(lastKey)) {
+        return false;
+      }
+
+      return true;
     };
     
-    const scanObject = (obj) => {
+    const scanObject = (obj, path = []) => {
       for (const key in obj) {
-        if (typeof obj[key] === 'string' && checkForSQLInjection(obj[key])) {
+        if (typeof obj[key] === 'string' && checkForSQLInjection(obj[key], [...path, key])) {
           return true;
         }
         if (typeof obj[key] === 'object' && obj[key] !== null) {
-          if (scanObject(obj[key])) return true;
+          if (scanObject(obj[key], [...path, key])) return true;
         }
       }
       return false;

@@ -282,6 +282,17 @@ class AuthRecoveryManager {
     
     this.showRecoveryNotification('info');
 
+    // If user is on blocked page or session marked as blocked, do NOT force logout
+    try {
+      const onBlockedPage = typeof window !== 'undefined' && window.location?.pathname === '/blocked';
+      const blockedFlag = typeof localStorage !== 'undefined' && localStorage.getItem('blockedSession') === '1';
+      if (onBlockedPage || blockedFlag || window.__SPENDWISE_BLOCKED__) {
+        // Keep recovery in a passive state and avoid destructive actions
+        this.healthState.isRecovering = false;
+        return;
+      }
+    } catch (_) {}
+
     // Try token refresh first
     try {
       const authAPI = await getAuthAPI();
@@ -385,6 +396,16 @@ class AuthRecoveryManager {
     
     const authStore = getAuthStore()?.getState?.();
     
+    // Respect blocked session: do not auto-logout from blocked page
+    try {
+      const onBlockedPage = typeof window !== 'undefined' && window.location?.pathname === '/blocked';
+      const blockedFlag = typeof localStorage !== 'undefined' && localStorage.getItem('blockedSession') === '1';
+      if (onBlockedPage || blockedFlag || window.__SPENDWISE_BLOCKED__) {
+        this.healthState.isRecovering = false;
+        return;
+      }
+    } catch (_) {}
+
     try {
       // Show user-friendly message and trigger auto logout
       if (window.authToasts) {

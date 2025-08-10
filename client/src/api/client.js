@@ -223,6 +223,13 @@ class SpendWiseAPIClient {
       if (err.code === 'USER_BLOCKED') {
         const state = { reason: err.reason, expires_at: err.expires_at };
         try {
+          // Mark session as blocked to prevent auth-recovery auto-logout
+          try { localStorage.setItem('blockedSession', '1'); } catch (_) {}
+          if (typeof window !== 'undefined') {
+            window.__SPENDWISE_BLOCKED__ = true;
+          }
+          // Clear any lingering auth-recovery toast to avoid confusion
+          try { if (window.authToasts?.dismiss) window.authToasts.dismiss('connectionRecovering'); } catch (_) {}
           if (window.spendWiseNavigate) {
             window.spendWiseNavigate('/blocked', { replace: true, state });
           } else {
@@ -300,7 +307,14 @@ class SpendWiseAPIClient {
     
     // Only redirect if not already on auth pages
     const isOnAuthPage = ['/login', '/register', '/auth/login', '/auth/register', '/auth/verify-email', '/auth/password-reset'].includes(window.location.pathname);
+    const isBlockedSession = (typeof window !== 'undefined' && window.location?.pathname === '/blocked') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('blockedSession') === '1');
     
+    // If user is blocked, do NOT navigate away from blocked page
+    if (isBlockedSession) {
+      return;
+    }
+
     if (!isOnAuthPage) {
       // Try to use React Router if available
       if (window.spendWiseNavigate) {
