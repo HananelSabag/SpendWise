@@ -1,3 +1,122 @@
+### 2025-01-16 – Revolutionary Admin Users Table with Currency Integration
+
+**User Request**: 
+1. Analyze admin users page and create revolutionary UI/UX component with best responsive design
+2. Integrate user currency preferences for transaction amounts display
+
+**Analysis**:
+- Created completely new ModernUsersTable component with revolutionary UX
+- Fixed missing translations for roles/status in Hebrew
+- Fixed AnimatePresence import error in Checkbox component  
+- Integrated currency preferences from user profiles using existing currency system
+- Enhanced responsive design for all screen sizes (mobile to 4K displays)
+
+**Affected Layers**:
+- Frontend: New modern table component with advanced UX and currency integration
+- UI Components: Fixed Checkbox component, enhanced design system usage
+- Translations: Added missing Hebrew translations for admin interface
+- Currency System: Integrated user-specific currency formatting
+
+**Affected Files**:
+- `client/src/components/features/admin/ModernUsersTable.jsx` - **NEW** Revolutionary table
+- `client/src/pages/admin/AdminUsers.jsx` - Updated with currency integration
+- `client/src/components/ui/Checkbox.jsx` - Fixed AnimatePresence import
+- `client/src/translations/en/admin.js` - Enhanced with missing translations
+- `client/src/translations/he/admin.js` - Fixed duplicates, added missing translations
+- `client/src/components/features/admin/UsersTablePro.jsx` - **DELETED** (replaced)
+
+**Actions Taken**:
+
+1. **Fixed Critical Errors**:
+   - Added missing `AnimatePresence` import to Checkbox component
+   - Fixed missing Hebrew translations for roles and status
+   - Removed duplicate translation objects in Hebrew admin file
+
+2. **Currency Integration**:
+   - Used existing `useCurrency()` hook and `formatCurrency()` function
+   - Created `formatUserAmount()` helper to respect user's currency_preference  
+   - Updated all transaction amount displays to use proper currency symbols
+   - Enhanced CSV export to include currency information
+   - Currency preferences come from database (`users.currency_preference`)
+
+3. **Revolutionary Modern Table Features**:
+   - **Mobile-First Design**: Perfect responsive experience 320px to 4K
+   - **Multiple View Modes**: Table and Grid views with intelligent switching
+   - **Advanced Filtering**: Real-time search, role/status/activity/verified filters  
+   - **Bulk Operations**: Multi-select with bulk block/unblock/delete/export
+   - **Currency-Aware Display**: Shows amounts in each user's preferred currency
+   - **Smart Animations**: Framer Motion micro-interactions and transitions
+   - **Accessibility**: ARIA labels, keyboard shortcuts, screen reader support
+   - **Activity Indicators**: Visual cues for user activity status
+   - **Expandable Rows**: Mobile-optimized detail expansion
+   - **Export Enhancement**: CSV export with currency formatting
+
+4. **Translation System Enhancement**:
+   - Added missing filter translations (allStatuses, verified, activity, etc.)
+   - Added bulk operation translations for both languages
+   - Fixed Hebrew role and status translations
+   - Added table column translations (activity, selectAll)
+
+**Currency System Details**:
+- Uses `user.currency_preference` from database (fetched by admin controller)
+- Defaults to 'ILS' if no preference set
+- Supports all currencies defined in `appStore.js` (USD, EUR, GBP, ILS, JPY, etc.)
+- Properly formats with currency symbols (₪, $, €, £, ¥, etc.)
+- Maintains consistency across table view, grid view, user details modal, and CSV export
+
+**Result**: Created the most advanced, currency-aware, responsive admin users table with enterprise-grade UX supporting all currencies and screen sizes. All translation errors fixed, perfect mobile/desktop experience, and proper currency formatting for each user's preference.
+
+### 2025-08-11 – Admin Users Table Redesign (UI/UX)
+- User request: Redesign admin users table to be cleaner, responsive, and testable alongside the existing page.
+- Analysis: Existing `AdminUsers.jsx` had parallel mobile cards + desktop table; kept actions/modals/translations but improved readability and responsiveness.
+- Affected layers: Client UI only.
+- Affected files: `client/src/components/features/admin/UsersTablePro.jsx` (new), `client/src/pages/admin/AdminUsers.jsx` (integrated component), `doc/workflow_state.md` (plan added).
+- Actions taken: Built `UsersTablePro` with mobile cards + desktop table, sortable headers, better badge styles, accessible buttons; wired it in while preserving handlers and modals; lint clean.
+### 2025-08-11 – Dashboard UX Overhaul Blueprint
+- User request: Redesign the client Dashboard (balance panel, recent transactions, stats chart) with improved UI/UX and animations; preserve all existing functionality. Also check header/footer polish.
+- Analysis: Reviewed `pages/Dashboard.jsx`, `BalancePanel.jsx`, `RecentTransactionsWidget.jsx`, `QuickActionsBar.jsx`, `StatsChart.jsx`, chart subcomponents, `Header.jsx`, and `Footer.jsx`. Current architecture is componentized with translations/RTL and framer-motion. Opportunities: unify spacing, add secondary header bar for period controls, refine skeletons, consistent micro-interactions, a11y labels, dark-mode contrast tweaks, and sticky quick actions.
+- Affected layers: Frontend UI only (React components, no API/logic changes).
+- Affected files: `client/src/pages/Dashboard.jsx`, `client/src/components/features/dashboard/*`, `client/src/components/layout/Header.jsx`, `client/src/components/layout/Footer.jsx`.
+- Actions taken: Added “Dashboard UX Overhaul (Blueprint)” plan to `doc/workflow_state.md` with layout, interactions, a11y/RTL, and performance details. Awaiting approval before implementation to preserve functionality and avoid regressions.
+- UI responsiveness polish for Admin Users:
+  - Added role-change button to mobile user cards.
+  - Made desktop users table horizontally scrollable on smaller widths and allowed action buttons to wrap to avoid hidden controls.
+  - File updated: `client/src/pages/admin/AdminUsers.jsx`.
+
+- Desktop action buttons refined:
+  - Replaced icon-only buttons with text labels: Overview, Role Change, Block/Unblock. Kept Delete as icon-only for emphasis.
+  - Added i18n keys in English/Hebrew under `buttons`.
+  - Files updated: `client/src/pages/admin/AdminUsers.jsx`, `client/src/translations/en/admin.js`, `client/src/translations/he/admin.js`.
+
+### Admin UI improvements: delete dialog + role change
+
+- User request: Replace browser confirm/prompt for delete with a nice modal, add reason input; add super-admin role change UI (admin/user).
+- Analysis: Implemented modal-based confirmation using existing `Modal` and `Button` components; added translations (en/he). Added role change modal gated by super admin.
+- Affected layers: client (Admin Users page, translations).
+- Affected files: `client/src/pages/admin/AdminUsers.jsx`, `client/src/translations/en/admin.js`, `client/src/translations/he/admin.js`.
+- Actions taken: Added styled delete confirmation modal with optional reason; added role change modal and action; ensured notifications and cache invalidation; added missing translation keys.
+
+### Auth Recovery Overhaul – Plan Added
+
+- User request: unify auth recovery, handle Render cold start (~50s), force re-login on token expiry, and server crash UX; keep Vercel client + Render server + Supabase DB; improve purple loading toasts/UI.
+- Analysis: Located `authRecoveryManager`, axios client interceptors, global toasts via `useAuthToasts`, `/health` endpoint, and Zustand stores. Supabase tables confirm hybrid email/password + Google OAuth fields (`users.oauth_provider`, `google_id`).
+- Affected layers: client API/interceptors, recovery manager, toast/i18n, global overlay/pages, routing; server `/health` remains.
+- Affected files: `client/src/api/client.js`, `client/src/utils/authRecoveryManager.js`, `client/src/hooks/useAuthToasts.js`, `client/src/components/common/AuthRecoveryProvider.jsx`, `client/src/components/common/ConnectionStatusOverlay.jsx` (new), `client/src/pages/ServerWaking.jsx` (new), translations.
+- Actions taken: drafted detailed blueprint in `doc/workflow_state.md` under “Unified Auth Recovery & Connection Handling (Blueprint)”. No code edits yet pending blueprint auto-approval.
+ - Actions taken: Implemented first phase.
+   - Added `ConnectionStatusOverlay` and wired globally in `client/src/app.jsx`.
+   - Added `ServerWaking` page and route; API client navigates there on likely cold starts.
+   - Unified toast handling to single loading id; added explicit `sessionExpired` toast usage on 401.
+   - Simplified network recovery path in `authRecoveryManager` to avoid request storms (waking page handles).
+
+### Admin delete user -> FK error on admin_activity_log
+
+- User request: Deleting a user works (user gone from DB) but UI shows a 500 and server logs FK error: `admin_activity_log_target_user_id_fkey`.
+- Analysis: After deletion, code attempted to insert an admin activity row with `target_user_id = deletedUserId`, violating FK because the user row no longer exists. Table is defined with `target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`, so safe approach is to insert NULL for deletes.
+- Affected layers: server controller logging on `manageUser` (delete), client receives 500 due to server error.
+- Affected files: `server/controllers/adminController.js`.
+- Actions taken: Adjusted logging to set `target_user_id = NULL` when `action === 'delete'`, preventing FK violation. No client change needed.
+
 ### Blocked user auto-logout fix
 
 - User request: Blocked users see the block page only for a moment; then auth recovery logs them out and sends them back to login.

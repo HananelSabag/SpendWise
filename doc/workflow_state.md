@@ -162,6 +162,74 @@ LANGUAGE CONTEXT: ✅ PERFECTED
 
 ## Plan
 
+### Unified Auth Recovery & Connection Handling (Blueprint)
+
+Goal: Replace fragmented recovery/toast logic with a single, high-performance, user-friendly system that covers cold starts (Render sleep), token expiry, server crashes, and offline states without causing request storms or UI thrash. Preserve existing APIs and routing.
+
+Scope and guarantees
+- Preserve existing store contracts (`useAuthStore`, `useAuthToasts`, `useToast`), and API client surface (`client/src/api/client.js`).
+- Keep translations; reuse `toast.auth.*` keys with minimal additions.
+- No regressions to login/Google OAuth/email flows; maintain `/health` endpoint usage.
+
+Changes (high level)
+1) Connection State Layer
+   - Add `client/src/components/common/ConnectionStatusOverlay.jsx` that renders global overlays based on a singleton connection state (cold start, server down, offline).
+   - Integrate into `App` near `ToastProvider` so it is always present.
+
+2) Cold Start UX (Render sleep ~50s)
+   - New route `client/src/pages/ServerWaking.jsx`: branded full-screen page with a purple progress bar (0–50s), cancellable. Stops early if `/health` succeeds; otherwise shows “server is waking” with ETA and tips.
+   - API client: on timeout/ECONNABORTED/5xx before warm, redirect once to `/server-waking` and start a gated 5s health poll (max 50s) with exponential backoff. Disable further API retries during this window.
+
+3) Token Expiry and Forced Re-login
+   - Interceptor: on 401 → attempt one `refreshToken`; if it fails, emit `sessionExpired` toast (he/en), clear tokens, navigate to `/login` with `state.reason='expired'`.
+   - Ensure blocked-session path (`/blocked`) takes precedence and suppresses auto-logout.
+
+4) Server Crash / Maintenance / Offline
+   - Detect browser offline via `navigator.onLine === false` → show `connectionIssue` toast and set connection state `offline`; pause TanStack Query refetch.
+   - Persistent 503 with `MAINTENANCE_MODE` → route to `/maintenance` (already present).
+   - Repeated 5xx/no-response beyond cold-start window → show `ServerDown` overlay with retry button; do not loop requests (health poll only).
+
+5) Toasts Unification
+   - Centralize recovery toasts in `useAuthToasts` using `useToast` purple loading style; ensure single loading toast instance with id tracking; provide `dismiss` helper used by recovery manager.
+   - Add optional keys: `toast.auth.serverWaking`, `toast.auth.serverDown`, `toast.auth.tryAgainSoon`.
+
+6) AuthRecoveryManager Simplification
+   - Reduce to: state tracking, classification, single trigger point that sets connection state; remove redundant timers that duplicate API client behavior; keep stuck-state protection and blocked-session checks.
+
+7) Performance & Safety
+   - Gate network retries: health polling every 5s (max 10 tries) during cold-start; exponential backoff for other network errors; deduplicate navigations via a guard flag.
+   - Pause background refetches while in `serverWaking` or `serverDown` states; resume on recovery.
+
+File changes (planned)
+- Update: `client/src/utils/authRecoveryManager.js` (simplify, delegate to connection state)
+- Update: `client/src/api/client.js` (route to `/server-waking`, gate retries, emit connection state)
+- Add: `client/src/components/common/ConnectionStatusOverlay.jsx`
+- Add: `client/src/pages/ServerWaking.jsx` (+ simple `ServerDown` view if needed)
+- Update: `client/src/components/common/AuthRecoveryProvider.jsx` (wire new connection state)
+- Update: `client/src/hooks/useAuthToasts.js` (unify recovery toasts + purple loading)
+- Update: i18n `client/src/translations/{en,he}/toast.js` (new keys)
+
+Pseudocode (core flows)
+```js
+// api/client.js (error branch)
+if (isTimeoutOr5xx && serverState.isLikelyColdStart() && !connectionState.serverWaking) {
+  connectionState.startServerWaking(); // navigate('/server-waking') and begin health poll
+  throw normalizedError; // stop request storm
+}
+
+// authRecoveryManager
+if (errorIsAuth) tryRefreshOnce(); else if (errorIsNetwork) connectionState.set('offline');
+
+// ConnectionStatusOverlay
+render overlay/page for states: serverWaking (progress up to 50s), serverDown (retry), offline (hint).
+```
+
+Exit criteria
+- No request storms during outages; background refetches paused gracefully.
+- Cold start experience: one navigation to a purple, branded page; recovers automatically as soon as `/health` is OK.
+- Session expiry produces a single clear toast, auto-logout, and redirect.
+- Build green and lint clean.
+
 ### Transactions Page Rebuild (Blueprint)
 
 Goal: Replace `pages/Transactions.jsx` and its brittle sub-tree with a clean, modular, high-UX implementation that preserves and improves all existing functionality: dropdown actions (edit/delete/duplicate), instant filters/search/sort, Upcoming-first view, full i18n (EN/HE) with RTL, multi-select with bulk actions, animations, responsiveness, and real-time backend integration via existing hooks.
@@ -398,3 +466,117 @@ Approval Needed
 
 ## Log
 - Implemented conditional `onSelect` forwarding in `client/src/components/features/dashboard/transactions/TransactionList.jsx` so checkboxes are visible only after the user clicks the multi-select (bulk actions) button. Lint clean.
+
+## Plan – Dashboard UX Overhaul (Blueprint)
+
+Goal: Redesign the user Dashboard to a polished, responsive, and accessible experience with delightful micro-interactions, while preserving all existing functionality (data fetching, quick actions, transactions, charts, RTL/i18n). No data or API contract changes.
+
+Scope and guarantees
+- Preserve feature set: `BalancePanel`, `QuickActionsBar`, `RecentTransactionsWidget`, `StatsChart`, tips; keep add/edit/refresh flows intact.
+- Preserve routing and header/footer behavior; improve polish only.
+- Maintain translations and RTL. No new dependencies.
+
+Layout and composition
+- Page scaffold: sticky translucent header remains; add a thin secondary bar below header for period controls when on Dashboard only.
+- Content grid: 
+  - Row 1: full-width `BalancePanel` with compact header, period chips, and visibility toggle.
+  - Row 2: three-column on desktop (1fr 2fr) with gap-8; mobile becomes stacked.
+    - Left column (lg: span 1): `QuickActionsBar` in a sticky card with subtle shadow; compact helper stats row at bottom preserved.
+    - Right column (lg: span 2): `StatsChart` on top, `RecentTransactionsWidget` below; tips panel last.
+- Spacing: consistent vertical rhythm (8/12/16/24 px), Card paddings `md` or `lg` only; unified shadows.
+
+Micro-interactions and states
+- Motion: entrance fade/slide duration 200–300ms; hover lift on cards; disabled subdued states.
+- Skeletons: show for `BalancePanel`, chart area, and recent list while loading.
+- Refresh UX: keep current per-widget refresh with toast; add subtle rotate animation to icons.
+- Focus/keyboard: ensure all icon buttons have `aria-label`; focus ring visible and theme-aware.
+
+Header and footer polish
+- Header: keep primary nav; when on Dashboard, show a compact secondary bar with current greeting on the left and quick period selector on the right; collapses on scroll.
+- Footer: ensure consistent spacing, link hover states, and dark-mode contrast; no structural changes.
+
+Performance
+- Lazy-load chart submodules (already split) and defer AI insights panel until chart is visible.
+- Pause chart animations when tab not visible; keep brush off by default on mobile.
+
+Accessibility and RTL/i18n
+- All text via `t()`; ensure date/time formatting respects locale; maintain `dir` toggling at container level.
+- Buttons and controls receive descriptive `aria-label`s.
+
+Affected files (UI-only edits)
+- `client/src/pages/Dashboard.jsx`
+- `client/src/components/features/dashboard/BalancePanel.jsx`
+- `client/src/components/features/dashboard/QuickActionsBar.jsx`
+- `client/src/components/features/dashboard/RecentTransactionsWidget.jsx`
+- `client/src/components/features/dashboard/StatsChart.jsx`
+- `client/src/components/features/dashboard/charts/*`
+- `client/src/components/layout/Header.jsx` (secondary bar only when on Dashboard)
+- `client/src/components/layout/Footer.jsx` (spacing/contrast tweaks)
+
+Non-goals
+- No backend contract changes; no transaction logic changes.
+- No new libraries or design system swap.
+
+Pseudocode (high level)
+```jsx
+// pages/Dashboard.jsx
+<Page dir={isRTL ? 'rtl' : 'ltr'}>
+  <Header>
+    {route === '/' && <SecondaryBar>
+      <Greeting />
+      <PeriodChips onChange={(p) => setSelectedPeriod(p)} />
+    </SecondaryBar>}
+  </Header>
+
+  <Container>
+    <BalancePanel showDetails className="mb-8" />
+
+    <Grid cols="1 lg:3" gap="8">
+      <Card sticky className="lg:col-span-1">
+        <QuickActionsBar />
+        <SmartSuggestions maxSuggestions={3} />
+      </Card>
+
+      <div className="lg:col-span-2 space-y-8">
+        <Card>
+          <StatsChart showControls showStatistics showAIInsights />
+        </Card>
+        <RecentTransactionsWidget onViewAll={goToTransactions} onAddTransaction={scrollToQuickActions} />
+        <TipsPanel />
+      </div>
+    </Grid>
+  </Container>
+</Page>
+```
+
+Exit criteria
+- Visual hierarchy is clean on mobile and desktop; interactions smooth; keyboard-a11y intact; dark mode polished.
+- All features preserved (quick add, charts, recent list, tips); translations and RTL unaffected.
+- Build green and lint clean.
+
+Implementation will proceed after auto-approval of this blueprint.
+
+## Log
+- 2025-08-11: Drafted Dashboard UX Overhaul blueprint; awaiting approval before implementation.
+
+## Plan – Admin Users Table Redesign (Blueprint)
+
+Goal: Replace the current admin users table with a modern, responsive, accessible component that works across all screen sizes, improves readability, and preserves all existing actions (overview, role change, block/unblock, delete) and translations.
+
+Scope and guarantees
+- Preserve existing data fetching via `api.admin.users.getAll()` and keep query keys unchanged.
+- Keep all existing modals and handlers in `AdminUsers.jsx` (delete confirm, role change, details modal).
+- Maintain i18n keys under `admin.*` and RTL compatibility. No backend changes.
+
+Changes (high level)
+- New component `client/src/components/features/admin/UsersTablePro.jsx`:
+  - Mobile: stacked card list with clear hierarchy and action buttons.
+  - Desktop: sticky header, sortable columns (name, role, join date), horizontal scroll safety at narrower widths.
+  - Badges for role and status with consistent color semantics; accessible buttons with `aria-label`s.
+- Integrate into `AdminUsers.jsx` by replacing legacy list/table rendering with `UsersTablePro` while reusing existing state and callbacks.
+
+Exit criteria
+- Visual clarity improved on mobile/desktop; sorting works; actions functional; translations intact; build and lint clean.
+
+## Log
+- 2025-08-11: Added blueprint for Admin Users Table Redesign and scaffolded `UsersTablePro.jsx` component.
