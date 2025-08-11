@@ -115,12 +115,12 @@ export const storeManager = new StoreManager();
 
 // ✅ Store Provider Component - SIMPLIFIED
 import React, { useEffect, useState } from 'react';
+import TopProgressBar from '../components/common/TopProgressBar.jsx';
 
 export const StoreProvider = ({ children }) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Simple initialization without complex timeouts
     const init = async () => {
       try {
         await storeManager.initialize();
@@ -134,21 +134,12 @@ export const StoreProvider = ({ children }) => {
     init();
   }, []);
 
-  // Simple loading screen - no timeouts needed
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">
-            Initializing SpendWise...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return children;
+  return (
+    <>
+      <TopProgressBar visible={!isReady} />
+      {children}
+    </>
+  );
 };
 
 // ✅ Main exports

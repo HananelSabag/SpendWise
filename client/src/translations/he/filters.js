@@ -26,8 +26,28 @@ export default {
     all: "כל הסוגים",
     income: "הכנסה",
     expense: "הוצאה",
-    transfer: "העברה"
+    transfer: "העברה",
+    label: "סוג"
   },
+
+  // Recurring filters
+  recurring: {
+    all: "כל העסקאות",
+    recurring: "חוזרות בלבד",
+    oneTime: "חד-פעמיות בלבד",
+    label: "סטטוס חזרה"
+  },
+
+  // Filter labels
+  category: {
+    all: "כל הקטגוריות",
+    label: "קטגוריה"
+  },
+
+  amountRange: "טווח סכומים",
+  minAmount: "סכום מינימלי",
+  maxAmount: "סכום מקסימלי",
+  clearAll: "נקה הכל",
 
   // Sort options
   sortBy: {

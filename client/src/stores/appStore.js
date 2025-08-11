@@ -131,7 +131,7 @@ export const useAppStore = create(
         
         // ✅ App Actions
         actions: {
-          // Theme management
+          // Theme management (session-scoped)
           setTheme: (theme) => {
             if (!THEMES[theme]) return false;
             
@@ -140,6 +140,10 @@ export const useAppStore = create(
             });
             
             get().actions.updateResolvedTheme();
+            // Save to session only
+            try {
+              sessionStorage.setItem('spendwise-session-theme', theme);
+            } catch (_) {}
             return true;
           },
 
@@ -169,13 +173,18 @@ export const useAppStore = create(
             }
           },
 
-          // Accessibility management
+          // Accessibility management (session-scoped)
           updateAccessibility: (updates) => {
             set((state) => {
               Object.assign(state.accessibility, updates);
             });
             
             get().actions.applyAccessibilitySettings();
+            // Save to session only
+            try {
+              const { accessibility } = get();
+              sessionStorage.setItem('spendwise-session-accessibility', JSON.stringify(accessibility));
+            } catch (_) {}
           },
 
           applyAccessibilitySettings: () => {
@@ -632,8 +641,7 @@ export const useAppStore = create(
         name: 'spendwise-app',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
-          theme: state.theme,
-          accessibility: state.accessibility,
+          // Exclude theme and accessibility so they are session-only
           currency: state.currency,
           currencyPosition: state.currencyPosition,
           decimalPlaces: state.decimalPlaces,
@@ -698,6 +706,21 @@ export const useNotifications = () => useAppStore((state) => ({
 if (typeof window !== 'undefined') {
   const store = useAppStore.getState();
   
+  // Load session-scoped preferences first
+  try {
+    const sessionTheme = sessionStorage.getItem('spendwise-session-theme');
+    if (sessionTheme && THEMES[sessionTheme]) {
+      store.actions.setTheme(sessionTheme);
+    }
+    const sessionAccRaw = sessionStorage.getItem('spendwise-session-accessibility');
+    if (sessionAccRaw) {
+      const parsed = JSON.parse(sessionAccRaw);
+      if (parsed && typeof parsed === 'object') {
+        store.actions.updateAccessibility(parsed);
+      }
+    }
+  } catch (_) {}
+
   // Detect system theme
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   store.actions.setSystemTheme(mediaQuery.matches ? 'dark' : 'light');

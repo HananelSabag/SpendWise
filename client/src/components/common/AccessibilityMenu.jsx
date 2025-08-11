@@ -31,30 +31,9 @@ const AccessibilityMenu = ({
 }) => {
   // ✅ NEW: Use Zustand stores
   const { t, isRTL } = useTranslation('common');
-  const { 
-    theme, 
-    isDark, 
-    setTheme, 
-    contrast, 
-    setContrast 
-  } = useTheme();
-  const {
-    fontSize,
-    setFontSize,
-    motionReduced,
-    setMotionReduced,
-    screenReaderMode,
-    setScreenReaderMode,
-    highContrast,
-    setHighContrast,
-    soundEnabled,
-    setSoundEnabled,
-    focusVisible,
-    setFocusVisible,
-    settings,
-    updateSettings,
-    resetSettings
-  } = useAccessibility();
+  const { theme, isDark, setTheme } = useTheme();
+  const { accessibility, updateAccessibility } = useAccessibility();
+  const { fontSize, reducedMotion, screenReader, contrast, focusVisible, announcements } = accessibility;
   const { addNotification } = useNotifications();
 
   // Local state
@@ -68,16 +47,15 @@ const AccessibilityMenu = ({
     if (isOpen && !originalSettings) {
       setOriginalSettings({
         fontSize,
-        motionReduced,
-        screenReaderMode,
-        highContrast,
-        soundEnabled,
+        reducedMotion,
+        screenReader,
+        announcements,
         focusVisible,
         theme,
         contrast
       });
     }
-  }, [isOpen, originalSettings, fontSize, motionReduced, screenReaderMode, highContrast, soundEnabled, focusVisible, theme, contrast]);
+  }, [isOpen, originalSettings, fontSize, reducedMotion, screenReader, announcements, focusVisible, theme, contrast]);
 
   // Font size options
   const fontSizeOptions = [
@@ -106,101 +84,62 @@ const AccessibilityMenu = ({
   // Handle setting changes
   const handleSettingChange = useCallback((setting, value) => {
     setHasChanges(true);
-    
-    switch (setting) {
-      case 'fontSize':
-        setFontSize(value);
-        break;
-      case 'motionReduced':
-        setMotionReduced(value);
-        break;
-      case 'screenReaderMode':
-        setScreenReaderMode(value);
-        break;
-      case 'highContrast':
-        setHighContrast(value);
-        break;
-      case 'soundEnabled':
-        setSoundEnabled(value);
-        break;
-      case 'focusVisible':
-        setFocusVisible(value);
-        break;
-      case 'theme':
-        setTheme(value);
-        break;
-      case 'contrast':
-        setContrast(value);
-        break;
-      default:
-        break;
+    if (setting === 'theme') {
+      setTheme(value);
+    } else if (setting === 'contrast') {
+      updateAccessibility({ contrast: value });
+    } else {
+      updateAccessibility({ [setting]: value });
     }
-  }, [setFontSize, setMotionReduced, setScreenReaderMode, setHighContrast, setSoundEnabled, setFocusVisible, setTheme, setContrast]);
+  }, [setTheme, updateAccessibility]);
 
   // Save settings
   const handleSave = useCallback(async () => {
     try {
-      await updateSettings({
-        fontSize,
-        motionReduced,
-        screenReaderMode,
-        highContrast,
-        soundEnabled,
-        focusVisible,
-        theme,
-        contrast
-      });
-
+      // Already session-persisted by store setters
       setHasChanges(false);
       setOriginalSettings(null);
-      
-      addNotification({
-        type: 'success',
-        title: t('accessibility.settings.saved'),
-        duration: 3000
-      });
-
+      addNotification({ type: 'success', title: t('accessibility.settings.saved'), duration: 3000 });
       onClose();
     } catch (error) {
-      addNotification({
-        type: 'error',
-        title: t('accessibility.settings.saveFailed'),
-        description: error.message,
-        duration: 5000
-      });
+      addNotification({ type: 'error', title: t('accessibility.settings.saveFailed'), description: error.message, duration: 5000 });
     }
-  }, [fontSize, motionReduced, screenReaderMode, highContrast, soundEnabled, focusVisible, theme, contrast, updateSettings, addNotification, t, onClose]);
+  }, [addNotification, t, onClose]);
 
   // Reset to defaults
   const handleReset = useCallback(() => {
-    resetSettings();
+    updateAccessibility({
+      fontSize: 'medium',
+      reducedMotion: false,
+      screenReader: false,
+      announcements: true,
+      focusVisible: true,
+      contrast: 'normal'
+    });
+    setTheme('auto');
     setHasChanges(false);
     setOriginalSettings(null);
-    
-    addNotification({
-      type: 'info',
-      title: t('accessibility.settings.reset'),
-      duration: 3000
-    });
-  }, [resetSettings, addNotification, t]);
+    addNotification({ type: 'info', title: t('accessibility.settings.reset'), duration: 3000 });
+  }, [updateAccessibility, setTheme, addNotification, t]);
 
   // Cancel changes
   const handleCancel = useCallback(() => {
     if (originalSettings) {
-      setFontSize(originalSettings.fontSize);
-      setMotionReduced(originalSettings.motionReduced);
-      setScreenReaderMode(originalSettings.screenReaderMode);
-      setHighContrast(originalSettings.highContrast);
-      setSoundEnabled(originalSettings.soundEnabled);
-      setFocusVisible(originalSettings.focusVisible);
+      updateAccessibility({
+        fontSize: originalSettings.fontSize,
+        reducedMotion: originalSettings.reducedMotion,
+        screenReader: originalSettings.screenReader,
+        announcements: originalSettings.announcements,
+        focusVisible: originalSettings.focusVisible,
+        contrast: originalSettings.contrast
+      });
       setTheme(originalSettings.theme);
-      setContrast(originalSettings.contrast);
     }
     
     setHasChanges(false);
     setOriginalSettings(null);
     onClose();
-  }, [originalSettings, setFontSize, setMotionReduced, setScreenReaderMode, setHighContrast, setSoundEnabled, setFocusVisible, setTheme, setContrast, onClose]);
+  }, [originalSettings, updateAccessibility, setTheme, onClose]);
 
   return (
     <AnimatePresence>

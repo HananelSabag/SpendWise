@@ -38,6 +38,10 @@ export default {
   selectOption: 'Select an option',
   goBack: 'Go Back',
   needHelp: 'Need help?',
+  languageChanged: 'Language changed successfully',
+  themeChanged: 'Theme changed to {{theme}}',
+  lightTheme: 'Light Theme',
+  darkTheme: 'Dark Theme',
 
   // Password actions
   showPassword: 'Show Password',
@@ -210,5 +214,11 @@ export default {
   and: 'and',
 
   // Quick panels
-  quickPanelsTip: 'Click the icon to open quick actions panel'
+  quickPanelsTip: 'Click the icon to open quick actions panel',
+
+  // Date labels
+  date: {
+    today: "Today",
+    yesterday: "Yesterday"
+  }
 }; 

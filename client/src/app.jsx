@@ -11,7 +11,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
 
 // Core UI components
-import LoadingSpinner from './components/ui/LoadingSpinner';
+import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
@@ -259,22 +259,9 @@ const AppContent = () => {
     }
   }, [location.pathname, isAuthenticated, isLoading, navigate]);
 
-  // Initial loading
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <LoadingSpinner size="large" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">
-            Initializing SpendWise...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col min-h-screen">
+      <TopProgressBar visible={isLoading} />
       {/* Onboarding Manager */}
       {isAuthenticated && <OnboardingManager />}
       

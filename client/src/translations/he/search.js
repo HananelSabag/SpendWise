@@ -22,6 +22,7 @@ export default {
   dates: 'תאריכים',
   
   // Search placeholders
+  placeholder: 'חפש...',
   searchTransactions: 'חפש עסקאות...',
   searchCategories: 'חפש קטגוריות...',
   searchByDescription: 'חפש לפי תיאור...',

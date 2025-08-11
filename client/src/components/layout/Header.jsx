@@ -30,7 +30,7 @@ import { LoadingSpinner } from '../ui';
 
 // ✅ Lazy-loaded modals for performance
 const CategoryManager = React.lazy(() => import('../features/categories/CategoryManager'));
-const RecurringManagerPanel = React.lazy(() => import('../features/transactions/recurring/RecurringManagerPanel.jsx'));
+const RecurringManagerPanel = React.lazy(() => import('../features/transactions/recurring/ModernRecurringManagerPanel.jsx'));
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
 const OnboardingModal = React.lazy(() => import('../features/onboarding/OnboardingModal'));
 

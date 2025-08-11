@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../stores';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import TopProgressBar from './TopProgressBar.jsx';
 import { api } from '../../api';
 import { useAppStore } from '../../stores/appStore';
 
@@ -67,20 +67,12 @@ const AppInitializer = ({ children }) => {
     initializeApp();
   }, [authActions]);
 
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <LoadingSpinner size="large" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Initializing SpendWise...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return children;
+  return (
+    <>
+      <TopProgressBar visible={!isInitialized} />
+      {children}
+    </>
+  );
 };
 
 export default AppInitializer; 

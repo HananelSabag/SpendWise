@@ -436,7 +436,7 @@ const transactionController = {
         description: description.trim(),
         categoryId: categoryId || null,
         notes: notes ? notes.trim() : '',
-        date: date || new Date().toISOString().split('T')[0]
+        date: date || new Date().toISOString().split('T')[0] // Default to current date if not provided
       };
 
       const transaction = await Transaction.create(transactionData, userId);

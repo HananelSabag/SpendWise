@@ -32,43 +32,27 @@ const HeaderActions = ({
   const { isDark, setTheme } = useTheme();
   const { addNotification } = useNotifications();
 
-  // ✅ Handle theme toggle (SESSION-ONLY: Does not save to database)
+  // ✅ Handle theme toggle (SESSION-ONLY via app store session persistence)
   const handleThemeToggle = useCallback(() => {
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
     
-    // ✅ Save guest preferences for non-authenticated users
-    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
-      window.spendWiseStores?.app?.getState?.()?.actions?.saveGuestPreferences?.();
-    }
-    
     addNotification({
       type: 'success',
-      message: t('common.themeChanged', { theme: t(`common.${newTheme}Theme`) })
+      message: t('toast.settings.themeChangedSession', { theme: t(`common.${newTheme}Theme`) }),
+      description: t('toast.settings.sessionOnly', 'Session-only change. Persistent preferences load from Profile at login.')
     });
   }, [isDark, setTheme, addNotification, t]);
 
-  // ✅ Handle language toggle (SESSION-ONLY: Does not save to database)
+  // ✅ Handle language toggle (SESSION-ONLY)
   const handleLanguageToggle = useCallback(() => {
     const newLanguage = currentLanguage === 'en' ? 'he' : 'en';
     setLanguage(newLanguage);
     
-    // ✅ Save guest preferences for non-authenticated users
-    if (window.spendWiseStores?.auth?.getState?.()?.isAuthenticated === false) {
-      // For guests, save language preference to sessionStorage
-      try {
-        const guestPrefs = JSON.parse(sessionStorage.getItem('spendwise-guest-preferences') || '{}');
-        guestPrefs.language = newLanguage;
-        guestPrefs.timestamp = Date.now();
-        sessionStorage.setItem('spendwise-guest-preferences', JSON.stringify(guestPrefs));
-      } catch (error) {
-        console.warn('Failed to save guest language preference:', error);
-      }
-    }
-    
     addNotification({
       type: 'success',
-      message: t('common.languageChanged')
+      message: t('toast.settings.languageChangedSession'),
+      description: t('toast.settings.sessionOnly', 'Session-only change. Persistent preferences load from Profile at login.')
     });
   }, [currentLanguage, setLanguage, addNotification, t]);
 

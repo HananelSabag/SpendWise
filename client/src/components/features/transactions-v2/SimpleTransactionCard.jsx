@@ -17,7 +17,8 @@ const SimpleTransactionCard = ({
   const { formatCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
 
-  const isIncome = (transaction?.type === 'income') || (transaction?.amount > 0);
+  // ✅ FIX: Use transaction type instead of amount sign to determine income/expense
+  const isIncome = transaction?.type === 'income';
   const amountAbs = Math.abs(transaction?.amount || 0);
   const dateText = dateHelpers.fromNow(transaction?.date || transaction?.created_at);
   const isRecurring = transaction?.template_id || transaction?.is_recurring;

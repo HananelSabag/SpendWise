@@ -2321,6 +2321,17 @@
   @apply w-6 h-6;
 }
 
+/* TopProgressBar indeterminate animation */
+.sw-indeterminate {
+  animation: sw-indeterminate 1.2s infinite;
+}
+
+@keyframes sw-indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(50%); }
+  100% { transform: translateX(100%); }
+}
+
 .loading-spinner-lg {
   @apply w-8 h-8;
 }

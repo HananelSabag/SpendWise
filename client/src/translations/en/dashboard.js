@@ -82,6 +82,7 @@ export default {
 
   // ✅ FIXED: Common UI translations
   common: {
+    noData: 'No data',
     hide: 'Hide',
     show: 'Show',
     categoryTypes: {
@@ -155,6 +156,7 @@ export default {
   // ✅ FIXED: Balance section translations
   balance: {
     title: 'Current Balance',
+    subtitle: 'Your current financial overview',
     income: 'Income',
     expenses: 'Expenses',
     net: 'Total',
@@ -162,6 +164,9 @@ export default {
     growth: 'Growth',
     balancesHidden: 'Balances hidden',
     balancesShown: 'Balances shown',
+    hide: 'Hide balances',
+    show: 'Show balances',
+    refresh: 'Refresh balance',
     refreshed: 'Balance refreshed successfully',
     // ✅ FIXED: Added missing balance translations
     noData: 'No balance data available',
@@ -187,8 +192,13 @@ export default {
   // Quick Actions
   quickActions: {
     title: 'Quick Actions',
-    addExpense: 'Quick Expense',
-    addIncome: 'Quick Income',
+    subtitle: 'Add transactions instantly',
+    expense: 'Expense',
+    income: 'Income',
+    addExpense: 'Add Expense',
+    addIncome: 'Add Income',
+    expense: 'Expense',
+    income: 'Income',
     addExpenseDesc: 'Add expense instantly',
     addIncomeDesc: 'Add income instantly', 
     transfer: 'Transfer',
@@ -197,10 +207,16 @@ export default {
     amount: 'Amount',
     description: 'Description',
     descriptionOptional: 'Description (optional)',
+    descriptionPlaceholder: 'What was this for? (optional)',
+    enterAmount: 'Enter amount...',
     category: 'Category',
     add: 'Add',
     adding: 'Adding...',
     cancel: 'Cancel',
+    success: 'Transaction added successfully!',
+    failed: 'Failed to add transaction. Please try again.',
+    invalidAmount: 'Please enter a valid amount',
+    smartCategory: 'Smart category',
     success: 'Added successfully!',
     failed: 'Failed to add transaction. Please try again.',
     invalidAmount: 'Please enter a valid amount',
@@ -259,14 +275,17 @@ export default {
     balance: 'Balance Over Time'
   },
 
-  // ✅ MISSING: Stats section
+  // ✅ Stats section
   stats: {
     title: 'Statistics',
     thisMonth: 'This Month',
     lastMonth: 'Last Month',
     totalTransactions: 'Total Transactions',
     avgTransaction: 'Avg per Transaction',
-    topCategory: 'Top Category'
+    topCategory: 'Top Category',
+    monthlyBalance: 'Monthly Balance',
+    positive: 'Positive',
+    negative: 'Negative'
   },
 
   // ✅ MISSING: Tips section

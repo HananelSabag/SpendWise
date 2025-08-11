@@ -9,7 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Shield, Download, Camera, Edit2, Save, X,
   Eye, EyeOff, Key, Mail, Calendar, MapPin, Settings,
-  RefreshCw, Upload, ZoomIn, ImageIcon
+  RefreshCw, Upload, ZoomIn, ImageIcon,
+  FileSpreadsheet, Braces, FileText, ShieldCheck
 } from 'lucide-react';
 
 import { 
@@ -24,7 +25,7 @@ import { useAuthToasts } from '../hooks/useAuthToasts';
 import { useToast } from '../hooks/useToast';
 
 import { Button, Card, Input, Avatar, LoadingSpinner } from '../components/ui';
-import ExportModal from '../components/features/profile/ExportModal';
+import useExport from '../hooks/useExport';
 import { api } from '../api';
 import { cn, dateHelpers } from '../utils/helpers';
 
@@ -39,7 +40,8 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
+  // Export hook for one-click downloads
+  const { exportAsCSV, exportAsJSON, exportAsPDF, isExporting, triggerDownload } = useExport();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showPictureModal, setShowPictureModal] = useState(false);
@@ -293,7 +295,7 @@ const Profile = () => {
   const renderPersonalTab = () => (
     <Card className="p-6">
       {/* Profile Header */}
-      <div className="flex items-center space-x-6 mb-6">
+      <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 mb-8">
         <div className="relative group">
           {/* Profile Picture with Click to View */}
           <motion.div
@@ -303,7 +305,7 @@ const Profile = () => {
             className="relative cursor-pointer"
             onClick={handlePictureClick}
           >
-            <div className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-green-100 dark:ring-green-800 group-hover:ring-green-200 dark:group-hover:ring-green-700 transition-all duration-200">
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden ring-4 ring-green-100 dark:ring-green-800 group-hover:ring-green-200 dark:group-hover:ring-green-700 transition-all duration-200">
               <Avatar
                 src={user?.avatar}
                 alt={user?.name || user?.email}
@@ -330,7 +332,7 @@ const Profile = () => {
           <motion.label 
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="absolute -bottom-1 -right-1 w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 border-4 border-white dark:border-gray-800"
+            className="absolute -bottom-2 -right-2 sm:-bottom-1 sm:-right-1 w-12 h-12 z-10 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 border-4 border-white dark:border-gray-800"
           >
             <Upload className="w-5 h-5 text-white" />
             <input
@@ -343,13 +345,13 @@ const Profile = () => {
           </motion.label>
         </div>
         
-        <div>
+        <div className="text-center sm:text-left">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             {user?.name || user?.email?.split('@')[0]}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Member since {user?.createdAt ? dateHelpers.format(user.createdAt, 'MMM yyyy') : 'Unknown'}
+            {t('personal.memberSince', { fallback: 'Member since' })} {user?.createdAt ? dateHelpers.format(user.createdAt, 'MMM yyyy') : 'Unknown'}
           </p>
         </div>
       </div>
@@ -379,7 +381,7 @@ const Profile = () => {
                 }}
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                {t('actions.cancel', { fallback: 'Cancel' })}
               </Button>
             )}
             <Button
@@ -402,7 +404,7 @@ const Profile = () => {
               ) : (
                 <>
                   <Edit2 className="w-4 h-4 mr-2" />
-                  Edit
+                  {t('actions.edit', { fallback: 'Edit' })}
                 </>
               )}
             </Button>
@@ -554,9 +556,11 @@ const Profile = () => {
           <Button
             onClick={handlePreferencesUpdate}
             loading={isLoading}
-            className="px-6"
+            variant="primary"
+            size="lg"
+            icon={<Save />}
+            className="px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md hover:shadow-lg border-0 w-full sm:w-auto"
           >
-            <Save className="w-4 h-4 mr-2" />
             {t('preferences.savePreferences', { fallback: 'Save Preferences' })}
           </Button>
         </div>
@@ -625,13 +629,14 @@ const Profile = () => {
         <Button 
           onClick={handlePasswordChange} 
           disabled={
-            // ✅ For Google-only users: only need new password & confirm
-            // ✅ For regular users: need current password + new password + confirm
             isGoogleOnlyUser 
               ? (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
               : (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
           }
-          className="w-full"
+          variant="primary"
+          size="lg"
+          icon={<ShieldCheck />}
+          className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md hover:shadow-lg border-0"
         >
           {isLoading 
             ? (isGoogleOnlyUser ? t('messages.saving', { fallback: 'Saving...' }) : t('messages.saving', { fallback: 'Saving...' })) 
@@ -651,60 +656,58 @@ const Profile = () => {
       </p>
       
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* CSV - Green gradient */}
           <Button 
             onClick={async () => {
-              setIsLoading(true);
               try {
-                const result = await api.export.exportAsCSV();
-                if (result.success) {
-                  // Using general toast for export operations (not auth-specific)
-                  toast.success('CSV export started - download will begin shortly');
-                } else {
-                  throw new Error(result.error?.message || 'Export failed');
-                }
-              } catch (error) {
-                toast.error(error.message || 'Failed to export CSV');
-              } finally {
-                setIsLoading(false);
-              }
+                const data = await exportAsCSV();
+                triggerDownload(data, null, 'csv');
+              } catch (_) {}
             }}
-            disabled={isLoading}
-            variant="outline"
+            disabled={isExporting}
+            variant="primary"
+            size="lg"
+            icon={<FileSpreadsheet />}
+            className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg border-0"
           >
-            <Download className="w-4 h-4 mr-2" />
             {t('export.actions.download', { fallback: 'Download Data' })} CSV
           </Button>
-          
+
+          {/* JSON - Indigo/Purple gradient */}
           <Button 
             onClick={async () => {
-              setIsLoading(true);
               try {
-                const result = await api.export.exportAsJSON();
-                if (result.success) {
-                  // Using general toast for export operations (not auth-specific)
-                  toast.success('JSON export started - download will begin shortly');
-                } else {
-                  throw new Error(result.error?.message || 'Export failed');
-                }
-              } catch (error) {
-                toast.error(error.message || 'Failed to export JSON');
-              } finally {
-                setIsLoading(false);
-              }
+                const data = await exportAsJSON();
+                triggerDownload(data, null, 'json');
+              } catch (_) {}
             }}
-            disabled={isLoading}
-            variant="outline"
+            disabled={isExporting}
+            variant="primary"
+            size="lg"
+            icon={<Braces />}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg border-0"
           >
-            <Download className="w-4 h-4 mr-2" />
             {t('export.actions.download', { fallback: 'Download Data' })} JSON
           </Button>
+
+          {/* PDF - Rose/Red gradient */}
+          <Button 
+            onClick={async () => {
+              try {
+                const data = await exportAsPDF();
+                triggerDownload(data, null, 'pdf');
+              } catch (_) {}
+            }}
+            disabled={isExporting}
+            variant="primary"
+            size="lg"
+            icon={<FileText />}
+            className="bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-md hover:shadow-lg border-0"
+          >
+            {t('export.actions.download', { fallback: 'Download Data' })} PDF
+          </Button>
         </div>
-        
-        <Button onClick={() => setShowExportModal(true)} className="w-full">
-          <Download className="w-4 h-4 mr-2" />
-          {t('export.actions.preview', { fallback: 'Preview' })}
-        </Button>
       </div>
     </Card>
   );
@@ -736,7 +739,7 @@ const Profile = () => {
                   transition={{ delay: 0.2 }}
                   className="text-3xl font-bold text-gray-900 dark:text-white"
                 >
-                  Profile
+                  {t('page.title', { fallback: 'Profile' })}
                 </motion.h1>
                 <motion.p 
                   initial={{ opacity: 0, x: -20 }}
@@ -744,7 +747,7 @@ const Profile = () => {
                   transition={{ delay: 0.3 }}
                   className="text-sm text-gray-600 dark:text-gray-400 mt-1"
                 >
-                  Manage your account and preferences
+                  {t('page.subtitle', { fallback: 'Manage your account and preferences' })}
                 </motion.p>
               </div>
             </div>
@@ -764,7 +767,7 @@ const Profile = () => {
                     className="flex items-center gap-2 px-4 py-2.5 h-auto rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg"
                   >
                     <Save className="w-4 h-4" />
-                    <span className="hidden sm:inline font-medium">Save</span>
+                    <span className="hidden sm:inline font-medium">{t('actions.save', { fallback: 'Save' })}</span>
                   </Button>
                 </motion.div>
               )}
@@ -835,7 +838,7 @@ const Profile = () => {
               >
                 {/* Modal Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Profile Picture</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('personal.profilePictureTitle', { fallback: 'Profile Picture' })}</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -852,7 +855,7 @@ const Profile = () => {
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
-                        alt="Profile Picture"
+                         alt={t('personal.profilePictureAlt', { fallback: 'Profile Picture' })}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -872,13 +875,13 @@ const Profile = () => {
                       >
                         {isUploadingAvatar ? (
                           <>
-                            <LoadingSpinner size="sm" className="mr-2" />
-                            Uploading...
+                             <LoadingSpinner size="sm" className="mr-2" />
+                             {t('messages.loading', { fallback: 'Uploading...' })}
                           </>
                         ) : (
                           <>
                             <Upload className="w-4 h-4 mr-2" />
-                            Change Picture
+                            {t('personal.changePicture', { fallback: 'Change Picture' })}
                           </>
                         )}
                       </Button>
@@ -896,7 +899,7 @@ const Profile = () => {
                       onClick={handleClosePictureModal}
                       className="flex-1 sm:flex-none px-6"
                     >
-                      Cancel
+                      {t('actions.cancel', { fallback: 'Cancel' })}
                     </Button>
                   </div>
                 </div>
@@ -905,13 +908,7 @@ const Profile = () => {
           )}
         </AnimatePresence>
 
-        {/* Export Modal */}
-        {showExportModal && (
-          <ExportModal
-            isOpen={showExportModal}
-            onClose={() => setShowExportModal(false)}
-          />
-        )}
+        {/* Export modal removed: one-click CSV/JSON/PDF buttons replace preview */}
 
         {/* Loading Overlay */}
         {isLoading && (

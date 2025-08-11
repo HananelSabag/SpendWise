@@ -22,6 +22,7 @@ export default {
   dates: 'Dates',
   
   // Search placeholders
+  placeholder: 'Search...',
   searchTransactions: 'Search transactions...',
   searchCategories: 'Search categories...',
   searchByDescription: 'Search by description...',

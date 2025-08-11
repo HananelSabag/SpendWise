@@ -22,7 +22,7 @@ const ExportModal = ({ isOpen, onClose }) => {
   const formats = [
     { value: 'csv', label: 'CSV', description: 'Excel compatible spreadsheet format', icon: FileText },
     { value: 'json', label: 'JSON', description: 'Machine-readable data format', icon: Database },
-    { value: 'pdf', label: 'PDF', description: 'Professional report with charts 🆕', icon: FileText, new: true }
+    { value: 'pdf', label: 'PDF', description: 'Professional report', icon: FileText }
   ];
 
   const handleExport = async () => {

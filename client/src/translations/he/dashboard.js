@@ -57,6 +57,7 @@ export default {
 
   // ✅ FIXED: Common UI translations (no duplicates)
   common: {
+    noData: 'אין נתונים',
     hide: 'הסתר',
     show: 'הצג',
     categoryTypes: {
@@ -149,6 +150,7 @@ export default {
   // Balance and financial data
   balance: {
     title: 'יתרה נוכחית',
+    subtitle: 'סקירה פיננסית נוכחית',
     income: 'הכנסות',
     expenses: 'הוצאות',
     net: 'סך הכל',
@@ -156,6 +158,9 @@ export default {
     growth: 'צמיחה',
     balancesHidden: 'יתרות הוסתרו',
     balancesShown: 'יתרות מוצגות',
+    hide: 'הסתר יתרות',
+    show: 'הצג יתרות',
+    refresh: 'רענון יתרה',
     refreshed: 'יתרה רוענה בהצלחה',
     // ✅ FIXED: הוספת תרגומי יתרה חסרים
     noData: 'לא קיימים נתוני יתרה',
@@ -183,8 +188,13 @@ export default {
   // Quick Actions
   quickActions: {
     title: 'פעולות מהירות',
-    addExpense: 'הוצאה מהירה',
-    addIncome: 'הכנסה מהירה',
+    subtitle: 'הוסף תנועות מיידיות',
+    expense: 'הוצאה',
+    income: 'הכנסה',
+    addExpense: 'הוסף הוצאה',
+    addIncome: 'הוסף הכנסה',
+    expense: 'הוצאה',
+    income: 'הכנסה',
     addExpenseDesc: 'הוסף הוצאה מיידית',
     addIncomeDesc: 'הוסף הכנסה מיידית', 
     transfer: 'העברה',
@@ -193,15 +203,29 @@ export default {
     amount: 'סכום',
     description: 'תיאור',
     descriptionOptional: 'תיאור (אופציונלי)',
+    descriptionPlaceholder: 'בשביל מה זה היה? (אופציונלי)',
+    enterAmount: 'הזן סכום...',
     category: 'קטגוריה',
     add: 'הוסף',
     adding: 'מוסיף...',
     cancel: 'ביטול',
+    success: 'התנועה נוספה בהצלחה!',
+    failed: 'הוספת התנועה נכשלה. אנא נסה שוב.',
+    invalidAmount: 'אנא הזן סכום תקין',
+    smartCategory: 'קטגוריה חכמה',
     success: 'נוסף בהצלחה!',
     failed: 'נכשל בהוספת העסקה. אנא נסה שוב.',
     invalidAmount: 'אנא הכנס סכום תקין',
     enterAmount: 'הכנס סכום',
     smartCategory: 'קטגוריה חכמה:',
+    addTransaction: 'הוסף תנועה',
+    expense: 'הוצאה',
+    income: 'הכנסה',
+    addExpense: 'הוסף הוצאה',
+    addIncome: 'הוסף הכנסה',
+    viewReports: 'דוחות',
+    manageCategories: 'נהל קטגוריות',
+    exportData: 'ייצא נתונים',
     placeholder: {
       amount: 'הכנס סכום...',
       description: 'תיאור (אופציונלי)',
@@ -248,7 +272,10 @@ export default {
     lastMonth: 'חודש שעבר',
     totalTransactions: 'סה״כ תנועות',
     avgTransaction: 'ממוצע לתנועה',
-    topCategory: 'קטגוריה מובילה'
+    topCategory: 'קטגוריה מובילה',
+    monthlyBalance: 'יתרה חודשית',
+    positive: 'חיובי',
+    negative: 'שלילי'
   },
   
   tips: {

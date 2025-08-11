@@ -188,7 +188,7 @@ const AmountInput = ({ value, onChange, onKeyDown, disabled, currency, type, inp
             scale: isFocused ? 1.1 : 1,
             color: type === 'expense' ? '#EF4444' : '#10B981'
           }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold pointer-events-none"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold pointer-events-none"
         >
           {currencySymbol}
         </motion.div>
@@ -222,7 +222,7 @@ const AmountInput = ({ value, onChange, onKeyDown, disabled, currency, type, inp
  * 🚀 Modern Quick Actions Bar Component
  */
 const ModernQuickActionsBar = ({ className = '' }) => {
-  const { t } = useTranslation('dashboard');
+  const { t, isRTL } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
   const { currency } = useCurrency();
   
@@ -324,7 +324,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
         amount: Math.abs(numericAmount),
         description: description.trim() || `Quick ${activeType}`,
         categoryId: categoryId,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'), // Use local date in YYYY-MM-DD format
         notes: '',
         isRecurring: false
       };
@@ -410,14 +410,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
           </div>
         </div>
         
-        <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="flex items-center gap-1"
-        >
-          <Sparkles className="w-5 h-5 text-yellow-500" />
-          <span className="text-xs font-medium text-gray-500">AI Powered</span>
-        </motion.div>
+
       </motion.div>
 
       {/* Enhanced Type Selector */}
@@ -427,9 +420,14 @@ const ModernQuickActionsBar = ({ className = '' }) => {
             layoutId="activeTypeIndicator"
             className={cn(
               'absolute top-1 bottom-1 rounded-xl shadow-lg transition-all duration-300',
-              activeType === 'expense' 
-                ? 'left-1 right-1/2 bg-gradient-to-r from-red-500 to-red-600' 
-                : 'left-1/2 right-1 bg-gradient-to-r from-green-500 to-green-600'
+              // Flip indicator position for RTL so it aligns with logical button order
+              isRTL
+                ? (activeType === 'expense'
+                    ? 'right-1 left-1/2 bg-gradient-to-l from-red-500 to-red-600'
+                    : 'right-1/2 left-1 bg-gradient-to-l from-green-500 to-green-600')
+                : (activeType === 'expense'
+                    ? 'left-1 right-1/2 bg-gradient-to-r from-red-500 to-red-600'
+                    : 'left-1/2 right-1 bg-gradient-to-r from-green-500 to-green-600')
             )}
           />
           
@@ -652,38 +650,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
         </motion.button>
       </motion.div>
 
-      {/* Quick Action Stats */}
-      <motion.div
-        variants={itemVariants}
-        className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200 dark:border-gray-700"
-      >
-        {[
-          { icon: BarChart3, label: 'Reports', color: 'text-blue-500' },
-          { icon: Target, label: 'Categories', color: 'text-purple-500' },
-          { icon: Eye, label: 'Analytics', color: 'text-green-500' }
-        ].map((item, index) => (
-          <motion.button
-            key={item.label}
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-            onClick={() => {
-              addNotification({
-                type: 'info',
-                message: `${item.label} feature coming soon!`,
-                duration: 2000
-              });
-            }}
-          >
-            <div className={cn('w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:scale-110 transition-transform', item.color)}>
-              <item.icon className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200">
-              {item.label}
-            </span>
-          </motion.button>
-        ))}
-      </motion.div>
+
     </motion.div>
   );
 };

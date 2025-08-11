@@ -5,6 +5,12 @@
  */
 
 export default {
+  // Page titles and navigation
+  title: "Transactions",
+  subtitle: "Manage your financial transactions",
+  total: "total",
+  loading: "Loading transactions...",
+  
   // Transaction types
   types: {
     income: "Income",
@@ -225,6 +231,9 @@ export default {
   // Recurring transactions
   recurring: {
     title: "Recurring Transactions",
+    description: "Manage your recurring transactions and templates",
+    manage: "Manage Recurring",
+    tooltip: "Recurring Transaction",
     create: {
       title: "Create Recurring Transaction",
       subtitle: "Set up automatic transactions"
@@ -443,8 +452,8 @@ export default {
     serverError: "Server error occurred"
   },
 
-  // Loading states
-  loading: {
+  // Loading states (renamed to avoid clobbering top-level "loading")
+  loadingStates: {
     loading: "Loading transactions...",
     saving: "Saving transaction...",
     deleting: "Deleting transaction...",
@@ -591,6 +600,7 @@ export default {
   // Upcoming Transactions
   upcoming: {
     title: 'Upcoming Transactions',
+    subtitle: 'Your scheduled transactions',
     loading: 'Loading upcoming transactions...',
     noUpcoming: 'No Upcoming Transactions',
     noUpcomingDesc: 'No future transactions scheduled. Set up recurring transactions to see them here.',
@@ -600,7 +610,13 @@ export default {
     transactions: 'transactions',
     totalAmount: 'Total',
     showingNext: 'Showing next {{count}} transactions',
-    viewAll: 'View All'
+    viewAll: 'View All',
+    totalTransactions: 'Total Upcoming',
+    expectedIncome: 'Expected Income',
+    expectedExpenses: 'Expected Expenses',
+    tomorrow: 'Tomorrow',
+    thisWeek: 'This Week',
+    later: 'Later'
   },
 
   // Enhanced Recurring Manager
@@ -610,8 +626,10 @@ export default {
     active: 'Active',
     paused: 'Paused',
     total: 'Total',
+    totalAmount: 'Total Monthly',
+    avgAmount: 'Average Amount',
     addNew: 'Add New',
-    addFirst: 'Add First Recurring',
+    addFirst: 'Add First Template',
     created: 'Created',
     totalRuns: 'Total Runs',
     lastRun: 'Last Run',
@@ -620,17 +638,22 @@ export default {
     indefinite: 'Indefinite',
     endDate: 'End Date',
     confirmDelete: 'Delete "{{name}}"?',
-    deleteSuccess: 'Recurring transaction deleted',
-    deleteFailed: 'Failed to delete recurring transaction',
-    statusUpdated: 'Status updated',
+    deleteSuccess: 'Template deleted successfully',
+    deleteFailed: 'Failed to delete template',
+    statusUpdated: 'Status updated successfully',
     statusUpdateFailed: 'Failed to update status',
-    noRecurring: 'No Recurring Transactions',
+    templateSaved: 'Template saved successfully',
+    noRecurring: 'No Recurring Templates',
     noRecurringDesc: 'Create recurring transactions to automate your finance tracking',
-    noMatches: 'No Matching Transactions',
+    noMatches: 'No Matching Templates',
     noMatchesDesc: 'Try adjusting your filters',
-    loading: 'Loading recurring transactions...',
+    loading: 'Loading templates...',
     loadError: 'Failed to load recurring transactions',
-    searchPlaceholder: 'Search recurring transactions...',
+    searchPlaceholder: 'Search templates...',
+    templates: 'Templates',
+    upcoming: 'Upcoming',
+    upcomingTitle: 'Upcoming Transactions',
+    upcomingDesc: 'Your upcoming recurring transactions will appear here',
     filter: {
       allStatus: 'All Status',
       active: 'Active Only',
@@ -643,5 +666,38 @@ export default {
       monthly: 'Monthly',
       yearly: 'Yearly'
     }
+  },
+
+    // Modern page features
+  stats: {
+    totalTransactions: "Total Transactions",
+    totalIncome: "Total Income",
+    totalExpenses: "Total Expenses",
+    recurringTransactions: "Recurring",
+    netAmount: "Net Amount",
+    averageTransaction: "Average Transaction"
+  },
+
+  // Additional labels
+  count: "transactions",
+  net: "Net",
+
+  tabs: {
+    all: "All Transactions",
+    upcoming: "Upcoming",
+    recurring: "Recurring"
+  },
+
+  advancedFilters: "Advanced Filters",
+  selected: "selected",
+  bulkActions: "Choose an action to apply to selected transactions",
+  noDescription: "No description",
+  autoGenerating: "Auto-generating...",
+
+  
+
+  empty: {
+    title: "No Transactions Found",
+    description: "Start tracking your finances by adding your first transaction."
   }
 }; 

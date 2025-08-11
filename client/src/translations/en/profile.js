@@ -3,6 +3,10 @@
  */
 
 export default {
+  page: {
+    title: 'Profile',
+    subtitle: 'Manage your account and preferences'
+  },
   // Navigation tabs
   tabs: {
     personal: 'Personal Info',
@@ -23,6 +27,9 @@ export default {
   // Personal Info section
   personal: {
     title: 'Personal Information',
+    profilePictureTitle: 'Profile Picture',
+    profilePictureAlt: 'Profile Picture',
+    changePicture: 'Change Picture',
     firstName: 'First Name',
     lastName: 'Last Name',
     email: 'Email',

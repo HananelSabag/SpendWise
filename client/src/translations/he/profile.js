@@ -4,6 +4,10 @@
  */
 
 export default {
+  page: {
+    title: 'פרופיל',
+    subtitle: 'נהל את החשבון וההעדפות שלך'
+  },
   // Navigation tabs
   tabs: {
     personal: 'מידע אישי',
@@ -24,6 +28,9 @@ export default {
   // Personal Info section
   personal: {
     title: 'מידע אישי',
+    profilePictureTitle: 'תמונת פרופיל',
+    profilePictureAlt: 'תמונת פרופיל',
+    changePicture: 'שנה תמונה',
     firstName: 'שם פרטי',
     lastName: 'שם משפחה',
     email: 'אימייל',

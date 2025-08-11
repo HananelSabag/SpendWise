@@ -15,8 +15,8 @@ const createLazyComponent = (importFn, componentName) => {
 
 // ✅ Core Pages - Critical Route Components
 export const Dashboard = createLazyComponent(
-  () => import('../pages/Dashboard.jsx'),
-  'Dashboard'
+  () => import('../pages/ModernDashboard.jsx'),
+  'ModernDashboard'
 );
 
 export const Profile = createLazyComponent(
@@ -25,8 +25,8 @@ export const Profile = createLazyComponent(
 );
 
 export const Transactions = createLazyComponent(
-  () => import('../pages/Transactions.jsx'),
-  'Transactions'
+  () => import('../pages/ModernTransactions.jsx'),
+  'ModernTransactions'
 );
 
 // ✅ Authentication Pages
@@ -84,8 +84,8 @@ export const Analytics = createLazyComponent(
 
 // ✅ Recurring Manager Panel
 export const RecurringManagerPanel = createLazyComponent(
-  () => import('../components/features/transactions/recurring/RecurringManagerPanel.jsx'),
-  'RecurringManagerPanel'
+  () => import('../components/features/transactions/recurring/ModernRecurringManagerPanel.jsx'),
+  'ModernRecurringManagerPanel'
 );
 
 // ✅ Utility Pages

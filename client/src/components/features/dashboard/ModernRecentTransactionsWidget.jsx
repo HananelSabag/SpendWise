@@ -82,7 +82,8 @@ const cardVariants = {
 // ✅ Enhanced Transaction Item Component
 const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClick }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isIncome = transaction.amount > 0;
+  // ✅ FIX: Use transaction type instead of amount sign to determine income/expense
+  const isIncome = transaction.type === 'income';
   const amount = Math.abs(transaction.amount);
   
   // Get category icon
@@ -219,7 +220,7 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
                   className="text-xs text-gray-500 mt-1"
                   animate={{ opacity: isHovered ? 0.7 : 1 }}
                 >
-                  {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {isToday ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : getDateLabel()}
                 </motion.p>
               </div>
             </div>

@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
 import { 
-  RefreshCw, Eye, EyeOff, TrendingUp, TrendingDown, 
+  RefreshCw, TrendingUp, TrendingDown, 
   DollarSign, Target, Sparkles, BarChart3, Calendar,
   ArrowUp, ArrowDown, Activity, Zap, PiggyBank
 } from 'lucide-react';
@@ -286,8 +286,8 @@ const ModernBalancePanel = ({
   });
 
   // ✅ State management
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
-  const [showBalances, setShowBalances] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('daily');
+
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ✅ Refs for advanced animations
@@ -459,19 +459,6 @@ const ModernBalancePanel = ({
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Toggle visibility */}
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowBalances(!showBalances)}
-                  className="text-white/90 hover:text-white hover:bg-white/20 border-white/30"
-                  aria-label={showBalances ? t('balance.hide') : t('balance.show')}
-                >
-                  {showBalances ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </Button>
-              </motion.div>
-              
               {/* Enhanced refresh button */}
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Button
@@ -505,78 +492,54 @@ const ModernBalancePanel = ({
           variants={cardVariants}
           className="p-6"
         >
-          <AnimatePresence mode="wait">
-            {showBalances ? (
-              <motion.div
-                key="balances"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-6"
-              >
-                {/* Income Card */}
-                <BalanceCard
-                  type="income"
-                  amount={currentPeriodData.income}
-                  icon={TrendingUp}
-                  color="text-green-700"
-                  bgColor="bg-green-50 dark:bg-green-900/20"
-                  borderColor="border-green-200 dark:border-green-800"
-                  trend={trends.income}
-                  isVisible={showBalances}
-                  formatCurrency={formatCurrency}
-                  t={t}
-                />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            {/* Income Card */}
+            <BalanceCard
+              type="income"
+              amount={currentPeriodData.income}
+              icon={TrendingUp}
+              color="text-green-700"
+              bgColor="bg-green-50 dark:bg-green-900/20"
+              borderColor="border-green-200 dark:border-green-800"
+              trend={trends.income}
+              isVisible={true}
+              formatCurrency={formatCurrency}
+              t={t}
+            />
 
-                {/* Expenses Card */}
-                <BalanceCard
-                  type="expenses"
-                  amount={currentPeriodData.expenses}
-                  icon={TrendingDown}
-                  color="text-red-700"
-                  bgColor="bg-red-50 dark:bg-red-900/20"
-                  borderColor="border-red-200 dark:border-red-800"
-                  trend={trends.expenses}
-                  isVisible={showBalances}
-                  formatCurrency={formatCurrency}
-                  t={t}
-                />
+            {/* Expenses Card */}
+            <BalanceCard
+              type="expenses"
+              amount={currentPeriodData.expenses}
+              icon={TrendingDown}
+              color="text-red-700"
+              bgColor="bg-red-50 dark:bg-red-900/20"
+              borderColor="border-red-200 dark:border-red-800"
+              trend={trends.expenses}
+              isVisible={true}
+              formatCurrency={formatCurrency}
+              t={t}
+            />
 
-                {/* Net Balance Card */}
-                <BalanceCard
-                  type="total"
-                  amount={currentPeriodData.total}
-                  icon={Activity}
-                  color={currentPeriodData.total >= 0 ? "text-blue-700" : "text-orange-700"}
-                  bgColor={currentPeriodData.total >= 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-orange-50 dark:bg-orange-900/20"}
-                  borderColor={currentPeriodData.total >= 0 ? "border-blue-200 dark:border-blue-800" : "border-orange-200 dark:border-orange-800"}
-                  trend={trends.total}
-                  isVisible={showBalances}
-                  formatCurrency={formatCurrency}
-                  t={t}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="hidden"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="text-center py-12"
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <Eye className="w-10 h-10 text-gray-400" />
-                </motion.div>
-                <p className="text-gray-500 text-lg font-medium">{t('balance.hidden')}</p>
-                <p className="text-gray-400 text-sm mt-2">{t('balance.clickToShow', 'Click the eye icon to show balances')}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* Net Balance Card */}
+            <BalanceCard
+              type="total"
+              amount={currentPeriodData.total}
+              icon={Activity}
+              color={currentPeriodData.total >= 0 ? "text-blue-700" : "text-orange-700"}
+              bgColor={currentPeriodData.total >= 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-orange-50 dark:bg-orange-900/20"}
+              borderColor={currentPeriodData.total >= 0 ? "border-blue-200 dark:border-blue-800" : "border-orange-200 dark:border-orange-800"}
+              trend={trends.total}
+              isVisible={true}
+              formatCurrency={formatCurrency}
+              t={t}
+            />
+          </motion.div>
         </motion.div>
       </Card>
     </motion.div>

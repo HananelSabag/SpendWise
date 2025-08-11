@@ -26,6 +26,9 @@ import search from './search.js';
 import empty from './empty.js';
 import filters from './filters.js';
 import exchange from './exchange.js';
+import date from './date.js';
+import recurringManager from './recurringManager.js';
+import types from './types.js';
 
 export default {
   common,
@@ -51,4 +54,7 @@ export default {
   empty,
   filters,
   exchange,
+  date,
+  recurringManager,
+  types,
 }; 

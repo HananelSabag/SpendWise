@@ -26,8 +26,28 @@ export default {
     all: "All Types",
     income: "Income",
     expense: "Expense",
-    transfer: "Transfer"
+    transfer: "Transfer",
+    label: "Type"
   },
+
+  // Recurring filters
+  recurring: {
+    all: "All Transactions",
+    recurring: "Recurring Only", 
+    oneTime: "One-Time Only",
+    label: "Recurring Status"
+  },
+
+  // Filter labels
+  category: {
+    all: "All Categories",
+    label: "Category"
+  },
+
+  amountRange: "Amount Range",
+  minAmount: "Min Amount",
+  maxAmount: "Max Amount",
+  clearAll: "Clear All",
 
   // Sort options
   sortBy: {

@@ -38,6 +38,10 @@ export default {
   goBack: 'חזור',
   needHelp: 'זקוק לעזרה?',
   selectOption: 'בחר אופציה',
+  languageChanged: 'השפה עודכנה בהצלחה',
+  themeChanged: 'ערכת נושא עודכנה ל־{{theme}}',
+  lightTheme: 'מצב בהיר',
+  darkTheme: 'מצב כהה',
 
   // פעולות סיסמה
   showPassword: 'הצג סיסמה',
@@ -209,5 +213,11 @@ export default {
   english: 'English',
 
   // Quick panels
-  quickPanelsTip: 'לחצו על האייקון כדי לפתוח פאנל פעולות מהיר'
+  quickPanelsTip: 'לחצו על האייקון כדי לפתוח פאנל פעולות מהיר',
+
+  // Date labels
+  date: {
+    today: "היום",
+    yesterday: "אתמול"
+  }
 }; 

@@ -323,6 +323,11 @@ export const useAuthStore = create(
               // ✅ FIX: Clear ALL tokens and auth data  
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
+              // Clear session-scoped UI prefs
+              try {
+                sessionStorage.removeItem('spendwise-session-theme');
+                sessionStorage.removeItem('spendwise-session-accessibility');
+              } catch (_) {}
               
               // Reset state
               get().actions.reset();
@@ -349,6 +354,10 @@ export const useAuthStore = create(
               // ✅ FIX: Force clear everything even if logout API fails
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
+              try {
+                sessionStorage.removeItem('spendwise-session-theme');
+                sessionStorage.removeItem('spendwise-session-accessibility');
+              } catch (_) {}
               get().actions.clearTokenRefreshTimer();
               get().actions.reset();
               

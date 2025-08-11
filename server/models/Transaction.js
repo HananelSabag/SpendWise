@@ -50,7 +50,7 @@ class Transaction {
         transactionData.type,
         transactionData.description || '',
         transactionData.notes || '',
-        transactionData.date || new Date().toISOString().split('T')[0],
+        transactionData.date || new Date().toISOString().split('T')[0], // Default to current UTC date
         transactionData.templateId || null
       ];
 

@@ -5,10 +5,16 @@
  */
 
 export default {
+  // Page titles and navigation
+  title: "עסקאות",
+  subtitle: "נהלו את העסקאות הפיננסיות שלכם",
+  total: "סה״כ",
+  loading: "טוען עסקאות...",
+  
   // Transaction types
   types: {
     income: "הכנסה",
-    expense: "הוצאה",
+    expense: "הוצאה", 
     transfer: "העברה",
     all: "כל הסוגים"
   },
@@ -230,6 +236,9 @@ export default {
     paused: "מושהה",
     nextRun: "הרצה הבאה",
     title: "עסקאות חוזרות",
+    description: "נהלו את העסקאות החוזרות והתבניות שלכם",
+    manage: "ניהול חוזרות",
+    tooltip: "עסקה חוזרת",
     create: {
       title: "צור עסקה חוזרת",
       subtitle: "הגדר עסקאות אוטומטיות"
@@ -448,8 +457,8 @@ export default {
     serverError: "שגיאת שרת התרחשה"
   },
 
-  // Loading states
-  loading: {
+  // Loading states (renamed to avoid clobbering top-level "loading")
+  loadingStates: {
     loading: "טוען עסקאות...",
     saving: "שומר עסקה...",
     deleting: "מוחק עסקה...",
@@ -596,6 +605,7 @@ export default {
   // Upcoming Transactions
   upcoming: {
     title: 'עסקאות קרובות',
+    subtitle: 'העסקאות המתוכננות שלכם',
     loading: 'טוען עסקאות קרובות...',
     noUpcoming: 'אין עסקאות קרובות',
     noUpcomingDesc: 'אין עסקאות עתידיות מתוכננות. הגדירו עסקאות חוזרות כדי לראות אותן כאן.',
@@ -605,6 +615,94 @@ export default {
     transactions: 'עסקאות',
     totalAmount: 'סה"כ',
     showingNext: 'מציג את {{count}} הקרובות',
-    viewAll: 'הצג הכל'
+    viewAll: 'הצג הכל',
+    totalTransactions: 'סה״כ קרובות',
+    expectedIncome: 'הכנסות צפויות',
+    expectedExpenses: 'הוצאות צפויות',
+    tomorrow: 'מחר',
+    thisWeek: 'השבוע',
+    later: 'מאוחר יותר'
+  },
+
+  // Enhanced Recurring Manager
+  recurringManager: {
+    title: 'מנהל עסקאות חוזרות',
+    subtitle: 'נהלו את העסקאות החוזרות שלכם',
+    active: 'פעיל',
+    paused: 'מושהה',
+    total: 'סה״כ',
+    totalAmount: 'סה״כ חודשי',
+    avgAmount: 'סכום ממוצע',
+    addNew: 'הוסף חדש',
+    addFirst: 'הוסף תבנית ראשונה',
+    created: 'נוצר',
+    totalRuns: 'סה״כ הרצות',
+    lastRun: 'הרצה אחרונה',
+    nextRun: 'הרצה הבאה',
+    never: 'לעולם לא',
+    indefinite: 'בלתי מוגבל',
+    endDate: 'תאריך סיום',
+    confirmDelete: 'למחוק את "{{name}}"?',
+    deleteSuccess: 'תבנית נמחקה בהצלחה',
+    deleteFailed: 'מחיקת התבנית נכשלה',
+    statusUpdated: 'הסטטוס עודכן בהצלחה',
+    statusUpdateFailed: 'עדכון הסטטוס נכשל',
+    templateSaved: 'תבנית נשמרה בהצלחה',
+    noRecurring: 'אין תבניות חוזרות',
+    noRecurringDesc: 'צרו עסקאות חוזרות כדי להוסיף אוטומציה למעקב הפיננסי',
+    noMatches: 'אין תבניות מתאימות',
+    noMatchesDesc: 'נסו לשנות את המסננים',
+    loading: 'טוען תבניות...',
+    loadError: 'טעינת עסקאות חוזרות נכשלה',
+    searchPlaceholder: 'חפשו תבניות...',
+    templates: 'תבניות',
+    upcoming: 'קרובות',
+    upcomingTitle: 'עסקאות קרובות',
+    upcomingDesc: 'העסקאות החוזרות הקרובות שלכם יופיעו כאן',
+    filter: {
+      allStatus: 'כל הסטטוסים',
+      active: 'פעילות בלבד',
+      paused: 'מושהות בלבד',
+      allTypes: 'כל הסוגים'
+    },
+    frequency: {
+      daily: 'יומי',
+      weekly: 'שבועי',
+      monthly: 'חודשי',
+      yearly: 'שנתי'
+    }
+  },
+
+  // Modern page features
+  stats: {
+    totalTransactions: "סה״כ עסקאות",
+    totalIncome: "סה״כ הכנסות",
+    totalExpenses: "סה״כ הוצאות",
+    recurringTransactions: "חוזרות",
+    netAmount: "סכום נטו",
+    averageTransaction: "עסקה ממוצעת"
+  },
+
+  // Additional labels
+  count: "עסקאות",
+  net: "נטו",
+
+  tabs: {
+    all: "כל העסקאות",
+    upcoming: "קרובות",
+    recurring: "חוזרות"
+  },
+
+  advancedFilters: "מסננים מתקדמים",
+  selected: "נבחרו",
+  bulkActions: "בחרו פעולה להחיל על העסקאות הנבחרות",
+  noDescription: "ללא תיאור",
+  autoGenerating: "יוצר אוטומטית...",
+
+  
+
+  empty: {
+    title: "לא נמצאו עסקאות",
+    description: "התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה."
   }
 }; 
