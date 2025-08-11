@@ -69,9 +69,9 @@ export default {
   users: {
     title: 'ניהול משתמשים',
     subtitle: 'נהל {{total}} משתמשים ברחבי המערכת',
-    searchPlaceholder: 'חפש משתמשים...',
+    searchPlaceholder: 'חפש משתמשים לפי שם, דוא"ל, שם משתמש...',
     noUsers: 'לא נמצאו משתמשים',
-    noUsersDesc: 'אין משתמשים התואמים לקריטריונים שלך',
+    noUsersDescription: 'נסה לשנות את קריטריוני החיפוש או הסינון.',
     userDetails: 'פרטי משתמש',
   },
 
@@ -80,14 +80,27 @@ export default {
     user: 'משתמש',
     role: 'תפקיד',
     status: 'סטטוס',
+    activity: 'פעילות',
     joinDate: 'תאריך הצטרפות',
     actions: 'פעולות',
+    selectAll: 'בחר הכל'
   },
 
   // Filters
   filters: {
     allRoles: 'כל התפקידים',
+    allStatuses: 'כל הסטטוסים',
+    allVerified: 'הכל',
+    allActivity: 'הכל',
+    verified: 'מאומת',
+    unverified: 'לא מאומת',
+    activeUsers: 'פעיל (7 ימים)',
+    inactiveUsers: 'לא פעיל',
     filterByRole: 'סנן לפי תפקיד',
+    role: 'תפקיד',
+    status: 'סטטוס',
+    verified: 'דוא"ל מאומת',
+    activity: 'פעילות'
   },
 
   // Roles
@@ -102,6 +115,26 @@ export default {
     deleteUser: 'האם אתה בטוח שברצונך למחוק את המשתמש?',
   },
 
+  // Dialogs
+  dialogs: {
+    deleteUser: {
+      title: 'מחיקת משתמש',
+      message: 'פעולה זו קבועה ותסיר את המשתמש וכל הנתונים הקשורים. ניתן לספק סיבה לצורך תיעוד.',
+      reasonLabel: 'סיבה (אופציונלי)',
+      reasonPlaceholder: 'הזן סיבה למחיקה...',
+      confirm: 'מחק משתמש',
+      cancel: 'בטל'
+    },
+    roleChange: {
+      title: 'שינוי תפקיד משתמש',
+      message: 'בחר תפקיד חדש למשתמש. השינוי נכנס לתוקף מיידית.',
+      selectLabel: 'בחר תפקיד',
+      confirm: 'עדכן תפקיד',
+      cancel: 'בטל',
+      success: 'תפקיד המשתמש עודכן בהצלחה'
+    }
+  },
+
   // Status
   status: {
     active: 'פעיל',
@@ -110,15 +143,7 @@ export default {
     inactive: 'לא פעיל',
   },
 
-  // Users Management - Additional keys
-  users: {
-    title: 'ניהול משתמשים',
-    subtitle: 'ניהול חשבונות משתמשים והרשאות',
-    searchPlaceholder: 'חפש משתמשים...',
-    noUsers: 'לא נמצאו משתמשים',
-    noUsersDesc: 'אין משתמשים התואמים לקריטריונים שלך',
-    userDetails: 'פרטי משתמש',
-  },
+
 
   // Fields
   fields: {
@@ -135,6 +160,19 @@ export default {
     error: 'שגיאה',
     success: 'הצלחה',
     never: 'אף פעם',
+    users: 'משתמשים',
+    selected: 'נבחרו',
+    filters: 'מסננים'
+  },
+
+  // Bulk operations
+  bulk: {
+    block: 'חסום נבחרים',
+    unblock: 'בטל חסימת נבחרים',
+    delete: 'מחק נבחרים',
+    export: 'ייצא נבחרים',
+    actionSuccess: '{{action}} הושלם עבור {{count}} משתמשים',
+    actionError: 'פעולה קבוצתית נכשלה'
   },
 
   // Errors - Additional keys
@@ -144,6 +182,14 @@ export default {
     actionFailed: 'הפעולה נכשלה',
     accessDenied: 'גישה נדחתה',
     adminRequired: 'נדרשות הרשאות מנהל לגישה לעמוד זה',
+  },
+
+  // Buttons
+  buttons: {
+    overview: 'סקירה',
+    roleChange: 'שינוי תפקיד',
+    block: 'חסום',
+    unblock: 'בטל חסימה'
   },
 
   // Admin Settings

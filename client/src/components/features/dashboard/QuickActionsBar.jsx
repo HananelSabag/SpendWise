@@ -223,7 +223,7 @@ const QuickActionsBar = ({ className = '' }) => {
         className="space-y-4"
       >
         {/* Income/Expense Tabs */}
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1" role="tablist" aria-label={t('quickActions.typeSelector', 'Transaction type')}>
           <button
             onClick={() => handleTypeChange('expense')}
             className={cn(
@@ -232,6 +232,9 @@ const QuickActionsBar = ({ className = '' }) => {
                 ? 'bg-red-500 text-white shadow-md'
                 : 'text-gray-600 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
             )}
+            role="tab"
+            aria-selected={activeType === 'expense'}
+            aria-label={t('quickActions.expense', 'Expense')}
           >
             <Minus className="w-4 h-4" />
             <span>{t('quickActions.expense', 'Expense')}</span>
@@ -245,6 +248,9 @@ const QuickActionsBar = ({ className = '' }) => {
                 ? 'bg-green-500 text-white shadow-md'
                 : 'text-gray-600 dark:text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'
             )}
+            role="tab"
+            aria-selected={activeType === 'income'}
+            aria-label={t('quickActions.income', 'Income')}
           >
             <Plus className="w-4 h-4" />
             <span>{t('quickActions.income', 'Income')}</span>
@@ -270,6 +276,7 @@ const QuickActionsBar = ({ className = '' }) => {
               )}
               step="0.01"
               min="0"
+              aria-label={t('quickActions.enterAmount', 'Enter amount...')}
             />
             <div
               className={cn(
@@ -291,6 +298,7 @@ const QuickActionsBar = ({ className = '' }) => {
             onKeyDown={handleKeyPress}
             disabled={isSubmitting}
             className="text-sm"
+            aria-label={t('quickActions.descriptionOptional', 'Description (optional)...')}
           />
         </div>
 
@@ -321,6 +329,9 @@ const QuickActionsBar = ({ className = '' }) => {
               ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
               : 'bg-green-500 hover:bg-green-600 disabled:bg-green-300'
           )}
+          aria-label={activeType === 'expense' 
+            ? t('quickActions.addExpense', 'Add Expense')
+            : t('quickActions.addIncome', 'Add Income')}
         >
           {isSubmitting ? (
             <div className="flex items-center justify-center space-x-2">

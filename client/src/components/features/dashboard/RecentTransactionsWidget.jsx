@@ -196,7 +196,7 @@ const RecentTransactionsWidget = ({
               <RefreshCw className={cn(
                 'w-4 h-4',
                 loading && 'animate-spin'
-              )} />
+              )} aria-hidden="true" />
             </Button>
             
             {/* View All Button */}
@@ -210,7 +210,7 @@ const RecentTransactionsWidget = ({
                 <span className="hidden sm:inline mr-2">
                   {t('recentTransactions.viewAll', 'View All')}
                 </span>
-                <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </Button>
             )}
           </div>

@@ -4,20 +4,21 @@
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Search, Filter, MoreVertical, UserX, UserCheck, 
-  Shield, Crown, User, Calendar, Mail, Phone, Ban, Trash2,
-  Eye, Edit, CheckCircle, XCircle, AlertTriangle, Users
+  ArrowLeft, Search, Filter, UserCheck,
+  Shield, Crown, User, Ban, Trash2,
+  Eye, CheckCircle, XCircle, AlertTriangle, Users
 } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores and API
-import { useAuth, useTranslation, useTheme, useNotifications } from '../../stores';
+import { useAuth, useTranslation, useTheme, useNotifications, useCurrency } from '../../stores';
 import { api } from '../../api';
 import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal } from '../../components/ui';
+import ModernUsersTable from '../../components/features/admin/ModernUsersTable.jsx';
 import { cn } from '../../utils/helpers';
 
 const AdminUsers = () => {
@@ -26,13 +27,24 @@ const AdminUsers = () => {
   const { t } = useTranslation('admin');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
+  const { formatCurrency } = useCurrency();
+
+  // ✅ Helper function to format amount with user's currency preference
+  const formatUserAmount = useCallback((amount, userCurrencyPreference) => {
+    const userCurrency = userCurrencyPreference || 'ILS'; // Default to ILS if no preference
+    return formatCurrency(amount || 0, { currency: userCurrency });
+  }, [formatCurrency]);
 
   // Local state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState(null);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [pendingRoleUser, setPendingRoleUser] = useState(null);
+  const [selectedRole, setSelectedRole] = useState('user');
 
   const queryClient = useQueryClient();
 
@@ -44,8 +56,8 @@ const AdminUsers = () => {
     error,
     refetch 
   } = useQuery({
-    queryKey: ['admin', 'users', { search: searchTerm, role: filterRole }],
-    queryFn: () => api.admin.users.getAll({ search: searchTerm, role: filterRole }),
+    queryKey: ['admin', 'users'],
+    queryFn: () => api.admin.users.getAll({}),
     keepPreviousData: true,
     refetchInterval: 30000, // Refresh every 30 seconds
     onError: (err) => {
@@ -105,6 +117,9 @@ const AdminUsers = () => {
       });
       setActionLoading(null);
       setShowUserModal(false);
+      setShowDeleteDialog(false);
+      setDeleteReason('');
+      setPendingDeleteUserId(null);
     },
     onError: (error) => {
       addNotification({
@@ -132,7 +147,9 @@ const AdminUsers = () => {
     email_verified: user.email_verified || user.emailVerified || false,
     avatar: user.avatar || user.profilePicture || null,
     total_transactions: user.total_transactions || 0,
-    total_amount: user.total_amount || 0
+    total_amount: user.total_amount || 0,
+    currency_preference: user.currency_preference || 'ILS', // ✅ Pass user's currency preference
+    last_login: user.last_login || null
   }));
 
   // User action handlers
@@ -147,12 +164,21 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = (userId) => {
-    const confirmed = window.confirm(t('confirmations.deleteUser', { fallback: 'Are you sure you want to delete this user?' }));
-    if (!confirmed) return;
+    setPendingDeleteUserId(userId);
+    setDeleteReason('');
+    setShowDeleteDialog(true);
+  };
 
-    const reason = prompt(t('admin.actions.deleteReason', { fallback: 'Please enter a reason for deletion (optional):' }), 'Policy violation');
-    setActionLoading(userId);
-    deleteUserMutation.mutate({ userId, reason: reason || undefined });
+  const confirmDeleteUser = () => {
+    if (!pendingDeleteUserId) return;
+    setActionLoading(pendingDeleteUserId);
+    deleteUserMutation.mutate({ userId: pendingDeleteUserId, reason: deleteReason || undefined });
+  };
+
+  const openRoleDialog = (user) => {
+    setPendingRoleUser(user);
+    setSelectedRole(user.role || 'user');
+    setShowRoleDialog(true);
   };
 
   const getRoleBadge = (role) => {
@@ -212,176 +238,63 @@ const AdminUsers = () => {
           </div>
         </Card>
 
-        {/* Search and Filters */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <Card className="p-4">
-            <div className={cn('flex flex-col sm:flex-row gap-4')}>
-              <div className="flex-1">
-                <Input
-                  icon={Search}
-                  placeholder={t('users.searchPlaceholder', { fallback: 'Search users by name, email...' })}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Dropdown
-                  options={[
-                    { value: 'all', label: t('filters.allRoles', { fallback: 'All Roles' }) },
-                    { value: 'user', label: t('roles.user', { fallback: 'User' }) },
-                    { value: 'admin', label: t('roles.admin', { fallback: 'Admin' }) },
-                    { value: 'super_admin', label: t('roles.superAdmin', { fallback: 'Super Admin' }) }
-                  ]}
-                  value={filterRole}
-                  onChange={setFilterRole}
-                  placeholder={t('filters.filterByRole', { fallback: 'Filter by role' })}
-                />
-                <Button
-                  onClick={() => refetch()}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Filter className="w-4 h-4" />
-                  {t('common.refresh', { fallback: 'Refresh' })}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Users List (mobile) + Table (desktop) */}
+        {/* Revolutionary Modern Users Table */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {/* Mobile cards */}
-          <div className="grid grid-cols-1 gap-3 md:hidden">
-            {safeUsers.length > 0 ? (
-              safeUsers.map((user) => (
-                <Card key={user.id} className="p-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      className="h-10 w-10 rounded-full"
-                      src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`}
-                      alt={(user.first_name || '') + ' ' + (user.last_name || '')}
-                      onError={(e) => {
-                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`;
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {user.first_name || user.username || 'Unknown'} {user.last_name || ''}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setSelectedUser(user); setShowUserModal(true); }}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {user.status === 'active' ? (
-                        <Button size="sm" variant="outline" onClick={() => handleBlockUser(user.id)} disabled={actionLoading === user.id || user.id === currentUser?.id} loading={actionLoading === user.id}>
-                          <Ban className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => handleUnblockUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id}>
-                          <UserCheck className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      {getRoleBadge(user.role)}
-                      {getStatusBadge(user.status)}
-                    </div>
-                    <span>{new Date(user.created_at).toLocaleDateString()}</span>
-                  </div>
-                  {isSuperAdmin && user.id !== currentUser?.id && (
-                    <div className="mt-3 flex justify-end">
-                      <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id} className="text-red-600 hover:text-red-700">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              ))
-            ) : (
-              <Card className="p-6 text-center text-gray-500 dark:text-gray-400">
-                <Users className="mx-auto h-10 w-10 mb-2" />
-                {t('users.noUsers', { fallback: 'No users found' })}
-              </Card>
-            )}
-          </div>
-
-          {/* Desktop table */}
-          <Card className="overflow-hidden hidden md:block">
-            <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[45%]">{t('table.user', { fallback: 'User' })}</th>
-                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell w-[15%]">{t('table.role', { fallback: 'Role' })}</th>
-                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[20%]">{t('table.status', { fallback: 'Status' })}</th>
-                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell w-[10%]">{t('table.joinDate', { fallback: 'Join Date' })}</th>
-                  <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[10%]">{t('table.actions', { fallback: 'Actions' })}</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {safeUsers.length > 0 ? (
-                  safeUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center min-w-0">
-                          <img className="h-10 w-10 rounded-full flex-shrink-0" src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=3B82F6&color=fff`} alt={(user.first_name || '') + ' ' + (user.last_name || '')} onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.charAt(0))}&background=6B7280&color=fff`; }} />
-                          <div className="ml-4 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.first_name || user.username || 'Unknown'} {user.last_name || ''}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap hidden lg:table-cell">{getRoleBadge(user.role)}</td>
-                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap">{getStatusBadge(user.status)}</td>
-                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">{new Date(user.created_at).toLocaleDateString()}</td>
-                      <td className="px-3 lg:px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedUser(user); setShowUserModal(true); }}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {user.status === 'active' ? (
-                            <Button size="sm" variant="outline" onClick={() => handleBlockUser(user.id)} disabled={actionLoading === user.id || user.id === currentUser?.id} loading={actionLoading === user.id}>
-                              <Ban className="w-4 h-4" />
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="outline" onClick={() => handleUnblockUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id}>
-                              <UserCheck className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {isSuperAdmin && user.id !== currentUser?.id && (
-                            <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} disabled={actionLoading === user.id} loading={actionLoading === user.id} className="text-red-600 hover:text-red-700">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                      <Users className="mx-auto h-12 w-12 mb-4" />
-                      {t('users.noUsers', { fallback: 'No users found' })}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </Card>
+          <ModernUsersTable
+            users={safeUsers}
+            currentUser={currentUser}
+            isSuperAdmin={isSuperAdmin}
+            actionLoadingUserId={actionLoading}
+            isLoading={isLoading}
+            onOverview={(user) => { setSelectedUser(user); setShowUserModal(true); }}
+            onRoleChange={(user) => openRoleDialog(user)}
+            onBlock={(userId) => handleBlockUser(userId)}
+            onUnblock={(userId) => handleUnblockUser(userId)}
+            onDelete={(userId) => handleDeleteUser(userId)}
+            onBulkAction={async (action, userIds) => {
+              // Handle bulk actions
+              switch (action) {
+                case 'block':
+                  for (const userId of userIds) {
+                    await blockUserMutation.mutateAsync(userId);
+                  }
+                  break;
+                case 'unblock':
+                  for (const userId of userIds) {
+                    await unblockUserMutation.mutateAsync(userId);
+                  }
+                  break;
+                case 'delete':
+                  if (isSuperAdmin) {
+                    for (const userId of userIds) {
+                      await deleteUserMutation.mutateAsync({ userId, reason: 'Bulk deletion' });
+                    }
+                  }
+                  break;
+                case 'export':
+                  // Export functionality
+                  const exportData = safeUsers.filter(user => userIds.includes(user.id));
+                  const csvContent = "data:text/csv;charset=utf-8," 
+                    + "Name,Email,Role,Status,Transactions,Total Amount,Currency,Join Date\n"
+                    + exportData.map(user => 
+                        `"${user.first_name} ${user.last_name}","${user.email}","${user.role}","${user.status}","${user.total_transactions || 0}","${formatUserAmount(user.total_amount, user.currency_preference)}","${user.currency_preference || 'ILS'}","${new Date(user.created_at).toLocaleDateString()}"`
+                      ).join("\n");
+                  
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encodedUri);
+                  link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  break;
+              }
+            }}
+          />
         </motion.div>
 
         {/* User Details Modal */}
@@ -445,13 +358,95 @@ const AdminUsers = () => {
                     {t('fields.totalSpent', { fallback: 'Total Spent' })}
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    ${selectedUser.total_amount || '0.00'}
+                    {formatUserAmount(selectedUser.total_amount, selectedUser.currency_preference)}
                   </p>
                 </div>
               </div>
             </div>
           </Modal>
         )}
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          isOpen={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
+          title={t('dialogs.deleteUser.title', { fallback: 'Delete User' })}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-600 dark:text-gray-300">
+              {t('dialogs.deleteUser.message', { fallback: 'This action is permanent and will remove the user and all related data.' })}
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('dialogs.deleteUser.reasonLabel', { fallback: 'Reason (optional)' })}
+              </label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder={t('dialogs.deleteUser.reasonPlaceholder', { fallback: 'Enter a reason for deletion...' })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                {t('dialogs.deleteUser.cancel', { fallback: 'Cancel' })}
+              </Button>
+              <Button variant="danger" onClick={confirmDeleteUser} loading={actionLoading === pendingDeleteUserId}>
+                {t('dialogs.deleteUser.confirm', { fallback: 'Delete User' })}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Role Change Modal (Super Admin) */}
+        <Modal
+          isOpen={showRoleDialog}
+          onClose={() => setShowRoleDialog(false)}
+          title={t('dialogs.roleChange.title', { fallback: 'Change User Role' })}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-600 dark:text-gray-300">
+              {t('dialogs.roleChange.message', { fallback: 'Select a new role for this user. Changes take effect immediately.' })}
+            </p>
+            <Dropdown
+              label={t('dialogs.roleChange.selectLabel', { fallback: 'Select Role' })}
+              value={selectedRole}
+              onChange={setSelectedRole}
+              options={[
+                { value: 'user', label: t('roles.user', { fallback: 'User' }) },
+                { value: 'admin', label: t('roles.admin', { fallback: 'Admin' }) }
+              ]}
+              fullWidth
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+                {t('dialogs.roleChange.cancel', { fallback: 'Cancel' })}
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!pendingRoleUser) return;
+                  setActionLoading(pendingRoleUser.id);
+                  try {
+                    await api.client.post(`/admin/users/${pendingRoleUser.id}/manage`, { action: 'change_role', role: selectedRole });
+                    queryClient.invalidateQueries(['admin', 'users']);
+                    addNotification({ type: 'success', message: t('dialogs.roleChange.success', { fallback: 'User role updated successfully' }) });
+                    setShowRoleDialog(false);
+                  } catch (e) {
+                    addNotification({ type: 'error', message: t('errors.actionFailed', { fallback: 'Action failed' }) });
+                  } finally {
+                    setActionLoading(null);
+                    setPendingRoleUser(null);
+                  }
+                }}
+              >
+                {t('dialogs.roleChange.confirm', { fallback: 'Update Role' })}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );

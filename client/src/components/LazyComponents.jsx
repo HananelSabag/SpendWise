@@ -104,6 +104,11 @@ export const Blocked = createLazyComponent(
   'Blocked'
 );
 
+export const ServerWaking = createLazyComponent(
+  () => import('../pages/ServerWaking.jsx'),
+  'ServerWaking'
+);
+
 // ✅ Feature Components - Conditional Loading
 export const CategoryManager = createLazyComponent(
   () => import('../components/features/categories/CategoryManager'),

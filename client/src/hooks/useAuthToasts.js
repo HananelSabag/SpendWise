@@ -104,7 +104,10 @@ export const useAuthToasts = () => {
 
     // ✅ Session & Security Toasts
     sessionExpired: () => {
-      toast.error(t('auth.sessionExpired', 'Your session has expired. Please sign in again.'));
+      // Debounce duplicate session-expired toasts
+      const id = 'auth-session-expired';
+      toast.dismiss(id);
+      toast.error(t('auth.sessionExpired', 'Your session has expired. Please sign in again.'), { id });
     },
 
     sessionExpiring: () => {
@@ -121,7 +124,13 @@ export const useAuthToasts = () => {
     },
 
     connectionRecovering: (message) => {
-      return toast.loading(message || t('auth.connectionRecovering', 'Attempting to reconnect to server...'));
+      // Ensure single loading instance
+      const id = 'connection-recovering';
+      toast.dismiss(id);
+      return toast.loading(
+        message || t('auth.connectionRecovering', 'Attempting to reconnect to server...'),
+        { id }
+      );
     },
 
     connectionRestored: (message) => {
@@ -129,6 +138,7 @@ export const useAuthToasts = () => {
     },
 
     connectionFailed: (message) => {
+      toast.dismiss('connection-recovering');
       toast.error(message || t('auth.connectionFailed', 'Failed to connect to server. Please try again.'));
     },
 
@@ -141,6 +151,8 @@ export const useAuthToasts = () => {
       };
       toast.error(messages[reason] || t('auth.sessionExpired', 'Your session has expired. Please sign in again.'));
     },
+
+    // Explicit session expired toast (single definition)
 
     accountLocked: () => {
       toast.error(t('auth.accountLocked', 'Account temporarily locked due to security reasons.'));

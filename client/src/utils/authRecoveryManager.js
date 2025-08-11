@@ -262,7 +262,13 @@ class AuthRecoveryManager {
           
         case 'NETWORK_ERROR':
         case 'TIMEOUT_ERROR':
-          await this.recoverFromNetworkError();
+          // Set lightweight UI hints; avoid aggressive re-tries (waking page now handles cold start)
+          this.showRecoveryNotification('info');
+          // If offline, show warning; waking page will take over if needed via api client
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            this.showRecoveryNotification('warning');
+          }
+          this.healthState.isRecovering = false;
           break;
           
         default:
@@ -465,6 +471,8 @@ class AuthRecoveryManager {
         case 'info':
           // Avoid stacking multiple loading toasts
           if (!this.recoveryToastId) {
+            // use a fixed id to prevent duplicates across components
+            try { if (window.authToasts?.dismiss) window.authToasts.dismiss('connection-recovering'); } catch (_) {}
             this.recoveryToastId = window.authToasts.connectionRecovering?.(message);
           }
           break;

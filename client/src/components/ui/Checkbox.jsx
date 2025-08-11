@@ -5,7 +5,7 @@
  */
 
 import React, { forwardRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Minus } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores (replaces Context API!)

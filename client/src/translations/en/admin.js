@@ -60,9 +60,9 @@ export default {
   users: {
     title: 'User Management',
     subtitle: 'Manage {{total}} users across the platform',
-    searchPlaceholder: 'Search users by name, email...',
+    searchPlaceholder: 'Search users by name, email, username...',
     noUsers: 'No users found',
-    noUsersDesc: 'No users match your search criteria',
+    noUsersDescription: 'Try adjusting your search or filter criteria.',
     userDetails: 'User Details'
   },
 
@@ -71,14 +71,27 @@ export default {
     user: 'User',
     role: 'Role',
     status: 'Status',
+    activity: 'Activity',
     joinDate: 'Join Date',
-    actions: 'Actions'
+    actions: 'Actions',
+    selectAll: 'Select all'
   },
 
   // Filters
   filters: {
     allRoles: 'All Roles',
-    filterByRole: 'Filter by role'
+    allStatuses: 'All Statuses',
+    allVerified: 'All',
+    allActivity: 'All',
+    verified: 'Verified',
+    unverified: 'Unverified',
+    activeUsers: 'Active (7d)',
+    inactiveUsers: 'Inactive',
+    filterByRole: 'Filter by role',
+    role: 'Role',
+    status: 'Status',
+    verified: 'Email Verified',
+    activity: 'Activity'
   },
 
   // Roles
@@ -91,6 +104,26 @@ export default {
   // Confirmations
   confirmations: {
     deleteUser: 'Are you sure you want to delete this user?'
+  },
+
+  // Dialogs
+  dialogs: {
+    deleteUser: {
+      title: 'Delete User',
+      message: 'This action is permanent and will remove the user and all related data. You can optionally provide a reason for auditing.',
+      reasonLabel: 'Reason (optional)',
+      reasonPlaceholder: 'Enter a reason for deletion...',
+      confirm: 'Delete User',
+      cancel: 'Cancel'
+    },
+    roleChange: {
+      title: 'Change User Role',
+      message: 'Select a new role for this user. Changes take effect immediately.',
+      selectLabel: 'Select Role',
+      confirm: 'Update Role',
+      cancel: 'Cancel',
+      success: 'User role updated successfully'
+    }
   },
 
   // Status values for users
@@ -115,7 +148,20 @@ export default {
     loading: 'Loading...',
     error: 'Error',
     success: 'Success',
-    never: 'Never'
+    never: 'Never',
+    users: 'users',
+    selected: 'selected',
+    filters: 'Filters'
+  },
+
+  // Bulk operations
+  bulk: {
+    block: 'Block Selected',
+    unblock: 'Unblock Selected',
+    delete: 'Delete Selected',
+    export: 'Export Selected',
+    actionSuccess: '{{action}} completed for {{count}} users',
+    actionError: 'Bulk action failed'
   },
 
   // Errors shown in admin pages
@@ -127,6 +173,14 @@ export default {
     adminRequired: 'Admin privileges required to access this page',
     loadFailed: 'Failed to Load Data',
     generic: 'Something went wrong'
+  },
+
+  // Buttons
+  buttons: {
+    overview: 'Overview',
+    roleChange: 'Role Change',
+    block: 'Block',
+    unblock: 'Unblock'
   },
 
   // Admin Settings

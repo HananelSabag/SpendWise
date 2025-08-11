@@ -210,8 +210,37 @@ class SpendWiseAPIClient {
     // Notify auth recovery manager of the error
     const errorType = this.authRecovery.handleApiError(error, requestConfig);
 
+    // Detect likely Render cold-start: timeout or 5xx when server not warm
+    const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+    const isServerError = !!error?.response && error.response.status >= 500;
+    const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError);
+
+    if (isLikelyColdStart) {
+      try {
+        // Remember where to return and navigate once to the waking page
+        if (typeof window !== 'undefined' && !window.__SERVER_WAKING__) {
+          window.__SERVER_WAKING__ = true;
+          try {
+            const currentPath = window.location.pathname + (window.location.search || '');
+            sessionStorage.setItem('serverWakingReturnTo', currentPath);
+          } catch (_) {}
+          if (window.spendWiseNavigate) {
+            window.spendWiseNavigate('/server-waking', { replace: true });
+          } else {
+            window.location.replace('/server-waking');
+          }
+        }
+      } catch (_) {}
+      // Do not retry this request now; the waking page will poll /health
+      return Promise.reject(this.normalizeError(error));
+    }
+
     // Handle specific error types
     if (error.response?.status === 401) {
+      // Prevent duplicate logout flows from parallel requests
+      if (typeof window !== 'undefined' && window.__AUTH_LOGOUT_IN_PROGRESS__) {
+        return Promise.reject(error);
+      }
       // Let auth recovery manager handle this, but still do legacy handling
       this.handleAuthError();
       return Promise.reject(error);
@@ -229,7 +258,7 @@ class SpendWiseAPIClient {
             window.__SPENDWISE_BLOCKED__ = true;
           }
           // Clear any lingering auth-recovery toast to avoid confusion
-          try { if (window.authToasts?.dismiss) window.authToasts.dismiss('connectionRecovering'); } catch (_) {}
+          try { if (window.authToasts?.dismiss) window.authToasts.dismiss('connection-recovering'); } catch (_) {}
           if (window.spendWiseNavigate) {
             window.spendWiseNavigate('/blocked', { replace: true, state });
           } else {
@@ -255,11 +284,9 @@ class SpendWiseAPIClient {
       }
     }
 
-    // Retry for cold start issues (but only if not in recovery mode)
-    if (!this.authRecovery.healthState?.isRecovering && 
-        this.serverState.shouldRetryForColdStart(error) && 
-        requestConfig) {
-      return this.retryColdStartRequest(requestConfig);
+    // Avoid request storms while server may be down; no auto-retry here if waking page is active
+    if (typeof window !== 'undefined' && window.__SERVER_WAKING__) {
+      return Promise.reject(this.normalizeError(error));
     }
 
     // Log error in debug mode
@@ -305,6 +332,25 @@ class SpendWiseAPIClient {
     localStorage.removeItem('accessToken');
     this.cache.clear();
     
+    // User feedback on expiry
+    try {
+      // Only show session expired if there was a token
+      const hadToken = !!localStorage.getItem('accessToken');
+      if (hadToken && window.authToasts?.sessionExpired) {
+        window.authToasts.sessionExpired();
+      }
+    } catch (_) {}
+
+    // Debounce redirect + toast to avoid multiple toasts from parallel 401s
+    if (typeof window !== 'undefined') {
+      if (window.__AUTH_LOGOUT_IN_PROGRESS__) {
+        return;
+      }
+      window.__AUTH_LOGOUT_IN_PROGRESS__ = true;
+      // reset the flag after a short while
+      setTimeout(() => { try { delete window.__AUTH_LOGOUT_IN_PROGRESS__; } catch (_) {} }, 2000);
+    }
+
     // Only redirect if not already on auth pages
     const isOnAuthPage = ['/login', '/register', '/auth/login', '/auth/register', '/auth/verify-email', '/auth/password-reset'].includes(window.location.pathname);
     const isBlockedSession = (typeof window !== 'undefined' && window.location?.pathname === '/blocked') ||
@@ -398,7 +444,7 @@ class SpendWiseAPIClient {
   // ✅ Manual Cache Management
   clearCache(pattern) {
     this.cache.clear(pattern);
-    toast.dismiss('cold-start');
+    try { toast.dismiss('cold-start'); } catch (_) {}
   }
 
   // ✅ HTTP Methods - Delegate to axios client

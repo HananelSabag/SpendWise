@@ -38,7 +38,13 @@ export default {
     currentDay: 'יום',
     daysInMonth: 'ימים/חודש',
     weekElapsed: 'ימי שבוע',
-    lastUpdate: 'עודכן'
+    lastUpdate: 'עודכן',
+    // Missing UI labels used by components (aria/tooltips)
+    hide: 'הסתר יתרות',
+    show: 'הצג יתרות',
+    refresh: 'רענון יתרה',
+    hideBalances: 'הסתרת יתרות',
+    showBalances: 'הצגת יתרות'
   },
   
   // ✅ Period translations
@@ -161,7 +167,9 @@ export default {
     lastUpdate: 'עדכון אחרון',
     refreshFailed: 'רענון יתרה נכשל',
     dataUpdated: 'נתוני יתרה עודכנו',
-    tryAgain: 'אנא נסה שוב'
+    tryAgain: 'אנא נסה שוב',
+    // Aria label for selecting period
+    periodSelector: 'בחירת תקופה'
   },
 
   // ✅ FIXED: Period summary translations
@@ -198,7 +206,9 @@ export default {
       amount: 'הכנס סכום...',
       description: 'תיאור (אופציונלי)',
       selectCategory: 'בחר קטגוריה'
-    }
+    },
+    // Missing aria-label used by QuickActionsBar
+    typeSelector: 'סוג תנועה'
   },
 
   // ✅ FIXED: Notification messages

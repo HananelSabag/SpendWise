@@ -21,7 +21,8 @@ import { useBalance } from '../../../hooks';
  */
 const BalancePanel = ({
   className = '',
-  showDetails = true,
+  // UI/UX: hide debug metadata by default; this prop is now ignored intentionally
+  showDetails = false,
   onToggleDetails
 }) => {
   // ✅ Stores
@@ -81,10 +82,10 @@ const BalancePanel = ({
 
   // ✅ Period options
   const periodOptions = [
-    { key: 'daily', label: t('periods.daily'), icon: '📅' },
-    { key: 'weekly', label: t('periods.weekly'), icon: '📆' },
-    { key: 'monthly', label: t('periods.monthly'), icon: '🗓️' },
-    { key: 'yearly', label: t('periods.yearly'), icon: '📊' }
+    { key: 'daily', label: t('periods.daily') },
+    { key: 'weekly', label: t('periods.weekly') },
+    { key: 'monthly', label: t('periods.monthly') },
+    { key: 'yearly', label: t('periods.yearly') }
   ];
 
   // ✅ Loading state
@@ -141,6 +142,7 @@ const BalancePanel = ({
               size="sm"
               onClick={() => setShowBalances(!showBalances)}
               className="text-gray-600 hover:text-gray-900"
+              aria-label={showBalances ? t('balance.hide', 'Hide balances') : t('balance.show', 'Show balances')}
             >
               {showBalances ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
@@ -152,6 +154,7 @@ const BalancePanel = ({
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="text-gray-600 hover:text-gray-900"
+              aria-label={t('balance.refresh', 'Refresh balance')}
             >
               <RefreshCw className={cn(
                 'w-4 h-4',
@@ -162,7 +165,7 @@ const BalancePanel = ({
       </div>
 
         {/* Period Selector */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('balance.periodSelector', 'Balance period')}>
           {periodOptions.map((period) => (
             <Button
               key={period.key}
@@ -170,8 +173,9 @@ const BalancePanel = ({
               size="sm"
               onClick={() => setSelectedPeriod(period.key)}
               className="text-xs"
+              aria-pressed={selectedPeriod === period.key}
+              aria-label={period.label}
             >
-              <span className="mr-1">{period.icon}</span>
               {period.label}
             </Button>
           ))}
@@ -237,31 +241,12 @@ const BalancePanel = ({
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
-            <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
             <p>{t('balance.hidden')}</p>
           </div>
         )}
 
-        {/* Metadata Display (Debug Info) */}
-        {showDetails && metadata && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div>
-                <span className="font-medium">{t('balance.currentDay')}:</span> {metadata.currentDay}
-              </div>
-              <div>
-                <span className="font-medium">{t('balance.daysInMonth')}:</span> {metadata.daysInMonth}
-              </div>
-              <div>
-                <span className="font-medium">{t('balance.weekElapsed')}:</span> {metadata.daysElapsedInWeek}
-              </div>
-              <div>
-                <span className="font-medium">{t('balance.lastUpdate')}:</span> 
-                {new Date(metadata.currentDate).toLocaleTimeString()}
-        </div>
-      </div>
-        </div>
-        )}
+        {/* Debug metadata removed for cleaner UX */}
       </div>
     </Card>
   );

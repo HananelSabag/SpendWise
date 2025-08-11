@@ -417,13 +417,15 @@ class AdminController {
       }
 
       // Log admin activity
+      // For delete action, the target user no longer exists; avoid FK violation by logging with NULL target_user_id
+      const targetUserIdForLog = action === 'delete' ? null : userId;
       await db.query(`
         INSERT INTO admin_activity_log (admin_id, action_type, target_user_id, action_details, created_at)
         VALUES ($1, $2, $3, $4, NOW())
       `, [
         adminId,
         `user_${action}`,
-        userId,
+        targetUserIdForLog,
         JSON.stringify(result)
       ], 'admin_log_activity');
 

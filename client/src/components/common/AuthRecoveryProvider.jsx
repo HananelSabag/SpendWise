@@ -12,6 +12,14 @@ const AuthRecoveryProvider = ({ children }) => {
     // Initialize auth recovery manager
     const recoveryManager = getAuthRecoveryManager();
 
+    // Expose simple connection state helpers for overlays/pages
+    if (typeof window !== 'undefined') {
+      window.connectionState = window.connectionState || {
+        setServerWaking(flag) { window.__SERVER_WAKING__ = !!flag; },
+        isServerWaking() { return !!window.__SERVER_WAKING__; }
+      };
+    }
+
     // Cleanup on unmount
     return () => {
       if (recoveryManager.stopHealthMonitoring) {

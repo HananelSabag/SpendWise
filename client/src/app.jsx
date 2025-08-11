@@ -24,6 +24,7 @@ import { StoreProvider, useAuth, useTranslation } from './stores';
 import { ToastProvider } from './hooks/useToast';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
+import ConnectionStatusOverlay from './components/common/ConnectionStatusOverlay';
 
 // ✅ Balance Provider  
 import { BalanceProvider } from './contexts/BalanceContext';
@@ -433,6 +434,15 @@ const AppContent = () => {
             </RouteErrorBoundary>
           } />
 
+          {/* ✅ Server Waking Route */}
+          <Route path="/server-waking" element={
+            <RouteErrorBoundary routeName="ServerWaking">
+              <Suspense fallback={<RouteLoadingFallback route="server waking" />}>
+                <LazyComponents.ServerWaking />
+              </Suspense>
+            </RouteErrorBoundary>
+          } />
+
           {/* ✅ 404 Route */}
           <Route path="*" element={
             <RouteErrorBoundary routeName="NotFound">
@@ -450,6 +460,8 @@ const AppContent = () => {
       
       {/* Portal container for modals */}
       <div id="portal-root" />
+      {/* Global connection status overlays */}
+      <ConnectionStatusOverlay />
     </div>
   );
 };
