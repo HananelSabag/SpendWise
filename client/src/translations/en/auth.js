@@ -215,6 +215,22 @@ export default {
   passwordStrengthFair: "Fair",
   passwordStrengthGood: "Good", 
   passwordStrengthStrong: "Strong",
+  password: {
+    empty: "Enter password",
+    weak: "Weak",
+    medium: "Medium",
+    strong: "Strong",
+    excellent: "Excellent",
+    checks: {
+      length: "At least 8 characters",
+      uppercase: "Uppercase letter",
+      lowercase: "Lowercase letter",
+      numbers: "Number",
+      symbols: "Special character",
+      noSequential: "No sequential characters",
+      noRepeating: "No repeating characters"
+    }
+  },
   twoFactorEnable: "Enable Two-Factor Authentication",
   twoFactorDisable: "Disable Two-Factor Authentication",
   twoFactorRequired: "Two-factor authentication required"

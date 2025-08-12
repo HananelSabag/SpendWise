@@ -43,7 +43,7 @@ class GoogleOAuthManager {
     });
   }
 
-  // Simple initialization
+  // Simple initialization (enable One Tap + button fallback)
   async initialize() {
     if (this.isReady) return;
 
@@ -55,8 +55,21 @@ class GoogleOAuthManager {
 
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CONFIG.CLIENT_ID,
-      callback: this.handleResponse.bind(this)
+      callback: this.handleResponse.bind(this),
+      auto_select: true,
+      cancel_on_tap_outside: true,
+      use_fedcm_for_prompt: true
     });
+
+    // Try One Tap non-blocking
+    try {
+      window.google.accounts.id.prompt((notification) => {
+        const dismissed = notification?.isNotDisplayed() || notification?.isSkippedMoment();
+        if (dismissed && import.meta.env.DEV) {
+          console.log('ℹ️ One Tap not displayed or skipped:', notification.getNotDisplayedReason?.() || notification.getSkippedReason?.());
+        }
+      });
+    } catch (_) {}
 
     this.isReady = true;
     console.log('✅ Google OAuth ready');
@@ -74,7 +87,7 @@ class GoogleOAuthManager {
     }
   }
 
-  // Simple sign-in - Direct popup approach
+  // Simple sign-in - One Tap first, fallback to button
   async signIn() {
     if (!this.isReady) {
       await this.initialize();
@@ -84,11 +97,20 @@ class GoogleOAuthManager {
       // Set the main resolver
       this.resolver = resolve;
       let timeoutId;
-
-      console.log('🚀 Using direct popup approach (skipping One Tap)');
       
-      // Go directly to popup - skip One Tap completely
-      this.renderButton().catch(reject);
+      // Attempt One Tap immediately, if it fails, render button
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          const displayed = notification?.isDisplayed && notification.isDisplayed();
+          const notDisplayed = notification?.isNotDisplayed && notification.isNotDisplayed();
+          const skipped = notification?.isSkippedMoment && notification.isSkippedMoment();
+          if (!displayed && (notDisplayed || skipped)) {
+            this.renderButton().catch(reject);
+          }
+        });
+      } catch (_) {
+        this.renderButton().catch(reject);
+      }
 
       // Extended timeout to allow for user interaction
       timeoutId = setTimeout(() => {
@@ -125,7 +147,9 @@ class GoogleOAuthManager {
     window.google.accounts.id.renderButton(container, {
       theme: 'outline',
       size: 'large',
-      type: 'standard'
+      type: 'standard',
+      shape: 'pill',
+      text: 'continue_with'
     });
 
     console.log('🔍 Button rendered, attempting auto-click...');
@@ -414,15 +438,20 @@ export const authAPI = {
   // ✅ User Registration
   async register(userData) {
     try {
-      const response = await api.client.post('/users/register', userData);
-      
-      const { user, token } = response.data;
-      
-      // Store token if provided (auto-login after registration)
-      if (token) {
-        localStorage.setItem('accessToken', token);
-      }
-      
+      // Send only the fields the server expects
+      const payload = {
+        email: userData.email,
+        username: userData.username,
+        password: userData.password
+      };
+
+      const response = await api.client.post('/users/register', payload);
+
+      // Server format: { success: true, data: { user: {...}, message: '...' }, metadata: {...} }
+      const serverData = response.data?.data || {};
+      const user = serverData.user || {};
+      const message = serverData.message || 'Registration successful! Please check your email to verify your account.';
+
       return {
         success: true,
         user: {
@@ -430,8 +459,7 @@ export const authAPI = {
           isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
           isSuperAdmin: (user.role || 'user') === 'super_admin'
         },
-        token,
-        message: 'Registration successful! Please check your email to verify your account.'
+        message
       };
     } catch (error) {
       return {

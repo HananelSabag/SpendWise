@@ -415,6 +415,16 @@ class AuthRecoveryManager {
     try {
       // Show user-friendly message and trigger auto logout
       if (window.authToasts) {
+        // Dismiss any active recovery/loading toasts to avoid stacking
+        try {
+          if (this.recoveryToastId && window.authToasts.dismiss) {
+            window.authToasts.dismiss(this.recoveryToastId);
+            this.recoveryToastId = null;
+          }
+          if (window.authToasts.dismiss) {
+            window.authToasts.dismiss('connection-recovering');
+          }
+        } catch (_) {}
         window.authToasts.autoLogout(reason);
       }
       

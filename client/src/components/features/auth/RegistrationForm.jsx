@@ -35,9 +35,8 @@ const RegistrationForm = ({
 
   // ✅ Form state
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '', // ✅ ADD: Username field to match Google OAuth
+    // Align with server requirements for /users/register
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -97,64 +96,7 @@ const RegistrationForm = ({
           </motion.div>
         )}
 
-        {/* Name Fields Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* First Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('firstName')}
-            </label>
-            <div className="relative">
-              <Input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder={t('firstNamePlaceholder')}
-                className={cn(
-                  "pl-12",
-                  errors.firstName && "border-red-300 focus:border-red-500"
-                )}
-                disabled={isSubmitting}
-                autoComplete="given-name"
-              />
-              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
-            {errors.firstName && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                {errors.firstName}
-              </p>
-            )}
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('lastName')}
-            </label>
-            <div className="relative">
-              <Input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder={t('lastNamePlaceholder')}
-                className={cn(
-                  "pl-12",
-                  errors.lastName && "border-red-300 focus:border-red-500"
-                )}
-                disabled={isSubmitting}
-                autoComplete="family-name"
-              />
-              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
-            {errors.lastName && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                {errors.lastName}
-              </p>
-            )}
-          </div>
-        </div>
+        {/* Removed first/last name for normal registration (kept for Google profile step) */}
 
         {/* ✅ ADD: Username Field */}
         <div>
@@ -333,7 +275,7 @@ const RegistrationForm = ({
           ) : (
             <ArrowRight className={cn("w-5 h-5 mr-2", isRTL && "ml-2 mr-0 rotate-180")} />
           )}
-          {isSubmitting ? t('creatingAccount') : t('createAccount')}
+          {isSubmitting ? t('signingUp') : t('createAccount')}
         </Button>
 
         {/* Divider */}

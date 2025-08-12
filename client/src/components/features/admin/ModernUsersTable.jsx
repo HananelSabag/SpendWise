@@ -179,6 +179,7 @@ const ModernUsersTable = ({
   users = [],
   currentUser,
   isSuperAdmin,
+  isAdmin,
   onOverview,
   onRoleChange,
   onBlock,
@@ -658,33 +659,39 @@ const ModernUsersTable = ({
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
-                  {isSuperAdmin && user.id !== currentUser?.id && (
+                  {user.id !== currentUser?.id && (
                     <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onRoleChange?.(user)}
-                      >
-                        <Shield className="w-4 h-4" />
-                      </Button>
-                      {user.status === 'active' ? (
+                      {isSuperAdmin && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onBlock?.(user.id)}
-                          disabled={actionLoadingUserId === user.id}
+                          onClick={() => onRoleChange?.(user)}
                         >
-                          <Ban className="w-4 h-4" />
+                          <Shield className="w-4 h-4" />
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onUnblock?.(user.id)}
-                          disabled={actionLoadingUserId === user.id}
-                        >
-                          <UserCheck className="w-4 h-4" />
-                        </Button>
+                      )}
+                      {(isSuperAdmin || (isAdmin && user.role === 'user')) && (
+                        <>
+                          {user.status === 'active' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onBlock?.(user.id)}
+                              disabled={actionLoadingUserId === user.id}
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onUnblock?.(user.id)}
+                              disabled={actionLoadingUserId === user.id}
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -840,53 +847,61 @@ const ModernUsersTable = ({
                               <Eye className="w-4 h-4" />
                               {t('buttons.overview', { fallback: 'Overview' })}
                             </Button>
-                            {isSuperAdmin && user.id !== currentUser?.id && (
+                            {user.id !== currentUser?.id && (
                               <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => onRoleChange?.(user)}
-                                  className="gap-2"
-                                >
-                                  <Shield className="w-4 h-4" />
-                                  {t('buttons.roleChange', { fallback: 'Role' })}
-                                </Button>
-                                {user.status === 'active' ? (
+                                {isSuperAdmin && (
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => onBlock?.(user.id)}
-                                    disabled={actionLoadingUserId === user.id}
-                                    loading={actionLoadingUserId === user.id}
+                                    onClick={() => onRoleChange?.(user)}
                                     className="gap-2"
                                   >
-                                    <Ban className="w-4 h-4" />
-                                    {t('buttons.block', { fallback: 'Block' })}
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onUnblock?.(user.id)}
-                                    disabled={actionLoadingUserId === user.id}
-                                    loading={actionLoadingUserId === user.id}
-                                    className="gap-2"
-                                  >
-                                    <UserCheck className="w-4 h-4" />
-                                    {t('buttons.unblock', { fallback: 'Unblock' })}
+                                    <Shield className="w-4 h-4" />
+                                    {t('buttons.roleChange', { fallback: 'Role' })}
                                   </Button>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => onDelete?.(user.id)}
-                                  disabled={actionLoadingUserId === user.id}
-                                  loading={actionLoadingUserId === user.id}
-                                  className="gap-2 text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  {t('buttons.delete', { fallback: 'Delete' })}
-                                </Button>
+                                {(isSuperAdmin || (isAdmin && user.role === 'user')) && (
+                                  <>
+                                    {user.status === 'active' ? (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => onBlock?.(user.id)}
+                                        disabled={actionLoadingUserId === user.id}
+                                        loading={actionLoadingUserId === user.id}
+                                        className="gap-2"
+                                      >
+                                        <Ban className="w-4 h-4" />
+                                        {t('buttons.block', { fallback: 'Block' })}
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => onUnblock?.(user.id)}
+                                        disabled={actionLoadingUserId === user.id}
+                                        loading={actionLoadingUserId === user.id}
+                                        className="gap-2"
+                                      >
+                                        <UserCheck className="w-4 h-4" />
+                                        {t('buttons.unblock', { fallback: 'Unblock' })}
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                                {(isSuperAdmin || (isAdmin && user.role === 'user')) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => onDelete?.(user.id)}
+                                    disabled={actionLoadingUserId === user.id}
+                                    loading={actionLoadingUserId === user.id}
+                                    className="gap-2 text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    {t('buttons.delete', { fallback: 'Delete' })}
+                                  </Button>
+                                )}
                               </>
                             )}
                           </div>
@@ -1020,49 +1035,57 @@ const ModernUsersTable = ({
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {isSuperAdmin && user.id !== currentUser?.id && (
+                       {user.id !== currentUser?.id && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onRoleChange?.(user)}
-                            className="p-2"
-                          >
-                            <Shield className="w-4 h-4" />
-                          </Button>
-                          {user.status === 'active' ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onBlock?.(user.id)}
-                              disabled={actionLoadingUserId === user.id}
-                              loading={actionLoadingUserId === user.id}
-                              className="p-2"
-                            >
-                              <Ban className="w-4 h-4" />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onUnblock?.(user.id)}
-                              disabled={actionLoadingUserId === user.id}
-                              loading={actionLoadingUserId === user.id}
-                              className="p-2"
-                            >
-                              <UserCheck className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onDelete?.(user.id)}
-                            disabled={actionLoadingUserId === user.id}
-                            loading={actionLoadingUserId === user.id}
-                            className="p-2 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                           {isSuperAdmin && (
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => onRoleChange?.(user)}
+                               className="p-2"
+                             >
+                               <Shield className="w-4 h-4" />
+                             </Button>
+                           )}
+                           {(isSuperAdmin || (isAdmin && user.role === 'user')) && (
+                             <>
+                               {user.status === 'active' ? (
+                                 <Button
+                                   size="sm"
+                                   variant="ghost"
+                                   onClick={() => onBlock?.(user.id)}
+                                   disabled={actionLoadingUserId === user.id}
+                                   loading={actionLoadingUserId === user.id}
+                                   className="p-2"
+                                 >
+                                   <Ban className="w-4 h-4" />
+                                 </Button>
+                               ) : (
+                                 <Button
+                                   size="sm"
+                                   variant="ghost"
+                                   onClick={() => onUnblock?.(user.id)}
+                                   disabled={actionLoadingUserId === user.id}
+                                   loading={actionLoadingUserId === user.id}
+                                   className="p-2"
+                                 >
+                                   <UserCheck className="w-4 h-4" />
+                                 </Button>
+                               )}
+                             </>
+                           )}
+                           {(isSuperAdmin || (isAdmin && user.role === 'user')) && (
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => onDelete?.(user.id)}
+                               disabled={actionLoadingUserId === user.id}
+                               loading={actionLoadingUserId === user.id}
+                               className="p-2 text-red-600 hover:text-red-700"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
+                           )}
                         </>
                       )}
                     </div>

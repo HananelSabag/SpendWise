@@ -218,5 +218,23 @@ export default {
   googleRegisterError: "אירעה שגיאה במהלך הרשמה עם Google.",
   alreadyHaveAccount: "כבר יש לכם חשבון?",
   welcomeAboard: "ברוכים הבאים!",
-  readyToStart: "הכל מוכן ואתם יכולים להתחיל לנהל את הכספים שלכם!"
+  readyToStart: "הכל מוכן ואתם יכולים להתחיל לנהל את הכספים שלכם!",
+
+  // Password strength nested keys to match UI
+  password: {
+    empty: "הכניסו סיסמה",
+    weak: "חלשה",
+    medium: "בינונית",
+    strong: "חזקה",
+    excellent: "מעולה",
+    checks: {
+      length: "לפחות 8 תווים",
+      uppercase: "אות גדולה",
+      lowercase: "אות קטנה",
+      numbers: "ספרה",
+      symbols: "תו מיוחד",
+      noSequential: "ללא תווים עוקבים",
+      noRepeating: "ללא חזרות"
+    }
+  }
 }; 

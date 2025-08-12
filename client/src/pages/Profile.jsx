@@ -910,12 +910,7 @@ const Profile = () => {
 
         {/* Export modal removed: one-click CSV/JSON/PDF buttons replace preview */}
 
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <LoadingSpinner size="lg" />
-          </div>
-        )}
+        {/* Removed legacy full-screen loading overlay to avoid blocking the page */}
       </motion.div>
     </div>
   );

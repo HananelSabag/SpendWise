@@ -15,6 +15,7 @@ import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
+import AccessibilityFab from './components/common/AccessibilityFab.jsx';
 import OnboardingManager from './components/common/OnboardingManager';
 
 // ✅ Zustand stores
@@ -121,17 +122,13 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
   const { isAuthenticated, isLoading, user, isAdmin, isSuperAdmin } = useAuth();
   const { t } = useTranslation();
   
-  // Loading state
+  // Loading state: keep route area light and non-blocking
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <LoadingSpinner size="large" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {t('common.loadingData', { fallback: 'Loading...' })}
-          </p>
-        </div>
-      </div>
+      <>
+        <TopProgressBar visible={true} />
+        <div className="min-h-[40vh]" />
+      </>
     );
   }
   
@@ -443,7 +440,8 @@ const AppContent = () => {
       
       {/* Footer & Accessibility */}
       {isAuthenticated && <Footer />}
-      {isAuthenticated && <AccessibilityMenu />}
+      {/* Floating accessibility button (works on mobile and desktop) */}
+      {isAuthenticated && <AccessibilityFab />}
       
       {/* Portal container for modals */}
       <div id="portal-root" />

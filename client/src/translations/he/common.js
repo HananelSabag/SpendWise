@@ -211,9 +211,12 @@ export default {
   guestMode: 'מצב אורח',
   hebrew: 'עברית',
   english: 'English',
+  users: 'משתמשים',
+  selected: 'נבחרים',
 
   // Quick panels
   quickPanelsTip: 'לחצו על האייקון כדי לפתוח פאנל פעולות מהיר',
+  filters: 'מסננים',
 
   // Date labels
   date: {

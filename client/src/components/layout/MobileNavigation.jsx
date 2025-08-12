@@ -91,38 +91,13 @@ const MobileNavigation = ({
       href: '/admin',
       icon: Shield,
       current: location.pathname.startsWith('/admin')
-    },
-    {
-      name: t('nav.userManagement') || 'User Management',
-      href: '/admin/users',
-      icon: Users,
-      current: location.pathname === '/admin/users'
-    },
-    {
-      name: t('nav.systemStats') || 'System Statistics',
-      href: '/admin/stats',
-      icon: BarChart3,
-      current: location.pathname === '/admin/stats'
-    },
-    {
-      name: t('nav.activityLog') || 'Activity Log',
-      href: '/admin/activity',
-      icon: Activity,
-      current: location.pathname === '/admin/activity'
-    },
-    // ✅ System Settings - Only for super admin
-    ...(isSuperAdmin ? [{
-      name: t('nav.systemSettings') || 'System Settings',
-      href: '/admin/settings',
-      icon: Settings,
-      current: location.pathname === '/admin/settings'
-    }] : [])
+    }
   ] : [];
 
   // ✅ Quick actions (mobile panels)
   const quickActions = [
     {
-      name: t('common.categories'),
+      name: t('common.categoryManager', { fallback: t('common.categories') }),
       description: t('common.manageCategoriesDesc'),
       icon: Tag,
       color: 'blue',
@@ -132,7 +107,7 @@ const MobileNavigation = ({
       }
     },
     {
-      name: t('common.recurring'),
+      name: t('common.recurringManager', { fallback: t('common.recurring') }),
       description: t('common.recurringTransactionsDesc'),
       icon: Clock,
       color: 'green',
@@ -142,8 +117,8 @@ const MobileNavigation = ({
       }
     },
     {
-      name: t('common.exchange'),
-      description: t('common.currencyExchangeDesc'),
+      name: t('common.calculator'),
+      description: t('common.quickCalculatorDesc'),
       icon: Activity,
       color: 'purple',
       onClick: () => {

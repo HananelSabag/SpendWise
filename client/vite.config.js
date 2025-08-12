@@ -1,10 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
+  // Load .env files and merge with real process.env (Vercel/CI injects only into process.env)
+  const fileEnv = loadEnv(mode, process.cwd(), '');
+  const env = { ...process.env, ...fileEnv };
   const isDev = command === 'serve' || mode === 'development';
   const isProd = command === 'build' || mode === 'production';
   
@@ -134,23 +137,23 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
       // Environment variables for runtime access
       'import.meta.env.VITE_API_URL': JSON.stringify(
-        (process.env.VITE_API_URL && process.env.VITE_API_URL.startsWith('http')) 
-          ? process.env.VITE_API_URL 
+        (env.VITE_API_URL && env.VITE_API_URL.startsWith('http'))
+          ? env.VITE_API_URL
           : 'https://spendwise-dx8g.onrender.com/api/v1'
       ),
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
-        process.env.VITE_GOOGLE_CLIENT_ID || ''
+        env.VITE_GOOGLE_CLIENT_ID || ''
       ),
       'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
-        process.env.VITE_CLIENT_URL || (isDev 
-          ? 'http://localhost:5173' 
+        env.VITE_CLIENT_URL || (isDev
+          ? 'http://localhost:5173'
           : 'https://spend-wise-kappa.vercel.app')
       ),
       'import.meta.env.VITE_DEBUG_MODE': JSON.stringify(
-        process.env.VITE_DEBUG_MODE || (isDev ? 'true' : 'false')
+        (env.VITE_DEBUG_MODE !== undefined ? env.VITE_DEBUG_MODE : (isDev ? 'true' : 'false'))
       ),
       'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(
-        process.env.VITE_ENVIRONMENT || (isDev ? 'development' : 'production')
+        env.VITE_ENVIRONMENT || (isDev ? 'development' : 'production')
       )
     },
     

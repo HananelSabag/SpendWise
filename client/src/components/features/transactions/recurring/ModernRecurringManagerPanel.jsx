@@ -445,7 +445,7 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           animate="animate"
           exit="exit"
           className={cn(
-            "absolute inset-4 sm:inset-8",
+            "absolute inset-0 sm:inset-8",
             "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950",
             "rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800",
             "flex flex-col overflow-hidden"
@@ -500,9 +500,9 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
             </div>
           </motion.div>
 
-          {/* ✨ Stats Grid */}
-          <div className="flex-shrink-0 p-6 bg-white/50 dark:bg-gray-900/50">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* ✨ Stats Grid - compact on mobile */}
+          <div className="flex-shrink-0 p-4 sm:p-6 bg-white/50 dark:bg-gray-900/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <ModernStatsCard
                 title={t('recurringManager.active', 'Active Templates')}
                 value={summary.totalActive}
@@ -604,7 +604,7 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           </div>
 
           {/* ✨ Content */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
             {activeTab === 'templates' ? (
               <div>
                 {templatesLoading ? (
@@ -642,7 +642,7 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {filteredTemplates.map((template, index) => (
                       <motion.div
                         key={template.id}

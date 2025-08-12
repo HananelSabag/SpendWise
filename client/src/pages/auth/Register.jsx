@@ -62,13 +62,7 @@ const Register = () => {
   const validateForm = useCallback((formData) => {
     const newErrors = {};
 
-    if (!formData.firstName?.trim()) {
-      newErrors.firstName = t('firstNameRequired');
-    }
-
-    if (!formData.lastName?.trim()) {
-      newErrors.lastName = t('lastNameRequired');
-    }
+    // First/last name are not required for email/password registration
 
     // ✅ ADD: Username validation
     if (!formData.username?.trim()) {
@@ -114,9 +108,7 @@ const Register = () => {
 
     try {
       const registrationData = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        username: formData.username.trim(), // ✅ ADD: Include username
+        username: formData.username.trim(),
         email: formData.email.trim(),
         password: formData.password,
         passwordStrength: formData.passwordAnalysis
@@ -125,12 +117,7 @@ const Register = () => {
       const result = await register(registrationData);
       
       if (result.success) {
-        setUserData({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          fullName: `${formData.firstName} ${formData.lastName}`
-        });
+        setUserData({ email: formData.email, username: formData.username });
         
         // Move to security setup
         setRegistrationStep('security');

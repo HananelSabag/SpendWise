@@ -212,6 +212,9 @@ export default {
   hebrew: 'עברית',
   english: 'English',
   and: 'and',
+  users: 'users',
+  selected: 'selected',
+  filters: 'Filters',
 
   // Quick panels
   quickPanelsTip: 'Click the icon to open quick actions panel',

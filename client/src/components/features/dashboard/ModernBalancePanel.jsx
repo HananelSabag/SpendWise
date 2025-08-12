@@ -9,8 +9,8 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
 import { 
   RefreshCw, TrendingUp, TrendingDown, 
-  DollarSign, Target, Sparkles, BarChart3, Calendar,
-  ArrowUp, ArrowDown, Activity, Zap, PiggyBank
+  Wallet, Sparkles,
+  ArrowUp, ArrowDown, Activity, PiggyBank
 } from 'lucide-react';
 
 // ✅ Import stores and components
@@ -87,7 +87,7 @@ const BalanceCard = ({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className={cn(
-        'relative overflow-hidden rounded-2xl border-2 p-6 cursor-pointer',
+        'relative overflow-hidden rounded-2xl border-2 p-3 sm:p-6 cursor-pointer min-w-0 select-none w-full',
         'transition-all duration-300 shadow-lg hover:shadow-xl',
         bgColor,
         borderColor
@@ -116,8 +116,8 @@ const BalanceCard = ({
 
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <motion.div
               animate={{ 
                 rotate: isHovered ? [0, -10, 10, 0] : 0,
@@ -125,21 +125,21 @@ const BalanceCard = ({
               }}
               transition={{ duration: 0.5 }}
               className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center shadow-lg',
+                'w-8 h-8 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-lg',
                 'bg-white/90 backdrop-blur-sm'
               )}
             >
-              <Icon className={cn('w-6 h-6', color)} />
+              <Icon className={cn('w-4 h-4 sm:w-6 sm:h-6', color)} />
             </motion.div>
             <div>
-              <h3 className={cn('text-sm font-bold uppercase tracking-wide', color)}>
+              <h3 className={cn('text-[10px] sm:text-sm font-bold uppercase tracking-wide', color)}>
                 {t(`balance.${type}`)}
               </h3>
               {trend !== undefined && (
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-1 mt-1"
+                  className="hidden sm:flex items-center gap-1 mt-1"
                 >
                   {trend >= 0 ? (
                     <ArrowUp className="w-3 h-3 text-green-500" />
@@ -157,33 +157,42 @@ const BalanceCard = ({
             </div>
           </div>
 
-          {/* Activity indicator */}
+          {/* Activity indicator (hidden on mobile for compactness) */}
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-blue-500"
+            className="hidden sm:block w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-blue-500"
           />
         </div>
 
         {/* Amount */}
         <div className="relative">
           {isVisible ? (
-            <motion.div
+              <motion.div
               variants={numberVariants}
-              className="space-y-2"
+                className="space-y-1.5 sm:space-y-2"
             >
+              {(() => {
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                const useZeroDecimals = isMobile; // tighter for mobile
+                const formattedAmount = formatCurrency(amount, { precision: useZeroDecimals ? 0 : undefined });
+                const isLongMobile = isMobile && formattedAmount.length > 10;
+                const amountTextClass = isLongMobile ? 'text-base' : 'text-xl';
+                return (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className={cn('text-3xl font-bold', color)}
+                  className={cn(`${amountTextClass} sm:text-3xl font-bold leading-tight tracking-tight whitespace-nowrap`, color)}
               >
-                {formatCurrency(amount)}
+                  {formattedAmount}
               </motion.div>
+                );
+              })()}
               
               {/* Progress bar for visual representation */}
               <motion.div
-                className="w-full h-2 bg-white/30 rounded-full overflow-hidden"
+                className="w-full h-1 sm:h-2 bg-white/30 rounded-full overflow-hidden"
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ delay: 0.5, duration: 0.8 }}
@@ -214,13 +223,13 @@ const BalanceCard = ({
   );
 };
 
-// ✅ Period Selector Component
+// ✅ Period Selector Component (icons removed for clarity; always show labels)
 const PeriodSelector = ({ selectedPeriod, onPeriodChange, t }) => {
   const periods = [
-    { key: 'daily', label: t('periods.daily'), icon: Calendar },
-    { key: 'weekly', label: t('periods.weekly'), icon: BarChart3 },
-    { key: 'monthly', label: t('periods.monthly'), icon: Target },
-    { key: 'yearly', label: t('periods.yearly'), icon: TrendingUp }
+    { key: 'daily', label: t('periods.daily') },
+    { key: 'weekly', label: t('periods.weekly') },
+    { key: 'monthly', label: t('periods.monthly') },
+    { key: 'yearly', label: t('periods.yearly') }
   ];
 
   return (
@@ -232,14 +241,13 @@ const PeriodSelector = ({ selectedPeriod, onPeriodChange, t }) => {
     >
       {periods.map((period) => {
         const isActive = selectedPeriod === period.key;
-        const Icon = period.icon;
         
         return (
           <motion.button
             key={period.key}
             onClick={() => onPeriodChange(period.key)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300',
+              'flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-300',
               'hover:shadow-md active:scale-95',
               isActive
                 ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-lg'
@@ -249,8 +257,7 @@ const PeriodSelector = ({ selectedPeriod, onPeriodChange, t }) => {
             whileTap={{ scale: 0.95 }}
             layoutId={isActive ? "activePeriod" : undefined}
           >
-            <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{period.label}</span>
+            <span>{period.label}</span>
           </motion.button>
         );
       })}
@@ -427,11 +434,11 @@ const ModernBalancePanel = ({
       animate="visible"
       className={cn('relative', className)}
     >
-      <Card className="overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl">
+        <Card className="overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl">
         {/* Enhanced Header */}
         <motion.div
           variants={cardVariants}
-          className="p-6 pb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+            className="mx-3 sm:mx-6 mt-4 rounded-2xl p-4 sm:p-6 pb-3 sm:pb-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -440,7 +447,7 @@ const ModernBalancePanel = ({
                 transition={{ duration: 0.5 }}
                 className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center"
               >
-                <DollarSign className="w-8 h-8 text-white" />
+                  <Wallet className="w-8 h-8 text-white" />
               </motion.div>
               <div>
                 <motion.h2 
@@ -451,7 +458,7 @@ const ModernBalancePanel = ({
                 </motion.h2>
                 <motion.p
                   variants={numberVariants}
-                  className="text-blue-100 text-sm"
+                    className="text-white/80 text-sm"
                 >
                   {t('balance.subtitle', 'Your financial overview')}
                 </motion.p>
@@ -490,13 +497,13 @@ const ModernBalancePanel = ({
         {/* Enhanced Balance Display */}
         <motion.div
           variants={cardVariants}
-          className="p-6"
+          className="p-4 sm:p-6"
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid grid-cols-3 gap-1 sm:gap-6"
           >
             {/* Income Card */}
             <BalanceCard

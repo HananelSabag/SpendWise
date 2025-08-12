@@ -285,19 +285,20 @@ export const useToast = () => {
 
   const error = useCallback((message, options = {}) => {
     let errorMessage;
-    
+
     if (typeof message === 'string') {
-      // Only try to translate if it looks like a translation key (contains dots and is short)
-      if (message.includes('.') && message.length < 100) {
+      // Treat as translation key only if it matches dot.notation without spaces
+      const looksLikeKey = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/.test(message);
+      if (looksLikeKey) {
         errorMessage = t(message) || message;
       } else {
-        // Raw error message - use as is, don't try to translate
+        // Raw server/user message – use as-is
         errorMessage = message;
       }
     } else {
       errorMessage = message?.message || t('common.error') || 'An error occurred';
     }
-    
+
     return showToast(errorMessage, 'error', { duration: 6000, ...options });
   }, [showToast, t]);
 

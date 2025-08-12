@@ -10,8 +10,18 @@ import { toast } from 'react-hot-toast';
 import getAuthRecoveryManager from '../utils/authRecoveryManager';
 
 // ✅ API Configuration
+const rawApiUrl = import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1';
+const normalizedApiUrl = (() => {
+  try {
+    const trimmed = (rawApiUrl || '').replace(/\/$/, '');
+    return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
+  } catch (_) {
+    return 'https://spendwise-dx8g.onrender.com/api/v1';
+  }
+})();
+
 const config = {
-  API_URL: import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1',
+  API_URL: normalizedApiUrl,
   API_VERSION: 'v1',
   TIMEOUT: 45000, // Increased timeout for better cold start handling
   RETRY_ATTEMPTS: 3,
@@ -22,7 +32,7 @@ const config = {
 // 🔍 Debug API configuration
 console.log('🔍 API Configuration Debug:', {
   API_URL: config.API_URL,
-  VITE_API_URL_ENV: import.meta.env.VITE_API_URL,
+  RAW_VITE_API_URL: import.meta.env.VITE_API_URL,
   MODE: import.meta.env.MODE,
   ALL_VITE_VARS: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 });

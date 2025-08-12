@@ -327,6 +327,7 @@ export const useAuthStore = create(
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');
+                sessionStorage.removeItem('spendwise-session-language');
               } catch (_) {}
               
               // Reset state
@@ -411,7 +412,7 @@ export const useAuthStore = create(
             return rolePermissions[role] || rolePermissions.user;
           },
 
-          // ✅ Sync user preferences with other stores - ENHANCED for persistent preferences
+          // ✅ Sync user preferences with other stores - respects session overrides (theme/language)
           syncUserPreferences: (user) => {
             if (!user) return;
 
@@ -424,7 +425,17 @@ export const useAuthStore = create(
                 fullUser: user
               });
 
-              // ✅ Sync with app store (FIXED: Direct import approach like Profile page)
+              // ✅ Check for session overrides (user changed during this session from header/UI)
+              let hasSessionThemeOverride = false;
+              let hasSessionLanguageOverride = false;
+              try {
+                hasSessionThemeOverride = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('spendwise-session-theme');
+              } catch (_) {}
+              try {
+                hasSessionLanguageOverride = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('spendwise-session-language');
+              } catch (_) {}
+
+              // ✅ Sync with app store (FIXED: Direct import approach like Profile page) with override guard
               try {
                 const appStore = useAppStore.getState();
                 
@@ -439,31 +450,36 @@ export const useAuthStore = create(
                     console.log('✅ Applied currency preference:', normalizedCurrency);
                   }
 
-                  // ✅ Sync theme - Apply immediately to DOM
+                  // ✅ Sync theme - Apply immediately to DOM (skip if user set a session override)
                   const userTheme = user.theme_preference || user.themePreference || 'system';
-                  
-                  if (userTheme !== appStore.theme) {
-                    appStore.actions.setTheme(userTheme);
-                    console.log('✅ Applied theme preference:', userTheme);
-                    
-                    // Apply theme to DOM immediately
-                    get().actions.applyThemeToDOM(userTheme);
+                  if (!hasSessionThemeOverride) {
+                    if (userTheme !== appStore.theme) {
+                      appStore.actions.setTheme(userTheme);
+                      console.log('✅ Applied theme preference:', userTheme);
+                      // Apply theme to DOM immediately
+                      get().actions.applyThemeToDOM(userTheme);
+                    }
+                  } else {
+                    console.log('⏭️ Skipping DB theme sync (session override present)');
                   }
                 }
               } catch (error) {
                 console.error('❌ Failed to access app store:', error);
               }
 
-              // ✅ Sync with translation store (FIXED: Direct import approach like Profile page)
+              // ✅ Sync with translation store (FIXED: Direct import approach like Profile page) with override guard
               try {
                 const translationStore = useTranslationStore.getState();
                 
                 if (translationStore && translationStore.actions) {
                   const userLanguage = user.language_preference || user.languagePreference || 'en';
-                  
-                  if (userLanguage !== translationStore.currentLanguage) {
-                    translationStore.actions.setLanguage(userLanguage);
-                    console.log('✅ Applied language preference:', userLanguage);
+                  if (!hasSessionLanguageOverride) {
+                    if (userLanguage !== translationStore.currentLanguage) {
+                      translationStore.actions.setLanguage(userLanguage);
+                      console.log('✅ Applied language preference:', userLanguage);
+                    }
+                  } else {
+                    console.log('⏭️ Skipping DB language sync (session override present)');
                   }
                 }
               } catch (error) {

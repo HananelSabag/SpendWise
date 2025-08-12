@@ -23,7 +23,7 @@ import { cn } from '../../utils/helpers';
 
 const AdminUsers = () => {
   // ✅ Zustand stores
-  const { user: currentUser, isSuperAdmin } = useAuth();
+  const { user: currentUser, isSuperAdmin, isAdmin } = useAuth();
   const { t } = useTranslation('admin');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
@@ -248,6 +248,7 @@ const AdminUsers = () => {
             users={safeUsers}
             currentUser={currentUser}
             isSuperAdmin={isSuperAdmin}
+            isAdmin={isAdmin}
             actionLoadingUserId={actionLoading}
             isLoading={isLoading}
             onOverview={(user) => { setSelectedUser(user); setShowUserModal(true); }}

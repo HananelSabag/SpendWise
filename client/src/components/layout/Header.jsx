@@ -131,13 +131,21 @@ const Header = () => {
 
             {/* ✅ Right side - Actions & User Menu */}
             <div className="flex items-center space-x-3">
-              {/* Quick Panels (Desktop) - KEPT AS REQUESTED */}
-              <QuickPanels onOpenModal={openModal} />
+              {/* Quick Panels - hide on small screens to reduce clutter; accessible via mobile menu */}
+              <div className="hidden md:flex">
+                <QuickPanels onOpenModal={openModal} />
+              </div>
 
-              {/* Header Actions - SIMPLIFIED (removed settings, moved to user menu) */}
-              <HeaderActions onOpenModal={openModal} />
+              {/* Header Actions (theme/lang) */}
+              <div className="hidden md:flex">
+                <HeaderActions onOpenModal={openModal} />
+              </div>
+              {/* Mobile theme/lang toggles for session parity */}
+              <div className="flex md:hidden">
+                <HeaderActions onOpenModal={openModal} />
+              </div>
 
-              {/* User Menu - ENHANCED (contains all other options) */}
+              {/* User Menu - always visible */}
               <UserMenu />
             </div>
           </div>

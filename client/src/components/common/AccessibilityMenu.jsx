@@ -59,12 +59,10 @@ const AccessibilityMenu = ({
 
   // Font size options
   const fontSizeOptions = [
-    { value: 'xs', label: t('accessibility.fontSize.extraSmall'), size: '12px' },
-    { value: 'sm', label: t('accessibility.fontSize.small'), size: '14px' },
-    { value: 'base', label: t('accessibility.fontSize.normal'), size: '16px' },
-    { value: 'lg', label: t('accessibility.fontSize.large'), size: '18px' },
-    { value: 'xl', label: t('accessibility.fontSize.extraLarge'), size: '20px' },
-    { value: '2xl', label: t('accessibility.fontSize.huge'), size: '24px' }
+    { value: 'small', label: t('accessibility.fontSize.small'), size: '0.875x' },
+    { value: 'medium', label: t('accessibility.fontSize.normal'), size: '1x' },
+    { value: 'large', label: t('accessibility.fontSize.large'), size: '1.125x' },
+    { value: 'xl', label: t('accessibility.fontSize.extraLarge'), size: '1.25x' }
   ];
 
   // Theme options
@@ -77,8 +75,7 @@ const AccessibilityMenu = ({
   // Contrast options
   const contrastOptions = [
     { value: 'normal', label: t('accessibility.contrast.normal') },
-    { value: 'high', label: t('accessibility.contrast.high') },
-    { value: 'maximum', label: t('accessibility.contrast.maximum') }
+    { value: 'high', label: t('accessibility.contrast.high') }
   ];
 
   // Handle setting changes
@@ -293,11 +290,11 @@ const AccessibilityMenu = ({
                     </span>
                   </div>
                   <Button
-                    variant={motionReduced ? "primary" : "outline"}
+                    variant={reducedMotion ? "primary" : "outline"}
                     size="sm"
-                    onClick={() => handleSettingChange('motionReduced', !motionReduced)}
+                    onClick={() => handleSettingChange('reducedMotion', !reducedMotion)}
                   >
-                    {motionReduced ? t('common.enabled') : t('common.disabled')}
+                    {reducedMotion ? t('common.enabled') : t('common.disabled')}
                   </Button>
                 </div>
 
@@ -310,18 +307,18 @@ const AccessibilityMenu = ({
                     </span>
                   </div>
                   <Button
-                    variant={screenReaderMode ? "primary" : "outline"}
+                    variant={screenReader ? "primary" : "outline"}
                     size="sm"
-                    onClick={() => handleSettingChange('screenReaderMode', !screenReaderMode)}
+                    onClick={() => handleSettingChange('screenReader', !screenReader)}
                   >
-                    {screenReaderMode ? t('common.enabled') : t('common.disabled')}
+                    {screenReader ? t('common.enabled') : t('common.disabled')}
                   </Button>
                 </div>
 
-                {/* Sound Enabled */}
+                {/* Announcements (instead of soundEnabled) */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    {soundEnabled ? 
+                    {announcements ? 
                       <Volume2 className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" /> :
                       <VolumeX className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     }
@@ -330,11 +327,11 @@ const AccessibilityMenu = ({
                     </span>
                   </div>
                   <Button
-                    variant={soundEnabled ? "primary" : "outline"}
+                    variant={announcements ? "primary" : "outline"}
                     size="sm"
-                    onClick={() => handleSettingChange('soundEnabled', !soundEnabled)}
+                    onClick={() => handleSettingChange('announcements', !announcements)}
                   >
-                    {soundEnabled ? t('common.enabled') : t('common.disabled')}
+                    {announcements ? t('common.enabled') : t('common.disabled')}
                   </Button>
                 </div>
 

@@ -15,9 +15,9 @@ import {
 // ✅ Import Zustand stores
 import { 
   useTranslation, 
-  useTheme,
-  useNotifications
+  useTheme
 } from '../../stores';
+import { useToast } from '../../hooks/useToast';
 
 import { cn } from '../../utils/helpers';
 
@@ -30,31 +30,35 @@ const HeaderActions = ({
 }) => {
   const { currentLanguage, setLanguage, t } = useTranslation();
   const { isDark, setTheme } = useTheme();
-  const { addNotification } = useNotifications();
+  const toast = useToast();
 
   // ✅ Handle theme toggle (SESSION-ONLY via app store session persistence)
   const handleThemeToggle = useCallback(() => {
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
+    try {
+      sessionStorage.setItem('spendwise-session-theme', newTheme);
+    } catch (_) {}
     
-    addNotification({
-      type: 'success',
-      message: t('toast.settings.themeChangedSession', { theme: t(`common.${newTheme}Theme`) }),
-      description: t('toast.settings.sessionOnly', 'Session-only change. Persistent preferences load from Profile at login.')
-    });
-  }, [isDark, setTheme, addNotification, t]);
+    toast.success(
+      t('toast.settings.themeChangedSession', { theme: t(`common.${newTheme}Theme`) }),
+      { duration: 3000 }
+    );
+  }, [isDark, setTheme, toast, t]);
 
   // ✅ Handle language toggle (SESSION-ONLY)
   const handleLanguageToggle = useCallback(() => {
     const newLanguage = currentLanguage === 'en' ? 'he' : 'en';
     setLanguage(newLanguage);
+    try {
+      sessionStorage.setItem('spendwise-session-language', newLanguage);
+    } catch (_) {}
     
-    addNotification({
-      type: 'success',
-      message: t('toast.settings.languageChangedSession'),
-      description: t('toast.settings.sessionOnly', 'Session-only change. Persistent preferences load from Profile at login.')
-    });
-  }, [currentLanguage, setLanguage, addNotification, t]);
+    toast.success(
+      t('toast.settings.languageChangedSession'),
+      { duration: 3000 }
+    );
+  }, [currentLanguage, setLanguage, toast, t]);
 
   // ✅ Action buttons configuration - Theme & Language only (SESSION changes)
   const actionButtons = [

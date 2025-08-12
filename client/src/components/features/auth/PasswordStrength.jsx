@@ -5,7 +5,7 @@
  * @version 2.0.0
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Check, X, AlertCircle, Shield, Eye, EyeOff,
@@ -190,11 +190,14 @@ const PasswordStrength = ({
   compact = false,
   className = '' 
 }) => {
-  const analysis = useMemo(() => {
-    const result = analyzePassword(password);
-    onAnalysisChange?.(result);
-    return result;
-  }, [password, onAnalysisChange]);
+  const analysis = useMemo(() => analyzePassword(password), [password]);
+
+  // Avoid invoking parent setState during render phase
+  useEffect(() => {
+    if (onAnalysisChange) {
+      onAnalysisChange(analysis);
+    }
+  }, [analysis, onAnalysisChange]);
 
   const { score, strength, checks, suggestions } = analysis;
 

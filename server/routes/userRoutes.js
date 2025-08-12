@@ -59,7 +59,8 @@ router.post('/resend-verification', emailVerificationLimiter, userController.res
  */
 router.post('/auth/google',
   authLimiter,
-  validate.googleAuth, // ✅ NOW IMPLEMENTED
+  // Keep minimal validation (idToken length etc.) but do not require email (server extracts from token)
+  validate.googleAuth,
   userController.googleAuth
 );
 
@@ -270,7 +271,6 @@ const validateGoogleAuth = (req, res, next) => {
   next();
 };
 
-// Apply Google Auth validation to the Google OAuth route
-router.use('/auth/google', validateGoogleAuth);
+// Removed duplicate validation layer to avoid conflicting requirements
 
 module.exports = router; 

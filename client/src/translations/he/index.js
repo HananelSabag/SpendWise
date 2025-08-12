@@ -29,6 +29,10 @@ import exchange from './exchange.js';
 import date from './date.js';
 import recurringManager from './recurringManager.js';
 import types from './types.js';
+import status from './status.js';
+import roles from './roles.js';
+import users from './users.js';
+import table from './table.js';
 
 export default {
   common,
@@ -57,4 +61,8 @@ export default {
   date,
   recurringManager,
   types,
+  status,
+  roles,
+  users,
+  table,
 }; 

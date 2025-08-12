@@ -5,6 +5,7 @@
  */
 
 const { User } = require('../models/User');
+const { OAuth2Client } = require('google-auth-library');
 const { generateTokens, verifyToken } = require('../middleware/auth');
 const { normalizeUserData } = require('../utils/userNormalizer');
 const errorCodes = require('../utils/errorCodes');
@@ -431,45 +432,31 @@ const userController = {
       };
     }
 
-    // ✅ Extract email from JWT if not provided
-    if (!email) {
-      try {
-        // Basic JWT decode (just payload, not verification)
-        const payloadBase64 = idToken.split('.')[1];
-        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
-        
-        email = payload.email;
-        name = name || payload.name;
-        picture = picture || payload.picture;
-      } catch (decodeError) {
-        throw { 
-          ...errorCodes.VALIDATION_ERROR, 
-          details: 'Invalid Google ID token or missing email' 
-        };
-      }
-    }
-
-    if (!email) {
-      throw { 
-        ...errorCodes.VALIDATION_ERROR, 
-        details: 'Email is required (from idToken or request body)' 
-      };
-    }
-
+    // ✅ Verify Google ID token server-side
     try {
-      // NOTE: Consider implementing Google ID token verification for enhanced security
-      // For now, we'll trust the frontend verification
+      const clientIdPrimary = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientIdPrimary) {
+        throw { ...errorCodes.SERVER_ERROR, details: 'Server GOOGLE_CLIENT_ID is not configured' };
+      }
+
+      const oauthClient = new OAuth2Client(clientIdPrimary);
+      const ticket = await oauthClient.verifyIdToken({
+        idToken,
+        audience: clientIdPrimary
+      });
+
+      const payload = ticket.getPayload();
+      email = (email || payload?.email || '').toLowerCase();
+      name = name || payload?.name || '';
+      picture = picture || payload?.picture || '';
+
+      if (!email) {
+        throw { ...errorCodes.VALIDATION_ERROR, details: 'Email not present in verified Google token' };
+      }
+
       logger.info('🔐 Google OAuth attempt', { email, name });
 
-      // ✅ Extract Google user ID from JWT payload
-      let googleUserId = null;
-      try {
-        const payloadBase64 = idToken.split('.')[1];
-        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
-        googleUserId = payload.sub; // Google user ID (usually numeric)
-      } catch (extractError) {
-        // Continue without Google ID - not critical
-      }
+      const googleUserId = payload?.sub || null;
 
       // Check if user exists
       let user = await User.findByEmail(email);

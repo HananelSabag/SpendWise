@@ -98,34 +98,77 @@ export const useTranslationStore = create(
         totalTranslations: 0,
         
         // ✅ Fallback translations (critical ones loaded immediately)
-        fallbackTranslations: {
-          // Critical UI elements that must be available immediately
-          common: {
-            loading: 'Loading...',
-            error: 'Error',
-            save: 'Save',
-            cancel: 'Cancel',
-            delete: 'Delete',
-            edit: 'Edit',
-            add: 'Add',
-            close: 'Close',
-            ok: 'OK',
-            yes: 'Yes',
-            no: 'No',
-            retry: 'Retry',
-            back: 'Back',
-            next: 'Next',
-            previous: 'Previous',
-            submit: 'Submit',
-            search: 'Search',
-            filter: 'Filter',
-            sort: 'Sort',
-            refresh: 'Refresh',
-            settings: 'Settings',
-            lightMode: 'Light Mode',
-            darkMode: 'Dark Mode',
-            guestSettings: 'Guest settings are saved locally'
-          },
+          fallbackTranslations: {
+            // Critical UI elements that must be available immediately
+            common: {
+              // App
+              appName: 'SpendWise',
+
+              // Status & actions
+              loading: 'Loading...',
+              error: 'Error',
+              save: 'Save',
+              saving: 'Saving...',
+              cancel: 'Cancel',
+              delete: 'Delete',
+              edit: 'Edit',
+              add: 'Add',
+              close: 'Close',
+              ok: 'OK',
+              yes: 'Yes',
+              no: 'No',
+              retry: 'Retry',
+              back: 'Back',
+              next: 'Next',
+              previous: 'Previous',
+              submit: 'Submit',
+              search: 'Search',
+              filter: 'Filter',
+              sort: 'Sort',
+              refresh: 'Refresh',
+              settings: 'Settings',
+              lightMode: 'Light Mode',
+              darkMode: 'Dark Mode',
+              guestSettings: 'Guest settings are saved locally',
+
+              // Feature labels used early in header/menus
+              categories: 'Categories',
+              manageCategoriesDesc: 'Organize and manage your categories',
+              recurring: 'Recurring',
+              recurringTransactionsDesc: 'Set up recurring transactions',
+              exchange: 'Exchange',
+              currencyExchangeDesc: 'Convert between currencies',
+              openMenu: 'Open menu',
+
+              // Quick panels & tools
+              categoryManager: 'Category Manager',
+              recurringManager: 'Recurring Manager',
+              calculator: 'Calculator',
+              quickCalculatorDesc: 'Quick calculation tool for expenses',
+              quickPanels: 'Quick Panels'
+              ,
+              // Accessibility nested fallbacks used early by menus/components
+              accessibility: {
+                fontSize: {
+                  extraSmall: 'Extra Small',
+                  small: 'Small',
+                  normal: 'Normal',
+                  large: 'Large',
+                  extraLarge: 'Extra Large',
+                  huge: 'Huge'
+                },
+                theme: {
+                  light: 'Light',
+                  dark: 'Dark',
+                  auto: 'Auto'
+                },
+                contrast: {
+                  normal: 'Normal',
+                  high: 'High',
+                  maximum: 'Maximum'
+                }
+              }
+            },
           
           // Critical auth elements for login page
           auth: {
@@ -170,7 +213,33 @@ export const useTranslationStore = create(
             profile: 'Profile',
             settings: 'Settings',
             analytics: 'Analytics',
-            admin: 'Admin'
+            admin: 'Admin',
+            help: 'Help',
+            profileDesc: 'Manage your account and preferences',
+
+            // Admin area items referenced by header/mobile nav
+            adminDashboard: 'Admin Dashboard',
+            userManagement: 'User Management',
+            systemStats: 'System Statistics',
+            systemSettings: 'System Settings',
+            activityLog: 'Activity Log'
+          }
+          ,
+          // Footer module fallbacks used before async load completes
+          footer: {
+            description: 'Take control of your finances with intelligent expense tracking and analytics.',
+            navigation: 'Navigation',
+            adminPanel: 'Admin Panel',
+            support: 'Support',
+            legal: 'Legal',
+            privacyPolicy: 'Privacy Policy',
+            termsOfService: 'Terms of Service',
+            accessibilityStatement: 'Accessibility Statement',
+            privacyProtectionLaw: 'Privacy Protection Law',
+            contact: 'Contact Us',
+            madeWith: 'Made with',
+            byTeam: 'by the SpendWise team',
+            poweredBy: 'Powered by Zustand & React'
           }
         },
 
@@ -204,7 +273,15 @@ export const useTranslationStore = create(
 
           // Load core translation modules (most commonly used)
           loadCoreModules: async () => {
-            const coreModules = ['common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer', 'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast', 'views', 'pages', 'actions', 'summary', 'search', 'transactions', 'categories', 'filters', 'exchange', 'empty', 'date', 'recurringManager', 'types'];
+            const coreModules = [
+              'common', 'errors', 'nav', 'auth', 'dashboard', 'onboarding', 'footer',
+              'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast',
+              'views', 'pages', 'actions', 'summary', 'search', 'transactions',
+              'categories', 'filters', 'exchange', 'empty', 'date', 'recurringManager',
+              'types',
+              // Ensure these are available immediately for admin users screens
+              'status', 'roles', 'users', 'table'
+            ];
             const { currentLanguage } = get();
             
             // ✅ SAFETY: Always load English as fallback first
@@ -595,8 +672,18 @@ export const useNavTranslation = () => useTranslation('nav');
 
 // ✅ Initialize translation store
 if (typeof window !== 'undefined') {
-  // ✅ FIXED: Always default to English to avoid module loading mismatch
-  const savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+  // ✅ FIXED: Prefer session override first, then localStorage, default to English
+  let savedLanguage = 'en';
+  try {
+    const sessionLang = sessionStorage.getItem('spendwise-session-language');
+    if (sessionLang) {
+      savedLanguage = sessionLang;
+    } else {
+      savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+    }
+  } catch (_) {
+    savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+  }
   
   // ✅ DEBUG: Log translation initialization
   if (import.meta.env.DEV) {
@@ -616,7 +703,11 @@ if (typeof window !== 'undefined') {
       (state) => state.currentLanguage,
       (language) => {
         console.log('🌐 Language changed to:', language);
-        localStorage.setItem('spendwise-language', language);
+        try {
+          // Keep persistent preference for next login via Profile, but also honor session scope
+          localStorage.setItem('spendwise-language', language);
+          sessionStorage.setItem('spendwise-session-language', language);
+        } catch (_) {}
       }
     );
   }

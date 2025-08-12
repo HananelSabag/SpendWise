@@ -31,6 +31,11 @@ const UserMenu = ({ className = '' }) => {
   const { addNotification } = useNotifications();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
+  const hasAdminAccess = Boolean(
+    isSuperAdmin ||
+    isAdmin ||
+    (user && ['admin', 'super_admin'].includes(user.role))
+  );
   
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -53,7 +58,7 @@ const UserMenu = ({ className = '' }) => {
   ];
 
   // ✅ Admin menu items - SIMPLIFIED PER USER REQUEST
-  const adminMenuItems = (isAdmin || isSuperAdmin) ? [
+  const adminMenuItems = hasAdminAccess ? [
     {
       name: t('nav.admin'),
       href: '/admin',
@@ -211,7 +216,7 @@ const UserMenu = ({ className = '' }) => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {user?.email}
                     </p>
-                    {user?.isAdmin && (
+                    {hasAdminAccess && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 mt-1">
                         <Shield className="w-3 h-3 mr-1" />
                         {t('common.admin')}

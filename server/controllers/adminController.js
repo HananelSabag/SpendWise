@@ -302,6 +302,28 @@ class AdminController {
     }
 
     try {
+      // ✅ Load target user and role for permission checks
+      const targetRes = await db.query(
+        'SELECT id, role FROM users WHERE id = $1',
+        [userId],
+        'admin_target_user_lookup'
+      );
+      if (targetRes.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'User not found' }
+        });
+      }
+      const targetRole = targetRes.rows[0].role;
+
+      // ✅ Admins cannot manage admin/super_admin accounts; only super admin can
+      if (['admin', 'super_admin'].includes(targetRole) && req.user.role !== 'super_admin') {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'SUPER_ADMIN_REQUIRED', message: 'Cannot manage admin accounts without super admin privileges' }
+        });
+      }
+
       // ✅ SIMPLIFIED: Direct database operations instead of calling missing functions
       let result;
       
@@ -330,20 +352,11 @@ class AdminController {
           break;
           
         case 'delete':
-          // Check admin permissions for deletion
-          if (req.user.role !== 'super_admin') {
+          // Allow: super admin can delete any user; admin can delete only regular users
+          if (!(req.user.role === 'super_admin' || (req.user.role === 'admin' && targetRole === 'user'))) {
             return res.status(403).json({
               success: false,
-              error: { code: 'INSUFFICIENT_PERMISSIONS', message: 'Super admin required for user deletion' }
-            });
-          }
-
-          // Ensure user exists
-          const existing = await db.query('SELECT 1 FROM users WHERE id = $1', [userId], 'admin_check_user_exists');
-          if (existing.rowCount === 0) {
-            return res.status(404).json({
-              success: false,
-              error: { code: 'USER_NOT_FOUND', message: 'User not found' }
+              error: { code: 'INSUFFICIENT_PERMISSIONS', message: 'Not allowed to delete this user' }
             });
           }
 
@@ -399,13 +412,20 @@ class AdminController {
           break;
           
         case 'change_role':
+          // Only super admin can change roles
+          if (req.user.role !== 'super_admin') {
+            return res.status(403).json({
+              success: false,
+              error: { code: 'SUPER_ADMIN_REQUIRED', message: 'Only super admin can change user roles' }
+            });
+          }
           if (!role || !['user', 'admin', 'super_admin'].includes(role)) {
             return res.status(400).json({
               success: false,
               error: { code: 'INVALID_ROLE', message: 'Invalid role specified' }
             });
           }
-          
+          // Prevent demoting or promoting super_admin via this endpoint unless caller is super_admin (already checked)
           await db.query(`
             UPDATE users 
             SET role = $1, updated_at = NOW()

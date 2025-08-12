@@ -143,6 +143,10 @@ export const useAuthToasts = () => {
     },
 
     autoLogout: (reason) => {
+      // Dismiss any loading/recovery toasts first to avoid overlap
+      try {
+        toast.dismiss('connection-recovering');
+      } catch (_) {}
       const messages = {
         auth_failure: t('auth.autoLogoutAuthFailure', 'Automatically signed out due to authentication issues'),
         stuck_state: t('auth.autoLogoutStuckState', 'Automatically signed out due to connection issues'),
