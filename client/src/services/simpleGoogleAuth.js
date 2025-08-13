@@ -52,6 +52,7 @@ class SimpleGoogleAuth {
   constructor() {
     this.isScriptLoaded = false;
     this.isInitialized = false;
+    this._gsiInitialized = false;
   }
 
   /**
@@ -146,7 +147,7 @@ class SimpleGoogleAuth {
         this._gsiInitialized = true;
       }
 
-      // Render the button
+      // Always re-render the button on each call so it's clickable again
       window.google.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
@@ -154,6 +155,9 @@ class SimpleGoogleAuth {
         shape: 'rectangular',
         width: '300' // Fixed width instead of percentage
       });
+
+      // Re-enable click after a successful or failed attempt by canceling prompt state
+      try { window.google.accounts.id.cancel(); } catch (_) {}
 
       // silent
       return true;

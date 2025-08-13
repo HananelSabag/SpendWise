@@ -538,11 +538,11 @@ class AdminController {
     }
     
     try {
-      // Convert value to JSONB format
-      const jsonValue = typeof value === 'string' ? JSON.stringify(value) : JSON.stringify(value);
+      // Convert to JSON text; cast to jsonb in SQL to preserve native types (bool/number/object)
+      const jsonValue = JSON.stringify(value);
       
       const result = await db.query(
-        'SELECT admin_manage_settings($1, $2, $3, $4, $5, $6) as result',
+        'SELECT admin_manage_settings($1, $2, $3, $4::jsonb, $5, $6) as result',
         [adminId, 'set', key, jsonValue, description, category],
         'admin_update_setting'
       );

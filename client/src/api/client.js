@@ -205,31 +205,6 @@ class SpendWiseAPIClient {
     // Notify auth recovery manager of the error
     const errorType = this.authRecovery.handleApiError(error, requestConfig);
 
-    // Detect likely Render cold-start: timeout or 5xx when server not warm
-    const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
-    const isServerError = !!error?.response && error.response.status >= 500;
-    const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError);
-
-    if (isLikelyColdStart) {
-      try {
-        // Remember where to return and navigate once to the waking page
-        if (typeof window !== 'undefined' && !window.__SERVER_WAKING__) {
-          window.__SERVER_WAKING__ = true;
-          try {
-            const currentPath = window.location.pathname + (window.location.search || '');
-            sessionStorage.setItem('serverWakingReturnTo', currentPath);
-          } catch (_) {}
-          if (window.spendWiseNavigate) {
-            window.spendWiseNavigate('/server-waking', { replace: true });
-          } else {
-            window.location.replace('/server-waking');
-          }
-        }
-      } catch (_) {}
-      // Do not retry this request now; the waking page will poll /health
-      return Promise.reject(this.normalizeError(error));
-    }
-
     // Handle specific error types
     if (error.response?.status === 401) {
       // Prevent duplicate logout flows from parallel requests
@@ -270,6 +245,13 @@ class SpendWiseAPIClient {
       const err = error.response?.data?.error || {};
       if (err.code === 'MAINTENANCE_MODE') {
         try {
+          // Remember where user was to support "Go back"
+          if (typeof window !== 'undefined') {
+            try {
+              const currentPath = window.location.pathname + (window.location.search || '');
+              sessionStorage.setItem('maintenanceReturnTo', currentPath);
+            } catch (_) {}
+          }
           if (window.spendWiseNavigate) {
             window.spendWiseNavigate('/maintenance', { replace: true });
           } else {
@@ -277,6 +259,29 @@ class SpendWiseAPIClient {
           }
         } catch (_) {}
       }
+    }
+
+    // Detect likely Render cold-start: timeout or 5xx when server not warm (after maintenance routing)
+    const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
+    const isServerError = !!error?.response && error.response.status >= 500;
+    const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError);
+
+    if (isLikelyColdStart) {
+      try {
+        if (typeof window !== 'undefined' && !window.__SERVER_WAKING__) {
+          window.__SERVER_WAKING__ = true;
+          try {
+            const currentPath = window.location.pathname + (window.location.search || '');
+            sessionStorage.setItem('serverWakingReturnTo', currentPath);
+          } catch (_) {}
+          if (window.spendWiseNavigate) {
+            window.spendWiseNavigate('/server-waking', { replace: true });
+          } else {
+            window.location.replace('/server-waking');
+          }
+        }
+      } catch (_) {}
+      return Promise.reject(this.normalizeError(error));
     }
 
     // Avoid request storms while server may be down; no auto-retry here if waking page is active

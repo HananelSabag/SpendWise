@@ -16,6 +16,17 @@ import { useTranslation, useNotifications } from '../../stores';
 import { cn } from '../../utils/helpers';
 import { api } from '../../api';
 
+// Normalize jsonb values that may be stored as boolean, string, or number
+const toBoolean = (value) => {
+  if (value === true || value === false) return value;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    return v === 'true' || v === '1' || v === 't' || v === 'yes' || v === 'on';
+  }
+  if (typeof value === 'number') return value !== 0;
+  return false;
+};
+
 const AdminSettings = () => {
   const { t } = useTranslation();
   const { addNotification } = useNotifications();
@@ -61,12 +72,12 @@ const AdminSettings = () => {
         const serverSettings = Array.isArray(result.data) ? result.data : [];
         const transformedSettings = {
           siteName: serverSettings.find(s => s.key === 'site_name')?.value || 'SpendWise',
-          userRegistration: serverSettings.find(s => s.key === 'user_registration')?.value !== false,
-          emailVerificationRequired: serverSettings.find(s => s.key === 'email_verification_required')?.value !== false,
-          googleOAuthEnabled: serverSettings.find(s => s.key === 'google_oauth_enabled')?.value !== false,
-          maintenanceMode: serverSettings.find(s => s.key === 'maintenance_mode')?.value === true,
-          analyticsEnabled: serverSettings.find(s => s.key === 'analytics_enabled')?.value !== false,
-          notificationsEnabled: serverSettings.find(s => s.key === 'notifications_enabled')?.value !== false,
+          userRegistration: toBoolean(serverSettings.find(s => s.key === 'user_registration')?.value),
+          emailVerificationRequired: toBoolean(serverSettings.find(s => s.key === 'email_verification_required')?.value),
+          googleOAuthEnabled: toBoolean(serverSettings.find(s => s.key === 'google_oauth_enabled')?.value),
+          maintenanceMode: toBoolean(serverSettings.find(s => s.key === 'maintenance_mode')?.value),
+          analyticsEnabled: toBoolean(serverSettings.find(s => s.key === 'analytics_enabled')?.value),
+          notificationsEnabled: toBoolean(serverSettings.find(s => s.key === 'notifications_enabled')?.value),
           supportEmail: serverSettings.find(s => s.key === 'support_email')?.value || '',
           emailSenderName: serverSettings.find(s => s.key === 'email_sender_name')?.value || 'SpendWise',
           analyticsProvider: serverSettings.find(s => s.key === 'analytics_provider')?.value || ''

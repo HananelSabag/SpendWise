@@ -3,7 +3,17 @@ const logger = require('../utils/logger');
 
 // Simple cached settings fetcher
 let cache = { value: null, expiresAt: 0 };
-const TTL_MS = 30 * 1000; // 30 seconds
+const TTL_MS = 5 * 1000; // shorten to 5s so toggles apply quickly
+
+// Public auth endpoints that must remain accessible during maintenance
+const PUBLIC_AUTH_PREFIXES = [
+  '/api/v1/users/login',
+  '/api/v1/users/register',
+  '/api/v1/users/auth/google',
+  '/api/v1/users/refresh-token',
+  '/api/v1/users/verify-email',
+  '/api/v1/users/password-reset'
+];
 
 async function getMaintenanceFlag() {
   const now = Date.now();
@@ -32,7 +42,13 @@ async function maintenanceGate(req, res, next) {
     if (!isMaintenance) return next();
 
     // Always allow health and admin endpoints
-    if (req.path.startsWith('/health') || req.path.startsWith('/api/v1/admin')) {
+    const path = req.path || '';
+    if (path.startsWith('/health') || path.startsWith('/api/v1/admin')) {
+      return next();
+    }
+
+    // Allow essential auth endpoints so admins can log in during maintenance
+    if (PUBLIC_AUTH_PREFIXES.some(prefix => path.startsWith(prefix))) {
       return next();
     }
 
