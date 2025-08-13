@@ -10,6 +10,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import App from './app.jsx';
 import './index.css';
 import { clearStorageFromURL } from './utils/clearStorage.js';
+// import './test-env.js'; // DEBUG: Test environment variables
 
 // ✅ Clear storage based on URL parameters (for dev mode)
 clearStorageFromURL();

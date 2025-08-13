@@ -458,6 +458,33 @@ function App() {
     if (import.meta.env.DEV) {
       console.log('🚀 SpendWise App - Clean & Optimized');
       window.queryClient = queryClient;
+      // Expose env for debugging local issues (safe: dev only)
+      try {
+        const viteKeys = Object.keys(import.meta.env || {}).filter((k) => k.startsWith('VITE_'));
+        if (import.meta.env.VITE_DEBUG_MODE === 'true') {
+          console.log('🧪 Vite Env Debug:', {
+            MODE: import.meta.env.MODE,
+            DEV: import.meta.env.DEV,
+            VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            VITE_API_URL: import.meta.env.VITE_API_URL,
+            VITE_KEYS: viteKeys
+          });
+        }
+        window.__SW_DEBUG_ENV_APP__ = {
+          MODE: import.meta.env.MODE,
+          DEV: import.meta.env.DEV,
+          VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          VITE_API_URL: import.meta.env.VITE_API_URL,
+          VITE_KEYS: viteKeys
+        };
+        // Allow manual override for DEV when .env injection is problematic
+        if (!import.meta.env.VITE_GOOGLE_CLIENT_ID && typeof window !== 'undefined') {
+          const manual = window.__SW_GOOGLE_CLIENT_ID__ || (typeof localStorage !== 'undefined' && localStorage.getItem('SW_DEV_GOOGLE_CLIENT_ID'));
+          if (manual && import.meta.env.VITE_DEBUG_MODE === 'true') {
+            console.warn('⚠️ Using DEV manual Google Client ID override');
+          }
+        }
+      } catch (_) {}
     }
   }, []);
 

@@ -29,6 +29,7 @@ export default {
   orContinueWith: "Or continue with",
   continueWithGoogle: "Continue with Google",
   connecting: "Connecting...",
+  initializingGoogle: "Loading Google...",
   
   // Account states
   dontHaveAccount: "Don't have an account?",
@@ -96,6 +97,15 @@ export default {
   checkEmail: "Check your email",
   checkEmailMessage: "We've sent password reset instructions to your email address.",
   backToLogin: "Back to Login",
+  checkYourEmail: "Check your email",
+  clickVerificationLink: "Click the verification link we sent to your email",
+  verifyingEmail: "Verifying Email",
+  pleaseWaitVerifying: "Please wait while we verify your email...",
+  emailVerificationSuccess: "Email verified successfully!",
+  verificationTokenExpired: "Verification link expired. You can request a new one.",
+  verificationEmailResent: "Verification email sent again!",
+  resendVerificationFailed: "Failed to resend verification email",
+  resendVerificationError: "An error occurred while resending verification email",
   goToLogin: "Go to Login",
   newPassword: "New Password",
   newPasswordPlaceholder: "Enter your new password",

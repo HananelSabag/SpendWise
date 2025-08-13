@@ -168,7 +168,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
   const typeStyles = getTypeStyles(type);
 
   return (
-    <div
+		<div
       className={`
         relative flex items-center p-4 rounded-xl backdrop-blur-md
         bg-gradient-to-r ${typeStyles.bg}
@@ -177,7 +177,8 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
         max-w-md w-full
         ${isRTL ? 'text-right' : 'text-left'}
         transition-all duration-200 ease-out
-        hover:scale-105 transform
+				hover:scale-105 transform
+				pointer-events-auto select-none
       `}
       style={{
         direction: isRTL ? 'rtl' : 'ltr',
@@ -185,6 +186,9 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
           ? '"Heebo", "Noto Sans Hebrew", system-ui, -apple-system, sans-serif'
           : '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif'
       }}
+			onClick={(e) => { e.stopPropagation(); }}
+			onMouseDown={(e) => { e.stopPropagation(); }}
+			onTouchStart={(e) => { e.stopPropagation(); }}
     >
       {/* Icon */}
       <div className={`flex-shrink-0 ${isRTL ? 'ml-3' : 'mr-3'}`}>
@@ -200,9 +204,39 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
 
       {/* Close Button */}
       <button
-        onClick={() => {
-          if (onClose) onClose();
-          toast.dismiss(toastId);
+        type="button"
+				onClick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					if (onClose) onClose();
+          try {
+            if (toastId) {
+              toast.dismiss(toastId);
+              toast.remove?.(toastId);
+            } else {
+              toast.dismiss();
+            }
+          } catch (_) {
+            try { toast.dismiss(); } catch (_) {}
+          }
+				}}
+				onMouseDown={(e) => { e.stopPropagation(); }}
+				onTouchStart={(e) => { e.stopPropagation(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              if (toastId) {
+                toast.dismiss(toastId);
+                toast.remove?.(toastId);
+              } else {
+                toast.dismiss();
+              }
+            } catch (_) {
+              try { toast.dismiss(); } catch (_) {}
+            }
+          }
         }}
         className={`
           flex-shrink-0 ${isRTL ? 'mr-2' : 'ml-2'} 
@@ -405,7 +439,8 @@ export const ToastProvider = ({ children }) => {
             margin: 0,
             // ✅ Responsive width
             maxWidth: '100%',
-            width: 'auto'
+            width: 'auto',
+            pointerEvents: 'auto'
           }
         }}
       />

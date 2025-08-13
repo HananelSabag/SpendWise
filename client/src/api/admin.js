@@ -11,20 +11,14 @@ export const adminAPI = {
   // ✅ Get Admin Dashboard Overview
   async getDashboard() {
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      if (!token) return { success: false, error: { code: 'NO_TOKEN' } };
       const response = await api.cachedRequest('/admin/dashboard', {
         method: 'GET'
-      }, 'admin-dashboard', 2 * 60 * 1000); // 2 minute cache
-      
-      return {
-        success: true,
-        data: response.data
-      };
+      }, 'admin-dashboard', 2 * 60 * 1000);
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔍 Admin dashboard error:', error);
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
+      return { success: false, error: api.normalizeError(error) };
     }
   },
 

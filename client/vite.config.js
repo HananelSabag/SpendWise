@@ -6,7 +6,8 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
   // Load .env files and merge with real process.env (Vercel/CI injects only into process.env)
-  const fileEnv = loadEnv(mode, process.cwd(), '');
+  // Always load .env from the client project root, even if CWD is a subfolder (e.g., running from src)
+  const fileEnv = loadEnv(mode, __dirname, '');
   const env = { ...process.env, ...fileEnv };
   const isDev = command === 'serve' || mode === 'development';
   const isProd = command === 'build' || mode === 'production';
@@ -18,6 +19,14 @@ export default defineConfig(({ command, mode }) => {
       }),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
+        devOptions: {
+          enabled: false
+        },
         includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {
           name: 'SpendWise - Financial Management Platform',
@@ -131,31 +140,35 @@ export default defineConfig(({ command, mode }) => {
     },
     
     // ✅ Production-Ready Environment Configuration
-    define: {
-      global: 'globalThis',
-      __DEV__: isDev,
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
-      // Environment variables for runtime access
-      'import.meta.env.VITE_API_URL': JSON.stringify(
-        (env.VITE_API_URL && env.VITE_API_URL.startsWith('http'))
-          ? env.VITE_API_URL
-          : 'https://spendwise-dx8g.onrender.com/api/v1'
-      ),
-      'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
-        env.VITE_GOOGLE_CLIENT_ID || ''
-      ),
-      'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
-        env.VITE_CLIENT_URL || (isDev
-          ? 'http://localhost:5173'
-          : 'https://spend-wise-kappa.vercel.app')
-      ),
-      'import.meta.env.VITE_DEBUG_MODE': JSON.stringify(
-        (env.VITE_DEBUG_MODE !== undefined ? env.VITE_DEBUG_MODE : (isDev ? 'true' : 'false'))
-      ),
-      'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(
-        env.VITE_ENVIRONMENT || (isDev ? 'development' : 'production')
-      )
-    },
+    define: (() => {
+      const d = {
+        global: 'globalThis',
+        __DEV__: isDev,
+        __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.0'),
+        // Environment variables for runtime access
+        'import.meta.env.VITE_API_URL': JSON.stringify(
+          (env.VITE_API_URL && env.VITE_API_URL.startsWith('http'))
+            ? env.VITE_API_URL
+            : 'https://spendwise-dx8g.onrender.com/api/v1'
+        ),
+        'import.meta.env.VITE_CLIENT_URL': JSON.stringify(
+          env.VITE_CLIENT_URL || (isDev
+            ? 'http://localhost:5173'
+            : 'https://spend-wise-kappa.vercel.app')
+        ),
+        'import.meta.env.VITE_DEBUG_MODE': JSON.stringify(
+          (env.VITE_DEBUG_MODE !== undefined ? env.VITE_DEBUG_MODE : (isDev ? 'true' : 'false'))
+        ),
+        'import.meta.env.VITE_ENVIRONMENT': JSON.stringify(
+          env.VITE_ENVIRONMENT || (isDev ? 'development' : 'production')
+        )
+      };
+      // Only define GOOGLE_CLIENT_ID if provided; else let Vite inject from .env normally
+      if (env.VITE_GOOGLE_CLIENT_ID) {
+        d['import.meta.env.VITE_GOOGLE_CLIENT_ID'] = JSON.stringify(env.VITE_GOOGLE_CLIENT_ID);
+      }
+      return d;
+    })(),
     
     clearScreen: false,
     

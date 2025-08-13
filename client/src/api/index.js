@@ -5,7 +5,7 @@
  */
 
 import apiClient from './client.js';
-import authAPI from './auth.js';
+import { authAPI } from './auth.js';
 import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
 import categoriesAPI from './categories.js'; // ✅ ADD: Import categories API
@@ -23,7 +23,13 @@ export const api = {
   
   // Authentication & Users
   auth: authAPI,
-  users: authAPI, // Alias for backward compatibility
+  users: {
+    // Backward-compatibility wrapper
+    async getProfile() { return authAPI.getProfile(); },
+    async updateProfile(updates) { return authAPI.updateProfile(updates); },
+    async verifyEmail(data) { return authAPI.verifyEmail?.(data?.token || data); },
+    async resendVerificationEmail(data) { return authAPI.resendVerification?.(data?.email || data); }
+  },
   
   // Data Management  
   transactions: transactionAPI, // ✅ FIXED: Use proper transaction API
@@ -111,6 +117,11 @@ export const api = {
 // Set default configuration
 if (typeof api.setBaseURL === 'function') {
   api.setBaseURL(import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1');
+}
+
+// Expose globally in dev for debugging (used by recovery/cache)
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  try { window.spendWiseAPI = api; } catch (_) {}
 }
 
 // Default export for backward compatibility

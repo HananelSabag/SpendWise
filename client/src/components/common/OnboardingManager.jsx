@@ -27,26 +27,21 @@ const OnboardingManager = () => {
     setIsChecking(true);
     
     try {
-      console.log('🎯 OnboardingManager - Checking user onboarding status:', {
-        userId: user.id,
-        username: user.username,
-        onboarding_completed: user.onboarding_completed,
-        onboardingCompleted: user.onboardingCompleted
-      });
+      // silent
 
       // ✅ Check database status (onboarding_completed field)
       const shouldShowOnboarding = !user.onboarding_completed && !user.onboardingCompleted;
       
       if (shouldShowOnboarding) {
-        console.log('🎯 OnboardingManager - User needs onboarding, showing popup');
+        // silent
         setShowOnboarding(true);
       } else {
-        console.log('🎯 OnboardingManager - User has completed onboarding, not showing popup');
+        // silent
       }
       
       setHasChecked(true);
     } catch (error) {
-      console.error('🎯 OnboardingManager - Error checking onboarding status:', error);
+      // silent
       setHasChecked(true);
     } finally {
       setIsChecking(false);
@@ -56,7 +51,7 @@ const OnboardingManager = () => {
   // ✅ Handle onboarding completion
   const handleOnboardingComplete = useCallback(async () => {
     try {
-      console.log('🎯 OnboardingManager - Marking onboarding as completed');
+      // silent
       
       // ✅ Update user profile to mark onboarding as completed
       const result = await updateProfile({
@@ -66,11 +61,11 @@ const OnboardingManager = () => {
       });
 
       if (result.success) {
-        console.log('🎯 OnboardingManager - Onboarding completed successfully');
+        // silent
         setShowOnboarding(false);
         
         // ✅ Navigate to dashboard after successful onboarding
-        console.log('🎯 OnboardingManager - Navigating to dashboard');
+        // silent
         navigate('/', { replace: true });
         
         addNotification({
@@ -79,7 +74,7 @@ const OnboardingManager = () => {
           duration: 5000
         });
       } else {
-        console.error('🎯 OnboardingManager - Failed to update onboarding status:', result.error);
+        // silent
         addNotification({
           type: 'error',
           message: 'Failed to save onboarding completion. Please try again.',
@@ -87,7 +82,7 @@ const OnboardingManager = () => {
         });
       }
     } catch (error) {
-      console.error('🎯 OnboardingManager - Error completing onboarding:', error);
+      // silent
       addNotification({
         type: 'error',
         message: 'Error completing onboarding. Please try again.',
@@ -98,7 +93,7 @@ const OnboardingManager = () => {
 
   // ✅ Handle onboarding close/skip
   const handleOnboardingClose = useCallback(() => {
-    console.log('🎯 OnboardingManager - User closed/skipped onboarding');
+    // silent
     setShowOnboarding(false);
     
     // Optional: Mark as skipped in database for analytics
@@ -112,7 +107,7 @@ const OnboardingManager = () => {
 
   // ✅ Handle onboarding skip (separate from close)
   const handleOnboardingSkip = useCallback(() => {
-    console.log('🎯 OnboardingManager - User skipped onboarding');
+    // silent
     setShowOnboarding(false);
     
     addNotification({

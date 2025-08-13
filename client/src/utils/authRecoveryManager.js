@@ -61,7 +61,7 @@ class AuthRecoveryManager {
     // Start monitoring
     this.startHealthMonitoring();
     
-    console.log('🔄 Auth Recovery Manager initialized');
+    // silent
   }
 
   /**
@@ -79,28 +79,18 @@ class AuthRecoveryManager {
     switch (errorType) {
       case 'AUTH_ERROR':
         this.healthState.authFailureCount++;
-        console.warn('🚨 Auth failure detected:', {
-          count: this.healthState.authFailureCount,
-          status: error.response?.status,
-          message: error.message
-        });
+        // silent
         break;
         
       case 'NETWORK_ERROR':
         this.healthState.networkFailureCount++;
         this.healthState.serverResponding = false;
-        console.warn('🌐 Network failure detected:', {
-          count: this.healthState.networkFailureCount,
-          message: error.message
-        });
+        // silent
         break;
         
       case 'TIMEOUT_ERROR':
         this.healthState.timeoutCount++;
-        console.warn('⏱️ Timeout failure detected:', {
-          count: this.healthState.timeoutCount,
-          timeout: requestConfig.timeout
-        });
+        // silent
         break;
     }
 
@@ -143,7 +133,7 @@ class AuthRecoveryManager {
         this.recoveryToastId = null;
       }
       this.showRecoveryNotification('success', 'החיבור לשרת התאושש בהצלחה! 🎉');
-      console.log('✅ Auth Recovery: Connection restored successfully');
+      // silent
     }
   }
 
@@ -217,7 +207,7 @@ class AuthRecoveryManager {
    * Handle stuck authentication state
    */
   async handleStuckState() {
-    console.warn('🚨 Stuck state detected - initiating recovery');
+    // silent
     
     this.showRecoveryNotification('warning');
     
@@ -228,12 +218,12 @@ class AuthRecoveryManager {
         const authAPI = await getAuthAPI();
         const validation = await authAPI.validateToken(token);
         if (validation.success) {
-          console.log('✅ Token validation successful - recovering from stuck state');
+          // silent
           this.handleApiSuccess();
           return;
         }
       } catch (error) {
-        console.warn('❌ Token validation failed during recovery');
+        // silent
       }
     }
 
@@ -252,7 +242,7 @@ class AuthRecoveryManager {
     this.healthState.isRecovering = true;
     this.healthState.lastRecoveryAttempt = Date.now();
 
-    console.log(`🔄 Triggering recovery for: ${errorType}`);
+    // silent
     
     try {
       switch (errorType) {
@@ -275,7 +265,7 @@ class AuthRecoveryManager {
           await this.genericRecovery();
       }
     } catch (error) {
-      console.error('❌ Recovery failed:', error);
+      // silent
       this.forceLogoutAndRecovery('recovery_failed');
     }
   }
@@ -284,7 +274,7 @@ class AuthRecoveryManager {
    * Recover from authentication errors
    */
   async recoverFromAuthError() {
-    console.log('🔑 Attempting auth recovery...');
+    // silent
     
     this.showRecoveryNotification('info');
 
@@ -304,12 +294,12 @@ class AuthRecoveryManager {
       const authAPI = await getAuthAPI();
       const refreshResult = await authAPI.refreshToken();
       if (refreshResult.success) {
-        console.log('✅ Token refresh successful');
+        // silent
         this.handleApiSuccess();
         return;
       }
     } catch (error) {
-      console.warn('❌ Token refresh failed');
+      // silent
     }
 
     // If refresh fails, force logout
@@ -320,7 +310,7 @@ class AuthRecoveryManager {
    * Recover from network errors
    */
   async recoverFromNetworkError() {
-    console.log('🌐 Attempting network recovery...');
+    // silent
     
     this.showRecoveryNotification('info');
 
@@ -345,13 +335,13 @@ class AuthRecoveryManager {
       clearTimeout(timeoutId);
       
       if (response.ok) {
-        console.log('✅ Server health check successful');
+        // silent
         this.healthState.serverResponding = true;
         this.handleApiSuccess();
         return;
       }
     } catch (error) {
-      console.warn('❌ Server health check failed:', error.message);
+      // silent
     }
 
     // If health check fails, show user-friendly message
@@ -369,7 +359,7 @@ class AuthRecoveryManager {
    * Generic recovery for unknown issues
    */
   async genericRecovery() {
-    console.log('🔧 Attempting generic recovery...');
+    // silent
     
     // Clear any cached data that might be causing issues
     if (window.spendWiseAPI?.cache) {
@@ -388,7 +378,7 @@ class AuthRecoveryManager {
         }
       }
     } catch (error) {
-      console.warn('❌ Generic recovery failed');
+      // silent
     }
 
     this.forceLogoutAndRecovery('generic_failure');
@@ -398,7 +388,7 @@ class AuthRecoveryManager {
    * Force logout and show recovery options
    */
   async forceLogoutAndRecovery(reason) {
-    console.log(`🚪 Force logout due to: ${reason}`);
+    // silent
     
     const authStore = getAuthStore()?.getState?.();
     
@@ -446,7 +436,7 @@ class AuthRecoveryManager {
       }
       
     } catch (error) {
-      console.error('❌ Force logout failed:', error);
+      // silent
       // Last resort - full page reload
       window.location.reload();
     } finally {
@@ -498,7 +488,7 @@ class AuthRecoveryManager {
     }
 
     // Always log for debugging
-    console.log(`🔔 Recovery notification [${type}]: ${message}`);
+    // silent
   }
 
   /**
@@ -514,7 +504,7 @@ class AuthRecoveryManager {
       this.performHealthCheck();
     }, this.config.healthCheckInterval);
 
-    console.log('❤️ Health monitoring started');
+    // silent
   }
 
   /**
@@ -532,7 +522,7 @@ class AuthRecoveryManager {
 
     // If it's been too long since last success, trigger a check
     if (timeSinceLastSuccess > this.config.healthCheckInterval * 2) {
-      console.log('🏥 Performing health check - too long since last success');
+      // silent
 
       try {
         const token = localStorage.getItem('accessToken');
@@ -543,7 +533,7 @@ class AuthRecoveryManager {
         }
       } catch (error) {
         // If failed, handleApiError will be called by the interceptor
-        console.warn('❌ Health check failed:', error.message);
+        // silent
       }
     }
   }
@@ -556,7 +546,7 @@ class AuthRecoveryManager {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
     }
-    console.log('🛑 Health monitoring stopped');
+    // silent
   }
 
   /**
@@ -585,7 +575,7 @@ class AuthRecoveryManager {
       isRecovering: false,
       lastRecoveryAttempt: null
     };
-    console.log('🔄 Health state reset');
+    // silent
   }
 }
 

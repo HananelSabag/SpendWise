@@ -20,14 +20,14 @@ export const clearStorageFromURL = () => {
     if (clearTypes.includes('storage') || clearTypes.includes('localStorage')) {
       localStorage.clear();
       clearedItems.push('localStorage');
-      console.log('🧹 localStorage cleared');
+      // silent
     }
     
     // Clear sessionStorage  
     if (clearTypes.includes('storage') || clearTypes.includes('sessionStorage')) {
       sessionStorage.clear();
       clearedItems.push('sessionStorage');
-      console.log('🧹 sessionStorage cleared');
+      // silent
     }
     
     // Clear cookies
@@ -39,7 +39,7 @@ export const clearStorageFromURL = () => {
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
       });
       clearedItems.push('cookies');
-      console.log('🧹 cookies cleared');
+      // silent
     }
     
     // Clear cache (using Cache API if available)
@@ -49,7 +49,7 @@ export const clearStorageFromURL = () => {
           caches.delete(cacheName);
         });
         clearedItems.push('cache');
-        console.log('🧹 cache cleared');
+        // silent
       });
     }
     
@@ -66,11 +66,11 @@ export const clearStorageFromURL = () => {
       localStorage.removeItem('REACT_QUERY_OFFLINE_CACHE');
       sessionStorage.removeItem('REACT_QUERY_OFFLINE_CACHE');
       
-      console.log('🧹 SpendWise specific storage cleared');
+      // silent
     }
     
     if (clearedItems.length > 0) {
-      console.log(`✅ Cleared: ${clearedItems.join(', ')}`);
+      // silent
       
       // Show notification to user
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -120,7 +120,7 @@ export const clearStorageFromURL = () => {
     }
     
   } catch (error) {
-    console.error('❌ Error clearing storage:', error);
+    // silent
   }
 };
 
@@ -148,13 +148,13 @@ export const clearAllStorage = () => {
       });
     }
     
-    console.log('✅ All storage cleared manually');
+    // silent
     
     // Reload page
     window.location.reload();
     
   } catch (error) {
-    console.error('❌ Error clearing storage manually:', error);
+    // silent
   }
 };
 
@@ -175,10 +175,10 @@ export const clearTranslationCache = () => {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
-    console.log('🌐 Translation cache cleared:', keysToRemove);
+    // silent
     return { cleared: keysToRemove.length, keys: keysToRemove };
   } catch (error) {
-    console.error('❌ Failed to clear translation cache:', error);
+    // silent
     return { error: error.message };
   }
 };
@@ -186,7 +186,9 @@ export const clearTranslationCache = () => {
 // Make available globally for console debugging
 if (typeof window !== 'undefined') {
   window.clearSpendWiseStorage = clearAllStorage;
-  console.log('💡 Use clearSpendWiseStorage() in console to manually clear all storage');
+  if (import.meta.env.VITE_DEBUG_MODE === 'true') {
+  // silent hint
+  }
 } 
 
 // Make it available globally for debugging

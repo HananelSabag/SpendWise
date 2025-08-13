@@ -16,6 +16,7 @@ import {
 import { useTranslation, useNotifications } from '../../../stores';
 import { Button, Input, LoadingSpinner, Badge } from '../../ui';
 import PasswordStrength from './PasswordStrength';
+import SimpleGoogleButton from './SimpleGoogleButton';
 import { api } from '../../../api';
 import { cn } from '../../../utils/helpers';
 
@@ -35,8 +36,8 @@ const RegistrationForm = ({
 
   // ✅ Form state
   const [formData, setFormData] = useState({
-    // Align with server requirements for /users/register
-    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -96,35 +97,66 @@ const RegistrationForm = ({
           </motion.div>
         )}
 
-        {/* Removed first/last name for normal registration (kept for Google profile step) */}
-
-        {/* ✅ ADD: Username Field */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('username')}
-          </label>
-          <div className="relative">
-            <Input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              placeholder={t('usernamePlaceholder')}
-              className={cn(
-                "pl-12",
-                errors.username && "border-red-300 focus:border-red-500"
-              )}
-              disabled={isSubmitting}
-              autoComplete="username"
-            />
-            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {/* Name Fields Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* First Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('firstName')}
+            </label>
+            <div className="relative">
+              <Input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder={t('firstNamePlaceholder')}
+                className={cn(
+                  "pl-12",
+                  errors.firstName && "border-red-300 focus:border-red-500"
+                )}
+                disabled={isSubmitting}
+                autoComplete="given-name"
+              />
+              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            </div>
+            {errors.firstName && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                {errors.firstName}
+              </p>
+            )}
           </div>
-          {errors.username && (
-            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-              {errors.username}
-            </p>
-          )}
+
+          {/* Last Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('lastName')}
+            </label>
+            <div className="relative">
+              <Input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder={t('lastNamePlaceholder')}
+                className={cn(
+                  "pl-12",
+                  errors.lastName && "border-red-300 focus:border-red-500"
+                )}
+                disabled={isSubmitting}
+                autoComplete="family-name"
+              />
+              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            </div>
+            {errors.lastName && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                {errors.lastName}
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Username removed; server derives it from names/email */}
 
         {/* Email */}
         <div>
@@ -291,27 +323,16 @@ const RegistrationForm = ({
         </div>
 
         {/* Google Register */}
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full min-h-[48px]"
-          onClick={onGoogleRegister}
-          disabled={isGoogleLoading}
-        >
-          {isGoogleLoading ? (
-            <LoadingSpinner size="sm" className={cn("mr-2", isRTL && "ml-2 mr-0")} />
-          ) : (
-            <span className={cn("mr-2 inline-flex", isRTL && "ml-2 mr-0")} aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18">
-                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12   s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C33.18,7.163,28.791,5.333,24,5.333C12.318,5.333,2.667,14.985,2.667,26.667   S12.318,48,24,48c11.046,0,20-8.954,20-20C44,25.342,43.862,22.662,43.611,20.083z"/>
-                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.689,16.768,18.961,14,24,14c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657   C33.18,7.163,28.791,5.333,24,5.333C16.318,5.333,9.64,9.507,6.306,14.691z"/>
-                <path fill="#4CAF50" d="M24,48c5.174,0,9.86-1.977,13.387-5.189l-6.178-5.245C29.165,39.54,26.714,40.333,24,40.333   c-5.194,0-9.604-3.317-11.271-7.946l-6.547,5.04C9.485,43.808,16.227,48,24,48z"/>
-                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.793,2.237-2.231,4.164-4.084,5.567   c0.001-0.001,0.002-0.001,0.003-0.002l6.178,5.245C39.088,41.989,44,36.667,44,28C44,25.342,43.862,22.662,43.611,20.083z"/>
-              </svg>
-            </span>
-          )}
-          {isGoogleLoading ? t('connecting') : t('continueWithGoogle')}
-        </Button>
+        <SimpleGoogleButton
+          onSuccess={onGoogleRegister}
+          onError={(error) => {
+            addNotification({
+              type: 'error',
+              message: error.message || t('googleSignInFailed')
+            });
+          }}
+          disabled={isSubmitting}
+        />
       </form>
     </div>
   );

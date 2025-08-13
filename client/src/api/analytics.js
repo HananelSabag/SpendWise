@@ -31,20 +31,15 @@ export const analyticsAPI = {
   // User analytics (matches: GET /analytics/user)
   async getUserAnalytics(params = {}) {
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      if (!token) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
       const response = await api.cachedRequest('/analytics/user', {
         method: 'GET',
         params
-      }, `analytics-user-${JSON.stringify(params)}`, 10 * 60 * 1000); // 10 minute cache
-
-      return {
-        success: true,
-        data: response.data
-      };
+      }, `analytics-user-${JSON.stringify(params)}`, 10 * 60 * 1000);
+      return { success: true, data: response.data };
     } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
+      return { success: false, error: api.normalizeError(error) };
     }
   },
 

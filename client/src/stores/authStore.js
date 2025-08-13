@@ -38,20 +38,25 @@ export const useAuthStore = create(
           // Initialize auth store - SIMPLIFIED
           initialize: () => {
             // ✅ FIXED: Synchronous initialization to prevent race conditions
-            const token = localStorage.getItem('accessToken');
-              
-              set((state) => {
-                state.initialized = true;
-                state.isLoading = false;
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
 
-              // Simple token check - if exists, assume authenticated
+            set((state) => {
+              state.initialized = true;
+              state.isLoading = false;
+
+              // Align auth state with actual token presence
               if (token) {
-                      state.isAuthenticated = true;
-                // Will be validated on first API call
-                  }
+                state.isAuthenticated = true;
+              } else {
+                state.isAuthenticated = false;
+                state.user = null;
+                state.userRole = 'user';
+                state.isAdmin = false;
+                state.isSuperAdmin = false;
+              }
             });
 
-              return true;
+            return true;
           },
 
           // Basic login - SIMPLIFIED
@@ -87,7 +92,7 @@ export const useAuthStore = create(
                 try {
                   get().actions.syncUserPreferences(userData);
                 } catch (e) {
-                  console.warn('Preference sync after login failed (continuing):', e?.message);
+                  // silent
                 }
 
                 return { success: true, user: userData };
@@ -145,7 +150,7 @@ export const useAuthStore = create(
                 try {
                   get().actions.syncUserPreferences(userData);
                 } catch (e) {
-                  console.warn('Preference sync after Google login failed (continuing):', e?.message);
+                  // silent
                 }
 
                 return { success: true, user: userData };
@@ -254,7 +259,7 @@ export const useAuthStore = create(
               }
             } catch (error) {
               set((state) => {
-                state.error = api.normalizeError ? api.normalizeError(error) : { message: error.message };
+                state.error = { message: error.message || 'Failed to load profile' };
                 state.isLoading = false;
               });
               throw error;
@@ -317,7 +322,7 @@ export const useAuthStore = create(
                 await authAPI.logout();
               } catch (error) {
                 // Log error but continue with local logout
-                console.warn('Logout API error (continuing with local logout):', error);
+                // silent
               }
 
               // ✅ FIX: Clear ALL tokens and auth data  
@@ -350,7 +355,7 @@ export const useAuthStore = create(
 
               return { success: true };
             } catch (error) {
-              console.error('Logout failed:', error);
+              // silent
               
               // ✅ FIX: Force clear everything even if logout API fails
               localStorage.removeItem('accessToken');
@@ -417,13 +422,7 @@ export const useAuthStore = create(
             if (!user) return;
 
             try {
-              console.log('🔄 Syncing user preferences from database:', {
-                language: user.language_preference,
-                theme: user.theme_preference,
-                currency: user.currency_preference,
-                userFields: Object.keys(user),
-                fullUser: user
-              });
+              // silent
 
               // ✅ Check for session overrides (user changed during this session from header/UI)
               let hasSessionThemeOverride = false;
@@ -447,7 +446,7 @@ export const useAuthStore = create(
                   
                   if (normalizedCurrency !== appStore.currency) {
                     appStore.actions.setCurrency(normalizedCurrency);
-                    console.log('✅ Applied currency preference:', normalizedCurrency);
+                    // silent
                   }
 
                   // ✅ Sync theme - Apply immediately to DOM (skip if user set a session override)
@@ -455,16 +454,16 @@ export const useAuthStore = create(
                   if (!hasSessionThemeOverride) {
                     if (userTheme !== appStore.theme) {
                       appStore.actions.setTheme(userTheme);
-                      console.log('✅ Applied theme preference:', userTheme);
+                      // silent
                       // Apply theme to DOM immediately
                       get().actions.applyThemeToDOM(userTheme);
                     }
                   } else {
-                    console.log('⏭️ Skipping DB theme sync (session override present)');
+                    // silent
                   }
                 }
               } catch (error) {
-                console.error('❌ Failed to access app store:', error);
+                // silent
               }
 
               // ✅ Sync with translation store (FIXED: Direct import approach like Profile page) with override guard
@@ -476,20 +475,20 @@ export const useAuthStore = create(
                   if (!hasSessionLanguageOverride) {
                     if (userLanguage !== translationStore.currentLanguage) {
                       translationStore.actions.setLanguage(userLanguage);
-                      console.log('✅ Applied language preference:', userLanguage);
+                      // silent
                     }
                   } else {
-                    console.log('⏭️ Skipping DB language sync (session override present)');
+                    // silent
                   }
                 }
               } catch (error) {
-                console.error('❌ Failed to access translation store:', error);
+                // silent
               }
               
-              console.log('✅ User preferences successfully synced from database');
+              // silent
               
             } catch (error) {
-              console.warn('❌ Failed to sync user preferences:', error);
+              // silent
             }
           },
 
@@ -506,7 +505,7 @@ export const useAuthStore = create(
                 document.documentElement.classList.toggle('dark', prefersDark);
               }
             } catch (error) {
-              console.warn('Failed to apply theme to DOM:', error);
+              // silent
             }
           },
 
@@ -557,9 +556,9 @@ export const useAuthStore = create(
                 translationStore.actions.setLanguage('en'); // Default to English for guests
               }
 
-              console.log('✅ Guest preferences setup completed');
+              // silent
             } catch (error) {
-              console.warn('Failed to setup guest preferences:', error);
+              // silent
             }
           },
 
@@ -623,15 +622,15 @@ export const useAuthStore = create(
               
               if (refreshTime > 0) {
                 const timer = setTimeout(async () => {
-                  console.log('🔄 Auto-refreshing token...');
+                  // silent
                   const result = await authAPI.refreshToken();
                   
                   if (result.success) {
-                    console.log('✅ Token auto-refreshed successfully');
+                    // silent
                     // Restart timer for new token
                     get().actions.startTokenRefreshTimer();
                   } else if (result.requiresLogin) {
-                    console.log('❌ Token refresh failed, logging out...');
+                    // silent
                     get().actions.logout(false); // Silent logout
                   }
                 }, refreshTime);
@@ -640,10 +639,10 @@ export const useAuthStore = create(
                   state.tokenRefreshTimer = timer;
                 });
 
-                console.log(`🔄 Token refresh timer set for ${Math.round(refreshTime/1000/60)} minutes`);
+                // silent
               }
             } catch (error) {
-              console.error('Failed to set token refresh timer:', error);
+              // silent
             }
           },
 

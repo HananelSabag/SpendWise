@@ -29,6 +29,7 @@ export default {
   orContinueWith: "או המשיכו עם",
   continueWithGoogle: "המשך עם גוגל",
   connecting: "מתחבר...",
+  initializingGoogle: "טוען את Google...",
   
   // Account states
   dontHaveAccount: "אין לכם חשבון?",
@@ -120,6 +121,15 @@ export default {
   verificationSent: "אימייל אימות נשלח!",
   resendFailed: "נכשל בשליחת אימייל אימות",
   redirecting: "מפנה ללוח הבקרה...",
+  checkYourEmail: "בדקו את האימייל שלכם",
+  clickVerificationLink: "לחצו על קישור האימות ששלחנו אליכם",
+  verifyingEmail: "מאמת אימייל",
+  pleaseWaitVerifying: "אנא המתינו בזמן שאנו מאמתים את האימייל...",
+  emailVerificationSuccess: "האימייל אומת בהצלחה!",
+  verificationTokenExpired: "קישור האימות פג. ניתן לבקש חדש.",
+  verificationEmailResent: "אימייל אימות נשלח שוב!",
+  resendVerificationFailed: "שליחת אימייל אימות נכשלה",
+  resendVerificationError: "אירעה שגיאה בשליחת אימייל האימות",
   
   // Additional validation
   nameRequired: "שם נדרש",

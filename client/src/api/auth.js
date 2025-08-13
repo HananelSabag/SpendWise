@@ -1,182 +1,20 @@
 /**
  * 🔐 AUTH API MODULE - Complete Authentication System
- * Features: Email/Password, Google OAuth, Role-based access, Enhanced security
+ * Features: Email/Password, Google One Tap, Role-based access, Enhanced security
  * @module api/auth
+ * @version 2.0.0 - Google One Tap Integration
  */
 
 import { api } from './client.js';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
 import { normalizeUserData } from '../utils/userNormalizer';
+import { simpleGoogleAuth } from '../services/simpleGoogleAuth.js';
 
-// ✅ Google OAuth Configuration
-const GOOGLE_CONFIG = {
-  CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  SCRIPT_URL: 'https://accounts.google.com/gsi/client'
-};
-
-// ✅ Google OAuth Manager - CLEAN SIMPLE VERSION
-class GoogleOAuthManager {
-  constructor() {
-    this.isReady = false;
-  }
-
-  // Simple Google script loading
-  async loadScript() {
-    if (window.google?.accounts?.id) return;
-    
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.onload = () => {
-        setTimeout(() => {
-          if (window.google?.accounts?.id) {
-            resolve();
-          } else {
-            reject(new Error('Google services not available'));
-          }
-        }, 100);
-      };
-      script.onerror = () => reject(new Error('Failed to load Google script'));
-      document.head.appendChild(script);
-    });
-  }
-
-  // Simple initialization (enable One Tap + button fallback)
-  async initialize() {
-    if (this.isReady) return;
-
-    if (!GOOGLE_CONFIG.CLIENT_ID) {
-      throw new Error('Google Client ID not configured');
-    }
-
-    await this.loadScript();
-
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CONFIG.CLIENT_ID,
-      callback: this.handleResponse.bind(this),
-      auto_select: true,
-      cancel_on_tap_outside: true,
-      use_fedcm_for_prompt: true
-    });
-
-    // Try One Tap non-blocking
-    try {
-      window.google.accounts.id.prompt((notification) => {
-        const dismissed = notification?.isNotDisplayed() || notification?.isSkippedMoment();
-        if (dismissed && import.meta.env.DEV) {
-          console.log('ℹ️ One Tap not displayed or skipped:', notification.getNotDisplayedReason?.() || notification.getSkippedReason?.());
-        }
-      });
-    } catch (_) {}
-
-    this.isReady = true;
-    console.log('✅ Google OAuth ready');
-  }
-
-  // Handle Google response
-  handleResponse(response) {
-    console.log('🎯 Google response received:', response);
-    if (this.resolver) {
-      console.log('✅ Resolving with response');
-      this.resolver(response);
-      this.resolver = null;
-    } else {
-      console.log('⚠️ No resolver available');
-    }
-  }
-
-  // Simple sign-in - One Tap first, fallback to button
-  async signIn() {
-    if (!this.isReady) {
-      await this.initialize();
-    }
-
-    return new Promise((resolve, reject) => {
-      // Set the main resolver
-      this.resolver = resolve;
-      let timeoutId;
-      
-      // Attempt One Tap immediately, if it fails, render button
-      try {
-        window.google.accounts.id.prompt((notification) => {
-          const displayed = notification?.isDisplayed && notification.isDisplayed();
-          const notDisplayed = notification?.isNotDisplayed && notification.isNotDisplayed();
-          const skipped = notification?.isSkippedMoment && notification.isSkippedMoment();
-          if (!displayed && (notDisplayed || skipped)) {
-            this.renderButton().catch(reject);
-          }
-        });
-      } catch (_) {
-        this.renderButton().catch(reject);
-      }
-
-      // Extended timeout to allow for user interaction
-      timeoutId = setTimeout(() => {
-        if (this.resolver) {
-          console.log('⏰ OAuth timeout reached');
-          this.resolver = null;
-          reject(new Error('Google sign-in timeout'));
-        }
-      }, 60000); // 60 seconds
-
-      // Wrap original resolver to clear timeout
-      const originalResolver = this.resolver;
-      this.resolver = (response) => {
-        clearTimeout(timeoutId);
-        if (originalResolver) {
-          originalResolver(response);
-        }
-      };
-    });
-  }
-
-  // Render button approach - simplified
-  async renderButton() {
-    console.log('🔍 Creating invisible button...');
-    
-    // Create invisible button container
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.top = '-9999px';
-    container.style.visibility = 'hidden';
-    document.body.appendChild(container);
-
-    // Render Google button
-    window.google.accounts.id.renderButton(container, {
-      theme: 'outline',
-      size: 'large',
-      type: 'standard',
-      shape: 'pill',
-      text: 'continue_with'
-    });
-
-    console.log('🔍 Button rendered, attempting auto-click...');
-    
-    // Auto-click after short delay
-    setTimeout(() => {
-      const button = container.querySelector('[role="button"]');
-      if (button) {
-        console.log('✅ Button found, clicking...');
-        button.click();
-      } else {
-        console.log('❌ Button not found');
-      }
-    }, 500);
-    
-    // Cleanup after delay
-    setTimeout(() => {
-      if (document.body.contains(container)) {
-        console.log('🧹 Cleaning up button container');
-        document.body.removeChild(container);
-      }
-    }, 5000);
-  }
+// Quiet noisy debug logs in production; keep minimal in dev
+if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_MODE === 'true') {
+  // silent
 }
-
-// ✅ Initialize Google OAuth Manager
-const googleOAuth = new GoogleOAuthManager();
 
 // ✅ Auth API Module
 export const authAPI = {
@@ -184,334 +22,80 @@ export const authAPI = {
   async login(email, password) {
     try {
       const response = await api.client.post('/users/login', {
-        email,
+        email: email.trim().toLowerCase(),
         password
       });
 
-      // Handle your server's response structure with comprehensive fallbacks
+      // ✅ Extract user and token data
       let user, token;
-      
-      // Try multiple extraction patterns
-      if (response.data.success && response.data.data) {
-        // Primary server format: { success: true, data: { user: {...}, accessToken: "..." } }
-        user = response.data.data.user;
-        token = response.data.data.accessToken ||           // ← MAIN PATH (actual server format)
-                response.data.data.tokens?.accessToken || 
-                response.data.data.tokens?.access_token || 
-                response.data.data.token;
-      } else if (response.data.data && response.data.data.tokens) {
-        // Alternative: data.tokens directly
-        user = response.data.data.user || response.data.user;
-        token = response.data.data.tokens.accessToken || response.data.data.tokens.access_token;
-      } else if (response.data.user && response.data.token) {
-        // Direct user/token structure
-        user = response.data.user;
-        token = response.data.token;
-      } else if (response.data.accessToken || response.data.token) {
-        // Legacy structure: user data directly + token
-        user = response.data;
-        token = response.data.accessToken || response.data.token;
-      } else {
-        // Last resort: check all possible token locations
-        user = response.data.user || response.data.data?.user || response.data;
-        token = response.data.token || 
-                response.data.accessToken ||
-                response.data.data?.token ||
-                response.data.data?.accessToken ||
-                response.data.data?.tokens?.accessToken ||
-                response.data.data?.tokens?.access_token;
-      }
-      
-      // Ensure user has required properties
-      if (!user) {
-        throw new Error('Invalid server response: no user data');
-      }
-      
-      // ✅ Use centralized user normalization
-      const normalizedUser = normalizeUserData(user);
-      
-      // Store tokens if provided
-      if (token) {
-        localStorage.setItem('accessToken', token);
+
+      const d = response?.data || {};
+      const dd = d?.data || {};
+
+      // Prefer server's unified shape: { success, data: { user, accessToken, tokens } }
+      if (dd?.user && (dd?.accessToken || dd?.token || dd?.tokens?.accessToken)) {
+        user = dd.user;
+        token = dd.accessToken || dd.token || dd.tokens?.accessToken;
+      } else if (d?.user && (d?.accessToken || d?.token)) {
+        // Top-level fallback
+        user = d.user;
+        token = d.accessToken || d.token;
+      } else if (dd && (dd.id || dd.email)) {
+        // If data is already user-like
+        user = dd;
+        token = d.accessToken || d.token || dd.accessToken || dd.token || dd.tokens?.accessToken;
       }
 
-      // ✅ FIX: Store refresh token if provided  
-      const refreshToken = response.data.data?.tokens?.refreshToken || 
-                          response.data.data?.refreshToken ||
-                          response.data.tokens?.refreshToken ||
-                          response.data.refreshToken;
-      
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
-        console.log('✅ Refresh token stored for login');
+      if (!user || !token) {
+        throw new Error('Invalid response format from server');
       }
+
+      // ✅ Normalize user data
+      const normalizedUser = normalizeUserData(user);
       
-      // Clear any auth-related cache
-      api.clearCache('users');
-      api.clearCache('auth');
-      
+      // Store tokens in both keys for compatibility
+      localStorage.setItem('accessToken', token);
+      localStorage.setItem('authToken', token);
+      const rt = dd?.tokens?.refreshToken || dd?.refreshToken || d?.refreshToken || '';
+      if (rt) localStorage.setItem('refreshToken', rt);
+
       return {
         success: true,
         user: normalizedUser,
         token,
-        refreshToken
+        refreshToken: response.data.refreshToken
       };
+
     } catch (error) {
-      console.error('🔑 Auth API login error:', error);
-      
-      // Provide more specific error information
-      let errorMessage = 'Login failed';
-      let errorCode = 'LOGIN_FAILED';
-      
-      if (error.response) {
-        // Server responded with error status
-        const status = error.response.status;
-        const data = error.response.data;
-        
-        if (status === 401) {
-          // ✅ FIXED: Preserve server's specific error messages (e.g., hybrid auth guidance)
-          errorMessage = data.message || data.error || 'Invalid email or password';
-          errorCode = 'INVALID_CREDENTIALS';
-        } else if (status === 403) {
-          errorMessage = data.message || data.error || 'Account is locked or suspended';
-          errorCode = 'ACCOUNT_LOCKED';
-        } else if (status === 422) {
-          errorMessage = data.message || 'Invalid input data';
-          errorCode = 'VALIDATION_ERROR';
-        } else if (status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
-          errorCode = 'SERVER_ERROR';
-        } else {
-          errorMessage = data.message || data.error || 'Login failed';
-        }
-      } else if (error.code === 'NETWORK_ERROR') {
-        errorMessage = 'Network error. Please check your connection.';
-        errorCode = 'NETWORK_ERROR';
-      }
+      console.error('Login error:', error);
       
       return {
         success: false,
         error: {
-          message: errorMessage,
-          code: errorCode,
+          message: error.response?.data?.message || error.message || 'Login failed',
+          code: error.response?.data?.code || 'LOGIN_ERROR',
           status: error.response?.status || 0
         }
       };
     }
   },
 
-  // ✅ Google OAuth Login
-  async googleLogin() {
+  // ✅ Get Profile (shared by stores and hooks)
+  async getProfile() {
     try {
-      // Initialize Google OAuth if needed
-      if (!googleOAuth.isInitialized) {
-        await googleOAuth.initialize();
-      }
-      
-      // Get Google credential
-      const googleResponse = await googleOAuth.signIn();
-      
-      // ✅ Extract credential from Google response object
-      const credential = googleResponse?.credential || googleResponse;
-      
-      // ✅ Validate that we received a proper JWT token
-      if (!credential || typeof credential !== 'string') {
-        throw new Error('Invalid Google credential received');
-      }
-      
-      // ✅ Check if it's a JWT (has 3 parts separated by dots)
-      const parts = credential.split('.');
-      if (parts.length !== 3) {
-        throw new Error('Invalid token format - expected JWT ID token');
-      }
-      
-      // ✅ Extract user info from JWT credential
-      let userInfo = { email: '', name: '', picture: '' };
-      
-      try {
-        const decoded = jwtDecode(credential);
-        userInfo = {
-          email: decoded.email || '',
-          name: decoded.name || '',
-          picture: decoded.picture || ''
-        };
-      } catch (decodeError) {
-        throw new Error('Failed to decode Google ID token');
-      }
-      
-      // ✅ Ensure we have an email
-      if (!userInfo.email) {
-        throw new Error('No email found in Google credential');
-      }
-      
-      // ✅ Final payload to send
-      const payload = {
-        idToken: credential,
-        email: userInfo.email,
-        name: userInfo.name,
-        picture: userInfo.picture
-      };
-      
-      // Send credential to our backend with extracted user info
-      const response = await api.client.post('/users/auth/google', payload);
-
-      // ✅ FIX: Use EXACT same extraction logic as regular login
-      let user, token;
-      
-      // Try multiple extraction patterns (same as regular login)
-      if (response.data.success && response.data.data) {
-        // Primary server format: { success: true, data: { user: {...}, accessToken: "..." } }
-        user = response.data.data.user;
-        token = response.data.data.accessToken ||           // ← MAIN PATH (actual server format)
-                response.data.data.tokens?.accessToken || 
-                response.data.data.tokens?.access_token || 
-                response.data.data.token;
-      } else if (response.data.data && response.data.data.tokens) {
-        // Alternative: data.tokens directly
-        user = response.data.data.user || response.data.user;
-        token = response.data.data.tokens.accessToken || response.data.data.tokens.access_token;
-      } else if (response.data.user && response.data.token) {
-        // Direct user/token structure
-        user = response.data.user;
-        token = response.data.token;
-      } else if (response.data.accessToken || response.data.token) {
-        // Legacy structure: user data directly + token
-        user = response.data;
-        token = response.data.accessToken || response.data.token;
-      } else {
-        // Last resort: check all possible token locations
-        user = response.data.user || response.data.data?.user || response.data;
-        token = response.data.token || 
-                response.data.accessToken ||
-                response.data.data?.token ||
-                response.data.data?.accessToken ||
-                response.data.data?.tokens?.accessToken ||
-                response.data.data?.tokens?.access_token;
-      }
-      
-      // Ensure user has required properties
-      if (!user) {
-        throw new Error('Invalid server response: no user data');
-      }
-      
-      // ✅ CLEANED: Use centralized user normalization
-      const normalizedUser = normalizeUserData(user);
-      
-      // Store tokens if provided
-      if (token) {
-        localStorage.setItem('accessToken', token);
-      }
-
-      // ✅ FIX: Store refresh token for Google Auth too
-      const refreshToken = response.data.data?.tokens?.refreshToken || 
-                          response.data.data?.refreshToken ||
-                          response.data.tokens?.refreshToken ||
-                          response.data.refreshToken;
-      
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
-        console.log('✅ Refresh token stored for Google login');
-      }
-      
-      // Clear any auth-related cache
-      api.clearCache('users');
-      api.clearCache('auth');
-      
-      // ✅ Return EXACT same structure as regular login
-      return {
-        success: true,
-        user: normalizedUser,
-        token,
-        refreshToken
-      };
+      const response = await api.client.get('/users/profile');
+      const payload = response?.data || {};
+      const rawUser = payload?.data || payload?.user || payload; // server uses data: normalizedUser
+      const normalizedUser = normalizeUserData(rawUser);
+      return { success: true, user: normalizedUser, data: normalizedUser };
     } catch (error) {
       return {
         success: false,
         error: {
-          message: error.response?.data?.error?.message || error.message || 'Google Sign-In failed',
-          code: 'GOOGLE_AUTH_ERROR'
+          message: error.response?.data?.message || error.message || 'Failed to load profile',
+          code: error.response?.data?.error?.code || 'PROFILE_ERROR',
+          status: error.response?.status || 0
         }
-      };
-    }
-  },
-
-  // ✅ User Registration
-  async register(userData) {
-    try {
-      // Send only the fields the server expects
-      const payload = {
-        email: userData.email,
-        username: userData.username,
-        password: userData.password
-      };
-
-      const response = await api.client.post('/users/register', payload);
-
-      // Server format: { success: true, data: { user: {...}, message: '...' }, metadata: {...} }
-      const serverData = response.data?.data || {};
-      const user = serverData.user || {};
-      const message = serverData.message || 'Registration successful! Please check your email to verify your account.';
-
-      return {
-        success: true,
-        user: {
-          ...user,
-          isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
-          isSuperAdmin: (user.role || 'user') === 'super_admin'
-        },
-        message
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Logout
-  async logout() {
-    try {
-      // Call server logout endpoint
-      await api.client.post('/users/logout');
-    } catch (error) {
-      // Continue with logout even if server call fails
-      console.warn('Server logout failed:', error);
-    } finally {
-      // Clear local data
-      localStorage.removeItem('accessToken');
-      api.clearCache();
-      
-      // Google Sign-Out if available
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.disableAutoSelect();
-      }
-      
-      return { success: true };
-    }
-  },
-
-  // ✅ Get Current User Profile
-  async getProfile() {
-    try {
-      const response = await api.cachedRequest('/users/profile', {
-        method: 'GET'
-      }, 'user-profile', 10 * 60 * 1000); // 10 minute cache
-      
-      // ✅ FIXED: Handle server response structure correctly
-      const user = response.data?.data || response.data;
-      
-      // ✅ CLEANED: Use centralized user normalization
-      const normalizedUser = normalizeUserData(user);
-
-      return {
-        success: true,
-        user: normalizedUser
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
       };
     }
   },
@@ -520,51 +104,321 @@ export const authAPI = {
   async updateProfile(updates) {
     try {
       const response = await api.client.put('/users/profile', updates);
-      
-      // Clear profile cache
-      api.clearCache('user-profile');
-      api.clearCache('users');
-      
-      // ✅ FIXED: Handle server response format correctly
-      const userData = response.data?.data || response.data || response;
-      
-      console.log('🔍 updateProfile server response:', {
-        fullResponse: response,
-        extractedUserData: userData,
-        hasOnboardingCompleted: userData?.onboarding_completed
-      });
-      
-      return {
-        success: true,
-        user: userData  // ✅ FIXED: Extract user data correctly
-      };
+      const payload = response?.data || {};
+      const rawUser = payload?.data || payload?.user || updates;
+      const normalizedUser = normalizeUserData(rawUser);
+      return { success: true, user: normalizedUser, data: normalizedUser };
     } catch (error) {
-      console.error('❌ updateProfile error:', error);
       return {
         success: false,
-        error: api.normalizeError(error)
+        error: {
+          message: error.response?.data?.message || error.message || 'Profile update failed',
+          code: error.response?.data?.error?.code || 'PROFILE_UPDATE_ERROR',
+          status: error.response?.status || 0
+        }
       };
     }
   },
 
-  // ✅ Upload Avatar
-  async uploadAvatar(formData) {
+  // ✅ Validate Token (used by recovery manager)
+  async validateToken() {
     try {
-      const response = await api.client.post('/users/upload-profile-picture', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const res = await this.getProfile();
+      return { success: !!res.success };
+    } catch {
+      return { success: false };
+    }
+  },
+
+  // ✅ Simple Google Login (processes credential from button)
+  async processGoogleCredential(credential) {
+    try {
+      console.log('🔍 Processing Google credential...');
+
+      if (!credential) {
+        throw new Error('No Google credential provided');
+      }
+
+      // Parse the JWT credential
+      const userInfo = simpleGoogleAuth.parseCredential(credential);
+      console.log('🔍 Parsed Google user info:', userInfo);
+
+      // Send to backend for processing
+      const response = await api.client.post('/users/google-auth', {
+        credential: credential,
+        userInfo: userInfo
       });
-      
-      // Clear profile cache
-      api.clearCache('user-profile');
-      api.clearCache('users');
-      
-      // ✅ FIX: Return the server response directly, not double-wrapped
-      return response.data;
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Google authentication failed');
+      }
+
+      const userData = normalizeUserData(response.data.user);
+      console.log('✅ Google authentication successful:', userData);
+
+      return {
+        success: true,
+        user: userData,
+        token: response.data.token,
+        refreshToken: response.data.refreshToken
+      };
+
     } catch (error) {
-      console.error('❌ uploadAvatar error:', error);
+      console.error('❌ Google credential processing error:', error);
+      
       return {
         success: false,
-        error: api.normalizeError(error)
+        error: {
+          message: error.message || 'Google authentication failed',
+          code: 'GOOGLE_AUTH_ERROR',
+          status: error.response?.status || 0
+        }
+      };
+    }
+  },
+
+  // Removed deprecated googleButtonLogin – use SimpleGoogleButton component
+
+  // ✅ Process Google credential (shared logic)
+  async processGoogleCredential(credential) {
+    // ✅ Validate credential
+    if (!credential || typeof credential !== 'string') {
+      throw new Error('Invalid Google credential received');
+    }
+
+    // ✅ Check JWT format
+    const parts = credential.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid token format - expected JWT ID token');
+    }
+
+    // ✅ Extract user info
+    let userInfo = { email: '', name: '', picture: '' };
+    
+    try {
+      const decoded = jwtDecode(credential);
+      userInfo = {
+        email: decoded.email || '',
+        name: decoded.name || '',
+        picture: decoded.picture || ''
+      };
+    } catch (decodeError) {
+      throw new Error('Failed to decode Google ID token');
+    }
+
+    if (!userInfo.email) {
+      throw new Error('No email found in Google credential');
+    }
+
+    // ✅ Send to backend
+    const payload = {
+      idToken: credential,
+      email: userInfo.email,
+      name: userInfo.name,
+      picture: userInfo.picture
+    };
+
+    const response = await api.client.post('/users/auth/google', payload);
+
+    // ✅ Extract response data (server returns data.user and data.accessToken)
+    let user, token;
+    const d = response?.data || {};
+    if (d?.data?.user && (d?.data?.accessToken || d?.data?.token)) {
+      user = d.data.user;
+      token = d.data.accessToken || d.data.token;
+    } else if (d?.user && (d?.accessToken || d?.token)) {
+      user = d.user;
+      token = d.accessToken || d.token;
+    }
+
+    if (!user || !token) {
+      console.error('❌ Server response debug:', {
+        fullResponse: response,
+        responseData: response.data,
+        userFound: !!user,
+        tokenFound: !!token,
+        responseStatus: response?.status,
+        responseHeaders: response?.headers
+      });
+      throw new Error('Invalid response format from server');
+    }
+
+    // ✅ Normalize and store
+    const normalizedUser = normalizeUserData(user);
+    
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('authToken', token);
+    const rt = response.data.data?.tokens?.refreshToken || response.data.refreshToken || '';
+    if (rt) localStorage.setItem('refreshToken', rt);
+
+    return {
+      success: true,
+      user: normalizedUser,
+      token,
+      refreshToken: response.data.refreshToken
+    };
+  },
+
+  // ✅ Register
+  async register(userData) {
+    try {
+      const response = await api.client.post('/users/register', {
+        firstName: userData.firstName?.trim(),
+        lastName: userData.lastName?.trim(),
+        email: userData.email?.trim().toLowerCase(),
+        password: userData.password,
+        acceptedTerms: userData.acceptedTerms
+      });
+
+      // ✅ Handle registration response
+      let user, message;
+      
+      if (response.data?.data?.user) {
+        user = response.data.data.user;
+        message = response.data.message || 'Registration successful';
+      } else if (response.data?.user) {
+        user = response.data.user;
+        message = response.data.message || 'Registration successful';
+      } else {
+        message = response.data?.message || 'Registration successful';
+      }
+
+      return {
+        success: true,
+        user: user ? normalizeUserData(user) : null,
+        message,
+        requiresVerification: !user?.email_verified
+      };
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: error.response?.data?.message || error.message || 'Registration failed',
+          code: error.response?.data?.code || 'REGISTRATION_ERROR',
+          status: error.response?.status || 0
+        }
+      };
+    }
+  },
+
+  // ✅ Logout
+  async logout() {
+    try {
+      // Sign out from Google (if available)
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect();
+      }
+      
+      // Clear local storage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // Optional: Call backend logout endpoint
+      try {
+        await api.client.post('/users/logout');
+      } catch (e) {
+        // Ignore logout errors
+        console.warn('Backend logout failed (ignored):', e.message);
+      }
+
+      return { success: true };
+
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Still clear local storage even if API call fails
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      return { success: true }; // Always succeed for logout
+    }
+  },
+
+  // ✅ Token Refresh
+  async refreshToken() {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        return { success: false, requiresLogin: true, error: { code: 'NO_REFRESH_TOKEN', message: 'No refresh token available' } };
+      }
+
+      const response = await api.client.post('/users/refresh-token', { refreshToken });
+
+      // Accept server format: { success, data: { accessToken, refreshToken } }
+      const d = response?.data || {};
+      const newToken = d?.data?.accessToken || d?.accessToken || d?.token;
+      const newRefreshToken = d?.data?.refreshToken || d?.refreshToken;
+
+      if (newToken) {
+        localStorage.setItem('accessToken', newToken);
+        localStorage.setItem('authToken', newToken);
+      }
+      if (newRefreshToken) {
+        localStorage.setItem('refreshToken', newRefreshToken);
+      }
+
+      return { success: true, token: newToken, refreshToken: newRefreshToken };
+
+    } catch (error) {
+      // Clear invalid tokens on 401
+      if (error?.response?.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        return { success: false, requiresLogin: true, error: { code: 'TOKEN_REFRESH_ERROR', message: 'Token refresh failed' } };
+      }
+      return { success: false, error: { code: 'TOKEN_REFRESH_ERROR', message: error.response?.data?.message || 'Token refresh failed' } };
+    }
+  },
+
+  // ✅ Verify Email
+  async verifyEmail(token) {
+    try {
+      const response = await api.client.post('/users/verify-email', { token });
+      
+      return {
+        success: true,
+        message: response.data?.message || 'Email verified successfully'
+      };
+
+    } catch (error) {
+      console.error('Email verification error:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: error.response?.data?.message || 'Email verification failed',
+          code: error.response?.data?.code || 'EMAIL_VERIFICATION_ERROR'
+        }
+      };
+    }
+  },
+
+  // ✅ Resend Verification
+  async resendVerification(email) {
+    try {
+      const response = await api.client.post('/users/resend-verification', {
+        email: email.trim().toLowerCase()
+      });
+      
+      return {
+        success: true,
+        message: response.data?.message || 'Verification email sent'
+      };
+
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: error.response?.data?.message || 'Failed to resend verification',
+          code: error.response?.data?.code || 'RESEND_VERIFICATION_ERROR'
+        }
       };
     }
   },
@@ -572,277 +426,54 @@ export const authAPI = {
   // ✅ Password Reset Request
   async requestPasswordReset(email) {
     try {
-      await api.client.post('/users/password-reset', { email });
-      
-      return {
-        success: true,
-        message: 'Password reset instructions sent to your email.'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Password Reset Confirm
-  async resetPassword({ token, password, passwordStrength }) {
-    try {
-      await api.client.post('/users/password-reset/confirm', { token, password });
-      
-      return {
-        success: true,
-        message: 'Password reset successful. You can now log in with your new password.'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Email Verification
-  async verifyEmail({ token }) {
-    try {
-      const response = await api.client.post('/users/verify-email', { token });
-      
-      return {
-        success: true,
-        message: 'Email verified successfully!',
-        user: response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Resend Verification Email
-  async resendVerificationEmail({ email }) {
-    try {
-      await api.client.post('/users/resend-verification', { email });
-      
-      return {
-        success: true,
-        message: 'Verification email sent!'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Validate Token with AUTO-REFRESH
-  async validateToken(token) {
-    try {
-      // First do a quick local validation
-      const decoded = jwtDecode(token);
-      const now = Date.now() / 1000;
-      
-      // ✅ FIX: Check if token will expire soon (within 2 minutes)
-      const willExpireSoon = decoded.exp - now < 120; // 2 minutes
-      
-      if (decoded.exp < now) {
-        // Token already expired - try to refresh
-        console.log('🔄 Token expired, attempting refresh...');
-        return await this.refreshToken();
-      }
-      
-      if (willExpireSoon) {
-        // Token expires soon - refresh proactively
-        console.log('🔄 Token expires soon, refreshing proactively...');
-        const refreshResult = await this.refreshToken();
-        if (refreshResult.success) {
-          return refreshResult;
-        }
-        // If refresh fails, continue with current token
-      }
-      
-      // Then validate with server and get fresh user data
-      const response = await api.client.get('/users/profile', {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await api.client.post('/users/password-reset-request', {
+        email: email.trim().toLowerCase()
       });
       
-      if (response.data) {
-        // ✅ FIXED: Handle server response structure correctly
-        const user = response.data?.data || response.data;
-        
-        // ✅ CLEANED: Use centralized user normalization
-        const normalizedUser = normalizeUserData(user);
-        
-        return {
-          success: true,
-          data: normalizedUser
-        };
-      }
-      
-      return { success: false, error: 'Invalid token' };
-      
+      return {
+        success: true,
+        message: response.data?.message || 'Password reset email sent'
+      };
+
     } catch (error) {
-      console.warn('Token validation failed:', error);
+      console.error('Password reset request error:', error);
       
-      // ✅ FIX: If 401, try refresh before giving up
-      if (error.response?.status === 401) {
-        console.log('🔄 Got 401, attempting token refresh...');
-        return await this.refreshToken();
-      }
-      
-      localStorage.removeItem('accessToken');
       return {
         success: false,
-        error: 'Token validation failed'
-      };
-    }
-  },
-
-  // ✅ NEW: Automatic Token Refresh
-  async refreshToken() {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        console.log('❌ No refresh token available');
-        return { success: false, error: 'No refresh token', requiresLogin: true };
-      }
-
-      console.log('🔄 Refreshing access token...');
-      const response = await api.client.post('/users/refresh-token', {
-        refreshToken: refreshToken
-      });
-
-      if (response.data?.success && response.data?.data) {
-        const { accessToken, refreshToken: newRefreshToken, user } = response.data.data;
-        
-        // Update stored tokens
-        localStorage.setItem('accessToken', accessToken);
-        if (newRefreshToken) {
-          localStorage.setItem('refreshToken', newRefreshToken);
+        error: {
+          message: error.response?.data?.message || 'Password reset request failed',
+          code: error.response?.data?.code || 'PASSWORD_RESET_REQUEST_ERROR'
         }
-        
-        console.log('✅ Token refreshed successfully');
-        return { 
-          success: true, 
-          data: user,
-          token: accessToken,
-          refreshed: true
-        };
-      }
-      
-      throw new Error('Invalid refresh response');
-      
-    } catch (error) {
-      console.error('❌ Token refresh failed:', error);
-      
-      // Clear invalid tokens
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      
-      return { 
-        success: false, 
-        error: 'Token refresh failed',
-        requiresLogin: true
       };
     }
   },
 
-  // ✅ Check if user is authenticated
-  isAuthenticated() {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return false;
-    
-    const validation = this.validateToken(token);
-    return validation.valid;
-  },
-
-  // ✅ Get user role from token
-  getUserRole() {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return null;
-    
-    const validation = this.validateToken(token);
-    if (!validation.valid) return null;
-    
-    return validation.payload.role || 'user';
-  },
-
-  // ✅ Check if user has admin access
-  isAdmin() {
-    const role = this.getUserRole();
-    return ['admin', 'super_admin'].includes(role);
-  },
-
-  // ✅ Check if user is super admin
-  isSuperAdmin() {
-    const role = this.getUserRole();
-    return role === 'super_admin';
-  },
-
-  // ✅ Upload profile picture
-  async uploadProfilePicture(formData) {
+  // ✅ Password Reset
+  async resetPassword(token, newPassword) {
     try {
-      const response = await api.client.post('/users/upload-profile-picture', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await api.client.post('/users/password-reset', {
+        token,
+        newPassword
       });
-
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
-
-  // ✅ Change Password
-  async changePassword(passwordData) {
-    try {
-      const response = await api.client.post('/users/change-password', passwordData);
       
       return {
         success: true,
-        data: response.data,
-        message: response.data?.message || 'Password changed successfully'
+        message: response.data?.message || 'Password reset successful'
       };
-    } catch (error) {
-      console.error('❌ changePassword error:', error);
-      return {
-        success: false,
-        error: api.normalizeError(error)
-      };
-    }
-  },
 
-  // ✅ Set Password (for OAuth users setting first password)
-  async setPassword(passwordData) {
-    try {
-      const response = await api.client.post('/users/set-password', passwordData);
+    } catch (error) {
+      console.error('Password reset error:', error);
       
       return {
-        success: true,
-        data: response.data,
-        message: response.data?.message || 'Password set successfully. You can now use both OAuth and email/password login.'
-      };
-    } catch (error) {
-      console.error('❌ setPassword error:', error);
-      return {
         success: false,
-        error: api.normalizeError(error)
+        error: {
+          message: error.response?.data?.message || 'Password reset failed',
+          code: error.response?.data?.code || 'PASSWORD_RESET_ERROR'
+        }
       };
     }
   }
 };
 
-// ✅ Export Google OAuth utilities
-export { googleOAuth };
-
-export default authAPI; 
+// ✅ Export Simple Google Auth service for UI components
+export { simpleGoogleAuth };

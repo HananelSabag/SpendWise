@@ -29,13 +29,7 @@ const config = {
   DEBUG: false // Debug completed - token extraction working
 };
 
-// 🔍 Debug API configuration
-console.log('🔍 API Configuration Debug:', {
-  API_URL: config.API_URL,
-  RAW_VITE_API_URL: import.meta.env.VITE_API_URL,
-  MODE: import.meta.env.MODE,
-  ALL_VITE_VARS: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-});
+// silent config dump
 
 // ✅ Server State Management
 class ServerStateManager {
@@ -163,8 +157,8 @@ class SpendWiseAPIClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        // Add auth token
-        const token = localStorage.getItem('accessToken');
+        // Add auth token (support both legacy and new key)
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -175,10 +169,7 @@ class SpendWiseAPIClient {
           retryCount: config.retryCount || 0
         };
 
-        // Request logged only in development
-        if (import.meta.env.DEV && config.url && config.method) {
-          console.log(`🚀 ${config.method.toUpperCase()} ${config.url}`);
-        }
+        // silent request log
 
         return config;
       },
@@ -194,13 +185,7 @@ class SpendWiseAPIClient {
         // Notify auth recovery manager of success
         this.authRecovery.handleApiSuccess();
 
-        // Log performance in development only
-        if (import.meta.env.DEV && response.config.metadata) {
-          const duration = Date.now() - response.config.metadata.startTime;
-          if (duration > 1000) { // Only log slow requests
-            console.log(`⚠️ Slow API (${duration}ms): ${response.config.url}`);
-          }
-        }
+        // silent perf log
 
         return response;
       },

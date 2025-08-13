@@ -64,10 +64,10 @@ export const useDashboard = (date = null, forceRefresh = null) => {
     queryKey,
     enabled: initialized && isAuthenticated, // ✅ Only run when user is authenticated
     queryFn: async () => {
-      // ✅ DEBUG: Check authentication state before making API calls
-      const token = localStorage.getItem('accessToken');
-      // Removed debug logging to prevent re-renders
-      
+      // Gate calls without token to avoid triggering auth recovery and 401 spam
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      if (!token) return { data: null };
+
       try {
         const result = await api.transactions.getDashboardData({ date: formattedDate });
         
@@ -79,12 +79,8 @@ export const useDashboard = (date = null, forceRefresh = null) => {
           throw new Error(result.error?.message || 'Failed to fetch dashboard data');
         }
       } catch (error) {
-        console.error('❌ Dashboard API Error:', {
-          message: error.message,
-          status: error.response?.status,
-          responseData: error.response?.data
-        });
-        throw error;
+        // Return safe data to avoid query undefined errors; let interceptors handle auth
+        return { data: null };
       }
     },
     ...queryConfigs.dynamic,

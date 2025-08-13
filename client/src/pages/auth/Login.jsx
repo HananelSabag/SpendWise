@@ -17,7 +17,8 @@ import {
   useAuth, 
   useTranslation,
   useTheme,
-  useNotifications
+  useNotifications,
+  useAuthStore
 } from '../../stores';
 import { useAuthToasts } from '../../hooks/useAuthToasts';
 
@@ -89,10 +90,34 @@ const Login = () => {
         const from = location.state?.from?.pathname || '/';
         navigate(from, { replace: true });
       } else {
-        authToasts.loginFailed(result.error);
-        setErrors({ 
-          general: result.error?.message || t('loginFailed')
-        });
+        // Handle unverified email with resend action
+        if (result.error?.code === 'EMAIL_NOT_VERIFIED') {
+          setErrors({
+            general: result.error?.message || t('emailNotVerified'),
+            code: 'EMAIL_NOT_VERIFIED',
+            isResending: false,
+            onResendVerification: async () => {
+              try {
+                setErrors(prev => ({ ...prev, isResending: true }));
+                const resend = await api.auth.resendVerificationEmail({ email: formData.email });
+                if (resend.success) {
+                  addNotification({ type: 'success', message: t('verificationEmailResent') });
+                } else {
+                  addNotification({ type: 'error', message: resend.error?.message || t('resendVerificationFailed') });
+                }
+              } catch (_) {
+                addNotification({ type: 'error', message: t('resendVerificationError') });
+              } finally {
+                setErrors(prev => ({ ...prev, isResending: false }));
+              }
+            }
+          });
+        } else {
+          authToasts.loginFailed(result.error);
+          setErrors({ 
+            general: result.error?.message || t('loginFailed')
+          });
+        }
       }
     } catch (error) {
       authToasts.loginFailed(error);
@@ -104,34 +129,50 @@ const Login = () => {
     }
   }, [validateForm, login, authToasts, t, location, navigate]);
 
-  // ✅ Handle Google login - FIXED WITH DEBUG
-  const handleGoogleLogin = useCallback(async () => {
-    console.log('🔍 Google login button clicked');
+  // ✅ Handle Google login with credential
+  const handleGoogleLogin = useCallback(async (credential) => {
+    // silent
     setIsGoogleLoading(true);
     
     try {
-      console.log('🔍 Calling googleLogin from auth store...');
-      // ✅ Use auth store method instead of API directly
-      const result = await googleLogin();
+      let result;
       
-      console.log('🔍 Google login result:', result);
+      if (credential) {
+        // Direct credential from SimpleGoogleButton
+        // silent
+        const { authAPI } = await import('../../api');
+        result = await authAPI.processGoogleCredential(credential);
+      } else {
+        // This shouldn't happen anymore with SimpleGoogleButton
+        throw new Error('No Google credential provided');
+      }
+      
+      // silent
       
       if (result.success) {
-        console.log('✅ Google login successful');
+        // Keep UI success toasts only
         authToasts.googleLoginSuccess(result.user);
         
-        // ✅ FIXED: Navigate to dashboard with proper fallback
+        // Update auth store with the user data
+        if (credential) {
+          // Update store directly and start token refresh timer (hybrid auth)
+          const store = useAuthStore.getState();
+          store.actions.setUser(result.user);
+          try { store.actions.startTokenRefreshTimer(); } catch (_) {}
+        }
+        
+        // Navigate to dashboard
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
-        console.error('❌ Google login failed:', result.error);
+        // silent
         authToasts.googleLoginFailed();
         setErrors({ 
           general: result.error?.message || 'Google login failed'
         });
       }
     } catch (error) {
-      console.error('❌ Google login error:', error);
+      // silent
       authToasts.googleLoginFailed();
       setErrors({ 
         general: error.message || 'Google login error'
@@ -230,7 +271,7 @@ const Login = () => {
           <p className="text-gray-600 dark:text-gray-400">
             {t('dontHaveAccount')}{' '}
             <Link
-              to="/auth/register"
+              to="/register"
               className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
             >
               {t('signUp')}

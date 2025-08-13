@@ -17,13 +17,13 @@ import {
   useAuth, 
   useTranslation, 
   useTheme,
-  useNotifications 
+  useNotifications,
+  useAuthStore 
 } from '../../stores';
 import { useAuthToasts } from '../../hooks/useAuthToasts';
 
 // ✅ Import extracted components
 import RegistrationForm from '../../components/features/auth/RegistrationForm';
-import SecuritySetup from '../../components/features/auth/SecuritySetup';
 import RegistrationComplete from '../../components/features/auth/RegistrationComplete';
 import GoogleProfileCompletion from '../../components/features/auth/GoogleProfileCompletion';
 import GuestSettings from '../../components/common/GuestSettings';
@@ -43,7 +43,7 @@ const Register = () => {
   const navigate = useNavigate();
   
   // ✅ Registration flow state
-  const [registrationStep, setRegistrationStep] = useState('form'); // form, security, googleProfile, complete
+  const [registrationStep, setRegistrationStep] = useState('form'); // form only
   const [userData, setUserData] = useState(null);
   const [securityData, setSecurityData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,16 +62,9 @@ const Register = () => {
   const validateForm = useCallback((formData) => {
     const newErrors = {};
 
-    // First/last name are not required for email/password registration
-
-    // ✅ ADD: Username validation
-    if (!formData.username?.trim()) {
-      newErrors.username = t('usernameRequired');
-    } else if (formData.username.length < 3) {
-      newErrors.username = t('usernameTooShort');
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = t('usernameInvalidCharacters');
-    }
+    // Names required for DB; username not used
+    if (!formData.firstName?.trim()) newErrors.firstName = t('firstNameRequired');
+    if (!formData.lastName?.trim()) newErrors.lastName = t('lastNameRequired');
 
     if (!formData.email) {
       newErrors.email = t('emailRequired');
@@ -108,7 +101,8 @@ const Register = () => {
 
     try {
       const registrationData = {
-        username: formData.username.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         password: formData.password,
         passwordStrength: formData.passwordAnalysis
@@ -117,12 +111,9 @@ const Register = () => {
       const result = await register(registrationData);
       
       if (result.success) {
-        setUserData({ email: formData.email, username: formData.username });
-        
-        // Move to security setup
-        setRegistrationStep('security');
-        
-        authToasts.registrationSuccess();
+        setUserData({ email: formData.email, firstName: formData.firstName, lastName: formData.lastName });
+        addNotification({ type: 'success', message: t('registrationSuccess') });
+        navigate('/auth/login', { replace: true });
       } else {
         authToasts.registrationFailed(result.error);
         setErrors({ 
@@ -139,13 +130,22 @@ const Register = () => {
     }
   }, [validateForm, register, authToasts, t]);
 
-  // ✅ Handle Google registration - ENHANCED with profile completion
-  const handleGoogleRegister = useCallback(async () => {
+  // ✅ Handle Google registration with credential
+  const handleGoogleRegister = useCallback(async (credential) => {
     setIsGoogleLoading(true);
     
     try {
-      // Use the correct Google OAuth API
-      const result = await googleLogin();
+      let result;
+      
+      if (credential) {
+        // Direct credential from SimpleGoogleButton
+        if (import.meta.env.DEV) console.log('🔍 Processing Google credential for registration...');
+        const { authAPI } = await import('../../api');
+        result = await authAPI.processGoogleCredential(credential);
+      } else {
+        // This shouldn't happen anymore with SimpleGoogleButton
+        throw new Error('No Google credential provided');
+      }
       
       if (result.success) {
         // ✅ FIXED: Check if user needs profile completion (must have username)
@@ -164,6 +164,13 @@ const Register = () => {
           fullName: result.user.name || `${result.user.firstName} ${result.user.lastName}`,
           onboarding_completed: result.user.onboarding_completed
         });
+        
+        // Update auth store with the user data
+        if (credential) {
+          const store = useAuthStore.getState();
+          store.actions.setUser(result.user);
+          try { store.actions.startTokenRefreshTimer(); } catch (_) {}
+        }
         
         setIsGoogleUser(true);
         setSecurityData({ securityScore: 85 }); // Google OAuth gives good security score
@@ -202,10 +209,7 @@ const Register = () => {
     setSecurityData(securitySetup);
     setRegistrationStep('complete');
     
-    addNotification({
-      type: 'success',
-      message: t('securitySetupComplete')
-    });
+    addNotification({ type: 'success', message: t('registrationSuccess') });
   }, [addNotification, t]);
 
   // ✅ Handle security setup skip
@@ -317,13 +321,11 @@ const Register = () => {
           
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {registrationStep === 'form' ? t('createAccount') :
-             registrationStep === 'security' ? t('secureAccount') :
              registrationStep === 'googleProfile' ? t('completeYourProfile') :
              t('welcomeAboard')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             {registrationStep === 'form' ? t('joinSpendWise') :
-             registrationStep === 'security' ? t('almostDone') :
              registrationStep === 'googleProfile' ? t('addDetailsToPersonalizeExperience') :
              t('readyToStart')}
           </p>
@@ -337,20 +339,7 @@ const Register = () => {
                 "w-3 h-3 rounded-full transition-colors",
                 registrationStep === 'form' ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
               )} />
-              <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600" />
-              <div className={cn(
-                "w-3 h-3 rounded-full transition-colors",
-                (registrationStep === 'security' || (isGoogleUser && registrationStep === 'googleProfile')) ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-              )} />
-              {isGoogleUser && (
-                <>
-                  <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600" />
-                  <div className={cn(
-                    "w-3 h-3 rounded-full transition-colors",
-                    registrationStep === 'googleProfile' ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-                  )} />
-                </>
-              )}
+            {/* Progress simplified to single step */}
             </div>
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 px-1">
               <span>{t('account')}</span>
@@ -381,22 +370,7 @@ const Register = () => {
               </motion.div>
             )}
             
-            {registrationStep === 'security' && (
-              <motion.div
-                key="security"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <SecuritySetup
-                  onComplete={handleSecurityComplete}
-                  onSkip={handleSecuritySkip}
-                  userEmail={userData?.email}
-                  userName={userData?.fullName}
-                />
-              </motion.div>
-            )}
+            {/* Security step removed from flow */}
 
             {registrationStep === 'googleProfile' && (
               <motion.div
@@ -433,7 +407,7 @@ const Register = () => {
         </motion.div>
 
         {/* Navigation */}
-        {(registrationStep === 'security' || registrationStep === 'googleProfile') && (
+        {(registrationStep === 'googleProfile') && (
           <motion.div variants={itemVariants} className="mt-6">
             <Button
               variant="ghost"

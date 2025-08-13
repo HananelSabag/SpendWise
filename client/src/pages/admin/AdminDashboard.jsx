@@ -38,13 +38,10 @@ const AdminDashboard = () => {
     queryKey: ['admin', 'dashboard-stats'],
     queryFn: async () => {
       const result = await api.admin.getDashboard();
-      console.log('🎯 Admin API Response:', result);
-      console.log('🔍 Raw API Data:', JSON.stringify(result, null, 2));
       return result;
     },
     refetchInterval: 30000, // Refresh every 30 seconds
     onError: (err) => {
-      console.error('❌ Admin Dashboard Error:', err);
       addNotification({
         type: 'error',
         message: t('errors.statsLoadFailed', { fallback: 'Failed to load admin statistics' }),
@@ -139,7 +136,7 @@ const AdminDashboard = () => {
     }
   };
 
-  console.log('📊 Computed Stats:', stats);
+  // silent
 
   // Small helper to format relative time for activity items
   const formatTimeAgo = (value) => {

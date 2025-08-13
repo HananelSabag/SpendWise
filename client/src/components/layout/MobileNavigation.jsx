@@ -128,37 +128,7 @@ const MobileNavigation = ({
     }
   ];
 
-  // ✅ Debug logging (moved after all variable declarations)
-  if (import.meta.env.DEV && isOpen) {
-    console.log('🔍 Mobile Navigation Debug:', {
-      isOpen,
-      navigationItems,
-      navigationItemsLength: navigationItems.length,
-      isAuthenticated,
-      user: user?.email,
-      isAdmin,
-      isSuperAdmin,
-      adminItems,
-      adminItemsLength: adminItems.length,
-      quickActions,
-      quickActionsLength: quickActions.length,
-      translations: {
-        dashboard: t('nav.dashboard'),
-        transactions: t('nav.transactions'),
-        analytics: t('nav.analytics'),
-        profile: t('nav.profile'),
-        navigation: t('nav.navigation'),
-        quickActions: t('common.quickActions'),
-        administration: t('nav.administration')
-      },
-      navigationItemsDetails: navigationItems.map(item => ({
-        name: item.name,
-        href: item.href,
-        current: item.current,
-        translationResult: item.name
-      }))
-    });
-  }
+  // silent
 
   // ✅ Handle navigation
   const handleNavigation = useCallback((href) => {

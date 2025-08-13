@@ -71,10 +71,15 @@ const VerifyEmail = () => {
             message: t('emailVerificationSuccess')
           });
           
-          // Auto redirect to dashboard after 3 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 3000);
+          // Try to fetch fresh profile and redirect to login if not logged in
+          try {
+            const profile = await api.auth.getProfile();
+            if (profile.success) {
+              navigate('/', { replace: true });
+              return;
+            }
+          } catch (_) {}
+          navigate('/auth/login', { replace: true });
         } else {
           setErrorMessage(result.error?.message || t('verificationFailed'));
           setVerificationState('error');
@@ -93,7 +98,7 @@ const VerifyEmail = () => {
     };
 
     verifyToken();
-  }, [token, api, addNotification, t, navigate]);
+  }, [token, addNotification, t, navigate]);
 
   // ✅ Handle resend verification email
   const handleResendVerification = useCallback(async () => {

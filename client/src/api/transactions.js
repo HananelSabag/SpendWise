@@ -347,6 +347,8 @@ const transactionAPI = {
    */
   async getDashboardData(params = {}) {
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      if (!token) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
       const response = await apiClient.client.get('/transactions/dashboard', { params });
       return { success: true, data: response.data };
     } catch (error) {

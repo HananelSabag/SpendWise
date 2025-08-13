@@ -22,13 +22,11 @@ const AppInitializer = ({ children }) => {
 
         // If already authenticated (token in storage), fetch fresh profile and sync preferences immediately
         try {
-          const token = localStorage.getItem('accessToken');
+          const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
           if (token && typeof authActions.getProfile === 'function') {
             await authActions.getProfile();
           }
-        } catch (e) {
-          console.warn('Profile preload failed on init (non-fatal):', e?.message);
-        }
+        } catch (_) {}
         
         // Load admin system settings ONLY for authenticated admins
         try {
@@ -42,24 +40,17 @@ const AppInitializer = ({ children }) => {
             const googleEnabled = settings.find(s => s.key === 'google_oauth_enabled')?.value !== false;
             const supportEmail = settings.find(s => s.key === 'support_email')?.value || 'spendwise.verifiction@gmail.com';
 
-            // Set document title and app store pageTitle base
             document.title = `${siteName}`;
             useAppStore.setState((state) => { state.pageTitle = siteName; });
 
-            // Expose flag globally for conditional UI
             window.__SW_GOOGLE_OAUTH_ENABLED__ = googleEnabled;
             window.__SW_SUPPORT_EMAIL__ = supportEmail;
           }
-        } catch (e) {
-          // Non-fatal for init
-          console.warn('Skipped admin settings on init:', e?.message);
-        }
+        } catch (_) {}
         
         // Mark as initialized
         setIsInitialized(true);
-      } catch (error) {
-        console.error('App initialization failed:', error);
-        // Still mark as initialized to prevent infinite loading
+      } catch (_) {
         setIsInitialized(true);
       }
     };

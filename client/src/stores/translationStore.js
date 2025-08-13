@@ -419,13 +419,7 @@ export const useTranslationStore = create(
 
             // ✅ Only log translation issues (not every successful translation)
             if (!translation || translation === key) {
-              console.warn('🔍 Translation missing:', JSON.stringify({
-                key,
-                module: moduleName,
-                translationKey,
-                moduleKey,
-                loadedModules: Object.keys(loadedModules)
-              }, null, 2));
+              // silent missing translation in console; UI will use fallback
             }
 
             // Use provided fallback or key itself
