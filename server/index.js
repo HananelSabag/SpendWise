@@ -16,6 +16,7 @@ dotenv.config();
 const logger = require('./utils/logger');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
+const { optionalAuth } = require('./middleware/auth');
 const { maintenanceGate } = require('./middleware/maintenance');
 const scheduler = require('./utils/scheduler');
 const db = require('./config/db');
@@ -141,6 +142,8 @@ app.use(requestId);
 // API rate limiter
 app.use('/api', apiLimiter);
 
+// Load user context early so admins can bypass maintenance
+app.use(optionalAuth);
 // Global maintenance gate (place before route handlers)
 app.use(maintenanceGate);
 
