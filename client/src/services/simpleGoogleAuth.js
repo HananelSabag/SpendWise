@@ -147,7 +147,7 @@ class SimpleGoogleAuth {
         this._gsiInitialized = true;
       }
 
-      // Always re-render the button on each call so it's clickable again
+      // Render the button
       window.google.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
@@ -156,8 +156,10 @@ class SimpleGoogleAuth {
         width: '300' // Fixed width instead of percentage
       });
 
-      // Re-enable click after a successful or failed attempt by canceling prompt state
-      try { window.google.accounts.id.cancel(); } catch (_) {}
+      // Explicitly enable the container to accept pointer events
+      try {
+        container.style.pointerEvents = 'auto';
+      } catch (_) {}
 
       // silent
       return true;

@@ -35,7 +35,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   
   // ✅ FIX: Simplified event listeners without excessive debouncing
   useEffect(() => {
-    const events = ['transaction-added', 'dashboard-refresh-requested'];
+    const events = ['transaction-added', 'dashboard-refresh-requested', 'server-woke'];
     
     const handleRefresh = () => {
       queryClient.invalidateQueries({ queryKey });

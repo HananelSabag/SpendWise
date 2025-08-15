@@ -117,6 +117,8 @@ export const useAppStore = create(
         // ✅ UI State
         sidebarCollapsed: false,
         pageTitle: 'SpendWise',
+         // Maintenance status for admin indicator
+         maintenanceMode: false,
         notifications: [],
         modals: [],
         loading: {
@@ -531,6 +533,13 @@ export const useAppStore = create(
             if (typeof document !== 'undefined') {
               document.title = `${title} | SpendWise`;
             }
+          },
+
+          // Maintenance indicator management
+          setMaintenanceMode: (enabled) => {
+            set((state) => {
+              state.maintenanceMode = !!enabled;
+            });
           },
 
           // Loading management

@@ -331,28 +331,28 @@ const ModernDayHeader = ({ title, date, totalIncome, totalExpenses, count }) => 
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 mb-4"
+      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 mb-4 sticky top-0 z-10"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start sm:items-center gap-3">
         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
           <Calendar className="w-5 h-5" />
         </div>
         
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <div className="flex items-center gap-3 mt-1">
-            <Badge variant="outline" className="bg-white dark:bg-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg">{title}</h3>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <Badge variant="outline" className="bg-white dark:bg-gray-800 whitespace-nowrap">
               {count} {t('transactions.count', 'transactions')}
             </Badge>
             
             {totalIncome > 0 && (
-              <span className="text-sm font-medium text-green-600 dark:text-green-400">
+              <span className="text-sm font-medium text-green-600 dark:text-green-400 whitespace-nowrap tabular-nums">
                 +{formatCurrency(totalIncome)}
               </span>
             )}
             
             {totalExpenses > 0 && (
-              <span className="text-sm font-medium text-red-600 dark:text-red-400">
+              <span className="text-sm font-medium text-red-600 dark:text-red-400 whitespace-nowrap tabular-nums">
                 -{formatCurrency(totalExpenses)}
               </span>
             )}
@@ -360,12 +360,12 @@ const ModernDayHeader = ({ title, date, totalIncome, totalExpenses, count }) => 
         </div>
       </div>
       
-      <div className="text-right">
+      <div className="text-right shrink-0 ml-2">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {t('transactions.net', 'Net')}
         </div>
         <div className={cn(
-          "font-semibold",
+          "font-semibold whitespace-nowrap tabular-nums text-base sm:text-lg",
           totalIncome - totalExpenses >= 0 
             ? "text-green-600 dark:text-green-400" 
             : "text-red-600 dark:text-red-400"
@@ -512,7 +512,7 @@ const ModernTransactionsList = ({
             
             {/* Transactions for this day */}
             <div className={cn(
-              "space-y-3 pl-4",
+              "space-y-3 pl-3 sm:pl-4", // compact padding on mobile
               viewMode === 'grid' && "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 space-y-0 pl-0"
             )}>
               <AnimatePresence mode="popLayout">

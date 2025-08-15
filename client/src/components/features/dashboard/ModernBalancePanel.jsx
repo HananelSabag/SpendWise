@@ -176,14 +176,14 @@ const BalanceCard = ({
                 const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
                 const useZeroDecimals = isMobile; // tighter for mobile
                 const formattedAmount = formatCurrency(amount, { precision: useZeroDecimals ? 0 : undefined });
-                const isLongMobile = isMobile && formattedAmount.length > 10;
-                const amountTextClass = isLongMobile ? 'text-base' : 'text-xl';
+                const isLongMobile = isMobile && formattedAmount.length > 9;
+                const amountTextClass = isLongMobile ? 'text-lg' : 'text-2xl';
                 return (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                  className={cn(`${amountTextClass} sm:text-3xl font-bold leading-tight tracking-tight whitespace-nowrap`, color)}
+                  className={cn(`${amountTextClass} sm:text-3xl font-bold leading-tight tracking-tight whitespace-nowrap tabular-nums`, color)}
               >
                   {formattedAmount}
               </motion.div>
@@ -503,7 +503,7 @@ const ModernBalancePanel = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="grid grid-cols-3 gap-1 sm:gap-6"
+            className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-6"
           >
             {/* Income Card */}
             <BalanceCard

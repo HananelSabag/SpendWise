@@ -181,6 +181,13 @@ class SpendWiseAPIClient {
       (response) => {
         // Update server state on success
         this.serverState.updateSuccess();
+        // If we were in waking mode, announce recovery and clear flag
+        try {
+          if (typeof window !== 'undefined' && window.__SERVER_WAKING__) {
+            window.__SERVER_WAKING__ = false;
+            window.dispatchEvent(new CustomEvent('server-woke'));
+          }
+        } catch (_) {}
         
         // Notify auth recovery manager of success
         this.authRecovery.handleApiSuccess();

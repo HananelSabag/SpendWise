@@ -6,7 +6,7 @@
 
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -36,29 +36,8 @@ import AppInitializer from './components/common/AppInitializer';
 // ✅ Lazy-loaded pages
 import * as LazyComponents from './components/LazyComponents';
 
-// ✅ QueryClient Configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        if (error?.status >= 400 && error?.status < 500) return false;
-        return failureCount < 3;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      retry: (failureCount, error) => {
-        if (error?.status >= 400 && error?.status < 500) return false;
-        return failureCount < 2;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
-    },
-  },
-});
+// ✅ Use centralized QueryClient configuration
+import queryClient from './config/queryClient';
 
 // ✅ Route Loading Fallback
 const RouteLoadingFallback = ({ route = 'page' }) => (

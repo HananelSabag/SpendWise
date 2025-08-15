@@ -116,7 +116,7 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
       <motion.div
         variants={cardVariants}
         className={cn(
-          'relative overflow-hidden rounded-xl p-4 border transition-all duration-300',
+          'relative overflow-visible rounded-xl p-4 border transition-all duration-300 z-10',
           'bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm',
           'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
           'hover:shadow-lg hover:bg-white dark:hover:bg-gray-800'
@@ -134,7 +134,7 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
           transition={{ duration: 0.3 }}
         />
         
-        <div className="relative z-10 flex items-center gap-4">
+        <div className="relative z-10 flex items-center gap-3">
           {/* Enhanced Category Icon */}
           <motion.div
             animate={{ 
@@ -143,13 +143,13 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
             }}
             transition={{ duration: 0.3 }}
             className={cn(
-              'relative w-12 h-12 rounded-xl flex items-center justify-center shadow-md',
+              'relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-md',
               isIncome 
                 ? 'bg-gradient-to-br from-green-400 to-emerald-500' 
                 : 'bg-gradient-to-br from-red-400 to-pink-500'
             )}
           >
-            <CategoryIcon className="w-6 h-6 text-white" />
+            <CategoryIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             
             {/* Activity indicator */}
             {isToday && (
@@ -162,11 +162,11 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
           </motion.div>
           
           {/* Transaction Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 w-full">
+            <div className="flex items-start justify-between gap-2 w-full">
+              <div className="flex-1 min-w-0 w-full">
                 <motion.p 
-                  className="font-semibold text-gray-900 dark:text-white truncate text-lg"
+                  className="font-semibold text-gray-900 dark:text-white truncate text-base sm:text-lg"
                   animate={{ x: isHovered ? 4 : 0 }}
                   transition={{ duration: 0.3 }}
                 >
@@ -185,9 +185,9 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
                   {transaction.category_name && (
                     <>
                       <span className="text-gray-300">•</span>
-                      <Badge 
+                  <Badge 
                         className={cn(
-                          'text-xs px-2 py-1 border-0',
+                          'text-xs px-2 py-1 border-0 truncate max-w-[50%] sm:max-w-[60%]',
                           isIncome 
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
@@ -201,10 +201,10 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
               </div>
               
               {/* Amount */}
-              <div className="text-right">
+              <div className="text-right whitespace-nowrap tabular-nums">
                 <motion.p 
                   className={cn(
-                    'font-bold text-xl',
+                    'font-bold text-sm sm:text-xl',
                     isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   )}
                   animate={{ 
@@ -257,13 +257,9 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
 // ✅ Enhanced Header Component
 const WidgetHeader = ({ 
   title, 
-  onRefresh, 
   onViewAll, 
-  loading, 
   totalCount, 
-  showingCount,
-  showFilters,
-  onToggleFilters 
+  showingCount
 }) => {
   return (
     <div className="space-y-4">
@@ -288,37 +284,6 @@ const WidgetHeader = ({
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Filter toggle */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleFilters}
-              className={cn(
-                'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200',
-                showFilters && 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-              )}
-            >
-              <Filter className="w-4 h-4" />
-            </Button>
-          </motion.div>
-          
-          {/* Refresh button */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRefresh}
-              disabled={loading}
-              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <RefreshCw className={cn(
-                'w-4 h-4 transition-transform',
-                loading && 'animate-spin'
-              )} />
-            </Button>
-          </motion.div>
-          
           {/* View all button */}
           {totalCount > 0 && (
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -491,26 +456,12 @@ const ModernRecentTransactionsWidget = ({
           {/* Enhanced Header */}
           <WidgetHeader
             title={t('recentTransactions.title', 'Recent Transactions')}
-            onRefresh={handleRefresh}
             onViewAll={handleViewAll}
-            loading={loading}
             totalCount={processedTransactions.total}
             showingCount={processedTransactions.recent.length}
-            showFilters={showFilters}
-            onToggleFilters={() => setShowFilters(!showFilters)}
           />
 
-          {/* Filter Panel */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div className="mt-4">
-                <FilterPanel
-                  searchValue={searchTerm}
-                  onSearchChange={setSearchTerm}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Filter Panel disabled per product request */}
 
           {/* Content */}
           <div className="mt-6">

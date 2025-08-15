@@ -84,7 +84,16 @@ const SimpleGoogleButton = ({
 
     // Start initialization
     const timeoutId = setTimeout(initGoogle, 300);
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      // Ensure previous GSI instance does not block clicks after unmount
+      try {
+        if (buttonRef.current) {
+          buttonRef.current.innerHTML = '';
+        }
+      } catch (_) {}
+      initOnceRef.current = false;
+    };
   }, [disabled, hasError, onSuccess, onError]); // retryCount not included to prevent infinite re-runs
 
   // Render custom button; keep GSI container invisible and clickable when ready

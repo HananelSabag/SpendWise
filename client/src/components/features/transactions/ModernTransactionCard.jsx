@@ -361,7 +361,7 @@ const ModernTransactionCard = ({
       whileTap="tap"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className={cardClasses}
+      className={cn(cardClasses, "overflow-visible", isMenuOpen && "z-50")}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       {/* ✨ Recurring Transaction Indicator */}
@@ -383,7 +383,7 @@ const ModernTransactionCard = ({
 
       {/* ✨ Main Content */}
       <div className={cn(
-        "flex items-center gap-4", 
+        "flex items-center gap-3",
         viewMode === 'grid' && "flex-col text-center",
         isRTL && "flex-row-reverse"
       )}>
@@ -395,7 +395,7 @@ const ModernTransactionCard = ({
         >
           <div
             className={cn(
-              "relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg border-2",
+              "relative rounded-2xl flex items-center justify-center shadow-lg border-2",
               "transition-all duration-300",
               isIncome
                 ? "bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-900/40 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300"
@@ -403,7 +403,9 @@ const ModernTransactionCard = ({
               isHovered && "scale-110 shadow-xl"
             )}
           >
-            <Icon className="w-7 h-7" strokeWidth={2} />
+            <div className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center">
+              <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={2} />
+            </div>
             
             {/* ✨ Income/Expense Indicator */}
             <motion.div
@@ -465,7 +467,7 @@ const ModernTransactionCard = ({
 
           {/* Date, Time and Amount */}
           <div className={cn(
-            "flex items-center justify-between gap-4",
+            "flex items-center justify-between gap-3 flex-wrap",
             viewMode === 'grid' && "flex-col gap-2"
           )}>
             {/* Date and Time */}
@@ -489,7 +491,8 @@ const ModernTransactionCard = ({
               )}
             >
               <div className={cn(
-                "font-bold text-lg",
+                "font-bold text-base md:text-lg leading-tight tabular-nums tracking-tight",
+                "whitespace-nowrap",
                 isIncome 
                   ? "text-green-600 dark:text-green-400" 
                   : "text-red-600 dark:text-red-400"

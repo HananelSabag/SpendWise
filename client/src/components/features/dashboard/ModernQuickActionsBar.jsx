@@ -172,7 +172,7 @@ const AmountInput = ({ value, onChange, onKeyDown, disabled, currency, type, inp
           onBlur={() => setIsFocused(false)}
           disabled={disabled}
           className={cn(
-            'text-3xl font-bold pl-16 pr-4 py-6 border-2 transition-all duration-300',
+            'text-3xl font-bold pl-16 pr-4 py-6 border-2 transition-all duration-300 tabular-nums',
             'bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm',
             type === 'expense' 
               ? 'border-red-200 focus:border-red-500 text-red-700 dark:text-red-400'
@@ -188,7 +188,7 @@ const AmountInput = ({ value, onChange, onKeyDown, disabled, currency, type, inp
             scale: isFocused ? 1.1 : 1,
             color: type === 'expense' ? '#EF4444' : '#10B981'
           }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold pointer-events-none"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl sm:text-3xl leading-none font-bold pointer-events-none translate-y-[1px]"
         >
           {currencySymbol}
         </motion.div>
@@ -562,7 +562,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
           <div className="flex items-center gap-3">
             <Target className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="font-medium text-gray-900 dark:text-white">
-              {selectedCategory ? selectedCategory.name : 'Choose Category'}
+              {selectedCategory ? selectedCategory.name : t('quickActions.chooseCategoryOptional', { fallback: 'Choose Category (optional)' })}
             </span>
           </div>
           <motion.div

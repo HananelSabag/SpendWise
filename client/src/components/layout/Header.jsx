@@ -8,7 +8,7 @@
 import React, { useState, useCallback, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { DollarSign, Shield } from 'lucide-react';
+import { DollarSign, Shield, Wrench } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import { 
@@ -18,6 +18,7 @@ import {
   useIsAdmin,
   useIsSuperAdmin
 } from '../../stores';
+import { useAppStore } from '../../stores';
 
 // ✅ Import extracted components
 import MobileNavigation from './MobileNavigation';
@@ -41,6 +42,7 @@ const Header = () => {
   const { isDark } = useTheme();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
+  const maintenanceMode = useAppStore((s) => s.maintenanceMode);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -131,6 +133,13 @@ const Header = () => {
 
             {/* ✅ Right side - Actions & User Menu */}
             <div className="flex items-center space-x-3">
+              {/* Maintenance indicator for Admin/Super Admin */}
+              {(isAdmin || isSuperAdmin) && maintenanceMode && (
+                <div className="hidden md:flex items-center gap-2 px-2 py-1 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300">
+                  <Wrench className="w-4 h-4" />
+                  <span className="text-xs font-medium">{t('admin.settings.maintenanceMode', { fallback: 'Maintenance Mode' })}</span>
+                </div>
+              )}
               {/* Quick Panels - hide on small screens to reduce clutter; accessible via mobile menu */}
               <div className="hidden md:flex">
                 <QuickPanels onOpenModal={openModal} />
@@ -141,7 +150,13 @@ const Header = () => {
                 <HeaderActions onOpenModal={openModal} />
               </div>
               {/* Mobile theme/lang toggles for session parity */}
-              <div className="flex md:hidden">
+              <div className="flex md:hidden items-center gap-2">
+                {(isAdmin || isSuperAdmin) && maintenanceMode && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300">
+                    <Wrench className="w-4 h-4" />
+                    <span className="text-[10px] font-semibold">{t('admin.settings.maintenanceMode', { fallback: 'Maintenance' })}</span>
+                  </div>
+                )}
                 <HeaderActions onOpenModal={openModal} />
               </div>
 
