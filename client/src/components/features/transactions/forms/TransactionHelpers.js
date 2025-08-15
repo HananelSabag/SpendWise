@@ -140,7 +140,8 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
       categoryId: formData.categoryId || null,
       interval_type: formData.recurringFrequency || 'monthly',
       // Only set day_of_month for monthly
-      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || new Date().getDate()) : null,
+      // Default to full-month cadence: first day of month unless user chose otherwise
+      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || 1) : null,
       // Only set day_of_week for weekly  
       day_of_week: formData.recurringFrequency === 'weekly' ? (formData.dayOfWeek || new Date().getDay()) : null,
       is_active: true,

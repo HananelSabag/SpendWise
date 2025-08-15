@@ -138,7 +138,7 @@ const CategorySelector = ({
   ];
 
   return (
-    <div className={cn("space-y-2", className)} ref={dropdownRef}>
+    <div className={cn("space-y-2 relative", className)} ref={dropdownRef}>
       {/* Label */}
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {t('fields.category.label')}
@@ -241,8 +241,8 @@ const CategorySelector = ({
                 "z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden",
                 // Mobile: Full screen modal
                 "fixed inset-x-4 top-20 bottom-20 sm:relative sm:inset-auto sm:top-auto sm:bottom-auto",
-                // Desktop: Dropdown
-                "sm:absolute sm:w-full sm:mt-1 sm:max-h-80"
+                // Desktop: Dropdown anchored to field
+                "sm:absolute sm:left-0 sm:right-auto sm:w-full sm:mt-1 sm:max-h-80"
               )}
             >
             {!showCreateForm ? (

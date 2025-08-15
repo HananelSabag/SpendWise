@@ -27,11 +27,13 @@ const DateTimePicker = ({
   disabled = false,
   showTime = true,
   showPresets = true,
+  collapsed = false,
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
   
   const [showDatePresets, setShowDatePresets] = useState(false);
+  const [isCollapsedOpen, setIsCollapsedOpen] = useState(false);
 
   // ✅ Date presets
   const datePresets = useMemo(() => {
@@ -130,7 +132,22 @@ const DateTimePicker = ({
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      {collapsed && !isCollapsedOpen ? (
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            {formatDisplayDate(date)}
+          </div>
+          <button
+            type="button"
+            className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+            onClick={() => setIsCollapsedOpen(true)}
+          >
+            {t('datePicker.change', { fallback: 'Change' })}
+          </button>
+        </div>
+      ) : null}
+
+      <div className={cn("grid gap-3", (showTime && !collapsed) || (collapsed && isCollapsedOpen && showTime) ? "md:grid-cols-2" : "md:grid-cols-1") }>
         {/* Date Input */}
         <div className="space-y-2">
           <div className="relative">
@@ -211,7 +228,7 @@ const DateTimePicker = ({
         </div>
 
         {/* Time Input */}
-        {showTime && (
+        {showTime && (!collapsed || (collapsed && isCollapsedOpen)) && (
           <div className="space-y-2">
             <div className="relative">
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -266,6 +283,19 @@ const DateTimePicker = ({
           </div>
         )}
       </div>
+
+      {/* Collapse close */}
+      {collapsed && isCollapsedOpen && (
+        <div>
+          <button
+            type="button"
+            className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
+            onClick={() => setIsCollapsedOpen(false)}
+          >
+            {t('datePicker.done', { fallback: 'Done' })}
+          </button>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (

@@ -140,6 +140,7 @@ const TransactionFormFields = ({
             onTimeChange={(time) => handleFieldChange('time', time)}
             error={getFieldError('date', validationErrors)}
             required
+            collapsed
           />
         </motion.div>
       </div>

@@ -117,6 +117,16 @@ const MobileNavigation = ({
       }
     },
     {
+      name: t('nav.help') || 'Help / Onboarding',
+      description: t('onboarding.restart', { fallback: 'Reopen setup guide (no changes to your data)' }),
+      icon: HelpCircle,
+      color: 'purple',
+      onClick: () => {
+        onOpenModal?.('onboarding');
+        setIsOpen(false);
+      }
+    },
+    {
       name: t('common.calculator'),
       description: t('common.quickCalculatorDesc'),
       icon: Activity,

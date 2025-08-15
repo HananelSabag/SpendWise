@@ -108,15 +108,37 @@ const RecurringSetupModal = ({
   }, [formData, previewData]);
 
   // ✅ Handle form data from step 1
-  const handleFormData = useCallback((data) => {
+  const handleFormData = useCallback(async (data) => {
     setFormData(data);
-    if (data.isRecurring) {
-      setCurrentStep(2); // Go to preview
-    } else {
-      // Skip preview for non-recurring, go straight to confirm
-      setCurrentStep(3);
+    const isRecurring = Boolean(data._isRecurring || data.interval_type);
+    // If recurring and this is a single-step flow, finish immediately and create template
+    if (isRecurring) {
+      try {
+        setIsSubmitting(true);
+        const result = await createRecurringTemplate(data);
+        setShowSuccess(true);
+        onSuccess?.(result);
+        setTimeout(() => {
+          setShowSuccess(false);
+          resetModal();
+          onClose?.();
+        }, 800);
+      } catch (e) {
+        addNotification({ type: 'error', message: t('notifications.recurringCreateFailed'), duration: 4000 });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
-  }, []);
+    // Non-recurring inside this modal: just complete without extra steps
+    setShowSuccess(true);
+    onSuccess?.(data);
+    setTimeout(() => {
+      setShowSuccess(false);
+      resetModal();
+      onClose?.();
+    }, 800);
+  }, [createRecurringTemplate, addNotification, t, onSuccess, onClose, resetModal]);
 
   // ✅ Handle final submission
   const handleSubmit = useCallback(async () => {

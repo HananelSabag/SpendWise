@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -163,7 +162,7 @@ const AmountInput = ({
         </div>
 
         {/* Input Field */}
-        <motion.input
+        <input
           ref={inputRef}
           type="text"
           value={isFocused ? localValue : displayValue}

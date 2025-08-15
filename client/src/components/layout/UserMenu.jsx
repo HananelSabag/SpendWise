@@ -312,6 +312,7 @@ const UserMenu = ({ className = '' }) => {
           onClose={handleOnboardingClose}
           onSkip={handleOnboardingClose}
           forceShow={true} // Force show when triggered manually
+          previewOnly={true} // Do not change DB on help-triggered onboarding
         />
       )}
     </div>

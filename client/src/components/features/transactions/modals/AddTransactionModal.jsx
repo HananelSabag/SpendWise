@@ -37,7 +37,6 @@ const AddTransactionModal = ({
   const { createTransaction, isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (formData) => {
@@ -45,9 +44,6 @@ const AddTransactionModal = ({
     
     try {
       const newTransaction = await createTransaction(formData);
-      
-      // Show success state briefly
-      setShowSuccess(true);
       
       // Notify success
       addNotification({
@@ -59,11 +55,8 @@ const AddTransactionModal = ({
       // Call success callback
       onSuccess?.(newTransaction);
       
-      // Close modal after brief success display
-      setTimeout(() => {
-        setShowSuccess(false);
-        onClose?.();
-      }, 1500);
+      // Close modal immediately after success toast
+      onClose?.();
       
     } catch (error) {
       console.error('Failed to create transaction:', error);
@@ -99,8 +92,7 @@ const AddTransactionModal = ({
       mobileFullScreen={true}
     >
       <AnimatePresence mode="wait">
-        {!showSuccess ? (
-          <motion.div
+        <motion.div
             key="form"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -148,39 +140,6 @@ const AddTransactionModal = ({
               </div>
             </div>
           </motion.div>
-        ) : (
-          /* Success State */
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="p-8 text-center"
-          >
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-            
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('modals.add.success.title')}
-            </h3>
-            
-            <p className="text-gray-600 dark:text-gray-400">
-              {t('modals.add.success.message')}
-            </p>
-            
-            {/* Success animation */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: [0, 1.2, 1] }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-4"
-            >
-              <div className="w-24 h-1 bg-green-500 rounded-full mx-auto" />
-            </motion.div>
-          </motion.div>
-        )}
       </AnimatePresence>
     </Modal>
   );

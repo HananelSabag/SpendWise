@@ -30,6 +30,7 @@ const OnboardingModal = ({
   onComplete,
   onSkip,
   forceShow = false,
+  previewOnly = false,
   className = ''
 }) => {
   const { t, isRTL } = useTranslation('onboarding');
@@ -93,6 +94,12 @@ const OnboardingModal = ({
   const handleComplete = async () => {
     console.log('🎯 OnboardingModal - Handling completion');
     try {
+      // In preview mode, do not write to DB; just close
+      if (previewOnly) {
+        onComplete?.();
+        onClose?.();
+        return;
+      }
       setIsCompleting(true);
       const result = await completeOnboarding();
       if (result) {
