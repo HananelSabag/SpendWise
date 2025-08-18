@@ -16,7 +16,7 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
 import AccessibilityFab from './components/common/AccessibilityFab.jsx';
-import OnboardingManager from './components/common/OnboardingManager';
+import ModernOnboardingManager from './components/common/ModernOnboardingManager';
 
 // ✅ Zustand stores
 import { StoreProvider, useAuth, useTranslation } from './stores';
@@ -238,8 +238,8 @@ const AppContent = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <TopProgressBar visible={isLoading} />
-      {/* Onboarding Manager */}
-      {isAuthenticated && <OnboardingManager />}
+      {/* Modern Onboarding Manager */}
+      {isAuthenticated && <ModernOnboardingManager />}
       
       {/* Header */}
       {isAuthenticated && <Header />}

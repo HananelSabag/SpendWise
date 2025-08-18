@@ -41,7 +41,8 @@ export default {
       label: "Category", 
       placeholder: "Select a category",
       search: "Search categories...",
-      createNew: "Create new category"
+      createNew: "Create new category",
+      helper: "Choose a category from the list or create a new one"
     },
     date: {
       label: "Date",
@@ -546,6 +547,21 @@ export default {
       subtitle: "Automatic transaction",
       description: "Create a template that will generate transactions automatically in the future"
     }
+  },
+
+  // Form header tab labels (used by modal header selector)
+  formTabs: {
+    oneTime: {
+      title: "One-time Transaction",
+      subtitle: "Single transaction",
+      description: "Create a single transaction that will be executed once"
+    },
+    recurring: {
+      title: "Recurring Transaction",
+      subtitle: "Automatic transaction",
+      description: "Create a template that will generate transactions automatically in the future"
+    },
+    changeWarning: "Changing the tab will reset the form. Continue?"
   },
 
   // Badges

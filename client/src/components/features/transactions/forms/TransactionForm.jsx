@@ -34,7 +34,8 @@ const TransactionForm = ({
   isLoading = false,
   showRecurring = true,
   showAdvanced = true,
-  className = ''
+  className = '',
+  hideHeader = false
 }) => {
   const { user } = useAuth();
   const { t, isRTL } = useTranslation('transactions');
@@ -193,68 +194,70 @@ const TransactionForm = ({
       )}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* Enhanced Form Header - Better Mobile Layout */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6 space-y-4 sm:space-y-0">
-        <div className="flex-1">
-          <motion.h2 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-2xl font-bold text-gray-900 dark:text-white mb-2"
-          >
-            {formTitle}
-          </motion.h2>
-          {mode === 'edit' && initialData && (
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"
+      {/* Enhanced Form Header - Better Mobile Layout (toggleable) */}
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6 space-y-4 sm:space-y-0">
+          <div className="flex-1">
+            <motion.h2 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl font-bold text-gray-900 dark:text-white mb-2"
             >
-              <Calendar className="w-4 h-4" />
-              {t('form.editingTransaction', { 
-                date: new Date(formData.date).toLocaleDateString(),
-                amount: formatCurrency(Math.abs(formData.amount)) 
-              })}
-            </motion.p>
-          )}
-        </div>
+              {formTitle}
+            </motion.h2>
+            {mode === 'edit' && initialData && (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                {t('form.editingTransaction', { 
+                  date: new Date(formData.date).toLocaleDateString(),
+                  amount: formatCurrency(Math.abs(formData.amount)) 
+                })}
+              </motion.p>
+            )}
+          </div>
 
-        {/* Form Status - Better Mobile Layout */}
-        <div className="flex items-center gap-2 sm:ml-4">
-          {isDirty && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-orange-600 dark:text-orange-400"
-            >
-              <Clock className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.unsaved')}</span>
-            </motion.div>
-          )}
-          
-          {!isValid && isDirty && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-red-600 dark:text-red-400"
-            >
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.invalid')}</span>
-            </motion.div>
-          )}
-          
-          {isValid && isDirty && !isSubmitting && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center space-x-1 text-green-600 dark:text-green-400"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-xs font-medium">{t('form.valid')}</span>
-            </motion.div>
-          )}
+          {/* Form Status - Better Mobile Layout */}
+          <div className="flex items-center gap-2 sm:ml-4">
+            {isDirty && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center space-x-1 text-orange-600 dark:text-orange-400"
+              >
+                <Clock className="w-4 h-4" />
+                <span className="text-xs font-medium">{t('form.unsaved')}</span>
+              </motion.div>
+            )}
+            
+            {!isValid && isDirty && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center space-x-1 text-red-600 dark:text-red-400"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-xs font-medium">{t('form.invalid')}</span>
+              </motion.div>
+            )}
+            
+            {isValid && isDirty && !isSubmitting && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center space-x-1 text-green-600 dark:text-green-400"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-xs font-medium">{t('form.valid')}</span>
+              </motion.div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Form Fields */}
       <motion.div variants={fieldVariants}>

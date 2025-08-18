@@ -41,7 +41,8 @@ export default {
       label: "קטגוריה", 
       placeholder: "בחרו קטגוריה",
       search: "חפשו קטגוריות...",
-      createNew: "צרו קטגוריה חדשה"
+      createNew: "צרו קטגוריה חדשה",
+      helper: "בחר קטגוריה מהרשימה או צור חדשה"
     },
     date: {
       label: "תאריך",
@@ -196,7 +197,7 @@ export default {
     lastWeek: "השבוע שעבר",
     month: "החודש",
     lastMonth: "החודש שעבר",
-    quarter: "הרבעון",
+    quarter: "הרבעונית",
     year: "השנה",
     custom: "טווח מותאם"
   },
@@ -551,6 +552,21 @@ export default {
       subtitle: "עסקה אוטומטית", 
       description: "צור תבנית שתיצור עסקאות אוטומטית בעתיד"
     }
+  },
+
+  // Form header tab labels (used by modal header selector)
+  formTabs: {
+    oneTime: {
+      title: "עסקה חד פעמית",
+      subtitle: "עסקה אחת בלבד",
+      description: "צור עסקה יחידה שתבוצע פעם אחת"
+    },
+    recurring: {
+      title: "עסקה חוזרת",
+      subtitle: "עסקה אוטומטית",
+      description: "צור תבנית שתיצור עסקאות אוטומטית בעתיד"
+    },
+    changeWarning: "שינוי הטאב יאפס את הטופס. להמשיך?"
   },
 
   // Badges

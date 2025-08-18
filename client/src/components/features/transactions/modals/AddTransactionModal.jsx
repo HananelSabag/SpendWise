@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, CheckCircle } from 'lucide-react';
+import { Plus, CheckCircle, CreditCard, Repeat } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -37,6 +37,7 @@ const AddTransactionModal = ({
   const { createTransaction, isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [active, setActive] = useState('one-time');
 
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (formData) => {
@@ -87,6 +88,7 @@ const AddTransactionModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
+      title={t('modals.add.title')}
       size="6xl"
       className={cn("backdrop-blur-sm", className)}
       mobileFullScreen={true}
@@ -99,35 +101,24 @@ const AddTransactionModal = ({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Enhanced Modal Header */}
-            <div className="flex items-center justify-between p-6 md:p-8 lg:p-10 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Plus className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    {t('modals.add.title')}
-                  </h2>
-                  <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
-                    {t('modals.add.subtitle')}
-                  </p>
+            {/* Enhanced Modal Body - Optimized for Desktop & Mobile */}
+            <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-[500px] md:min-h-[600px]">
+              {/* Centered Tab Selector under header */}
+              <div className="w-full flex justify-center mb-4">
+                <div className="inline-flex bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
+                  {[{ id: 'one-time', label: t('formTabs.oneTime.title') }, { id: 'recurring', label: t('formTabs.recurring.title') }].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActive(tab.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${active === tab.id ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      {tab.id === 'recurring' ? <Repeat className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Enhanced Modal Body - Optimized for Desktop & Mobile */}
-            <div className="p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 min-h-[500px] md:min-h-[650px] lg:min-h-[700px]">
               <div className="max-w-none mx-auto">
                 <TransactionFormTabs
                   mode="create"
@@ -136,6 +127,9 @@ const AddTransactionModal = ({
                   onCancel={handleClose}
                   isLoading={isSubmitting || isLoading}
                   className="w-full"
+                  activeTabExternal={active}
+                  onActiveTabChange={setActive}
+                  hideTopCard
                 />
               </div>
             </div>

@@ -5,7 +5,7 @@
  * @version 2.0.0 - COMPLETE REFACTOR
  */
 
-import React, { useState, useCallback, Suspense } from 'react';
+import React, { useState, useCallback, Suspense, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DollarSign, Shield, Wrench } from 'lucide-react';
@@ -33,7 +33,7 @@ import { LoadingSpinner } from '../ui';
 const CategoryManager = React.lazy(() => import('../features/categories/CategoryManager'));
 const RecurringManagerPanel = React.lazy(() => import('../features/transactions/recurring/ModernRecurringManagerPanel.jsx'));
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
-const OnboardingModal = React.lazy(() => import('../features/onboarding/OnboardingModal'));
+const ModernOnboardingModal = React.lazy(() => import('../features/onboarding/ModernOnboardingModal'));
 
 const Header = () => {
   // ✅ Zustand stores
@@ -59,6 +59,18 @@ const Header = () => {
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
+  }, []);
+
+  // ✅ Allow desktop user menu to open onboarding via window event
+  useEffect(() => {
+    const open = () => setActiveModal('onboarding');
+    const close = () => setActiveModal(null);
+    window.addEventListener('open-onboarding', open);
+    window.addEventListener('close-onboarding', close);
+    return () => {
+      window.removeEventListener('open-onboarding', open);
+      window.removeEventListener('close-onboarding', close);
+    };
   }, []);
 
   // ✅ Early return for unauthenticated users
@@ -192,7 +204,7 @@ const Header = () => {
         )}
         
         {activeModal === 'onboarding' && (
-          <OnboardingModal
+          <ModernOnboardingModal
             isOpen={true}
             onClose={closeModal}
             previewOnly={true}

@@ -35,6 +35,7 @@ const QuickRecurringSetupStep = ({
   // ✅ Local state
   const [selectedTemplates, setSelectedTemplates] = useState(data.selectedTemplates || []);
   const [customAmounts, setCustomAmounts] = useState(data.customAmounts || {});
+  const [customAmountInputs, setCustomAmountInputs] = useState({});
   const [activeCategory, setActiveCategory] = useState('income');
 
   // ✅ Pre-made recurring transaction templates
@@ -173,129 +174,126 @@ const QuickRecurringSetupStep = ({
 
   // ✅ Handle amount change
   const handleAmountChange = useCallback((templateId, amount) => {
+    setCustomAmountInputs(prev => ({ ...prev, [templateId]: amount }));
     const numAmount = parseFloat(amount) || 0;
     const newAmounts = { ...customAmounts, [templateId]: numAmount };
     setCustomAmounts(newAmounts);
     
-    // Update selected template amount
-    const newSelected = selectedTemplates.map(t => 
-      t.id === templateId ? { ...t, amount: numAmount } : t
-    );
-    setSelectedTemplates(newSelected);
-    
+    // Do NOT recreate selectedTemplates on each keystroke to preserve input focus
     onDataUpdate({ 
-      selectedTemplates: newSelected, 
+      selectedTemplates,
       customAmounts: newAmounts 
     });
   }, [customAmounts, selectedTemplates, onDataUpdate]);
 
-  // ✅ Template Card Component
+  // ✅ Template Row Component (compact + responsive)
   const TemplateCard = ({ template, isSelected }) => {
     const IconComponent = template.icon;
-    const currentAmount = customAmounts[template.id] || template.defaultAmount;
+    const currentAmount = customAmounts[template.id] ?? template.defaultAmount;
     const isIncome = activeCategory === 'income';
     
     return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -2 }}
-        className="cursor-pointer"
-      >
-        <Card className={cn(
-          "p-4 border-2 transition-all duration-300 relative",
-          isSelected 
-            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg shadow-purple-200/50" 
-            : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-        )}>
-          {/* Selection indicator */}
-          {isSelected && (
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white shadow-lg">
-              <Check className="w-3 h-3" />
-            </div>
+      <div className="cursor-pointer">
+        <Card
+          className={cn(
+            "px-4 py-3 border-2 transition-all duration-200 relative",
+            "flex items-center gap-3",
+            isSelected
+              ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+              : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
           )}
-          
-          <div 
-            className="flex items-start gap-3 mb-4"
-            onClick={() => handleTemplateToggle(template)}
-          >
-            {/* Icon */}
-            <div className={cn(
-              "w-12 h-12 rounded-xl flex items-center justify-center border-2",
-              isSelected
-                ? isIncome
-                  ? "bg-gradient-to-br from-green-400 to-purple-500 text-white border-purple-300"
-                  : "bg-gradient-to-br from-red-400 to-purple-500 text-white border-purple-300"
-                : isIncome
-                  ? "bg-green-50 dark:bg-green-900/30 text-green-600 border-green-200"
-                  : "bg-red-50 dark:bg-red-900/30 text-red-600 border-red-200"
-            )}>
-              <IconComponent className="w-6 h-6" />
-            </div>
-            
-            {/* Details */}
-            <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                {template.name}
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                {template.description}
-              </p>
-              <div className="flex items-center gap-2 text-xs">
-                <Badge variant="outline" size="sm">
-                  {template.category}
-                </Badge>
-                <Badge variant="secondary" size="sm">
-                  {template.frequency}
-                </Badge>
+          onClick={() => handleTemplateToggle(template)}
+        >
+          {/* Select checkbox */}
+          <input
+            type="checkbox"
+            checked={isSelected}
+            readOnly
+            className="w-4 h-4 accent-purple-600"
+          />
+
+          {/* Icon */}
+          <div className={cn(
+            "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center border",
+            isIncome
+              ? "bg-green-50 dark:bg-green-900/30 text-green-600 border-green-200"
+              : "bg-red-50 dark:bg-red-900/30 text-red-600 border-red-200"
+          )}>
+            <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+
+          {/* Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                  {template.name}
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                  {template.description}
+                </p>
+                <div className="flex items-center gap-2 text-xs mt-1">
+                  <Badge variant="outline" size="sm">
+                    {template.category}
+                  </Badge>
+                  <Badge variant="secondary" size="sm">
+                    {template.frequency}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Amount input */}
+              <div className="w-40 sm:w-48">
+                <UncontrolledAmountInput
+                  value={customAmountInputs[template.id] ?? String(currentAmount)}
+                  onChange={(val) => handleAmountChange(template.id, val)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="mt-1 text-right text-xs">
+                  <span className={cn(isIncome ? "text-green-600" : "text-red-600", "font-semibold")}>{isIncome ? '+' : '-'}{formatCurrency(currentAmount)}</span>
+                  <span className="text-gray-500 ml-1">/ {template.frequency}</span>
+                </div>
               </div>
             </div>
           </div>
-          
-          {/* Amount input */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Amount:
-            </span>
-            <div className="flex-1">
-              <Input
-                type="number"
-                value={currentAmount}
-                onChange={(e) => handleAmountChange(template.id, e.target.value)}
-                placeholder="0.00"
-                className="text-center font-bold"
-                min="0"
-                step="0.01"
-              />
-            </div>
-          </div>
-          
-          {/* Preview amount */}
-          <div className="mt-3 text-center">
-            <span className={cn(
-              "text-lg font-bold",
-              isIncome ? "text-green-600" : "text-red-600"
-            )}>
-              {isIncome ? '+' : '-'}{formatCurrency(currentAmount)}
-            </span>
-            <span className="text-sm text-gray-500 ml-1">
-              / {template.frequency}
-            </span>
-          </div>
         </Card>
-      </motion.div>
+      </div>
+    );
+  };
+
+  // Uncontrolled input to prevent React re-render from stealing focus
+  const UncontrolledAmountInput = ({ value, onChange, ...rest }) => {
+    const ref = React.useRef(null);
+    // Initialize once
+    React.useEffect(() => {
+      if (ref.current && ref.current.value !== value) {
+        ref.current.value = value;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return (
+      <input
+        ref={ref}
+        type="text"
+        inputMode="decimal"
+        defaultValue={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ''))}
+        placeholder="0.00"
+        className="w-full px-3 py-2 border rounded-lg text-right font-bold bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        {...rest}
+      />
     );
   };
 
   // ✅ Summary calculations
   const totalIncome = selectedTemplates
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (customAmounts[t.id] ?? t.amount), 0);
     
   const totalExpenses = selectedTemplates
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (customAmounts[t.id] ?? t.amount), 0);
     
   const netAmount = totalIncome - totalExpenses;
 
@@ -384,17 +382,44 @@ const QuickRecurringSetupStep = ({
         </div>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <AnimatePresence mode="wait">
-          {recurringTemplates[activeCategory].map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              isSelected={selectedTemplates.some(t => t.id === template.id)}
-            />
-          ))}
-        </AnimatePresence>
+      {/* Select All */}
+      <div className="flex items-center justify-end gap-2 mb-3">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const all = recurringTemplates[activeCategory].map(t => ({
+              ...t,
+              amount: customAmounts[t.id] ?? t.defaultAmount,
+              type: activeCategory === 'income' ? 'income' : 'expense'
+            }));
+            setSelectedTemplates(all);
+            onDataUpdate({ selectedTemplates: all, customAmounts });
+          }}
+        >
+          Select All
+        </Button>
+        {selectedTemplates.length > 0 && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSelectedTemplates([]);
+              onDataUpdate({ selectedTemplates: [], customAmounts });
+            }}
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Templates List */}
+      <div className="space-y-3 mb-8">
+        {recurringTemplates[activeCategory].map((template) => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            isSelected={selectedTemplates.some(t => t.id === template.id)}
+          />
+        ))}
       </div>
 
       {/* Summary Panel */}

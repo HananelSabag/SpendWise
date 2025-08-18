@@ -35,7 +35,7 @@ const CategorySelector = ({
   placeholder,
   className = ''
 }) => {
-  const { t } = useTranslation('transactions');
+  const { t, currentLanguage } = useTranslation('transactions');
   const { categories, createCategory, isLoading } = useCategory();
   
   const [isOpen, setIsOpen] = useState(false);
@@ -52,20 +52,29 @@ const CategorySelector = ({
   const filteredCategories = useMemo(() => {
     if (!categories) return [];
     
+    const detectLanguage = (name) => /[\u0590-\u05FF]/.test(name) ? 'he' : 'en';
+
     let filtered = categories.filter(category => {
       // Filter by transaction type if category has type preference
       if (category.type && category.type !== transactionType) return false;
+      // Language-specific: prefer categories matching UI language
+      const lang = category.language || detectLanguage(category.name || '');
+      if (lang !== currentLanguage) return false;
       
       // Filter by search query
       if (searchQuery) {
-        return category.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const name = category.localized_name?.[currentLanguage] || category.name || '';
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
       }
       
       return true;
     });
 
-    return filtered;
-  }, [categories, transactionType, searchQuery]);
+    return filtered.map(cat => ({
+      ...cat,
+      displayName: cat.localized_name?.[currentLanguage] || cat.name
+    }));
+  }, [categories, transactionType, searchQuery, currentLanguage]);
 
   // ✅ Selected category
   const selectedCategory = useMemo(() => {
@@ -189,10 +198,10 @@ const CategorySelector = ({
               {/* Enhanced Category Name */}
               <div className="flex-1 min-w-0">
                 <span className="font-semibold text-lg md:text-xl truncate block">
-                  {selectedCategory.name}
+                  {selectedCategory.localized_name?.[currentLanguage] || selectedCategory.name}
                 </span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedCategory.type === 'income' ? 'קטגוריית הכנסה' : 'קטגוריית הוצאה'}
+                  {selectedCategory.type === 'income' ? t('types.income') : t('types.expense')}
                 </span>
               </div>
             </>
@@ -209,7 +218,7 @@ const CategorySelector = ({
                   {placeholder || t('fields.category.placeholder')}
                 </span>
                 <span className="text-sm text-gray-400 dark:text-gray-500">
-                  בחר קטגוריה מהרשימה או צור חדשה
+                  {t('fields.category.helper', { fallback: 'Choose a category from the list or create a new one' })}
                 </span>
               </div>
             </>
@@ -249,7 +258,7 @@ const CategorySelector = ({
               <>
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 sm:hidden">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select Category</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('fields.category.label')}</h3>
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
@@ -300,10 +309,10 @@ const CategorySelector = ({
                             
                             <div className="flex-1 min-w-0">
                               <span className="font-medium block truncate text-base sm:text-sm">
-                                {category.name}
+                                {category.displayName || category.name}
                               </span>
                               <span className="text-sm text-gray-500 dark:text-gray-400 block sm:hidden">
-                                {category.type === 'income' ? 'Income' : 'Expense'}
+                                {category.type === 'income' ? t('types.income') : t('types.expense')}
                               </span>
                             </div>
                             

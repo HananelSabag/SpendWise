@@ -23,7 +23,7 @@ import {
 } from '../../stores';
 import { Avatar, Button } from '../ui';
 import { cn } from '../../utils/helpers';
-import OnboardingModal from '../features/onboarding/OnboardingModal';
+import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 
 const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
@@ -88,7 +88,11 @@ const UserMenu = ({ className = '' }) => {
   // ✅ Handle onboarding trigger
   const handleOnboardingTrigger = useCallback(() => {
     console.log('🎯 UserMenu - Triggering onboarding from Help button');
-    setShowOnboarding(true);
+    try {
+      window.dispatchEvent(new Event('open-onboarding'));
+    } catch (_) {
+      setShowOnboarding(true);
+    }
     setShowDropdown(false);
     
     addNotification({
@@ -304,9 +308,9 @@ const UserMenu = ({ className = '' }) => {
         )}
       </AnimatePresence>
 
-      {/* ✅ Onboarding Modal - Triggered from Help button */}
+      {/* ✅ Modern Onboarding Modal - Triggered from Help button */}
       {showOnboarding && (
-        <OnboardingModal
+        <ModernOnboardingModal
           isOpen={showOnboarding}
           onComplete={handleOnboardingComplete}
           onClose={handleOnboardingClose}

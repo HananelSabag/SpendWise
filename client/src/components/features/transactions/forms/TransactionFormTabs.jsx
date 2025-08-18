@@ -1,8 +1,8 @@
 /**
- * 📝 TRANSACTION FORM WITH TABS - עיצוב מחדש מקיף
- * טופס עסקאות עם הבחנה ברורה בין חד-פעמי לחוזר
- * Features: טאבים נפרדים, UX משופר, הבחנה ויזואלית ברורה
- * @version 4.0.0 - בהתאם לבקשת המשתמש
+ * 📝 TRANSACTION FORM WITH TABS - Modern
+ * Tabbed transaction form with clear separation between one-time and recurring
+ * Features: Separate tabs, improved UX, clear visual distinction
+ * @version 4.0.0
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -35,21 +35,30 @@ const TransactionFormTabs = ({
   onSubmit,
   onCancel,
   isLoading = false,
-  className = ''
+  className = '',
+  // External control for active tab and header visibility
+  activeTabExternal,
+  onActiveTabChange,
+  hideTopCard = false
 }) => {
   const { user } = useAuth();
   const { t, isRTL } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
 
-  // ✅ Tab state - חד פעמי או חוזר
-  const [activeTab, setActiveTab] = useState(() => {
-    // בעריכה - זהה את הסוג לפי הנתונים הקיימים
+  // ✅ Tab state (supports external control)
+  const [internalActiveTab, setInternalActiveTab] = useState(() => {
+    // In edit mode, detect type from existing data
     if (mode === 'edit' && initialData?.template_id) {
       return 'recurring';
     }
-    return 'one-time'; // ברירת מחדל
+    return 'one-time';
   });
+  const activeTab = activeTabExternal ?? internalActiveTab;
+  const setActiveTab = (val) => {
+    if (onActiveTabChange) onActiveTabChange(val);
+    setInternalActiveTab(val);
+  };
 
   // ✅ Centralized form state
   const [formData, setFormData] = useState(() => 
@@ -60,7 +69,7 @@ const TransactionFormTabs = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  // ✅ עדכון formData כאשר משנים טאב
+  // ✅ Update formData when changing tab
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
@@ -89,26 +98,26 @@ const TransactionFormTabs = ({
     {
       id: 'one-time',
       icon: CreditCard,
-      title: t('tabs.oneTime.title', { fallback: 'עסקה חד פעמית' }),
-      subtitle: t('tabs.oneTime.subtitle', { fallback: 'עסקה אחת בלבד' }),
+      title: t('formTabs.oneTime.title', { fallback: 'One-time Transaction' }),
+      subtitle: t('formTabs.oneTime.subtitle', { fallback: 'Single transaction' }),
       color: 'blue',
-      description: t('tabs.oneTime.description', { fallback: 'צור עסקה יחידה שתבוצע פעם אחת' })
+      description: t('formTabs.oneTime.description', { fallback: 'Create a single transaction that will be executed once' })
     },
     {
       id: 'recurring',
       icon: Repeat,
-      title: t('tabs.recurring.title', { fallback: 'עסקה חוזרת' }),
-      subtitle: t('tabs.recurring.subtitle', { fallback: 'עסקה אוטומטית' }),
+      title: t('formTabs.recurring.title', { fallback: 'Recurring Transaction' }),
+      subtitle: t('formTabs.recurring.subtitle', { fallback: 'Automatic transaction' }),
       color: 'purple',
-      description: t('tabs.recurring.description', { fallback: 'צור תבנית שתיצור עסקאות אוטומטית בעתיד' })
+      description: t('formTabs.recurring.description', { fallback: 'Create a template that will generate transactions automatically in the future' })
     }
   ];
 
   // ✅ Handle tab change
   const handleTabChange = useCallback((tabId) => {
     if (isDirty) {
-      const confirmed = window.confirm(t('tabs.changeWarning', { 
-        fallback: 'שינוי הטאב יאיפס את הטופס. האם להמשיך?' 
+      const confirmed = window.confirm(t('formTabs.changeWarning', { 
+        fallback: 'Changing the tab will reset the form. Continue?' 
       }));
       if (!confirmed) return;
     }
@@ -212,110 +221,38 @@ const TransactionFormTabs = ({
       className={cn("space-y-6", className)}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* Header with Tab Selection */}
-      <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-700">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {mode === 'edit' ? t('form.editTransaction') : t('form.addTransaction')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('form.selectType', { fallback: 'בחר את סוג העסקה שברצונך ליצור' })}
-          </p>
-        </div>
+      {/* Header with Type Selection (compact) */}
+      {!hideTopCard && (
+      <Card className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-700">
 
-        {/* Enhanced Tab Navigation - Better Desktop Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+        {/* Compact segmented control instead of large cards */}
+        <div className="inline-flex bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.id;
-            
             return (
-              <motion.button
+              <button
                 key={tab.id}
                 type="button"
                 onClick={() => handleTabChange(tab.id)}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.97 }}
                 className={cn(
-                  "relative p-6 md:p-8 lg:p-10 rounded-2xl border-2 transition-all duration-300 text-right shadow-lg hover:shadow-2xl",
-                  "focus:outline-none focus:ring-4 focus:ring-offset-2 group overflow-hidden touch-manipulation",
-                  isActive ? [
-                    tab.color === 'blue' 
-                      ? "border-blue-500 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200 focus:ring-blue-300"
-                      : "border-purple-500 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-purple-200 focus:ring-purple-300"
-                  ] : [
-                    "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700",
-                    "hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-xl hover:bg-gray-50 dark:hover:bg-gray-600"
-                  ]
+                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                 )}
-                disabled={mode === 'edit'} // לא ניתן לשנות טאב בעריכה
+                disabled={mode === 'edit'}
               >
-                {/* Active indicator */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className={cn(
-                      "absolute top-2 left-2 w-3 h-3 rounded-full",
-                      tab.color === 'blue' ? "bg-blue-500" : "bg-purple-500"
-                    )}
-                  />
-                )}
-
-                {/* Background decorative element */}
-                <div className={cn(
-                  "absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-20 transition-opacity",
-                  isActive ? (tab.color === 'blue' ? "bg-blue-200" : "bg-purple-200") : "bg-gray-200"
-                )} />
-
-                <div className="flex items-start space-x-4 rtl:space-x-reverse relative z-10">
-                  <div className={cn(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg",
-                    isActive ? [
-                      "bg-white/20 backdrop-blur-sm text-white"
-                    ] : "bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-500"
-                  )}>
-                    <TabIcon className="w-7 h-7" />
-                  </div>
-                  
-                  <div className="flex-1 text-right rtl:text-right">
-                    <h3 className={cn(
-                      "font-bold text-lg mb-2 transition-colors",
-                      isActive ? "text-white" : "text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200"
-                    )}>
-                      {tab.title}
-                    </h3>
-                    <p className={cn(
-                      "text-sm font-medium",
-                      isActive ? "text-white/90" : "text-gray-600 dark:text-gray-400 group-hover:text-gray-500"
-                    )}>
-                      {tab.subtitle}
-                    </p>
-                    <p className={cn(
-                      "text-xs mt-1 transition-colors",
-                      isActive ? "text-white/70" : "text-gray-500 dark:text-gray-400"
-                    )}>
-                      {tab.description}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Badge for recurring */}
-                {tab.id === 'recurring' && (
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute top-2 right-2 text-xs"
-                  >
-                    {t('badges.advanced', { fallback: 'מתקדם' })}
-                  </Badge>
-                )}
-              </motion.button>
+                <TabIcon className="w-4 h-4" />
+                <span>{tab.id === 'recurring' ? t('tabs.recurring.title') : t('tabs.oneTime.title')}</span>
+              </button>
             );
           })}
         </div>
 
         {/* Mode indicator for edit */}
         {mode === 'edit' && (
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+          <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
             <div className="flex items-center space-x-2 rtl:space-x-reverse text-yellow-800 dark:text-yellow-200">
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm font-medium">
@@ -325,6 +262,7 @@ const TransactionFormTabs = ({
           </div>
         )}
       </Card>
+      )}
 
       {/* Form Content */}
       <AnimatePresence mode="wait">
@@ -337,31 +275,28 @@ const TransactionFormTabs = ({
         >
           <Card className="p-6 sm:p-8 md:p-10 lg:p-12 bg-white dark:bg-gray-800 shadow-xl rounded-3xl border-0">
             {/* Enhanced Form Header - Better Mobile Layout */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 md:pb-8 mb-6 md:mb-8 border-b-2 border-gradient-to-r from-blue-200 to-purple-200 dark:from-blue-800 dark:to-purple-800 space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-gray-200 dark:border-gray-700 space-y-3 sm:space-y-0">
               <div className="flex items-center space-x-4 rtl:space-x-reverse flex-1">
                 {/* Enhanced Tab icon */}
                 <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300",
+                  "w-12 h-12 rounded-xl flex items-center justify-center shadow-md transition-all duration-300",
                   activeTab === 'recurring' 
                     ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
                     : "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
                 )}>
                   {activeTab === 'recurring' ? (
-                    <Repeat className="w-8 h-8" />
+                    <Repeat className="w-6 h-6" />
                   ) : (
-                    <CreditCard className="w-8 h-8" />
+                    <CreditCard className="w-6 h-6" />
                   )}
                 </div>
                 
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {tabs.find(tab => tab.id === activeTab)?.title}
                   </h3>
-                  <p className="text-lg text-gray-600 dark:text-gray-400">
-                    {activeTab === 'recurring' 
-                      ? t('form.recurringSubtitle', { fallback: 'הגדר תבנית לעסקאות אוטומטיות' })
-                      : t('form.oneTimeSubtitle', { fallback: 'פרטי העסקה החד-פעמית' })
-                    }
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {activeTab === 'recurring' ? t('form.recurringSubtitle') : t('form.oneTimeSubtitle')}
                   </p>
                 </div>
               </div>
@@ -425,13 +360,13 @@ const TransactionFormTabs = ({
                         )}
                       </div>
                       <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {activeTab === 'recurring' ? 'תצוגה מקדימה של עסקה חוזרת' : 'סיכום עסקה'}
+                        {activeTab === 'recurring' ? t('recurring.preview.title') : t('labels.template')}
                       </h4>
                     </div>
                     
                     <div className="space-y-4">
                       <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">סכום:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('fields.amount.label')}:</span>
                         <span className={cn(
                           "font-bold text-lg",
                           formData.type === 'income' ? "text-green-600" : "text-red-600"
@@ -441,15 +376,15 @@ const TransactionFormTabs = ({
                       </div>
                       
                       <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">סוג:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('fields.type.label')}:</span>
                         <Badge variant={formData.type === 'income' ? 'success' : 'destructive'}>
-                          {formData.type === 'income' ? 'הכנסה' : 'הוצאה'}
+                          {formData.type === 'income' ? t('types.income') : t('types.expense')}
                         </Badge>
                       </div>
                       
                       {formData.description && (
                         <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                          <span className="text-gray-600 dark:text-gray-400 block mb-1">תיאור:</span>
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">{t('fields.description.label')}:</span>
                           <p className="font-medium text-gray-900 dark:text-white">{formData.description}</p>
                         </div>
                       )}
@@ -458,10 +393,10 @@ const TransactionFormTabs = ({
                         <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                           <div className="flex items-center space-x-2 rtl:space-x-reverse text-purple-600 dark:text-purple-400 mb-2">
                             <Repeat className="w-4 h-4" />
-                            <span className="font-medium">עסקה חוזרת</span>
+                            <span className="font-medium">{t('labels.recurring')}</span>
                           </div>
                           <p className="text-sm text-purple-700 dark:text-purple-300">
-                            עסקה זו תוגדר כתבנית ותיווצר אוטומטית לפי התדירות שנבחרה
+                            {t('tabs.recurring.description')}
                           </p>
                         </div>
                       )}

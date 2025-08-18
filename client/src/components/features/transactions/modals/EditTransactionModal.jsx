@@ -196,6 +196,7 @@ const EditTransactionModal = ({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
+        title={modalConfig.title}
         size="5xl"
         className={cn("backdrop-blur-sm", className)}
         mobileFullScreen={true}
@@ -209,22 +210,18 @@ const EditTransactionModal = ({
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Enhanced Modal Header */}
-              <div className="flex items-center justify-between p-6 md:p-8 lg:p-10 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+              {/* Compact Modal Header */}
+              {/* Header area removed; title shown in modal header */}
+              <div className="relative p-0">
                 <div className="flex items-center space-x-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${modalConfig.bgColor}`}>
                     <IconComponent className={`w-5 h-5 ${modalConfig.color}`} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {modalConfig.title}
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {modalConfig.subtitle}
-                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{modalConfig.subtitle}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {/* Action Menu */}
                   {actionMenuItems.length > 0 && (
@@ -242,22 +239,12 @@ const EditTransactionModal = ({
                       items={actionMenuItems}
                     />
                   )}
-                  
-                  {/* Close Button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClose}
-                    disabled={isSubmitting}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
+                  {/* Note: No inner close button to avoid duplicate X */}
                 </div>
               </div>
 
-              {/* Enhanced Modal Body - Better Desktop Spacing */}
-              <div className="p-6 md:p-8 lg:p-10 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+              {/* Compact Body */}
+              <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
                 <div className="max-w-none mx-auto">
                   <TransactionForm
                     mode={mode}
@@ -268,6 +255,7 @@ const EditTransactionModal = ({
                     showRecurring={mode !== 'view'}
                     showAdvanced={mode !== 'view'}
                     className="w-full"
+                    hideHeader
                   />
                 </div>
               </div>

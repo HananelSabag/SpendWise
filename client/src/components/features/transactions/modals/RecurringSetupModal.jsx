@@ -50,6 +50,14 @@ const RecurringSetupModal = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState(null);
 
+  // ✅ Reset modal state (defined early to avoid temporal dead zone in callbacks below)
+  const resetModal = useCallback(() => {
+    setCurrentStep(1);
+    setFormData(null);
+    setShowSuccess(false);
+    setIsSubmitting(false);
+  }, []);
+
   // ✅ Steps configuration
   const steps = [
     {
@@ -191,14 +199,6 @@ const RecurringSetupModal = ({
       setIsSubmitting(false);
     }
   }, [formData, mode, initialData, createRecurringTemplate, updateRecurringTemplate, addNotification, t, onSuccess, onClose]);
-
-  // ✅ Reset modal state
-  const resetModal = useCallback(() => {
-    setCurrentStep(1);
-    setFormData(null);
-    setShowSuccess(false);
-    setIsSubmitting(false);
-  }, []);
 
   // ✅ Handle modal close
   const handleClose = useCallback(() => {
