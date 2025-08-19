@@ -20,8 +20,8 @@ class AuthStatusService {
         SELECT 
           id,
           email,
-          password_hash IS NOT NULL AND LENGTH(COALESCE(password_hash, '')) > 0 as has_password,
-          google_id IS NOT NULL as has_google,
+          password_hash IS NOT NULL AND LENGTH(password_hash) > 0 as has_password,
+          google_id IS NOT NULL AND LENGTH(google_id) > 0 as has_google,
           oauth_provider,
           google_id
         FROM users 

@@ -157,11 +157,11 @@ const AdminDashboard = () => {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className={cn('flex items-start justify-between gap-4')}>
             <div className={cn('space-y-1')}>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                {t('dashboardPage.title', { fallback: '⚡ Control Center' })}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {t('dashboardPage.subtitle', { fallback: 'Complete system administration and user management' })}
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                {t('dashboardPage.subtitle', { fallback: 'Supercharge your platform with powerful admin tools' })}
               </p>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <Shield className="w-4 h-4" />

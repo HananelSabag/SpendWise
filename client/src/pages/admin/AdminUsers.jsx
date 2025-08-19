@@ -16,6 +16,7 @@ import {
 
 // ✅ NEW: Import Zustand stores and API
 import { useAuth, useTranslation, useTheme, useNotifications, useCurrency } from '../../stores';
+import { useToast } from '../../hooks/useToast.jsx';
 import { api } from '../../api';
 import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal } from '../../components/ui';
 import ModernUsersTable from '../../components/features/admin/ModernUsersTable.jsx';
@@ -28,6 +29,7 @@ const AdminUsers = () => {
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
 
   // ✅ Helper function to format amount with user's currency preference
   const formatUserAmount = useCallback((amount, userCurrencyPreference) => {
@@ -72,18 +74,15 @@ const AdminUsers = () => {
   const blockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.blockUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'users']);
-      addNotification({
-        type: 'success',
-        message: t('actions.userBlocked', { fallback: 'User blocked successfully' }),
-      });
+      // Debounce re-fetch to prevent multiple rapid renders
+      setTimeout(() => {
+        queryClient.invalidateQueries(['admin', 'users'], { exact: true });
+      }, 100);
+      toast.success(t('actions.userBlocked', { fallback: 'User blocked successfully' }));
       setActionLoading(null);
     },
     onError: (error) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
-      });
+      toast.error(t('errors.actionFailed', { fallback: 'Action failed' }));
       setActionLoading(null);
     }
   });
@@ -91,18 +90,15 @@ const AdminUsers = () => {
   const unblockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.unblockUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'users']);
-      addNotification({
-        type: 'success',
-        message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }),
-      });
+      // Debounce re-fetch to prevent multiple rapid renders
+      setTimeout(() => {
+        queryClient.invalidateQueries(['admin', 'users'], { exact: true });
+      }, 100);
+      toast.success(t('actions.userUnblocked', { fallback: 'User unblocked successfully' }));
       setActionLoading(null);
     },
     onError: (error) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
-      });
+      toast.error(t('errors.actionFailed', { fallback: 'Action failed' }));
       setActionLoading(null);
     }
   });
@@ -110,11 +106,11 @@ const AdminUsers = () => {
   const deleteUserMutation = useMutation({
     mutationFn: ({ userId, reason }) => api.admin.deleteUser({ userId, reason }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'users']);
-      addNotification({
-        type: 'success',
-        message: t('actions.userDeleted', { fallback: 'User deleted successfully' }),
-      });
+      // Debounce re-fetch to prevent multiple rapid renders
+      setTimeout(() => {
+        queryClient.invalidateQueries(['admin', 'users'], { exact: true });
+      }, 100);
+      toast.success(t('actions.userDeleted', { fallback: 'User deleted successfully' }));
       setActionLoading(null);
       setShowUserModal(false);
       setShowDeleteDialog(false);
@@ -122,10 +118,7 @@ const AdminUsers = () => {
       setPendingDeleteUserId(null);
     },
     onError: (error) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
-      });
+      toast.error(t('errors.actionFailed', { fallback: 'Action failed' }));
       setActionLoading(null);
     }
   });
@@ -225,9 +218,9 @@ const AdminUsers = () => {
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div>
-                  <h1 className="text-xl md:text-2xl font-semibold">{t('users.title', { fallback: 'User Management' })}</h1>
+                  <h1 className="text-xl md:text-2xl font-semibold">{t('users.title', { fallback: '👥 User Command Center' })}</h1>
                   <p className="text-white/90 text-sm mt-1">
-                    {t('users.subtitle', { fallback: 'Manage {{total}} users across the platform', total: totalUsers.toLocaleString() })}
+                    {t('users.subtitle', { fallback: 'Master control for {{total}} users • Create, edit, monitor & optimize', total: totalUsers.toLocaleString() })}
                   </p>
                 </div>
               </div>
@@ -432,11 +425,14 @@ const AdminUsers = () => {
                   setActionLoading(pendingRoleUser.id);
                   try {
                     await api.client.post(`/admin/users/${pendingRoleUser.id}/manage`, { action: 'change_role', role: selectedRole });
-                    queryClient.invalidateQueries(['admin', 'users']);
-                    addNotification({ type: 'success', message: t('dialogs.roleChange.success', { fallback: 'User role updated successfully' }) });
+                    // Debounce re-fetch to prevent multiple rapid renders
+                    setTimeout(() => {
+                      queryClient.invalidateQueries(['admin', 'users'], { exact: true });
+                    }, 100);
+                    toast.success(t('dialogs.roleChange.success', { fallback: 'User role updated successfully' }));
                     setShowRoleDialog(false);
                   } catch (e) {
-                    addNotification({ type: 'error', message: t('errors.actionFailed', { fallback: 'Action failed' }) });
+                    toast.error(t('errors.actionFailed', { fallback: 'Action failed' }));
                   } finally {
                     setActionLoading(null);
                     setPendingRoleUser(null);

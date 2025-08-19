@@ -164,8 +164,8 @@ class User {
       user.name = user.username || user.first_name || 'User'; // Fallback for name field
       
       // ✅ Add computed fields for authentication (same as in findByEmail)
-      user.hasPassword = !!user.password_hash; // ✅ CRITICAL: Add hasPassword field for client auth detection
-      user.has_password = !!user.password_hash; // Snake case version
+      user.hasPassword = !!(user.password_hash && user.password_hash.length > 0); // ✅ CRITICAL: Check length > 0 for empty strings
+      user.has_password = !!(user.password_hash && user.password_hash.length > 0); // Snake case version
 
 
       // Normalize field names for client compatibility (same as in findByEmail)
@@ -240,8 +240,8 @@ class User {
       user.name = user.username || user.first_name || 'User'; // Fallback for name field
 
       // ✅ Add computed fields for authentication (same as in findById)
-      user.hasPassword = !!user.password_hash; // ✅ CRITICAL: Add hasPassword field for client auth detection
-      user.has_password = !!user.password_hash; // Snake case version
+      user.hasPassword = !!(user.password_hash && user.password_hash.length > 0); // ✅ CRITICAL: Check length > 0 for empty strings
+      user.has_password = !!(user.password_hash && user.password_hash.length > 0); // Snake case version
 
       // Normalize field names for client compatibility (same as in findById)
       user.firstName = user.first_name || '';
@@ -781,25 +781,26 @@ class User {
 
       const query = `
         INSERT INTO users (
-          email, username, verification_token, 
+          email, username, password_hash, verification_token, 
           email_verified, is_active, created_at, 
           google_id, oauth_provider, oauth_provider_id,
           profile_picture_url, avatar, first_name, last_name,
           language_preference, currency_preference, theme_preference,
           onboarding_completed
         ) VALUES (
-          $1, $2, $3, 
-          $4, $5, NOW(), 
-          $6, $7, $8,
-          $9, $10, $11, $12,
-          $13, $14, $15,
-          $16
+          $1, $2, $3, $4, 
+          $5, $6, NOW(), 
+          $7, $8, $9,
+          $10, $11, $12, $13,
+          $14, $15, $16,
+          $17
         ) RETURNING *
       `;
 
       const values = [
         email.toLowerCase(),
         username,
+        '', // ✅ EMPTY STRING instead of NULL (satisfies NOT NULL constraint)
         verificationToken,
         true, // email_verified (Google verified)
         true, // is_active
@@ -823,8 +824,8 @@ class User {
       user.firstName = user.first_name || '';
       user.lastName = user.last_name || '';
       user.profilePicture = user.profile_picture_url;
-      user.hasPassword = false; // ✅ NO PASSWORD HASH
-      user.has_password = false;
+      user.hasPassword = !!(user.password_hash && user.password_hash.length > 0); // ✅ Should be false for empty string
+      user.has_password = !!(user.password_hash && user.password_hash.length > 0);
 
       // Invalidate relevant caches
       UserCache.invalidate(`email:${email.toLowerCase()}`);

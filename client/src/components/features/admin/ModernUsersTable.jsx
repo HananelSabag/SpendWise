@@ -17,6 +17,7 @@ import {
 
 // ✅ Import design system components
 import { useTranslation, useTheme, useNotifications, useCurrency } from '../../../stores';
+import { useToast } from '../../../hooks/useToast.jsx';
 import { Button, Card, Badge, Avatar, Input, Checkbox } from '../../ui';
 import { cn } from '../../../utils/helpers';
 
@@ -193,6 +194,7 @@ const ModernUsersTable = ({
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
 
   // ✅ Helper function to format amount with user's currency preference
   const formatUserAmount = useCallback((amount, userCurrencyPreference) => {
@@ -334,19 +336,13 @@ const ModernUsersTable = ({
     try {
       await onBulkAction?.(action, Array.from(selectedUsers));
       setSelectedUsers(new Set());
-      addNotification({
-        type: 'success',
-        message: t('bulk.actionSuccess', { 
-          fallback: `${action} completed for ${selectedUsers.size} users`
-        })
-      });
+      toast.success(t('bulk.actionSuccess', { 
+        fallback: `${action} completed for ${selectedUsers.size} users`
+      }));
     } catch (error) {
-      addNotification({
-        type: 'error',
-        message: t('bulk.actionError', { fallback: 'Bulk action failed' })
-      });
+      toast.error(t('bulk.actionError', { fallback: 'Bulk action failed' }));
     }
-  }, [selectedUsers, onBulkAction, addNotification, t]);
+  }, [selectedUsers, onBulkAction, toast, t]);
 
   // ✅ Keyboard shortcuts
   useEffect(() => {
