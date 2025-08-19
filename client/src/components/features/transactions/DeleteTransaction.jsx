@@ -44,7 +44,7 @@ const DeleteTransaction = ({
       isRecurring,
       isExpense,
       formattedAmount: Math.abs(transaction.amount).toFixed(2),
-      displayDate: dateHelpers.format(transaction.date, 'MMM DD, YYYY'),
+      displayDate: dateHelpers.format(transaction.date, 'MMM dd, yyyy'),
       description: transaction.description || t('labels.noDescription'),
       category: transaction.category?.name || t('labels.uncategorized')
     };

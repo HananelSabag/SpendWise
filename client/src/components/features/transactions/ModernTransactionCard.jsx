@@ -215,8 +215,11 @@ const ActionMenu = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  onEdit(transaction);
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🎯 Edit clicked for transaction:', transaction.id);
+                  onEdit?.(transaction);
                   onToggle();
                 }}
                 className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
@@ -228,8 +231,11 @@ const ActionMenu = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  onDuplicate(transaction);
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('📋 Duplicate clicked for transaction:', transaction.id);
+                  onDuplicate?.(transaction);
                   onToggle();
                 }}
                 className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
@@ -243,8 +249,11 @@ const ActionMenu = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  onDelete(transaction);
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🗑️ Delete clicked for transaction:', transaction.id);
+                  onDelete?.(transaction);
                   onToggle();
                 }}
                 className="w-full justify-start text-left text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"

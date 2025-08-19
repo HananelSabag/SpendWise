@@ -119,12 +119,13 @@ class User {
   // Find user by ID with caching
   static async findById(userId) {
     try {
-      // 🔧 TEMPORARY: Skip cache to ensure OAuth fields are fetched correctly
+      // Check cache first
       const cacheKey = `user:${userId}`;
-      let user = null; // Force fresh DB lookup
-      
-      // Clear any existing cache for this user to ensure fresh data
-      UserCache.cache.delete(cacheKey);
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
 
       const query = `
         SELECT 
@@ -193,12 +194,13 @@ class User {
   // Find user by email
   static async findByEmail(email) {
     try {
-      // 🔧 TEMPORARY: Skip cache for authentication debugging
+      // Check cache first
       const cacheKey = `user:email:${email.toLowerCase()}`;
-      let user = null; // Force fresh DB lookup
-      
-      // Clear any existing cache for this user (use correct method)
-      UserCache.cache.delete(cacheKey);
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
 
       const query = `
         SELECT 

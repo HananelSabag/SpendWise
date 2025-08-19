@@ -39,7 +39,7 @@ import EditTransactionModal from '../components/features/transactions/modals/Edi
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
-import { RecurringManagerPanel } from '../components/LazyComponents';
+import UnifiedRecurringControlCenter from '../components/features/transactions/recurring/UnifiedRecurringControlCenter';
 import useAutoRegeneration from '../hooks/useAutoRegeneration';
 
 import { cn } from '../utils/helpers';
@@ -1091,7 +1091,7 @@ const ModernTransactions = () => {
                         className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-3"
                       >
                         <Settings className="w-5 h-5 mr-2" />
-                        {t('transactions.recurring.manage', 'Manage Recurring')}
+                        🎛️ Control Center
                       </Button>
                       
                       <Button
@@ -1153,8 +1153,8 @@ const ModernTransactions = () => {
         />
       )}
 
-      {/* ✨ Recurring Manager Modal */}
-      <RecurringManagerPanel 
+      {/* 🎛️ Unified Recurring Control Center - NO TABS! */}
+      <UnifiedRecurringControlCenter 
         isOpen={showRecurringManager} 
         onClose={() => setShowRecurringManager(false)} 
       />
