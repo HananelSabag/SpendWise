@@ -11,7 +11,8 @@ import {
   Repeat, Calendar, DollarSign, Coffee, Car, Home,
   Briefcase, TrendingUp, ArrowRight, CheckCircle,
   Clock, Zap, BarChart3, Eye, EyeOff, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Lightbulb, Target
+  ArrowUpRight, ArrowDownRight, Lightbulb, Target,
+  GraduationCap
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -861,3 +862,4 @@ const ModernEducationStep = ({
 };
 
 export default ModernEducationStep;
+

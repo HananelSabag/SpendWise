@@ -43,13 +43,13 @@ const ModernOnboardingFooter = ({
   const isSecondStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps - 1;
 
-  // ✅ Default texts with fallbacks
+  // ✅ Default texts - NO TRANSLATIONS for finish buttons per user request
   const texts = {
     back: t('modal.back') || 'Back',
     next: t('modal.next') || 'Next', 
-    finish: t('modal.finish') || 'Finish',
-    finishNow: t('modal.finishNow') || 'Finish Now',
-    completing: t('modal.completing') || 'Completing...'
+    finish: 'Done', // ✅ NO TRANSLATION - simple text
+    finishNow: 'Skip Setup', // ✅ NO TRANSLATION - simple text
+    completing: 'Please wait...' // ✅ NO TRANSLATION - simple text
   };
 
   // ✅ Handle primary action
@@ -219,3 +219,4 @@ const ModernOnboardingFooter = ({
 };
 
 export default ModernOnboardingFooter;
+

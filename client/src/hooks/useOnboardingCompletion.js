@@ -35,11 +35,38 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
     try {
       console.log('🎯 Starting simplified onboarding completion...');
 
-      // ✅ SIMPLIFIED: Just call the onboarding complete API
+      // ✅ ENHANCED: Save templates and complete onboarding
+      const templates = stepData?.templates?.selectedTemplates || [];
+      
+      console.log('🎯 Templates to save:', templates);
+      
+      // Save templates first if any exist
+      if (templates.length > 0) {
+        console.log('💾 Saving templates to database...');
+        for (const template of templates) {
+          try {
+            await api.onboarding.saveTemplate({
+              name: template.name,
+              type: template.type,
+              amount: template.amount,
+              description: `Template: ${template.name}`,
+              interval_type: 'monthly',
+              start_date: new Date().toISOString().split('T')[0],
+              is_active: true
+            });
+            console.log('✅ Template saved:', template.name);
+          } catch (error) {
+            console.warn('❌ Failed to save template:', template.name, error);
+          }
+        }
+      }
+
+      // Complete onboarding
       const response = await api.onboarding.complete({
         steps_completed: Object.keys(stepData || {}).length,
         completion_time: new Date().toISOString(),
-        user_id: user?.id
+        user_id: user?.id,
+        templates_count: templates.length
       });
 
       if (!response.success) {

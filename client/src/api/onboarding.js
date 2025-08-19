@@ -82,6 +82,25 @@ export const onboardingAPI = {
         data: { message: 'Onboarding skipped' }
       };
     }
+  },
+
+  /**
+   * Save a template during onboarding
+   */
+  async saveTemplate(templateData) {
+    try {
+      const response = await api.client.post('/transactions/templates', templateData);
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: api.normalizeError ? api.normalizeError(error) : { message: error.message }
+      };
+    }
   }
 };
 

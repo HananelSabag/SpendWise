@@ -16,7 +16,7 @@ import { useTranslation, useAuth } from '../stores';
 // Import NEW modern step components
 import ModernProfileStep from '../components/features/onboarding/steps/ModernProfileStep';
 import ModernEducationStep from '../components/features/onboarding/steps/ModernEducationStep';
-import ModernTemplatesStep from '../components/features/onboarding/steps/ModernTemplatesStep';
+import FinalTemplatesStep from '../components/features/onboarding/steps/FinalTemplatesStep';
 
 /**
  * 🎯 Modern 3-Step Onboarding State Hook
@@ -106,7 +106,7 @@ export const useModernOnboardingState = (options = {}) => {
     },
     {
       id: 'templates',
-      component: ModernTemplatesStep,
+      component: FinalTemplatesStep,
       title: t('steps.templates.title') || 'Quick Setup',
       subtitle: t('steps.templates.subtitle') || 'Add recurring transactions in seconds',
       icon: Zap,
@@ -153,15 +153,21 @@ export const useModernOnboardingState = (options = {}) => {
         if (!data.currency) {
           errors.push('Currency selection is required');
         }
-        // Check if Google user needs password
-        const isGoogleUser = !!(user?.oauth_provider === 'google' || user?.google_id);
-        const hasPassword = !!(user?.hasPassword || user?.has_password);
-        const needsPassword = isGoogleUser && !hasPassword;
+                        // ✅ SIMPLIFIED: Use ACTUAL database values instead of guesswork
+                const isGoogleUser = !!(user?.oauth_provider === 'google' || user?.google_id);
+                const hasPassword = !!(user?.hasPassword || user?.has_password);
+                const isHybridUser = isGoogleUser && hasPassword; // Simple: Google + Password = Hybrid
+                const isEmailOnlyUser = hasPassword && !isGoogleUser; // Email only
+                const isGoogleOnlyUser = isGoogleUser && !hasPassword; // Google only
+
+                // Authentication setup requirements
+                const needsPassword = isGoogleOnlyUser; // Only Google-only users need password setup
+                const canLinkGoogle = isEmailOnlyUser;   // Only email-only users can link Google
         
-        if (needsPassword) {
-          if (!data.password) {
-            errors.push('Password is required for hybrid authentication');
-          } else if (data.password.length < 8) {
+        // ✅ Password is now OPTIONAL - users can proceed without setting it
+        if (needsPassword && data.password) {
+          // Only validate password if user chooses to set one
+          if (data.password.length < 8) {
             errors.push('Password must be at least 8 characters');
           }
           if (data.password !== data.confirmPassword) {

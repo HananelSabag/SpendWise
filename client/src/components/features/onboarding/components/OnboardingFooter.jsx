@@ -37,13 +37,13 @@ const OnboardingFooter = ({
 }) => {
   const { t } = useTranslation('onboarding');
 
-  // ✅ DEFAULT TEXTS with fallbacks
+  // ✅ DEFAULT TEXTS - NO TRANSLATIONS for finish buttons per user request  
   const defaultTexts = {
     back: t('modal.back') || 'Back',
     next: t('modal.next') || 'Next', 
-    skip: t('modal.skip') || 'Skip For Now',
-    complete: t('modal.finish') || 'Complete Setup',
-    completing: t('modal.completing') || 'Completing...'
+    skip: 'Skip For Now', // ✅ NO TRANSLATION - simple text
+    complete: 'Done', // ✅ NO TRANSLATION - simple text
+    completing: 'Please wait...' // ✅ NO TRANSLATION - simple text
   };
 
   // ✅ ENHANCED: Handle primary action (Next or Complete)

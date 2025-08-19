@@ -25,6 +25,7 @@ import { useAuthToasts } from '../hooks/useAuthToasts';
 import { useToast } from '../hooks/useToast';
 
 import { Button, Card, Input, Avatar, LoadingSpinner } from '../components/ui';
+import AuthStatusWindow from '../components/features/profile/AuthStatusWindow';
 import useExport from '../hooks/useExport';
 import { api } from '../api';
 import { cn, dateHelpers } from '../utils/helpers';
@@ -783,6 +784,16 @@ const Profile = () => {
         transition={{ delay: 0.5 }}
         className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
+        {/* Authentication Status Window */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mb-6"
+        >
+          <AuthStatusWindow onNavigateToSecurity={() => setActiveTab('security')} />
+        </motion.div>
+
         {/* Tab Navigation - Mobile Optimized */}
         <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-1 sm:space-y-0 bg-white dark:bg-gray-800 rounded-lg p-1 mb-8 shadow-sm">
           {tabs.map((tab) => {

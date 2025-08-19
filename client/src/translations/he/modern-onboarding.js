@@ -319,3 +319,4 @@ export default {
     passwordsDoNotMatch: 'הסיסמאות אינן תואמות'
   }
 };
+

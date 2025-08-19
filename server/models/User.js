@@ -119,17 +119,16 @@ class User {
   // Find user by ID with caching
   static async findById(userId) {
     try {
-      // Check cache first
+      // 🔧 TEMPORARY: Skip cache to ensure OAuth fields are fetched correctly
       const cacheKey = `user:${userId}`;
-      let user = UserCache.get(cacheKey);
-
-      if (user) {
-        return user;
-      }
+      let user = null; // Force fresh DB lookup
+      
+      // Clear any existing cache for this user to ensure fresh data
+      UserCache.cache.delete(cacheKey);
 
       const query = `
         SELECT 
-          id, email, username, role, email_verified, is_active,
+          id, email, username, password_hash, role, email_verified, is_active,
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, phone, bio, location,
           website, birthday, preferences,
@@ -161,6 +160,10 @@ class User {
       user.isAdmin = ['admin', 'super_admin'].includes(user.role);
       user.isSuperAdmin = user.role === 'super_admin';
       user.name = user.username || user.first_name || 'User'; // Fallback for name field
+      
+      // ✅ Add computed fields for authentication (same as in findByEmail)
+      user.hasPassword = !!user.password_hash; // ✅ CRITICAL: Add hasPassword field for client auth detection
+      user.has_password = !!user.password_hash; // Snake case version
       
       // Normalize field names for client compatibility (same as in findByEmail)
       user.firstName = user.first_name || '';
@@ -231,6 +234,10 @@ class User {
       user.isAdmin = ['admin', 'super_admin'].includes(user.role);
       user.isSuperAdmin = user.role === 'super_admin';
       user.name = user.username || user.first_name || 'User'; // Fallback for name field
+
+      // ✅ Add computed fields for authentication (same as in findById)
+      user.hasPassword = !!user.password_hash; // ✅ CRITICAL: Add hasPassword field for client auth detection
+      user.has_password = !!user.password_hash; // Snake case version
 
       // Normalize field names for client compatibility (same as in findById)
       user.firstName = user.first_name || '';

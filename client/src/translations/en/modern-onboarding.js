@@ -319,3 +319,4 @@ export default {
     passwordsDoNotMatch: 'Passwords do not match'
   }
 };
+
