@@ -25,7 +25,7 @@ import { useAuthToasts } from '../hooks/useAuthToasts';
 import { useToast } from '../hooks/useToast';
 
 import { Button, Card, Input, Avatar, LoadingSpinner } from '../components/ui';
-import AuthStatusWindow from '../components/features/profile/AuthStatusWindow';
+import AuthStatusDetector from '../components/features/auth/AuthStatusDetector';
 import useExport from '../hooks/useExport';
 import { api } from '../api';
 import { cn, dateHelpers } from '../utils/helpers';
@@ -795,7 +795,11 @@ const Profile = () => {
           transition={{ delay: 0.6 }}
           className="mb-6"
         >
-          <AuthStatusWindow onNavigateToSecurity={() => setActiveTab('security')} />
+          <AuthStatusDetector 
+            context="profile"
+            onNavigateToSecurity={() => setActiveTab('security')} 
+            showDebug={import.meta.env.DEV}
+          />
         </motion.div>
 
         {/* Tab Navigation - Mobile Optimized */}

@@ -23,7 +23,7 @@ import {
 
 import { Button, Input, Card, Avatar, Badge, Switch } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
-import AuthStatusWindow from '../../../features/profile/AuthStatusWindow';
+import AuthStatusDetector from '../../auth/AuthStatusDetector';
 
 /**
  * 👤 Modern Profile Step Component
@@ -92,24 +92,7 @@ const ModernProfileStep = ({
   const needsPassword = isGoogleOnlyUser;  // Only pure Google users need password setup
   const canLinkGoogle = isEmailOnlyUser;   // Only email-only users can link Google
   
-  // 🔍 ULTIMATE DEBUG: Log everything the onboarding component sees
-  console.log('🔍 ONBOARDING: Component received user object:', {
-    email: user?.email,
-    userId: user?.id,
-    // Raw fields from server
-    hasPassword_field: user?.hasPassword,
-    has_password_field: user?.has_password,
-    password_hash_field: user?.password_hash ? 'EXISTS' : 'MISSING',
-    oauth_provider_field: user?.oauth_provider,
-    google_id_field: user?.google_id,
-    // Computed values
-    hasPassword_computed: hasPassword,
-    isGoogleUser_computed: isGoogleUser,
-    isHybridUser_computed: isHybridUser,
-    needsPassword_computed: needsPassword,
-    // User object keys
-    userObjectKeys: Object.keys(user || {})
-  });
+
   const isHybridAuth = isHybridUser;
 
   // ✅ Handle profile picture upload - ENHANCED
@@ -347,8 +330,8 @@ const ModernProfileStep = ({
                     </div>
                   </div>
 
-                  {/* ✅ Authentication Status Window - Unified for all auth scenarios */}
-                  <AuthStatusWindow
+                  {/* ✅ New Bulletproof Authentication Status Detector */}
+                  <AuthStatusDetector
                     context="onboarding"
                     className="mt-4"
                     onPasswordSetup={() => {
@@ -388,6 +371,7 @@ const ModernProfileStep = ({
                         toast.error('Failed to link Google account. Please try again.');
                       }
                     }}
+                    showDebug={import.meta.env.DEV}
                   />
 
                   {/* ✅ Password Setup Form - Show when triggered by AuthStatusWindow */}

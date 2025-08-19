@@ -87,27 +87,11 @@ export const authAPI = {
       const payload = response?.data || {};
       const rawUser = payload?.data || payload?.user || payload; // server uses data: normalizedUser
       
-      // 🔍 DEBUG: Log what server sent vs what client receives
-      console.log('🔍 CLIENT: getProfile API received from server:', {
-        responseStatus: response?.status,
-        payloadKeys: Object.keys(payload),
-        rawUserKeys: Object.keys(rawUser),
-        hasPassword_raw: rawUser?.hasPassword,
-        has_password_raw: rawUser?.has_password,
-        password_hash_raw: rawUser?.password_hash ? 'EXISTS' : 'MISSING',
-        oauth_provider_raw: rawUser?.oauth_provider,
-        google_id_raw: rawUser?.google_id
-      });
+
       
       const normalizedUser = normalizeUserData(rawUser);
       
-      // 🔍 DEBUG: Log what client normalizer produces
-      console.log('🔍 CLIENT: After normalizeUserData:', {
-        hasPassword_normalized: normalizedUser?.hasPassword,
-        has_password_normalized: normalizedUser?.has_password,
-        oauth_provider_normalized: normalizedUser?.oauth_provider,
-        google_id_normalized: normalizedUser?.google_id
-      });
+
       
       return { success: true, user: normalizedUser, data: normalizedUser };
     } catch (error) {
@@ -155,7 +139,7 @@ export const authAPI = {
   // ✅ Simple Google Login (processes credential from button)
   async processGoogleCredential(credential) {
     try {
-      console.log('🔍 Processing Google credential...');
+
 
       if (!credential) {
         throw new Error('No Google credential provided');
@@ -163,7 +147,7 @@ export const authAPI = {
 
       // Parse the JWT credential
       const userInfo = simpleGoogleAuth.parseCredential(credential);
-      console.log('🔍 Parsed Google user info:', userInfo);
+
 
       // Send to backend for processing
       const response = await api.client.post('/users/google-auth', {

@@ -251,6 +251,15 @@ try {
   } catch (error) {
     console.error('❌ Admin routes failed:', error.message);
   }
+
+  // 🔐 NEW: Bulletproof authentication status detection
+  try {
+    logger.debug('Loading auth status routes...');
+    app.use(`${API_VERSION}/auth-status`, require('./routes/authStatusRoutes'));
+    logger.debug('✅ Auth status routes loaded');
+  } catch (error) {
+    console.error('❌ Auth status routes failed:', error.message);
+  }
 } catch (error) {
   console.error('❌ API routes loading failed:', error.message);
   console.error('Stack:', error.stack);

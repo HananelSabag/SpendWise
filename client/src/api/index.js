@@ -6,6 +6,7 @@
 
 import apiClient from './client.js';
 import { authAPI } from './auth.js';
+import { authStatusAPI } from './authStatus.js'; // 🔐 NEW: Bulletproof auth detection
 import adminAPI from './admin.js';
 import analyticsAPI from './analytics.js';
 import categoriesAPI from './categories.js'; // ✅ ADD: Import categories API
@@ -23,6 +24,7 @@ export const api = {
   
   // Authentication & Users
   auth: authAPI,
+  authStatus: authStatusAPI, // 🔐 NEW: Bulletproof auth detection
   users: {
     // Backward-compatibility wrapper
     async getProfile() { return authAPI.getProfile(); },
@@ -130,6 +132,7 @@ export default spendWiseAPI;
 
 // Individual module exports for backward compatibility
 export { authAPI };
+export { authStatusAPI }; // 🔐 NEW: Bulletproof auth detection
 export { adminAPI };
 export { analyticsAPI };
 export { performanceAPI };

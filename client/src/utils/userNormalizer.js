@@ -14,18 +14,7 @@ export const normalizeUserData = (user) => {
     throw new Error('User data is required for normalization');
   }
 
-  // 🔍 DEBUG: Log authentication data normalization  
-  if (import.meta.env.DEV) {
-    console.log('🔍 CLIENT normalizeUserData - Processing user:', {
-      userId: user.id,
-      email: user.email,
-      input_hasPassword: user.hasPassword,
-      input_has_password: user.has_password,
-      input_oauth_provider: user.oauth_provider,
-      input_google_id: user.google_id,
-      serverKeys: Object.keys(user)
-    });
-  }
+
 
   const normalized = {
     // ✅ Core Identity
@@ -77,16 +66,7 @@ export const normalizeUserData = (user) => {
     has_password: user.hasPassword || user.has_password || false
   };
 
-  // 🔍 DEBUG: Log normalized output
-  if (import.meta.env.DEV) {
-    console.log('🔍 CLIENT normalizeUserData - Normalized output:', {
-      userId: normalized.id,
-      output_hasPassword: normalized.hasPassword,
-      output_has_password: normalized.has_password,
-      output_oauth_provider: normalized.oauth_provider,
-      output_google_id: normalized.google_id
-    });
-  }
+
 
   return normalized;
 };
