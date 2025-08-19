@@ -119,11 +119,17 @@ class User {
   // Find user by ID with caching
   static async findById(userId) {
     try {
+      // 🔥 EMERGENCY: Force fresh DB lookup for user 1 until cache is verified clean
+      if (userId == 1) {
+        UserCache.invalidate('1');
+        console.log('🔥 FORCED CACHE CLEAR for user 1');
+      }
+
       // Check cache first
       const cacheKey = `user:${userId}`;
       let user = UserCache.get(cacheKey);
 
-      if (user) {
+      if (user && userId != 1) {
         return user;
       }
 
@@ -147,6 +153,19 @@ class User {
       }
 
       user = result.rows[0];
+
+      // 🔍 DEBUG: Log database result for user 1
+      if (userId == 1) {
+        console.log('🚨 SERVER User.findById - Database returned for user 1:', {
+          userId: user.id,
+          email: user.email,
+          password_hash_exists: !!user.password_hash,
+          password_hash_length: user.password_hash?.length,
+          password_hash_preview: user.password_hash ? user.password_hash.substring(0, 10) + '...' : 'NULL',
+          oauth_provider: user.oauth_provider,
+          google_id: user.google_id
+        });
+      }
       
       // Parse JSON fields safely
       if (user.preferences) {
@@ -165,6 +184,15 @@ class User {
       // ✅ Add computed fields for authentication (same as in findByEmail)
       user.hasPassword = !!user.password_hash; // ✅ CRITICAL: Add hasPassword field for client auth detection
       user.has_password = !!user.password_hash; // Snake case version
+
+      // 🔍 DEBUG: Log computed fields for user 1
+      if (userId == 1) {
+        console.log('🚨 SERVER User.findById - Computed fields for user 1:', {
+          password_hash_exists: !!user.password_hash,
+          hasPassword_computed: user.hasPassword,
+          has_password_computed: user.has_password
+        });
+      }
       
       // Normalize field names for client compatibility (same as in findByEmail)
       user.firstName = user.first_name || '';

@@ -15,7 +15,20 @@ const normalizeUserData = (user) => {
     throw new Error('User data is required for normalization');
   }
 
-  return {
+  // 🔍 DEBUG: Log server normalizer input for user 1
+  if (user.id == 1) {
+    console.log('🚨 SERVER normalizeUserData - Input for user 1:', {
+      userId: user.id,
+      email: user.email,
+      input_password_hash_exists: !!user.password_hash,
+      input_hasPassword: user.hasPassword,
+      input_has_password: user.has_password,
+      input_oauth_provider: user.oauth_provider,
+      input_google_id: user.google_id
+    });
+  }
+
+  const normalized = {
     // ✅ Core Identity
     id: user.id,
     email: user.email,
@@ -86,6 +99,19 @@ const normalizeUserData = (user) => {
     has_password: !!user.password_hash, // True if user has a password set
     hasPassword: !!user.password_hash    // Camel case version
   };
+
+  // 🔍 DEBUG: Log server normalizer output for user 1
+  if (user.id == 1) {
+    console.log('🚨 SERVER normalizeUserData - Output for user 1:', {
+      userId: normalized.id,
+      output_hasPassword: normalized.hasPassword,
+      output_has_password: normalized.has_password,
+      output_oauth_provider: normalized.oauth_provider,
+      output_google_id: normalized.google_id
+    });
+  }
+
+  return normalized;
 };
 
 /**

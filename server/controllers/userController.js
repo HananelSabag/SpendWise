@@ -616,8 +616,35 @@ const userController = {
         throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
       }
 
+      // 🔍 DEBUG: Log what findById returns for user 1
+      if (userId == 1) {
+        console.log('🚨 SERVER getProfile - User.findById returned for user 1:', {
+          userId: user.id,
+          email: user.email,
+          password_hash_exists: !!user.password_hash,
+          password_hash_length: user.password_hash?.length,
+          hasPassword_field: user.hasPassword,
+          has_password_field: user.has_password,
+          oauth_provider: user.oauth_provider,
+          google_id: user.google_id,
+          userKeys: Object.keys(user)
+        });
+      }
+
       // ✅ CLEANED: Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
+
+      // 🔍 DEBUG: Log what normalizer returns for user 1
+      if (userId == 1) {
+        console.log('🚨 SERVER getProfile - normalizeUserData returned for user 1:', {
+          userId: normalizedUser.id,
+          hasPassword: normalizedUser.hasPassword,
+          has_password: normalizedUser.has_password,
+          oauth_provider: normalizedUser.oauth_provider,
+          google_id: normalizedUser.google_id,
+          normalizedKeys: Object.keys(normalizedUser)
+        });
+      }
 
       const duration = Date.now() - start;
       logger.debug('✅ User profile served', {
