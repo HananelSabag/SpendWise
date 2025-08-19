@@ -119,12 +119,13 @@ class User {
   // Find user by ID with caching
   static async findById(userId) {
     try {
-      // 🔧 TEMPORARY: Force fresh DB lookup for debugging user 17
+      // Check cache first
       const cacheKey = `user:${userId}`;
-      let user = null; // Skip cache to debug user 17
-      
-      // Clear cache for this user
-      UserCache.cache.delete(cacheKey);
+      let user = UserCache.get(cacheKey);
+
+      if (user) {
+        return user;
+      }
 
       const query = `
         SELECT 
@@ -139,28 +140,7 @@ class User {
         WHERE id = $1 AND is_active = true
       `;
 
-      // 🔍 DEBUG: Log the SQL query and parameters for user 17 debugging
-      console.log('🔍 User.findById SQL Debug:', {
-        userId: userId,
-        query: query.replace(/\s+/g, ' ').trim(),
-        queryParams: [userId]
-      });
-      
       const result = await db.query(query, [userId]);
-      
-      // 🔍 DEBUG: Log raw database result
-      console.log('🔍 User.findById DB Result:', {
-        userId: userId,
-        rowCount: result.rows.length,
-        rawUser: result.rows[0] ? {
-          id: result.rows[0].id,
-          email: result.rows[0].email,
-          password_hash_exists: !!result.rows[0].password_hash,
-          password_hash_length: result.rows[0].password_hash?.length,
-          oauth_provider: result.rows[0].oauth_provider,
-          google_id: result.rows[0].google_id
-        } : null
-      });
       
       if (result.rows.length === 0) {
         return null;
@@ -308,20 +288,6 @@ class User {
       const hasPassword = !!(user.password_hash && user.password_hash.length > 0);
       const isGoogleUser = user.oauth_provider === 'google' || !!user.google_id;
       const isHybridUser = hasPassword && isGoogleUser;
-      
-      // 🔍 URGENT DEBUG: Check why hasPassword is false for hybrid user
-      console.log('🔍 URGENT DEBUG - Authentication Check:', {
-        email: user.email,
-        hasPasswordHash: !!user.password_hash,
-        passwordHashLength: user.password_hash?.length,
-        passwordHashType: typeof user.password_hash,
-        passwordHashPreview: user.password_hash ? user.password_hash.substring(0, 10) + '...' : 'NULL',
-        hasPassword: hasPassword,
-        isGoogleUser: isGoogleUser,
-        isHybridUser: isHybridUser,
-        oauthProvider: user.oauth_provider,
-        googleId: user.google_id ? 'EXISTS' : 'NULL'
-      });
 
       // ✅ HYBRID SYSTEM: Users with both password and Google ID can use either method
 
@@ -339,21 +305,7 @@ class User {
       
       // ✅ PASSWORD LOGIN ATTEMPT: Check if password authentication is possible
       if (!hasPassword) {
-        // 🔧 EMERGENCY FIX: Force password check from database for specific user
-        if (user.email === 'hananel12345@gmail.com') {
-          console.log('🚨 EMERGENCY: Forcing password recheck for user:', user.email);
-          // Re-query password directly from database
-          const passwordQuery = await db.query('SELECT password_hash FROM users WHERE id = $1', [user.id]);
-          const dbPasswordHash = passwordQuery.rows[0]?.password_hash;
-          console.log('🚨 DB Password Hash:', dbPasswordHash ? 'EXISTS' : 'NULL', dbPasswordHash?.length || 0);
-          
-          if (dbPasswordHash && dbPasswordHash.length > 0) {
-            console.log('✅ EMERGENCY: Password found in DB, proceeding with authentication');
-            user.password_hash = dbPasswordHash; // Force update the user object
-          } else {
-            throw new Error('This account uses Google sign-in. Please use the Google login button.');
-          }
-        } else if (isGoogleUser) {
+        if (isGoogleUser) {
           // Google user without password - provide helpful guidance
           throw new Error('This account uses Google sign-in. Please use the Google login button.');
         } else {
@@ -387,14 +339,16 @@ class User {
       // Update last login
       await this.updateLastLogin(user.id);
 
-      // Remove sensitive data
-      delete user.password_hash;
-      delete user.login_attempts;
-      delete user.locked_until;
+      // ✅ SECURITY FIX: Create clean copy instead of mutating cached object
+      // This prevents cache corruption that affects authentication detection
+      const cleanUser = { ...user };
+      delete cleanUser.password_hash;
+      delete cleanUser.login_attempts;
+      delete cleanUser.locked_until;
 
       logger.info('User authenticated successfully', { userId: user.id, email: user.email });
 
-      return user;
+      return cleanUser;
     } catch (error) {
       logger.error('Authentication failed', { email, error: error.message });
       throw error;

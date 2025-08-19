@@ -13,8 +13,15 @@ import {
 import { Button, Card } from '../../ui';
 import { cn } from '../../../utils/helpers';
 import { useAuth } from '../../../stores';
+import { toast } from 'react-hot-toast';
 
-const AuthStatusWindow = ({ className = "", onNavigateToSecurity }) => {
+const AuthStatusWindow = ({ 
+  className = "", 
+  onNavigateToSecurity, 
+  context = "profile", // "profile" or "onboarding"
+  onPasswordSetup, 
+  onGoogleLink 
+}) => {
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -71,10 +78,16 @@ const AuthStatusWindow = ({ className = "", onNavigateToSecurity }) => {
         icon: Key,
         bgColor: 'bg-blue-50 dark:bg-blue-900/20',
         borderColor: 'border-blue-200 dark:border-blue-800',
-        actions: [
+        actions: context === 'profile' ? [
           { 
             text: 'Set Password', 
             action: () => onNavigateToSecurity && onNavigateToSecurity(),
+            icon: Lock 
+          }
+        ] : [
+          { 
+            text: 'Set Password', 
+            action: () => onPasswordSetup && onPasswordSetup(),
             icon: Lock 
           }
         ]
@@ -90,13 +103,46 @@ const AuthStatusWindow = ({ className = "", onNavigateToSecurity }) => {
         icon: AlertCircle,
         bgColor: 'bg-orange-50 dark:bg-orange-900/20',
         borderColor: 'border-orange-200 dark:border-orange-800',
-        actions: [
+        actions: context === 'profile' ? [
           { 
             text: 'Link Google', 
-            action: () => {
-              // TODO: Implement Google linking
-              alert('Google linking will be implemented soon!');
+            action: async () => {
+              try {
+                // Import Google auth service
+                const { simpleGoogleAuth } = await import('../../../services/simpleGoogleAuth.js');
+                const { authAPI } = await import('../../../api/auth.js');
+                
+                // Initialize Google auth and get credential
+                await simpleGoogleAuth.initializeGoogle();
+                const credential = await simpleGoogleAuth.signIn();
+                
+                if (credential) {
+                  // Process Google credential to link account
+                  const result = await authAPI.googleLogin(credential);
+                  
+                  if (result.success) {
+                    // Update auth store with new user data
+                    const { useAuthStore } = await import('../../../stores/authStore.js');
+                    useAuthStore.getState().actions.setUser(result.user);
+                    
+                    // Also refresh profile to get latest data
+                    await useAuthStore.getState().actions.getProfile();
+                    
+                    // Show success message
+                    toast.success('Google account linked successfully! You can now use both login methods.');
+                  }
+                }
+              } catch (error) {
+                console.error('Google linking failed:', error);
+                toast.error('Failed to link Google account. Please try again.');
+              }
             },
+            icon: Link2 
+          }
+        ] : [
+          { 
+            text: 'Link Google', 
+            action: () => onGoogleLink && onGoogleLink(),
             icon: Link2 
           }
         ]

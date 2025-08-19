@@ -285,6 +285,10 @@ const Profile = () => {
       }
       
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      
+      // ✅ Refresh user profile to update authentication state
+      await useAuthStore.getState().actions.getProfile();
+      
       authToasts.passwordChanged();
     } catch (error) {
       authToasts.passwordChangeFailed(error);
