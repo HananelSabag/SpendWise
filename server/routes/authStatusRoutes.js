@@ -6,7 +6,7 @@
 
 const express = require('express');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { authenticate } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const AuthStatusService = require('../services/authStatusService');
 const logger = require('../utils/logger');
 
@@ -16,7 +16,7 @@ const router = express.Router();
  * 🎯 Get user's authentication status - BULLETPROOF
  * @route GET /api/v1/auth-status
  */
-router.get('/', authenticate, asyncHandler(async (req, res) => {
+router.get('/', auth, asyncHandler(async (req, res) => {
   const start = Date.now();
   const userId = req.user.id;
 
@@ -56,7 +56,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
  * 🔍 Verify authentication status consistency - DEBUG
  * @route GET /api/v1/auth-status/verify
  */
-router.get('/verify', authenticate, asyncHandler(async (req, res) => {
+router.get('/verify', auth, asyncHandler(async (req, res) => {
   const start = Date.now();
   const userId = req.user.id;
 
