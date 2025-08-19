@@ -22,6 +22,23 @@ const AuthStatusWindow = ({ className = "", onNavigateToSecurity }) => {
   const isGoogleUser = !!(user?.oauth_provider === 'google' || user?.google_id);
   const hasPassword = !!(user?.hasPassword || user?.has_password);
   
+  // 🔍 ULTIMATE DEBUG: Log what profile auth window sees
+  console.log('🔍 PROFILE AUTH WINDOW: Component received user object:', {
+    email: user?.email,
+    userId: user?.id,
+    // Raw fields from server
+    hasPassword_field: user?.hasPassword,
+    has_password_field: user?.has_password,
+    password_hash_field: user?.password_hash ? 'EXISTS' : 'MISSING',
+    oauth_provider_field: user?.oauth_provider,
+    google_id_field: user?.google_id,
+    // Computed values
+    hasPassword_computed: hasPassword,
+    isGoogleUser_computed: isGoogleUser,
+    // User object keys
+    userObjectKeys: Object.keys(user || {})
+  });
+  
   // Simple, clear user types based on database reality
   const isHybridUser = isGoogleUser && hasPassword;    // Has both Google + Password
   const isEmailOnlyUser = hasPassword && !isGoogleUser; // Has only password

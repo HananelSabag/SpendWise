@@ -616,8 +616,28 @@ const userController = {
         throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
       }
 
+      // 🔍 DEBUG: Log what findById returns for auth debugging
+      console.log('🔍 User.findById returned for auth debug:', {
+        userId: user.id,
+        email: user.email,
+        hasPasswordHash: !!user.password_hash,
+        passwordHashLength: user.password_hash?.length,
+        oauthProvider: user.oauth_provider,
+        googleId: user.google_id ? 'EXISTS' : 'NULL',
+        hasPasswordComputed: user.hasPassword,
+        has_passwordComputed: user.has_password
+      });
+
       // ✅ CLEANED: Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
+      
+      // 🔍 DEBUG: Log what normalizer returns
+      console.log('🔍 normalizeUserData returned for auth debug:', {
+        hasPassword: normalizedUser.hasPassword,
+        has_password: normalizedUser.has_password,
+        oauthProvider: normalizedUser.oauth_provider,
+        googleId: normalizedUser.google_id
+      });
 
       const duration = Date.now() - start;
       logger.debug('✅ User profile served', {

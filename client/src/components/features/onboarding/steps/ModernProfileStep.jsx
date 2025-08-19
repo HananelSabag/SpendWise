@@ -90,22 +90,23 @@ const ModernProfileStep = ({
   const needsPassword = isGoogleOnlyUser;  // Only pure Google users need password setup
   const canLinkGoogle = isEmailOnlyUser;   // Only email-only users can link Google
   
-  // ✅ CLEAN Debug logging - using database truth
-  console.log('🔍 Profile Step - SIMPLIFIED Auth Debug:', {
+  // 🔍 ULTIMATE DEBUG: Log everything the onboarding component sees
+  console.log('🔍 ONBOARDING: Component received user object:', {
     email: user?.email,
     userId: user?.id,
-    // Database values (truth)
-    oauth_provider: user?.oauth_provider,
-    google_id: user?.google_id ? 'EXISTS' : null,
-    hasPassword: hasPassword,
-    // Computed user type
-    isGoogleUser,
-    isHybridUser,
-    isEmailOnlyUser,
-    isGoogleOnlyUser,
-    // UI logic
-    needsPassword,
-    canLinkGoogle
+    // Raw fields from server
+    hasPassword_field: user?.hasPassword,
+    has_password_field: user?.has_password,
+    password_hash_field: user?.password_hash ? 'EXISTS' : 'MISSING',
+    oauth_provider_field: user?.oauth_provider,
+    google_id_field: user?.google_id,
+    // Computed values
+    hasPassword_computed: hasPassword,
+    isGoogleUser_computed: isGoogleUser,
+    isHybridUser_computed: isHybridUser,
+    needsPassword_computed: needsPassword,
+    // User object keys
+    userObjectKeys: Object.keys(user || {})
   });
   const isHybridAuth = isHybridUser;
 
