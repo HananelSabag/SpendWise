@@ -20,7 +20,10 @@ class AuthStatusService {
         SELECT 
           id,
           email,
-          password_hash IS NOT NULL AND LENGTH(password_hash) > 0 as has_password,
+          password_hash,
+          password_hash IS NOT NULL as password_hash_not_null,
+          LENGTH(COALESCE(password_hash, '')) as password_hash_length,
+          password_hash IS NOT NULL AND LENGTH(COALESCE(password_hash, '')) > 0 as has_password,
           oauth_provider = 'google' OR google_id IS NOT NULL as has_google,
           oauth_provider,
           google_id
@@ -35,6 +38,19 @@ class AuthStatusService {
       }
 
       const user = result.rows[0];
+      
+      // 🔍 DEBUG: Log what we actually got from database
+      logger.debug('🔍 AuthStatusService - Raw DB result:', {
+        userId: user.id,
+        email: user.email,
+        password_hash_not_null: user.password_hash_not_null,
+        password_hash_length: user.password_hash_length,
+        password_hash_preview: user.password_hash ? user.password_hash.substring(0, 15) + '...' : 'NULL',
+        has_password_computed: user.has_password,
+        has_google_computed: user.has_google,
+        oauth_provider: user.oauth_provider,
+        google_id: user.google_id ? 'EXISTS' : 'NULL'
+      });
       
       // 🎯 SIMPLE LOGIC - No room for error
       const hasPassword = user.has_password;
