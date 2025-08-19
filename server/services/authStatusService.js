@@ -20,11 +20,8 @@ class AuthStatusService {
         SELECT 
           id,
           email,
-          password_hash,
-          password_hash IS NOT NULL as password_hash_not_null,
-          LENGTH(COALESCE(password_hash, '')) as password_hash_length,
           password_hash IS NOT NULL AND LENGTH(COALESCE(password_hash, '')) > 0 as has_password,
-          oauth_provider = 'google' OR google_id IS NOT NULL as has_google,
+          google_id IS NOT NULL as has_google,
           oauth_provider,
           google_id
         FROM users 
@@ -39,36 +36,9 @@ class AuthStatusService {
 
       const user = result.rows[0];
       
-      // 🔍 DEBUG: Log what we actually got from database (RENDER VISIBLE)
-      console.log('🔍 AuthStatusService - Raw DB result for user:', user.id, {
-        email: user.email,
-        password_hash_not_null: user.password_hash_not_null,
-        password_hash_length: user.password_hash_length,
-        password_hash_preview: user.password_hash ? user.password_hash.substring(0, 15) + '...' : 'NULL',
-        has_password_computed: user.has_password,
-        has_google_computed: user.has_google,
-        oauth_provider: user.oauth_provider,
-        google_id: user.google_id ? 'EXISTS' : 'NULL'
-      });
-      
       // 🎯 SIMPLE LOGIC - No room for error
       const hasPassword = user.has_password;
       const hasGoogle = user.has_google;
-      
-      // 🔍 BACKUP CHECK: Manual verification in case SQL is wrong
-      const manualPasswordCheck = user.password_hash && 
-        user.password_hash.trim().length > 0 && 
-        user.password_hash !== 'null' && 
-        user.password_hash.startsWith('$2b$'); // bcrypt hash starts with $2b$
-      
-      const manualGoogleCheck = user.google_id && user.google_id.trim().length > 0;
-      
-      console.log('🔍 MANUAL CHECKS for user:', userId, {
-        sql_hasPassword: hasPassword,
-        manual_hasPassword: manualPasswordCheck,
-        sql_hasGoogle: hasGoogle,
-        manual_hasGoogle: manualGoogleCheck
-      });
       
       let authType;
       if (hasPassword && hasGoogle) {
@@ -97,14 +67,11 @@ class AuthStatusService {
         canLinkGoogle: authType === 'PASSWORD_ONLY'
       };
 
-      // 🔍 RENDER DEBUG: Show final computed result
-      console.log('✅ AuthStatusService - FINAL RESULT for user:', userId, {
+      logger.debug('✅ AuthStatusService - Status retrieved:', {
+        userId,
         authType,
         hasPassword,
-        hasGoogle,
-        isHybrid: authType === 'HYBRID',
-        isGoogleOnly: authType === 'GOOGLE_ONLY',
-        isPasswordOnly: authType === 'PASSWORD_ONLY'
+        hasGoogle
       });
 
       return status;

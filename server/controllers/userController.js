@@ -462,28 +462,15 @@ const userController = {
       let user = await User.findByEmail(email);
 
       if (!user) {
-        // ✅ EDGE CASE: New Google user - create with Google OAuth
-        logger.info('🆕 Creating new Google OAuth user', { email });
+        // ✅ FIXED: New Google user - create WITHOUT password hash
+        logger.info('🆕 Creating new Google-only user (NO PASSWORD)', { email });
         const username = name || email.split('@')[0];
-        const randomPassword = generateRandomPassword();
 
-        user = await User.create(email, username, randomPassword);
-        
-        // Mark as verified since Google verified the email and store Google info
-        await User.update(user.id, { 
-          email_verified: true,
-          onboarding_completed: false, // ✅ Will trigger onboarding flow
+        user = await User.createGoogleOnlyUser(email, username, {
           google_id: googleUserId,
-          oauth_provider: 'google',
-          oauth_provider_id: googleUserId,
-          profile_picture_url: picture,
-          avatar: picture,
+          picture: picture,
           first_name: name?.split(' ')[0] || '',
-          last_name: name?.split(' ').slice(1).join(' ') || '',
-          // ✅ Set same default preferences as regular registration
-          language_preference: 'en',      // Default language: English
-          currency_preference: 'ILS',     // Default currency: Israeli Shekel (ILS code)
-          theme_preference: 'system'      // Default theme: System
+          last_name: name?.split(' ').slice(1).join(' ') || ''
         });
 
         // Refresh user data

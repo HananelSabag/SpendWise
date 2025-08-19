@@ -764,6 +764,102 @@ class User {
     }
   }
 
+  // 🆕 Create Google-only user WITHOUT password hash
+  static async createGoogleOnlyUser(email, username, googleData = {}) {
+    try {
+      // Validate required fields
+      if (!email || !username) {
+        throw new Error('Email and username are required');
+      }
+      
+      if (!googleData.google_id) {
+        throw new Error('Google ID is required for Google-only user');
+      }
+
+      // Generate verification token
+      const verificationToken = generateVerificationToken();
+
+      const query = `
+        INSERT INTO users (
+          email, username, verification_token, 
+          email_verified, is_active, created_at, 
+          google_id, oauth_provider, oauth_provider_id,
+          profile_picture_url, avatar, first_name, last_name,
+          language_preference, currency_preference, theme_preference,
+          onboarding_completed
+        ) VALUES (
+          $1, $2, $3, 
+          $4, $5, NOW(), 
+          $6, $7, $8,
+          $9, $10, $11, $12,
+          $13, $14, $15,
+          $16
+        ) RETURNING *
+      `;
+
+      const values = [
+        email.toLowerCase(),
+        username,
+        verificationToken,
+        true, // email_verified (Google verified)
+        true, // is_active
+        googleData.google_id,
+        'google', // oauth_provider
+        googleData.google_id, // oauth_provider_id
+        googleData.picture || null,
+        googleData.picture || null,
+        googleData.first_name || '',
+        googleData.last_name || '',
+        'en', // language_preference
+        'ILS', // currency_preference
+        'system', // theme_preference
+        false // onboarding_completed
+      ];
+
+      const result = await db.query(query, values);
+      const user = result.rows[0];
+
+      // Add computed fields
+      user.firstName = user.first_name || '';
+      user.lastName = user.last_name || '';
+      user.profilePicture = user.profile_picture_url;
+      user.hasPassword = false; // ✅ NO PASSWORD HASH
+      user.has_password = false;
+
+      // Invalidate relevant caches
+      UserCache.invalidate(`email:${email.toLowerCase()}`);
+      UserCache.invalidate(`google:${googleData.google_id}`);
+
+      logger.info('✅ Google-only user created (NO PASSWORD)', {
+        userId: user.id,
+        email: user.email,
+        google_id: googleData.google_id
+      });
+
+      return user;
+    } catch (error) {
+      logger.error('❌ Google-only user creation failed', {
+        email,
+        error: error.message
+      });
+
+      // Handle unique constraint violations
+      if (error.code === '23505') {
+        if (error.detail.includes('email')) {
+          throw new Error('Email already exists');
+        }
+        if (error.detail.includes('username')) {
+          throw new Error('Username already exists');
+        }
+        if (error.detail.includes('google_id')) {
+          throw new Error('Google account already linked to another user');
+        }
+      }
+      
+      throw error;
+    }
+  }
+
   // Cache management
   static clearCache() {
     UserCache.clear();
