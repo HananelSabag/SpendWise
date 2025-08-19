@@ -57,6 +57,10 @@ export const normalizeUserData = (user) => {
     // ✅ OAuth Fields
     oauth_provider: user.oauth_provider || null,
     google_id: user.google_id || null,
-    oauth_provider_id: user.oauth_provider_id || null
+    oauth_provider_id: user.oauth_provider_id || null,
+    
+    // ✅ Password Status - CRITICAL for auth detection
+    hasPassword: user.hasPassword || user.has_password || false,
+    has_password: user.hasPassword || user.has_password || false
   };
 };

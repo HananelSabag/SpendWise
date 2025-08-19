@@ -119,13 +119,12 @@ class User {
   // Find user by ID with caching
   static async findById(userId) {
     try {
-      // Check cache first
+      // 🔧 TEMPORARY: Force fresh DB lookup for debugging user 17
       const cacheKey = `user:${userId}`;
-      let user = UserCache.get(cacheKey);
-
-      if (user) {
-        return user;
-      }
+      let user = null; // Skip cache to debug user 17
+      
+      // Clear cache for this user
+      UserCache.cache.delete(cacheKey);
 
       const query = `
         SELECT 
@@ -140,7 +139,28 @@ class User {
         WHERE id = $1 AND is_active = true
       `;
 
+      // 🔍 DEBUG: Log the SQL query and parameters for user 17 debugging
+      console.log('🔍 User.findById SQL Debug:', {
+        userId: userId,
+        query: query.replace(/\s+/g, ' ').trim(),
+        queryParams: [userId]
+      });
+      
       const result = await db.query(query, [userId]);
+      
+      // 🔍 DEBUG: Log raw database result
+      console.log('🔍 User.findById DB Result:', {
+        userId: userId,
+        rowCount: result.rows.length,
+        rawUser: result.rows[0] ? {
+          id: result.rows[0].id,
+          email: result.rows[0].email,
+          password_hash_exists: !!result.rows[0].password_hash,
+          password_hash_length: result.rows[0].password_hash?.length,
+          oauth_provider: result.rows[0].oauth_provider,
+          google_id: result.rows[0].google_id
+        } : null
+      });
       
       if (result.rows.length === 0) {
         return null;
