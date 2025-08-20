@@ -478,6 +478,57 @@ export const authAPI = {
         }
       };
     }
+  },
+
+  // 🔐 Set Password (for Google-only users setting their first password)
+  async setPassword({ newPassword }) {
+    try {
+      const response = await api.client.post('/users/set-password', {
+        newPassword
+      });
+      
+      return {
+        success: true,
+        message: response.data?.message || 'Password set successfully'
+      };
+
+    } catch (error) {
+      console.error('Set password error:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: error.response?.data?.message || 'Failed to set password',
+          code: error.response?.data?.code || 'SET_PASSWORD_ERROR'
+        }
+      };
+    }
+  },
+
+  // 🔑 Change Password (for users updating their existing password)
+  async changePassword({ currentPassword, newPassword }) {
+    try {
+      const response = await api.client.post('/users/change-password', {
+        currentPassword,
+        newPassword
+      });
+      
+      return {
+        success: true,
+        message: response.data?.message || 'Password changed successfully'
+      };
+
+    } catch (error) {
+      console.error('Change password error:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: error.response?.data?.message || 'Failed to change password',
+          code: error.response?.data?.code || 'CHANGE_PASSWORD_ERROR'
+        }
+      };
+    }
   }
 };
 

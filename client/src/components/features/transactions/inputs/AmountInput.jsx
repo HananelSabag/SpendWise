@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // ✅ Import Zustand stores
 import {

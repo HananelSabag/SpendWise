@@ -17,19 +17,33 @@ const transactionAPI = {
   // ==========================================
   
   /**
-   * Create a new transaction (one-time or recurring)
+   * Create a new transaction (one-time or recurring) - TIMEZONE AWARE
    * @param {string} type - 'transaction' or 'recurring'  
-   * @param {Object} data - Transaction data
+   * @param {Object} data - Transaction data with timezone support
    * @returns {Promise<Object>} Created transaction
    */
   async create(type = 'expense', data) {
     try {
       // ✅ FIX: Ensure proper endpoint structure for server routes
       const endpoint = `/transactions/${type}`;
-      console.log('📤 Creating transaction:', { endpoint, type, data });
+      
+      // ✅ NEW: Log timezone-aware data for debugging
+      console.log('📤 Creating transaction:', { 
+        endpoint, 
+        type, 
+        data: {
+          ...data,
+          timezone: data.timezone || 'not provided',
+          transaction_datetime: data.transaction_datetime || 'not provided'
+        }
+      });
       
       const response = await apiClient.client.post(endpoint, data);
-      console.log('✅ Transaction created successfully:', response.data);
+      console.log('✅ Transaction created successfully:', {
+        id: response.data.data?.id,
+        transaction_datetime: response.data.data?.transaction_datetime,
+        timezone: data.timezone
+      });
       return { success: true, data: response.data };
     } catch (error) {
       console.error('❌ Transaction creation failed:', error);
@@ -87,17 +101,29 @@ const transactionAPI = {
   },
 
   /**
-   * Update an existing transaction
+   * Update an existing transaction - TIMEZONE AWARE
    * @param {string} type - 'transaction' or 'recurring'
    * @param {string} id - Transaction ID
-   * @param {Object} data - Updated transaction data
+   * @param {Object} data - Updated transaction data with timezone support
    * @returns {Promise<Object>} Updated transaction
    */
   async update(type, id, data) {
     try {
+      console.log('📝 Updating transaction:', { 
+        type, 
+        id,
+        timezone: data.timezone || 'not provided',
+        transaction_datetime: data.transaction_datetime || 'not provided'
+      });
+      
       const response = await apiClient.client.put(`/transactions/${type}/${id}`, data);
+      console.log('✅ Transaction updated successfully:', {
+        id: response.data.data?.id,
+        transaction_datetime: response.data.data?.transaction_datetime
+      });
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('❌ Transaction update failed:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

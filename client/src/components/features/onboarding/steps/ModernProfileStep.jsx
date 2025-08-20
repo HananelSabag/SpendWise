@@ -436,16 +436,50 @@ const ModernProfileStep = ({
                                 Cancel
                               </Button>
                               <Button
-                                onClick={() => {
-                                  // Validate and save password
+                                onClick={async () => {
+                                  // Validate and save password via API
                                   if (validateForm()) {
-                                    setShowPasswordSetup(false);
-                                    // Password is already stored in profileData, will be processed on form submission
+                                    try {
+                                      setIsLoading(true);
+                                      
+                                      // Import auth API
+                                      const { authAPI } = await import('../../../../api/auth.js');
+                                      
+                                      // Call setPassword API for Google-only users
+                                      const result = await authAPI.setPassword({
+                                        newPassword: profileData.password
+                                      });
+                                      
+                                      if (result.success) {
+                                        // Success - refresh user data and close form
+                                        const { useAuthStore } = await import('../../../../stores/authStore.js');
+                                        await useAuthStore.getState().actions.getProfile();
+                                        
+                                        setShowPasswordSetup(false);
+                                        
+                                        // Show success message
+                                        const { toast } = await import('react-hot-toast');
+                                        toast.success('Password set successfully! You can now use both login methods.');
+                                        
+                                        // Clear password fields
+                                        handleInputChange('password', '');
+                                        handleInputChange('confirmPassword', '');
+                                      } else {
+                                        throw new Error(result.error?.message || 'Failed to set password');
+                                      }
+                                    } catch (error) {
+                                      console.error('Password setup failed:', error);
+                                      const { toast } = await import('react-hot-toast');
+                                      toast.error(error.message || 'Failed to set password. Please try again.');
+                                    } finally {
+                                      setIsLoading(false);
+                                    }
                                   }
                                 }}
                                 className="bg-amber-600 hover:bg-amber-700"
+                                disabled={isLoading}
                               >
-                                Save Password
+                                {isLoading ? 'Setting Password...' : 'Save Password'}
                               </Button>
                             </div>
                           </div>

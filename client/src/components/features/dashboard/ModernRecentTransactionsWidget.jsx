@@ -266,13 +266,9 @@ const WidgetHeader = ({
       {/* Main header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center"
-          >
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
             <TrendingUp className="w-6 h-6 text-white" />
-          </motion.div>
+          </div>
           <div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {title}
@@ -473,13 +469,9 @@ const ModernRecentTransactionsWidget = ({
                 className="flex items-center justify-center py-12"
               >
                 <div className="text-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-12 h-12 mx-auto mb-4"
-                  >
+                  <div className="w-12 h-12 mx-auto mb-4">
                     <LoadingSpinner size="lg" />
-                  </motion.div>
+                  </div>
                   <p className="text-gray-500 font-medium">
                     {t('recentTransactions.loading', 'Loading transactions...')}
                   </p>

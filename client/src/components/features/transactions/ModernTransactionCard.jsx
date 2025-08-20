@@ -293,8 +293,14 @@ const ModernTransactionCard = ({
   const amount = Math.abs(transaction?.amount || 0);
   const categoryKey = transaction?.category_name?.toLowerCase() || 'other';
   
-  // ✅ Enhanced date handling
-  const date = new Date(transaction?.date || transaction?.created_at);
+  // ✅ TIMEZONE-AWARE date handling - Use user's intended transaction time
+  const getTransactionDateTime = () => {
+    // Prioritize transaction_datetime (user's intended time) over created_at (server time)
+    const datetime = transaction?.transaction_datetime || transaction?.created_at || transaction?.date;
+    return new Date(datetime);
+  };
+
+  const date = getTransactionDateTime();
   const isToday = date.toDateString() === new Date().toDateString();
   const isYesterday = date.toDateString() === new Date(Date.now() - 86400000).toDateString();
   
@@ -306,9 +312,39 @@ const ModernTransactionCard = ({
 
   const getTimeLabel = () => {
     if (isToday) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // ✅ NEW: Show user's intended time in 24-hour format
+      const timeString = date.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false // Use 24-hour format
+      });
+      
+      return timeString;
     }
     return dateHelpers.fromNow(date);
+  };
+
+  const getTimezoneDisplay = () => {
+    // ✅ NEW: Show timezone in requested format like "israel 21:23"
+    if (transaction?.transaction_datetime) {
+      try {
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const timeString = date.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false
+        });
+        
+        // Convert timezone to friendly name
+        const timezoneName = userTimezone.split('/').pop()?.toLowerCase() || 'local';
+        const friendlyName = timezoneName === 'jerusalem' ? 'israel' : timezoneName;
+        
+        return `${friendlyName} ${timeString}`;
+      } catch (error) {
+        return getTimeLabel();
+      }
+    }
+    return getTimeLabel();
   };
 
   // ✅ Category icon with fallback
@@ -488,7 +524,7 @@ const ModernTransactionCard = ({
               <span>{getDateLabel()}</span>
               <span className="text-gray-400">•</span>
               <Clock className="w-4 h-4" />
-              <span>{getTimeLabel()}</span>
+              <span>{transaction?.transaction_datetime ? getTimezoneDisplay() : getTimeLabel()}</span>
             </div>
 
             {/* Amount */}

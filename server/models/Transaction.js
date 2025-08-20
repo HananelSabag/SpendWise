@@ -29,18 +29,23 @@ const logger = require('../utils/logger');
 class Transaction {
 
   /**
-   * Create a new transaction
+   * Create a new transaction - TIMEZONE AWARE VERSION
    * @param {Object} transactionData - Transaction data
    * @param {number} userId - User ID
    * @returns {Promise<Object>} Created transaction
    */
   static async create(transactionData, userId) {
     try {
+      // ✅ NEW: Handle timezone-aware transaction datetime
+      const transactionDateTime = transactionData.transaction_datetime || 
+                                  transactionData.date ? new Date(`${transactionData.date}T12:00:00Z`).toISOString() :
+                                  new Date().toISOString();
+
       const query = `
         INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+          user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9, NOW(), NOW())
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
       `;
 
       const values = [
@@ -50,7 +55,8 @@ class Transaction {
         transactionData.type,
         transactionData.description || '',
         transactionData.notes || '',
-        transactionData.date || new Date().toISOString().split('T')[0], // Default to current UTC date
+        transactionData.date || new Date().toISOString().split('T')[0], // Keep for backward compatibility
+        transactionDateTime, // ✅ NEW: User's intended datetime with timezone
         transactionData.templateId || null
       ];
 
@@ -61,7 +67,9 @@ class Transaction {
         transactionId: transaction.id, 
         userId, 
         amount: transaction.amount,
-        type: transaction.type
+        type: transaction.type,
+        datetime: transaction.transaction_datetime,
+        timezone: transactionData.timezone || 'unknown'
       });
 
       return transaction;
@@ -135,6 +143,7 @@ class Transaction {
           t.description,
           t.notes,
           t.date,
+          t.transaction_datetime,
           t.template_id,
           t.created_at,
           t.updated_at,

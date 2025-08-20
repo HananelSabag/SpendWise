@@ -120,7 +120,50 @@ export const formatAmountDisplay = (amount, currency = 'USD') => {
 };
 
 /**
- * 📊 Format Transaction for API - SUPPORTS RECURRING TEMPLATES
+ * 🌍 Get User's Timezone
+ */
+export const getUserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (error) {
+    console.warn('Failed to detect user timezone, using UTC', error);
+    return 'UTC';
+  }
+};
+
+/**
+ * 🕒 Combine Date and Time with Timezone
+ */
+export const combineDateTimeWithTimezone = (date, time, timezone = null) => {
+  if (!date) return null;
+  
+  const userTimezone = timezone || getUserTimezone();
+  
+  try {
+    // If time is provided, combine date and time
+    if (time) {
+      const dateTimeString = `${date}T${time}:00`;
+      const dateTime = new Date(dateTimeString);
+      
+      // Create a proper timezone-aware ISO string
+      // Note: This preserves the user's intended local time
+      return new Date(dateTime.getTime() - (dateTime.getTimezoneOffset() * 60000)).toISOString();
+    }
+    
+    // If no time provided, use current time
+    const now = new Date();
+    const dateTimeString = `${date}T${now.toTimeString().slice(0, 8)}`;
+    const dateTime = new Date(dateTimeString);
+    
+    return new Date(dateTime.getTime() - (dateTime.getTimezoneOffset() * 60000)).toISOString();
+  } catch (error) {
+    console.warn('Failed to combine date/time with timezone', { date, time, timezone, error });
+    return new Date(`${date}T12:00:00`).toISOString(); // Fallback to noon UTC
+  }
+};
+
+/**
+ * 📊 Format Transaction for API - TIMEZONE AWARE VERSION
  */
 export const formatTransactionForAPI = (formData, mode = 'create') => {
   const amount = parseFloat(formData.amount);
@@ -159,13 +202,18 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     return recurringData;
   }
 
-  // ✅ Regular transaction formatting (existing logic)
+  // ✅ NEW: Timezone-aware transaction formatting
+  const userTimezone = getUserTimezone();
+  const transactionDateTime = combineDateTimeWithTimezone(formData.date, formData.time, userTimezone);
+
   const apiData = {
     type: formData.type,
     amount: finalAmount,
     description: formData.description?.trim() || 'Transaction', // ✅ FIX: Ensure description is never empty
     categoryId: formData.categoryId || null,
-    date: formData.date,
+    date: formData.date, // Keep for backward compatibility
+    transaction_datetime: transactionDateTime, // ✅ NEW: User's intended datetime with timezone
+    timezone: userTimezone, // ✅ NEW: User's timezone for server reference
     notes: formData.notes ? formData.notes.trim() : null
     // ⚠️ DISABLED: tags not supported by current server API
     // tags: formData.tags || []

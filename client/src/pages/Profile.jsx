@@ -83,6 +83,27 @@ const Profile = () => {
     confirmPassword: ''
   });
 
+  // ✅ Track auth status using new API
+  const [authStatus, setAuthStatus] = useState(null);
+
+  // ✅ Load auth status on mount and when user changes
+  React.useEffect(() => {
+    const loadAuthStatus = async () => {
+      if (user) {
+        try {
+          const result = await api.authStatus.getAuthStatus();
+          if (result.success) {
+            setAuthStatus(result.data);
+          }
+        } catch (error) {
+          console.error('Failed to load auth status:', error);
+        }
+      }
+    };
+
+    loadAuthStatus();
+  }, [user]);
+
   // ENHANCED tabs - include preferences
   const tabs = [
     { id: 'personal', label: t('tabs.personal', { fallback: 'Personal Info' }), icon: User },
@@ -267,10 +288,12 @@ const Profile = () => {
       return;
     }
 
-    const isGoogleOnlyUser = user?.oauth_provider === 'google' && !user?.hasPassword;
-
     setIsLoading(true);
     try {
+      // ✅ Use NEW auth status API to determine user type (reliable)
+      const authStatusResult = await api.authStatus.getAuthStatus();
+      const isGoogleOnlyUser = authStatusResult.success && authStatusResult.data.authType === 'GOOGLE_ONLY';
+
       if (isGoogleOnlyUser) {
         // OAuth user setting first password - use setPassword endpoint
         await api.auth.setPassword({
@@ -288,6 +311,12 @@ const Profile = () => {
       
       // ✅ Refresh user profile to update authentication state
       await useAuthStore.getState().actions.getProfile();
+      
+      // ✅ Refresh auth status for UI updates
+      const updatedAuthStatus = await api.authStatus.getAuthStatus();
+      if (updatedAuthStatus.success) {
+        setAuthStatus(updatedAuthStatus.data);
+      }
       
       authToasts.passwordChanged();
     } catch (error) {
@@ -574,8 +603,8 @@ const Profile = () => {
   );
 
   const renderSecurityTab = () => {
-    // ✅ Check if user is Google-only (no password set)
-    const isGoogleOnlyUser = user?.oauth_provider === 'google' && !user?.hasPassword;
+    // ✅ Use NEW auth status API data (reliable)
+    const isGoogleOnlyUser = authStatus?.authType === 'GOOGLE_ONLY';
     
     return (
       <Card className="p-6">
