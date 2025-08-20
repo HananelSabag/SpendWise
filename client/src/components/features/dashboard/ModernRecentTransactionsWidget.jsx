@@ -24,6 +24,7 @@ import {
 import { useTransactions } from '../../../hooks/useTransactions';
 import { Button, Card, LoadingSpinner, Badge, Input } from '../../ui';
 import { cn } from '../../../utils/helpers';
+import ModernTransactionCard from '../transactions/ModernTransactionCard';
 
 // ✅ Category icons mapping
 const CATEGORY_ICONS = {
@@ -79,45 +80,19 @@ const cardVariants = {
   }
 };
 
-// ✅ Enhanced Transaction Item Component
-const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClick }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  // ✅ FIX: Use transaction type instead of amount sign to determine income/expense
-  const isIncome = transaction.type === 'income';
-  const amount = Math.abs(transaction.amount);
-  
-  // Get category icon
-  const categoryKey = transaction.category_name?.toLowerCase() || 'other';
-  const CategoryIcon = CATEGORY_ICONS[categoryKey] || 
-    (Object.keys(CATEGORY_ICONS).find(key => categoryKey.includes(key)) 
-      ? CATEGORY_ICONS[Object.keys(CATEGORY_ICONS).find(key => categoryKey.includes(key))]
-      : Plus);
-  
-  const date = new Date(transaction.date || transaction.created_at);
-  const isToday = date.toDateString() === new Date().toDateString();
-  const isYesterday = date.toDateString() === new Date(Date.now() - 86400000).toDateString();
-  
-  const getDateLabel = () => {
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
-    return date.toLocaleDateString();
-  };
-
+// ✅ SIMPLIFIED: Use ModernTransactionCard for consistency
+const TransactionItem = ({ transaction, onTransactionClick }) => {
   return (
-    <motion.div
-      variants={itemVariants}
-      whileHover="hover"
-      whileTap="tap"
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      onClick={() => onTransactionClick?.(transaction)}
-      className="group relative cursor-pointer"
-    >
-      <motion.div
-        variants={cardVariants}
-        className={cn(
-          'relative overflow-visible rounded-xl p-4 border transition-all duration-300 z-10',
-          'bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm',
+    <motion.div variants={itemVariants}>
+      <ModernTransactionCard
+        transaction={transaction}
+        viewMode="list"
+        onEdit={() => onTransactionClick?.(transaction)}
+        className="mb-2"
+      />
+    </motion.div>
+  );
+};
           'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
           'hover:shadow-lg hover:bg-white dark:hover:bg-gray-800'
         )}
@@ -220,7 +195,7 @@ const TransactionItem = ({ transaction, formatCurrency, isRTL, onTransactionClic
                   className="text-xs text-gray-500 mt-1"
                   animate={{ opacity: isHovered ? 0.7 : 1 }}
                 >
-                  {isToday ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : getDateLabel()}
+                  {isToday ? getTimezoneDisplay() : getDateLabel()}
                 </motion.p>
               </div>
             </div>
@@ -375,7 +350,8 @@ const ModernRecentTransactionsWidget = ({
     let filtered = allTransactions
       // Only include past and present transactions
       .filter(transaction => {
-        const transactionDate = new Date(transaction.date || transaction.created_at);
+        // ✅ TIMEZONE-AWARE: Use transaction_datetime for filtering
+        const transactionDate = new Date(transaction.transaction_datetime || transaction.created_at || transaction.date);
         if (transactionDate > now) return false;
         if (transaction.is_recurring && transactionDate > now) return false;
         if (transaction.is_template) return false;
@@ -390,10 +366,10 @@ const ModernRecentTransactionsWidget = ({
           transaction.category_name?.toLowerCase().includes(searchLower)
         );
       })
-      // Sort by date (most recent first)
+      // Sort by date (most recent first) - TIMEZONE-AWARE
       .sort((a, b) => {
-        const dateA = new Date(a.date || a.created_at);
-        const dateB = new Date(b.date || b.created_at);
+        const dateA = new Date(a.transaction_datetime || a.created_at || a.date);
+        const dateB = new Date(b.transaction_datetime || b.created_at || b.date);
         return dateB - dateA;
       });
 

@@ -20,7 +20,11 @@ const SimpleTransactionCard = ({
   // ✅ FIX: Use transaction type instead of amount sign to determine income/expense
   const isIncome = transaction?.type === 'income';
   const amountAbs = Math.abs(transaction?.amount || 0);
-  const dateText = dateHelpers.fromNow(transaction?.date || transaction?.created_at);
+  // ✅ TIMEZONE-AWARE: Use transaction_datetime (user's intended time) over created_at (server time)
+  const getTransactionDate = () => {
+    return transaction?.transaction_datetime || transaction?.created_at || transaction?.date;
+  };
+  const dateText = dateHelpers.fromNow(getTransactionDate());
   const isRecurring = transaction?.template_id || transaction?.is_recurring;
 
   const Icon = useMemo(() => getIconComponent(
