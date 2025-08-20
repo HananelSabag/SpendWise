@@ -634,7 +634,21 @@ const Profile = () => {
         ) : null}
         
         <div className="space-y-4 max-w-md">
-        {/* Current password field removed per request */}
+        {/* Current password field - REQUIRED for password change */}
+        {!isGoogleOnlyUser && (
+          <div className="relative">
+            <Input
+              label={t('security.password.current', { fallback: 'Current Password' })}
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+              icon={<Key className="w-5 h-5" />}
+              placeholder={t('security.password.current', { fallback: 'Enter current password...' })}
+              autoComplete="current-password"
+              showPasswordToggle
+            />
+          </div>
+        )}
 
         <div className="relative">
           <Input
@@ -665,7 +679,7 @@ const Profile = () => {
           disabled={
             isGoogleOnlyUser 
               ? (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
-              : (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+              : (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading)
           }
           variant="primary"
           size="lg"

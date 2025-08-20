@@ -530,10 +530,20 @@ const userController = {
           updateData.last_name = name?.split(' ').slice(1).join(' ') || user.last_name || '';
         }
         
-        await User.update(user.id, updateData);
+        // ✅ Ensure user exists and updateData is valid before update
+        if (!user || !user.id) {
+          throw { 
+            ...errorCodes.NOT_FOUND, 
+            details: 'User not found during Google OAuth update' 
+          };
+        }
         
-        // Refresh user data
-        user = await User.findById(user.id);
+        if (Object.keys(updateData).length > 0) {
+          await User.update(user.id, updateData);
+          
+          // Refresh user data
+          user = await User.findById(user.id);
+        }
         
         logger.info('✅ Existing user authenticated via Google', {
           userId: user.id,
@@ -806,6 +816,21 @@ const userController = {
     const userId = req.user.id;
     const { currentPassword, newPassword } = req.body;
 
+    // ✅ Enhanced validation for required fields
+    if (!newPassword) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: { newPassword: 'New password is required' }
+      };
+    }
+
+    if (newPassword.length < 8) {
+      throw { 
+        ...errorCodes.VALIDATION_ERROR, 
+        details: { newPassword: 'New password must be at least 8 characters' }
+      };
+    }
+
     try {
       // Get user with password hash for verification
       const query = `
@@ -824,7 +849,9 @@ const userController = {
       
       // ✅ HYBRID SYSTEM: Allow password changes for all users
       // If user doesn't have a password yet, they're setting their first password (OAuth users)
-      if (!user.password_hash) {
+      const hasExistingPassword = user.password_hash && user.password_hash.length > 0;
+      
+      if (!hasExistingPassword) {
         // For OAuth users setting their first password, skip current password verification
         // This allows them to set up email/password login alongside their OAuth account
         logger.info('🔑 OAuth user setting first password for hybrid login', {
@@ -834,13 +861,20 @@ const userController = {
         });
       } else {
         // Regular password change - verify current password
+        if (!currentPassword) {
+          throw { 
+            ...errorCodes.VALIDATION_ERROR, 
+            details: { currentPassword: 'Current password is required' }
+          };
+        }
+        
         const bcrypt = require('bcrypt');
         const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
         
         if (!isValidPassword) {
           throw { 
             ...errorCodes.UNAUTHORIZED, 
-            details: 'Current password is incorrect' 
+            details: { currentPassword: 'Current password is incorrect' }
           };
         }
       }
