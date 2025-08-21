@@ -892,8 +892,13 @@ const userController = {
       
       const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
       
+      // ✅ CRITICAL: Invalidate cache after password change - Ensures fresh data on next login
+      const { UserCache } = require('../models/User');
+      UserCache.invalidate(userId);
+      UserCache.invalidate(`email:${user.email.toLowerCase()}`);
+      
       const duration = Date.now() - start;
-      logger.info('✅ User password changed successfully', {
+      logger.info('✅ User password changed successfully - CACHE INVALIDATED', {
         userId,
         email: user.email,
         duration: `${duration}ms`,
@@ -975,8 +980,13 @@ const userController = {
       
       const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
       
+      // ✅ CRITICAL: Invalidate cache after password update - This fixes the authentication issue!
+      const { UserCache } = require('../models/User');
+      UserCache.invalidate(userId);
+      UserCache.invalidate(`email:${user.email.toLowerCase()}`);
+      
       const duration = Date.now() - start;
-      logger.info('✅ OAuth user set first password successfully', {
+      logger.info('✅ OAuth user set first password successfully - CACHE INVALIDATED', {
         userId,
         email: user.email,
         oauthProvider: user.oauth_provider,

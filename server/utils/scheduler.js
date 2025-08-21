@@ -157,14 +157,14 @@ class Scheduler {
       const passwordResult = await db.query(`
         DELETE FROM password_reset_tokens 
         WHERE expires_at < NOW() OR used = TRUE
-        RETURNING count(*) as deleted_count
+        RETURNING id
       `, [], 'cleanup_password_tokens');
 
       // Clean up expired email verification tokens  
       const emailResult = await db.query(`
         DELETE FROM email_verification_tokens 
         WHERE expires_at < NOW() OR used = TRUE
-        RETURNING count(*) as deleted_count
+        RETURNING id
       `, [], 'cleanup_email_tokens');
 
       const passwordDeleted = passwordResult.rowCount || 0;
