@@ -66,7 +66,8 @@ export default {
       change: 'Change Password',
       success: 'Password changed successfully',
       error: 'Error changing password',
-      requirements: 'Password must be at least 8 characters'
+      requirements: 'Password must be at least 8 characters',
+      policy: 'Password must include at least one letter and one number'
     },
     
     // Two-factor authentication

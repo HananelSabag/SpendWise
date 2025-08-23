@@ -58,7 +58,7 @@ const TransactionTypeToggle = ({
     }
   }[size];
 
-  // ✅ Type configurations
+  // ✅ Type configurations - Enhanced mobile support
   const typeConfigs = {
     [TRANSACTION_TYPES.EXPENSE]: {
       label: t('types.expense'),
@@ -67,7 +67,9 @@ const TransactionTypeToggle = ({
       bgColor: 'bg-red-500',
       bgColorLight: 'bg-red-50 dark:bg-red-900/20',
       borderColor: 'border-red-200 dark:border-red-700',
-      hoverColor: 'hover:bg-red-100 dark:hover:bg-red-900/30'
+      hoverColor: 'hover:bg-red-100 dark:hover:bg-red-900/30',
+      activeTextColor: 'text-white',
+      inactiveTextColor: 'text-red-600 dark:text-red-400'
     },
     [TRANSACTION_TYPES.INCOME]: {
       label: t('types.income'),
@@ -76,7 +78,9 @@ const TransactionTypeToggle = ({
       bgColor: 'bg-green-500',
       bgColorLight: 'bg-green-50 dark:bg-green-900/20',
       borderColor: 'border-green-200 dark:border-green-700',
-      hoverColor: 'hover:bg-green-100 dark:hover:bg-green-900/30'
+      hoverColor: 'hover:bg-green-100 dark:hover:bg-green-900/30',
+      activeTextColor: 'text-white',
+      inactiveTextColor: 'text-green-600 dark:text-green-400'
     }
   };
 
@@ -91,19 +95,23 @@ const TransactionTypeToggle = ({
         {t('fields.type.label')}
       </label>
 
-      {/* Toggle Container */}
+      {/* Toggle Container - Enhanced Mobile Support */}
       <div className={cn(
-        "relative flex items-center border-2 rounded-lg overflow-hidden transition-all duration-200",
+        "relative flex items-center border-2 rounded-lg overflow-hidden transition-all duration-200 touch-manipulation",
         sizeConfig.container,
         error ? "border-red-300 dark:border-red-600" : "border-gray-200 dark:border-gray-700",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}>
-        {/* Background Slider */}
+        disabled && "opacity-50 cursor-not-allowed",
+        // Enhanced mobile support
+        "select-none"
+      )} style={{ direction: 'ltr' }}>
+        {/* Background Slider - Enhanced Mobile Animation */}
         <motion.div
           layout
           className={cn(
-            "absolute top-1 bottom-1 w-1/2 rounded-md",
-            currentConfig.bgColor
+            "absolute top-1 bottom-1 w-1/2 rounded-md shadow-sm",
+            currentConfig.bgColor,
+            // Enhanced mobile performance
+            "will-change-transform"
           )}
           initial={false}
           animate={{
@@ -111,45 +119,58 @@ const TransactionTypeToggle = ({
           }}
           transition={{
             type: "spring",
-            stiffness: 300,
-            damping: 30
+            stiffness: 400,
+            damping: 35,
+            mass: 0.8
           }}
         />
 
-        {/* Expense Button */}
+        {/* Expense Button - Enhanced Mobile Support */}
         <button
           type="button"
           onClick={() => onChange?.(TRANSACTION_TYPES.EXPENSE)}
           disabled={disabled}
           className={cn(
-            "relative z-10 flex-1 flex items-center justify-center space-x-2 font-medium transition-colors duration-200",
+            "relative z-10 flex-1 flex items-center justify-center space-x-2 font-medium transition-all duration-200",
             sizeConfig.button,
+            // Enhanced color logic for mobile
             value === TRANSACTION_TYPES.EXPENSE 
-              ? "text-white" 
-              : cn(typeConfigs[TRANSACTION_TYPES.EXPENSE].color, typeConfigs[TRANSACTION_TYPES.EXPENSE].hoverColor),
-            !disabled && "cursor-pointer"
+              ? "text-white font-semibold" 
+              : cn(
+                  typeConfigs[TRANSACTION_TYPES.EXPENSE].inactiveTextColor,
+                  !disabled && "hover:bg-red-50 dark:hover:bg-red-900/10 active:bg-red-100 dark:active:bg-red-900/20"
+                ),
+            !disabled && "cursor-pointer touch-manipulation",
+            // Mobile-specific enhancements
+            "tap-highlight-transparent focus:outline-none focus:ring-2 focus:ring-red-500/50"
           )}
         >
-          <TrendingDown className={sizeConfig.icon} />
-          <span>{typeConfigs[TRANSACTION_TYPES.EXPENSE].label}</span>
+          <TrendingDown className={cn(sizeConfig.icon, "flex-shrink-0")} />
+          <span className="truncate">{typeConfigs[TRANSACTION_TYPES.EXPENSE].label}</span>
         </button>
 
-        {/* Income Button */}
+        {/* Income Button - Enhanced Mobile Support */}
         <button
           type="button"
           onClick={() => onChange?.(TRANSACTION_TYPES.INCOME)}
           disabled={disabled}
           className={cn(
-            "relative z-10 flex-1 flex items-center justify-center space-x-2 font-medium transition-colors duration-200",
+            "relative z-10 flex-1 flex items-center justify-center space-x-2 font-medium transition-all duration-200",
             sizeConfig.button,
+            // Enhanced color logic for mobile
             value === TRANSACTION_TYPES.INCOME 
-              ? "text-white" 
-              : cn(typeConfigs[TRANSACTION_TYPES.INCOME].color, typeConfigs[TRANSACTION_TYPES.INCOME].hoverColor),
-            !disabled && "cursor-pointer"
+              ? "text-white font-semibold" 
+              : cn(
+                  typeConfigs[TRANSACTION_TYPES.INCOME].inactiveTextColor,
+                  !disabled && "hover:bg-green-50 dark:hover:bg-green-900/10 active:bg-green-100 dark:active:bg-green-900/20"
+                ),
+            !disabled && "cursor-pointer touch-manipulation",
+            // Mobile-specific enhancements
+            "tap-highlight-transparent focus:outline-none focus:ring-2 focus:ring-green-500/50"
           )}
         >
-          <TrendingUp className={sizeConfig.icon} />
-          <span>{typeConfigs[TRANSACTION_TYPES.INCOME].label}</span>
+          <TrendingUp className={cn(sizeConfig.icon, "flex-shrink-0")} />
+          <span className="truncate">{typeConfigs[TRANSACTION_TYPES.INCOME].label}</span>
         </button>
 
         {/* Switch Icon (shows on hover) */}
@@ -174,9 +195,9 @@ const TransactionTypeToggle = ({
         </motion.p>
       )}
 
-      {/* Helper Text */}
+      {/* Helper Text - Enhanced Mobile Readability */}
       {!error && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
           {t('fields.type.helper', { 
             current: currentConfig.label,
             other: otherConfig.label 

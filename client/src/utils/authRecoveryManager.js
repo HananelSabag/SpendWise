@@ -151,8 +151,20 @@ class AuthRecoveryManager {
 
     // HTTP status code errors
     const status = error.response.status;
-    if (status === 401 || status === 403) {
+
+    // Treat 401 as authentication error (token expired/invalid)
+    if (status === 401) {
       return 'AUTH_ERROR';
+    }
+
+    // Treat 403 as auth error ONLY for explicit blocked sessions; otherwise it's a permission issue
+    if (status === 403) {
+      const err = error.response?.data?.error || {};
+      if (err.code === 'USER_BLOCKED') {
+        return 'AUTH_ERROR';
+      }
+      // Permission denied (e.g., adminOnly) should NOT trigger auth recovery/logout
+      return 'CLIENT_ERROR';
     }
     
     if (status >= 500) {

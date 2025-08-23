@@ -10,6 +10,29 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    
+    /* Accessibility: Font size scaling */
+    --font-size-scale: 1;
+    font-size: calc(16px * var(--font-size-scale));
+  }
+  
+  /* Accessibility: Motion reduction */
+  :root {
+    --motion-reduce: 0;
+  }
+  
+  /* Apply motion reduction when enabled */
+  * {
+    animation-duration: calc(var(--motion-reduce) * 0s + (1 - var(--motion-reduce)) * 300ms);
+    transition-duration: calc(var(--motion-reduce) * 0s + (1 - var(--motion-reduce)) * 200ms);
+  }
+  
+  /* Respect system preference for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0s !important;
+      transition-duration: 0s !important;
+    }
   }
 
   /* Smooth scrolling */

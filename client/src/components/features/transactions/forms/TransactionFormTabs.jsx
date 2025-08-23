@@ -1,8 +1,8 @@
 /**
- * 📝 TRANSACTION FORM WITH TABS - עיצוב מחדש מקיף
- * טופס עסקאות עם הבחנה ברורה בין חד-פעמי לחוזר
- * Features: טאבים נפרדים, UX משופר, הבחנה ויזואלית ברורה
- * @version 4.0.0 - בהתאם לבקשת המשתמש
+ * 📝 TRANSACTION FORM WITH TABS - Comprehensive Redesign
+ * Clear distinction between one-time and recurring transactions
+ * Features: Separate tabs, improved UX, clear visual distinction
+ * @version 4.0.0
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -89,18 +89,18 @@ const TransactionFormTabs = ({
     {
       id: 'one-time',
       icon: CreditCard,
-      title: t('tabs.oneTime.title', { fallback: 'עסקה חד פעמית' }),
-      subtitle: t('tabs.oneTime.subtitle', { fallback: 'עסקה אחת בלבד' }),
+      title: t('tabs.oneTime.title', { fallback: 'One-time Transaction' }),
+      subtitle: t('tabs.oneTime.subtitle', { fallback: 'Single transaction' }),
       color: 'blue',
-      description: t('tabs.oneTime.description', { fallback: 'צור עסקה יחידה שתבוצע פעם אחת' })
+      description: t('tabs.oneTime.description', { fallback: 'Create a single transaction executed once' })
     },
     {
       id: 'recurring',
       icon: Repeat,
-      title: t('tabs.recurring.title', { fallback: 'עסקה חוזרת' }),
-      subtitle: t('tabs.recurring.subtitle', { fallback: 'עסקה אוטומטית' }),
+      title: t('tabs.recurring.title', { fallback: 'Recurring Transaction' }),
+      subtitle: t('tabs.recurring.subtitle', { fallback: 'Automatic transaction' }),
       color: 'purple',
-      description: t('tabs.recurring.description', { fallback: 'צור תבנית שתיצור עסקאות אוטומטית בעתיד' })
+      description: t('tabs.recurring.description', { fallback: 'Create a template that generates transactions automatically' })
     }
   ];
 
@@ -108,7 +108,7 @@ const TransactionFormTabs = ({
   const handleTabChange = useCallback((tabId) => {
     if (isDirty) {
       const confirmed = window.confirm(t('tabs.changeWarning', { 
-        fallback: 'שינוי הטאב יאיפס את הטופס. האם להמשיך?' 
+        fallback: 'Changing the tab will reset the form. Continue?' 
       }));
       if (!confirmed) return;
     }
@@ -173,8 +173,8 @@ const TransactionFormTabs = ({
       addNotification({
         type: 'success',
         message: activeTab === 'recurring' 
-          ? t('form.recurringCreateSuccess', { fallback: 'תבנית חוזרת נוצרה בהצלחה!' })
-          : t('form.createSuccess', { fallback: 'עסקה נוצרה בהצלחה!' }),
+          ? t('form.recurringCreateSuccess', { fallback: 'Recurring transaction template created successfully!' })
+          : t('form.createSuccess', { fallback: 'Transaction created successfully!' }),
         duration: 3000
       });
       
@@ -219,12 +219,12 @@ const TransactionFormTabs = ({
             {mode === 'edit' ? t('form.editTransaction') : t('form.addTransaction')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            {t('form.selectType', { fallback: 'בחר את סוג העסקה שברצונך ליצור' })}
+            {t('form.selectType', { fallback: 'Choose the type of transaction you want to create' })}
           </p>
         </div>
 
         {/* Compact segmented control instead of large cards */}
-        <div className="inline-flex bg-white dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="inline-flex bg-white dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700 shadow-sm" style={{ direction: 'ltr' }}>
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -242,7 +242,7 @@ const TransactionFormTabs = ({
                 disabled={mode === 'edit'}
               >
                 <TabIcon className="w-4 h-4" />
-                <span>{tab.id === 'recurring' ? t('tabs.recurring.title', { fallback: 'עסקה חוזרת' }) : t('tabs.oneTime.title', { fallback: 'עסקה חד פעמית' })}</span>
+                <span>{tab.id === 'recurring' ? t('tabs.recurring.title', { fallback: 'Recurring Transaction' }) : t('tabs.oneTime.title', { fallback: 'One-time Transaction' })}</span>
               </button>
             );
           })}
@@ -254,7 +254,7 @@ const TransactionFormTabs = ({
             <div className="flex items-center space-x-2 rtl:space-x-reverse text-yellow-800 dark:text-yellow-200">
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm font-medium">
-                {t('form.editMode', { fallback: 'במצב עריכה - לא ניתן לשנות את סוג העסקה' })}
+                {t('form.editMode', { fallback: 'In edit mode - cannot change transaction type' })}
               </span>
             </div>
           </div>
@@ -294,8 +294,8 @@ const TransactionFormTabs = ({
                   </h3>
                   <p className="text-lg text-gray-600 dark:text-gray-400">
                     {activeTab === 'recurring' 
-                      ? t('form.recurringSubtitle', { fallback: 'הגדר תבנית לעסקאות אוטומטיות' })
-                      : t('form.oneTimeSubtitle', { fallback: 'פרטי העסקה החד-פעמית' })
+                      ? t('form.recurringSubtitle', { fallback: 'Set up template for automatic transactions' })
+                      : t('form.oneTimeSubtitle', { fallback: 'One-time transaction details' })
                     }
                   </p>
                 </div>
@@ -360,13 +360,15 @@ const TransactionFormTabs = ({
                         )}
                       </div>
                       <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {activeTab === 'recurring' ? 'תצוגה מקדימה של עסקה חוזרת' : 'סיכום עסקה'}
+                        {activeTab === 'recurring' 
+                          ? t('recurring.preview.title', { fallback: 'Recurring Preview' })
+                          : t('form.editTransaction', { fallback: 'Transaction Summary' })}
                       </h4>
                     </div>
                     
                     <div className="space-y-4">
                       <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">סכום:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('fields.amount.label', { fallback: 'Amount' })}:</span>
                         <span className={cn(
                           "font-bold text-lg",
                           formData.type === 'income' ? "text-green-600" : "text-red-600"
@@ -376,15 +378,15 @@ const TransactionFormTabs = ({
                       </div>
                       
                       <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">סוג:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('fields.type.label', { fallback: 'Type' })}:</span>
                         <Badge variant={formData.type === 'income' ? 'success' : 'destructive'}>
-                          {formData.type === 'income' ? 'הכנסה' : 'הוצאה'}
+                          {formData.type === 'income' ? t('types.income', { fallback: 'Income' }) : t('types.expense', { fallback: 'Expense' })}
                         </Badge>
                       </div>
                       
                       {formData.description && (
                         <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                          <span className="text-gray-600 dark:text-gray-400 block mb-1">תיאור:</span>
+                          <span className="text-gray-600 dark:text-gray-400 block mb-1">{t('fields.description.label', { fallback: 'Description' })}:</span>
                           <p className="font-medium text-gray-900 dark:text-white">{formData.description}</p>
                         </div>
                       )}
@@ -393,10 +395,10 @@ const TransactionFormTabs = ({
                         <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                           <div className="flex items-center space-x-2 rtl:space-x-reverse text-purple-600 dark:text-purple-400 mb-2">
                             <Repeat className="w-4 h-4" />
-                            <span className="font-medium">עסקה חוזרת</span>
+                            <span className="font-medium">{t('labels.recurring', { fallback: 'Recurring' })}</span>
                           </div>
                           <p className="text-sm text-purple-700 dark:text-purple-300">
-                            עסקה זו תוגדר כתבנית ותיווצר אוטומטית לפי התדירות שנבחרה
+                            {t('recurring.description', { fallback: 'This will be created as a template and generated automatically by the chosen frequency.' })}
                           </p>
                         </div>
                       )}

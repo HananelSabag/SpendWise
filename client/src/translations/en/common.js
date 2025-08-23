@@ -42,6 +42,10 @@ export default {
   themeChanged: 'Theme changed to {{theme}}',
   lightTheme: 'Light Theme',
   darkTheme: 'Dark Theme',
+  
+  // Status states
+  enabled: 'Enabled',
+  disabled: 'Disabled',
 
   // Password actions
   showPassword: 'Show Password',
@@ -142,7 +146,11 @@ export default {
 
   // Accessibility
   accessibility: {
+    title: 'Accessibility Settings',
+    subtitle: 'Customize your viewing experience',
+    
     fontSize: {
+      title: 'Font Size',
       extraSmall: 'Extra Small',
       small: 'Small',
       normal: 'Normal',
@@ -151,14 +159,35 @@ export default {
       huge: 'Huge'
     },
     theme: {
+      title: 'Theme',
       light: 'Light',
       dark: 'Dark',
       auto: 'Auto'
     },
     contrast: {
+      title: 'Contrast',
       normal: 'Normal',
       high: 'High',
       maximum: 'Maximum'
+    },
+    motionReduced: {
+      title: 'Reduce Motion'
+    },
+    screenReader: {
+      title: 'Screen Reader Mode'
+    },
+    sound: {
+      title: 'Sound Announcements'
+    },
+    focusVisible: {
+      title: 'Enhanced Focus Indicators'
+    },
+    settings: {
+      saved: 'Accessibility settings saved',
+      saveFailed: 'Failed to save accessibility settings',
+      reset: 'Settings reset to defaults',
+      save: 'Save Settings',
+      unsavedChanges: 'You have unsaved changes'
     }
   },
 

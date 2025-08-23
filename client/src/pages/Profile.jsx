@@ -288,24 +288,41 @@ const Profile = () => {
       return;
     }
 
+    // ✅ Enforce same policy as server (at least one letter and one number)
+    if (!/[A-Za-z]/.test(passwordData.newPassword) || !/[0-9]/.test(passwordData.newPassword)) {
+      authToasts.error?.(t('security.password.policy', { fallback: 'Password must include at least one letter and one number' }));
+      return;
+    }
+
     setIsLoading(true);
     try {
       // ✅ Use NEW auth status API to determine user type (reliable)
       const authStatusResult = await api.authStatus.getAuthStatus();
       const isGoogleOnlyUser = authStatusResult.success && authStatusResult.data.authType === 'GOOGLE_ONLY';
 
+      let result;
       if (isGoogleOnlyUser) {
         // OAuth user setting first password - use setPassword endpoint
-        await api.auth.setPassword({
+        console.log('🔐 Calling setPassword API for Google-only user');
+        result = await api.auth.setPassword({
           newPassword: passwordData.newPassword
         });
       } else {
         // Regular user changing password - use changePassword endpoint
-        await api.auth.changePassword({
+        console.log('🔐 Calling changePassword API for regular user');
+        result = await api.auth.changePassword({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
         });
       }
+
+      // ✅ CRITICAL: Check if the API call actually succeeded
+      if (!result.success) {
+        console.error('❌ Password API call failed:', result.error);
+        throw new Error(result.error?.message || 'Password operation failed');
+      }
+      
+      console.log('✅ Password API call successful:', result.message);
       
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       
@@ -324,7 +341,7 @@ const Profile = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [passwordData, authToasts, user]);
+  }, [passwordData, authToasts, user, t]);
 
   const renderPersonalTab = () => (
     <Card className="p-6">

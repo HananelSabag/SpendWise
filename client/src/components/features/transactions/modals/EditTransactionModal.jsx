@@ -101,8 +101,8 @@ const EditTransactionModal = ({
       addNotification({
         type: 'success',
         message: mode === 'duplicate' 
-          ? t('notifications.duplicateSuccess')
-          : t('notifications.updateSuccess'),
+          ? t('success.transactionAdded')
+          : t('success.transactionUpdated'),
         duration: 3000
       });
       
@@ -121,8 +121,8 @@ const EditTransactionModal = ({
       addNotification({
         type: 'error',
         message: error.message || (mode === 'duplicate' 
-          ? t('notifications.duplicateFailed')
-          : t('notifications.updateFailed')),
+          ? t('errors.addingFailed')
+          : t('errors.updatingFailed')),
         duration: 4000
       });
     } finally {
@@ -139,7 +139,7 @@ const EditTransactionModal = ({
       
       addNotification({
         type: 'success',
-        message: t('notifications.deleteSuccess'),
+        message: t('success.transactionDeleted'),
         duration: 3000
       });
       
@@ -151,7 +151,7 @@ const EditTransactionModal = ({
       
       addNotification({
         type: 'error',
-        message: error.message || t('notifications.deleteFailed'),
+        message: error.message || t('errors.deletingFailed'),
         duration: 4000
       });
     }

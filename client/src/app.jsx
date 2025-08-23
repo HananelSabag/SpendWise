@@ -26,6 +26,7 @@ import { ToastProvider } from './hooks/useToast';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 import ConnectionStatusOverlay from './components/common/ConnectionStatusOverlay';
+import UnifiedTransactionActions from './components/features/transactions/actions/UnifiedTransactionActions.jsx';
 
 // ✅ Balance Provider  
 import { BalanceProvider } from './contexts/BalanceContext';
@@ -421,6 +422,8 @@ const AppContent = () => {
       {isAuthenticated && <Footer />}
       {/* Floating accessibility button (works on mobile and desktop) */}
       {isAuthenticated && <AccessibilityFab />}
+      {/* Global unified transaction actions (modals orchestrator) */}
+      {isAuthenticated && <UnifiedTransactionActions />}
       
       {/* Portal container for modals */}
       <div id="portal-root" />

@@ -148,7 +148,7 @@ const AccessibilityMenu = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleCancel}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
           />
 
           {/* Menu */}
@@ -170,15 +170,21 @@ const AccessibilityMenu = ({
             }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "fixed z-50 w-full max-w-md bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl",
-              "bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
-              "max-h-[90vh] overflow-hidden",
+              "fixed z-50 bg-white dark:bg-gray-800 shadow-2xl overflow-hidden",
+              // Mobile: Full width bottom sheet
+              "w-full bottom-0 left-0 right-0 rounded-t-2xl max-h-[90vh] mx-auto",
+              // Desktop: Large centered modal - RESET positioning for desktop
+              "sm:bottom-auto sm:left-auto sm:right-auto sm:mx-0",
+              "sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
+              "sm:w-auto sm:min-w-[600px] sm:max-w-[800px] sm:rounded-2xl sm:max-h-[80vh]",
+              // Large desktop: Even bigger
+              "lg:min-w-[700px] lg:max-w-[900px] lg:max-h-[85vh]",
               className
             )}
             style={{ direction: isRTL ? 'rtl' : 'ltr' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                   <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -205,7 +211,7 @@ const AccessibilityMenu = ({
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+            <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-h-[60vh] sm:max-h-[55vh] lg:max-h-[60vh] overflow-y-auto overscroll-contain">
               {/* Font Size */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -217,7 +223,7 @@ const AccessibilityMenu = ({
                     {fontSizeOptions.find(opt => opt.value === fontSize)?.size}
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {fontSizeOptions.map((option) => (
                     <Button
                       key={option.value}
@@ -238,7 +244,7 @@ const AccessibilityMenu = ({
                   <Palette className="w-4 h-4 mr-2" />
                   {t('accessibility.theme.title')}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {themeOptions.map((option) => {
                     const Icon = option.icon;
                     return (
@@ -355,7 +361,7 @@ const AccessibilityMenu = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+            <div className="p-6 sm:p-8 border-t border-gray-200 dark:border-gray-700 space-y-3">
               {hasChanges && (
                 <div className="flex items-center justify-center text-xs text-orange-600 dark:text-orange-400 mb-3">
                   <Shield className="w-4 h-4 mr-1" />
@@ -363,34 +369,37 @@ const AccessibilityMenu = ({
                 </div>
               )}
 
+              {/* Reset to Defaults Button - Prominent placement */}
+              <Button
+                variant="secondary"
+                onClick={handleReset}
+                className="w-full mb-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-md"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                {t('accessibility.settings.reset')}
+              </Button>
+              
               <div className="flex space-x-3">
                 <Button
                   variant="outline"
-                  onClick={handleReset}
+                  onClick={handleCancel}
                   className="flex-1"
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  {t('accessibility.settings.reset')}
+                  {t('actions.cancel')}
                 </Button>
                 
                 <Button
                   variant="primary"
                   onClick={handleSave}
                   disabled={!hasChanges}
-                  className="flex-1"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {t('accessibility.settings.save')}
                 </Button>
               </div>
 
-              <Button
-                variant="ghost"
-                onClick={handleCancel}
-                className="w-full"
-              >
-                {t('actions.cancel')}
-              </Button>
+
             </div>
           </motion.div>
         </>

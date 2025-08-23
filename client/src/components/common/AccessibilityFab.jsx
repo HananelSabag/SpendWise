@@ -35,11 +35,11 @@ const AccessibilityFab = () => {
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
+      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 pb-safe">
         <button
           aria-label="Accessibility settings"
           onClick={() => setOpen(true)}
-          className="rounded-full p-3 shadow-lg bg-primary-600 hover:bg-primary-700 text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          className="rounded-full p-3 shadow-lg bg-primary-600 hover:bg-primary-700 text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 min-h-[44px] min-w-[44px] flex items-center justify-center"
         >
           <AccessibilityIcon className="w-6 h-6" />
         </button>
@@ -47,7 +47,7 @@ const AccessibilityFab = () => {
           aria-label="Hide accessibility button"
           title="Hide"
           onClick={toggleHidden}
-          className="rounded-full p-2 shadow bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+          className="rounded-full p-2 shadow bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
         >
           <X className="w-4 h-4" />
         </button>

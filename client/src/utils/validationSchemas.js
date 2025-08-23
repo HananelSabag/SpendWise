@@ -25,7 +25,8 @@ export const userSchemas = {
     password: z.string()
       .min(8, 'Password must be at least 8 characters')
       .max(16, 'Password must be at most 16 characters')
-      .regex(/[0-9]/, 'Password must contain at least one number'),
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[A-Za-z]/, 'Password must contain at least one letter'),
     confirmPassword: z.string()
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -42,6 +43,7 @@ export const userSchemas = {
       .min(8, 'Password must be at least 8 characters')
       .max(16, 'Password must be at most 16 characters')
       .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[A-Za-z]/, 'Password must contain at least one letter')
       .optional(),
   }).refine((data) => {
     if (data.newPassword && !data.currentPassword) {
@@ -361,5 +363,15 @@ export const imageValidation = {
       img.onerror = reject;
       img.src = URL.createObjectURL(file);
     });
+  }
+};
+
+// Add a small helper for client-side inline validation
+export const passwordHelpers = {
+  meetsPolicy(password) {
+    if (!password || password.length < 8) return false;
+    const hasNumber = /[0-9]/.test(password);
+    const hasLetter = /[A-Za-z]/.test(password);
+    return hasNumber && hasLetter;
   }
 };

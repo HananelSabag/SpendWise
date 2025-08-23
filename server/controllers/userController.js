@@ -892,10 +892,25 @@ const userController = {
       
       const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
       
-      // ✅ CRITICAL: Invalidate cache after password change - Ensures fresh data on next login
+      // ✅ CRITICAL: Invalidate ALL cache after password change - Ensures fresh data on next login
       const { UserCache } = require('../models/User');
+      
+      // Clear all possible cache keys for this user
       UserCache.invalidate(userId);
+      UserCache.invalidate(`user:${userId}`);
       UserCache.invalidate(`email:${user.email.toLowerCase()}`);
+      UserCache.invalidate(`user:email:${user.email.toLowerCase()}`);
+      
+      // NUCLEAR OPTION: Clear entire cache to be absolutely sure
+      UserCache.clear();
+      
+      // Log the password change for debugging
+      logger.info('🔐 PASSWORD CHANGED - Cache cleared completely', {
+        userId,
+        email: user.email,
+        passwordHashLength: hashedNewPassword.length,
+        passwordHashPrefix: hashedNewPassword.substring(0, 10) + '...'
+      });
       
       const duration = Date.now() - start;
       logger.info('✅ User password changed successfully - CACHE INVALIDATED', {
@@ -941,6 +956,16 @@ const userController = {
     const userId = req.user.id;
     const { newPassword } = req.body;
 
+    // ✅ ENHANCED: Debug logging for setPassword calls
+    logger.info('🔐 setPassword API called', {
+      userId,
+      userEmail: req.user?.email || 'unknown',
+      hasNewPassword: !!newPassword,
+      newPasswordLength: newPassword ? newPassword.length : 0,
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    });
+
     try {
       // Get user to check their current state
       const query = `
@@ -980,10 +1005,25 @@ const userController = {
       
       const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
       
-      // ✅ CRITICAL: Invalidate cache after password update - This fixes the authentication issue!
+      // ✅ CRITICAL: Invalidate ALL cache after password update - This fixes the authentication issue!
       const { UserCache } = require('../models/User');
+      
+      // Clear all possible cache keys for this user
       UserCache.invalidate(userId);
+      UserCache.invalidate(`user:${userId}`);
       UserCache.invalidate(`email:${user.email.toLowerCase()}`);
+      UserCache.invalidate(`user:email:${user.email.toLowerCase()}`);
+      
+      // NUCLEAR OPTION: Clear entire cache to be absolutely sure
+      UserCache.clear();
+      
+      // Log the password update for debugging
+      logger.info('🔐 PASSWORD SET - Cache cleared completely', {
+        userId,
+        email: user.email,
+        passwordHashLength: hashedNewPassword.length,
+        passwordHashPrefix: hashedNewPassword.substring(0, 10) + '...'
+      });
       
       const duration = Date.now() - start;
       logger.info('✅ OAuth user set first password successfully - CACHE INVALIDATED', {

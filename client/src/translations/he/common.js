@@ -42,6 +42,10 @@ export default {
   themeChanged: 'ערכת נושא עודכנה ל־{{theme}}',
   lightTheme: 'מצב בהיר',
   darkTheme: 'מצב כהה',
+  
+  // מצבי סטטוס
+  enabled: 'מופעל',
+  disabled: 'מושבת',
 
   // פעולות סיסמה
   showPassword: 'הצג סיסמה',
@@ -142,7 +146,11 @@ export default {
 
   // נגישות
   accessibility: {
+    title: 'הגדרות נגישות',
+    subtitle: 'התאם את חוויית הצפייה שלך',
+    
     fontSize: {
+      title: 'גודל גופן',
       extraSmall: 'קטן במיוחד',
       small: 'קטן',
       normal: 'רגיל',
@@ -151,14 +159,35 @@ export default {
       huge: 'ענק'
     },
     theme: {
+      title: 'עיצוב',
       light: 'בהיר',
       dark: 'כהה',
       auto: 'אוטומטי'
     },
     contrast: {
+      title: 'ניגודיות',
       normal: 'רגיל',
       high: 'גבוה',
       maximum: 'מקסימלי'
+    },
+    motionReduced: {
+      title: 'הפחת תנועה'
+    },
+    screenReader: {
+      title: 'מצב קורא מסך'
+    },
+    sound: {
+      title: 'הכרזות קוליות'
+    },
+    focusVisible: {
+      title: 'אינדיקטורי פוקוס משופרים'
+    },
+    settings: {
+      saved: 'הגדרות נגישות נשמרו',
+      saveFailed: 'שמירת הגדרות נגישות נכשלה',
+      reset: 'ההגדרות אופסו לברירת מחדל',
+      save: 'שמור הגדרות',
+      unsavedChanges: 'יש לך שינויים לא שמורים'
     }
   },
 

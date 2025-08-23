@@ -17,7 +17,15 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
       type="button"
       aria-label={label}
       title={label}
-      onClick={onClick}
+      onClick={(e) => {
+        if (onClick) {
+          onClick(e);
+        } else {
+          try {
+            window.dispatchEvent(new CustomEvent('transaction:add'));
+          } catch (_) {}
+        }
+      }}
       className="fixed bottom-6 left-6 z-[10000] group focus:outline-none"
     >
       {/* Glow */}

@@ -155,12 +155,14 @@ const ModernProfileStep = ({
   const validateForm = useCallback(() => {
     const newErrors = {};
     
-    // First and last name are optional now
     if (needsPassword) {
-      if (!profileData.password) {
+      const pwd = profileData.password || '';
+      if (!pwd) {
         newErrors.password = 'Password is required for hybrid authentication';
-      } else if (profileData.password.length < 8) {
+      } else if (pwd.length < 8) {
         newErrors.password = 'Password must be at least 8 characters';
+      } else if (!/[A-Za-z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+        newErrors.password = 'Password must include at least one letter and one number';
       }
       
       if (profileData.password !== profileData.confirmPassword) {

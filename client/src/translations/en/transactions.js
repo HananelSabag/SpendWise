@@ -589,6 +589,7 @@ export default {
     saving: "Saving...",
     createSuccess: "Transaction created successfully",
     recurringCreateSuccess: "Recurring transaction template created successfully!",
+    editMode: "In edit mode - cannot change transaction type",
     unsavedChanges: "You have unsaved changes"
   },
 

@@ -219,7 +219,11 @@ const ActionMenu = ({
                   e.preventDefault();
                   e.stopPropagation();
                   console.log('🎯 Edit clicked for transaction:', transaction.id);
-                  onEdit?.(transaction);
+                  if (onEdit) {
+                    onEdit(transaction);
+                  } else {
+                    try { window.dispatchEvent(new CustomEvent('transaction:edit', { detail: { tx: transaction } })); } catch (_) {}
+                  }
                   onToggle();
                 }}
                 className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
@@ -235,7 +239,11 @@ const ActionMenu = ({
                   e.preventDefault();
                   e.stopPropagation();
                   console.log('📋 Duplicate clicked for transaction:', transaction.id);
-                  onDuplicate?.(transaction);
+                  if (onDuplicate) {
+                    onDuplicate(transaction);
+                  } else {
+                    try { window.dispatchEvent(new CustomEvent('transaction:duplicate', { detail: { tx: transaction } })); } catch (_) {}
+                  }
                   onToggle();
                 }}
                 className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
@@ -253,7 +261,11 @@ const ActionMenu = ({
                   e.preventDefault();
                   e.stopPropagation();
                   console.log('🗑️ Delete clicked for transaction:', transaction.id);
-                  onDelete?.(transaction);
+                  if (onDelete) {
+                    onDelete(transaction);
+                  } else {
+                    try { window.dispatchEvent(new CustomEvent('transaction:delete', { detail: { tx: transaction } })); } catch (_) {}
+                  }
                   onToggle();
                 }}
                 className="w-full justify-start text-left text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"

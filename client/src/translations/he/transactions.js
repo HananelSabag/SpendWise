@@ -594,6 +594,7 @@ export default {
     saving: "שומר...",
     createSuccess: "העסקה נוצרה בהצלחה",
     recurringCreateSuccess: "תבנית העסקה החוזרת נוצרה בהצלחה!",
+    editMode: "במצב עריכה - לא ניתן לשנות את סוג העסקה",
     unsavedChanges: "יש לך שינויים שלא נשמרו"
   },
 
