@@ -69,12 +69,74 @@ export const authAPI = {
     } catch (error) {
       console.error('Login error:', error);
       
+      // Enhanced error handling with specific cases
+      let errorMessage = 'Login failed';
+      let errorCode = 'LOGIN_ERROR';
+      const status = error.response?.status || 0;
+      
+      // Handle specific HTTP status codes
+      if (status === 401) {
+        // Invalid credentials
+        const serverMessage = error.response?.data?.message || '';
+        if (serverMessage.toLowerCase().includes('invalid credentials') || 
+            serverMessage.toLowerCase().includes('invalid email') ||
+            serverMessage.toLowerCase().includes('invalid password') ||
+            serverMessage.toLowerCase().includes('incorrect')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          errorCode = 'INVALID_CREDENTIALS';
+        } else if (serverMessage.toLowerCase().includes('user not found')) {
+          errorMessage = 'Account not found. Please check your email or create a new account.';
+          errorCode = 'USER_NOT_FOUND';
+        } else {
+          errorMessage = 'Invalid email or password. Please try again.';
+          errorCode = 'INVALID_CREDENTIALS';
+        }
+      } else if (status === 403) {
+        // Account blocked or requires verification
+        const serverMessage = error.response?.data?.message || '';
+        if (serverMessage.toLowerCase().includes('email not verified')) {
+          errorMessage = 'Please verify your email address before logging in.';
+          errorCode = 'EMAIL_NOT_VERIFIED';
+        } else if (serverMessage.toLowerCase().includes('blocked')) {
+          errorMessage = 'Your account has been temporarily blocked. Please contact support.';
+          errorCode = 'ACCOUNT_BLOCKED';
+        } else {
+          errorMessage = 'Access denied. Please contact support if this persists.';
+          errorCode = 'ACCESS_DENIED';
+        }
+      } else if (status === 429) {
+        // Rate limiting
+        errorMessage = 'Too many login attempts. Please wait a moment and try again.';
+        errorCode = 'RATE_LIMITED';
+      } else if (status >= 500) {
+        // Server errors
+        errorMessage = 'Our server is currently experiencing issues. Please try again in a few moments.';
+        errorCode = 'SERVER_ERROR';
+      } else if (!error.response) {
+        // Network errors
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          errorMessage = 'Connection timed out. Please check your internet connection and try again.';
+          errorCode = 'TIMEOUT_ERROR';
+        } else {
+          errorMessage = 'Unable to connect to our servers. Please check your internet connection.';
+          errorCode = 'NETWORK_ERROR';
+        }
+      } else {
+        // Use server message if available and meaningful
+        const serverMessage = error.response?.data?.message;
+        if (serverMessage && !serverMessage.includes('Internal server error')) {
+          errorMessage = serverMessage;
+        }
+        errorCode = error.response?.data?.code || 'LOGIN_ERROR';
+      }
+      
       return {
         success: false,
         error: {
-          message: error.response?.data?.message || error.message || 'Login failed',
-          code: error.response?.data?.code || 'LOGIN_ERROR',
-          status: error.response?.status || 0
+          message: errorMessage,
+          code: errorCode,
+          status: status,
+          originalMessage: error.response?.data?.message || error.message
         }
       };
     }

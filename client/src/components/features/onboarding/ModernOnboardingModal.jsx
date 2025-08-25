@@ -81,21 +81,30 @@ const ModernOnboardingModal = ({
   // ✅ Handle completion
   const handleComplete = async () => {
     console.log('🎯 ModernOnboardingModal - Handling completion');
+    console.log('🎯 ModernOnboardingModal - previewOnly mode:', previewOnly);
+    console.log('🎯 ModernOnboardingModal - Current stepData:', stepData);
+    console.log('🎯 ModernOnboardingModal - Templates data:', stepData?.templates);
     try {
       if (previewOnly) {
+        console.log('⚠️ ModernOnboardingModal - PREVIEW ONLY MODE - Skipping template saving!');
         onComplete?.();
         onClose?.();
         return;
       }
       setIsCompleting(true);
+      console.log('🔄 ModernOnboardingModal - Calling completeOnboarding...');
       const result = await completeOnboarding();
+      console.log('🔄 ModernOnboardingModal - completeOnboarding result:', result);
       if (result) {
         console.log('✅ ModernOnboardingModal - Completion successful');
         onComplete?.();
         onClose?.();
+      } else {
+        console.log('❌ ModernOnboardingModal - Completion returned false');
       }
     } catch (error) {
       console.error('❌ ModernOnboardingModal - Completion failed:', error);
+      console.error('❌ ModernOnboardingModal - Error stack:', error.stack);
     } finally {
       setIsCompleting(false);
     }

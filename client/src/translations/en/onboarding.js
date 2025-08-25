@@ -38,6 +38,22 @@ export default {
   title: 'Welcome to SpendWise!',
   subtitle: 'Let\'s set up your account in just a few steps',
 
+  // ✅ Step-specific titles and subtitles
+  steps: {
+    profile: {
+      title: 'Profile & Preferences',
+      subtitle: 'Set up your profile and preferences'
+    },
+    education: {
+      title: 'Learn the Basics',
+      subtitle: 'Understand transactions and balance tracking'
+    },
+    templates: {
+      title: 'Quick Setup',
+      subtitle: 'Add recurring transactions in seconds'
+    }
+  },
+
   // ✅ WELCOME STEP - MISSING TRANSLATIONS ADDED
   welcome: {
     title: 'Welcome to SpendWise!',
@@ -128,6 +144,16 @@ export default {
       lifestyleDescription: 'Entertainment, dining, and personal expenses',
       customDescription: 'Your own custom templates'
     },
+
+    // New UX strings
+    enterAmount: 'Enter amount',
+    autoSelect: 'Press Enter or click away to select',
+    customName: 'Template name (e.g., "Farm Cleaning")',
+    customAmount: 'Amount',
+    customHint: 'Create your own recurring transaction',
+    remove: 'Remove',
+    readyToCreate: 'These will be saved as recurring transaction templates',
+    info: 'These are quick setups. You can create advanced recurring transactions with full control using the + button in the main app.',
 
     // Popular Templates
     popular: {
@@ -359,7 +385,10 @@ export default {
     success: 'Setup completed successfully! Welcome to SpendWise!',
     failed: 'Setup completion failed. Please try again.',
     completing: 'Completing your setup...',
-    almostDone: 'Almost done! Finalizing your account...'
+    almostDone: 'Almost done! Finalizing your account...',
+    templates_created: 'Successfully created {{count}} out of {{total}} templates',
+    templates_partial_failure: 'Some templates could not be created. Please try again.',
+    templates_failed: 'Templates could not be created, but onboarding will continue.'
   },
 
   // ✅ Type Labels

@@ -125,6 +125,12 @@ router.post('/templates',
   transactionController.createRecurringTemplate
 );
 
+// ✅ BULK CREATE TEMPLATES - FOR ONBOARDING
+router.post('/templates/bulk',
+  createTransactionLimiter,
+  transactionController.createBulkRecurringTemplates
+);
+
 // Update recurring template
 router.put('/templates/:id',
   createTransactionLimiter,

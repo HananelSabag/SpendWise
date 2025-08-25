@@ -67,6 +67,21 @@ export default {
   securityBlock: "Security Block",
   securityBlockDesc: "Login blocked due to security concerns",
   
+  // Specific login errors
+  invalidCredentials: "Invalid email or password. Please check your credentials and try again.",
+  userNotFound: "Account not found. Please check your email or create a new account.",
+  emailNotVerified: "Please verify your email address before logging in.",
+  accountBlocked: "Your account has been temporarily blocked. Please contact support.",
+  accessDenied: "Access denied. Please contact support if this persists.",
+  rateLimited: "Too many login attempts. Please wait a moment and try again.",
+  serverError: "Our server is currently experiencing issues. Please try again in a few moments.",
+  timeoutError: "Connection timed out. Please check your internet connection and try again.",
+  networkError: "Unable to connect to our servers. Please check your internet connection.",
+  
+  // Support messages
+  contactSupport: "If this problem persists, please contact us at:",
+  supportEmail: "spendwise.verification@gmail.com",
+  
   // Success messages
   loginSuccess: "Welcome back!",
   googleLoginSuccess: "Google login successful!",

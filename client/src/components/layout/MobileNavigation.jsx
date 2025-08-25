@@ -151,7 +151,7 @@ const MobileNavigation = ({
     try {
       await logout();
       setIsOpen(false);
-      navigate('/auth/login');
+      navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
     }

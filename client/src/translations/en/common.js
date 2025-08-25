@@ -37,6 +37,7 @@ export default {
   duplicate: 'Duplicate',
   selectOption: 'Select an option',
   goBack: 'Go Back',
+  checkAgain: 'Check again',
   needHelp: 'Need help?',
   languageChanged: 'Language changed successfully',
   themeChanged: 'Theme changed to {{theme}}',

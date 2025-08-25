@@ -120,6 +120,19 @@ const LoginForm = ({
                 </Button>
               </div>
             )}
+            {errors.showSupportContact && (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                  {t('contactSupport')}
+                </p>
+                <a
+                  href={`mailto:${t('supportEmail')}`}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  {t('supportEmail')}
+                </a>
+              </div>
+            )}
           </motion.div>
         )}
 

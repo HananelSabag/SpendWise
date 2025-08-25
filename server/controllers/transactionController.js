@@ -853,6 +853,168 @@ const transactionController = {
   }),
 
   /**
+   * ✅ BULK CREATE RECURRING TEMPLATES - FOR ONBOARDING
+   * Creates multiple templates efficiently without triggering individual refreshes
+   * @route POST /api/v1/transactions/templates/bulk
+   */
+  createBulkRecurringTemplates: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { templates } = req.body;
+
+    try {
+      // Validate input
+      if (!templates || !Array.isArray(templates) || templates.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Templates array is required'
+        });
+      }
+
+      // Validate each template
+      for (const template of templates) {
+        if (!template.name || !template.amount || !template.type || !template.interval_type) {
+          return res.status(400).json({
+            success: false,
+            error: 'Each template must have name, amount, type, and interval_type'
+          });
+        }
+      }
+
+      const createdTemplates = [];
+      const results = {
+        totalRequested: templates.length,
+        successful: 0,
+        failed: 0,
+        errors: []
+      };
+
+      // Process each template
+      for (const templateData of templates) {
+        try {
+          const {
+            name,
+            description,
+            amount,
+            type,
+            category_name,
+            categoryId,
+            interval_type,
+            day_of_month,
+            day_of_week,
+            is_active
+          } = templateData;
+
+          // ✅ Get or create category (same logic as single template)
+          let finalCategoryId = null;
+          
+          if (categoryId) {
+            finalCategoryId = categoryId;
+          } else if (category_name) {
+            const categoryQuery = `
+              SELECT id FROM categories 
+              WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
+              ORDER BY user_id DESC NULLS LAST
+              LIMIT 1
+            `;
+            const categoryResult = await db.query(categoryQuery, [category_name, userId]);
+            
+            if (categoryResult.rows.length > 0) {
+              finalCategoryId = categoryResult.rows[0].id;
+            } else {
+              const createCategoryQuery = `
+                INSERT INTO categories (name, user_id, created_at, updated_at)
+                VALUES ($1, $2, NOW(), NOW())
+                RETURNING id
+              `;
+              const createResult = await db.query(createCategoryQuery, [category_name, userId]);
+              finalCategoryId = createResult.rows[0].id;
+            }
+          }
+
+          // Create template
+          const insertQuery = `
+            INSERT INTO recurring_templates (
+              user_id, name, description, amount, type, category_id,
+              interval_type, day_of_month, day_of_week, is_active,
+              start_date, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_DATE, NOW(), NOW())
+            RETURNING *
+          `;
+
+          const values = [
+            userId,
+            name,
+            description || null,
+            amount,
+            type,
+            finalCategoryId,
+            interval_type,
+            day_of_month || null,
+            day_of_week || null,
+            is_active !== false
+          ];
+
+          const result = await db.query(insertQuery, values);
+          const template = result.rows[0];
+
+          // ✅ Generate transactions for this template
+          const today = new Date();
+          const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          
+          const currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
+          const upcomingTransactions = await generateUpcomingTransactions(template);
+
+          createdTemplates.push({
+            template,
+            currentTransactions,
+            upcomingTransactions
+          });
+
+          results.successful++;
+
+          logger.info('Bulk template created successfully', {
+            userId,
+            templateId: template.id,
+            name: template.name,
+            currentCount: currentTransactions.length,
+            upcomingCount: upcomingTransactions.length
+          });
+
+        } catch (error) {
+          results.failed++;
+          results.errors.push({
+            templateName: templateData.name,
+            error: error.message
+          });
+          
+          logger.error('Failed to create template in bulk', {
+            userId,
+            templateName: templateData.name,
+            error: error.message
+          });
+        }
+      }
+
+      // Return comprehensive results
+      res.status(results.successful > 0 ? 201 : 400).json({
+        success: results.successful > 0,
+        data: {
+          templates: createdTemplates,
+          summary: results
+        },
+        message: `Bulk operation completed: ${results.successful} successful, ${results.failed} failed`
+      });
+
+    } catch (error) {
+      logger.error('Bulk template creation failed', {
+        userId,
+        error: error.message
+      });
+      throw error;
+    }
+  }),
+
+  /**
    * Generate 3 months of upcoming transactions for a template
    */
   

@@ -111,12 +111,12 @@ const NotFound = () => {
           <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <HelpCircle className="w-4 h-4" />
             <span>{t('common.needHelp', { fallback: 'Need help?' })}</span>
-            <Link 
-              to="/help" 
+            <a 
+              href="mailto:spendwise.verification@gmail.com" 
               className="text-primary-600 dark:text-primary-400 hover:underline"
             >
               {t('nav.contactSupport', { fallback: 'Contact Support' })}
-            </Link>
+            </a>
           </div>
         </motion.div>
       </div>

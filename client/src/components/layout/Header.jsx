@@ -207,7 +207,7 @@ const Header = () => {
           <ModernOnboardingModal
             isOpen={true}
             onClose={closeModal}
-            previewOnly={true}
+            previewOnly={false}
           />
         )}
       </Suspense>

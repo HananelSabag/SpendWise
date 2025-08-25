@@ -7,6 +7,7 @@
 import { useCallback, useState } from 'react';
 import { useAuth, useNotifications, useTranslation } from '../stores';
 import { api } from '../api';
+import { useBalanceRefresh } from '../contexts/BalanceContext';
 
 /**
  * ✅ Simplified Onboarding Completion Hook
@@ -20,6 +21,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { user, actions: authActions } = useAuth();
   const { addNotification } = useNotifications();
   const { t } = useTranslation('onboarding');
+  const { refreshAll } = useBalanceRefresh();
 
   const [isCompleting, setIsCompleting] = useState(false);
 
@@ -38,26 +40,66 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
       // ✅ ENHANCED: Save templates and complete onboarding
       const templates = stepData?.templates?.selectedTemplates || [];
       
-      console.log('🎯 Templates to save:', templates);
+      console.log('🎯 DEBUG: Full stepData received:', stepData);
+      console.log('🎯 DEBUG: stepData.templates:', stepData?.templates);
+      console.log('🎯 DEBUG: Templates to save:', templates);
+      console.log('🎯 DEBUG: Templates length:', templates.length);
       
-      // Save templates first if any exist
+      // ✅ BULK SAVE TEMPLATES - AVOID RATE LIMITS
       if (templates.length > 0) {
-        console.log('💾 Saving templates to database...');
-        for (const template of templates) {
-          try {
-            await api.onboarding.saveTemplate({
-              name: template.name,
-              type: template.type,
-              amount: template.amount,
-              description: `Template: ${template.name}`,
-              interval_type: 'monthly',
-              start_date: new Date().toISOString().split('T')[0],
-              is_active: true
-            });
-            console.log('✅ Template saved:', template.name);
-          } catch (error) {
-            console.warn('❌ Failed to save template:', template.name, error);
+        console.log('💾 Saving templates to database using BULK method to avoid rate limits...');
+        console.log('💾 Templates to save:', templates.length);
+        
+        try {
+          // Format templates for bulk API
+          const formattedTemplates = templates.map(template => ({
+            name: template.name,
+            description: template.name,
+            amount: template.amount,
+            type: template.type,
+            category_name: template.categoryName || 'General',
+            interval_type: 'monthly',
+            is_active: true
+          }));
+
+          console.log('💾 Formatted templates for bulk creation:', formattedTemplates);
+
+          // Use bulk API method directly
+          const api = (await import('../api/transactions')).default;
+          const result = await api.createBulkRecurringTemplates(formattedTemplates);
+          
+          if (result.success) {
+            console.log('✅ All templates saved successfully via bulk API!');
+            console.log('✅ Bulk result:', result.data.summary);
+            
+            // ✅ Show success toast with details
+            const summary = result.data.summary;
+            addNotification(
+              t('completion.templates_created', { 
+                count: summary.successful,
+                total: summary.totalRequested 
+              }) || `Successfully created ${summary.successful} out of ${summary.totalRequested} templates`,
+              'success'
+            );
+          } else {
+            console.warn('⚠️ Some templates failed to save:', result.error);
+            
+            // ⚠️ Show warning toast for partial failure
+            addNotification(
+              t('completion.templates_partial_failure') || 'Some templates could not be created. Please try again.',
+              'warning'
+            );
           }
+        } catch (error) {
+          console.error('❌ Bulk template creation failed:', error);
+          
+          // ⚠️ Show error toast but don't fail onboarding
+          addNotification(
+            t('completion.templates_failed') || 'Templates could not be created, but onboarding will continue.',
+            'warning'
+          );
+          
+          // Don't fail the whole onboarding if templates fail
         }
       }
 
@@ -126,6 +168,15 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
       localStorage.setItem('onboarding_completed', 'true');
       localStorage.setItem('onboarding_completed_at', new Date().toISOString());
 
+      // ✅ FINAL REFRESH: Single refresh after all operations complete
+      console.log('🔄 Triggering final app refresh after onboarding completion...');
+      try {
+        await refreshAll();
+        console.log('✅ Final refresh completed - all data should be up-to-date');
+      } catch (refreshError) {
+        console.warn('⚠️ Final refresh failed, but onboarding still completed:', refreshError);
+      }
+
       addNotification({
         type: 'success',
         message: t('completion.success') || 'Setup completed successfully!',
@@ -164,7 +215,8 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
     addNotification,
     t,
     onSuccess,
-    onError
+    onError,
+    createRecurringTemplate
   ]);
 
   return {

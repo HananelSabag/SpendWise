@@ -229,6 +229,39 @@ const transactionAPI = {
   },
 
   /**
+   * ✅ BULK CREATE RECURRING TEMPLATES - FOR ONBOARDING
+   * Creates multiple templates in one request to avoid rate limits
+   * @param {Array} templates - Array of template data objects
+   * @returns {Promise<Object>} Bulk creation result
+   */
+  async createBulkRecurringTemplates(templates) {
+    try {
+      const endpoint = `/transactions/templates/bulk`;
+      console.log('📤 Creating bulk recurring templates:', { endpoint, count: templates.length });
+      
+      // Format each template consistently
+      const formattedTemplates = templates.map(template => ({
+        name: template.name,
+        description: template.description || template.name,
+        amount: template.amount,
+        type: template.type,
+        category_name: template.category_name || template.categoryName || 'General',
+        interval_type: template.interval_type || template.intervalType || 'monthly',
+        day_of_month: template.day_of_month || template.dayOfMonth || 1,
+        day_of_week: template.day_of_week || template.dayOfWeek || null,
+        is_active: template.is_active !== undefined ? template.is_active : (template.isActive !== undefined ? template.isActive : true)
+      }));
+      
+      const response = await apiClient.client.post(endpoint, { templates: formattedTemplates });
+      console.log('✅ Bulk recurring templates created successfully:', response.data);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Bulk recurring template creation failed:', error);
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
    * Update a recurring template
    * @param {string} id - Template ID
    * @param {Object} data - Updated template data

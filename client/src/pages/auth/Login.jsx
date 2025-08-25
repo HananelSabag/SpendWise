@@ -113,16 +113,65 @@ const Login = () => {
             }
           });
         } else {
-          authToasts.loginFailed(result.error);
+          // Enhanced error handling with specific messages
+          let errorMessage = result.error?.message || t('loginFailed');
+          const errorCode = result.error?.code;
+          
+          // Use translated messages for known error codes
+          switch (errorCode) {
+            case 'INVALID_CREDENTIALS':
+              errorMessage = t('invalidCredentials');
+              break;
+            case 'USER_NOT_FOUND':
+              errorMessage = t('userNotFound');
+              break;
+            case 'ACCOUNT_BLOCKED':
+              errorMessage = t('accountBlocked');
+              break;
+            case 'ACCESS_DENIED':
+              errorMessage = t('accessDenied');
+              break;
+            case 'RATE_LIMITED':
+              errorMessage = t('rateLimited');
+              break;
+            case 'SERVER_ERROR':
+              errorMessage = t('serverError');
+              break;
+            case 'TIMEOUT_ERROR':
+              errorMessage = t('timeoutError');
+              break;
+            case 'NETWORK_ERROR':
+              errorMessage = t('networkError');
+              break;
+            default:
+              // Keep original message if it's meaningful, otherwise use fallback
+              if (errorMessage.toLowerCase().includes('internal server error')) {
+                errorMessage = t('invalidCredentials'); // Default to credentials error for generic server errors
+              }
+              break;
+          }
+          
+          authToasts.loginFailed({ ...result.error, message: errorMessage });
           setErrors({ 
-            general: result.error?.message || t('loginFailed')
+            general: errorMessage,
+            showSupportContact: ['ACCOUNT_BLOCKED', 'ACCESS_DENIED', 'SERVER_ERROR'].includes(errorCode)
           });
         }
       }
     } catch (error) {
-      authToasts.loginFailed(error);
+      // Handle unexpected errors
+      let errorMessage = t('authenticationFailed');
+      
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = t('networkError');
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = t('timeoutError');
+      }
+      
+      authToasts.loginFailed({ message: errorMessage, code: 'UNEXPECTED_ERROR' });
       setErrors({ 
-        general: t('authenticationFailed')
+        general: errorMessage,
+        showSupportContact: true
       });
     } finally {
       setIsSubmitting(false);
@@ -162,7 +211,7 @@ const Login = () => {
         }
         
         // Navigate to dashboard
-        const from = location.state?.from?.pathname || '/dashboard';
+        const from = location.state?.from?.pathname || '/';
         navigate(from, { replace: true });
       } else {
         // silent

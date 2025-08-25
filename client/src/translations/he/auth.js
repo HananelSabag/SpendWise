@@ -67,6 +67,21 @@ export default {
   securityBlock: "חסימת אבטחה",
   securityBlockDesc: "הכניסה נחסמה עקב חששות אבטחה",
   
+  // Specific login errors
+  invalidCredentials: "אימייל או סיסמה שגויים. אנא בדקו את הפרטים ונסו שוב.",
+  userNotFound: "החשבון לא נמצא. אנא בדקו את כתובת האימייל או צרו חשבון חדש.",
+  emailNotVerified: "אנא אמתו את כתובת האימייל שלכם לפני ההתחברות.",
+  accountBlocked: "החשבון שלכם נחסם זמנית. אנא פנו לתמיכה.",
+  accessDenied: "הגישה נדחתה. אנא פנו לתמיכה אם הבעיה נמשכת.",
+  rateLimited: "יותר מדי ניסיונות התחברות. אנא המתינו רגע ונסו שוב.",
+  serverError: "השרת שלנו חווה כרגע בעיות. אנא נסו שוב בעוד כמה רגעים.",
+  timeoutError: "הזמן הקצוב למחוברות פג. אנא בדקו את החיבור לאינטרנט ונסו שוב.",
+  networkError: "לא ניתן להתחבר לשרתים שלנו. אנא בדקו את החיבור לאינטרנט.",
+  
+  // Support messages
+  contactSupport: "אם הבעיה נמשכת, אנא פנו אלינו בכתובת:",
+  supportEmail: "spendwise.verification@gmail.com",
+  
   // Success messages
   loginSuccess: "ברוכים השבים!",
   googleLoginSuccess: "ההתחברות עם גוגל הצליחה!",
