@@ -24,8 +24,9 @@ import {
 import { useAuthToasts } from '../hooks/useAuthToasts';
 import { useToast } from '../hooks/useToast';
 
-import { Button, Card, Input, Avatar, LoadingSpinner } from '../components/ui';
+import { Button, Card, Input, Avatar, LoadingSpinner, Badge } from '../components/ui';
 import AuthStatusDetector from '../components/features/auth/AuthStatusDetector';
+import PersonalInfo from '../components/features/profile/PersonalInfo';
 import useExport from '../hooks/useExport';
 import { api } from '../api';
 import { cn, dateHelpers } from '../utils/helpers';
@@ -48,17 +49,7 @@ const Profile = () => {
   const [showPictureModal, setShowPictureModal] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  // Form data
-  const [personalData, setPersonalData] = useState({
-    firstName: user?.first_name || user?.firstName || '',
-    lastName: user?.last_name || user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    location: user?.location || '',
-    bio: user?.bio || '',
-    website: user?.website || '',
-    birthday: user?.birthday || ''
-  });
+
 
   const [preferencesData, setPreferencesData] = useState({
     language_preference: user?.language_preference || 'en',
@@ -181,37 +172,7 @@ const Profile = () => {
     setShowPictureModal(false);
   }, []);
 
-  // ✅ ENHANCED: Update personal info with all fields
-  const handlePersonalUpdate = useCallback(async () => {
-    if (!personalData.firstName?.trim() || !personalData.lastName?.trim()) {
-      authToasts.requiredFieldsMissing();
-      return;
-    }
 
-    setIsLoading(true);
-    try {
-      const result = await updateProfile({
-        firstName: personalData.firstName.trim(),
-        lastName: personalData.lastName.trim(),
-        phone: personalData.phone?.trim() || '',
-        location: personalData.location?.trim() || '',
-        bio: personalData.bio?.trim() || '',
-        website: personalData.website?.trim() || '',
-        birthday: personalData.birthday || null
-      });
-
-      if (result.success) {
-        setIsEditing(false);
-        authToasts.profileUpdated();
-      } else {
-        throw new Error(result.error?.message || 'Update failed');
-      }
-    } catch (error) {
-      authToasts.profileUpdateFailed();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [personalData, updateProfile, authToasts, t]);
 
   // ✅ ENHANCED: Update preferences with immediate application
   const handlePreferencesUpdate = useCallback(async () => {
@@ -344,7 +305,7 @@ const Profile = () => {
   }, [passwordData, authToasts, user, t]);
 
   const renderPersonalTab = () => (
-    <Card className="p-6">
+    <div>
       {/* Profile Header */}
       <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 mb-8">
         <div className="relative group">
@@ -402,138 +363,18 @@ const Profile = () => {
           </h2>
           <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            {t('personal.memberSince', { fallback: 'Member since' })} {user?.createdAt ? dateHelpers.format(user.createdAt, 'MMM yyyy') : 'Unknown'}
+            {t('personal.memberSince', { fallback: 'Member since' })} {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
           </p>
         </div>
       </div>
 
-      {/* Personal Information Form */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('personal.title', { fallback: 'Personal Information' })}</h3>
-          <div className="flex items-center space-x-2">
-            {isEditing && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsEditing(false);
-                  // Reset form data to original user data
-                  setPersonalData({
-                    firstName: user?.first_name || user?.firstName || '',
-                    lastName: user?.last_name || user?.lastName || '',
-                    email: user?.email || '',
-                    phone: user?.phone || '',
-                    location: user?.location || '',
-                    bio: user?.bio || '',
-                    website: user?.website || '',
-                    birthday: user?.birthday || ''
-                  });
-                }}
-              >
-                <X className="w-4 h-4 mr-2" />
-                {t('actions.cancel', { fallback: 'Cancel' })}
-              </Button>
-            )}
-            <Button
-              variant={isEditing ? "primary" : "outline"}
-              size="sm"
-              onClick={() => {
-                if (isEditing) {
-                  handlePersonalUpdate();
-                } else {
-                  setIsEditing(true);
-                }
-              }}
-              disabled={isLoading}
-            >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? t('messages.saving', { fallback: 'Saving...' }) : t('actions.update', { fallback: 'Save Changes' })}
-                </>
-              ) : (
-                <>
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  {t('actions.edit', { fallback: 'Edit' })}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label={t('personal.firstName', { fallback: 'First Name' })}
-            value={personalData.firstName}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, firstName: e.target.value }))}
-            disabled={!isEditing}
-            required
-          />
-          <Input
-            label={t('personal.lastName', { fallback: 'Last Name' })}
-            value={personalData.lastName}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, lastName: e.target.value }))}
-            disabled={!isEditing}
-            required
-          />
-          <Input
-            label={t('personal.email', { fallback: 'Email' })}
-            type="email"
-            value={personalData.email}
-            disabled={true}
-            className="opacity-50 cursor-not-allowed"
-          />
-          <Input
-            label={t('personal.phone', { fallback: 'Phone' })}
-            type="tel"
-            value={personalData.phone}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, phone: e.target.value }))}
-            disabled={!isEditing}
-            placeholder="+1234567890"
-          />
-          <Input
-            label={t('personal.location', { fallback: 'Location' })}
-            value={personalData.location}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, location: e.target.value }))}
-            disabled={!isEditing}
-            placeholder={t('personal.location', { fallback: 'City, Country' })}
-          />
-          <Input
-            label={t('personal.website', { fallback: 'Website' })}
-            type="url"
-            value={personalData.website}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, website: e.target.value }))}
-            disabled={!isEditing}
-            placeholder="https://..."
-          />
-          <Input
-            label={t('personal.birthday', { fallback: 'Birthday' })}
-            type="date"
-            value={personalData.birthday}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, birthday: e.target.value }))}
-            disabled={!isEditing}
-          />
-        </div>
-        
-        {/* Bio field - full width */}
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('personal.bio', { fallback: 'Bio' })}
-          </label>
-          <textarea
-            value={personalData.bio}
-            onChange={(e) => setPersonalData(prev => ({ ...prev, bio: e.target.value }))}
-            disabled={!isEditing}
-            rows={3}
-            placeholder={t('personal.bioPlaceholder', { fallback: 'Tell us about yourself...' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </div>
-
-
-      </div>
-    </Card>
+      {/* Use the new PersonalInfo component */}
+      <PersonalInfo 
+        user={user}
+        onUpdate={updateProfile}
+        isUpdating={isLoading}
+      />
+    </div>
   );
 
   // ✅ NEW: Preferences Tab
@@ -622,92 +463,214 @@ const Profile = () => {
   const renderSecurityTab = () => {
     // ✅ Use NEW auth status API data (reliable)
     const isGoogleOnlyUser = authStatus?.authType === 'GOOGLE_ONLY';
+    const isHybridUser = authStatus?.authType === 'HYBRID';
+    const isPasswordOnlyUser = authStatus?.authType === 'PASSWORD_ONLY';
+    const hasPassword = authStatus?.hasPassword;
     
     return (
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">{t('security.password.title', { fallback: 'Change Password' })}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+          {t('security.password.title', { fallback: 'Password & Security' })}
+        </h3>
         
-        {/* ✅ Google OAuth User Notice */}
-        {isGoogleOnlyUser ? (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                  {t('security.title', { fallback: 'Security & Account' })}
-                </h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                  {t('security.subtitle', { fallback: 'Manage your security settings' })}
-                </p>
-                <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-decimal">
-                  <li>{t('security.password.requirements', { fallback: 'Password must be at least 8 characters' })}</li>
-                  <li>{t('actions.update', { fallback: 'Update' })}</li>
-                  <li>{t('actions.success', { fallback: 'Operation completed successfully' })}</li>
-                </ol>
-                
+        {/* ✅ Authentication Status Explanation */}
+        <div className={`rounded-lg p-4 mb-6 ${
+          isGoogleOnlyUser 
+            ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
+            : isHybridUser
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700'
+            : 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700'
+        }`}>
+          <div className="flex items-start space-x-3">
+            <Shield className={`w-5 h-5 mt-0.5 ${
+              isGoogleOnlyUser 
+                ? 'text-blue-600 dark:text-blue-400'
+                : isHybridUser
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-orange-600 dark:text-orange-400'
+            }`} />
+            <div className="flex-1">
+              <h4 className={`font-medium mb-2 ${
+                isGoogleOnlyUser 
+                  ? 'text-blue-900 dark:text-blue-100'
+                  : isHybridUser
+                  ? 'text-green-900 dark:text-green-100'
+                  : 'text-orange-900 dark:text-orange-100'
+              }`}>
+                {isGoogleOnlyUser 
+                  ? t('security.googleOnly.title', { fallback: 'Google OAuth Account' })
+                  : isHybridUser
+                  ? t('security.hybrid.title', { fallback: 'Hybrid Authentication' })
+                  : t('security.passwordOnly.title', { fallback: 'Email & Password Account' })
+                }
+              </h4>
+              <p className={`text-sm mb-3 ${
+                isGoogleOnlyUser 
+                  ? 'text-blue-800 dark:text-blue-200'
+                  : isHybridUser
+                  ? 'text-green-800 dark:text-green-200'
+                  : 'text-orange-800 dark:text-orange-200'
+              }`}>
+                {isGoogleOnlyUser 
+                  ? t('security.googleOnly.description', { fallback: 'You registered with Google OAuth. Set a password to enable email/password login alongside Google login.' })
+                  : isHybridUser
+                  ? t('security.hybrid.description', { fallback: 'Perfect! You can login with both Google OAuth and email/password. You have maximum flexibility and security.' })
+                  : t('security.passwordOnly.description', { fallback: 'You can login with email and password. Consider linking your Google account for easier access.' })
+                }
+              </p>
+              
+              {/* Current Password Status */}
+              <div className={`text-sm ${
+                isGoogleOnlyUser 
+                  ? 'text-blue-800 dark:text-blue-200'
+                  : isHybridUser
+                  ? 'text-green-800 dark:text-green-200'
+                  : 'text-orange-800 dark:text-orange-200'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  <Key className="w-4 h-4" />
+                  <span>
+                    {hasPassword 
+                      ? t('security.password.status.set', { fallback: 'Password is set' })
+                      : t('security.password.status.notSet', { fallback: 'No password set' })
+                    }
+                  </span>
+                  {hasPassword && (
+                    <Badge variant="success" size="sm">
+                      {t('security.password.status.secure', { fallback: 'Secure' })}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        ) : null}
+        </div>
         
         <div className="space-y-4 max-w-md">
-        {/* Current password field - REQUIRED for password change */}
-        {!isGoogleOnlyUser && (
+          {/* Current Password Field - Show for all users with password */}
+          {hasPassword && (
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('security.password.current', { fallback: 'Current Password' })}
+                </label>
+                <Badge variant="outline" size="sm">
+                  {t('security.password.viewOnly', { fallback: 'View Only' })}
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Key className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-gray-900 dark:text-white font-mono">
+                    ••••••••••••••••
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Show current password in a toast or modal
+                    addNotification({
+                      type: 'info',
+                      message: t('security.password.currentHidden', { fallback: 'Current password is hidden for security. Use the form below to change it.' }),
+                      duration: 3000
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('security.password.currentNote', { fallback: 'Current password is hidden for security. Enter it below to change your password.' })}
+              </p>
+            </div>
+          )}
+
+          {/* Current Password Input - Required for password change */}
+          {hasPassword && (
+            <div className="relative">
+              <Input
+                label={t('security.password.currentInput', { fallback: 'Enter Current Password' })}
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                icon={<Key className="w-5 h-5" />}
+                placeholder={t('security.password.currentPlaceholder', { fallback: 'Enter your current password...' })}
+                autoComplete="current-password"
+                showPasswordToggle
+              />
+            </div>
+          )}
+
+          {/* New Password Field */}
           <div className="relative">
             <Input
-              label={t('security.password.current', { fallback: 'Current Password' })}
+              label={hasPassword 
+                ? t('security.password.new', { fallback: 'New Password' })
+                : t('security.password.set', { fallback: 'Set Password' })
+              }
               type="password"
-              value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
               icon={<Key className="w-5 h-5" />}
-              placeholder={t('security.password.current', { fallback: 'Enter current password...' })}
-              autoComplete="current-password"
+              placeholder={hasPassword 
+                ? t('security.password.newPlaceholder', { fallback: 'Enter new password...' })
+                : t('security.password.setPlaceholder', { fallback: 'Choose a secure password...' })
+              }
+              autoComplete="new-password"
               showPasswordToggle
             />
           </div>
-        )}
 
-        <div className="relative">
+          {/* Confirm Password Field */}
           <Input
-            label={isGoogleOnlyUser ? t('security.password.new', { fallback: 'Set Password' }) : t('security.password.new', { fallback: 'New Password' })}
+            label={hasPassword 
+              ? t('security.password.confirm', { fallback: 'Confirm New Password' })
+              : t('security.password.confirmSet', { fallback: 'Confirm Password' })
+            }
             type="password"
-            value={passwordData.newPassword}
-            onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+            value={passwordData.confirmPassword}
+            onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
             icon={<Key className="w-5 h-5" />}
-            placeholder={isGoogleOnlyUser ? t('security.password.new', { fallback: 'Choose a secure password...' }) : t('security.password.new', { fallback: 'Enter new password...' })}
+            placeholder={hasPassword 
+              ? t('security.password.confirmPlaceholder', { fallback: 'Confirm new password...' })
+              : t('security.password.confirmSetPlaceholder', { fallback: 'Confirm your password...' })
+            }
             autoComplete="new-password"
             showPasswordToggle
           />
-        </div>
 
-        <Input
-          label={isGoogleOnlyUser ? t('security.password.confirm', { fallback: 'Confirm Password' }) : t('security.password.confirm', { fallback: 'Confirm New Password' })}
-          type="password"
-          value={passwordData.confirmPassword}
-          onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-          icon={<Key className="w-5 h-5" />}
-          placeholder={isGoogleOnlyUser ? t('security.password.confirm', { fallback: 'Confirm your password...' }) : t('security.password.confirm', { fallback: 'Confirm new password...' })}
-          autoComplete="new-password"
-          showPasswordToggle
-        />
+          {/* Password Requirements */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('security.password.requirements.title', { fallback: 'Password Requirements' })}
+            </h5>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              <li>• {t('security.password.requirements.length', { fallback: 'At least 8 characters' })}</li>
+              <li>• {t('security.password.requirements.complexity', { fallback: 'Include letters and numbers' })}</li>
+              <li>• {t('security.password.requirements.unique', { fallback: 'Different from current password' })}</li>
+            </ul>
+          </div>
 
-        <Button 
-          onClick={handlePasswordChange} 
-          disabled={
-            isGoogleOnlyUser 
-              ? (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
-              : (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading)
-          }
-          variant="primary"
-          size="lg"
-          icon={<ShieldCheck />}
-          className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md hover:shadow-lg border-0"
-        >
-          {isLoading 
-            ? (isGoogleOnlyUser ? t('messages.saving', { fallback: 'Saving...' }) : t('messages.saving', { fallback: 'Saving...' })) 
-            : (isGoogleOnlyUser ? t('security.password.change', { fallback: 'Set Password' }) : t('security.password.change', { fallback: 'Change Password' }))
-          }
-        </Button>
+          <Button 
+            onClick={handlePasswordChange} 
+            disabled={
+              hasPassword 
+                ? (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+                : (!passwordData.newPassword || !passwordData.confirmPassword || isLoading)
+            }
+            variant="primary"
+            size="lg"
+            icon={<ShieldCheck />}
+            className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md hover:shadow-lg border-0"
+          >
+            {isLoading 
+              ? t('messages.saving', { fallback: 'Saving...' })
+              : hasPassword 
+                ? t('security.password.change', { fallback: 'Change Password' })
+                : t('security.password.set', { fallback: 'Set Password' })
+            }
+          </Button>
         </div>
       </Card>
     );
