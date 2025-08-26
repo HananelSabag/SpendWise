@@ -172,7 +172,19 @@ export default {
     delete: 'מחק נבחרים',
     export: 'ייצא נבחרים',
     actionSuccess: '{{action}} הושלם עבור {{count}} משתמשים',
-    actionError: 'פעולה קבוצתית נכשלה'
+    actionError: 'פעולה קבוצתית נכשלה',
+    noSelection: 'לא נבחרו משתמשים',
+    processing: 'מעבד {{count}} משתמשים...',
+    blockSuccess: 'חסם בהצלחה {{count}} משתמשים',
+    blockError: 'נכשל בחסימת {{count}} משתמשים',
+    unblockSuccess: 'ביטל חסימה בהצלחה עבור {{count}} משתמשים',
+    unblockError: 'נכשל בביטול חסימת {{count}} משתמשים',
+    deleteSuccess: 'נמחק בהצלחה {{count}} משתמשים',
+    deleteError: 'נכשל במחיקת {{count}} משתמשים',
+    exportSuccess: 'יוצא בהצלחה {{count}} משתמשים',
+    exportError: 'נכשל בייצוא משתמשים',
+    noDataToExport: 'אין נתונים לייצוא',
+    unknownAction: 'פעולה לא ידועה'
   },
 
   // Errors - Additional keys
@@ -182,6 +194,9 @@ export default {
     actionFailed: 'הפעולה נכשלה',
     accessDenied: 'גישה נדחתה',
     adminRequired: 'נדרשות הרשאות מנהל לגישה לעמוד זה',
+    loadFailed: 'נכשל בטעינת נתונים',
+    generic: 'משהו השתבש',
+    permissionDenied: 'אין הרשאה'
   },
 
   // Buttons
@@ -189,7 +204,37 @@ export default {
     overview: 'סקירה',
     roleChange: 'שינוי תפקיד',
     block: 'חסום',
-    unblock: 'בטל חסימה'
+    unblock: 'בטל חסימה',
+    goToDashboard: 'עבור לדף הבית',
+    refreshPage: 'רענן דף',
+    exportCsv: 'ייצא CSV'
+  },
+
+  // CSV Export Headers
+  csvHeaders: {
+    name: 'שם',
+    email: 'דוא"ל',
+    role: 'תפקיד',
+    status: 'סטטוס',
+    transactions: 'עסקאות',
+    totalAmount: 'סכום כולל',
+    currency: 'מטבע',
+    joinDate: 'תאריך הצטרפות'
+  },
+
+  // Time formatting
+  timeAgo: {
+    justNow: 'כעת',
+    minutesAgo: '{{minutes}} דק',
+    hoursAgo: '{{hours}} שע',
+    daysAgo: '{{days}} ימים'
+  },
+
+  // Accessibility labels
+  accessibility: {
+    manageUsersLabel: 'ניהול משתמשים',
+    systemSettingsLabel: 'הגדרות מערכת',
+    activityLogLabel: 'יומן פעילות'
   },
 
   // Admin Settings

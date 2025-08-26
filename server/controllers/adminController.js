@@ -612,31 +612,72 @@ class AdminController {
   });
 
   /**
-   * 📋 Get admin activity log
+   * 📋 Get admin activity log - UNIFIED VERSION
    */
   static getActivityLog = asyncHandler(async (req, res) => {
     const adminId = req.user.id;
     const { limit = 100, offset = 0 } = req.query;
     
     try {
-      const result = await db.query(
-        'SELECT get_admin_activity_log($1, $2, $3) as activity',
-        [adminId, parseInt(limit), parseInt(offset)],
-        'admin_activity_log'
+      // ✅ Use the same unified query as dashboard for consistency
+      const activityResult = await db.query(`
+        SELECT 
+          aal.id,
+          aal.admin_id,
+          aal.action_type,
+          aal.target_user_id,
+          aal.action_details,
+          aal.created_at,
+          u.username as admin_username,
+          u.email as admin_email,
+          tu.username as target_username,
+          tu.email as target_email,
+          CASE 
+            WHEN tu.id IS NOT NULL THEN 
+              json_build_object(
+                'id', tu.id,
+                'username', tu.username,
+                'email', tu.email
+              )
+            ELSE NULL
+          END as target_user
+        FROM admin_activity_log aal
+        LEFT JOIN users u ON aal.admin_id = u.id
+        LEFT JOIN users tu ON aal.target_user_id = tu.id
+        ORDER BY aal.created_at DESC
+        LIMIT $1 OFFSET $2
+      `, [parseInt(limit), parseInt(offset)], 'admin_activity_log');
+      
+      // Get total count
+      const countResult = await db.query(
+        'SELECT COUNT(*) as total FROM admin_activity_log',
+        [],
+        'admin_activity_log_count'
       );
       
-      const activity = result.rows[0]?.activity;
+      const activities = activityResult.rows || [];
+      const totalCount = parseInt(countResult.rows[0]?.total || 0);
       
       logger.info('📋 Admin activity log accessed', {
         adminId,
         limit,
         offset,
-        totalActivities: activity?.total_count
+        totalActivities: totalCount,
+        returnedActivities: activities.length
       });
       
       res.json({
         success: true,
-        data: activity,
+        data: {
+          activities,
+          total_count: totalCount,
+          pagination: {
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            total: totalCount,
+            hasMore: (parseInt(offset) + activities.length) < totalCount
+          }
+        },
         timestamp: new Date().toISOString()
       });
       

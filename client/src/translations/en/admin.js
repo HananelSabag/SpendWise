@@ -161,7 +161,19 @@ export default {
     delete: 'Delete Selected',
     export: 'Export Selected',
     actionSuccess: '{{action}} completed for {{count}} users',
-    actionError: 'Bulk action failed'
+    actionError: 'Bulk action failed',
+    noSelection: 'No users selected',
+    processing: 'Processing {{count}} users...',
+    blockSuccess: 'Successfully blocked {{count}} users',
+    blockError: 'Failed to block {{count}} users',
+    unblockSuccess: 'Successfully unblocked {{count}} users',
+    unblockError: 'Failed to unblock {{count}} users',
+    deleteSuccess: 'Successfully deleted {{count}} users',
+    deleteError: 'Failed to delete {{count}} users',
+    exportSuccess: 'Successfully exported {{count}} users',
+    exportError: 'Failed to export users',
+    noDataToExport: 'No data to export',
+    unknownAction: 'Unknown action'
   },
 
   // Errors shown in admin pages
@@ -172,7 +184,8 @@ export default {
     accessDenied: 'Access Denied',
     adminRequired: 'Admin privileges required to access this page',
     loadFailed: 'Failed to Load Data',
-    generic: 'Something went wrong'
+    generic: 'Something went wrong',
+    permissionDenied: 'Permission denied'
   },
 
   // Buttons
@@ -180,7 +193,37 @@ export default {
     overview: 'Overview',
     roleChange: 'Role Change',
     block: 'Block',
-    unblock: 'Unblock'
+    unblock: 'Unblock',
+    goToDashboard: 'Go to Dashboard',
+    refreshPage: 'Refresh Page',
+    exportCsv: 'Export CSV'
+  },
+
+  // CSV Export Headers
+  csvHeaders: {
+    name: 'Name',
+    email: 'Email',
+    role: 'Role',
+    status: 'Status',
+    transactions: 'Transactions',
+    totalAmount: 'Total Amount',
+    currency: 'Currency',
+    joinDate: 'Join Date'
+  },
+
+  // Time formatting
+  timeAgo: {
+    justNow: 'Just now',
+    minutesAgo: '{{minutes}}m',
+    hoursAgo: '{{hours}}h',
+    daysAgo: '{{days}}d'
+  },
+
+  // Accessibility labels
+  accessibility: {
+    manageUsersLabel: 'Manage users',
+    systemSettingsLabel: 'System settings',
+    activityLogLabel: 'Activity log'
   },
 
   // Admin Settings

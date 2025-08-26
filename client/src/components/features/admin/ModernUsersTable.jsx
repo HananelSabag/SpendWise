@@ -599,11 +599,16 @@ const ModernUsersTable = ({
         >
           <Card className="p-6 hover:shadow-lg transition-all duration-300 border-2 hover:border-primary-200 dark:hover:border-primary-700">
             <div className="flex items-start gap-3">
-              <Checkbox
-                checked={selectedUsers.has(user.id)}
-                onChange={(e) => handleSelectUser(user.id, e.target.checked)}
-                className="mt-1"
-              />
+              <div className="flex items-center justify-center mt-1">
+                <Checkbox
+                  checked={selectedUsers.has(user.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleSelectUser(user.id, e.target.checked);
+                  }}
+                  className="cursor-pointer"
+                />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar
@@ -731,12 +736,18 @@ const ModernUsersTable = ({
       <div className="block lg:hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <Checkbox
-              checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
-              indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
-              onChange={(e) => handleSelectAll(e.target.checked)}
-              label={t('table.selectAll', { fallback: 'Select all' })}
-            />
+            <div className="flex items-center">
+              <Checkbox
+                checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
+                indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleSelectAll(e.target.checked);
+                }}
+                label={t('table.selectAll', { fallback: 'Select all' })}
+                className="cursor-pointer"
+              />
+            </div>
             <span className="text-sm text-gray-500">
               {filteredAndSortedUsers.length} {t('common.users', { fallback: 'users' })}
             </span>
@@ -761,11 +772,16 @@ const ModernUsersTable = ({
                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={selectedUsers.has(user.id)}
-                    onChange={(e) => handleSelectUser(user.id, e.target.checked)}
-                    className="mt-1"
-                  />
+                  <div className="flex items-center justify-center mt-1">
+                    <Checkbox
+                      checked={selectedUsers.has(user.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleSelectUser(user.id, e.target.checked);
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
@@ -922,11 +938,17 @@ const ModernUsersTable = ({
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-4 text-left">
-                <Checkbox
-                  checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
-                  indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
+                    indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleSelectAll(e.target.checked);
+                    }}
+                    className="cursor-pointer"
+                  />
+                </div>
               </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <SortableHeader column="first_name">
@@ -977,10 +999,16 @@ const ModernUsersTable = ({
                   )}
                 >
                   <td className="px-6 py-4">
-                    <Checkbox
-                      checked={selectedUsers.has(user.id)}
-                      onChange={(e) => handleSelectUser(user.id, e.target.checked)}
-                    />
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={selectedUsers.has(user.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSelectUser(user.id, e.target.checked);
+                        }}
+                        className="cursor-pointer"
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

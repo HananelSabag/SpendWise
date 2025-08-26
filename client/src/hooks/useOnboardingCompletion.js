@@ -216,7 +216,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
     t,
     onSuccess,
     onError,
-    createRecurringTemplate
+    refreshAll
   ]);
 
   return {

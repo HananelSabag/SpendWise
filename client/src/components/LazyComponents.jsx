@@ -115,10 +115,7 @@ export const CategoryManager = createLazyComponent(
   'CategoryManager'
 );
 
-export const OnboardingModal = createLazyComponent(
-  () => import('../components/features/onboarding/OnboardingModal'),
-  'OnboardingModal'
-);
+
 
 export const ExchangeCalculator = createLazyComponent(
   () => import('../components/features/exchange/ExchangeCalculator'),

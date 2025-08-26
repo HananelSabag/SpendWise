@@ -4,7 +4,7 @@
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, startTransition } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -71,18 +71,21 @@ const AdminUsers = () => {
   // User action mutations
   const blockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.blockUser(userId),
-    onSuccess: () => {
+    onSuccess: (data, userId) => {
       queryClient.invalidateQueries(['admin', 'users']);
       addNotification({
         type: 'success',
         message: t('actions.userBlocked', { fallback: 'User blocked successfully' }),
+        duration: 3000
       });
       setActionLoading(null);
     },
-    onError: (error) => {
+    onError: (error, userId) => {
+      console.error('Block user error:', error);
       addNotification({
         type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
+        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
+        duration: 4000
       });
       setActionLoading(null);
     }
@@ -90,18 +93,21 @@ const AdminUsers = () => {
 
   const unblockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.unblockUser(userId),
-    onSuccess: () => {
+    onSuccess: (data, userId) => {
       queryClient.invalidateQueries(['admin', 'users']);
       addNotification({
         type: 'success',
         message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }),
+        duration: 3000
       });
       setActionLoading(null);
     },
-    onError: (error) => {
+    onError: (error, userId) => {
+      console.error('Unblock user error:', error);
       addNotification({
         type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
+        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
+        duration: 4000
       });
       setActionLoading(null);
     }
@@ -109,24 +115,34 @@ const AdminUsers = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: ({ userId, reason }) => api.admin.deleteUser({ userId, reason }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['admin', 'users']);
+    onSuccess: (data, variables) => {
+              // Use startTransition to prevent multiple renders
+        startTransition(() => {
+          queryClient.invalidateQueries(['admin', 'users']);
+          setActionLoading(null);
+          setShowUserModal(false);
+          setShowDeleteDialog(false);
+          setDeleteReason('');
+          setPendingDeleteUserId(null);
+        });
+      
       addNotification({
         type: 'success',
         message: t('actions.userDeleted', { fallback: 'User deleted successfully' }),
+        duration: 3000
       });
-      setActionLoading(null);
-      setShowUserModal(false);
-      setShowDeleteDialog(false);
-      setDeleteReason('');
-      setPendingDeleteUserId(null);
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      console.error('Delete user error:', error);
+      startTransition(() => {
+        setActionLoading(null);
+      });
+      
       addNotification({
         type: 'error',
-        message: t('errors.actionFailed', { fallback: 'Action failed' }),
+        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Failed to delete user' }),
+        duration: 4000
       });
-      setActionLoading(null);
     }
   });
 
@@ -257,42 +273,220 @@ const AdminUsers = () => {
             onUnblock={(userId) => handleUnblockUser(userId)}
             onDelete={(userId) => handleDeleteUser(userId)}
             onBulkAction={async (action, userIds) => {
-              // Handle bulk actions
-              switch (action) {
-                case 'block':
-                  for (const userId of userIds) {
-                    await blockUserMutation.mutateAsync(userId);
-                  }
-                  break;
-                case 'unblock':
-                  for (const userId of userIds) {
-                    await unblockUserMutation.mutateAsync(userId);
-                  }
-                  break;
-                case 'delete':
-                  if (isSuperAdmin) {
+              if (!userIds || userIds.length === 0) {
+                addNotification({
+                  type: 'warning',
+                  message: t('bulk.noSelection', { fallback: 'No users selected' }),
+                  duration: 3000
+                });
+                return;
+              }
+
+              try {
+                let successCount = 0;
+                let failCount = 0;
+
+                switch (action) {
+                  case 'block':
+                    addNotification({
+                      type: 'info',
+                      message: t('bulk.processing', { fallback: `Processing ${userIds.length} users...` }),
+                      duration: 2000
+                    });
+                    
                     for (const userId of userIds) {
-                      await deleteUserMutation.mutateAsync({ userId, reason: 'Bulk deletion' });
+                      try {
+                        await blockUserMutation.mutateAsync(userId);
+                        successCount++;
+                      } catch (error) {
+                        console.error(`Failed to block user ${userId}:`, error);
+                        failCount++;
+                      }
                     }
-                  }
-                  break;
-                case 'export':
-                  // Export functionality
-                  const exportData = safeUsers.filter(user => userIds.includes(user.id));
-                  const csvContent = "data:text/csv;charset=utf-8," 
-                    + "Name,Email,Role,Status,Transactions,Total Amount,Currency,Join Date\n"
-                    + exportData.map(user => 
-                        `"${user.first_name} ${user.last_name}","${user.email}","${user.role}","${user.status}","${user.total_transactions || 0}","${formatUserAmount(user.total_amount, user.currency_preference)}","${user.currency_preference || 'ILS'}","${new Date(user.created_at).toLocaleDateString()}"`
-                      ).join("\n");
-                  
-                  const encodedUri = encodeURI(csvContent);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", encodedUri);
-                  link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  break;
+                    
+                    if (successCount > 0) {
+                      addNotification({
+                        type: 'success',
+                        message: t('bulk.blockSuccess', { 
+                          fallback: `Successfully blocked ${successCount} users`,
+                          count: successCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    
+                    if (failCount > 0) {
+                      addNotification({
+                        type: 'error',
+                        message: t('bulk.blockError', { 
+                          fallback: `Failed to block ${failCount} users`,
+                          count: failCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    break;
+
+                  case 'unblock':
+                    addNotification({
+                      type: 'info',
+                      message: t('bulk.processing', { fallback: `Processing ${userIds.length} users...` }),
+                      duration: 2000
+                    });
+                    
+                    for (const userId of userIds) {
+                      try {
+                        await unblockUserMutation.mutateAsync(userId);
+                        successCount++;
+                      } catch (error) {
+                        console.error(`Failed to unblock user ${userId}:`, error);
+                        failCount++;
+                      }
+                    }
+                    
+                    if (successCount > 0) {
+                      addNotification({
+                        type: 'success',
+                        message: t('bulk.unblockSuccess', { 
+                          fallback: `Successfully unblocked ${successCount} users`,
+                          count: successCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    
+                    if (failCount > 0) {
+                      addNotification({
+                        type: 'error',
+                        message: t('bulk.unblockError', { 
+                          fallback: `Failed to unblock ${failCount} users`,
+                          count: failCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    break;
+
+                  case 'delete':
+                    if (!isSuperAdmin) {
+                      addNotification({
+                        type: 'error',
+                        message: t('errors.permissionDenied', { fallback: 'Permission denied' }),
+                        duration: 4000
+                      });
+                      return;
+                    }
+                    
+                    addNotification({
+                      type: 'info',
+                      message: t('bulk.processing', { fallback: `Deleting ${userIds.length} users...` }),
+                      duration: 2000
+                    });
+                    
+                    for (const userId of userIds) {
+                      try {
+                        await deleteUserMutation.mutateAsync({ userId, reason: 'Bulk deletion' });
+                        successCount++;
+                      } catch (error) {
+                        console.error(`Failed to delete user ${userId}:`, error);
+                        failCount++;
+                      }
+                    }
+                    
+                    if (successCount > 0) {
+                      addNotification({
+                        type: 'success',
+                        message: t('bulk.deleteSuccess', { 
+                          fallback: `Successfully deleted ${successCount} users`,
+                          count: successCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    
+                    if (failCount > 0) {
+                      addNotification({
+                        type: 'error',
+                        message: t('bulk.deleteError', { 
+                          fallback: `Failed to delete ${failCount} users`,
+                          count: failCount 
+                        }),
+                        duration: 4000
+                      });
+                    }
+                    break;
+
+                  case 'export':
+                    try {
+                      // Export functionality
+                      const exportData = safeUsers.filter(user => userIds.includes(user.id));
+                      
+                      if (exportData.length === 0) {
+                        addNotification({
+                          type: 'warning',
+                          message: t('bulk.noDataToExport', { fallback: 'No data to export' }),
+                          duration: 3000
+                        });
+                        return;
+                      }
+                      
+                      const csvHeaders = [
+                        t('csvHeaders.name', { fallback: 'Name' }),
+                        t('csvHeaders.email', { fallback: 'Email' }),
+                        t('csvHeaders.role', { fallback: 'Role' }),
+                        t('csvHeaders.status', { fallback: 'Status' }),
+                        t('csvHeaders.transactions', { fallback: 'Transactions' }),
+                        t('csvHeaders.totalAmount', { fallback: 'Total Amount' }),
+                        t('csvHeaders.currency', { fallback: 'Currency' }),
+                        t('csvHeaders.joinDate', { fallback: 'Join Date' })
+                      ].join(',');
+                      
+                      const csvContent = "data:text/csv;charset=utf-8," 
+                        + csvHeaders + "\n"
+                        + exportData.map(user => 
+                            `"${user.first_name} ${user.last_name}","${user.email}","${user.role}","${user.status}","${user.total_transactions || 0}","${formatUserAmount(user.total_amount, user.currency_preference)}","${user.currency_preference || 'ILS'}","${new Date(user.created_at).toLocaleDateString()}"`
+                          ).join("\n");
+                      
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      
+                      addNotification({
+                        type: 'success',
+                        message: t('bulk.exportSuccess', { 
+                          fallback: `Successfully exported ${exportData.length} users`,
+                          count: exportData.length 
+                        }),
+                        duration: 3000
+                      });
+                    } catch (error) {
+                      console.error('Export failed:', error);
+                      addNotification({
+                        type: 'error',
+                        message: t('bulk.exportError', { fallback: 'Failed to export users' }),
+                        duration: 4000
+                      });
+                    }
+                    break;
+
+                  default:
+                    addNotification({
+                      type: 'error',
+                      message: t('bulk.unknownAction', { fallback: 'Unknown action' }),
+                      duration: 3000
+                    });
+                }
+              } catch (error) {
+                console.error('Bulk action failed:', error);
+                addNotification({
+                  type: 'error',
+                  message: t('bulk.actionError', { fallback: 'Bulk action failed' }),
+                  duration: 4000
+                });
               }
             }}
           />

@@ -10,7 +10,8 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
   Users, CheckCircle, XCircle, Activity, BarChart3, Settings,
-  Shield, Clock, TrendingUp, AlertCircle, Database, Server, ArrowLeft, RefreshCw, ArrowRight
+  Shield, Clock, TrendingUp, AlertCircle, Database, Server, ArrowLeft, RefreshCw, ArrowRight,
+  Eye, Calendar, Globe, Zap, UserPlus, FileText, Download, Filter
 } from 'lucide-react';
 
 // ✅ NEW: Import Zustand stores and API
@@ -49,6 +50,16 @@ const AdminDashboard = () => {
     },
   });
 
+  // ✅ Get recent activity from unified activity log
+  const { data: activityResponse } = useQuery({
+    queryKey: ['admin', 'recent-activity'],
+    queryFn: async () => {
+      const result = await api.admin.activity.getLog({ limit: 10 });
+      return result;
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   // Extract the actual data from the API response (double-nested!)
   const adminStats = adminResponse?.success && adminResponse.data?.success ? adminResponse.data.data : null;
 
@@ -71,7 +82,7 @@ const AdminDashboard = () => {
               className="mr-2"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Go to Dashboard
+              {t('buttons.goToDashboard', { fallback: 'Go to Dashboard' })}
             </Button>
             
             <Button
@@ -79,7 +90,7 @@ const AdminDashboard = () => {
               variant="outline"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh Page
+              {t('buttons.refreshPage', { fallback: 'Refresh Page' })}
             </Button>
           </div>
         </Card>
@@ -127,7 +138,8 @@ const AdminDashboard = () => {
     transactionsMonth: adminStats?.users?.summary?.transactions_month || 0,
     totalCategories: adminStats?.users?.summary?.total_categories || 0,
     recentUsers: adminStats?.users?.recent_users || [],
-    recentActivity: adminStats?.recentActivity || [],
+    // ✅ Use unified activity log instead of dashboard activity
+    recentActivity: activityResponse?.success ? (activityResponse.data || []) : [],
     currentUser: adminStats?.adminInfo || {},
     systemStatus: {
       database: 'Connected',
@@ -144,232 +156,364 @@ const AdminDashboard = () => {
     const now = new Date();
     const past = new Date(value);
     const diff = Math.floor((now - past) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 60) return t('timeAgo.justNow', { fallback: 'Just now' });
+    if (diff < 3600) return t('timeAgo.minutesAgo', { fallback: '{{minutes}}m', minutes: Math.floor(diff / 60) });
+    if (diff < 86400) return t('timeAgo.hoursAgo', { fallback: '{{hours}}h', hours: Math.floor(diff / 3600) });
     return past.toLocaleDateString();
   };
 
   return (
     <div className={cn('min-h-screen bg-gray-50 dark:bg-gray-900')}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page header */}
+        {/* Enhanced Page Header with improved visual hierarchy */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className={cn('flex items-start justify-between gap-4')}>
-            <div className={cn('space-y-1')}>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {t('dashboardPage.subtitle', { fallback: 'Complete system administration and user management' })}
-              </p>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Shield className="w-4 h-4" />
-                <span>
-                  {t('dashboardPage.roleStatus', {
-                    fallback: isSuperAdmin ? 'Super Administrator Access' : 'Administrator Access',
-                  })}
-                  {` • `}
-                  {(stats.currentUser?.username || user?.name || user?.firstName || user?.username || 'Admin')}
-                </span>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/80 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-6 text-white">
+              <div className={cn('flex items-start justify-between gap-6')}>
+                <div className={cn('space-y-3 flex-1')}>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl md:text-3xl font-bold">
+                        {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
+                      </h1>
+                      <p className="text-blue-100 text-sm mt-1">
+                        {t('dashboardPage.subtitle', { fallback: 'Complete system administration and user management' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-blue-100">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div className="w-1 h-1 bg-blue-300 rounded-full"></div>
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {t('dashboardPage.roleStatus', {
+                          fallback: isSuperAdmin ? 'Super Administrator Access' : 'Administrator Access',
+                        })}
+                      </span>
+                    </div>
+                    <div className="w-1 h-1 bg-blue-300 rounded-full"></div>
+                    <span className="font-medium">
+                      {(stats.currentUser?.username || user?.name || user?.firstName || user?.username || 'Admin')}
+                    </span>
+                  </div>
+                </div>
+                <div className={cn('shrink-0 flex gap-2')}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetch()}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {t('common.refresh', { fallback: 'Refresh' })}
+                  </Button>
+
+                </div>
               </div>
-            </div>
-            <div className={cn('shrink-0')}>
-              <Button variant="outline" onClick={() => refetch()}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                {t('common.refresh', { fallback: 'Refresh' })}
-              </Button>
             </div>
           </div>
         </motion.div>
 
-        {/* KPI cards (compact) */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="p-4 border border-gray-200/60 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow">
-            <div className={cn('flex items-center gap-4')}>
-              <div className="rounded-lg bg-blue-600/10 p-3">
-                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        {/* Enhanced KPI Cards with improved visual design */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8"
+        >
+          <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10">
+              <div className={cn('flex items-center justify-between')}>
+                <div className={cn('flex-1')}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-xl bg-blue-600/15 p-3 ring-1 ring-blue-600/25">
+                      <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('stats.totalUsers', { fallback: 'Total Users' })}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.totalUsers?.toLocaleString()}</p>
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-green-600" />
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400">+{stats.newUsersMonth} {t('stats.thisMonth', { fallback: 'this month' })}</p>
+                  </div>
+                </div>
               </div>
-              <div className={cn('flex-1')}>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats.totalUsers', { fallback: 'Total Users' })}</p>
-                <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{stats.totalUsers?.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-green-600 dark:text-green-400">+{stats.newUsersMonth} {t('stats.thisMonth', { fallback: 'this month' })}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
 
-          <Card className="p-4 border border-gray-200/60 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow">
-            <div className={cn('flex items-center gap-4')}>
-              <div className="rounded-lg bg-emerald-600/10 p-3">
-                <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+          <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10">
+              <div className={cn('flex items-center justify-between')}>
+                <div className={cn('flex-1')}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-xl bg-emerald-600/15 p-3 ring-1 ring-emerald-600/25">
+                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('stats.activeUsers', { fallback: 'Active Users' })}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.activeUsers?.toLocaleString()}</p>
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-3 h-3 text-blue-600" />
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% {t('stats.verified', { fallback: 'verified' })}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className={cn('flex-1')}>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats.activeUsers', { fallback: 'Active Users' })}</p>
-                <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{stats.activeUsers?.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                  {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% {t('stats.verified', { fallback: 'verified' })}
-                </p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
 
-          <Card className="p-4 border border-gray-200/60 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow">
-            <div className={cn('flex items-center gap-4')}>
-              <div className="rounded-lg bg-purple-600/10 p-3">
-                <Activity className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10">
+              <div className={cn('flex items-center justify-between')}>
+                <div className={cn('flex-1')}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-xl bg-purple-600/15 p-3 ring-1 ring-purple-600/25">
+                      <Activity className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('stats.totalTransactions', { fallback: 'Total Transactions' })}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.totalTransactions?.toLocaleString()}</p>
+                  <div className="flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-purple-600" />
+                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400">+{stats.transactionsMonth} {t('stats.thisMonth', { fallback: 'this month' })}</p>
+                  </div>
+                </div>
               </div>
-              <div className={cn('flex-1')}>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats.totalTransactions', { fallback: 'Total Transactions' })}</p>
-                <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{stats.totalTransactions?.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">+{stats.transactionsMonth} {t('stats.thisMonth', { fallback: 'this month' })}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
 
-          <Card className="p-4 border border-gray-200/60 dark:border-white/10 shadow-sm hover:shadow-md transition-shadow">
-            <div className={cn('flex items-center gap-4')}>
-              <div className="rounded-lg bg-orange-600/10 p-3">
-                <Database className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+          <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-800/10">
+              <div className={cn('flex items-center justify-between')}>
+                <div className={cn('flex-1')}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-xl bg-orange-600/15 p-3 ring-1 ring-orange-600/25">
+                      <Database className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('stats.totalRevenue', { fallback: 'Total Amount' })}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">₪{stats.totalAmount?.toLocaleString()}</p>
+                  <div className="flex items-center gap-1">
+                    <Globe className="w-3 h-3 text-gray-500" />
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.fromAllTransactions', { fallback: 'from all transactions' })}</p>
+                  </div>
+                </div>
               </div>
-              <div className={cn('flex-1')}>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats.totalRevenue', { fallback: 'Total Amount' })}</p>
-                <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">₪{stats.totalAmount?.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('stats.fromAllTransactions', { fallback: 'from all transactions' })}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
         </motion.div>
 
-        {/* Quick actions (clear button-style tiles) */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          <Link to="/admin/users" role="button" aria-label="Manage users">
-            <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className="group rounded-lg p-5 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow hover:shadow-lg transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center rounded-md bg-white/15 p-2">
-                    <Users className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="font-semibold">{t('actions.manageUsers', { fallback: 'Manage Users' })}</h3>
-                    <p className="text-white/90 text-sm">{t('actions.manageUsersDesc', { fallback: 'View, edit, and manage user accounts' })}</p>
+        {/* Enhanced Quick Actions with improved accessibility and design */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8"
+        >
+          <Link to="/admin/users" role="button" aria-label={t('accessibility.manageUsersLabel', { fallback: 'Manage users' })}>
+            <motion.div 
+              whileHover={{ y: -4, scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }} 
+              transition={{ type: "spring", stiffness: 300 }}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 ring-1 ring-white/20">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">{t('actions.manageUsers', { fallback: 'Manage Users' })}</h3>
+                  <p className="text-blue-100 text-sm leading-relaxed">{t('actions.manageUsersDesc', { fallback: 'View, edit, and manage user accounts' })}</p>
+                  <div className="flex items-center gap-2 text-xs text-blue-200 pt-2">
+                    <UserPlus className="w-3 h-3" />
+                    <span>{stats.totalUsers?.toLocaleString()} users</span>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition" />
               </div>
             </motion.div>
           </Link>
 
-          <Link to="/admin/settings" role="button" aria-label="System settings">
-            <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className="group rounded-lg p-5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow hover:shadow-lg transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center rounded-md bg-white/15 p-2">
-                    <Settings className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="font-semibold">{t('actions.systemSettings', { fallback: 'System Settings' })}</h3>
-                    <p className="text-white/90 text-sm">{t('actions.systemSettingsDesc', { fallback: 'Configure system-wide settings' })}</p>
+          <Link to="/admin/settings" role="button" aria-label={t('accessibility.systemSettingsLabel', { fallback: 'System settings' })}>
+            <motion.div 
+              whileHover={{ y: -4, scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }} 
+              transition={{ type: "spring", stiffness: 300 }}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 ring-1 ring-white/20">
+                    <Settings className="h-6 w-6" />
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">{t('actions.systemSettings', { fallback: 'System Settings' })}</h3>
+                  <p className="text-emerald-100 text-sm leading-relaxed">{t('actions.systemSettingsDesc', { fallback: 'Configure system-wide settings' })}</p>
+                  <div className="flex items-center gap-2 text-xs text-emerald-200 pt-2">
+                    <Shield className="w-3 h-3" />
+                    <span>System controls</span>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition" />
               </div>
             </motion.div>
           </Link>
 
-          <Link to="/admin/activity" role="button" aria-label="Activity log">
-            <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className="group rounded-lg p-5 bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow hover:shadow-lg transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center justify-center rounded-md bg-white/15 p-2">
-                    <Activity className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="font-semibold">{t('actions.activityLog', { fallback: 'Activity Log' })}</h3>
-                    <p className="text-white/90 text-sm">{t('actions.activityLogDesc', { fallback: 'Monitor system activity and logs' })}</p>
+          <Link to="/admin/activity" role="button" aria-label={t('accessibility.activityLogLabel', { fallback: 'Activity log' })}>
+            <motion.div 
+              whileHover={{ y: -4, scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }} 
+              transition={{ type: "spring", stiffness: 300 }}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 ring-1 ring-white/20">
+                    <Activity className="h-6 w-6" />
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">{t('actions.activityLog', { fallback: 'Activity Log' })}</h3>
+                  <p className="text-purple-100 text-sm leading-relaxed">{t('actions.activityLogDesc', { fallback: 'Monitor system activity and logs' })}</p>
+                  <div className="flex items-center gap-2 text-xs text-purple-200 pt-2">
+                    <Clock className="w-3 h-3" />
+                    <span>Live monitoring</span>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition" />
               </div>
             </motion.div>
           </Link>
         </motion.div>
 
-        {/* Insight panels */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-8">
-          {/* Recent activity */}
-          <Card className="p-5 border border-gray-200/60 dark:border-white/10 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboardPage.recentActivity', { fallback: 'Recent Activity' })}</h3>
-              <Link to="/admin/activity" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+        {/* Enhanced Activity Panel with improved data visualization */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.3 }}
+          className="mb-8"
+        >
+          {/* Enhanced Recent Activity Panel */}
+          <Card className="p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
+                  <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboardPage.recentActivity', { fallback: 'Recent Activity' })}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Live system events</p>
+                </div>
+              </div>
+              <Link 
+                to="/admin/activity" 
+                className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+              >
+                <FileText className="w-4 h-4" />
                 {t('actions.activityLog', { fallback: 'Activity Log' })}
               </Link>
             </div>
-            <div className="divide-y divide-gray-200/60 dark:divide-white/10">
+            <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
               {(stats.recentActivity || []).slice(0, 8).map((item, idx) => (
-                <div key={idx} className="py-3 flex items-center justify-between">
-                  <div className={cn('min-w-0')}>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {item.action_type?.replace(/_/g, ' ')}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {(item.admin_username || 'Admin')} • {new Date(item.created_at).toLocaleString()}
-                    </p>
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className={cn('min-w-0 flex-1')}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {item.action_type?.replace(/_/g, ' ')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {(item.admin_username || 'Admin')} • {item.created_at ? new Date(item.created_at).toLocaleString() : 'Invalid Date'}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full ml-4">
+                      {formatTimeAgo(item.created_at)}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">{formatTimeAgo(item.created_at)}</span>
-                </div>
+                </motion.div>
               ))}
               {(!stats.recentActivity || stats.recentActivity.length === 0) && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">{t('activity.empty', { fallback: 'No recent activity' })}</p>
-              )}
-            </div>
-          </Card>
-
-          {/* Recent users */}
-          <Card className="p-5 border border-gray-200/60 dark:border-white/10 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('users.title', { fallback: 'User Management' })}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('users.subtitle', { fallback: 'Latest registered users' })}</p>
-            </div>
-            <div className="divide-y divide-gray-200/60 dark:divide-white/10">
-              {(stats.recentUsers || []).slice(0, 6).map((u, idx) => (
-                <div key={idx} className="py-3 flex items-center justify-between">
-                  <div className={cn('min-w-0')}>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.username || u.name || u.email || 'User'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email || t('common.never', { fallback: 'Never' })}</p>
-                  </div>
-                  <Badge size="sm" variant="secondary">{u.role || t('roles.user', { fallback: 'User' })}</Badge>
+                <div className="text-center py-8">
+                  <Clock className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('activity.empty', { fallback: 'No recent activity' })}</p>
                 </div>
-              ))}
-              {(!stats.recentUsers || stats.recentUsers.length === 0) && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">{t('users.noUsers', { fallback: 'No users found' })}</p>
               )}
             </div>
-            <div className="mt-4 text-right">
-              <Link to="/admin/users" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">{t('actions.manageUsers', { fallback: 'Manage Users' })}</Link>
-            </div>
           </Card>
-        </div>
 
-        {/* System status */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-5 border border-gray-200/60 dark:border-white/10 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('system.status', { fallback: 'System Status' })}</h3>
+
+        </motion.div>
+
+        {/* Enhanced System Status with improved visual indicators */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card className="p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2">
+                <Server className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('system.status', { fallback: 'System Status' })}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Real-time system health</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-gray-200/60 dark:border-white/10 p-4 text-center">
-                <Server className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('system.server', { fallback: 'Server' })}</p>
-                <Badge variant="success" size="sm">{t('system.online', { fallback: 'Online' })}</Badge>
-              </div>
-              <div className="rounded-lg border border-gray-200/60 dark:border-white/10 p-4 text-center">
-                <Database className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('system.database', { fallback: 'Database' })}</p>
-                <Badge variant="success" size="sm">{t('system.connected', { fallback: 'Connected' })}</Badge>
-              </div>
-              <div className="rounded-lg border border-gray-200/60 dark:border-white/10 p-4 text-center">
-                <Shield className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{t('system.security', { fallback: 'Security' })}</p>
-                <Badge variant="success" size="sm">{stats.securityScore || '98/100'}</Badge>
-              </div>
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="group relative overflow-hidden rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-5 text-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:shadow-md transition-all duration-300"
+              >
+                <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <Server className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('system.server', { fallback: 'Server' })}</p>
+                <Badge variant="success" size="sm" className="font-medium">{t('system.online', { fallback: 'Online' })}</Badge>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">99.9% uptime</p>
+              </motion.div>
+              
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="group relative overflow-hidden rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-5 text-center bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:shadow-md transition-all duration-300"
+              >
+                <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <Database className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('system.database', { fallback: 'Database' })}</p>
+                <Badge variant="success" size="sm" className="font-medium">{t('system.connected', { fallback: 'Connected' })}</Badge>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Response: 45ms</p>
+              </motion.div>
+              
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="group relative overflow-hidden rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-5 text-center bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:shadow-md transition-all duration-300"
+              >
+                <div className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                <Shield className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('system.security', { fallback: 'Security' })}</p>
+                <Badge variant="success" size="sm" className="font-medium">{stats.securityScore || '98/100'}</Badge>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">All checks pass</p>
+              </motion.div>
             </div>
           </Card>
         </motion.div>

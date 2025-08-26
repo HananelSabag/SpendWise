@@ -717,9 +717,13 @@ const validate = {
    */
   profileUpdate: (req, res, next) => {
     const { 
-      username, email, first_name, last_name, phone, bio, 
+      username, email, first_name, last_name, firstName, lastName, phone, bio, 
       location, website, birthday, preferences 
     } = req.body;
+
+    // ✅ NORMALIZE: Handle both camelCase and snake_case field names
+    if (firstName !== undefined) req.body.first_name = firstName;
+    if (lastName !== undefined) req.body.last_name = lastName;
 
     // Validate username if provided
     if (username !== undefined) {

@@ -5,33 +5,58 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Filter, Calendar, User, Activity as ActivityIcon, RefreshCw } from 'lucide-react';
 import { useTranslation } from '../../stores';
 import { cn } from '../../utils/helpers';
 import { api } from '../../api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Button } from '../../components/ui/Button';
 
 const AdminActivity = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState({
+    adminId: '',
+    actionType: '',
+    dateRange: '24h'
+  });
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
+  // Load activity log with filters
+  const loadActivities = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setRefreshing(!showLoading);
+    
+    try {
       const res = await api.admin.activity.getLog({ limit: 100 });
-      if (!mounted) return;
       if (res.success) {
-        setActivities(res.data || []);
+        // ✅ Handle unified response format from server
+        const activityData = res.data || [];
+        setActivities(Array.isArray(activityData) ? activityData : []);
+        setTotalCount(res.pagination?.total || activityData.length || 0);
         setError(null);
       } else {
+        console.error('Activity log error:', res.error);
         setError(res.error?.message || 'Failed to load activity');
+        setActivities([]);
+        setTotalCount(0);
       }
+    } catch (err) {
+      console.error('Activity log loading error:', err);
+      setError('Failed to load activity log');
+      setActivities([]);
+      setTotalCount(0);
+    } finally {
       setLoading(false);
-    })();
-    return () => { mounted = false; };
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadActivities();
   }, []);
 
   return (
@@ -54,60 +79,122 @@ const AdminActivity = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Filters
-          </h2>
+        {/* Enhanced Filters with Icons */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
+              <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('admin.filters', { fallback: 'Filters' })}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('admin.filtersDescription', { fallback: 'Filter and search activity logs' })}
+              </p>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Admin User
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <User className="w-4 h-4" />
+                {t('admin.adminUser', { fallback: 'Admin User' })}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <option>All Admins</option>
-                <option>hananel12345@gmail.com</option>
+              <select 
+                value={filters.adminId}
+                onChange={(e) => setFilters({...filters, adminId: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="">{t('admin.allAdmins', { fallback: 'All Admins' })}</option>
+                <option value="1">hananel12345@gmail.com</option>
               </select>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Action Type
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <ActivityIcon className="w-4 h-4" />
+                {t('admin.actionType', { fallback: 'Action Type' })}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <option>All Actions</option>
-                <option>User Management</option>
-                <option>Settings</option>
-                <option>Security</option>
+              <select 
+                value={filters.actionType}
+                onChange={(e) => setFilters({...filters, actionType: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="">{t('admin.allActions', { fallback: 'All Actions' })}</option>
+                <option value="user_delete">{t('admin.userDelete', { fallback: 'User Delete' })}</option>
+                <option value="user_block">{t('admin.userBlock', { fallback: 'User Block' })}</option>
+                <option value="user_change_role">{t('admin.roleChange', { fallback: 'Role Change' })}</option>
+                <option value="settings">{t('admin.settings', { fallback: 'Settings' })}</option>
               </select>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Date Range
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <Calendar className="w-4 h-4" />
+                {t('admin.dateRange', { fallback: 'Date Range' })}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <option>Last 24 Hours</option>
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Custom Range</option>
+              <select 
+                value={filters.dateRange}
+                onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="24h">{t('admin.last24Hours', { fallback: 'Last 24 Hours' })}</option>
+                <option value="7d">{t('admin.last7Days', { fallback: 'Last 7 Days' })}</option>
+                <option value="30d">{t('admin.last30Days', { fallback: 'Last 30 Days' })}</option>
+                <option value="all">{t('admin.allTime', { fallback: 'All Time' })}</option>
               </select>
             </div>
             
-            <div className="flex items-end">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Apply Filters
-              </button>
+            <div className="flex items-end gap-2">
+              <Button 
+                onClick={() => loadActivities()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading || refreshing}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                {t('admin.applyFilters', { fallback: 'Apply Filters' })}
+              </Button>
+              <Button
+                onClick={() => loadActivities(false)}
+                variant="outline"
+                size="sm"
+                disabled={loading || refreshing}
+                className="px-3"
+              >
+                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Activity List (mobile) + Table (desktop) */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-purple-700 dark:text-purple-300">
-              Recent Activity
-            </h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
+                  <ActivityIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {t('admin.recentActivity', { fallback: 'Recent Activity' })}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {totalCount > 0 ? `${activities.length} of ${totalCount} activities` : 'No activities found'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => loadActivities(false)}
+                variant="outline"
+                size="sm"
+                disabled={loading || refreshing}
+              >
+                <RefreshCw className={cn("w-4 h-4 mr-2", refreshing && "animate-spin")} />
+                {refreshing ? t('common.refreshing', { fallback: 'Refreshing...' }) : t('common.refresh', { fallback: 'Refresh' })}
+              </Button>
+            </div>
           </div>
           
           <div className="p-6">
@@ -124,13 +211,13 @@ const AdminActivity = () => {
                   {activities.map((a) => (
                     <div key={a.id} className="rounded-lg border border-purple-200 dark:border-purple-800 p-4">
                       <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                        {a.action_type?.replace(/_/g, ' ')}
+                        {a.action_type?.replace(/_/g, ' ') || 'Unknown Action'}
                       </div>
                       <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                        {a.admin_username || a.admin_email || 'Admin'} • {new Date(a.created_at).toLocaleString()}
+                        {a.admin_username || a.admin_email || 'Admin'} • {a.created_at ? new Date(a.created_at).toLocaleString() : 'Invalid Date'}
                       </div>
                       <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                        {a.target_user?.email || '-'}
+                        {a.target_user?.email || a.target_email || '-'}
                       </div>
                     </div>
                   ))}
@@ -149,11 +236,30 @@ const AdminActivity = () => {
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {activities.map((a) => (
-                        <tr key={a.id}>
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{new Date(a.created_at).toLocaleString()}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.admin_username || a.admin_email || 'Admin'}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.action_type}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{a.target_user?.email || '-'}</td>
+                        <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            {a.created_at ? (
+                              <div>
+                                <div className="font-medium">{new Date(a.created_at).toLocaleDateString()}</div>
+                                <div className="text-xs text-gray-500">{new Date(a.created_at).toLocaleTimeString()}</div>
+                              </div>
+                            ) : (
+                              <span className="text-red-500 italic">Invalid Date</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            <div className="font-medium">{a.admin_username || 'Admin'}</div>
+                            <div className="text-xs text-gray-500">{a.admin_email || ''}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              {a.action_type?.replace(/_/g, ' ') || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            <div className="font-medium">{a.target_username || '-'}</div>
+                            <div className="text-xs text-gray-500">{a.target_user?.email || a.target_email || ''}</div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
