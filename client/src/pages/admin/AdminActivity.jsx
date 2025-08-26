@@ -10,7 +10,7 @@ import { useTranslation } from '../../stores';
 import { cn } from '../../utils/helpers';
 import { api } from '../../api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { Button } from '../../components/ui/Button';
+import Button from '../../components/ui/Button';
 
 const AdminActivity = () => {
   const { t } = useTranslation();

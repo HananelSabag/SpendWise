@@ -747,15 +747,18 @@ const validate = {
       req.body.email = email.toLowerCase().trim();
     }
 
-    // Validate names if provided
-    if (first_name !== undefined && (typeof first_name !== 'string' || first_name.length > 100)) {
+    // ✅ FIXED: Validate names after normalization - check both original and normalized values
+    const finalFirstName = req.body.first_name || first_name;
+    const finalLastName = req.body.last_name || last_name;
+
+    if (finalFirstName !== undefined && (typeof finalFirstName !== 'string' || finalFirstName.length > 100)) {
       return res.status(400).json(createValidationError(
         'INVALID_FIRST_NAME',
         'First name must be a string with maximum 100 characters'
       ));
     }
 
-    if (last_name !== undefined && (typeof last_name !== 'string' || last_name.length > 100)) {
+    if (finalLastName !== undefined && (typeof finalLastName !== 'string' || finalLastName.length > 100)) {
       return res.status(400).json(createValidationError(
         'INVALID_LAST_NAME',
         'Last name must be a string with maximum 100 characters'
