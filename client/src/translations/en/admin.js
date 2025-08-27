@@ -160,9 +160,11 @@ export default {
     unblock: 'Unblock Selected',
     delete: 'Delete Selected',
     export: 'Export Selected',
+    clearSelection: 'Clear Selection',
     actionSuccess: '{{action}} completed for {{count}} users',
     actionError: 'Bulk action failed',
     noSelection: 'No users selected',
+    notSupported: 'Bulk actions not supported',
     processing: 'Processing {{count}} users...',
     blockSuccess: 'Successfully blocked {{count}} users',
     blockError: 'Failed to block {{count}} users',
@@ -196,7 +198,13 @@ export default {
     unblock: 'Unblock',
     goToDashboard: 'Go to Dashboard',
     refreshPage: 'Refresh Page',
-    exportCsv: 'Export CSV'
+    exportCsv: 'Export CSV',
+    multiSelect: 'Multi Select'
+  },
+
+  // Multi-select mode
+  multiSelect: {
+    hint: 'Multi-select mode active - click users to select'
   },
 
   // CSV Export Headers

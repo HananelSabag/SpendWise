@@ -4,7 +4,7 @@
  * @version 4.0.0 - SIMPLIFIED FOR RELIABILITY
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useAuth, useNotifications, useTranslation } from '../stores';
 import { api } from '../api';
 import { useBalanceRefresh } from '../contexts/BalanceContext';
@@ -23,17 +23,8 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { t } = useTranslation('onboarding');
   const { refreshAll } = useBalanceRefresh();
 
-  const [isCompleting, setIsCompleting] = useState(false);
-
   // ✅ SIMPLIFIED: Just complete onboarding without complex setup
   const completeOnboarding = useCallback(async () => {
-    if (isCompleting) {
-      console.warn('Onboarding completion already in progress');
-      return false;
-    }
-
-    setIsCompleting(true);
-
     try {
       console.log('🎯 Starting simplified onboarding completion...');
 
@@ -203,12 +194,8 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
 
       onError?.(error);
       return false;
-
-    } finally {
-      setIsCompleting(false);
     }
   }, [
-    isCompleting,
     stepData,
     user,
     authActions,
@@ -220,9 +207,6 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   ]);
 
   return {
-    // State
-    isCompleting,
-
     // Actions
     completeOnboarding,
 

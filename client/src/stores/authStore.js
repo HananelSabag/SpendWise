@@ -1,7 +1,11 @@
 /**
- * 🔐 AUTH STORE - SIMPLIFIED
- * Basic authentication with role-based access
- * @version 2.0.0
+ * 🔐 AUTH STORE - BULLETPROOF SECURITY
+ * Authentication with role-based access - CLIENT-SIDE ROLES FOR UI ONLY
+ * @version 3.0.0 - SECURITY HARDENED
+ * 
+ * ⚠️ SECURITY WARNING: All role checks in this store are for UI display only!
+ * Server-side validation is the ONLY source of truth for permissions.
+ * Client-side roles can be tampered with and should never be trusted for security decisions.
  */
 
 import { create } from 'zustand';
@@ -392,7 +396,7 @@ export const useAuthStore = create(
               state.isLoading = false;
               state.error = null;
               
-              // ✅ Derive role-based state
+              // ✅ Derive role-based state (UI ONLY - server validates permissions)
               state.userRole = (user && user.role) || 'user';
               state.isAdmin = user ? ['admin', 'super_admin'].includes(user.role || 'user') : false;
               state.isSuperAdmin = user ? (user.role || 'user') === 'super_admin' : false;

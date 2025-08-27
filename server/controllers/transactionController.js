@@ -1015,6 +1015,88 @@ const transactionController = {
   }),
 
   /**
+   * Bulk delete transactions
+   * @route POST /api/v1/transactions/bulk-delete
+   */
+  bulkDelete: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { transactionIds } = req.body;
+
+    if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction IDs array is required'
+      });
+    }
+
+    try {
+      const results = {
+        successful: 0,
+        failed: 0,
+        errors: []
+      };
+
+      // Process each transaction deletion
+      for (const transactionId of transactionIds) {
+        try {
+          // Check if transaction belongs to user
+          const checkQuery = `
+            SELECT id, template_id, is_recurring 
+            FROM transactions 
+            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+          `;
+          const checkResult = await db.query(checkQuery, [transactionId, userId]);
+          
+          if (checkResult.rows.length === 0) {
+            results.failed++;
+            results.errors.push(`Transaction ${transactionId} not found or not accessible`);
+            continue;
+          }
+
+          const transaction = checkResult.rows[0];
+
+          // Soft delete the transaction
+          const deleteQuery = `
+            UPDATE transactions 
+            SET deleted_at = NOW() 
+            WHERE id = $1 AND user_id = $2
+          `;
+          await db.query(deleteQuery, [transactionId, userId]);
+
+          results.successful++;
+          
+          logger.info(`Bulk deleted transaction ${transactionId} for user ${userId}`);
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to delete transaction ${transactionId}: ${error.message}`);
+          logger.error(`Bulk delete failed for transaction ${transactionId}`, {
+            userId,
+            transactionId,
+            error: error.message
+          });
+        }
+      }
+
+      res.json({
+        success: results.successful > 0,
+        data: {
+          summary: results,
+          deleted_count: results.successful,
+          failed_count: results.failed
+        },
+        message: `Bulk delete completed: ${results.successful} successful, ${results.failed} failed`
+      });
+    } catch (error) {
+      logger.error('Bulk delete operation failed', {
+        userId,
+        transactionIds,
+        error: error.message
+      });
+      throw error;
+    }
+  }),
+
+  /**
    * Generate 3 months of upcoming transactions for a template
    */
   

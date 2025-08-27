@@ -107,7 +107,7 @@ const AdminActivity = () => {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="">{t('admin.allAdmins', { fallback: 'All Admins' })}</option>
-                <option value="1">hananel12345@gmail.com</option>
+                {/* Dynamic admin options will be loaded from API */}
               </select>
             </div>
             

@@ -89,6 +89,7 @@ export default {
   selectAll: 'בחר הכל',
   deselectAll: 'בטל בחירת הכל',
   selectNone: 'בטל בחירה',
+  clearSelection: 'נקה בחירה',
   bulkActions: 'פעולות מרובות',
   bulkEdit: 'עריכה קבוצתית',
   bulkDelete: 'מחיקה קבוצתית'

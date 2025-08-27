@@ -143,6 +143,22 @@ const transactionAPI = {
     }
   },
 
+  /**
+   * Bulk delete transactions
+   * @param {Array<number>} transactionIds - Array of transaction IDs to delete
+   * @returns {Promise<Object>} Bulk deletion result
+   */
+  async bulkDelete(transactionIds) {
+    try {
+      const response = await apiClient.client.post('/transactions/bulk-delete', {
+        transactionIds
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
   // ==========================================
   // ⚡ QUICK ACTIONS (Dashboard Integration)
   // ==========================================

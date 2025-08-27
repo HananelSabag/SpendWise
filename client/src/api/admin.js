@@ -229,6 +229,32 @@ export const adminAPI = {
           error: api.normalizeError(error)
         };
       }
+    },
+
+    // Bulk manage users (block, unblock, delete multiple users)
+    async bulkManage(action, userIds, reason = null) {
+      try {
+        const response = await api.client.post('/admin/users/bulk-manage', {
+          action,
+          userIds,
+          reason
+        });
+
+        // Clear users cache to refresh data
+        api.clearCache('admin-users');
+        api.clearCache('admin-dashboard');
+
+        return {
+          success: true,
+          data: response.data?.data || response.data,
+          message: `Bulk ${action} operation completed`
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: api.normalizeError(error)
+        };
+      }
     }
   },
 
@@ -487,28 +513,37 @@ export const adminAPI = {
 
   // ✅ Admin Utilities
   utils: {
-    // Check if current user has admin access
+    // ✅ SECURITY WARNING: These are UI helpers only - NOT for security enforcement
+    // All actual permission checks MUST be done server-side
+    
+    // Check if current user has admin access (UI helper only)
     hasAdminAccess() {
+      // ⚠️ WARNING: This is for UI display purposes only!
+      // All actual security checks must be done server-side
       const token = localStorage.getItem('accessToken');
       if (!token) return false;
 
       try {
         const { jwtDecode } = require('jwt-decode');
         const decoded = jwtDecode(token);
+        // Note: Client-side JWT can be tampered with - server validation required
         return ['admin', 'super_admin'].includes(decoded.role);
       } catch {
         return false;
       }
     },
 
-    // Check if current user is super admin
+    // Check if current user is super admin (UI helper only)
     isSuperAdmin() {
+      // ⚠️ WARNING: This is for UI display purposes only!
+      // All actual security checks must be done server-side
       const token = localStorage.getItem('accessToken');
       if (!token) return false;
 
       try {
         const { jwtDecode } = require('jwt-decode');
         const decoded = jwtDecode(token);
+        // Note: Client-side JWT can be tampered with - server validation required
         return decoded.role === 'super_admin';
       } catch {
         return false;

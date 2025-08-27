@@ -34,7 +34,8 @@ const ModernOnboardingFooter = ({
   onComplete,
   onFinishNow, // NEW: For "Finish Now" button in step 1
   isRTL = false,
-  isValid = true
+  isValid = true,
+  isCompleted = false // NEW: Prop to indicate if onboarding is completed
 }) => {
   const { t } = useTranslation('onboarding');
 
@@ -183,7 +184,9 @@ const ModernOnboardingFooter = ({
             disabled={isCompleting || (!canGoNext && !isLastStep) || !isValid}
             className={cn(
               "flex items-center gap-2 px-6 py-3",
-              "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700",
+              isCompleted 
+                ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700",
               "text-white font-semibold",
               "shadow-lg hover:shadow-xl",
               "transition-all duration-200",
@@ -191,7 +194,12 @@ const ModernOnboardingFooter = ({
               isCompleting && "opacity-75 cursor-not-allowed"
             )}
           >
-            {isCompleting ? (
+            {isCompleted ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Success!
+              </>
+            ) : isCompleting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 {texts.completing}

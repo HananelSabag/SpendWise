@@ -7,64 +7,21 @@
 
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { auth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
 const { securityMiddleware } = require('../middleware/security');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const logger = require('../utils/logger');
 const db = require('../config/db'); // Fixed db import path
 
-/**
- * 🛡️ Admin Authorization Middleware
- * Ensures only admin/super_admin users can access admin routes
- */
-const adminAuth = (req, res, next) => {
-  if (!req.user || !['admin', 'super_admin'].includes(req.user.role)) {
-    logger.warn('🚫 Unauthorized admin access attempt', {
-      userId: req.user?.id,
-      userRole: req.user?.role,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    return res.status(403).json({
-      success: false,
-      error: {
-        code: 'ACCESS_DENIED',
-        message: 'Admin privileges required'
-      }
-    });
-  }
-  next();
-};
+// ✅ BULLETPROOF SECURITY: Using centralized auth middleware from auth.js
+// - requireAdmin: Ensures admin or super_admin role
+// - requireSuperAdmin: Ensures super_admin role only
+// - All middleware includes comprehensive logging and security checks
 
-/**
- * 🔒 Super Admin Authorization Middleware
- * Ensures only super_admin users can access super admin routes
- */
-const superAdminAuth = (req, res, next) => {
-  if (!req.user || req.user.role !== 'super_admin') {
-    logger.warn('🚫 Unauthorized super admin access attempt', {
-      userId: req.user?.id,
-      userRole: req.user?.role,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    return res.status(403).json({
-      success: false,
-      error: {
-        code: 'SUPER_ADMIN_REQUIRED',
-        message: 'Super admin privileges required'
-      }
-    });
-  }
-  next();
-};
-
-// Apply authentication and basic security to all admin routes (except bootstrap)
+// Apply authentication and bulletproof admin authorization to all admin routes
 router.use(auth);
-router.use(adminAuth);
+router.use(requireAdmin);
 router.use(securityMiddleware.api);
 
 /**
@@ -80,6 +37,13 @@ router.get('/dashboard', adminController.getDashboard);
  * @access  Admin/Super Admin
  */
 router.get('/users', adminController.getUsers);
+
+/**
+ * @route   POST /api/v1/admin/users/bulk-manage
+ * @desc    Bulk manage users (block, unblock, delete multiple users)
+ * @access  Admin/Super Admin (super admin required for admin users and delete)
+ */
+router.post('/users/bulk-manage', adminController.bulkManageUsers);
 
 /**
  * @route   POST /api/v1/admin/users/:userId/manage
@@ -107,7 +71,7 @@ router.put('/settings', adminController.updateSetting);
  * @desc    Delete system setting
  * @access  Super Admin only
  */
-router.delete('/settings/:key', superAdminAuth, adminController.deleteSetting);
+router.delete('/settings/:key', requireSuperAdmin, adminController.deleteSetting);
 
 /**
  * @route   GET /api/v1/admin/activity

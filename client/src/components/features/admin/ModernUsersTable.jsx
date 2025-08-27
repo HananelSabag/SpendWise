@@ -1,18 +1,16 @@
 /**
- * 🚀 MODERN USERS TABLE - Revolutionary Admin User Management
- * Features: Advanced responsive design, Micro-interactions, Bulk actions,
- * Advanced filtering, Virtualization, Real-time updates, Mobile-first UX
- * @version 4.0.0 - REVOLUTIONARY UPDATE
+ * 🚀 MODERN USERS TABLE - Clean Admin User Management
+ * Features: Responsive design, Individual user actions, Advanced filtering, Real-time updates
+ * @version 5.0.0 - CLEAN & OPTIMIZED UPDATE
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Filter, SortAsc, SortDesc, MoreHorizontal, Users,
+  Search, Filter, SortAsc, SortDesc, Users,
   Eye, Shield, Crown, User, Ban, UserCheck, Trash2, MailCheck,
-  ChevronDown, ChevronRight, Download, Upload, RefreshCw,
-  Grid3X3, List, Calendar, TrendingUp, Activity, Settings,
-  CheckCircle, XCircle, AlertTriangle, Clock, Zap, Star
+  ChevronDown, ChevronRight, Grid3X3, List, Calendar, TrendingUp,
+  CheckCircle, XCircle, AlertTriangle, Clock, Zap, Star, Check
 } from 'lucide-react';
 
 // ✅ Import design system components
@@ -200,9 +198,10 @@ const ModernUsersTable = ({
     return formatCurrency(amount || 0, { currency: userCurrency });
   }, [formatCurrency]);
 
-  // ✅ Advanced state management
-  const [viewMode, setViewMode] = useState('table'); // 'table', 'grid', 'cards'
+  // ✅ Clean state management - removed bulk functionality 
+  const [viewMode, setViewMode] = useState('table'); // 'table', 'grid'
   const [searchTerm, setSearchTerm] = useState('');
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [filterConfig, setFilterConfig] = useState({
@@ -212,7 +211,6 @@ const ModernUsersTable = ({
     activity: 'all'
   });
   const [expandedRows, setExpandedRows] = useState(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // ✅ Refs for virtualization and performance
@@ -289,16 +287,18 @@ const ModernUsersTable = ({
     return filtered;
   }, [users, searchTerm, filterConfig, sortConfig]);
 
-  // ✅ Bulk selection handlers
+  // ✅ Multi-select handlers (only work when multiSelectMode is enabled)
   const handleSelectAll = useCallback((checked) => {
+    if (!multiSelectMode) return;
     if (checked) {
       setSelectedUsers(new Set(filteredAndSortedUsers.map(user => user.id)));
     } else {
       setSelectedUsers(new Set());
     }
-  }, [filteredAndSortedUsers]);
+  }, [multiSelectMode, filteredAndSortedUsers]);
 
   const handleSelectUser = useCallback((userId, checked) => {
+    if (!multiSelectMode) return;
     const newSelected = new Set(selectedUsers);
     if (checked) {
       newSelected.add(userId);
@@ -306,7 +306,13 @@ const ModernUsersTable = ({
       newSelected.delete(userId);
     }
     setSelectedUsers(newSelected);
-  }, [selectedUsers]);
+  }, [multiSelectMode, selectedUsers]);
+
+  // ✅ Toggle multi-select mode
+  const toggleMultiSelectMode = useCallback(() => {
+    setMultiSelectMode(prev => !prev);
+    setSelectedUsers(new Set()); // Clear selections when toggling
+  }, []);
 
   // ✅ Sort handler
   const handleSort = useCallback((key) => {
@@ -327,28 +333,41 @@ const ModernUsersTable = ({
     setExpandedRows(newExpanded);
   }, [expandedRows]);
 
-  // ✅ Bulk actions
+  // ✅ Bulk action handler for server-side bulk operations
   const handleBulkAction = useCallback(async (action) => {
-    if (selectedUsers.size === 0) return;
-    
-    try {
-      await onBulkAction?.(action, Array.from(selectedUsers));
-      setSelectedUsers(new Set());
+    if (!multiSelectMode || selectedUsers.size === 0) {
       addNotification({
-        type: 'success',
-        message: t('bulk.actionSuccess', { 
-          fallback: `${action} completed for ${selectedUsers.size} users`
-        })
+        type: 'warning',
+        message: t('bulk.noSelection', { fallback: 'No users selected' }),
+        duration: 3000
       });
+      return;
+    }
+
+    try {
+      const userIds = Array.from(selectedUsers);
+      
+      // Call the onBulkAction prop if provided, otherwise show not supported message
+      if (onBulkAction) {
+        await onBulkAction(action, userIds);
+        setSelectedUsers(new Set()); // Clear selections after success
+      } else {
+        addNotification({
+          type: 'error',
+          message: t('bulk.notSupported', { fallback: 'Bulk actions not supported' }),
+          duration: 3000
+        });
+      }
     } catch (error) {
       addNotification({
         type: 'error',
-        message: t('bulk.actionError', { fallback: 'Bulk action failed' })
+        message: t('bulk.actionError', { fallback: 'Bulk action failed' }),
+        duration: 4000
       });
     }
-  }, [selectedUsers, onBulkAction, addNotification, t]);
+  }, [multiSelectMode, selectedUsers, onBulkAction, addNotification, t]);
 
-  // ✅ Keyboard shortcuts
+  // ✅ Keyboard shortcuts for search and multi-select
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.ctrlKey || e.metaKey) {
@@ -357,9 +376,9 @@ const ModernUsersTable = ({
             e.preventDefault();
             searchInputRef.current?.focus();
             break;
-          case 'a':
+          case 'm':
             e.preventDefault();
-            handleSelectAll(!selectedUsers.size);
+            toggleMultiSelectMode();
             break;
         }
       }
@@ -367,12 +386,7 @@ const ModernUsersTable = ({
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [handleSelectAll, selectedUsers.size]);
-
-  // ✅ Show bulk actions when users are selected
-  useEffect(() => {
-    setShowBulkActions(selectedUsers.size > 0);
-  }, [selectedUsers.size]);
+  }, [toggleMultiSelectMode]);
 
   // ✅ Header component
   const TableHeader = () => (
@@ -409,6 +423,18 @@ const ModernUsersTable = ({
             >
               <Filter className="w-4 h-4" />
               {t('common.filters', { fallback: 'Filters' })}
+            </Button>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Button
+              variant={multiSelectMode ? 'primary' : 'outline'}
+              size="md"
+              onClick={toggleMultiSelectMode}
+              className="gap-2"
+            >
+              <Check className="w-4 h-4" />
+              {t('buttons.multiSelect', { fallback: 'Multi Select' })}
             </Button>
           </motion.div>
 
@@ -520,18 +546,23 @@ const ModernUsersTable = ({
             <Users className="w-4 h-4" />
             <span>{filteredAndSortedUsers.length} {t('common.users', { fallback: 'users' })}</span>
           </div>
-          {selectedUsers.size > 0 && (
+          {multiSelectMode && selectedUsers.size > 0 && (
             <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
               <CheckCircle className="w-4 h-4" />
               <span>{selectedUsers.size} {t('common.selected', { fallback: 'selected' })}</span>
             </div>
           )}
+          {multiSelectMode && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {t('multiSelect.hint', { fallback: 'Multi-select mode active - click users to select' })}
+            </div>
+          )}
         </div>
       </motion.div>
 
-      {/* Bulk actions */}
+      {/* Bulk actions - show when multi-select mode is active and users are selected */}
       <AnimatePresence>
-        {showBulkActions && (
+        {multiSelectMode && selectedUsers.size > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -545,7 +576,7 @@ const ModernUsersTable = ({
               className="gap-2"
             >
               <Ban className="w-4 h-4" />
-              {t('bulk.block', { fallback: 'Block Selected' })}
+              {t('bulk.block', { fallback: 'Block Selected' })} ({selectedUsers.size})
             </Button>
             <Button
               variant="outline"
@@ -554,7 +585,7 @@ const ModernUsersTable = ({
               className="gap-2"
             >
               <UserCheck className="w-4 h-4" />
-              {t('bulk.unblock', { fallback: 'Unblock Selected' })}
+              {t('bulk.unblock', { fallback: 'Unblock Selected' })} ({selectedUsers.size})
             </Button>
             {isSuperAdmin && (
               <Button
@@ -564,17 +595,17 @@ const ModernUsersTable = ({
                 className="gap-2 text-red-600 hover:text-red-700"
               >
                 <Trash2 className="w-4 h-4" />
-                {t('bulk.delete', { fallback: 'Delete Selected' })}
+                {t('bulk.delete', { fallback: 'Delete Selected' })} ({selectedUsers.size})
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleBulkAction('export')}
+              onClick={() => setSelectedUsers(new Set())}
               className="gap-2"
             >
-              <Download className="w-4 h-4" />
-              {t('bulk.export', { fallback: 'Export Selected' })}
+              <XCircle className="w-4 h-4" />
+              {t('bulk.clearSelection', { fallback: 'Clear Selection' })}
             </Button>
           </motion.div>
         )}
@@ -599,16 +630,18 @@ const ModernUsersTable = ({
         >
           <Card className="p-6 hover:shadow-lg transition-all duration-300 border-2 hover:border-primary-200 dark:hover:border-primary-700">
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center mt-1">
-                <Checkbox
-                  checked={selectedUsers.has(user.id)}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleSelectUser(user.id, e.target.checked);
-                  }}
-                  className="cursor-pointer"
-                />
-              </div>
+              {multiSelectMode && (
+                <div className="flex items-center justify-center mt-1">
+                  <Checkbox
+                    checked={selectedUsers.has(user.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleSelectUser(user.id, e.target.checked);
+                    }}
+                    className="cursor-pointer"
+                  />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar
@@ -737,16 +770,18 @@ const ModernUsersTable = ({
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Checkbox
-                checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
-                indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  handleSelectAll(e.target.checked);
-                }}
-                label={t('table.selectAll', { fallback: 'Select all' })}
-                className="cursor-pointer"
-              />
+              {multiSelectMode && (
+                <Checkbox
+                  checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
+                  indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleSelectAll(e.target.checked);
+                  }}
+                  label={t('table.selectAll', { fallback: 'Select all' })}
+                  className="cursor-pointer"
+                />
+              )}
             </div>
             <span className="text-sm text-gray-500">
               {filteredAndSortedUsers.length} {t('common.users', { fallback: 'users' })}
@@ -772,16 +807,18 @@ const ModernUsersTable = ({
                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center mt-1">
-                    <Checkbox
-                      checked={selectedUsers.has(user.id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectUser(user.id, e.target.checked);
-                      }}
-                      className="cursor-pointer"
-                    />
-                  </div>
+                  {multiSelectMode && (
+                    <div className="flex items-center justify-center mt-1">
+                      <Checkbox
+                        checked={selectedUsers.has(user.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSelectUser(user.id, e.target.checked);
+                        }}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                  )}
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
@@ -937,19 +974,21 @@ const ModernUsersTable = ({
         <table className="w-full" ref={tableRef}>
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-4 text-left">
-                <div className="flex items-center justify-center">
-                  <Checkbox
-                    checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
-                    indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleSelectAll(e.target.checked);
-                    }}
-                    className="cursor-pointer"
-                  />
-                </div>
-              </th>
+              {multiSelectMode && (
+                <th className="px-6 py-4 text-left">
+                  <div className="flex items-center justify-center">
+                    <Checkbox
+                      checked={selectedUsers.size === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
+                      indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredAndSortedUsers.length}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleSelectAll(e.target.checked);
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </th>
+              )}
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <SortableHeader column="first_name">
                   {t('table.user', { fallback: 'User' })}
@@ -998,18 +1037,20 @@ const ModernUsersTable = ({
                     index % 2 === 0 && "bg-gray-50/30 dark:bg-gray-800/20"
                   )}
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center">
-                      <Checkbox
-                        checked={selectedUsers.has(user.id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleSelectUser(user.id, e.target.checked);
-                        }}
-                        className="cursor-pointer"
-                      />
-                    </div>
-                  </td>
+                  {multiSelectMode && (
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          checked={selectedUsers.has(user.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectUser(user.id, e.target.checked);
+                          }}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar

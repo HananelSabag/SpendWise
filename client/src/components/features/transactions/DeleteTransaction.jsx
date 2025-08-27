@@ -22,7 +22,7 @@ const DeleteTransaction = ({
   isOpen,
   onClose,
   transaction,
-  onConfirm,
+  onSuccess,
   isDeleting = false
 }) => {
   // ✅ NEW: Use Zustand stores
@@ -87,7 +87,7 @@ const DeleteTransaction = ({
     if (!transaction) return;
 
     try {
-      await onConfirm(transaction.id, {
+      await onSuccess(transaction.id, {
         mode: transactionData?.isRecurring ? deleteMode : 'single',
         transaction
       });
@@ -109,7 +109,7 @@ const DeleteTransaction = ({
         duration: 5000
       });
     }
-  }, [transaction, deleteMode, transactionData?.isRecurring, onConfirm, addNotification, t, onClose]);
+  }, [transaction, deleteMode, transactionData?.isRecurring, onSuccess, addNotification, t, onClose]);
 
   // Reset state when modal closes
   const handleClose = useCallback(() => {

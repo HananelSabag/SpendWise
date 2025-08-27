@@ -4,6 +4,8 @@ import AddTransactionModal from '../../transactions/modals/AddTransactionModal.j
 import EditTransactionModal from '../../transactions/modals/EditTransactionModal.jsx';
 import RecurringSetupModal from '../../transactions/modals/RecurringSetupModal.jsx';
 import DeleteTransaction from '../../transactions/DeleteTransaction.jsx';
+import { useTransactionActions } from '../../../../hooks/useTransactionActions';
+import { useNotifications } from '../../../../stores';
 
 /**
  * UnifiedTransactionActions
@@ -24,6 +26,10 @@ const UnifiedTransactionActions = () => {
   const [showRecurringSetup, setShowRecurringSetup] = React.useState(false);
   const [editMode, setEditMode] = React.useState('edit'); // 'edit' | 'duplicate'
   const [selectedTx, setSelectedTx] = React.useState(null);
+
+  // ✅ Add transaction actions and notifications
+  const { deleteTransaction } = useTransactionActions();
+  const { addNotification } = useNotifications();
 
   // Handlers
   const handleAdd = React.useCallback(() => {
@@ -88,6 +94,26 @@ const UnifiedTransactionActions = () => {
     setSelectedTx(null);
   }, []);
 
+  // ✅ Handle delete success with actual API call
+  const handleDeleteSuccess = React.useCallback(async (transactionId, options) => {
+    try {
+      await deleteTransaction(transactionId, options);
+      addNotification({
+        type: 'success',
+        message: 'Transaction deleted successfully',
+        duration: 3000
+      });
+      handleSuccess(); // Close modal and cleanup
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+      addNotification({
+        type: 'error',
+        message: error.message || 'Failed to delete transaction',
+        duration: 4000
+      });
+    }
+  }, [deleteTransaction, addNotification, handleSuccess]);
+
   return (
     <>
       {/* Add */}
@@ -135,7 +161,7 @@ const UnifiedTransactionActions = () => {
             setShowDelete(false);
             setSelectedTx(null);
           }}
-          onSuccess={handleSuccess}
+          onSuccess={handleDeleteSuccess}
         />
       )}
     </>

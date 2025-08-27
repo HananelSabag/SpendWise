@@ -34,6 +34,7 @@ export const useModernOnboardingState = (options = {}) => {
   // ✅ Current step tracking
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // ✅ Auto-populate names from email for new users
@@ -324,6 +325,7 @@ export const useModernOnboardingState = (options = {}) => {
     // State
     currentStep,
     isCompleting,
+    isCompleted,
     hasUnsavedChanges,
     stepData,
     steps,
@@ -335,6 +337,7 @@ export const useModernOnboardingState = (options = {}) => {
     // Actions
     setCurrentStep,
     setIsCompleting,
+    setIsCompleted,
     updateStepData,
     resetOnboarding,
     loadPersistedData,

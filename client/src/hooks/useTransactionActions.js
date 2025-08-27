@@ -255,6 +255,48 @@ export const useTransactionActions = (context = 'transactions') => {
   }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, refetchTransactions, logAction]);
 
   /**
+   * ✅ BULK DELETE: Use server bulk delete endpoint for better performance
+   */
+  const bulkDelete = useCallback(async (transactionIds, options = {}) => {
+    try {
+      logAction(`Bulk deleting ${transactionIds.length} transactions`);
+      
+      const result = await transactionAPI.bulkDelete(transactionIds);
+      
+      if (result.success) {
+        await invalidateRelevantQueries('critical');
+        setTimeout(() => {
+          refetchTransactions();
+        }, 200);
+        refreshAll();
+        
+        const { successful, failed } = result.data.data.summary;
+        
+        if (successful > 0) {
+          toastService.success('toast.success.bulkDeleteSuccess', { 
+            params: { count: successful } 
+          });
+        }
+        
+        if (failed > 0) {
+          toastService.error('toast.error.bulkDeletePartialFail', { 
+            params: { failed } 
+          });
+        }
+        
+        logAction(`Bulk delete completed: ${successful} successful, ${failed} failed`);
+        return result.data.data;
+      } else {
+        throw new Error(result.error?.message || 'Bulk delete failed');
+      }
+    } catch (error) {
+      logAction(`Bulk delete failed`, { error: error.message });
+      toastService.error('toast.error.bulkDeleteFailed');
+      throw error;
+    }
+  }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, refreshAll, logAction]);
+
+  /**
    * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading
    */
   const bulkOperations = useCallback(async (operation, transactionIds, options = {}) => {
@@ -436,6 +478,7 @@ export const useTransactionActions = (context = 'transactions') => {
     
     // ✅ ENHANCED: Operations with infinite loading support
     bulkOperations,
+    bulkDelete,
     forceRefreshAll,
     
     // ✅ PRESERVED: State Helper

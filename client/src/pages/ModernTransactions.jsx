@@ -612,7 +612,7 @@ const ModernTransactions = () => {
     createTransaction,
     updateTransaction,
     deleteTransaction,
-    bulkOperations
+    bulkDelete
   } = useTransactionActions();
 
   const { categories } = useCategory();
@@ -671,6 +671,26 @@ const ModernTransactions = () => {
       duration: 3000
     });
   }, [refetchTransactions, addNotification, t]);
+
+  // ✅ Handle delete success
+  const handleDeleteSuccess = useCallback(async (transactionId, options) => {
+    try {
+      await deleteTransaction(transactionId, options);
+      refetchTransactions();
+      addNotification({
+        type: 'success',
+        message: t('notifications.transactionDeleted', 'Transaction deleted successfully'),
+        duration: 3000
+      });
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+      addNotification({
+        type: 'error',
+        message: error.message || t('errors.deletingFailed', 'Failed to delete transaction'),
+        duration: 4000
+      });
+    }
+  }, [deleteTransaction, refetchTransactions, addNotification, t]);
 
   const handleAddTransaction = useCallback(() => {
     setShowAddTransaction(true);
@@ -1020,9 +1040,22 @@ const ModernTransactions = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            // Handle bulk delete
-                            console.log('Bulk delete:', Array.from(selectedIds));
+                          onClick={async () => {
+                            if (selectedIds.size === 0) return;
+                            
+                            const confirmed = window.confirm(
+                              t('modals.delete.title', 'Delete Transaction') + 
+                              ` - ${t('modals.delete.description', 'Are you sure you want to delete these transactions? This action cannot be undone.')}`
+                            );
+                            
+                            if (confirmed) {
+                              try {
+                                await bulkDelete(Array.from(selectedIds));
+                                setSelectedIds(new Set());
+                              } catch (error) {
+                                console.error('Bulk delete failed:', error);
+                              }
+                            }
                           }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -1149,7 +1182,7 @@ const ModernTransactions = () => {
             setShowDeleteModal(false);
             setSelectedTransaction(null);
           }}
-          onSuccess={handleTransactionSuccess}
+          onSuccess={handleDeleteSuccess}
         />
       )}
 

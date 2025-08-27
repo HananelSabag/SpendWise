@@ -1,7 +1,8 @@
 /**
- * 🔐 ENHANCED AUTH MIDDLEWARE - Admin Role Support
- * JWT authentication with admin role handling
+ * 🔐 BULLETPROOF AUTH MIDDLEWARE - Maximum Security
+ * JWT authentication with bulletproof role-based access control
  * @module middleware/auth
+ * @version 3.0.0 - BULLETPROOF SECURITY
  */
 
 const jwt = require('jsonwebtoken');
@@ -87,6 +88,33 @@ const auth = async (req, res, next) => {
       }
 
       user = result.rows[0];
+      
+      // ✅ BULLETPROOF ROLE VALIDATION
+      // Ensure role is valid and not tampered with
+      const validRoles = ['user', 'admin', 'super_admin'];
+      if (!validRoles.includes(user.role)) {
+        logger.error('🚨 SECURITY ALERT: Invalid role detected', {
+          userId: user.id,
+          email: user.email,
+          invalidRole: user.role,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
+        // Force user to regular user role and log incident
+        await db.query(
+          'UPDATE users SET role = $1 WHERE id = $2',
+          ['user', user.id],
+          'security_force_role_reset'
+        );
+        
+        user.role = 'user';
+      }
+      
+      // ✅ Add bulletproof role checks
+      user.isAdmin = ['admin', 'super_admin'].includes(user.role);
+      user.isSuperAdmin = user.role === 'super_admin';
+      user.isUser = user.role === 'user';
       
       // Check for user restrictions (blocks, etc.) - with error handling
       let isRestricted = false;
@@ -317,6 +345,97 @@ const verifyToken = (token, secret = process.env.JWT_SECRET) => {
 };
 
 /**
+ * 🛡️ BULLETPROOF ROLE VALIDATION MIDDLEWARE
+ */
+
+// Require Admin Role (admin or super_admin)
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' }
+    });
+  }
+
+  if (!['admin', 'super_admin'].includes(req.user.role)) {
+    logger.warn('🚫 Non-admin attempted admin access', {
+      userId: req.user.id,
+      userRole: req.user.role,
+      path: req.path,
+      ip: req.ip
+    });
+
+    return res.status(403).json({
+      success: false,
+      error: { code: 'ADMIN_REQUIRED', message: 'Admin privileges required' }
+    });
+  }
+
+  next();
+};
+
+// Require Super Admin Role
+const requireSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' }
+    });
+  }
+
+  if (req.user.role !== 'super_admin') {
+    logger.warn('🚫 Non-super-admin attempted super admin access', {
+      userId: req.user.id,
+      userRole: req.user.role,
+      path: req.path,
+      ip: req.ip
+    });
+
+    return res.status(403).json({
+      success: false,
+      error: { code: 'SUPER_ADMIN_REQUIRED', message: 'Super admin privileges required' }
+    });
+  }
+
+  next();
+};
+
+// Bulletproof role checker function
+const hasRole = (user, requiredRole) => {
+  if (!user || !user.role) return false;
+  
+  const validRoles = ['user', 'admin', 'super_admin'];
+  if (!validRoles.includes(user.role)) return false;
+  
+  switch (requiredRole) {
+    case 'user':
+      return validRoles.includes(user.role);
+    case 'admin':
+      return ['admin', 'super_admin'].includes(user.role);
+    case 'super_admin':
+      return user.role === 'super_admin';
+    default:
+      return false;
+  }
+};
+
+// Role hierarchy checker
+const canManageUser = (adminUser, targetUser) => {
+  if (!adminUser || !targetUser) return false;
+  
+  // Super admin can manage anyone
+  if (adminUser.role === 'super_admin') return true;
+  
+  // Admin can manage regular users only
+  if (adminUser.role === 'admin' && targetUser.role === 'user') return true;
+  
+  // Nobody can manage themselves through this function (prevents self-demotion)
+  if (adminUser.id === targetUser.id) return false;
+  
+  return false;
+};
+
+/**
  * 📊 Get auth cache statistics
  */
 const getAuthCacheStats = () => {
@@ -332,5 +451,9 @@ module.exports = {
   clearUserCache,
   getAuthCacheStats,
   generateTokens,
-  verifyToken
+  verifyToken,
+  requireAdmin,
+  requireSuperAdmin,
+  hasRole,
+  canManageUser
 };

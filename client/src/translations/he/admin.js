@@ -171,9 +171,11 @@ export default {
     unblock: 'בטל חסימת נבחרים',
     delete: 'מחק נבחרים',
     export: 'ייצא נבחרים',
+    clearSelection: 'נקה בחירה',
     actionSuccess: '{{action}} הושלם עבור {{count}} משתמשים',
     actionError: 'פעולה קבוצתית נכשלה',
     noSelection: 'לא נבחרו משתמשים',
+    notSupported: 'פעולות קבוצתיות לא נתמכות',
     processing: 'מעבד {{count}} משתמשים...',
     blockSuccess: 'חסם בהצלחה {{count}} משתמשים',
     blockError: 'נכשל בחסימת {{count}} משתמשים',
@@ -207,7 +209,13 @@ export default {
     unblock: 'בטל חסימה',
     goToDashboard: 'עבור לדף הבית',
     refreshPage: 'רענן דף',
-    exportCsv: 'ייצא CSV'
+    exportCsv: 'ייצא CSV',
+    multiSelect: 'בחירה מרובה'
+  },
+
+  // Multi-select mode
+  multiSelect: {
+    hint: 'מצב בחירה מרובה פעיל - לחץ על משתמשים לבחירה'
   },
 
   // CSV Export Headers

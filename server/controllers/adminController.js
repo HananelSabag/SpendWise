@@ -7,6 +7,7 @@
 
 const db = require('../config/db');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { hasRole, canManageUser } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 
@@ -271,6 +272,197 @@ class AdminController {
   });
 
   /**
+   * 🔒 Bulk manage users (block, unblock, delete multiple users)
+   */
+  static bulkManageUsers = asyncHandler(async (req, res) => {
+    const adminId = req.user.id;
+    const { userIds, action, reason } = req.body;
+    
+    // Validate action
+    const validActions = ['block', 'unblock', 'delete'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_ACTION',
+          message: `Invalid action. Must be one of: ${validActions.join(', ')}`
+        }
+      });
+    }
+    
+    // Validate required fields
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'MISSING_USER_IDS',
+          message: 'User IDs array is required and cannot be empty'
+        }
+      });
+    }
+    
+    // Limit bulk operations to reasonable size
+    if (userIds.length > 50) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'TOO_MANY_USERS',
+          message: 'Bulk operations are limited to 50 users at a time'
+        }
+      });
+    }
+
+    try {
+      const results = {
+        successful: 0,
+        failed: 0,
+        errors: []
+      };
+
+      // ✅ BULLETPROOF: Use the admin user from auth middleware (already validated)
+      const adminUser = req.user;
+      const isSuperAdmin = hasRole(adminUser, 'super_admin');
+
+      // Process each user
+      for (const userId of userIds) {
+        try {
+          // Load target user and check permissions
+          const userQuery = `SELECT id, role, status FROM users WHERE id = $1 AND email NOT LIKE '%_deleted_%'`;
+          const userResult = await db.query(userQuery, [userId]);
+          
+          if (userResult.rows.length === 0) {
+            results.failed++;
+            results.errors.push(`User ${userId} not found`);
+            continue;
+          }
+
+          const targetUser = userResult.rows[0];
+
+          // ✅ BULLETPROOF: Use centralized permission checking
+          if (!canManageUser(adminUser, targetUser)) {
+            results.failed++;
+            if (targetUser.id === adminUser.id) {
+              results.errors.push(`Cannot perform action on yourself`);
+            } else if (targetUser.role === 'super_admin') {
+              results.errors.push(`Cannot perform action on super admin users`);
+            } else if (targetUser.role === 'admin' && !isSuperAdmin) {
+              results.errors.push(`Only super admins can manage admin users`);
+            } else {
+              results.errors.push(`Insufficient permissions to manage user ${userId}`);
+            }
+            continue;
+          }
+
+          // Perform the action
+          let query, params;
+          let actionType;
+
+          switch (action) {
+            case 'block':
+              if (targetUser.status === 'blocked') {
+                results.failed++;
+                results.errors.push(`User ${userId} is already blocked`);
+                continue;
+              }
+              query = `UPDATE users SET status = 'blocked', updated_at = NOW() WHERE id = $1`;
+              params = [userId];
+              actionType = 'user_blocked';
+              break;
+
+            case 'unblock':
+              if (targetUser.status !== 'blocked') {
+                results.failed++;
+                results.errors.push(`User ${userId} is not blocked`);
+                continue;
+              }
+              query = `UPDATE users SET status = 'active', updated_at = NOW() WHERE id = $1`;
+              params = [userId];
+              actionType = 'user_unblocked';
+              break;
+
+            case 'delete':
+              if (!isSuperAdmin) {
+                results.failed++;
+                results.errors.push(`Only super admins can delete users`);
+                continue;
+              }
+              // Soft delete by updating email and marking as deleted
+              const timestamp = Date.now();
+              query = `
+                UPDATE users 
+                SET 
+                  email = CONCAT(email, '_deleted_', $2),
+                  status = 'deleted',
+                  updated_at = NOW()
+                WHERE id = $1
+              `;
+              params = [userId, timestamp];
+              actionType = 'user_deleted';
+              break;
+          }
+
+          await db.query(query, params);
+
+          // Log admin activity
+          const activityQuery = `
+            INSERT INTO admin_activity_log (admin_id, admin_username, action_type, target_user_id, details, created_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+          `;
+          const adminUsername = req.user.username || req.user.email;
+          const details = reason ? JSON.stringify({ reason, bulk: true }) : JSON.stringify({ bulk: true });
+          
+          await db.query(activityQuery, [adminId, adminUsername, actionType, userId, details]);
+
+          results.successful++;
+          
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to ${action} user ${userId}: ${error.message}`);
+          logger.error(`Bulk ${action} failed for user ${userId}`, {
+            adminId,
+            userId,
+            error: error.message
+          });
+        }
+      }
+
+      logger.info(`Bulk ${action} completed`, {
+        adminId,
+        successful: results.successful,
+        failed: results.failed,
+        total: userIds.length
+      });
+
+      res.json({
+        success: true,
+        data: {
+          action,
+          total: userIds.length,
+          successful: results.successful,
+          failed: results.failed,
+          errors: results.errors
+        }
+      });
+
+    } catch (error) {
+      logger.error('Bulk user management failed', {
+        adminId,
+        action,
+        userIds: userIds.length,
+        error: error.message
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'BULK_OPERATION_FAILED',
+          message: 'Bulk operation failed'
+        }
+      });
+    }
+  });
+
+  /**
    * 🔒 Manage user (block, unblock, delete, verify)
    */
   static manageUser = asyncHandler(async (req, res) => {
@@ -302,7 +494,7 @@ class AdminController {
     }
 
     try {
-      // ✅ Load target user and role for permission checks
+      // ✅ BULLETPROOF: Load target user and validate permissions
       const targetRes = await db.query(
         'SELECT id, role FROM users WHERE id = $1',
         [userId],
@@ -314,13 +506,25 @@ class AdminController {
           error: { code: 'USER_NOT_FOUND', message: 'User not found' }
         });
       }
-      const targetRole = targetRes.rows[0].role;
+      const targetUser = targetRes.rows[0];
 
-      // ✅ Admins cannot manage admin/super_admin accounts; only super admin can
-      if (['admin', 'super_admin'].includes(targetRole) && req.user.role !== 'super_admin') {
+      // ✅ Use bulletproof permission checking
+      if (!canManageUser(req.user, targetUser)) {
+        logger.warn('🚫 Unauthorized user management attempt', {
+          adminId: req.user.id,
+          adminRole: req.user.role,
+          targetUserId: userId,
+          targetUserRole: targetUser.role,
+          action,
+          ip: req.ip
+        });
+
         return res.status(403).json({
           success: false,
-          error: { code: 'SUPER_ADMIN_REQUIRED', message: 'Cannot manage admin accounts without super admin privileges' }
+          error: { 
+            code: 'PERMISSION_DENIED', 
+            message: 'Insufficient permissions to manage this user' 
+          }
         });
       }
 

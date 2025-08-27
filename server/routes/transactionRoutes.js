@@ -203,6 +203,12 @@ router.delete('/:type/:id',
   transactionController.delete
 );
 
+// Bulk delete transactions
+router.post('/bulk-delete',
+  createTransactionLimiter,
+  transactionController.bulkDelete
+);
+
 // Advanced delete for recurring transactions
 router.delete('/recurring/:id',
   createTransactionLimiter,

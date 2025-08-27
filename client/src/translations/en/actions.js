@@ -90,6 +90,7 @@ export default {
   selectAll: 'Select All',
   deselectAll: 'Deselect All',
   selectNone: 'Select None',
+  clearSelection: 'Clear Selection',
   bulkActions: 'Bulk Actions',
   bulkEdit: 'Bulk Edit',
   bulkDelete: 'Bulk Delete'

@@ -51,6 +51,8 @@ const ModernOnboardingModal = ({
     progress,
     setIsCompleting,
     isCompleting,
+    isCompleted,
+    setIsCompleted,
     getStepData,
     updateStepData,
     validateStep
@@ -84,6 +86,7 @@ const ModernOnboardingModal = ({
     console.log('🎯 ModernOnboardingModal - previewOnly mode:', previewOnly);
     console.log('🎯 ModernOnboardingModal - Current stepData:', stepData);
     console.log('🎯 ModernOnboardingModal - Templates data:', stepData?.templates);
+    
     try {
       if (previewOnly) {
         console.log('⚠️ ModernOnboardingModal - PREVIEW ONLY MODE - Skipping template saving!');
@@ -91,21 +94,36 @@ const ModernOnboardingModal = ({
         onClose?.();
         return;
       }
+      
+      // Set loading state
       setIsCompleting(true);
       console.log('🔄 ModernOnboardingModal - Calling completeOnboarding...');
+      
       const result = await completeOnboarding();
       console.log('🔄 ModernOnboardingModal - completeOnboarding result:', result);
+      
       if (result) {
         console.log('✅ ModernOnboardingModal - Completion successful');
+        
+        // ✅ Show success state
+        setIsCompleted(true);
+        
+        // ✅ ENHANCED: Add a small delay to show success state before closing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Call success callbacks
         onComplete?.();
         onClose?.();
       } else {
         console.log('❌ ModernOnboardingModal - Completion returned false');
+        // Don't close modal on failure, let user retry
       }
     } catch (error) {
       console.error('❌ ModernOnboardingModal - Completion failed:', error);
       console.error('❌ ModernOnboardingModal - Error stack:', error.stack);
+      // Don't close modal on error, let user retry
     } finally {
+      // Always clear loading state
       setIsCompleting(false);
     }
   };
@@ -265,6 +283,7 @@ const ModernOnboardingModal = ({
                 onFinishNow={handleFinishNow}
                 isRTL={isRTL}
                 isValid={isCurrentStepValid}
+                isCompleted={isCompleted}
               />
             </div>
           </motion.div>
