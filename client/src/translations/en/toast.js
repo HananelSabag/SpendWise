@@ -174,7 +174,16 @@ export default {
     emailSent: "Email sent successfully!",
     invitationSent: "Invitation sent successfully!",
     feedbackSubmitted: "Thank you for your feedback!",
-    supportTicketCreated: "Support ticket created successfully!"
+    supportTicketCreated: "Support ticket created successfully!",
+    bulkOperationSuccess: "{{count}} {{operation}} operations completed successfully!",
+    dataRefreshed: "Data refreshed successfully!"
+  },
+
+  // ✅ Error Actions
+  error: {
+    operationFailed: "Operation failed. Please try again.",
+    bulkOperationFailed: "Bulk {{operation}} operation failed. Please try again.",
+    bulkOperationPartialFail: "{{failed}} {{operation}} operations failed"
   },
 
   // ✅ Loading & Progress

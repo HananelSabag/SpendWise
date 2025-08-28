@@ -45,8 +45,8 @@ const DeleteTransaction = ({
       isExpense,
       formattedAmount: Math.abs(transaction.amount).toFixed(2),
       displayDate: dateHelpers.format(transaction.date, 'MMM dd, yyyy'),
-      description: transaction.description || t('labels.noDescription'),
-      category: transaction.category?.name || t('labels.uncategorized')
+      description: transaction.description || t('transactions.noDescription', 'No description'),
+      category: transaction.category?.name || t('categories.uncategorized', 'Uncategorized')
     };
   }, [transaction, t]);
 
@@ -94,7 +94,7 @@ const DeleteTransaction = ({
 
       addNotification({
         type: 'success',
-        title: t('success.transactionDeleted'),
+        message: t('toast.transactions.deleteSuccess', 'Transaction deleted successfully'),
         duration: 3000
       });
 
@@ -104,8 +104,7 @@ const DeleteTransaction = ({
       
       addNotification({
         type: 'error',
-        title: t('errors.deletingFailed'),
-        description: error.message,
+        message: error.message || t('toast.transactions.transactionDeleteFailed', 'Failed to delete transaction. Please try again.'),
         duration: 5000
       });
     }
@@ -253,7 +252,7 @@ const DeleteTransaction = ({
             onClick={handleDelete}
             disabled={isDeleting}
             loading={isDeleting}
-            className="flex-1 py-3 text-base font-medium"
+            className="flex-1 py-3 text-base font-medium bg-red-600 hover:bg-red-700 border-red-600 text-white"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             {isDeleting ? t('loading.deleting') : t('delete.confirm')}

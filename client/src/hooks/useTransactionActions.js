@@ -18,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions, useTransactionTemplates } from './useTransactions';
 import { useToast } from './useToast';
 import { useBalanceRefresh } from '../contexts/BalanceContext';
+import transactionAPI from '../api/transactions';
 
 /**
  * ✅ ENHANCED: Context strategies optimized for infinite loading
@@ -273,13 +274,13 @@ export const useTransactionActions = (context = 'transactions') => {
         const { successful, failed } = result.data.data.summary;
         
         if (successful > 0) {
-          toastService.success('toast.success.bulkDeleteSuccess', { 
+          toastService.success('toast.transactions.bulkDeleteSuccess', { 
             params: { count: successful } 
           });
         }
         
         if (failed > 0) {
-          toastService.error('toast.error.bulkDeletePartialFail', { 
+          toastService.error('toast.transactions.bulkDeletePartialFail', { 
             params: { failed } 
           });
         }
@@ -291,7 +292,7 @@ export const useTransactionActions = (context = 'transactions') => {
       }
     } catch (error) {
       logAction(`Bulk delete failed`, { error: error.message });
-      toastService.error('toast.error.bulkDeleteFailed');
+      toastService.error('toast.transactions.bulkDeleteFailed');
       throw error;
     }
   }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, refreshAll, logAction]);

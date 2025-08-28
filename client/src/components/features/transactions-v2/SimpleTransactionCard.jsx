@@ -89,7 +89,7 @@ const SimpleTransactionCard = ({
                 </h4>
               </div>
               <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                <span className="truncate">{transaction?.category_name || transaction?.category?.name || t('labels.uncategorized')}</span>
+                <span className="truncate">{transaction?.category_name || transaction?.category?.name || t('categories.uncategorized', 'Uncategorized')}</span>
                 <span className="text-gray-400">•</span>
                 <span className="flex-shrink-0">{dateText}</span>
               </div>

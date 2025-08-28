@@ -56,10 +56,20 @@ const ModernQuickActionsBar = ({ className = '' }) => {
     setIsSubmitting(true);
 
     try {
+      // Use specific quick action category IDs based on user's language preference
+      const { currentLanguage } = useTranslation();
+      const isHebrew = currentLanguage === 'he';
+      
+      const quickCategoryIds = {
+        expense: isHebrew ? 59 : 68, // Quick Expense - Hebrew: 59, English: 68
+        income: isHebrew ? 55 : 64   // Quick Income - Hebrew: 55, English: 64
+      };
+
       const transactionData = {
         type: activeType,
         amount: Math.abs(numericAmount),
         description: `Quick ${activeType}`,
+        categoryId: quickCategoryIds[activeType],
         date: new Date().toLocaleDateString('en-CA'),
         notes: '',
         isRecurring: false

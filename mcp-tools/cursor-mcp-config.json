@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "spendwise-db": {
+      "command": "node",
+      "args": ["./mcp-tools/spendwise-db-server.js", "--mcp"],
+      "cwd": "C:/SpendWiseRepository/SpendWise",
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}",
+        "NODE_ENV": "development",
+        "MCP_MODE": "true"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sb_secret_W7I70LFRNR4L4xgN4vLPAw_b8rIf9oU",
+        "SUPABASE_PROJECT_ID": "obsycususrdabscpuhmt"
+      }
+    }
+  }
+}
+

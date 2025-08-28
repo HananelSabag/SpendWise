@@ -19,6 +19,7 @@ The SpendWise MCP Tools provide:
 - Node.js 18+ 
 - Access to your Supabase database
 - SpendWise database schema already deployed
+- Cursor IDE with MCP support
 
 ### 1. Install Dependencies
 ```bash
@@ -27,26 +28,57 @@ npm install
 ```
 
 ### 2. Environment Setup
-Create a `.env` file in the `mcp-tools` directory:
+Create a `.env` file in the **project root** (not in mcp-tools):
 
 ```env
 # Supabase Database Connection
 DATABASE_URL=postgresql://postgres:[PASSWORD]@[PROJECT_REF].supabase.co:5432/postgres
-NODE_ENV=production
+NODE_ENV=development
 
 # Optional: For development/testing
 DEBUG_MCP=true
+MCP_MODE=false
 ```
 
-### 3. Test the Setup
+### 3. Configure Cursor MCP
+Update your Cursor MCP configuration file (`~/.cursor/mcp.json` or `%USERPROFILE%\.cursor\mcp.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "spendwise-db": {
+      "command": "node",
+      "args": ["./mcp-tools/spendwise-db-server.js", "--mcp"],
+      "cwd": "C:/SpendWiseRepository/SpendWise",
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:[PASSWORD]@[PROJECT_REF].supabase.co:5432/postgres",
+        "NODE_ENV": "development",
+        "MCP_MODE": "true"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "your-supabase-access-token",
+        "SUPABASE_PROJECT_ID": "your-project-id"
+      }
+    }
+  }
+}
+```
+
+### 4. Test the Setup
 ```bash
+# Test standalone
 npm test
+
+# Test MCP protocol
+node spendwise-db-server.js --mcp
 ```
 
-### 4. Start MCP Server
-```bash
-npm start
-```
+### 5. Restart Cursor
+After updating the MCP configuration, restart Cursor to load the new tools.
 
 ## 📋 Available Tools
 

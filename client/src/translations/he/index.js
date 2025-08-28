@@ -33,6 +33,7 @@ import status from './status.js';
 import roles from './roles.js';
 import users from './users.js';
 import table from './table.js';
+import modals from './modals.js';
 
 export default {
   common,
@@ -65,4 +66,5 @@ export default {
   roles,
   users,
   table,
+  modals,
 }; 

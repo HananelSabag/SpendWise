@@ -3,14 +3,14 @@
 /**
  * SpendWise Database MCP Server
  * Provides Model Context Protocol tools for interacting with SpendWise Supabase database
+ * @version 2.0.0 - MCP 2024-11-05 Compatible
  */
 
 const { Pool } = require('pg');
 const { parse } = require('pg-connection-string');
 require('dotenv').config();
-require('dotenv').config();
 
-// MCP Server Implementation (basic structure without SDK dependency)
+// MCP Protocol Implementation
 class SpendWiseMCPServer {
   constructor() {
     this.tools = new Map();
@@ -445,6 +445,125 @@ class SpendWiseMCPServer {
   }
 }
 
+// MCP Protocol Handler
+class MCPProtocolHandler {
+  constructor(server) {
+    this.server = server;
+    this.capabilities = {
+      tools: {}
+    };
+  }
+
+  async handleMessage(message) {
+    try {
+      const { method, params, id } = message;
+      
+      switch (method) {
+        case 'initialize':
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              protocolVersion: '2024-11-05',
+              capabilities: this.capabilities,
+              serverInfo: {
+                name: 'SpendWise Database MCP Server',
+                version: '2.0.0'
+              }
+            }
+          };
+          
+        case 'tools/list':
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              tools: Array.from(this.server.tools.keys()).map(name => ({
+                name,
+                description: `SpendWise database tool: ${name}`,
+                inputSchema: {
+                  type: 'object',
+                  properties: {},
+                  required: []
+                }
+              }))
+            }
+          };
+          
+        case 'tools/call':
+          const { name, arguments: args } = params;
+          const result = await this.server.executeTool(name, args || {});
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify(result, null, 2)
+              }]
+            }
+          };
+          
+        default:
+          throw new Error(`Unknown method: ${method}`);
+      }
+    } catch (error) {
+      return {
+        jsonrpc: '2.0',
+        id: message.id,
+        error: {
+          code: -32000,
+          message: error.message
+        }
+      };
+    }
+  }
+}
+
+// Standard input/output MCP handler
+async function startMCPServer() {
+  const server = new SpendWiseMCPServer();
+  const handler = new MCPProtocolHandler(server);
+  
+  try {
+    await server.initializeDatabase();
+    console.error('✅ SpendWise Database MCP Server is ready');
+    
+    // Handle stdin for MCP protocol
+    process.stdin.setEncoding('utf8');
+    
+    let buffer = '';
+    process.stdin.on('data', async (chunk) => {
+      buffer += chunk;
+      
+      // Process complete JSON messages
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const message = JSON.parse(line);
+            const response = await handler.handleMessage(message);
+            console.log(JSON.stringify(response));
+          } catch (error) {
+            console.error('❌ Error processing message:', error);
+          }
+        }
+      }
+    });
+    
+    process.stdin.on('end', () => {
+      server.close();
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start MCP server:', error);
+    process.exit(1);
+  }
+}
+
 // Command line interface for testing
 async function main() {
   console.log('🚀 Starting SpendWise Database MCP Server...');
@@ -476,5 +595,10 @@ module.exports = SpendWiseMCPServer;
 
 // Start if run directly
 if (require.main === module) {
-  main();
+  // Check if we're in MCP mode (typical when called by Cursor)
+  if (process.argv.includes('--mcp') || process.env.MCP_MODE === 'true' || !process.stdout.isTTY) {
+    startMCPServer();
+  } else {
+    main();
+  }
 } 

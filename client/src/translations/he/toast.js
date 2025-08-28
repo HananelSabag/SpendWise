@@ -174,7 +174,16 @@ export default {
     emailSent: "האימייל נשלח בהצלחה!",
     invitationSent: "ההזמנה נשלחה בהצלחה!",
     feedbackSubmitted: "תודה על המשוב שלכם!",
-    supportTicketCreated: "פנייה לתמיכה נוצרה בהצלחה!"
+    supportTicketCreated: "פנייה לתמיכה נוצרה בהצלחה!",
+    bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!",
+    dataRefreshed: "הנתונים רוענו בהצלחה!"
+  },
+
+  // ✅ Error Actions
+  error: {
+    operationFailed: "הפעולה נכשלה. אנא נסו שוב.",
+    bulkOperationFailed: "פעולת {{operation}} קבוצתית נכשלה. אנא נסו שוב.",
+    bulkOperationPartialFail: "{{failed}} פעולות {{operation}} נכשלו"
   },
 
   // ✅ Loading & Progress

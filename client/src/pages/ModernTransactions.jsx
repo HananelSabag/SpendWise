@@ -648,8 +648,33 @@ const ModernTransactions = () => {
   const summary = useMemo(() => {
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Math.abs(t.amount), 0);
     const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const recurringCount = transactions.filter(t => t.template_id || t.is_recurring).length;
+    
+    // ✅ Enhanced recurring detection - also check for 'recurring' template names
+    const recurringTransactions = transactions.filter(t => 
+      t.template_id || 
+      t.is_recurring || 
+      t.category_name?.toLowerCase().includes('recurring') ||
+      t.description?.toLowerCase().includes('recurring')
+    );
+    
+    const recurringCount = recurringTransactions.length;
     const oneTimeCount = transactions.length - recurringCount;
+    
+    // Debug logging to help identify recurring transactions
+    if (transactions.length > 0) {
+      console.log('📊 Transaction Summary Debug:', {
+        totalTransactions: transactions.length,
+        recurringCount,
+        oneTimeCount,
+        sampleTransactions: transactions.slice(0, 3).map(t => ({
+          id: t.id,
+          description: t.description,
+          template_id: t.template_id,
+          is_recurring: t.is_recurring,
+          category_name: t.category_name
+        }))
+      });
+    }
     
     return {
       totalIncome,
@@ -1177,6 +1202,7 @@ const ModernTransactions = () => {
 
       {showDeleteModal && selectedTransaction && (
         <DeleteTransaction
+          isOpen={showDeleteModal}
           transaction={selectedTransaction}
           onClose={() => {
             setShowDeleteModal(false);

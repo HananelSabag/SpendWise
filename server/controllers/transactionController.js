@@ -412,7 +412,7 @@ const transactionController = {
       });
     }
 
-    const { amount, description, categoryId, notes, date } = req.body;
+    const { amount, description, categoryId, category_name, notes, date } = req.body;
 
     // Validate required fields
     if (!amount || isNaN(parseFloat(amount))) {
@@ -430,11 +430,58 @@ const transactionController = {
     }
 
     try {
+      // ✅ IMPROVED: Get or create category from categoryId or category_name
+      let finalCategoryId = null;
+      
+      // If categoryId is provided, use it directly
+      if (categoryId) {
+        finalCategoryId = categoryId;
+      } else if (category_name) {
+        // Try to find existing category by name (exact match first, then case-insensitive)
+        const categoryQuery = `
+          SELECT id FROM categories 
+          WHERE name = $1 AND (user_id = $2 OR user_id IS NULL)
+          ORDER BY user_id DESC NULLS LAST
+          LIMIT 1
+        `;
+        let categoryResult = await db.query(categoryQuery, [category_name, userId]);
+        
+        // If exact match not found, try case-insensitive
+        if (categoryResult.rows.length === 0) {
+          const categoryQueryInsensitive = `
+            SELECT id FROM categories 
+            WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
+            ORDER BY user_id DESC NULLS LAST
+            LIMIT 1
+          `;
+          categoryResult = await db.query(categoryQueryInsensitive, [category_name, userId]);
+        }
+        
+        if (categoryResult.rows.length > 0) {
+          finalCategoryId = categoryResult.rows[0].id;
+        } else {
+          // Create new category if not found
+          const createCategoryQuery = `
+            INSERT INTO categories (name, user_id, created_at, updated_at)
+            VALUES ($1, $2, NOW(), NOW())
+            RETURNING id
+          `;
+          const createResult = await db.query(createCategoryQuery, [category_name, userId]);
+          finalCategoryId = createResult.rows[0].id;
+          
+          logger.info('Created new category for transaction', {
+            userId,
+            categoryName: category_name,
+            categoryId: finalCategoryId
+          });
+        }
+      }
+
       const transactionData = {
         type,
         amount: parseFloat(amount),
         description: description.trim(),
-        categoryId: categoryId || null,
+        categoryId: finalCategoryId,
         notes: notes ? notes.trim() : '',
         date: date || new Date().toISOString().split('T')[0] // Default to current date if not provided
       };

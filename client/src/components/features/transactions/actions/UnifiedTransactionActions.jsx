@@ -156,6 +156,7 @@ const UnifiedTransactionActions = () => {
       {/* Delete */}
       {showDelete && selectedTx && (
         <DeleteTransaction
+          isOpen={showDelete}
           transaction={selectedTx}
           onClose={() => {
             setShowDelete(false);

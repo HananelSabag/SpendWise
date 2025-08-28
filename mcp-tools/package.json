@@ -5,7 +5,10 @@
   "main": "spendwise-db-server.js",
   "scripts": {
     "start": "node spendwise-db-server.js",
-    "test": "node test-mcp-tools.js"
+    "test": "node test-mcp-tools.js",
+    "dev": "NODE_ENV=development node spendwise-db-server.js",
+    "setup": "node setup-mcp.js",
+    "mcp": "node spendwise-db-server.js --mcp"
   },
   "dependencies": {
     "dotenv": "^16.5.0",
