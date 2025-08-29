@@ -203,9 +203,8 @@ router.delete('/:type/:id',
   transactionController.delete
 );
 
-// Bulk delete transactions
+// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
 router.post('/bulk-delete',
-  createTransactionLimiter,
   transactionController.bulkDelete
 );
 

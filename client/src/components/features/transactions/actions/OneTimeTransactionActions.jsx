@@ -12,7 +12,7 @@ import {
   DollarSign, Receipt, Eye
 } from 'lucide-react';
 
-import { useTranslation } from '../../../../stores';
+import { useTranslation, useCurrency } from '../../../../stores';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 import { Button } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
@@ -28,6 +28,7 @@ const OneTimeTransactionActions = ({
   showLabels = false
 }) => {
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
   const { deleteTransaction } = useTransactionActions();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +41,17 @@ const OneTimeTransactionActions = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    // ✅ FIXED: Use parent handler if provided, otherwise show our own modal
+    if (onDelete) {
+      onDelete(transaction);
+    } else {
+      setShowDeleteModal(true);
+    }
+  };
+
+  // ✅ FIXED: Only handle actual deletion when parent handlers aren't available
+  const handleActualDelete = async () => {
     if (!confirm(t('transactions.delete.confirmDelete', { description: transaction.description }))) return;
     
     setIsLoading(true);
@@ -48,6 +59,7 @@ const OneTimeTransactionActions = ({
       // Simple deletion for one-time transactions
       await deleteTransaction(transaction.id, { deleteSingle: true });
       onSuccess?.('deleted');
+      setShowDeleteModal(false);
     } catch (error) {
       console.error('Failed to delete transaction:', error);
     } finally {
@@ -105,7 +117,7 @@ const OneTimeTransactionActions = ({
             "text-lg font-bold",
             transaction.type === 'income' ? "text-green-600" : "text-red-600"
           )}>
-            {transaction.type === 'income' ? '+' : '-'}${transaction.amount}
+            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
           </div>
           <div className="text-sm text-gray-500">
             {new Date(transaction.date).toLocaleDateString()}
@@ -127,14 +139,11 @@ const OneTimeTransactionActions = ({
           <Button
             variant="destructive"
             className="flex-1"
-            onClick={() => {
-              handleDelete();
-              setShowDeleteModal(false);
-            }}
+            onClick={handleActualDelete}
             disabled={isLoading}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            {t('actions.delete', 'Delete')}
+            {isLoading ? t('actions.deleting', 'Deleting...') : t('actions.delete', 'Delete')}
           </Button>
         </div>
       </motion.div>
@@ -205,7 +214,7 @@ const OneTimeTransactionActions = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowDeleteModal(true)}
+          onClick={handleDelete}
           disabled={isLoading}
           className="text-red-600 hover:text-red-700"
         >
@@ -280,15 +289,15 @@ const OneTimeTransactionActions = ({
         Duplicate
       </Button>
       
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowDeleteModal(true)}
-        disabled={isLoading}
-      >
-        <Trash2 className="w-4 h-4 mr-1" />
-        Delete
-      </Button>
+              <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDelete}
+          disabled={isLoading}
+        >
+          <Trash2 className="w-4 h-4 mr-1" />
+          Delete
+        </Button>
 
       {showDeleteModal && <DeleteModal />}
     </div>

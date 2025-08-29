@@ -680,11 +680,22 @@ const transactionController = {
         case 'all':
           // Delete all transactions for this template and the template itself
           if (templateId) {
-            // Delete all transactions created from this template
-            const transactionsResult = await db.query(
-              'UPDATE transactions SET deleted_at = NOW() WHERE template_id = $1 AND user_id = $2 AND deleted_at IS NULL RETURNING id',
+            // Delete all transactions created from this template - FIXED for current schema
+            let deletedTransactionsCount = 0;
+            
+            // Delete from income table
+            const incomeResult = await db.query(
+              'DELETE FROM income WHERE template_id = $1 AND user_id = $2 RETURNING id',
               [templateId, userId]
             );
+            deletedTransactionsCount += incomeResult.rows.length;
+            
+            // Delete from expenses table
+            const expensesResult = await db.query(
+              'DELETE FROM expenses WHERE template_id = $1 AND user_id = $2 RETURNING id',
+              [templateId, userId]
+            );
+            deletedTransactionsCount += expensesResult.rows.length;
             
             // Delete the template
             const templateResult = await db.query(
@@ -694,9 +705,9 @@ const transactionController = {
             
             result = { 
               templateDeleted: templateResult.rows.length > 0,
-              transactionsDeleted: transactionsResult.rows.length
+              transactionsDeleted: deletedTransactionsCount
             };
-            message = `Recurring template and ${transactionsResult.rows.length} related transactions deleted`;
+            message = `Recurring template and ${deletedTransactionsCount} related transactions deleted`;
           } else {
             // Just delete the single transaction if no template
             const singleDeleted = await Transaction.delete(id, userId);
@@ -1295,19 +1306,34 @@ const transactionController = {
         });
       }
 
-      // Soft delete the upcoming transaction
-      const deleteQuery = `
-        UPDATE transactions 
-        SET deleted_at = NOW(), updated_at = NOW() 
-        WHERE id = $1 AND user_id = $2 AND status = 'upcoming'
+      // Delete the upcoming transaction - FIXED for current schema
+      let deleted = false;
+      
+      // Try to delete from income table first
+      const deleteIncomeQuery = `
+        DELETE FROM income 
+        WHERE id = $1 AND user_id = $2
         RETURNING id
       `;
-      const deleteResult = await db.query(deleteQuery, [id, userId]);
+      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
+      
+      if (incomeResult.rows.length > 0) {
+        deleted = true;
+      } else {
+        // Try to delete from expenses table
+        const deleteExpenseQuery = `
+          DELETE FROM expenses 
+          WHERE id = $1 AND user_id = $2
+          RETURNING id
+        `;
+        const expenseResult = await db.query(deleteExpenseQuery, [id, userId]);
+        deleted = expenseResult.rows.length > 0;
+      }
 
-      if (deleteResult.rows.length === 0) {
+      if (!deleted) {
         return res.status(404).json({
           success: false,
-          error: 'Failed to delete upcoming transaction'
+          message: 'Upcoming transaction not found'
         });
       }
 
@@ -1357,27 +1383,39 @@ const transactionController = {
       `;
       const updateResult = await db.query(updateQuery, [id, userId]);
 
-      // Delete all future upcoming transactions for this template
-      const deleteUpcomingQuery = `
-        UPDATE transactions 
-        SET deleted_at = NOW(), updated_at = NOW() 
-        WHERE template_id = $1 AND user_id = $2 AND status = 'upcoming' AND date > CURRENT_DATE
+      // Delete all future upcoming transactions for this template - FIXED for current schema
+      let deletedCount = 0;
+      
+      // Delete from income table
+      const deleteIncomeQuery = `
+        DELETE FROM income 
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
-      const deletedResult = await db.query(deleteUpcomingQuery, [id, userId]);
+      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
+      deletedCount += incomeResult.rows.length;
+      
+      // Delete from expenses table
+      const deleteExpensesQuery = `
+        DELETE FROM expenses 
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+        RETURNING id
+      `;
+      const expensesResult = await db.query(deleteExpensesQuery, [id, userId]);
+      deletedCount += expensesResult.rows.length;
 
       logger.info('Template generation stopped', { 
         userId, 
         templateId: id, 
         templateName: template.name,
-        deletedUpcomingCount: deletedResult.rows.length 
+        deletedUpcomingCount: deletedCount 
       });
 
       res.json({
         success: true,
         data: updateResult.rows[0],
-        deletedUpcomingCount: deletedResult.rows.length,
-        message: `Template generation stopped. ${deletedResult.rows.length} upcoming transactions removed.`
+        deletedUpcomingCount: deletedCount,
+        message: `Template generation stopped. ${deletedCount} upcoming transactions removed.`
       });
     } catch (error) {
       logger.error('Stop template generation failed', { userId, templateId: id, error: error.message });
@@ -1410,14 +1448,26 @@ const transactionController = {
 
       const template = templateResult.rows[0];
 
-      // Remove existing upcoming transactions for this template
-      const deleteExistingQuery = `
-        UPDATE transactions 
-        SET deleted_at = NOW(), updated_at = NOW() 
-        WHERE template_id = $1 AND user_id = $2 AND status = 'upcoming'
+      // Remove existing upcoming transactions for this template - FIXED for current schema
+      let deletedCount = 0;
+      
+      // Delete from income table
+      const deleteIncomeQuery = `
+        DELETE FROM income 
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
-      const deletedResult = await db.query(deleteExistingQuery, [id, userId]);
+      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
+      deletedCount += incomeResult.rows.length;
+      
+      // Delete from expenses table
+      const deleteExpensesQuery = `
+        DELETE FROM expenses 
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+        RETURNING id
+      `;
+      const expensesResult = await db.query(deleteExpensesQuery, [id, userId]);
+      deletedCount += expensesResult.rows.length;
 
       // Generate new 3-month upcoming transactions
       const upcomingTransactions = await generateUpcomingTransactions(template);
@@ -1426,7 +1476,7 @@ const transactionController = {
         userId, 
         templateId: id, 
         templateName: template.name,
-        deletedCount: deletedResult.rows.length,
+        deletedCount: deletedCount,
         generatedCount: upcomingTransactions.length
       });
 
@@ -1437,7 +1487,7 @@ const transactionController = {
             id: template.id,
             name: template.name
           },
-          deletedCount: deletedResult.rows.length,
+          deletedCount: deletedCount,
           generatedCount: upcomingTransactions.length,
           upcomingTransactions
         },

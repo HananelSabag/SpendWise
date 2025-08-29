@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 // ✅ NEW: Import from Zustand stores instead of Context
-import { useTranslation, useTheme, useNotifications } from '../../../stores';
+import { useTranslation, useTheme, useNotifications, useCurrency } from '../../../stores';
 
 import { Button, Modal, Badge } from '../../ui';
 import { cn, dateHelpers } from '../../../utils/helpers';
@@ -29,6 +29,7 @@ const DeleteTransaction = ({
   const { t, isRTL } = useTranslation('transactions');
   const { isDark } = useTheme();
   const { addNotification } = useNotifications();
+  const { formatCurrency } = useCurrency();
 
   const [deleteMode, setDeleteMode] = useState('single'); // single, future, all
   const [confirmationText, setConfirmationText] = useState('');
@@ -173,7 +174,7 @@ const DeleteTransaction = ({
                 variant={transactionData.isExpense ? "destructive" : "success"}
                 className="text-lg font-bold"
               >
-                {transactionData.isExpense ? '-' : '+'}${transactionData.formattedAmount}
+                {transactionData.isExpense ? '-' : '+'}{formatCurrency(transactionData.formattedAmount)}
               </Badge>
             </div>
           </div>
