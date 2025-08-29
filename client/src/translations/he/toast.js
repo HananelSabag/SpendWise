@@ -175,8 +175,7 @@ export default {
     invitationSent: "ההזמנה נשלחה בהצלחה!",
     feedbackSubmitted: "תודה על המשוב שלכם!",
     supportTicketCreated: "פנייה לתמיכה נוצרה בהצלחה!",
-    bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!",
-    dataRefreshed: "הנתונים רוענו בהצלחה!"
+    bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!"
   },
 
   // ✅ Error Actions

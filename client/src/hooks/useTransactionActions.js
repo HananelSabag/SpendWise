@@ -271,28 +271,28 @@ export const useTransactionActions = (context = 'transactions') => {
         }, 200);
         refreshAll();
         
-        const { successful, failed } = result.data.data.summary;
+        const { successful, failed } = result.data.summary;
         
         if (successful > 0) {
-          toastService.success('toast.transactions.bulkDeleteSuccess', { 
+          toastService.success('transactions.bulkDeleteSuccess', { 
             params: { count: successful } 
           });
         }
         
         if (failed > 0) {
-          toastService.error('toast.transactions.bulkDeletePartialFail', { 
+          toastService.error('transactions.bulkDeletePartialFail', { 
             params: { failed } 
           });
         }
         
         logAction(`Bulk delete completed: ${successful} successful, ${failed} failed`);
-        return result.data.data;
+        return result.data;
       } else {
         throw new Error(result.error?.message || 'Bulk delete failed');
       }
     } catch (error) {
       logAction(`Bulk delete failed`, { error: error.message });
-      toastService.error('toast.transactions.bulkDeleteFailed');
+      toastService.error('transactions.bulkDeleteFailed');
       throw error;
     }
   }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, refreshAll, logAction]);
@@ -350,13 +350,13 @@ export const useTransactionActions = (context = 'transactions') => {
       const failed = results.filter(r => r.status === 'rejected').length;
       
       if (successful > 0) {
-        toastService.success('toast.success.bulkOperationSuccess', { 
+        toastService.success('success.bulkOperationSuccess', { 
           params: { count: successful, operation } 
         });
       }
       
       if (failed > 0) {
-        toastService.error('toast.error.bulkOperationPartialFail', { 
+        toastService.error('error.bulkOperationPartialFail', { 
           params: { failed, operation } 
         });
       }
@@ -364,7 +364,7 @@ export const useTransactionActions = (context = 'transactions') => {
       return { successful, failed, results };
       
     } catch (error) {
-              toastService.error('toast.error.bulkOperationFailed', { 
+              toastService.error('error.bulkOperationFailed', { 
           params: { operation } 
         });
       throw error;
@@ -404,9 +404,9 @@ export const useTransactionActions = (context = 'transactions') => {
         exact: false
       });
       
-              toastService.success('toast.success.dataRefreshed');
+              toastService.success('data.dataRefreshed');
     } catch (error) {
-              toastService.error('toast.error.operationFailed');
+              toastService.error('error.operationFailed');
       console.error('Force refresh error:', error);
     }
   }, [queryClient]);

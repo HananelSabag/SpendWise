@@ -305,9 +305,34 @@ testConnection().catch(() => {
   process.exit(1);
 });
 
+// 🔗 Get client from pool for transactions
+const getClient = async () => {
+  try {
+    const client = await pool.connect();
+    logger.debug('Database client acquired from pool', {
+      processId: client.processID,
+      totalCount: pool.totalCount,
+      idleCount: pool.idleCount
+    });
+    return client;
+  } catch (error) {
+    logger.error('Failed to acquire database client', {
+      error: error.message,
+      code: error.code,
+      poolStats: {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount
+      }
+    });
+    throw error;
+  }
+};
+
 module.exports = {
   query,
   pool,
+  getClient,
   healthCheck,
   gracefulShutdown,
   testConnection,

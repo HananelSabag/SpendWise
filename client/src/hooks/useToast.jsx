@@ -285,7 +285,7 @@ export const useToast = () => {
   // Toast notification functions
   const showToast = useCallback((message, type = 'info', options = {}) => {
     const resolvedMessage = typeof message === 'string' && message.includes('.') 
-      ? t(message) || message 
+      ? t(message, options.params) || message 
       : message;
 
     // ✅ Smart positioning: right-top on desktop, top-center on mobile
@@ -324,7 +324,7 @@ export const useToast = () => {
       // Treat as translation key only if it matches dot.notation without spaces
       const looksLikeKey = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/.test(message);
       if (looksLikeKey) {
-        errorMessage = t(message) || message;
+        errorMessage = t(message, options.params) || message;
       } else {
         // Raw server/user message – use as-is
         errorMessage = message;
