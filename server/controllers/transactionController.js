@@ -1139,39 +1139,21 @@ const transactionController = {
         errors: []
       };
 
-      // ✅ FIXED: Work with current database schema (income/expenses tables)
+      // ✅ CRITICAL FIX: Work with unified transactions table
       for (const transactionId of transactionIds) {
         try {
-          let deleted = false;
-          
-          // Try to delete from income table first
-          const deleteIncomeQuery = `
-            DELETE FROM income 
+          // Delete from unified transactions table
+          const deleteQuery = `
+            DELETE FROM transactions 
             WHERE id = $1 AND user_id = $2
-            RETURNING id
+            RETURNING id, type
           `;
-          const incomeResult = await db.query(deleteIncomeQuery, [transactionId, userId]);
+          const result = await db.query(deleteQuery, [transactionId, userId]);
           
-          if (incomeResult.rows.length > 0) {
-            deleted = true;
-            logger.info(`Bulk deleted income transaction ${transactionId} for user ${userId}`);
-          } else {
-            // Try to delete from expenses table
-            const deleteExpenseQuery = `
-              DELETE FROM expenses 
-              WHERE id = $1 AND user_id = $2
-              RETURNING id
-            `;
-            const expenseResult = await db.query(deleteExpenseQuery, [transactionId, userId]);
-            
-            if (expenseResult.rows.length > 0) {
-              deleted = true;
-              logger.info(`Bulk deleted expense transaction ${transactionId} for user ${userId}`);
-            }
-          }
-
-          if (deleted) {
+          if (result.rows.length > 0) {
+            const deletedTransaction = result.rows[0];
             results.successful++;
+            logger.info(`Bulk deleted ${deletedTransaction.type} transaction ${transactionId} for user ${userId}`);
           } else {
             results.failed++;
             results.errors.push(`Transaction ${transactionId} not found or not accessible`);
@@ -1520,17 +1502,10 @@ async function generateTransactionsFromTemplate(template) {
     const dueDates = calculateRecurringDates(template, today, maxDaysLookAhead);
     
     for (const dueDate of dueDates) {
-      // Check if transaction already exists for this date and template - BACKWARD COMPATIBLE
+      // Check if transaction already exists for this date and template - UNIFIED TABLE
       const dateStr = dueDate.toISOString().split('T')[0];
-      let existsResult;
-      
-      if (template.type === 'income') {
-        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      } else {
-        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      }
+      const existsQuery = `SELECT id FROM transactions WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
         // Create new transaction using Transaction model

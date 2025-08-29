@@ -48,27 +48,30 @@ class Transaction {
         transactionData.templateId || null
       ];
 
-      if (transactionData.type === 'income') {
-        query = `
-          INSERT INTO income (
-            user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-        `;
-      } else {
-        query = `
-          INSERT INTO expenses (
-            user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-        `;
-      }
+      // ✅ CRITICAL FIX: Use unified transactions table with type column
+      query = `
+        INSERT INTO transactions (
+          user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+      `;
+      
+      // ✅ CRITICAL: Add type to values array at correct position
+      const finalValues = [
+        userId,
+        transactionData.categoryId || null,
+        parseFloat(transactionData.amount),
+        transactionData.type || 'expense', // ✅ MUST provide type!
+        transactionData.description || '',
+        transactionData.notes || '',
+        transactionData.date || new Date().toISOString().split('T')[0],
+        transactionData.templateId || null
+      ];
 
-      const result = await db.query(query, values);
+      const result = await db.query(query, finalValues);
       const transaction = result.rows[0];
       
-      // Add type for consistency
-      transaction.type = transactionData.type;
+      // Type is already included in the result from the unified table
 
       logger.info('Transaction created successfully', { 
         transactionId: transaction.id, 

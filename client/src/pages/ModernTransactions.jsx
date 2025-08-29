@@ -14,7 +14,7 @@ import {
   Repeat, Zap, Eye, EyeOff, BarChart3, Grid3X3, List,
   SortAsc, SortDesc, Users, Target, Settings, Sparkles,
   CreditCard, Receipt, PiggyBank, Wallet, ArrowUp, ArrowDown,
-  ChevronDown, ChevronUp, FilterX, Layers, Archive
+  ChevronDown, ChevronUp, FilterX, Layers, Archive, AlertTriangle
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -573,6 +573,7 @@ const ModernTransactions = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   // ✅ Filter states with enhanced recurring support
   const [filters, setFilters] = useState({
@@ -1066,22 +1067,9 @@ const ModernTransactions = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={async () => {
+                          onClick={() => {
                             if (selectedIds.size === 0) return;
-                            
-                            const confirmed = window.confirm(
-                              t('modals.delete.title', 'Delete Transaction') + 
-                              ` - ${t('modals.delete.description', 'Are you sure you want to delete these transactions? This action cannot be undone.')}`
-                            );
-                            
-                            if (confirmed) {
-                              try {
-                                await bulkDelete(Array.from(selectedIds));
-                                setSelectedIds(new Set());
-                              } catch (error) {
-                                console.error('Bulk delete failed:', error);
-                              }
-                            }
+                            setShowBulkDeleteModal(true);
                           }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -1190,6 +1178,84 @@ const ModernTransactions = () => {
         isOpen={showRecurringManager} 
         onClose={() => setShowRecurringManager(false)} 
       />
+
+      {/* 🗑️ NICE Bulk Delete Modal - NO MORE UGLY ALERTS! */}
+      {showBulkDeleteModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowBulkDeleteModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('bulk.delete.title', 'Delete Transactions')}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {selectedIds.size} {selectedIds.size === 1 ? 'transaction' : 'transactions'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
+              <div className="flex items-center text-red-800 dark:text-red-200">
+                <AlertTriangle className="w-5 h-5 mr-2 flex-shrink-0" />
+                <p className="text-sm">
+                  {t('bulk.delete.warning', 'This action cannot be undone. All selected transactions will be permanently deleted.')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1"
+              >
+                {t('actions.cancel', 'Cancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  try {
+                    await bulkDelete(Array.from(selectedIds));
+                    setSelectedIds(new Set());
+                    setShowBulkDeleteModal(false);
+                    addNotification({
+                      type: 'success',
+                      message: t('bulk.delete.success', `Successfully deleted ${selectedIds.size} transactions`),
+                      duration: 5000
+                    });
+                  } catch (error) {
+                    console.error('Bulk delete failed:', error);
+                    addNotification({
+                      type: 'error',
+                      message: t('bulk.delete.error', 'Failed to delete transactions. Please try again.'),
+                      duration: 5000
+                    });
+                  }
+                }}
+                className="flex-1"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t('bulk.delete.confirm', 'Delete All')}
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* ✨ Floating Add Button */}
       <FloatingAddTransactionButton />
