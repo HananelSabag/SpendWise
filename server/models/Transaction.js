@@ -107,127 +107,89 @@ class Transaction {
         type = null,
         dateFrom = null,
         dateTo = null,
+        search = null, // ✅ NEW: Add search support
         sortBy = 'created_at',
         sortOrder = 'DESC'
       } = options;
 
-      // Build conditions for each table with proper aliases
+      // ✅ UNIFIED TRANSACTIONS TABLE: Build WHERE conditions
+      const conditions = ['t.user_id = $1'];
       const values = [userId];
       let paramCount = 2;
 
-      // Base condition parameters
-      let categoryParam = null;
-      let dateFromParam = null; 
-      let dateToParam = null;
-
       if (categoryId) {
-        categoryParam = `$${paramCount}`;
+        conditions.push(`t.category_id = $${paramCount}`);
         values.push(categoryId);
         paramCount++;
       }
 
+      if (type) {
+        conditions.push(`t.type = $${paramCount}`);
+        values.push(type);
+        paramCount++;
+      }
+
       if (dateFrom) {
-        dateFromParam = `$${paramCount}`;
+        conditions.push(`t.date >= $${paramCount}`);
         values.push(dateFrom);
         paramCount++;
       }
 
       if (dateTo) {
-        dateToParam = `$${paramCount}`;
+        conditions.push(`t.date <= $${paramCount}`);
         values.push(dateTo);
         paramCount++;
       }
 
-      const limitClause = `LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      // ✅ CRITICAL FIX: Add search filtering in SQL query, not after
+      if (search) {
+        conditions.push(`(
+          LOWER(t.description) LIKE LOWER($${paramCount}) OR 
+          LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
+          LOWER(c.name) LIKE LOWER($${paramCount})
+        )`);
+        values.push(`%${search}%`);
+        paramCount++;
+      }
+
+      // Add LIMIT and OFFSET parameters
       values.push(limit, offset);
 
-      // Build table-specific WHERE clauses to avoid ambiguity
-      const buildWhereClause = (tableAlias) => {
-        const conditions = [`${tableAlias}.user_id = $1`];
-        
-        if (categoryParam) {
-          conditions.push(`${tableAlias}.category_id = ${categoryParam}`);
-        }
-        
-        if (dateFromParam) {
-          conditions.push(`${tableAlias}.date >= ${dateFromParam}`);
-        }
-        
-        if (dateToParam) {
-          conditions.push(`${tableAlias}.date <= ${dateToParam}`);
-        }
-        
-        return conditions.join(' AND ');
-      };
-
-      // ✅ FIXED: Handle type filtering by including/excluding tables
-      let incomeQuery = '';
-      let expensesQuery = '';
-
-      if (type !== 'expense') {
-        incomeQuery = `
-          SELECT 
-            i.id,
-            i.user_id,
-            i.category_id,
-            i.amount,
-            'income' as type,
-            i.description,
-            i.notes,
-            i.date,
-            i.created_at as transaction_datetime,
-            i.template_id,
-            i.created_at,
-            i.updated_at,
-            c.name as category_name,
-            c.icon as category_icon,
-            c.color as category_color
-          FROM income i
-          LEFT JOIN categories c ON i.category_id = c.id
-          WHERE ${buildWhereClause('i')}
-        `;
-      }
-
-      if (type !== 'income') {
-        expensesQuery = `
-          SELECT 
-            e.id,
-            e.user_id,
-            e.category_id,
-            e.amount,
-            'expense' as type,
-            e.description,
-            e.notes,
-            e.date,
-            e.created_at as transaction_datetime,
-            e.template_id,
-            e.created_at,
-            e.updated_at,
-            c.name as category_name,
-            c.icon as category_icon,
-            c.color as category_color
-          FROM expenses e
-          LEFT JOIN categories c ON e.category_id = c.id
-          WHERE ${buildWhereClause('e')}
-        `;
-      }
-
-      // Build final query
-      let queries = [];
-      if (incomeQuery) queries.push(`(${incomeQuery})`);
-      if (expensesQuery) queries.push(`(${expensesQuery})`);
-
-      if (queries.length === 0) {
-        return []; // No valid type specified
-      }
-
+      // ✅ UNIFIED TRANSACTIONS TABLE QUERY
       const query = `
-        ${queries.join(' UNION ALL ')}
-        ORDER BY ${sortBy} ${sortOrder}
-        ${limitClause}
+        SELECT 
+          t.id,
+          t.user_id,
+          t.category_id,
+          t.amount,
+          t.type,
+          t.description,
+          t.notes,
+          t.date,
+          t.transaction_datetime,
+          t.template_id,
+          t.created_at,
+          t.updated_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY ${sortBy === 'amount' ? 't.amount' : 't.transaction_datetime'} ${sortOrder}
+        LIMIT $${paramCount} OFFSET $${paramCount + 1}
       `;
 
+      logger.info('findByUser query', { userId, options, query, values });
+      
       const result = await db.query(query, values);
+      
+      logger.info('findByUser results', { 
+        userId, 
+        resultCount: result.rows.length,
+        totalRequested: limit 
+      });
+      
       return result.rows;
     } catch (error) {
       logger.error('Transaction retrieval failed', { userId, error: error.message });

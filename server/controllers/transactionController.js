@@ -353,20 +353,15 @@ const transactionController = {
         categoryId: filters.categoryId,
         type: filters.type,
         dateFrom: filters.dateFrom,
-        dateTo: filters.dateTo
+        dateTo: filters.dateTo,
+        search: filters.search // ✅ CRITICAL FIX: Pass search to model instead of applying after
       };
 
-      let transactions = await Transaction.findByUser(userId, options);
+      logger.info('getTransactions options', { userId, options, filters });
 
-      // Apply search filter if provided
-      if (filters.search) {
-        const search = filters.search.toLowerCase();
-        transactions = transactions.filter(t => 
-          t.description?.toLowerCase().includes(search) ||
-          t.notes?.toLowerCase().includes(search) ||
-          t.category_name?.toLowerCase().includes(search)
-        );
-      }
+      const transactions = await Transaction.findByUser(userId, options);
+
+      // ✅ NO MORE POST-PROCESSING: Search is now applied in SQL query
 
       // Calculate summary
       const summary = {
