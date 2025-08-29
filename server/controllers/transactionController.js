@@ -1069,7 +1069,21 @@ const transactionController = {
     const userId = req.user.id;
     const { transactionIds } = req.body;
 
+    logger.info('Bulk delete request received', {
+      userId,
+      body: req.body,
+      transactionIds,
+      transactionIdsType: typeof transactionIds,
+      isArray: Array.isArray(transactionIds),
+      length: transactionIds?.length
+    });
+
     if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
+      logger.warn('Bulk delete validation failed', {
+        transactionIds,
+        isArray: Array.isArray(transactionIds),
+        length: transactionIds?.length
+      });
       return res.status(400).json({
         success: false,
         message: 'Transaction IDs array is required'
@@ -1450,46 +1464,33 @@ async function generateTransactionsFromTemplate(template) {
     const dueDates = calculateRecurringDates(template, today, maxDaysLookAhead);
     
     for (const dueDate of dueDates) {
-      // Check if transaction already exists for this date and template
-      const existsQuery = `
-        SELECT id FROM transactions 
-        WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL
-      `;
-      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      // Check if transaction already exists for this date and template - BACKWARD COMPATIBLE
+      const dateStr = dueDate.toISOString().split('T')[0];
+      let existsResult;
+      
+      if (template.type === 'income') {
+        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      } else {
+        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      }
       
       if (existsResult.rows.length === 0) {
-        // Create new transaction
+        // Create new transaction using Transaction model
         const transactionData = {
-          user_id: template.user_id,
-          category_id: template.category_id,
+          categoryId: template.category_id,
           amount: template.amount,
           type: template.type,
-          description: template.description,
+          description: template.description || template.name,
           notes: template.notes || `Generated from recurring template: ${template.name || 'Unnamed'}`,
-          date: dueDate.toISOString().split('T')[0],
-          template_id: template.id
+          date: dateStr,
+          templateId: template.id
         };
 
-        const insertQuery = `
-          INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at
-        `;
-
-        const values = [
-          transactionData.user_id,
-          transactionData.category_id,
-          transactionData.amount,
-          transactionData.type,
-          transactionData.description,
-          transactionData.notes,
-          transactionData.date,
-          transactionData.template_id
-        ];
-
-        const result = await db.query(insertQuery, values);
-        generated.push(result.rows[0]);
+        // Use Transaction model's create method for backward compatibility
+        const created = await Transaction.create(transactionData, template.user_id);
+        generated.push(created);
       }
     }
     
@@ -1564,47 +1565,34 @@ async function generateCurrentMonthTransactions(template, startDate, endDate) {
     const currentDates = calculateRecurringDatesInRange(template, startDate, endDate);
     
     for (const dueDate of currentDates) {
-      // Check if transaction already exists for this date and template
-      const existsQuery = `
-        SELECT id FROM transactions 
-        WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL
-      `;
-      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      // Check if transaction already exists for this date and template - BACKWARD COMPATIBLE
+      const dateStr = dueDate.toISOString().split('T')[0];
+      let existsResult;
+      
+      if (template.type === 'income') {
+        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      } else {
+        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      }
       
       if (existsResult.rows.length === 0) {
-        // Create new current transaction (normal status)
+        // Create new current transaction (normal status) using Transaction model
         const transactionData = {
-          user_id: template.user_id,
-          category_id: template.category_id,
+          categoryId: template.category_id,
           amount: template.amount,
           type: template.type,
           description: template.description || template.name,
           notes: `Generated from recurring template: ${template.name}`,
-          date: dueDate.toISOString().split('T')[0],
-          template_id: template.id
+          date: dateStr,
+          templateId: template.id
           // No status field = normal confirmed transaction
         };
 
-        const insertQuery = `
-          INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at
-        `;
-
-        const values = [
-          transactionData.user_id,
-          transactionData.category_id,
-          transactionData.amount,
-          transactionData.type,
-          transactionData.description,
-          transactionData.notes,
-          transactionData.date,
-          transactionData.template_id
-        ];
-
-        const result = await db.query(insertQuery, values);
-        currentTransactions.push(result.rows[0]);
+        // Use Transaction model's create method for backward compatibility
+        const created = await Transaction.create(transactionData, template.user_id);
+        currentTransactions.push(created);
       }
     }
     
@@ -1633,48 +1621,38 @@ async function generateUpcomingTransactions(template) {
     const upcomingDates = calculateUpcomingDates(template, today, threeMonthsFromNow);
     
     for (const dueDate of upcomingDates) {
-      // Check if upcoming transaction already exists for this date and template
-      const existsQuery = `
-        SELECT id FROM transactions 
-        WHERE template_id = $1 AND date = $2 AND status = 'upcoming' AND deleted_at IS NULL
-      `;
-      const existsResult = await db.query(existsQuery, [template.id, dueDate.toISOString().split('T')[0]]);
+      // For upcoming transactions, we'll create them as virtual data (not stored in DB)
+      // Since income/expenses tables don't have status field, we'll return them as virtual objects
+      const dateStr = dueDate.toISOString().split('T')[0];
+      
+      // Check if real transaction already exists for this date and template
+      let existsResult;
+      if (template.type === 'income') {
+        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      } else {
+        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
+        existsResult = await db.query(existsQuery, [template.id, dateStr]);
+      }
       
       if (existsResult.rows.length === 0) {
-        // Create new upcoming transaction
-        const transactionData = {
+        // Create virtual upcoming transaction (not stored in DB, used for UI display)
+        const upcomingTransaction = {
+          id: `upcoming_${template.id}_${dateStr}`, // Virtual ID for frontend
           user_id: template.user_id,
           category_id: template.category_id,
           amount: template.amount,
           type: template.type,
           description: template.description || template.name,
           notes: `Upcoming: ${template.name || 'Recurring Transaction'}`,
-          date: dueDate.toISOString().split('T')[0],
+          date: dateStr,
           template_id: template.id,
-          status: 'upcoming' // ✅ Mark as upcoming
+          status: 'upcoming', // Mark as upcoming
+          created_at: new Date().toISOString(),
+          is_virtual: true // Flag to indicate this is not stored in DB
         };
 
-        const insertQuery = `
-          INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, template_id, status, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, status, created_at
-        `;
-
-        const values = [
-          transactionData.user_id,
-          transactionData.category_id,
-          transactionData.amount,
-          transactionData.type,
-          transactionData.description,
-          transactionData.notes,
-          transactionData.date,
-          transactionData.template_id,
-          transactionData.status
-        ];
-
-        const result = await db.query(insertQuery, values);
-        upcomingTransactions.push(result.rows[0]);
+        upcomingTransactions.push(upcomingTransaction);
       }
     }
     
