@@ -197,15 +197,16 @@ router.put('/:type/:id',
   transactionController.update
 );
 
+// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
+// ✅ MOVED BEFORE /:type/:id to avoid route conflicts
+router.post('/bulk-delete',
+  transactionController.bulkDelete
+);
+
 // Delete transaction (soft delete)
 router.delete('/:type/:id',
   createTransactionLimiter,
   transactionController.delete
-);
-
-// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
-router.post('/bulk-delete',
-  transactionController.bulkDelete
 );
 
 // Advanced delete for recurring transactions

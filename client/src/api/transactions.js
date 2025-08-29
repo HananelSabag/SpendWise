@@ -167,11 +167,21 @@ const transactionAPI = {
    */
   async bulkDelete(transactionIds) {
     try {
+      console.log('📊 Starting bulk delete API call...', {
+        transactionIds,
+        count: transactionIds.length,
+        url: '/transactions/bulk-delete'
+      });
+      
+      // ✅ FIXED: Use apiClient with proper route order fix  
       const response = await apiClient.client.post('/transactions/bulk-delete', {
         transactionIds
       });
+      
+      console.log('✅ RAW Bulk delete API call successful:', response.data);
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('❌ Bulk delete failed:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

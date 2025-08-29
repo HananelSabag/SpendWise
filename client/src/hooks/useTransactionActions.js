@@ -260,7 +260,18 @@ export const useTransactionActions = (context = 'transactions') => {
    */
   const bulkDelete = useCallback(async (transactionIds, options = {}) => {
     try {
-      logAction(`Bulk deleting ${transactionIds.length} transactions`);
+      logAction(`Bulk deleting ${transactionIds.length} transactions`, {
+        transactionIds,
+        count: transactionIds.length,
+        firstId: transactionIds[0],
+        lastId: transactionIds[transactionIds.length - 1]
+      });
+      
+      console.log('🔄 [BULK_DELETE] Starting bulk delete...', {
+        transactionIds,
+        options,
+        context
+      });
       
       const result = await transactionAPI.bulkDelete(transactionIds);
       
@@ -288,9 +299,20 @@ export const useTransactionActions = (context = 'transactions') => {
         logAction(`Bulk delete completed: ${successful} successful, ${failed} failed`);
         return result.data;
       } else {
+        console.error('🚨 [BULK_DELETE] API Result Failed:');
+        console.error('🚨 Result Success:', result.success);
+        console.error('🚨 Result Error Object:', result.error);
+        console.error('🚨 Result Error Message:', result.error?.message);
+        console.error('🚨 Full Result:', JSON.stringify(result, null, 2));
+        
         throw new Error(result.error?.message || 'Bulk delete failed');
       }
     } catch (error) {
+      console.error('🚨 [BULK_DELETE] COMPLETE ERROR DETAILS:');
+      console.error('🚨 Error Message:', error.message);
+      console.error('🚨 Error Type:', error.constructor.name);
+      console.error('🚨 Full Error Object:', error);
+      
       logAction(`Bulk delete failed`, { error: error.message });
       toastService.error('transactions.bulkDeleteFailed');
       throw error;
