@@ -642,9 +642,9 @@ export const useTransactions = (options = {}) => {
   const toastService = useToast();
   const queryClient = useQueryClient();
 
-  // Enhanced options with AI features
+  // ✅ CRITICAL FIX: Increase page size for better user experience
   const {
-    pageSize = 20,
+    pageSize = 50, // ✅ INCREASED: Show more transactions per page
     enableAI = true,
     enableRealTimeAnalysis = true,
     autoRefresh = false,
@@ -668,6 +668,7 @@ export const useTransactions = (options = {}) => {
   // ✅ Enhanced infinite query with AI analysis
   const transactionsQuery = useInfiniteQuery({
     queryKey: ['transactions', user?.id, filters],
+    enabled: !!user?.id, // Only run if user is authenticated
     queryFn: async ({ pageParam = 0 }) => {
       const start = performance.now();
       
@@ -689,10 +690,40 @@ export const useTransactions = (options = {}) => {
           performanceRef.current.recordCacheMiss();
         }
 
+        // 🚨 CRITICAL FIX: Handle frontend-only date filters
+        const apiFilters = { ...filters };
+        
+        // Remove frontend-only dateRange filters - these are handled in the UI
+        if (['all', 'current', 'future'].includes(apiFilters.dateRange)) {
+          delete apiFilters.dateRange;
+          delete apiFilters.dateFrom;
+          delete apiFilters.dateTo;
+          delete apiFilters.startDate;
+          delete apiFilters.endDate;
+        }
+        
+        console.log('🔍 API Request Debug:', {
+          originalFilters: filters,
+          cleanedFilters: apiFilters,
+          page: pageParam + 1,
+          limit: pageSize
+        });
+
         const response = await api.transactions.getAll({
           page: pageParam + 1, // Server expects 1-based pagination
           limit: pageSize,
-          ...filters
+          ...apiFilters
+        });
+
+        console.log('🔍 RAW API Response:', {
+          pageParam,
+          pageSize,
+          responseSuccess: response.success,
+          responseKeys: Object.keys(response),
+          dataKeys: response.data ? Object.keys(response.data) : null,
+          paginationInfo: response.data?.pagination,
+          transactionCount: response.data?.transactions?.length,
+          fullResponse: response
         });
 
         // ✅ FIXED: Handle API response structure properly
@@ -799,7 +830,21 @@ export const useTransactions = (options = {}) => {
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
     getNextPageParam: (lastPage, pages) => {
-      return lastPage.hasMore ? pages.length : undefined; // This gives us the 0-based page index for next page
+      const nextPage = lastPage.hasMore ? pages.length : undefined;
+      console.log('🔍 Infinite Query - getNextPageParam:', {
+        lastPageHasMore: lastPage.hasMore,
+        lastPageTotal: lastPage.total,
+        lastPageTransactionCount: lastPage.transactions?.length,
+        currentPagesLength: pages.length,
+        nextPageIndex: nextPage,
+        allPagesInfo: pages.map((p, i) => ({
+          pageIndex: i,
+          transactionCount: p.transactions?.length,
+          hasMore: p.hasMore,
+          total: p.total
+        }))
+      });
+      return nextPage; // This gives us the 0-based page index for next page
     },
     staleTime: cacheStrategy === 'aggressive' ? 10 * 60 * 1000 : 2 * 60 * 1000,
     refetchInterval: autoRefresh ? 30 * 1000 : false
@@ -1152,9 +1197,12 @@ export const useTransactions = (options = {}) => {
 
   // ✅ Processed data
   const allTransactions = useMemo(() => {
-    if (!transactionsQuery.data?.pages) return [];
+    if (!transactionsQuery.data?.pages) {
+      console.log('🔍 allTransactions - No pages data');
+      return [];
+    }
     
-    return transactionsQuery.data.pages.flatMap(page => {
+    const flattened = transactionsQuery.data.pages.flatMap(page => {
       // ✅ FIXED: Safe access to page.transactions with fallback
       if (!page || !page.transactions || !Array.isArray(page.transactions)) {
         console.warn('⚠️ Invalid page structure:', page);
@@ -1162,7 +1210,22 @@ export const useTransactions = (options = {}) => {
       }
       return page.transactions;
     }) || [];
-  }, [transactionsQuery.data]);
+    
+    console.log('🔍 allTransactions processed:', {
+      totalPages: transactionsQuery.data.pages.length,
+      totalTransactions: flattened.length,
+      pagesInfo: transactionsQuery.data.pages.map((p, i) => ({
+        pageIndex: i,
+        transactionCount: p.transactions?.length,
+        hasMore: p.hasMore,
+        total: p.total
+      })),
+      hasNextPage: transactionsQuery.hasNextPage,
+      isFetchingNextPage: transactionsQuery.isFetchingNextPage
+    });
+    
+    return flattened;
+  }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage]);
 
   const batchInsights = useMemo(() => {
     // ✅ FIXED: Safe access to batchInsights

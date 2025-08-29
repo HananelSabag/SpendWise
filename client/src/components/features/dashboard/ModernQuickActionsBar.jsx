@@ -25,7 +25,7 @@ import { cn } from '../../../utils/helpers';
  * 🚀 Quick Actions Bar Component
  */
 const ModernQuickActionsBar = ({ className = '' }) => {
-  const { t } = useTranslation('dashboard');
+  const { t, currentLanguage } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
   const { currency } = useCurrency();
   
@@ -57,7 +57,6 @@ const ModernQuickActionsBar = ({ className = '' }) => {
 
     try {
       // Use specific quick action category IDs based on user's language preference
-      const { currentLanguage } = useTranslation();
       const isHebrew = currentLanguage === 'he';
       
       const quickCategoryIds = {
@@ -109,7 +108,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, activeType, createTransaction, addNotification, t]);
+  }, [amount, activeType, createTransaction, addNotification, t, currentLanguage]);
 
   // ✅ Handle keyboard shortcuts
   const handleKeyPress = useCallback((e) => {

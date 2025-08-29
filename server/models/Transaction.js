@@ -93,6 +93,193 @@ class Transaction {
   }
 
   /**
+   * Get total count of transactions for pagination
+   * @param {number} userId - User ID
+   * @param {Object} options - Query options (same as findByUser but without limit/offset)
+   * @returns {Promise<number>} Total count
+   */
+  static async getTotalCount(userId, options = {}) {
+    try {
+      const {
+        categoryId = null,
+        type = null,
+        dateFrom = null,
+        dateTo = null,
+        search = null
+      } = options;
+
+      // ✅ CRITICAL FIX: Check if unified transactions table has data, fallback to legacy tables
+      const unifiedCheckQuery = 'SELECT COUNT(*) as count FROM transactions WHERE user_id = $1';
+      const unifiedCheck = await db.query(unifiedCheckQuery, [userId]);
+      const hasUnifiedData = parseInt(unifiedCheck.rows[0].count) > 0;
+
+      if (hasUnifiedData) {
+        // Use unified transactions table
+        return await this.getTotalCountUnified(userId, options);
+      } else {
+        // Use legacy income/expenses tables
+        return await this.getTotalCountLegacy(userId, options);
+      }
+    } catch (error) {
+      logger.error('Transaction count failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Get total count from unified transactions table
+   */
+  static async getTotalCountUnified(userId, options = {}) {
+    const {
+      categoryId = null,
+      type = null,
+      dateFrom = null,
+      dateTo = null,
+      search = null
+    } = options;
+
+    const conditions = ['t.user_id = $1'];
+    const values = [userId];
+    let paramCount = 2;
+
+    if (categoryId) {
+      conditions.push(`t.category_id = $${paramCount}`);
+      values.push(categoryId);
+      paramCount++;
+    }
+
+    if (type) {
+      conditions.push(`t.type = $${paramCount}`);
+      values.push(type);
+      paramCount++;
+    }
+
+    if (dateFrom) {
+      conditions.push(`t.date >= $${paramCount}`);
+      values.push(dateFrom);
+      paramCount++;
+    }
+
+    if (dateTo) {
+      conditions.push(`t.date <= $${paramCount}`);
+      values.push(dateTo);
+      paramCount++;
+    }
+
+    if (search) {
+      conditions.push(`(
+        LOWER(t.description) LIKE LOWER($${paramCount}) OR 
+        LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(c.name) LIKE LOWER($${paramCount})
+      )`);
+      values.push(`%${search}%`);
+      paramCount++;
+    }
+
+    const query = `
+      SELECT COUNT(*) as total
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE ${conditions.join(' AND ')}
+    `;
+
+    const result = await db.query(query, values);
+    return parseInt(result.rows[0].total) || 0;
+  }
+
+  /**
+   * Get total count from legacy income/expenses tables
+   */
+  static async getTotalCountLegacy(userId, options = {}) {
+    const {
+      categoryId = null,
+      type = null,
+      dateFrom = null,
+      dateTo = null,
+      search = null
+    } = options;
+
+    // Build WHERE conditions for both tables
+    const conditions = ['user_id = $1'];
+    const values = [userId];
+    let paramCount = 2;
+
+    if (categoryId) {
+      conditions.push(`category_id = $${paramCount}`);
+      values.push(categoryId);
+      paramCount++;
+    }
+
+    if (dateFrom) {
+      conditions.push(`date >= $${paramCount}`);
+      values.push(dateFrom);
+      paramCount++;
+    }
+
+    if (dateTo) {
+      conditions.push(`date <= $${paramCount}`);
+      values.push(dateTo);
+      paramCount++;
+    }
+
+    let searchCondition = '';
+    if (search) {
+      searchCondition = `AND (
+        LOWER(description) LIKE LOWER($${paramCount}) OR 
+        LOWER(notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(c.name) LIKE LOWER($${paramCount})
+      )`;
+      values.push(`%${search}%`);
+      paramCount++;
+    }
+
+    let query;
+
+    if (type === 'income') {
+      query = `
+        SELECT COUNT(*) as total
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE ${conditions.join(' AND ')} ${searchCondition}
+      `;
+    } else if (type === 'expense') {
+      query = `
+        SELECT COUNT(*) as total
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE ${conditions.join(' AND ')} ${searchCondition}
+      `;
+    } else {
+      // Get both income and expenses count
+      query = `
+        (
+          SELECT COUNT(*) as total
+          FROM income i
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE ${conditions.join(' AND ')} ${searchCondition}
+        )
+        UNION ALL
+        (
+          SELECT COUNT(*) as total
+          FROM expenses e
+          LEFT JOIN categories c ON e.category_id = c.id
+          WHERE ${conditions.join(' AND ')} ${searchCondition}
+        )
+      `;
+    }
+
+    const result = await db.query(query, values);
+    
+    if (type === 'income' || type === 'expense') {
+      return parseInt(result.rows[0].total) || 0;
+    } else {
+      // Sum both income and expense counts
+      const total = result.rows.reduce((sum, row) => sum + (parseInt(row.total) || 0), 0);
+      return total;
+    }
+  }
+
+  /**
    * Get transactions for a user with filters
    * @param {number} userId - User ID
    * @param {Object} options - Query options

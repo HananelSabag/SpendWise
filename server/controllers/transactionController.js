@@ -359,18 +359,36 @@ const transactionController = {
 
       logger.info('getTransactions options', { userId, options, filters });
 
-      const transactions = await Transaction.findByUser(userId, options);
+      // ✅ CRITICAL FIX: Get both transactions AND total count
+      const [transactions, totalCountResult] = await Promise.all([
+        Transaction.findByUser(userId, options),
+        Transaction.getTotalCount(userId, options)
+      ]);
 
-      // ✅ NO MORE POST-PROCESSING: Search is now applied in SQL query
+      const totalTransactions = totalCountResult || 0;
 
       // Calculate summary
       const summary = {
-        total: transactions.length,
+        total: totalTransactions, // ✅ FIXED: Use actual total count, not page count
         totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0),
         totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0),
         count: transactions.length
       };
       summary.netAmount = summary.totalIncome - summary.totalExpenses;
+
+      // ✅ FIXED: Proper hasMore calculation
+      const hasMore = (offset + transactions.length) < totalTransactions;
+
+      logger.info('getTransactions pagination debug', {
+        userId,
+        page,
+        limit,
+        offset,
+        currentPageCount: transactions.length,
+        totalInDB: totalTransactions,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null
+      });
 
       res.json({
         success: true,
@@ -380,8 +398,10 @@ const transactionController = {
           pagination: {
             page,
             limit,
-            total: transactions.length,
-            hasMore: transactions.length === limit
+            offset,
+            total: totalTransactions, // ✅ FIXED: Actual total in database
+            hasMore: hasMore, // ✅ FIXED: Proper hasMore logic
+            currentPageCount: transactions.length
           },
           filters: filters
         }

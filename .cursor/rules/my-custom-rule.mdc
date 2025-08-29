@@ -56,16 +56,6 @@ rules:
       type: validate
       condition: rbacEnforced: true
 
-  - name: singleSessionLog
-    description: All logs and summaries must be appended to a single Markdown file named `current-fix.md` inside the `/doc` folder. Do not create new files for each task.
-    appliesTo:
-      actions: [logging, documentation]
-    action:
-      type: enforce
-      condition:
-        filePath: doc/current-fix.md
-        behavior: appendOnly
-
 guidelines:
   - "This is a working system. Suggest upgrades only if they bring tangible value."
   - "Favor composability, clarity and maintainability over buzzwords."

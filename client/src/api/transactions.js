@@ -93,10 +93,19 @@ const transactionAPI = {
    */
   async getAll(params = {}) {
     try {
+      console.log('🔍 DEBUG: TransactionAPI.getAll called with params:', params);
+      console.log('🔍 DEBUG: Making request to /transactions with:', { params });
+      
       const response = await apiClient.client.get('/transactions', { params });
+      
+      console.log('🔍 DEBUG: TransactionAPI.getAll response status:', response.status);
+      console.log('🔍 DEBUG: TransactionAPI.getAll response data:', response.data);
+      
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('TransactionAPI.getAll error:', error);
+      console.error('🚨 TransactionAPI.getAll error:', error);
+      console.error('🚨 Error response:', error.response?.data);
+      console.error('🚨 Error status:', error.response?.status);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

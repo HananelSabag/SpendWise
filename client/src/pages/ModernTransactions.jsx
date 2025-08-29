@@ -231,12 +231,12 @@ const AdvancedFilters = ({
             onChange={(e) => onFilterChange({ dateRange: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
           >
-            <option value="all">{t('filters.dateRange.all', 'All Time')}</option>
+            <option value="current">{t('filters.dateRange.current', 'Current & Past (August & Earlier)')}</option>
             <option value="today">{t('filters.dateRange.today', 'Today')}</option>
             <option value="week">{t('filters.dateRange.week', 'This Week')}</option>
             <option value="month">{t('filters.dateRange.month', 'This Month')}</option>
-            <option value="quarter">{t('filters.dateRange.quarter', 'This Quarter')}</option>
-            <option value="year">{t('filters.dateRange.year', 'This Year')}</option>
+            <option value="future">{t('filters.dateRange.future', 'Future Transactions (September+)')}</option>
+            <option value="all">{t('filters.dateRange.all', 'All Time (Including Future)')}</option>
           </select>
         </div>
 
@@ -577,7 +577,7 @@ const ModernTransactions = () => {
 
   // ✅ Filter states with enhanced recurring support
   const [filters, setFilters] = useState({
-    dateRange: 'all',
+    dateRange: 'current', // Default to current/past to avoid overwhelming future transactions
     category: 'all',
     type: 'all',
     recurring: 'all', // all | recurring | oneTime
@@ -610,6 +610,8 @@ const ModernTransactions = () => {
     limit: 50
   });
 
+
+
   const {
     createTransaction,
     updateTransaction,
@@ -625,26 +627,110 @@ const ModernTransactions = () => {
     triggerRegeneration
   } = useAutoRegeneration();
 
-  // ✅ Processed transactions with recurring/one-time distinction (ONLY current and past)
+  // ✅ Processed transactions with tab-specific filtering
   const transactions = useMemo(() => {
     if (!transactionsData || !Array.isArray(transactionsData)) return [];
     
-    const now = new Date();
-    now.setHours(23, 59, 59, 999); // End of today
+    let filtered = [...transactionsData];
     
-    let filtered = transactionsData
-      // ✅ FILTER OUT FUTURE TRANSACTIONS - only show current and past
-      .filter(t => new Date(t.date) <= now);
+    // 🐛 DEBUG: Comprehensive transaction analysis
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    console.log('🔍 COMPREHENSIVE Transaction Debug:', {
+      activeTab,
+      totalTransactions: transactionsData.length,
+      currentDate: now.toISOString(),
+      todayStart: today.toISOString(),
+      dateBreakdown: {
+        past: transactionsData.filter(t => new Date(t.date) < today).length,
+        today: transactionsData.filter(t => {
+          const txDate = new Date(t.date);
+          return txDate.toDateString() === today.toDateString();
+        }).length,
+        future: transactionsData.filter(t => new Date(t.date) > today).length
+      },
+      sampleTransactions: transactionsData.slice(0, 5).map(t => ({
+        id: t.id,
+        date: t.date,
+        description: t.description,
+        status: t.status,
+        type: t.type,
+        dateObj: new Date(t.date).toISOString(),
+        isPast: new Date(t.date) < today,
+        isToday: new Date(t.date).toDateString() === today.toDateString(),
+        isFuture: new Date(t.date) > today
+      }))
+    });
+    
+    // ✅ FIXED: Apply date filtering based on active tab
+    if (activeTab === 'upcoming') {
+      // Upcoming tab: Show only future transactions (after today)
+      const cutoffDate = new Date();
+      cutoffDate.setHours(23, 59, 59, 999); // End of today
+      const beforeFilter = filtered.length;
+      filtered = filtered.filter(t => new Date(t.date) > cutoffDate);
+      console.log('🔍 Upcoming tab date filter:', { beforeFilter, afterFilter: filtered.length, cutoffDate: cutoffDate.toISOString() });
+    } else if (activeTab === 'all') {
+      // 🚨 CRITICAL FIX: Apply dateRange filtering for 'all' tab
+      const nextMonth = new Date(2025, 8, 1); // September 2025
+      
+      if (filters.dateRange === 'current') {
+        // Show current month (August) and earlier - FIXED: Include all of August
+        const septemberFirst = new Date(2025, 8, 1); // September 1, 2025
+        filtered = transactionsData.filter(t => {
+          const txDate = new Date(t.date);
+          return txDate < septemberFirst; // Show everything before September 1
+        });
+        console.log('🔍 All tab - Current filter:', {
+          totalTransactions: transactionsData.length,
+          currentAndPastCount: filtered.length,
+          showingUpTo: septemberFirst.toISOString(),
+          sampleFilteredDates: filtered.slice(0, 3).map(t => t.date)
+        });
+        
+        // ✅ SAFETY: If no current transactions found, show all transactions to avoid empty list
+        if (filtered.length === 0) {
+          console.log('🚨 No current transactions found, showing all transactions as fallback');
+          filtered = [...transactionsData];
+        }
+      } else if (filters.dateRange === 'future') {
+        // Show future transactions (September onwards)
+        const septemberFirst = new Date(2025, 8, 1); // September 1, 2025
+        filtered = transactionsData.filter(t => {
+          const txDate = new Date(t.date);
+          return txDate >= septemberFirst; // Show September and later
+        });
+        console.log('🔍 All tab - Future filter:', {
+          totalTransactions: transactionsData.length,
+          futureCount: filtered.length,
+          showingFrom: septemberFirst.toISOString(),
+          sampleFilteredDates: filtered.slice(0, 3).map(t => t.date)
+        });
+      } else {
+        // Show all transactions (including future)
+        filtered = [...transactionsData];
+        console.log('🔍 All tab - All transactions:', {
+          totalTransactions: transactionsData.length
+        });
+      }
+    }
+    // ✅ 'recurring' tab: NO date filtering - handled separately
     
     // Apply recurring filter
     if (filters.recurring === 'recurring') {
+      const beforeFilter = filtered.length;
       filtered = filtered.filter(t => t.template_id || t.is_recurring);
+      console.log('🔍 Recurring filter:', { beforeFilter, afterFilter: filtered.length });
     } else if (filters.recurring === 'oneTime') {
+      const beforeFilter = filtered.length;
       filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
+      console.log('🔍 One-time filter:', { beforeFilter, afterFilter: filtered.length });
     }
     
+    console.log('🔍 Final filtered transactions:', filtered.length);
     return filtered;
-  }, [transactionsData, filters.recurring]);
+  }, [transactionsData, filters.recurring, activeTab]);
 
   // ✅ Enhanced summary with recurring insights
   const summary = useMemo(() => {
@@ -744,7 +830,7 @@ const ModernTransactions = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      dateRange: 'all',
+      dateRange: 'current', // Default to current/past
       category: 'all',
       type: 'all',
       recurring: 'all',
