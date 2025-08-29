@@ -689,19 +689,10 @@ export const useTransactions = (options = {}) => {
           performanceRef.current.recordCacheMiss();
         }
 
-        const apiParams = {
+        const response = await api.transactions.getAll({
           page: pageParam + 1, // Server expects 1-based pagination
           limit: pageSize,
           ...filters
-        };
-        console.log('📤 useTransactions: API call with params:', apiParams);
-        
-        const response = await api.transactions.getAll(apiParams);
-        console.log('📥 useTransactions: API response received:', {
-          success: response?.success,
-          hasData: !!response?.data,
-          dataType: typeof response?.data,
-          dataKeys: response?.data ? Object.keys(response.data) : 'no data'
         });
 
         // ✅ FIXED: Handle API response structure properly
