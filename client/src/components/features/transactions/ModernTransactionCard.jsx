@@ -19,6 +19,10 @@ import { getIconComponent } from '../../../config/categoryIcons';
 import { cn, dateHelpers } from '../../../utils/helpers';
 import { Button, Badge, Tooltip } from '../../ui';
 
+// ✅ DEDICATED ACTION COMPONENTS
+import RecurringTransactionActions from './actions/RecurringTransactionActions';
+import OneTimeTransactionActions from './actions/OneTimeTransactionActions';
+
 // ✨ Enhanced Animation Variants
 const cardVariants = {
   initial: { 
@@ -162,122 +166,41 @@ const TransactionTypeBadge = ({ isIncome, isRecurring, className = '' }) => {
   );
 };
 
-// ✨ Enhanced Action Menu
-const ActionMenu = ({ 
+// ✅ SMART ACTION MENU - Routes to appropriate action component
+const SmartActionMenu = ({ 
   transaction, 
   onEdit, 
   onDelete, 
   onDuplicate, 
-  isOpen, 
-  onToggle,
   className = '' 
 }) => {
-  const { t } = useTranslation();
+  // ✅ Determine if this is a recurring transaction
+  const isRecurring = transaction?.template_id || transaction?.is_recurring;
   
-  return (
-    <div className={cn("relative", className)}>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onToggle}
-        className={cn(
-          "w-8 h-8 p-0 rounded-lg transition-all duration-200",
-          "hover:bg-gray-100 dark:hover:bg-gray-700",
-          "focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-          isOpen && "bg-gray-100 dark:bg-gray-700"
-        )}
-      >
-        <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-      </Button>
+  // ✅ Use dedicated action component based on transaction type
+  if (isRecurring) {
+    return (
+      <RecurringTransactionActions
+        transaction={transaction}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onSuccess={() => {}} // Parent will handle success
+        variant="compact"
+        className={className}
+      />
+    );
+  }
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={onToggle}
-            />
-            
-            {/* Menu */}
-            <motion.div
-              variants={menuVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className={cn(
-                "absolute right-0 top-10 z-50 w-48 p-1",
-                "bg-white dark:bg-gray-800 rounded-xl shadow-2xl",
-                "border border-gray-200 dark:border-gray-700",
-                "backdrop-blur-xl"
-              )}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('🎯 Edit clicked for transaction:', transaction.id);
-                  if (onEdit) {
-                    onEdit(transaction);
-                  } else {
-                    try { window.dispatchEvent(new CustomEvent('transaction:edit', { detail: { tx: transaction } })); } catch (_) {}
-                  }
-                  onToggle();
-                }}
-                className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <Edit className="w-4 h-4 mr-3" />
-                {t('actions.edit', 'Edit')}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('📋 Duplicate clicked for transaction:', transaction.id);
-                  if (onDuplicate) {
-                    onDuplicate(transaction);
-                  } else {
-                    try { window.dispatchEvent(new CustomEvent('transaction:duplicate', { detail: { tx: transaction } })); } catch (_) {}
-                  }
-                  onToggle();
-                }}
-                className="w-full justify-start text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <Copy className="w-4 h-4 mr-3" />
-                {t('actions.duplicate', 'Duplicate')}
-              </Button>
-              
-              <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('🗑️ Delete clicked for transaction:', transaction.id);
-                  if (onDelete) {
-                    onDelete(transaction);
-                  } else {
-                    try { window.dispatchEvent(new CustomEvent('transaction:delete', { detail: { tx: transaction } })); } catch (_) {}
-                  }
-                  onToggle();
-                }}
-                className="w-full justify-start text-left text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-              >
-                <Trash2 className="w-4 h-4 mr-3" />
-                {t('actions.delete', 'Delete')}
-              </Button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+  return (
+    <OneTimeTransactionActions
+      transaction={transaction}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onDuplicate={onDuplicate}
+      onSuccess={() => {}} // Parent will handle success
+      variant="compact"
+      className={className}
+    />
   );
 };
 
@@ -296,7 +219,6 @@ const ModernTransactionCard = ({
   const { formatCurrency } = useCurrency();
   const { isDark } = useTheme();
   
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   // ✅ Transaction properties with enhanced logic
@@ -418,7 +340,7 @@ const ModernTransactionCard = ({
       whileTap="tap"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className={cn(cardClasses, "overflow-visible", isMenuOpen && "z-50")}
+      className={cn(cardClasses, "overflow-visible")}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       {/* ✨ Recurring Transaction Indicator */}
@@ -511,13 +433,11 @@ const ModernTransactionCard = ({
 
             {/* Action Menu */}
             {viewMode !== 'grid' && (
-              <ActionMenu
+              <SmartActionMenu
                 transaction={transaction}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
-                isOpen={isMenuOpen}
-                onToggle={() => setIsMenuOpen(!isMenuOpen)}
               />
             )}
           </div>
@@ -581,13 +501,11 @@ const ModernTransactionCard = ({
           {/* Grid View Action Menu */}
           {viewMode === 'grid' && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <ActionMenu
+              <SmartActionMenu
                 transaction={transaction}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
-                isOpen={isMenuOpen}
-                onToggle={() => setIsMenuOpen(!isMenuOpen)}
                 className="mx-auto"
               />
             </div>

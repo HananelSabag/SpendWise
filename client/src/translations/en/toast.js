@@ -175,7 +175,9 @@ export default {
     invitationSent: "Invitation sent successfully!",
     feedbackSubmitted: "Thank you for your feedback!",
     supportTicketCreated: "Support ticket created successfully!",
-    bulkOperationSuccess: "{{count}} {{operation}} operations completed successfully!"
+    bulkOperationSuccess: "{{count}} {{operation}} operations completed successfully!",
+    delete: "Successfully deleted!",
+    bulkDeleteSuccess: "{{count}} transactions deleted successfully!"
   },
 
   // ✅ Error Actions

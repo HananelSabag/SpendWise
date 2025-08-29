@@ -86,29 +86,7 @@ const FinalTemplatesStep = ({
     onDataUpdate({ selectedTemplates: newSelected });
   }, [selectedTemplates, onDataUpdate]);
 
-  // Add custom template
-  const addCustomTemplate = useCallback(() => {
-    if (customTemplate.name.trim() && customTemplate.amount && parseFloat(customTemplate.amount) > 0) {
-      const newTemplate = {
-        id: `custom-${Date.now()}`,
-        name: customTemplate.name.trim(),
-        icon: customTemplate.icon,
-        amount: parseFloat(customTemplate.amount),
-        type: activeCategory === 'income' ? 'income' : 'expense',
-        isCustom: true
-      };
-
-      const newSelected = [...selectedTemplates, newTemplate];
-      setSelectedTemplates(newSelected);
-      console.log('🎯 FinalTemplatesStep: Adding custom template:', newTemplate);
-      console.log('🎯 FinalTemplatesStep: New selected templates:', newSelected);
-      onDataUpdate({ selectedTemplates: newSelected });
-      
-      // Reset form
-      setCustomTemplate({ name: '', amount: '', icon: DollarSign });
-      setShowCustomForm(false);
-    }
-  }, [customTemplate, activeCategory, selectedTemplates, onDataUpdate]);
+  // ✅ REMOVED: addCustomTemplate - now handled within CustomTemplateForm component
 
   // Quick template card component
   const TemplateCard = ({ template }) => {
@@ -265,59 +243,113 @@ const FinalTemplatesStep = ({
   };
 
   // Custom template form
-  const CustomTemplateForm = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700"
-    >
-      <div className="flex items-center space-x-2 mb-4">
-        <Sparkles className="w-5 h-5 text-blue-600" />
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-          {t('templates.createCustom', 'Create Custom Template')}
-        </h3>
-      </div>
+  const CustomTemplateForm = () => {
+    // ✅ FIX: Use local state to prevent focus loss on re-renders
+    const [localName, setLocalName] = useState(customTemplate.name);
+    const [localAmount, setLocalAmount] = useState(customTemplate.amount);
+    
+    // ✅ Update parent state only on blur or form submission
+    const handleNameBlur = () => {
+      setCustomTemplate(prev => ({ ...prev, name: localName }));
+    };
+    
+    const handleAmountBlur = () => {
+      setCustomTemplate(prev => ({ ...prev, amount: localAmount }));
+    };
+    
+    const handleSubmit = () => {
+      // Ensure parent state is updated before submission
+      const finalTemplate = {
+        ...customTemplate,
+        name: localName,
+        amount: localAmount
+      };
       
-      <div className="space-y-4">
-        <Input
-          value={customTemplate.name}
-          onChange={(e) => setCustomTemplate(prev => ({ ...prev, name: e.target.value }))}
-          placeholder={t('templates.customName', 'Template name (e.g., "Farm Cleaning")')}
-          className="text-sm"
-        />
-        <Input
-          type="number"
-          value={customTemplate.amount}
-          onChange={(e) => setCustomTemplate(prev => ({ ...prev, amount: e.target.value }))}
-          placeholder={t('templates.customAmount', 'Amount')}
-          min="0"
-          step="0.01"
-          className="text-sm"
-        />
+      if (finalTemplate.name.trim() && finalTemplate.amount && parseFloat(finalTemplate.amount) > 0) {
+        const newTemplate = {
+          id: `custom-${Date.now()}`,
+          name: finalTemplate.name.trim(),
+          icon: customTemplate.icon,
+          amount: parseFloat(finalTemplate.amount),
+          type: activeCategory === 'income' ? 'income' : 'expense',
+          isCustom: true
+        };
+
+        const newSelected = [...selectedTemplates, newTemplate];
+        setSelectedTemplates(newSelected);
+        console.log('🎯 FinalTemplatesStep: Adding custom template:', newTemplate);
+        console.log('🎯 FinalTemplatesStep: New selected templates:', newSelected);
+        onDataUpdate({ selectedTemplates: newSelected });
         
-        <div className="flex space-x-2">
-          <Button
-            onClick={addCustomTemplate}
-            disabled={!customTemplate.name.trim() || !customTemplate.amount || parseFloat(customTemplate.amount) <= 0}
-            size="sm"
-            className="flex-1"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {t('templates.addCustom', 'Add Custom')}
-          </Button>
-          <Button
-            onClick={() => setShowCustomForm(false)}
-            size="sm"
-            variant="outline"
-            className="flex-1"
-          >
-            {t('common.cancel', 'Cancel')}
-          </Button>
+        // Reset form
+        setLocalName('');
+        setLocalAmount('');
+        setCustomTemplate({ name: '', amount: '', icon: DollarSign });
+        setShowCustomForm(false);
+      }
+    };
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700"
+      >
+        <div className="flex items-center space-x-2 mb-4">
+          <Sparkles className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+            {t('templates.createCustom', 'Create Custom Template')}
+          </h3>
         </div>
-      </div>
-    </motion.div>
-  );
+        
+        <div className="space-y-4">
+          <Input
+            value={localName}
+            onChange={(e) => setLocalName(e.target.value)}
+            onBlur={handleNameBlur}
+            placeholder={t('templates.customName', 'Template name (e.g., "Farm Cleaning")')}
+            className="text-sm"
+            autoFocus={false}
+          />
+          <Input
+            type="number"
+            value={localAmount}
+            onChange={(e) => setLocalAmount(e.target.value)}
+            onBlur={handleAmountBlur}
+            placeholder={t('templates.customAmount', 'Amount')}
+            min="0"
+            step="0.01"
+            className="text-sm"
+          />
+          
+          <div className="flex space-x-2">
+            <Button
+              onClick={handleSubmit}
+              disabled={!localName.trim() || !localAmount || parseFloat(localAmount) <= 0}
+              size="sm"
+              className="flex-1"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              {t('templates.addCustom', 'Add Custom')}
+            </Button>
+            <Button
+              onClick={() => {
+                setLocalName('');
+                setLocalAmount('');
+                setShowCustomForm(false);
+              }}
+              size="sm"
+              variant="outline"
+              className="flex-1"
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6">

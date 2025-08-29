@@ -133,27 +133,56 @@ class Transaction {
       
       values.push(limit, offset);
 
-      const query = `
+      // ✅ FIXED: Use current database schema (income/expenses tables)
+      const incomeQuery = `
         SELECT 
-          t.id,
-          t.user_id,
-          t.category_id,
-          t.amount,
-          t.type,
-          t.description,
-          t.notes,
-          t.date,
-          t.transaction_datetime,
-          t.template_id,
-          t.created_at,
-          t.updated_at,
+          i.id,
+          i.user_id,
+          i.category_id,
+          i.amount,
+          'income' as type,
+          i.description,
+          i.notes,
+          i.date,
+          i.created_at as transaction_datetime,
+          i.template_id,
+          i.created_at,
+          i.updated_at,
           c.name as category_name,
           c.icon as category_icon,
           c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE ${whereClause}
-        ${orderClause}
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE ${whereClause.replace(/t\./g, 'i.')}
+      `;
+
+      const expensesQuery = `
+        SELECT 
+          e.id,
+          e.user_id,
+          e.category_id,
+          e.amount,
+          'expense' as type,
+          e.description,
+          e.notes,
+          e.date,
+          e.created_at as transaction_datetime,
+          e.template_id,
+          e.created_at,
+          e.updated_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE ${whereClause.replace(/t\./g, 'e.')}
+      `;
+
+      const query = `
+        (${incomeQuery})
+        UNION ALL
+        (${expensesQuery})
+        ${orderClause.replace(/t\./g, '')}
         ${limitClause}
       `;
 
@@ -173,21 +202,40 @@ class Transaction {
    */
   static async getRecent(userId, limit = 10) {
     try {
+      // ✅ FIXED: Use current database schema (income/expenses tables)
       const query = `
-        SELECT 
-          t.id,
-          t.amount,
-          t.type,
-          t.description,
-          t.date,
-          t.created_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1 AND (t.deleted_at IS NULL)
-        ORDER BY t.created_at DESC
+        (
+          SELECT 
+            i.id,
+            i.amount,
+            'income' as type,
+            i.description,
+            i.date,
+            i.created_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM income i
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE i.user_id = $1 AND (i.deleted_at IS NULL)
+        )
+        UNION ALL
+        (
+          SELECT 
+            e.id,
+            e.amount,
+            'expense' as type,
+            e.description,
+            e.date,
+            e.created_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM expenses e
+          LEFT JOIN categories c ON e.category_id = c.id
+          WHERE e.user_id = $1 AND (e.deleted_at IS NULL)
+        )
+        ORDER BY created_at DESC
         LIMIT $2
       `;
 

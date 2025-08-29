@@ -34,6 +34,7 @@ import {
 // Transaction components
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
 import ModernUpcomingTransactions from '../components/features/transactions/ModernUpcomingTransactions';
+import ModernRecurringTransactions from '../components/features/transactions/ModernRecurringTransactions';
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
@@ -1123,46 +1124,18 @@ const ModernTransactions = () => {
             {/* ✨ Recurring Transactions Content */}
             {activeTab === 'recurring' && (
               <div className="mt-8">
-                <Card className="p-8 text-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="relative">
-                      <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center text-white shadow-2xl">
-                        <Repeat className="w-10 h-10" />
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                        {t('transactions.recurring.title', 'Recurring Transactions')}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto text-lg">
-                        {t('transactions.recurring.description', 'Manage your recurring transactions and templates')}
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={() => setShowRecurringManager(true)}
-                        className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-3"
-                      >
-                        <Settings className="w-5 h-5 mr-2" />
-                        🎛️ Control Center
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        onClick={() => setActiveTab('all')}
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/20 px-8 py-3"
-                      >
-                        <ArrowLeftRight className="w-5 h-5 mr-2" />
-                        {t('actions.viewAll', 'View All Transactions')}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                <ModernRecurringTransactions 
+                  onOpenRecurringManager={(template) => {
+                    if (template) {
+                      setSelectedTransaction(template);
+                      setModalMode(template.id ? 'edit' : 'duplicate');
+                    } else {
+                      setSelectedTransaction(null);
+                      setModalMode('create');
+                    }
+                    setShowRecurringManager(true);
+                  }}
+                />
               </div>
             )}
           </div>

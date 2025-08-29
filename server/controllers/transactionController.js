@@ -1062,7 +1062,7 @@ const transactionController = {
   }),
 
   /**
-   * Bulk delete transactions
+   * Bulk delete transactions - BACKWARD COMPATIBLE VERSION
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
@@ -1083,36 +1083,46 @@ const transactionController = {
         errors: []
       };
 
-      // Process each transaction deletion
+      // ✅ FIXED: Work with current database schema (income/expenses tables)
       for (const transactionId of transactionIds) {
         try {
-          // Check if transaction belongs to user
-          const checkQuery = `
-            SELECT id, template_id, is_recurring 
-            FROM transactions 
-            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-          `;
-          const checkResult = await db.query(checkQuery, [transactionId, userId]);
+          let deleted = false;
           
-          if (checkResult.rows.length === 0) {
-            results.failed++;
-            results.errors.push(`Transaction ${transactionId} not found or not accessible`);
-            continue;
+          // Try to delete from income table first
+          const deleteIncomeQuery = `
+            UPDATE income 
+            SET deleted_at = NOW() 
+            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+            RETURNING id
+          `;
+          const incomeResult = await db.query(deleteIncomeQuery, [transactionId, userId]);
+          
+          if (incomeResult.rows.length > 0) {
+            deleted = true;
+            logger.info(`Bulk deleted income transaction ${transactionId} for user ${userId}`);
+          } else {
+            // Try to delete from expenses table
+            const deleteExpenseQuery = `
+              UPDATE expenses 
+              SET deleted_at = NOW() 
+              WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+              RETURNING id
+            `;
+            const expenseResult = await db.query(deleteExpenseQuery, [transactionId, userId]);
+            
+            if (expenseResult.rows.length > 0) {
+              deleted = true;
+              logger.info(`Bulk deleted expense transaction ${transactionId} for user ${userId}`);
+            }
           }
 
-          const transaction = checkResult.rows[0];
-
-          // Soft delete the transaction
-          const deleteQuery = `
-            UPDATE transactions 
-            SET deleted_at = NOW() 
-            WHERE id = $1 AND user_id = $2
-          `;
-          await db.query(deleteQuery, [transactionId, userId]);
-
-          results.successful++;
+          if (deleted) {
+            results.successful++;
+          } else {
+            results.failed++;
+            results.errors.push(`Transaction ${transactionId} not found or not accessible`);
+          }
           
-          logger.info(`Bulk deleted transaction ${transactionId} for user ${userId}`);
         } catch (error) {
           results.failed++;
           results.errors.push(`Failed to delete transaction ${transactionId}: ${error.message}`);
