@@ -547,38 +547,27 @@ class Transaction {
       const createdTransactions = [];
 
       for (const transactionData of transactionsData) {
-        // ✅ FIXED: Insert into appropriate table based on transaction type
-        let query;
+        // ✅ CRITICAL FIX: Use unified transactions table with type column
+        const query = `
+          INSERT INTO transactions (
+            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+        `;
+
         const values = [
           userId,
           transactionData.categoryId || null,
           parseFloat(transactionData.amount),
+          transactionData.type || 'expense', // ✅ CRITICAL: Must provide type!
           transactionData.description || '',
           transactionData.notes || '',
           transactionData.date || new Date().toISOString().split('T')[0],
           transactionData.templateId || null
         ];
 
-        if (transactionData.type === 'income') {
-          query = `
-            INSERT INTO income (
-              user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-            RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-          `;
-        } else {
-          query = `
-            INSERT INTO expenses (
-              user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-            RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-          `;
-        }
-
         const result = await client.query(query, values);
         const created = result.rows[0];
-        // Add type for consistency
-        created.type = transactionData.type;
         createdTransactions.push(created);
       }
 
