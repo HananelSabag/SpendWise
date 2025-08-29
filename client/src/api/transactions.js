@@ -37,6 +37,12 @@ const transactionAPI = {
           transaction_datetime: data.transaction_datetime || 'not provided'
         }
       });
+      console.log('📤 Full API request details:', {
+        method: 'POST',
+        url: `${apiClient.client.defaults.baseURL}${endpoint}`,
+        headers: apiClient.client.defaults.headers,
+        data: data
+      });
       
       const response = await apiClient.client.post(endpoint, data);
       console.log('✅ Transaction created successfully:', {
@@ -47,6 +53,17 @@ const transactionAPI = {
       return { success: true, data: response.data };
     } catch (error) {
       console.error('❌ Transaction creation failed:', error);
+      console.error('❌ API Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          method: error.config?.method,
+          url: error.config?.url,
+          data: error.config?.data
+        }
+      });
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

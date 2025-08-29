@@ -1086,18 +1086,49 @@ const transactionController = {
       transactionIds,
       transactionIdsType: typeof transactionIds,
       isArray: Array.isArray(transactionIds),
-      length: transactionIds?.length
+      length: transactionIds?.length,
+      rawBody: JSON.stringify(req.body),
+      contentType: req.headers['content-type']
     });
 
-    if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
-      logger.warn('Bulk delete validation failed', {
-        transactionIds,
-        isArray: Array.isArray(transactionIds),
-        length: transactionIds?.length
+    // ✅ ENHANCED VALIDATION: More detailed error messages
+    if (!req.body) {
+      logger.error('Bulk delete failed - no body', { headers: req.headers });
+      return res.status(400).json({
+        success: false,
+        message: 'Request body is required',
+        error: 'NO_BODY'
+      });
+    }
+
+    if (!transactionIds) {
+      logger.error('Bulk delete failed - no transactionIds', { body: req.body });
+      return res.status(400).json({
+        success: false,
+        message: 'transactionIds field is required',
+        error: 'NO_TRANSACTION_IDS'
+      });
+    }
+
+    if (!Array.isArray(transactionIds)) {
+      logger.error('Bulk delete failed - transactionIds not array', { 
+        transactionIds, 
+        type: typeof transactionIds 
       });
       return res.status(400).json({
         success: false,
-        message: 'Transaction IDs array is required'
+        message: 'transactionIds must be an array',
+        error: 'INVALID_ARRAY',
+        received: typeof transactionIds
+      });
+    }
+
+    if (transactionIds.length === 0) {
+      logger.error('Bulk delete failed - empty array', { transactionIds });
+      return res.status(400).json({
+        success: false,
+        message: 'transactionIds array cannot be empty',
+        error: 'EMPTY_ARRAY'
       });
     }
 
@@ -1226,32 +1257,7 @@ const transactionController = {
     }
   }),
 
-  /**
-   * Get recent for specific type (legacy compatibility)
-   * @route GET /api/v1/transactions/:type/recent
-   */
-  getRecent: asyncHandler(async (req, res) => {
-    const { type } = req.params;
-    const userId = req.user.id;
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
 
-    try {
-      const transactions = await Transaction.findByUser(userId, { type, limit });
-
-      res.json({
-        success: true,
-        data: transactions,
-        metadata: {
-          count: transactions.length,
-          type,
-          limit
-        }
-      });
-    } catch (error) {
-      logger.error('Get recent by type failed', { userId, type, error: error.message });
-      throw error;
-    }
-  }),
 
   /**
    * Get upcoming transactions for user
@@ -1539,7 +1545,23 @@ async function generateTransactionsFromTemplate(template) {
         };
 
         // Use Transaction model's create method for backward compatibility
+        logger.info('Creating transaction from template', {
+          templateId: template.id,
+          userId: template.user_id,
+          transactionData: {
+            type: transactionData.type,
+            amount: transactionData.amount,
+            date: transactionData.date,
+            description: transactionData.description
+          }
+        });
+        
         const created = await Transaction.create(transactionData, template.user_id);
+        logger.info('Transaction created successfully from template', {
+          templateId: template.id,
+          transactionId: created.id,
+          type: created.type
+        });
         generated.push(created);
       }
     }
@@ -1814,4 +1836,5 @@ function calculateUpcomingDates(template, startDate, endDate) {
   return dates;
 }
 
+module.exports = transactionController;
 module.exports = transactionController;

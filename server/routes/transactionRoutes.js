@@ -68,13 +68,13 @@ router.get('/summary',
 // Get balance details for specific date
 router.get('/balance/details',
   getSummaryLimiter,
-  transactionController.getDashboardData
+  transactionController.getBalanceData
 );
 
 // Get balance history by period
 router.get('/balance/history/:period',
   getSummaryLimiter,
-  transactionController.getDashboardData
+  transactionController.getBalanceData
 );
 
 // Debug endpoint removed for production security
@@ -230,16 +230,9 @@ router.post('/:type/:id/skip',
  * Simplified endpoints for specific transaction types
  */
 
-// Add expense directly
-router.post('/expense',
-  createTransactionLimiter,
-  transactionController.create
-);
-
-// Add income directly
-router.post('/income',
-  createTransactionLimiter,
-  transactionController.create
-);
+// ✅ REMOVED: Redundant routes - use /:type instead
+// These endpoints are redundant with /:type route
+// router.post('/expense', ...) 
+// router.post('/income', ...)
 
 module.exports = router;
