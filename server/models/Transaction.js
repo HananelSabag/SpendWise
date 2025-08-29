@@ -48,15 +48,18 @@ class Transaction {
         transactionData.templateId || null
       ];
 
-      // ✅ CRITICAL FIX: Use unified transactions table with type column
+      // ✅ CRITICAL FIX: Use unified transactions table with type column AND transaction_datetime
+      const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
+      const transactionDateTime = new Date(transactionDate + 'T12:00:00Z').toISOString(); // Set to noon UTC
+      
       query = `
         INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+          user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
       `;
       
-      // ✅ CRITICAL: Add type to values array at correct position
+      // ✅ CRITICAL: Add type AND transaction_datetime to values array
       const finalValues = [
         userId,
         transactionData.categoryId || null,
@@ -64,7 +67,8 @@ class Transaction {
         transactionData.type || 'expense', // ✅ MUST provide type!
         transactionData.description || '',
         transactionData.notes || '',
-        transactionData.date || new Date().toISOString().split('T')[0],
+        transactionDate, // Date field
+        transactionDateTime, // DateTime field for constraint
         transactionData.templateId || null
       ];
 
@@ -547,12 +551,15 @@ class Transaction {
       const createdTransactions = [];
 
       for (const transactionData of transactionsData) {
-        // ✅ CRITICAL FIX: Use unified transactions table with type column
+        // ✅ CRITICAL FIX: Use unified transactions table with type column AND transaction_datetime
+        const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
+        const transactionDateTime = new Date(transactionDate + 'T12:00:00Z').toISOString(); // Set to noon UTC
+        
         const query = `
           INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+            user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
         `;
 
         const values = [
@@ -562,7 +569,8 @@ class Transaction {
           transactionData.type || 'expense', // ✅ CRITICAL: Must provide type!
           transactionData.description || '',
           transactionData.notes || '',
-          transactionData.date || new Date().toISOString().split('T')[0],
+          transactionDate, // Date field
+          transactionDateTime, // DateTime field for constraint
           transactionData.templateId || null
         ];
 

@@ -1204,7 +1204,7 @@ const ModernTransactions = () => {
                   {t('bulk.delete.title', 'Delete Transactions')}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedIds.size} {selectedIds.size === 1 ? 'transaction' : 'transactions'}
+                  {selectedIds.size} {t('bulk.delete.count', selectedIds.size === 1 ? 'transaction' : 'transactions')}
                 </p>
               </div>
             </div>
@@ -1247,7 +1247,7 @@ const ModernTransactions = () => {
                     });
                   }
                 }}
-                className="flex-1"
+                className="flex-1 bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 {t('bulk.delete.confirm', 'Delete All')}
