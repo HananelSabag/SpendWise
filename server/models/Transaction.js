@@ -107,94 +107,284 @@ class Transaction {
         type = null,
         dateFrom = null,
         dateTo = null,
-        search = null, // ✅ NEW: Add search support
+        search = null,
         sortBy = 'created_at',
         sortOrder = 'DESC'
       } = options;
 
-      // ✅ UNIFIED TRANSACTIONS TABLE: Build WHERE conditions
-      const conditions = ['t.user_id = $1'];
-      const values = [userId];
-      let paramCount = 2;
+      // ✅ CRITICAL FIX: Check if unified transactions table has data, fallback to legacy tables
+      const unifiedCheckQuery = 'SELECT COUNT(*) as count FROM transactions WHERE user_id = $1';
+      const unifiedCheck = await db.query(unifiedCheckQuery, [userId]);
+      const hasUnifiedData = parseInt(unifiedCheck.rows[0].count) > 0;
 
-      if (categoryId) {
-        conditions.push(`t.category_id = $${paramCount}`);
-        values.push(categoryId);
-        paramCount++;
-      }
-
-      if (type) {
-        conditions.push(`t.type = $${paramCount}`);
-        values.push(type);
-        paramCount++;
-      }
-
-      if (dateFrom) {
-        conditions.push(`t.date >= $${paramCount}`);
-        values.push(dateFrom);
-        paramCount++;
-      }
-
-      if (dateTo) {
-        conditions.push(`t.date <= $${paramCount}`);
-        values.push(dateTo);
-        paramCount++;
-      }
-
-      // ✅ CRITICAL FIX: Add search filtering in SQL query, not after
-      if (search) {
-        conditions.push(`(
-          LOWER(t.description) LIKE LOWER($${paramCount}) OR 
-          LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
-          LOWER(c.name) LIKE LOWER($${paramCount})
-        )`);
-        values.push(`%${search}%`);
-        paramCount++;
-      }
-
-      // Add LIMIT and OFFSET parameters
-      values.push(limit, offset);
-
-      // ✅ UNIFIED TRANSACTIONS TABLE QUERY
-      const query = `
-        SELECT 
-          t.id,
-          t.user_id,
-          t.category_id,
-          t.amount,
-          t.type,
-          t.description,
-          t.notes,
-          t.date,
-          t.transaction_datetime,
-          t.template_id,
-          t.created_at,
-          t.updated_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY ${sortBy === 'amount' ? 't.amount' : 't.transaction_datetime'} ${sortOrder}
-        LIMIT $${paramCount} OFFSET $${paramCount + 1}
-      `;
-
-      logger.info('findByUser query', { userId, options, query, values });
-      
-      const result = await db.query(query, values);
-      
-      logger.info('findByUser results', { 
+      logger.info('Transaction data location check', { 
         userId, 
-        resultCount: result.rows.length,
-        totalRequested: limit 
+        hasUnifiedData,
+        unifiedCount: unifiedCheck.rows[0].count 
       });
-      
-      return result.rows;
+
+      if (hasUnifiedData) {
+        // Use unified transactions table
+        return await this.findByUserUnified(userId, options);
+      } else {
+        // Use legacy income/expenses tables
+        return await this.findByUserLegacy(userId, options);
+      }
     } catch (error) {
       logger.error('Transaction retrieval failed', { userId, error: error.message });
       throw error;
     }
+  }
+
+  /**
+   * Get transactions from unified transactions table
+   */
+  static async findByUserUnified(userId, options = {}) {
+    const {
+      limit = 50,
+      offset = 0,
+      categoryId = null,
+      type = null,
+      dateFrom = null,
+      dateTo = null,
+      search = null,
+      sortBy = 'created_at',
+      sortOrder = 'DESC'
+    } = options;
+
+    const conditions = ['t.user_id = $1'];
+    const values = [userId];
+    let paramCount = 2;
+
+    if (categoryId) {
+      conditions.push(`t.category_id = $${paramCount}`);
+      values.push(categoryId);
+      paramCount++;
+    }
+
+    if (type) {
+      conditions.push(`t.type = $${paramCount}`);
+      values.push(type);
+      paramCount++;
+    }
+
+    if (dateFrom) {
+      conditions.push(`t.date >= $${paramCount}`);
+      values.push(dateFrom);
+      paramCount++;
+    }
+
+    if (dateTo) {
+      conditions.push(`t.date <= $${paramCount}`);
+      values.push(dateTo);
+      paramCount++;
+    }
+
+    if (search) {
+      conditions.push(`(
+        LOWER(t.description) LIKE LOWER($${paramCount}) OR 
+        LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(c.name) LIKE LOWER($${paramCount})
+      )`);
+      values.push(`%${search}%`);
+      paramCount++;
+    }
+
+    values.push(limit, offset);
+
+    const query = `
+      SELECT 
+        t.id,
+        t.user_id,
+        t.category_id,
+        t.amount,
+        t.type,
+        t.description,
+        t.notes,
+        t.date,
+        t.transaction_datetime,
+        t.template_id,
+        t.created_at,
+        t.updated_at,
+        c.name as category_name,
+        c.icon as category_icon,
+        c.color as category_color
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY ${sortBy === 'amount' ? 't.amount' : 't.transaction_datetime'} ${sortOrder}
+      LIMIT $${paramCount} OFFSET $${paramCount + 1}
+    `;
+
+    const result = await db.query(query, values);
+    return result.rows;
+  }
+
+  /**
+   * Get transactions from legacy income/expenses tables
+   */
+  static async findByUserLegacy(userId, options = {}) {
+    const {
+      limit = 50,
+      offset = 0,
+      categoryId = null,
+      type = null,
+      dateFrom = null,
+      dateTo = null,
+      search = null,
+      sortBy = 'created_at',
+      sortOrder = 'DESC'
+    } = options;
+
+    // Build WHERE conditions for both tables
+    const conditions = ['user_id = $1'];
+    const values = [userId];
+    let paramCount = 2;
+
+    if (categoryId) {
+      conditions.push(`category_id = $${paramCount}`);
+      values.push(categoryId);
+      paramCount++;
+    }
+
+    if (dateFrom) {
+      conditions.push(`date >= $${paramCount}`);
+      values.push(dateFrom);
+      paramCount++;
+    }
+
+    if (dateTo) {
+      conditions.push(`date <= $${paramCount}`);
+      values.push(dateTo);
+      paramCount++;
+    }
+
+    let searchCondition = '';
+    if (search) {
+      searchCondition = `AND (
+        LOWER(description) LIKE LOWER($${paramCount}) OR 
+        LOWER(notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(c.name) LIKE LOWER($${paramCount})
+      )`;
+      values.push(`%${search}%`);
+      paramCount++;
+    }
+
+    // Add LIMIT and OFFSET
+    values.push(limit, offset);
+
+    let query;
+
+    if (type === 'income') {
+      query = `
+        SELECT 
+          i.id,
+          i.user_id,
+          i.category_id,
+          i.amount,
+          'income' as type,
+          i.description,
+          i.notes,
+          i.date,
+          i.date as transaction_datetime,
+          i.template_id,
+          i.created_at,
+          i.updated_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE ${conditions.join(' AND ')} ${searchCondition}
+        ORDER BY ${sortBy === 'amount' ? 'i.amount' : 'i.created_at'} ${sortOrder}
+        LIMIT $${paramCount} OFFSET $${paramCount + 1}
+      `;
+    } else if (type === 'expense') {
+      query = `
+        SELECT 
+          e.id,
+          e.user_id,
+          e.category_id,
+          e.amount,
+          'expense' as type,
+          e.description,
+          e.notes,
+          e.date,
+          e.date as transaction_datetime,
+          e.template_id,
+          e.created_at,
+          e.updated_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE ${conditions.join(' AND ')} ${searchCondition}
+        ORDER BY ${sortBy === 'amount' ? 'e.amount' : 'e.created_at'} ${sortOrder}
+        LIMIT $${paramCount} OFFSET $${paramCount + 1}
+      `;
+    } else {
+      // Get both income and expenses
+      query = `
+        (
+          SELECT 
+            i.id,
+            i.user_id,
+            i.category_id,
+            i.amount,
+            'income' as type,
+            i.description,
+            i.notes,
+            i.date,
+            i.date as transaction_datetime,
+            i.template_id,
+            i.created_at,
+            i.updated_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM income i
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE ${conditions.join(' AND ')} ${searchCondition}
+        )
+        UNION ALL
+        (
+          SELECT 
+            e.id,
+            e.user_id,
+            e.category_id,
+            e.amount,
+            'expense' as type,
+            e.description,
+            e.notes,
+            e.date,
+            e.date as transaction_datetime,
+            e.template_id,
+            e.created_at,
+            e.updated_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM expenses e
+          LEFT JOIN categories c ON e.category_id = c.id
+          WHERE ${conditions.join(' AND ')} ${searchCondition}
+        )
+        ORDER BY ${sortBy === 'amount' ? 'amount' : 'created_at'} ${sortOrder}
+        LIMIT $${paramCount} OFFSET $${paramCount + 1}
+      `;
+    }
+
+    logger.info('findByUserLegacy query', { userId, options, query, values });
+    
+    const result = await db.query(query, values);
+    
+    logger.info('findByUserLegacy results', { 
+      userId, 
+      resultCount: result.rows.length,
+      totalRequested: limit 
+    });
+    
+    return result.rows;
   }
 
   /**
