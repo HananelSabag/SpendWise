@@ -104,33 +104,54 @@ class Transaction {
         sortOrder = 'DESC'
       } = options;
 
-      // Build base conditions (without type since income/expenses tables don't have type column)
-      const baseConditions = ['user_id = $1'];
+      // Build conditions for each table with proper aliases
       const values = [userId];
       let paramCount = 2;
 
+      // Base condition parameters
+      let categoryParam = null;
+      let dateFromParam = null; 
+      let dateToParam = null;
+
       if (categoryId) {
-        baseConditions.push(`category_id = $${paramCount}`);
+        categoryParam = `$${paramCount}`;
         values.push(categoryId);
         paramCount++;
       }
 
       if (dateFrom) {
-        baseConditions.push(`date >= $${paramCount}`);
+        dateFromParam = `$${paramCount}`;
         values.push(dateFrom);
         paramCount++;
       }
 
       if (dateTo) {
-        baseConditions.push(`date <= $${paramCount}`);
+        dateToParam = `$${paramCount}`;
         values.push(dateTo);
         paramCount++;
       }
 
-      const baseWhereClause = baseConditions.join(' AND ');
       const limitClause = `LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-      
       values.push(limit, offset);
+
+      // Build table-specific WHERE clauses to avoid ambiguity
+      const buildWhereClause = (tableAlias) => {
+        const conditions = [`${tableAlias}.user_id = $1`];
+        
+        if (categoryParam) {
+          conditions.push(`${tableAlias}.category_id = ${categoryParam}`);
+        }
+        
+        if (dateFromParam) {
+          conditions.push(`${tableAlias}.date >= ${dateFromParam}`);
+        }
+        
+        if (dateToParam) {
+          conditions.push(`${tableAlias}.date <= ${dateToParam}`);
+        }
+        
+        return conditions.join(' AND ');
+      };
 
       // ✅ FIXED: Handle type filtering by including/excluding tables
       let incomeQuery = '';
@@ -156,7 +177,7 @@ class Transaction {
             c.color as category_color
           FROM income i
           LEFT JOIN categories c ON i.category_id = c.id
-          WHERE ${baseWhereClause}
+          WHERE ${buildWhereClause('i')}
         `;
       }
 
@@ -180,7 +201,7 @@ class Transaction {
             c.color as category_color
           FROM expenses e
           LEFT JOIN categories c ON e.category_id = c.id
-          WHERE ${baseWhereClause}
+          WHERE ${buildWhereClause('e')}
         `;
       }
 

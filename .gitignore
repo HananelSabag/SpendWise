@@ -30,6 +30,16 @@ client/src/config/production.js
 database.config.js
 db-credentials.json
 
+# MCP Tools (CRITICAL - Contains database passwords)
+mcp-tools/
+mcp-tools/**
+cursor-mcp-config.json
+**/cursor-mcp-config.json
+mcp-config.json
+**/mcp-config.json
+spendwise-db-server.js
+**/spendwise-db-server.js
+
 # API keys and secrets
 secrets/
 keys/
