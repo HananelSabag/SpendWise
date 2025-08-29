@@ -1090,9 +1090,8 @@ const transactionController = {
           
           // Try to delete from income table first
           const deleteIncomeQuery = `
-            UPDATE income 
-            SET deleted_at = NOW() 
-            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+            DELETE FROM income 
+            WHERE id = $1 AND user_id = $2
             RETURNING id
           `;
           const incomeResult = await db.query(deleteIncomeQuery, [transactionId, userId]);
@@ -1103,9 +1102,8 @@ const transactionController = {
           } else {
             // Try to delete from expenses table
             const deleteExpenseQuery = `
-              UPDATE expenses 
-              SET deleted_at = NOW() 
-              WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+              DELETE FROM expenses 
+              WHERE id = $1 AND user_id = $2
               RETURNING id
             `;
             const expenseResult = await db.query(deleteExpenseQuery, [transactionId, userId]);

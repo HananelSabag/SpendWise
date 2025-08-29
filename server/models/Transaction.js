@@ -29,47 +29,53 @@ const logger = require('../utils/logger');
 class Transaction {
 
   /**
-   * Create a new transaction - TIMEZONE AWARE VERSION
+   * Create a new transaction - BACKWARD COMPATIBLE VERSION
    * @param {Object} transactionData - Transaction data
    * @param {number} userId - User ID
    * @returns {Promise<Object>} Created transaction
    */
   static async create(transactionData, userId) {
     try {
-      // ✅ NEW: Handle timezone-aware transaction datetime
-      const transactionDateTime = transactionData.transaction_datetime || 
-                                  transactionData.date ? new Date(`${transactionData.date}T12:00:00Z`).toISOString() :
-                                  new Date().toISOString();
-
-      const query = `
-        INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
-      `;
-
+      // ✅ FIXED: Insert into appropriate table based on transaction type
+      let query;
       const values = [
         userId,
         transactionData.categoryId || null,
         parseFloat(transactionData.amount),
-        transactionData.type,
         transactionData.description || '',
         transactionData.notes || '',
-        transactionData.date || new Date().toISOString().split('T')[0], // Keep for backward compatibility
-        transactionDateTime, // ✅ NEW: User's intended datetime with timezone
+        transactionData.date || new Date().toISOString().split('T')[0],
         transactionData.templateId || null
       ];
 
+      if (transactionData.type === 'income') {
+        query = `
+          INSERT INTO income (
+            user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+        `;
+      } else {
+        query = `
+          INSERT INTO expenses (
+            user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+        `;
+      }
+
       const result = await db.query(query, values);
       const transaction = result.rows[0];
+      
+      // Add type for consistency
+      transaction.type = transactionData.type;
 
       logger.info('Transaction created successfully', { 
         transactionId: transaction.id, 
         userId, 
         amount: transaction.amount,
         type: transaction.type,
-        datetime: transaction.transaction_datetime,
-        timezone: transactionData.timezone || 'unknown'
+        table: transactionData.type === 'income' ? 'income' : 'expenses'
       });
 
       return transaction;
@@ -98,91 +104,98 @@ class Transaction {
         sortOrder = 'DESC'
       } = options;
 
-      // Build dynamic query
-      const conditions = ['t.user_id = $1', '(t.deleted_at IS NULL)'];
+      // Build base conditions (without type since income/expenses tables don't have type column)
+      const baseConditions = ['user_id = $1'];
       const values = [userId];
       let paramCount = 2;
 
       if (categoryId) {
-        conditions.push(`t.category_id = $${paramCount}`);
+        baseConditions.push(`category_id = $${paramCount}`);
         values.push(categoryId);
         paramCount++;
       }
 
-      if (type) {
-        conditions.push(`t.type = $${paramCount}`);
-        values.push(type);
-        paramCount++;
-      }
-
       if (dateFrom) {
-        conditions.push(`t.date >= $${paramCount}`);
+        baseConditions.push(`date >= $${paramCount}`);
         values.push(dateFrom);
         paramCount++;
       }
 
       if (dateTo) {
-        conditions.push(`t.date <= $${paramCount}`);
+        baseConditions.push(`date <= $${paramCount}`);
         values.push(dateTo);
         paramCount++;
       }
 
-      const whereClause = conditions.join(' AND ');
-      const orderClause = `ORDER BY t.${sortBy} ${sortOrder}`;
+      const baseWhereClause = baseConditions.join(' AND ');
       const limitClause = `LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
       
       values.push(limit, offset);
 
-      // ✅ FIXED: Use current database schema (income/expenses tables)
-      const incomeQuery = `
-        SELECT 
-          i.id,
-          i.user_id,
-          i.category_id,
-          i.amount,
-          'income' as type,
-          i.description,
-          i.notes,
-          i.date,
-          i.created_at as transaction_datetime,
-          i.template_id,
-          i.created_at,
-          i.updated_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM income i
-        LEFT JOIN categories c ON i.category_id = c.id
-        WHERE ${whereClause.replace(/t\./g, 'i.')}
-      `;
+      // ✅ FIXED: Handle type filtering by including/excluding tables
+      let incomeQuery = '';
+      let expensesQuery = '';
 
-      const expensesQuery = `
-        SELECT 
-          e.id,
-          e.user_id,
-          e.category_id,
-          e.amount,
-          'expense' as type,
-          e.description,
-          e.notes,
-          e.date,
-          e.created_at as transaction_datetime,
-          e.template_id,
-          e.created_at,
-          e.updated_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        WHERE ${whereClause.replace(/t\./g, 'e.')}
-      `;
+      if (type !== 'expense') {
+        incomeQuery = `
+          SELECT 
+            i.id,
+            i.user_id,
+            i.category_id,
+            i.amount,
+            'income' as type,
+            i.description,
+            i.notes,
+            i.date,
+            i.created_at as transaction_datetime,
+            i.template_id,
+            i.created_at,
+            i.updated_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM income i
+          LEFT JOIN categories c ON i.category_id = c.id
+          WHERE ${baseWhereClause}
+        `;
+      }
+
+      if (type !== 'income') {
+        expensesQuery = `
+          SELECT 
+            e.id,
+            e.user_id,
+            e.category_id,
+            e.amount,
+            'expense' as type,
+            e.description,
+            e.notes,
+            e.date,
+            e.created_at as transaction_datetime,
+            e.template_id,
+            e.created_at,
+            e.updated_at,
+            c.name as category_name,
+            c.icon as category_icon,
+            c.color as category_color
+          FROM expenses e
+          LEFT JOIN categories c ON e.category_id = c.id
+          WHERE ${baseWhereClause}
+        `;
+      }
+
+      // Build final query
+      let queries = [];
+      if (incomeQuery) queries.push(`(${incomeQuery})`);
+      if (expensesQuery) queries.push(`(${expensesQuery})`);
+
+      if (queries.length === 0) {
+        return []; // No valid type specified
+      }
 
       const query = `
-        (${incomeQuery})
-        UNION ALL
-        (${expensesQuery})
-        ${orderClause.replace(/t\./g, '')}
+        ${queries.join(' UNION ALL ')}
+        ORDER BY ${sortBy} ${sortOrder}
         ${limitClause}
       `;
 
@@ -202,7 +215,7 @@ class Transaction {
    */
   static async getRecent(userId, limit = 10) {
     try {
-      // ✅ FIXED: Use current database schema (income/expenses tables)
+      // ✅ FIXED: Use current database schema (income/expenses tables) - corrected query
       const query = `
         (
           SELECT 
@@ -217,7 +230,7 @@ class Transaction {
             c.color as category_color
           FROM income i
           LEFT JOIN categories c ON i.category_id = c.id
-          WHERE i.user_id = $1 AND (i.deleted_at IS NULL)
+          WHERE i.user_id = $1
         )
         UNION ALL
         (
@@ -233,7 +246,7 @@ class Transaction {
             c.color as category_color
           FROM expenses e
           LEFT JOIN categories c ON e.category_id = c.id
-          WHERE e.user_id = $1 AND (e.deleted_at IS NULL)
+          WHERE e.user_id = $1
         )
         ORDER BY created_at DESC
         LIMIT $2
@@ -248,35 +261,63 @@ class Transaction {
   }
 
   /**
-   * Find transaction by ID
+   * Find transaction by ID - BACKWARD COMPATIBLE VERSION
    * @param {number} transactionId - Transaction ID
    * @param {number} userId - User ID
    * @returns {Promise<Object|null>} Transaction or null
    */
   static async findById(transactionId, userId) {
     try {
-      const query = `
+      // ✅ FIXED: Try both income and expenses tables
+      const incomeQuery = `
         SELECT 
-          t.id,
-          t.user_id,
-          t.category_id,
-          t.amount,
-          t.type,
-          t.description,
-          t.notes,
-          t.date,
-          t.template_id,
-          t.created_at,
-          t.updated_at,
+          i.id,
+          i.user_id,
+          i.category_id,
+          i.amount,
+          'income' as type,
+          i.description,
+          i.notes,
+          i.date,
+          i.template_id,
+          i.created_at,
+          i.updated_at,
           c.name as category_name,
           c.icon as category_icon,
           c.color as category_color
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.id = $1 AND t.user_id = $2 AND (t.deleted_at IS NULL)
+        FROM income i
+        LEFT JOIN categories c ON i.category_id = c.id
+        WHERE i.id = $1 AND i.user_id = $2
       `;
       
-      const result = await db.query(query, [transactionId, userId]);
+      const expenseQuery = `
+        SELECT 
+          e.id,
+          e.user_id,
+          e.category_id,
+          e.amount,
+          'expense' as type,
+          e.description,
+          e.notes,
+          e.date,
+          e.template_id,
+          e.created_at,
+          e.updated_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        WHERE e.id = $1 AND e.user_id = $2
+      `;
+
+      // Try income first, then expenses
+      let result = await db.query(incomeQuery, [transactionId, userId]);
+      if (result.rows.length > 0) {
+        return result.rows[0];
+      }
+
+      result = await db.query(expenseQuery, [transactionId, userId]);
       return result.rows[0] || null;
     } catch (error) {
       logger.error('Transaction find by ID failed', { transactionId, userId, error: error.message });
@@ -299,7 +340,8 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      const allowedFields = ['category_id', 'amount', 'description', 'type', 'notes', 'date'];
+      // ✅ FIXED: Don't allow type changes in current schema, remove type from allowed fields
+      const allowedFields = ['category_id', 'amount', 'description', 'notes', 'date'];
       const updates = {};
       const values = [];
       let paramCount = 1;
@@ -322,12 +364,23 @@ class Transaction {
         .map(([key, placeholder]) => `${key} = ${placeholder}`)
         .join(', ');
 
-      const query = `
-        UPDATE transactions 
-        SET ${setClause}
-        WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-      `;
+      // ✅ FIXED: Update appropriate table based on existing transaction type
+      let query;
+      if (existing.type === 'income') {
+        query = `
+          UPDATE income 
+          SET ${setClause}
+          WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
+          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+        `;
+      } else {
+        query = `
+          UPDATE expenses 
+          SET ${setClause}
+          WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
+          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+        `;
+      }
 
       values.push(transactionId, userId);
       const result = await db.query(query, values);
@@ -336,13 +389,17 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
+      // Add type field for consistency
+      const updated = result.rows[0];
+      updated.type = existing.type;
+
       logger.info('Transaction updated successfully', { 
         transactionId, 
         userId,
         updatedFields: Object.keys(updates)
       });
 
-      return result.rows[0];
+      return updated;
     } catch (error) {
       logger.error('Transaction update failed', { transactionId, userId, error: error.message });
       throw error;
@@ -350,7 +407,7 @@ class Transaction {
   }
 
   /**
-   * Soft delete transaction
+   * Soft delete transaction - BACKWARD COMPATIBLE VERSION
    * @param {number} transactionId - Transaction ID
    * @param {number} userId - User ID
    * @returns {Promise<boolean>} Success status
@@ -363,12 +420,21 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      const query = `
-        UPDATE transactions 
-        SET deleted_at = NOW(), updated_at = NOW()
-        WHERE id = $1 AND user_id = $2
-        RETURNING id
-      `;
+      // ✅ FIXED: Delete from appropriate table based on transaction type
+      let query;
+      if (existing.type === 'income') {
+        query = `
+          DELETE FROM income 
+          WHERE id = $1 AND user_id = $2
+          RETURNING id
+        `;
+      } else {
+        query = `
+          DELETE FROM expenses 
+          WHERE id = $1 AND user_id = $2
+          RETURNING id
+        `;
+      }
 
       const result = await db.query(query, [transactionId, userId]);
       const success = result.rows.length > 0;
@@ -385,31 +451,55 @@ class Transaction {
   }
 
   /**
-   * Get transaction counts and totals for dashboard
+   * Get transaction counts and totals for dashboard - BACKWARD COMPATIBLE VERSION
    * @param {number} userId - User ID
    * @param {number} days - Number of days to look back
    * @returns {Promise<Object>} Summary data
    */
   static async getSummary(userId, days = 30) {
     try {
-      const query = `
+      // ✅ FIXED: Query both income and expenses tables separately
+      const incomeQuery = `
         SELECT 
-          COUNT(*) as total_transactions,
-          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expenses,
-          AVG(CASE WHEN type = 'expense' THEN amount END) as avg_expense,
-          COUNT(DISTINCT category_id) as categories_used
-        FROM transactions
+          COUNT(*) as income_transactions,
+          COALESCE(SUM(amount), 0) as total_income,
+          COALESCE(AVG(amount), 0) as avg_income,
+          COUNT(DISTINCT category_id) as income_categories
+        FROM income
         WHERE user_id = $1 
-          AND (deleted_at IS NULL)
           AND date >= CURRENT_DATE - INTERVAL '${days} days'
       `;
 
-      const result = await db.query(query, [userId]);
-      const summary = result.rows[0] || {};
+      const expensesQuery = `
+        SELECT 
+          COUNT(*) as expense_transactions,
+          COALESCE(SUM(amount), 0) as total_expenses,
+          COALESCE(AVG(amount), 0) as avg_expense,
+          COUNT(DISTINCT category_id) as expense_categories
+        FROM expenses
+        WHERE user_id = $1 
+          AND date >= CURRENT_DATE - INTERVAL '${days} days'
+      `;
+
+      const [incomeResult, expensesResult] = await Promise.all([
+        db.query(incomeQuery, [userId]),
+        db.query(expensesQuery, [userId])
+      ]);
+
+      const incomeData = incomeResult.rows[0] || {};
+      const expenseData = expensesResult.rows[0] || {};
+
+      const summary = {
+        total_transactions: (parseInt(incomeData.income_transactions) || 0) + (parseInt(expenseData.expense_transactions) || 0),
+        total_income: parseFloat(incomeData.total_income) || 0,
+        total_expenses: parseFloat(expenseData.total_expenses) || 0,
+        avg_expense: parseFloat(expenseData.avg_expense) || 0,
+        avg_income: parseFloat(incomeData.avg_income) || 0,
+        categories_used: Math.max((parseInt(incomeData.income_categories) || 0), (parseInt(expenseData.expense_categories) || 0))
+      };
 
       // Calculate net balance
-      summary.net_balance = (summary.total_income || 0) - (summary.total_expenses || 0);
+      summary.net_balance = summary.total_income - summary.total_expenses;
 
       return summary;
     } catch (error) {
@@ -419,7 +509,7 @@ class Transaction {
   }
 
   /**
-   * Create batch transactions (for recurring, imports, etc.)
+   * Create batch transactions (for recurring, imports, etc.) - BACKWARD COMPATIBLE VERSION
    * @param {Array} transactionsData - Array of transaction data
    * @param {number} userId - User ID
    * @returns {Promise<Array>} Created transactions
@@ -433,26 +523,39 @@ class Transaction {
       const createdTransactions = [];
 
       for (const transactionData of transactionsData) {
-        const query = `
-          INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
-        `;
-
+        // ✅ FIXED: Insert into appropriate table based on transaction type
+        let query;
         const values = [
           userId,
           transactionData.categoryId || null,
           parseFloat(transactionData.amount),
-          transactionData.type,
           transactionData.description || '',
           transactionData.notes || '',
           transactionData.date || new Date().toISOString().split('T')[0],
           transactionData.templateId || null
         ];
 
+        if (transactionData.type === 'income') {
+          query = `
+            INSERT INTO income (
+              user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+          `;
+        } else {
+          query = `
+            INSERT INTO expenses (
+              user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
+          `;
+        }
+
         const result = await client.query(query, values);
-        createdTransactions.push(result.rows[0]);
+        const created = result.rows[0];
+        // Add type for consistency
+        created.type = transactionData.type;
+        createdTransactions.push(created);
       }
 
       await client.query('COMMIT');
