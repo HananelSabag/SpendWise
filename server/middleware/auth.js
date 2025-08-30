@@ -25,6 +25,15 @@ const userCache = new LRUCache({
  */
 const auth = async (req, res, next) => {
   try {
+    // DEBUG: Log ALL requests to see if we reach this middleware
+    logger.error('🔍 AUTH MIDDLEWARE: Request received', {
+      method: req.method,
+      path: req.path,
+      url: req.url,
+      hasAuth: !!req.header('Authorization'),
+      timestamp: new Date().toISOString()
+    });
+
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {

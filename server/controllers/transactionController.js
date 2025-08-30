@@ -1085,6 +1085,13 @@ const transactionController = {
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
+    // DEBUG: First thing - prove we reached the controller
+    logger.error('🔥 CONTROLLER REACHED: Fresh bulk delete controller hit!', {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path
+    });
+
     const userId = req.user.id;
     const { transactionIds } = req.body;
 
