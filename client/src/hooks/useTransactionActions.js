@@ -490,6 +490,16 @@ export const useTransactionActions = (context = 'transactions') => {
         
         refreshAll();
         logAction('Template deleted successfully');
+        
+        // 🎉 ADD TOAST NOTIFICATION FOR TEMPLATE DELETION SUCCESS
+        const { useNotifications } = await import('../stores');
+        const { addNotification } = useNotifications.getState();
+        addNotification({
+          type: 'success',
+          message: 'Template deleted successfully! 🗑️',
+          duration: 3000
+        });
+        
         return result.data;
       } else {
         throw new Error(result.error?.message || 'Failed to delete template');

@@ -86,7 +86,7 @@ const uploadProfilePicture = async (file, userId) => {
     };
 
   } catch (error) {
-    console.error('❌ [SUPABASE STORAGE] Upload failed:', error);
+    logger.error('❌ [SUPABASE STORAGE] Upload failed:', error.message);
     throw error;
   }
 };
@@ -104,12 +104,12 @@ const deleteProfilePicture = async (fileName) => {
       .remove([fileName]);
 
     if (error) {
-      console.warn('⚠️ [SUPABASE STORAGE] Delete failed:', error.message);
+      logger.warn('⚠️ [SUPABASE STORAGE] Delete failed:', error.message);
     } else {
       logger.info('✅ [SUPABASE STORAGE] File deleted:', fileName);
     }
   } catch (error) {
-    console.warn('⚠️ [SUPABASE STORAGE] Delete error:', error.message);
+    logger.warn('⚠️ [SUPABASE STORAGE] Delete error:', error.message);
   }
 };
 
@@ -125,7 +125,7 @@ const extractFileNameFromUrl = (url) => {
     const urlParts = url.split('/');
     return urlParts[urlParts.length - 1];
   } catch (error) {
-    console.warn('⚠️ [SUPABASE STORAGE] Could not extract filename from URL:', url);
+    logger.warn('⚠️ [SUPABASE STORAGE] Could not extract filename from URL:', url);
     return null;
   }
 };

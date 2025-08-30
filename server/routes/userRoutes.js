@@ -196,7 +196,7 @@ router.post('/upload-profile-picture',
         }
       });
     } catch (error) {
-      console.error('❌ Profile picture upload route error:', error);
+      logger.error('❌ Profile picture upload route error:', error.message);
       res.status(500).json({
         success: false,
         error: {

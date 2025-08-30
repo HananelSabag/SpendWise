@@ -274,15 +274,14 @@ class User {
     try {
       // Find user by email
       const user = await this.findByEmail(email);
-      
-      // ✅ Basic user validation logging
-      logger.debug('🔍 Authentication attempt for:', user?.email);
 
       if (!user) {
+        logger.debug('Authentication failed: User not found', { email });
         throw new Error('Invalid email or password');
       }
 
       if (!user.is_active) {
+        logger.warn('Authentication failed: Account deactivated', { email, userId: user.id });
         throw new Error('Account is deactivated');
       }
 
@@ -326,10 +325,24 @@ class User {
       // Password validation already handled above - proceed with password verification
 
       // ✅ Password verification
+      logger.debug('Attempting password verification', { 
+        email, 
+        userId: user.id, 
+        hasPassword: !!password,
+        passwordLength: password ? password.length : 0,
+        hasHash: !!user.password_hash,
+        hashLength: user.password_hash ? user.password_hash.length : 0
+      });
 
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
       if (!isValidPassword) {
+        logger.warn('Authentication failed: Invalid password', { 
+          email, 
+          userId: user.id,
+          passwordProvided: !!password,
+          hashExists: !!user.password_hash
+        });
         // Increment failed login attempts
         await this.incrementLoginAttempts(user.id);
         throw new Error('Invalid credentials');
@@ -898,11 +911,6 @@ class User {
       logger.info('✅ User onboarding marked as complete', { userId });
       return user;
     } catch (error) {
-      console.error('❌ User.markOnboardingComplete failed:', {
-        userId,
-        error: error.message,
-        stack: error.stack
-      });
       logger.error('❌ Failed to mark onboarding complete', { userId, error: error.message });
       throw error;
     }

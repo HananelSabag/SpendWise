@@ -18,7 +18,8 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
 const { optionalAuth } = require('./middleware/auth');
 const { maintenanceGate } = require('./middleware/maintenance');
-const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
+// ✅ DISABLED: debugLogger causing production crashes
+// const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
 const scheduler = require('./utils/scheduler');
 const db = require('./config/db');
 const keepAlive = require('./utils/keepAlive');
@@ -51,7 +52,7 @@ try {
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 } catch (error) {
-  console.error('❌ Helmet setup failed:', error.message);
+  logger.error('❌ Helmet setup failed:', error.message);
   process.exit(1);
 }
 
@@ -118,7 +119,7 @@ try {
     exposedHeaders: ['Content-Disposition']
   }));
 } catch (error) {
-  console.error('❌ CORS setup failed:', error.message);
+  logger.error('❌ CORS setup failed:', error.message);
   process.exit(1);
 }
 
@@ -152,10 +153,11 @@ app.use(maintenanceGate);
 
 // Set up comprehensive debugging
 // 🔍 COMPREHENSIVE DEBUG LOGGING - All environments (production-safe)
-app.use(debugLogger);
+// ✅ DISABLED: debugLogger causing production crashes with Buffer.byteLength on objects
+// app.use(debugLogger);
 
-// 🔐 Google OAuth specific debugging
-app.use(googleOAuthDebugger);
+// ✅ DISABLED: Google OAuth debugging (part of debugLogger module)
+// app.use(googleOAuthDebugger);
 
 // Legacy request logging (keeping for compatibility)
 if (process.env.NODE_ENV !== 'production') {
@@ -241,7 +243,7 @@ try {
     app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
     logger.debug('✅ Analytics routes loaded');
   } catch (error) {
-    console.error('❌ Analytics routes failed:', error.message);
+    logger.error('❌ Analytics routes failed:', error.message);
   }
 
   // ✅ ADMIN ROUTES - Add missing admin routes
@@ -250,7 +252,7 @@ try {
     app.use(`${API_VERSION}/admin`, require('./routes/adminRoutes'));
     logger.debug('✅ Admin routes loaded');
   } catch (error) {
-    console.error('❌ Admin routes failed:', error.message);
+    logger.error('❌ Admin routes failed:', error.message);
   }
 
   // 🔐 NEW: Bulletproof authentication status detection
@@ -259,7 +261,7 @@ try {
     app.use(`${API_VERSION}/auth-status`, require('./routes/authStatusRoutes'));
     logger.debug('✅ Auth status routes loaded');
   } catch (error) {
-    console.error('❌ Auth status routes failed:', error.message);
+    logger.error('❌ Auth status routes failed:', error.message);
   }
 
   // 🔍 NEW: Comprehensive debugging and monitoring routes
@@ -268,11 +270,10 @@ try {
     app.use(`${API_VERSION}/debug`, require('./routes/debugRoutes'));
     logger.debug('✅ Debug routes loaded');
   } catch (error) {
-    console.error('❌ Debug routes failed:', error.message);
+    logger.error('❌ Debug routes failed:', error.message);
   }
 } catch (error) {
-  console.error('❌ API routes loading failed:', error.message);
-  console.error('Stack:', error.stack);
+  logger.error('❌ API routes loading failed:', error.message, { stack: error.stack });
   process.exit(1);
 }
 
@@ -281,14 +282,13 @@ try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
   logger.debug('✅ Onboarding routes loaded');
 } catch (error) {
-  console.error('❌ CRITICAL: Onboarding routes failed to load:', error.message);
-  console.error('❌ CRITICAL: Onboarding route error stack:', error.stack);
+  logger.error('❌ CRITICAL: Onboarding routes failed to load:', error.message, { stack: error.stack });
   
   // ❌ NO FAKE FALLBACKS! Fail properly so we can fix the real issue
   app.post(`${API_VERSION}/onboarding/complete`, (req, res) => {
-    console.error('❌ CRITICAL: Onboarding completion attempted but routes failed to load!');
-    console.error('❌ CRITICAL: This should never happen in production!');
-    console.error('❌ CRITICAL: Check server logs and fix the onboarding route loading issue!');
+    logger.error('❌ CRITICAL: Onboarding completion attempted but routes failed to load!');
+    logger.error('❌ CRITICAL: This should never happen in production!');
+    logger.error('❌ CRITICAL: Check server logs and fix the onboarding route loading issue!');
     
     res.status(503).json({ 
       success: false, 
@@ -300,8 +300,8 @@ try {
     });
   });
   
-  console.error('❌ CRITICAL: Added ERROR fallback for onboarding (this indicates a serious problem)');
-  console.error('❌ CRITICAL: Fix required: Check why ./routes/onboarding.js is failing to load');
+  logger.error('❌ CRITICAL: Added ERROR fallback for onboarding (this indicates a serious problem)');
+  logger.error('❌ CRITICAL: Fix required: Check why ./routes/onboarding.js is failing to load');
 }
 
 // 404 handler - Fixed to prevent hanging requests
@@ -316,7 +316,7 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     // Fallback if 404 handler fails
-    console.error('404 handler error:', error.message);
+    logger.error('404 handler error:', error.message);
     res.status(404).end('Not Found');
   }
 });
@@ -325,7 +325,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   try {
     // Safe logging
-    console.error('Request processing issue:', err.message);
+    // Safe logging - already done by logger below
     if (logger && typeof logger.error === 'function') {
       logger.error('Request processing issue:', {
         message: err.message,
@@ -348,7 +348,7 @@ app.use((err, req, res, next) => {
     });
   } catch (handlerError) {
     // Fallback if response handler itself fails
-    console.error('Response handler failed:', handlerError.message);
+    logger.error('Response handler failed:', handlerError.message);
     res.status(500).json({
       error: {
         code: 'HANDLER_ERROR',

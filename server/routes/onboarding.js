@@ -53,7 +53,7 @@ router.post('/complete', auth, async (req, res) => {
     
     // ✅ ENHANCED: Add validation and debugging
     if (!userId) {
-      console.error('❌ [ONBOARDING] No user ID found');
+      logger.error('❌ [ONBOARDING] No user ID found');
       return res.status(400).json({
         success: false,
         error: {
@@ -83,7 +83,7 @@ router.post('/complete', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ [ONBOARDING] Route error:', {
+    logger.error('❌ [ONBOARDING] Route error:', {
       userId: req.user?.id,
       error: error.message,
       stack: error.stack,

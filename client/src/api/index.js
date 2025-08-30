@@ -30,7 +30,34 @@ export const api = {
     async getProfile() { return authAPI.getProfile(); },
     async updateProfile(updates) { return authAPI.updateProfile(updates); },
     async verifyEmail(data) { return authAPI.verifyEmail?.(data?.token || data); },
-    async resendVerificationEmail(data) { return authAPI.resendVerification?.(data?.email || data); }
+    async resendVerificationEmail(data) { return authAPI.resendVerification?.(data?.email || data); },
+    
+    // ✅ Profile picture upload
+    async uploadAvatar(formData) {
+      try {
+        const response = await apiClient.post('/users/upload-profile-picture', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        return {
+          success: true,
+          data: response.data,
+          // ✅ Extract avatar URL from different possible response formats
+          avatar_url: response.data?.data?.publicUrl || response.data?.data?.url || response.data?.avatar || response.data?.avatar_url
+        };
+      } catch (error) {
+        // Error logging handled by apiClient
+        return {
+          success: false,
+          error: {
+            message: error.response?.data?.message || 'Failed to upload profile picture',
+            code: error.response?.data?.code || 'AVATAR_UPLOAD_ERROR'
+          }
+        };
+      }
+    }
   },
   
   // Data Management  

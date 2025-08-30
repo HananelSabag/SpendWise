@@ -76,6 +76,7 @@ const ModernProfileStep = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const fileInputRef = useRef(null);
 
@@ -102,15 +103,52 @@ const ModernProfileStep = ({
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       console.error('Profile picture must be smaller than 5MB');
+      // Show user-friendly error
+      const { toast } = await import('react-hot-toast');
+      toast.error('Profile picture must be smaller than 5MB');
       return;
     }
 
     try {
       setIsUploading(true);
       
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
+      // ✅ Upload to server immediately during onboarding
+      const formData = new FormData();
+      formData.append('profilePicture', file);
       
+      // Import the API
+      const { api } = await import('../../../../api');
+      const response = await api.users.uploadAvatar(formData);
+      
+      if (response.success) {
+        // Get the uploaded URL from server response
+        const uploadedUrl = response.avatar_url || response.data?.data?.publicUrl || response.data?.data?.url;
+        
+        const newData = {
+          ...profileData,
+          profilePicture: uploadedUrl,
+          profilePictureFile: null, // Clear file since it's uploaded
+          uploadedProfilePicture: uploadedUrl
+        };
+        
+        setProfileData(newData);
+        onDataUpdate(newData);
+        
+        // Show success message
+        const { toast } = await import('react-hot-toast');
+        toast.success('Profile picture uploaded successfully!');
+      } else {
+        throw new Error(response.error?.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Profile picture upload error:', error);
+      
+      // Show user-friendly error
+      const { toast } = await import('react-hot-toast');
+      toast.error(error.message || 'Failed to upload profile picture. Please try again.');
+      
+      // Keep local preview only
+      const previewUrl = URL.createObjectURL(file);
       const newData = {
         ...profileData,
         profilePicture: previewUrl,
@@ -119,8 +157,6 @@ const ModernProfileStep = ({
       
       setProfileData(newData);
       onDataUpdate(newData);
-    } catch (error) {
-      console.error('Profile picture upload error:', error);
     } finally {
       setIsUploading(false);
     }

@@ -109,13 +109,29 @@ const debugLogger = (req, res, next) => {
   // Intercept response to log it
   res.send = function(data) {
     responseBody = data;
-    responseSize = Buffer.byteLength(data || '', 'utf8');
+    // ✅ SAFETY FIX: Handle objects properly in Buffer.byteLength
+    try {
+      if (typeof data === 'object' && data !== null) {
+        responseSize = Buffer.byteLength(JSON.stringify(data), 'utf8');
+      } else {
+        responseSize = Buffer.byteLength(data || '', 'utf8');
+      }
+    } catch (error) {
+      responseSize = 0;
+      logger.warn('Failed to calculate response size', { error: error.message });
+    }
     return originalSend.call(this, data);
   };
 
   res.json = function(data) {
     responseBody = data;
-    responseSize = Buffer.byteLength(JSON.stringify(data || {}), 'utf8');
+    // ✅ SAFETY FIX: Handle JSON stringify errors
+    try {
+      responseSize = Buffer.byteLength(JSON.stringify(data || {}), 'utf8');
+    } catch (error) {
+      responseSize = 0;
+      logger.warn('Failed to calculate JSON response size', { error: error.message });
+    }
     return originalJson.call(this, data);
   };
 

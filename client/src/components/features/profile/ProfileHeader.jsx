@@ -169,7 +169,7 @@ const ProfileHeader = ({
     if (!file.type.startsWith('image/')) {
       addNotification({
         type: 'error',
-        message: t('avatar.invalidFileType'),
+        message: t('avatar.invalidFileType', 'Invalid file type. Please select an image.'),
         duration: 3000
       });
       return;
@@ -178,7 +178,7 @@ const ProfileHeader = ({
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       addNotification({
         type: 'error',
-        message: t('avatar.fileTooLarge'),
+        message: t('avatar.fileTooLarge', 'File too large. Please select an image smaller than 5MB.'),
         duration: 3000
       });
       return;
@@ -191,12 +191,39 @@ const ProfileHeader = ({
       const previewUrl = URL.createObjectURL(file);
       setAvatarPreview(previewUrl);
 
-      // Upload file
-      await onAvatarUpload?.(file);
+      // ✅ Upload directly using API if no onAvatarUpload callback provided
+      if (onAvatarUpload) {
+        await onAvatarUpload(file);
+      } else {
+        // Direct API upload
+        const formData = new FormData();
+        formData.append('profilePicture', file);
+        
+        // Import the API
+        const { api } = await import('../../../api');
+        const response = await api.users.uploadAvatar(formData);
+        
+        if (response.success) {
+          // Update user in auth store
+          const { useAuthStore } = await import('../../../stores');
+          const currentUser = useAuthStore.getState().user;
+          const newAvatarUrl = response.avatar_url || response.data?.data?.publicUrl || response.data?.data?.url;
+          
+          useAuthStore.setState({
+            user: {
+              ...currentUser,
+              avatar: newAvatarUrl,
+              profile_picture_url: newAvatarUrl
+            }
+          });
+        } else {
+          throw new Error(response.error?.message || 'Upload failed');
+        }
+      }
       
       addNotification({
         type: 'success',
-        message: t('avatar.uploadSuccess'),
+        message: t('avatar.uploadSuccess', 'Profile picture uploaded successfully!'),
         duration: 3000
       });
     } catch (error) {
@@ -204,7 +231,7 @@ const ProfileHeader = ({
       setAvatarPreview(null);
       addNotification({
         type: 'error',
-        message: t('avatar.uploadFailed'),
+        message: t('avatar.uploadFailed', 'Failed to upload profile picture. Please try again.'),
         duration: 3000
       });
     } finally {
