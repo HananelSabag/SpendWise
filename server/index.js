@@ -25,6 +25,34 @@ const keepAlive = require('./utils/keepAlive');
 // Initialize Express app
 const app = express();
 
+// 🔥🔥🔥 RAW REQUEST LOGGER - CATCH EVERYTHING BEFORE ANY MIDDLEWARE!
+app.use((req, res, next) => {
+  console.error('🔥🔥🔥 RAW REQUEST CAPTURED:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    headers: {
+      'content-type': req.headers['content-type'],
+      'authorization': req.headers.authorization ? 'PRESENT' : 'MISSING',
+      'origin': req.headers.origin
+    },
+    timestamp: new Date().toISOString()
+  });
+  
+  // Special logging for bulk delete
+  if (req.url.includes('bulk-delete')) {
+    console.error('🚨🚨🚨 BULK DELETE REQUEST DETECTED!', {
+      method: req.method,
+      url: req.url,
+      body: req.body,
+      contentLength: req.headers['content-length']
+    });
+  }
+  
+  next();
+});
+
 // Trust proxy for production
 app.set('trust proxy', 1);
 

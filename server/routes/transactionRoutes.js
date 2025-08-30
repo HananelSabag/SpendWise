@@ -202,6 +202,16 @@ router.post('/templates/:id/regenerate',
  * Create, update, delete individual transactions
  */
 
+// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
+// ✅ MOVED BEFORE /:type to avoid route conflicts - SPECIFIC ROUTES FIRST!
+console.error('🔥🔥🔥 ROUTE REGISTRATION: bulk-delete route being registered!');
+router.post('/bulk-delete', (req, res, next) => {
+  console.error('🔥🔥🔥 ROUTE HIT: bulk-delete route handler called!');
+  console.error('🔥🔥🔥 ROUTE METHOD:', req.method);
+  console.error('🔥🔥🔥 ROUTE PATH:', req.path);
+  next();
+}, transactionController.bulkDelete);
+
 // Create new transaction (one-time or recurring)
 router.post('/:type',
   createTransactionLimiter,
@@ -213,16 +223,6 @@ router.put('/:type/:id',
   createTransactionLimiter,
   transactionController.update
 );
-
-// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
-// ✅ MOVED BEFORE /:type/:id to avoid route conflicts
-console.error('🔥🔥🔥 ROUTE REGISTRATION: bulk-delete route being registered!');
-router.post('/bulk-delete', (req, res, next) => {
-  console.error('🔥🔥🔥 ROUTE HIT: bulk-delete route handler called!');
-  console.error('🔥🔥🔥 ROUTE METHOD:', req.method);
-  console.error('🔥🔥🔥 ROUTE PATH:', req.path);
-  next();
-}, transactionController.bulkDelete);
 
 // Delete transaction (soft delete)
 router.delete('/:type/:id',
