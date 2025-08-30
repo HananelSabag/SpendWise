@@ -140,12 +140,31 @@ app.use(requestId);
 
 // Set up API rate limiter
 // API rate limiter
-app.use('/api', apiLimiter);
+app.use('/api', (req, res, next) => {
+  console.error('🔥🔥🔥 API LIMITER: Request passed through', {
+    method: req.method,
+    path: req.path,
+    url: req.url
+  });
+  next();
+}, apiLimiter);
 
 // Load user context early so admins can bypass maintenance
+app.use((req, res, next) => {
+  console.error('🔥🔥🔥 BEFORE OPTIONAL AUTH:', req.method, req.path);
+  next();
+});
 app.use(optionalAuth);
+app.use((req, res, next) => {
+  console.error('🔥🔥🔥 AFTER OPTIONAL AUTH:', req.method, req.path);
+  next();
+});
 // Global maintenance gate (place before route handlers)
 app.use(maintenanceGate);
+app.use((req, res, next) => {
+  console.error('🔥🔥🔥 AFTER MAINTENANCE GATE:', req.method, req.path);
+  next();
+});
 
 // Set up request logging
 // Request logging (production-safe)
@@ -223,7 +242,14 @@ try {
   logger.debug('✅ User routes loaded');
   
   logger.debug('Loading transaction routes...');
-  app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
+  app.use(`${API_VERSION}/transactions`, (req, res, next) => {
+    console.error('🔥🔥🔥 TRANSACTION ROUTER: Request reached transaction router!', {
+      method: req.method,
+      path: req.path,
+      originalUrl: req.originalUrl
+    });
+    next();
+  }, require('./routes/transactionRoutes'));
   logger.debug('✅ Transaction routes loaded');
   
   logger.debug('Loading category routes...');
