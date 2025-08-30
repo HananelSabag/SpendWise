@@ -603,12 +603,56 @@ const transactionController = {
   /**
    * Delete transaction (soft delete)
    * @route DELETE /api/v1/transactions/:type/:id
+   * @route DELETE /api/v1/transactions/templates/:id
    */
   delete: asyncHandler(async (req, res) => {
     const { type, id } = req.params;
     const userId = req.user.id;
 
     try {
+      // Check if this is a template deletion (from /templates/:id route)
+      if (req.path.includes('/templates/')) {
+        logger.info('Template deletion request', { templateId: id, userId });
+        
+        // First verify the template exists and belongs to the user
+        const templateCheck = await db.query(
+          'SELECT id, name FROM recurring_templates WHERE id = $1 AND user_id = $2',
+          [id, userId]
+        );
+
+        if (templateCheck.rows.length === 0) {
+          logger.warn('Template not found for deletion', { templateId: id, userId });
+          return res.status(404).json({
+            success: false,
+            error: 'Recurring template not found'
+          });
+        }
+
+        // Deactivate the template instead of hard delete
+        const updateResult = await db.query(
+          'UPDATE recurring_templates SET is_active = false, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id, name',
+          [id, userId]
+        );
+
+        logger.info('Template successfully deactivated', { 
+          templateId: id, 
+          templateName: updateResult.rows[0].name, 
+          userId 
+        });
+
+        return res.json({
+          success: true,
+          data: { 
+            deleted: true,
+            deactivated: true,
+            id: id,
+            name: updateResult.rows[0].name
+          },
+          message: 'Recurring template deactivated successfully'
+        });
+      }
+
+      // Regular transaction deletion
       const success = await Transaction.delete(id, userId);
 
       if (!success) {
@@ -634,7 +678,12 @@ const transactionController = {
         });
       }
       
-      logger.error('Transaction deletion failed', { transactionId: id, userId, error: error.message });
+      logger.error('Deletion failed', { 
+        type: req.path.includes('/templates/') ? 'template' : 'transaction',
+        id, 
+        userId, 
+        error: error.message 
+      });
       throw error;
     }
   }),
@@ -1023,11 +1072,44 @@ const transactionController = {
           const result = await db.query(insertQuery, values);
           const template = result.rows[0];
 
-          // ✅ Generate transactions for this template
+          // ✅ ONBOARDING FIX: Generate transactions for this template
           const today = new Date();
           const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
           
-          const currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
+          // 🔧 ONBOARDING FIX: For monthly templates, always generate current month transaction
+          let currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
+          
+          // 🔧 If no current month transactions generated and it's a monthly template, force create one
+          if (currentTransactions.length === 0 && template.interval_type === 'monthly') {
+            try {
+              const transactionData = {
+                categoryId: template.category_id,
+                amount: template.amount,
+                type: template.type,
+                description: template.description || template.name,
+                notes: `Current month transaction for onboarding template: ${template.name}`,
+                date: today.toISOString().split('T')[0], // Today's date
+                templateId: template.id
+              };
+              
+              const created = await Transaction.create(transactionData, userId);
+              currentTransactions = [created];
+              
+              logger.info('🔧 ONBOARDING FIX: Generated missing current month transaction', {
+                userId,
+                templateId: template.id,
+                templateName: template.name,
+                transactionId: created.id
+              });
+            } catch (currentError) {
+              logger.error('Failed to generate onboarding current month transaction', {
+                userId,
+                templateId: template.id,
+                error: currentError.message
+              });
+            }
+          }
+          
           const upcomingTransactions = await generateUpcomingTransactions(template);
 
           createdTemplates.push({
@@ -1735,5 +1817,144 @@ function calculateUpcomingDates(template, startDate, endDate) {
   return dates;
 }
 
-module.exports = transactionController;
+/**
+ * 🔧 ONBOARDING FIX: Generate missing current month transactions
+ * For templates created during onboarding that need current month transactions
+ */
+transactionController.generateMissingCurrentMonthTransactions = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    logger.info('Generating missing current month transactions for onboarding templates', { userId });
+    
+    // Get all active templates for this user
+    const templatesQuery = `
+      SELECT id, name, description, amount, type, category_id, user_id, start_date, day_of_month, interval_type
+      FROM recurring_templates 
+      WHERE user_id = $1 AND is_active = true
+    `;
+    const templateResult = await db.query(templatesQuery, [userId]);
+    const templates = templateResult.rows;
+    
+    let totalGenerated = 0;
+    const results = [];
+    
+    for (const template of templates) {
+      // Check if current month transaction already exists for this template
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const existsQuery = `
+        SELECT COUNT(*) as count 
+        FROM transactions 
+        WHERE template_id = $1 
+          AND user_id = $2 
+          AND date >= $3 
+          AND date < $4
+          AND deleted_at IS NULL
+      `;
+      
+      const startOfMonth = `${currentMonth}-01`;
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const startOfNextMonth = nextMonth.toISOString().slice(0, 7) + '-01';
+      
+      const existsResult = await db.query(existsQuery, [
+        template.id, 
+        userId, 
+        startOfMonth, 
+        startOfNextMonth
+      ]);
+      
+      const existingCount = parseInt(existsResult.rows[0].count);
+      
+      if (existingCount === 0) {
+        // Generate current month transaction
+        const transactionData = {
+          categoryId: template.category_id,
+          amount: template.amount,
+          type: template.type,
+          description: template.description || template.name,
+          notes: `Current month transaction for onboarding template: ${template.name}`,
+          date: new Date().toISOString().split('T')[0], // Today's date
+          templateId: template.id
+        };
+        
+        try {
+          const created = await Transaction.create(transactionData, userId);
+          totalGenerated++;
+          results.push({
+            templateId: template.id,
+            templateName: template.name,
+            transactionId: created.id,
+            amount: template.amount,
+            type: template.type,
+            success: true
+          });
+          
+          logger.info('Generated missing current month transaction', {
+            userId,
+            templateId: template.id,
+            templateName: template.name,
+            transactionId: created.id,
+            amount: template.amount
+          });
+        } catch (createError) {
+          logger.error('Failed to create current month transaction', {
+            userId,
+            templateId: template.id,
+            templateName: template.name,
+            error: createError.message
+          });
+          
+          results.push({
+            templateId: template.id,
+            templateName: template.name,
+            error: createError.message,
+            success: false
+          });
+        }
+      } else {
+        results.push({
+          templateId: template.id,
+          templateName: template.name,
+          skipped: true,
+          reason: `${existingCount} transaction(s) already exist for current month`
+        });
+      }
+    }
+    
+    logger.info('Completed generating missing current month transactions', {
+      userId,
+      totalTemplates: templates.length,
+      totalGenerated,
+      results
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        totalTemplates: templates.length,
+        totalGenerated,
+        results
+      },
+      message: `Generated ${totalGenerated} missing current month transactions`
+    });
+    
+  } catch (error) {
+    logger.error('Failed to generate missing current month transactions', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'GENERATION_FAILED',
+        message: 'Failed to generate missing current month transactions',
+        details: error.message
+      }
+    });
+  }
+});
+
 module.exports = transactionController;

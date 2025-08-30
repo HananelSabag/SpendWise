@@ -148,6 +148,8 @@ router.put('/templates/:id',
 // Delete/deactivate recurring template
 router.delete('/templates/:id',
   createTransactionLimiter,
+  routeLogger('DELETE_TEMPLATE'),
+  transactionLogger('DELETE_TEMPLATE'),
   transactionController.delete
 );
 
@@ -161,6 +163,66 @@ router.post('/templates/:id/skip',
 router.post('/generate-recurring',
   generateRecurringLimiter,
   transactionController.generateRecurring
+);
+
+// 🔧 ONBOARDING FIX: Generate missing current month transactions
+router.post('/fix-onboarding-current-month',
+  createTransactionLimiter,
+  routeLogger('FIX_ONBOARDING_CURRENT_MONTH'),
+  transactionController.generateMissingCurrentMonthTransactions
+);
+
+// 🧪 TEST: Onboarding template creation with prepared templates
+router.post('/test-onboarding-templates',
+  createTransactionLimiter,
+  routeLogger('TEST_ONBOARDING_TEMPLATES'),
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // 🎯 Prepared templates from onboarding (same as FinalTemplatesStep.jsx)
+      const preparedTemplates = [
+        // Income templates
+        { name: 'Monthly Salary', type: 'income', amount: 5000, category_name: 'Salary' },
+        { name: 'Freelance Work', type: 'income', amount: 2000, category_name: 'Freelance' },
+        
+        // Expense templates
+        { name: 'Rent/Mortgage', type: 'expense', amount: 1200, category_name: 'Housing' },
+        { name: 'Phone & Internet', type: 'expense', amount: 80, category_name: 'Utilities' },
+        { name: 'Groceries', type: 'expense', amount: 400, category_name: 'Food' },
+        { name: 'Insurance', type: 'expense', amount: 200, category_name: 'Insurance' },
+        { name: 'Gym Membership', type: 'expense', amount: 50, category_name: 'Health' },
+        { name: 'Streaming Services', type: 'expense', amount: 25, category_name: 'Entertainment' }
+      ];
+      
+      // Format for bulk creation
+      const formattedTemplates = preparedTemplates.map(template => ({
+        ...template,
+        description: template.name,
+        interval_type: 'monthly',
+        day_of_month: 1,
+        is_active: true
+      }));
+      
+      // Create via bulk endpoint
+      const result = await transactionController.createBulkRecurringTemplates({
+        user: req.user,
+        body: { templates: formattedTemplates }
+      }, res);
+      
+      // This will be handled by the controller method
+      
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'TEST_ONBOARDING_ERROR',
+          message: 'Failed to test onboarding templates',
+          details: error.message
+        }
+      });
+    }
+  }
 );
 
 // ✅ UPCOMING TRANSACTIONS MANAGEMENT
