@@ -1256,26 +1256,28 @@ const ModernTransactions = () => {
               </Button>
               <Button
                 variant="destructive"
-                onClick={async () => {
-                  try {
-                    console.log('🔥 FRESH BULK DELETE: Starting with IDs:', Array.from(selectedIds));
-                    await freshBulkDelete(Array.from(selectedIds));
-                    setSelectedIds(new Set());
-                    setShowBulkDeleteModal(false);
-                    addNotification({
-                      type: 'success',
-                      message: `Successfully deleted ${selectedIds.size} transactions`,
-                      duration: 5000
-                    });
-                  } catch (error) {
-                    console.error('🔥 FRESH BULK DELETE: Failed!', error);
-                    addNotification({
-                      type: 'error',
-                      message: 'Failed to delete transactions. Please try again.',
-                      duration: 5000
-                    });
-                  }
-                }}
+                                    onClick={async () => {
+                      try {
+                        const idsToDelete = Array.from(selectedIds);
+                        await freshBulkDelete(idsToDelete);
+                        
+                        // ✅ Clear selection and close modal on success
+                        setSelectedIds(new Set());
+                        setShowBulkDeleteModal(false);
+                        
+                        addNotification({
+                          type: 'success',
+                          message: t('bulk.delete.success', `Successfully deleted ${idsToDelete.length} transactions`),
+                          duration: 4000
+                        });
+                      } catch (error) {
+                        addNotification({
+                          type: 'error',
+                          message: error.message || t('bulk.delete.failed', 'Failed to delete transactions'),
+                          duration: 5000
+                        });
+                      }
+                    }}
                 className="flex-1 bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
