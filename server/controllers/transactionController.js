@@ -700,7 +700,7 @@ const transactionController = {
             
             // Delete from unified transactions table
             const transactionsResult = await db.query(
-              'DELETE FROM transactions WHERE recurring_template_id = $1 AND user_id = $2 RETURNING id',
+              'DELETE FROM transactions WHERE template_id = $1 AND user_id = $2 RETURNING id',
               [templateId, userId]
             );
             deletedTransactionsCount += transactionsResult.rows.length;
@@ -1261,7 +1261,7 @@ const transactionController = {
         SELECT t.*, c.name as category_name, rt.name as template_name
         FROM transactions t 
         LEFT JOIN categories c ON t.category_id = c.id
-        LEFT JOIN recurring_templates rt ON t.recurring_template_id = rt.id
+        LEFT JOIN recurring_templates rt ON t.template_id = rt.id
         WHERE t.user_id = $1 AND t.status = 'upcoming' AND t.deleted_at IS NULL
         ORDER BY t.date ASC, t.created_at ASC
       `;
@@ -1373,7 +1373,7 @@ const transactionController = {
       // Delete from unified transactions table
       const deleteQuery = `
         DELETE FROM transactions 
-        WHERE recurring_template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
       const result = await db.query(deleteQuery, [id, userId]);
@@ -1429,7 +1429,7 @@ const transactionController = {
       // Delete from unified transactions table
       const deleteQuery = `
         DELETE FROM transactions 
-        WHERE recurring_template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
       const result = await db.query(deleteQuery, [id, userId]);
@@ -1482,7 +1482,7 @@ async function generateTransactionsFromTemplate(template) {
     for (const dueDate of dueDates) {
       // Check if transaction already exists for this date and template - UNIFIED TABLE
       const dateStr = dueDate.toISOString().split('T')[0];
-      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsQuery = `SELECT id FROM transactions WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL`;
       const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
@@ -1592,7 +1592,7 @@ async function generateCurrentMonthTransactions(template, startDate, endDate) {
     for (const dueDate of currentDates) {
       // Check if transaction already exists for this date and template - UNIFIED TABLE
       const dateStr = dueDate.toISOString().split('T')[0];
-      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsQuery = `SELECT id FROM transactions WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL`;
       const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
@@ -1644,7 +1644,7 @@ async function generateUpcomingTransactions(template) {
       const dateStr = dueDate.toISOString().split('T')[0];
       
       // Check if real transaction already exists for this date and template
-      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsQuery = `SELECT id FROM transactions WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL`;
       const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
