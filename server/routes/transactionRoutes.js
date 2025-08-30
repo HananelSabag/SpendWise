@@ -10,6 +10,12 @@ const { auth } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const transactionController = require('../controllers/transactionController');
 const {
+  transactionLogger,
+  routeLogger,
+  bulkOperationLogger,
+  analyticsLogger
+} = require('../middleware/routeLogger');
+const {
   createTransactionLimiter,
   getSummaryLimiter,
   getTransactionsLimiter,
@@ -27,6 +33,8 @@ router.use(auth);
 // Get complete dashboard data (optimized single request)
 router.get('/dashboard',
   getSummaryLimiter,
+  routeLogger('TRANSACTION_DASHBOARD'),
+  analyticsLogger('dashboard'),
   transactionController.getDashboardData
 );
 
@@ -187,11 +195,15 @@ router.post('/templates/:id/regenerate',
 
 // Bulk delete transactions (no rate limit - destructive operations are naturally limited)
 // ✅ MOVED BEFORE /:type to avoid route conflicts - SPECIFIC ROUTES FIRST!
-router.post('/bulk-delete', transactionController.bulkDelete);
+router.post('/bulk-delete', 
+  bulkOperationLogger('DELETE_TRANSACTIONS'),
+  transactionController.bulkDelete
+);
 
 // Create new transaction (one-time or recurring)
 router.post('/:type',
   createTransactionLimiter,
+  transactionLogger('CREATE'),
   transactionController.create
 );
 

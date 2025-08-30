@@ -12,6 +12,11 @@ const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
 const { emailVerificationLimiter, authLimiter } = require('../middleware/rateLimiter');
 const { securityMiddleware } = require('../middleware/security'); // 🛡️ Enhanced security
+const {
+  authLogger,
+  userOperationLogger,
+  routeLogger
+} = require('../middleware/routeLogger');
 
 /**
  * 🚀 OPTIMIZED Public Auth Routes
@@ -24,7 +29,8 @@ const { securityMiddleware } = require('../middleware/security'); // 🛡️ Enh
  */
 router.post('/register', 
   authLimiter,
-  validate.userRegistration, 
+  validate.userRegistration,
+  authLogger('REGISTER'),
   userController.register
 );
 
@@ -36,6 +42,7 @@ router.post('/register',
 router.post('/login',
   authLimiter,
   validate.userLogin,
+  authLogger('LOGIN'),
   userController.login
 );
 /**

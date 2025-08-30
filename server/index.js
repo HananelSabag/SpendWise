@@ -18,6 +18,7 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
 const { optionalAuth } = require('./middleware/auth');
 const { maintenanceGate } = require('./middleware/maintenance');
+const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
 const scheduler = require('./utils/scheduler');
 const db = require('./config/db');
 const keepAlive = require('./utils/keepAlive');
@@ -149,18 +150,16 @@ app.use(optionalAuth);
 // Global maintenance gate (place before route handlers)
 app.use(maintenanceGate);
 
-// Set up request logging
-// Request logging (production-safe)
+// Set up comprehensive debugging
+// 🔍 COMPREHENSIVE DEBUG LOGGING - All environments (production-safe)
+app.use(debugLogger);
+
+// 🔐 Google OAuth specific debugging
+app.use(googleOAuthDebugger);
+
+// Legacy request logging (keeping for compatibility)
 if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    logger.info('Request received', {
-      method: req.method,
-      url: req.url,
-      ip: req.ip,
-      origin: req.headers.origin
-    });
-    next();
-  });
+  logger.info('🔍 Enhanced debugging enabled for development');
 }
 
 // Set up routes
@@ -261,6 +260,15 @@ try {
     logger.debug('✅ Auth status routes loaded');
   } catch (error) {
     console.error('❌ Auth status routes failed:', error.message);
+  }
+
+  // 🔍 NEW: Comprehensive debugging and monitoring routes
+  try {
+    logger.debug('Loading debug routes...');
+    app.use(`${API_VERSION}/debug`, require('./routes/debugRoutes'));
+    logger.debug('✅ Debug routes loaded');
+  } catch (error) {
+    console.error('❌ Debug routes failed:', error.message);
   }
 } catch (error) {
   console.error('❌ API routes loading failed:', error.message);
