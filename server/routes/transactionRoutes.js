@@ -199,9 +199,13 @@ router.put('/:type/:id',
 
 // Bulk delete transactions (no rate limit - destructive operations are naturally limited)
 // ✅ MOVED BEFORE /:type/:id to avoid route conflicts
-router.post('/bulk-delete',
-  transactionController.bulkDelete
-);
+console.error('🔥🔥🔥 ROUTE REGISTRATION: bulk-delete route being registered!');
+router.post('/bulk-delete', (req, res, next) => {
+  console.error('🔥🔥🔥 ROUTE HIT: bulk-delete route handler called!');
+  console.error('🔥🔥🔥 ROUTE METHOD:', req.method);
+  console.error('🔥🔥🔥 ROUTE PATH:', req.path);
+  next();
+}, transactionController.bulkDelete);
 
 // Delete transaction (soft delete)
 router.delete('/:type/:id',

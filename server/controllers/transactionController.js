@@ -1085,6 +1085,12 @@ const transactionController = {
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
+    // IMMEDIATE DEBUG: This should be the very first thing that executes
+    console.error('🔥🔥🔥 CONTROLLER ENTRY: IMMEDIATE ENTRY LOG!!!');
+    console.error('🔥🔥🔥 REQUEST METHOD:', req.method);
+    console.error('🔥🔥🔥 REQUEST PATH:', req.path);
+    console.error('🔥🔥🔥 TIMESTAMP:', new Date().toISOString());
+    
     // DEBUG: First thing - prove we reached the controller
     logger.error('🔥 CONTROLLER REACHED: Fresh bulk delete controller hit!', {
       timestamp: new Date().toISOString(),
