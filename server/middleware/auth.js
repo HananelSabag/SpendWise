@@ -28,10 +28,13 @@ const auth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      logger.debug('🚫 No auth token provided', {
+      logger.error('🚫 BULK DELETE AUTH: No token provided', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
-        path: req.path
+        path: req.path,
+        method: req.method,
+        headers: req.headers,
+        body: req.body
       });
       
       return res.status(401).json({
@@ -44,7 +47,27 @@ const auth = async (req, res, next) => {
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      logger.error('🚫 BULK DELETE AUTH: Invalid token', {
+        ip: req.ip,
+        path: req.path,
+        method: req.method,
+        tokenLength: token.length,
+        jwtError: jwtError.message
+      });
+      
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Access denied. Invalid token.'
+        }
+      });
+    }
+    
     const userId = decoded.userId;
 
     // Check cache first

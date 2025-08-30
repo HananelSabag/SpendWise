@@ -173,7 +173,10 @@ const transactionAPI = {
     try {
       console.log('🔥 FRESH BULK DELETE: Starting...', {
         transactionIds,
-        count: transactionIds.length
+        count: transactionIds.length,
+        token: localStorage.getItem('accessToken') ? 'TOKEN_PRESENT' : 'NO_TOKEN',
+        apiUrl: apiClient.client.defaults.baseURL,
+        headers: apiClient.client.defaults.headers
       });
 
       const response = await apiClient.client.post('/transactions/bulk-delete', {
@@ -185,6 +188,13 @@ const transactionAPI = {
 
     } catch (error) {
       console.error('❌ FRESH BULK DELETE: Failed!', error);
+      console.error('❌ FRESH BULK DELETE: Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        request: error.request,
+        message: error.message
+      });
       throw error;
     }
   },
