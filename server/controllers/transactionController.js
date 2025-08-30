@@ -1081,119 +1081,72 @@ const transactionController = {
   }),
 
   /**
-   * Bulk delete transactions - BACKWARD COMPATIBLE VERSION
+   * 🔥 FRESH BULK DELETE - Simple and clean implementation matching client expectations
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const { transactionIds } = req.body;
 
-    logger.info('Bulk delete request received', {
+    logger.info('🔥 FRESH BULK DELETE: Request received', {
       userId,
-      body: req.body,
       transactionIds,
-      transactionIdsType: typeof transactionIds,
-      isArray: Array.isArray(transactionIds),
-      length: transactionIds?.length,
-      rawBody: JSON.stringify(req.body),
-      contentType: req.headers['content-type']
+      count: transactionIds?.length
     });
 
-    // ✅ ENHANCED VALIDATION: More detailed error messages
-    if (!req.body) {
-      logger.error('Bulk delete failed - no body', { headers: req.headers });
+    // Simple validation
+    if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
+      logger.error('🔥 FRESH BULK DELETE: Invalid transactionIds', { transactionIds });
       return res.status(400).json({
         success: false,
-        message: 'Request body is required',
-        error: 'NO_BODY'
-      });
-    }
-
-    if (!transactionIds) {
-      logger.error('Bulk delete failed - no transactionIds', { body: req.body });
-      return res.status(400).json({
-        success: false,
-        message: 'transactionIds field is required',
-        error: 'NO_TRANSACTION_IDS'
-      });
-    }
-
-    if (!Array.isArray(transactionIds)) {
-      logger.error('Bulk delete failed - transactionIds not array', { 
-        transactionIds, 
-        type: typeof transactionIds 
-      });
-      return res.status(400).json({
-        success: false,
-        message: 'transactionIds must be an array',
-        error: 'INVALID_ARRAY',
-        received: typeof transactionIds
-      });
-    }
-
-    if (transactionIds.length === 0) {
-      logger.error('Bulk delete failed - empty array', { transactionIds });
-      return res.status(400).json({
-        success: false,
-        message: 'transactionIds array cannot be empty',
-        error: 'EMPTY_ARRAY'
+        message: 'transactionIds must be a non-empty array'
       });
     }
 
     try {
-      const results = {
-        successful: 0,
-        failed: 0,
-        errors: []
-      };
+      // Delete transactions in a single query for better performance
+      const deleteQuery = `
+        DELETE FROM transactions 
+        WHERE id = ANY($1) AND user_id = $2
+        RETURNING id, type, description
+      `;
+      
+      const result = await db.query(deleteQuery, [transactionIds, userId]);
+      const deletedCount = result.rows.length;
 
-      // ✅ CRITICAL FIX: Work with unified transactions table
-      for (const transactionId of transactionIds) {
-        try {
-          // Delete from unified transactions table
-          const deleteQuery = `
-            DELETE FROM transactions 
-            WHERE id = $1 AND user_id = $2
-            RETURNING id, type
-          `;
-          const result = await db.query(deleteQuery, [transactionId, userId]);
-          
-          if (result.rows.length > 0) {
-            const deletedTransaction = result.rows[0];
-            results.successful++;
-            logger.info(`Bulk deleted ${deletedTransaction.type} transaction ${transactionId} for user ${userId}`);
-          } else {
-            results.failed++;
-            results.errors.push(`Transaction ${transactionId} not found or not accessible`);
-          }
-          
-        } catch (error) {
-          results.failed++;
-          results.errors.push(`Failed to delete transaction ${transactionId}: ${error.message}`);
-          logger.error(`Bulk delete failed for transaction ${transactionId}`, {
-            userId,
-            transactionId,
-            error: error.message
-          });
-        }
-      }
-
-      res.json({
-        success: results.successful > 0,
-        data: {
-          summary: results,
-          deleted_count: results.successful,
-          failed_count: results.failed
-        },
-        message: `Bulk delete completed: ${results.successful} successful, ${results.failed} failed`
+      logger.info('🔥 FRESH BULK DELETE: Success', {
+        userId,
+        requested: transactionIds.length,
+        deleted: deletedCount,
+        deletedIds: result.rows.map(r => r.id)
       });
+
+      // Response format that matches client expectations
+      res.json({
+        success: true,
+        data: {
+          deleted_count: deletedCount,
+          summary: {
+            successful: deletedCount,
+            failed: transactionIds.length - deletedCount
+          },
+          deleted_transactions: result.rows
+        },
+        message: `Successfully deleted ${deletedCount} transactions`
+      });
+
     } catch (error) {
-      logger.error('Bulk delete operation failed', {
+      logger.error('🔥 FRESH BULK DELETE: Failed', {
         userId,
         transactionIds,
         error: error.message
       });
-      throw error;
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete transactions',
+        error: error.message
+      });
     }
   }),
 

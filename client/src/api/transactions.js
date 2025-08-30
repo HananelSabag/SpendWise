@@ -93,19 +93,10 @@ const transactionAPI = {
    */
   async getAll(params = {}) {
     try {
-      console.log('🔍 DEBUG: TransactionAPI.getAll called with params:', params);
-      console.log('🔍 DEBUG: Making request to /transactions with:', { params });
-      
       const response = await apiClient.client.get('/transactions', { params });
-      
-      console.log('🔍 DEBUG: TransactionAPI.getAll response status:', response.status);
-      console.log('🔍 DEBUG: TransactionAPI.getAll response data:', response.data);
-      
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('🚨 TransactionAPI.getAll error:', error);
-      console.error('🚨 Error response:', error.response?.data);
-      console.error('🚨 Error status:', error.response?.status);
+      console.error('TransactionAPI.getAll error:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },
@@ -170,28 +161,31 @@ const transactionAPI = {
   },
 
   /**
-   * Bulk delete transactions
+   * 🔥 FRESH BULK DELETE - Simple and clean implementation
    * @param {Array<number>} transactionIds - Array of transaction IDs to delete
    * @returns {Promise<Object>} Bulk deletion result
    */
-  async bulkDelete(transactionIds) {
+  async freshBulkDelete(transactionIds) {
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      throw new Error('Transaction IDs must be a non-empty array');
+    }
+
     try {
-      console.log('📊 Starting bulk delete API call...', {
+      console.log('🔥 FRESH BULK DELETE: Starting...', {
         transactionIds,
-        count: transactionIds.length,
-        url: '/transactions/bulk-delete'
+        count: transactionIds.length
       });
-      
-      // ✅ FIXED: Use apiClient with proper route order fix  
+
       const response = await apiClient.client.post('/transactions/bulk-delete', {
         transactionIds
       });
-      
-      console.log('✅ RAW Bulk delete API call successful:', response.data);
-      return { success: true, data: response.data };
+
+      console.log('✅ FRESH BULK DELETE: Success!', response.data);
+      return response.data;
+
     } catch (error) {
-      console.error('❌ Bulk delete failed:', error);
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+      console.error('❌ FRESH BULK DELETE: Failed!', error);
+      throw error;
     }
   },
 

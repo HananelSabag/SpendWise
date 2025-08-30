@@ -256,65 +256,37 @@ export const useTransactionActions = (context = 'transactions') => {
   }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, refetchTransactions, logAction]);
 
   /**
-   * ✅ BULK DELETE: Use server bulk delete endpoint for better performance
+   * 🔥 FRESH BULK DELETE - Simple and reliable implementation
    */
-  const bulkDelete = useCallback(async (transactionIds, options = {}) => {
+  const freshBulkDelete = useCallback(async (transactionIds) => {
     try {
-      logAction(`Bulk deleting ${transactionIds.length} transactions`, {
+      logAction(`🔥 Fresh bulk deleting ${transactionIds.length} transactions`, {
         transactionIds,
-        count: transactionIds.length,
-        firstId: transactionIds[0],
-        lastId: transactionIds[transactionIds.length - 1]
+        count: transactionIds.length
       });
-      
-      console.log('🔄 [BULK_DELETE] Starting bulk delete...', {
-        transactionIds,
-        options,
-        context
-      });
-      
-      const result = await transactionAPI.bulkDelete(transactionIds);
-      
+
+      const result = await transactionAPI.freshBulkDelete(transactionIds);
+
       if (result.success) {
+        // Invalidate and refresh data
         await invalidateRelevantQueries('critical');
-        setTimeout(() => {
-          refetchTransactions();
-        }, 200);
+        refetchTransactions();
         refreshAll();
         
-        const { successful, failed } = result.data.summary;
+        const deletedCount = result.data?.deleted_count || result.data?.summary?.successful || transactionIds.length;
         
-        if (successful > 0) {
-          toastService.success('transactions.bulkDeleteSuccess', { 
-            params: { count: successful } 
-          });
-        }
-        
-        if (failed > 0) {
-          toastService.error('transactions.bulkDeletePartialFail', { 
-            params: { failed } 
-          });
-        }
-        
-        logAction(`Bulk delete completed: ${successful} successful, ${failed} failed`);
-        return result.data;
+        toastService.success('transactions.bulkDeleteSuccess', { 
+          params: { count: deletedCount } 
+        });
+
+        logAction(`Fresh bulk delete completed: ${deletedCount} deleted`);
+        return result;
       } else {
-        console.error('🚨 [BULK_DELETE] API Result Failed:');
-        console.error('🚨 Result Success:', result.success);
-        console.error('🚨 Result Error Object:', result.error);
-        console.error('🚨 Result Error Message:', result.error?.message);
-        console.error('🚨 Full Result:', JSON.stringify(result, null, 2));
-        
-        throw new Error(result.error?.message || 'Bulk delete failed');
+        throw new Error(result.message || 'Fresh bulk delete failed');
       }
     } catch (error) {
-      console.error('🚨 [BULK_DELETE] COMPLETE ERROR DETAILS:');
-      console.error('🚨 Error Message:', error.message);
-      console.error('🚨 Error Type:', error.constructor.name);
-      console.error('🚨 Full Error Object:', error);
-      
-      logAction(`Bulk delete failed`, { error: error.message });
-      toastService.error('transactions.bulkDeleteFailed');
+      logAction(`Fresh bulk delete failed`, { error: error.message });
+      toastService.error('Fresh bulk delete failed. Please try again.');
       throw error;
     }
   }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, refreshAll, logAction]);
@@ -538,7 +510,7 @@ export const useTransactionActions = (context = 'transactions') => {
     
     // ✅ ENHANCED: Operations with infinite loading support
     bulkOperations,
-    bulkDelete,
+    freshBulkDelete,
     forceRefreshAll,
     
     // ✅ PRESERVED: State Helper  

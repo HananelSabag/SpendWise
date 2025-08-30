@@ -592,7 +592,7 @@ const ModernTransactions = () => {
     createTransaction,
     updateTransaction,
     deleteTransaction,
-    bulkDelete
+    freshBulkDelete
   } = useTransactionActions();
 
   const { categories } = useCategory();
@@ -1258,19 +1258,20 @@ const ModernTransactions = () => {
                 variant="destructive"
                 onClick={async () => {
                   try {
-                    await bulkDelete(Array.from(selectedIds));
+                    console.log('🔥 FRESH BULK DELETE: Starting with IDs:', Array.from(selectedIds));
+                    await freshBulkDelete(Array.from(selectedIds));
                     setSelectedIds(new Set());
                     setShowBulkDeleteModal(false);
                     addNotification({
                       type: 'success',
-                      message: t('bulk.delete.success', `Successfully deleted ${selectedIds.size} transactions`),
+                      message: `Successfully deleted ${selectedIds.size} transactions`,
                       duration: 5000
                     });
                   } catch (error) {
-                    console.error('Bulk delete failed:', error);
+                    console.error('🔥 FRESH BULK DELETE: Failed!', error);
                     addNotification({
                       type: 'error',
-                      message: t('bulk.delete.error', 'Failed to delete transactions. Please try again.'),
+                      message: 'Failed to delete transactions. Please try again.',
                       duration: 5000
                     });
                   }
