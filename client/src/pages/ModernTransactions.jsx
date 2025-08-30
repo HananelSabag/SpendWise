@@ -220,25 +220,8 @@ const AdvancedFilters = ({
         </Button>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Date Range */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('filters.dateRange.label', 'Date Range')}
-          </label>
-          <select
-            value={filters.dateRange}
-            onChange={(e) => onFilterChange({ dateRange: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            <option value="current">{t('filters.dateRange.current', 'Current & Past (August & Earlier)')}</option>
-            <option value="today">{t('filters.dateRange.today', 'Today')}</option>
-            <option value="week">{t('filters.dateRange.week', 'This Week')}</option>
-            <option value="month">{t('filters.dateRange.month', 'This Month')}</option>
-            <option value="future">{t('filters.dateRange.future', 'Future Transactions (September+)')}</option>
-            <option value="all">{t('filters.dateRange.all', 'All Time (Including Future)')}</option>
-          </select>
-        </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Note: Date Range filter removed - All Transactions tab automatically shows current + past only */}
 
         {/* Transaction Type */}
         <div className="space-y-2">
@@ -395,7 +378,7 @@ const ModernTransactionsList = ({
   const groupedTransactions = useMemo(() => {
     if (!transactions || !Array.isArray(transactions)) return {};
     
-    // Sort transactions by date (newest first)
+    // ✅ SIMPLE SORTING: Newest first (server already filters by date)
     const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
     
     return sorted.reduce((groups, transaction) => {
@@ -519,7 +502,7 @@ const ModernTransactionsList = ({
               <AnimatePresence mode="popLayout">
                 {group.transactions.map((transaction, index) => (
                   <motion.div
-                    key={transaction.id}
+                    key={`${transaction.id}-${groupKey}-${index}`}
                     layout
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -575,9 +558,8 @@ const ModernTransactions = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
-  // ✅ Filter states with enhanced recurring support
+  // ✅ Filter states - simplified (dateRange removed - handled automatically per tab)
   const [filters, setFilters] = useState({
-    dateRange: 'current', // Default to current/past to avoid overwhelming future transactions
     category: 'all',
     type: 'all',
     recurring: 'all', // all | recurring | oneTime
@@ -587,11 +569,7 @@ const ModernTransactions = () => {
     sortOrder: 'desc'
   });
 
-  // ✅ Custom date range
-  const [customDateRange, setCustomDateRange] = useState({
-    startDate: '',
-    endDate: ''
-  });
+  // Custom date range removed - not needed for simplified tab-based filtering
 
   // ✅ Hooks
   const {
@@ -603,11 +581,9 @@ const ModernTransactions = () => {
     fetchNextPage: loadMore
   } = useTransactions({
     search: searchQuery,
-    filters: {
-      ...filters,
-      ...(filters.dateRange === 'custom' ? customDateRange : {})
-    },
-    limit: 50
+    filters: filters,
+    activeTab: activeTab, // ✅ Pass active tab for smart filtering
+    pageSize: 30
   });
 
 
@@ -633,104 +609,25 @@ const ModernTransactions = () => {
     
     let filtered = [...transactionsData];
     
-    // 🐛 DEBUG: Comprehensive transaction analysis
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     
-    console.log('🔍 COMPREHENSIVE Transaction Debug:', {
-      activeTab,
-      totalTransactions: transactionsData.length,
-      currentDate: now.toISOString(),
-      todayStart: today.toISOString(),
-      dateBreakdown: {
-        past: transactionsData.filter(t => new Date(t.date) < today).length,
-        today: transactionsData.filter(t => {
-          const txDate = new Date(t.date);
-          return txDate.toDateString() === today.toDateString();
-        }).length,
-        future: transactionsData.filter(t => new Date(t.date) > today).length
-      },
-      sampleTransactions: transactionsData.slice(0, 5).map(t => ({
-        id: t.id,
-        date: t.date,
-        description: t.description,
-        status: t.status,
-        type: t.type,
-        dateObj: new Date(t.date).toISOString(),
-        isPast: new Date(t.date) < today,
-        isToday: new Date(t.date).toDateString() === today.toDateString(),
-        isFuture: new Date(t.date) > today
-      }))
+    // ✅ SIMPLIFIED: Server now handles date filtering by tab
+    
+    // Apply recurring filter (without excessive logging)
+    if (filters.recurring === 'recurring') {
+      filtered = filtered.filter(t => t.template_id || t.is_recurring);
+    } else if (filters.recurring === 'oneTime') {
+      filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
+    }
+    
+    console.log('✅ Client filtering applied:', {
+      received: transactionsData.length,
+      filtered: filtered.length,
+      tab: activeTab
     });
     
-    // ✅ FIXED: Apply date filtering based on active tab
-    if (activeTab === 'upcoming') {
-      // Upcoming tab: Show only future transactions (after today)
-      const cutoffDate = new Date();
-      cutoffDate.setHours(23, 59, 59, 999); // End of today
-      const beforeFilter = filtered.length;
-      filtered = filtered.filter(t => new Date(t.date) > cutoffDate);
-      console.log('🔍 Upcoming tab date filter:', { beforeFilter, afterFilter: filtered.length, cutoffDate: cutoffDate.toISOString() });
-    } else if (activeTab === 'all') {
-      // 🚨 CRITICAL FIX: Apply dateRange filtering for 'all' tab
-      const nextMonth = new Date(2025, 8, 1); // September 2025
-      
-      if (filters.dateRange === 'current') {
-        // Show current month (August) and earlier - FIXED: Include all of August
-        const septemberFirst = new Date(2025, 8, 1); // September 1, 2025
-        filtered = transactionsData.filter(t => {
-          const txDate = new Date(t.date);
-          return txDate < septemberFirst; // Show everything before September 1
-        });
-        console.log('🔍 All tab - Current filter:', {
-          totalTransactions: transactionsData.length,
-          currentAndPastCount: filtered.length,
-          showingUpTo: septemberFirst.toISOString(),
-          sampleFilteredDates: filtered.slice(0, 3).map(t => t.date)
-        });
-        
-        // ✅ SAFETY: If no current transactions found, show all transactions to avoid empty list
-        if (filtered.length === 0) {
-          console.log('🚨 No current transactions found, showing all transactions as fallback');
-          filtered = [...transactionsData];
-        }
-      } else if (filters.dateRange === 'future') {
-        // Show future transactions (September onwards)
-        const septemberFirst = new Date(2025, 8, 1); // September 1, 2025
-        filtered = transactionsData.filter(t => {
-          const txDate = new Date(t.date);
-          return txDate >= septemberFirst; // Show September and later
-        });
-        console.log('🔍 All tab - Future filter:', {
-          totalTransactions: transactionsData.length,
-          futureCount: filtered.length,
-          showingFrom: septemberFirst.toISOString(),
-          sampleFilteredDates: filtered.slice(0, 3).map(t => t.date)
-        });
-      } else {
-        // Show all transactions (including future)
-        filtered = [...transactionsData];
-        console.log('🔍 All tab - All transactions:', {
-          totalTransactions: transactionsData.length
-        });
-      }
-    }
-    // ✅ 'recurring' tab: NO date filtering - handled separately
-    
-    // Apply recurring filter
-    if (filters.recurring === 'recurring') {
-      const beforeFilter = filtered.length;
-      filtered = filtered.filter(t => t.template_id || t.is_recurring);
-      console.log('🔍 Recurring filter:', { beforeFilter, afterFilter: filtered.length });
-    } else if (filters.recurring === 'oneTime') {
-      const beforeFilter = filtered.length;
-      filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
-      console.log('🔍 One-time filter:', { beforeFilter, afterFilter: filtered.length });
-    }
-    
-    console.log('🔍 Final filtered transactions:', filtered.length);
     return filtered;
-  }, [transactionsData, filters.recurring, activeTab]);
+  }, [transactionsData, filters.recurring, activeTab, filters]); // ✅ Dependencies: transactionsData, filters, activeTab
 
   // ✅ Enhanced summary with recurring insights
   const summary = useMemo(() => {
@@ -830,7 +727,6 @@ const ModernTransactions = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      dateRange: 'current', // Default to current/past
       category: 'all',
       type: 'all',
       recurring: 'all',
@@ -1030,6 +926,22 @@ const ModernTransactions = () => {
             {/* ✨ All Transactions Content */}
             {activeTab === 'all' && (
               <div className="mt-8 space-y-6">
+                      {/* ✅ Simple explanation of what this tab shows */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                {t('transactions.allTab.title', 'Your Transactions')}
+              </h3>
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                {t('transactions.allTab.description', 'Showing your transactions with smart filtering. Scroll down to load more past transactions.')}
+              </p>
+            </div>
+          </div>
+        </div>
               {/* ✨ Enhanced Search and Controls */}
               <Card className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
                 <div className="flex flex-col lg:flex-row gap-4">
@@ -1181,6 +1093,36 @@ const ModernTransactions = () => {
                     onSelect={handleTransactionSelect}
                     multiSelectMode={multiSelectMode}
                   />
+                  
+                  {/* ✅ Infinite Scroll Trigger */}
+                  {hasMore && (
+                    <div 
+                      ref={(el) => {
+                        if (el && !transactionsLoading) {
+                          const observer = new IntersectionObserver(
+                            ([entry]) => {
+                              if (entry.isIntersecting) {
+                                loadMore();
+                              }
+                            },
+                            { threshold: 0.1 }
+                          );
+                          observer.observe(el);
+                          return () => observer.disconnect();
+                        }
+                      }}
+                      className="mt-6 h-20 flex justify-center items-center"
+                    >
+                      {transactionsLoading ? (
+                        <LoadingSpinner size="md" />
+                      ) : (
+                        <div className="text-gray-400 text-sm">
+                          {t('transactions.scrollForMore', 'Scroll for more transactions')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               </Card>
               </div>

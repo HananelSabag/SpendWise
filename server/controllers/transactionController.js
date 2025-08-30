@@ -698,19 +698,12 @@ const transactionController = {
             // Delete all transactions created from this template - FIXED for current schema
             let deletedTransactionsCount = 0;
             
-            // Delete from income table
-            const incomeResult = await db.query(
-              'DELETE FROM income WHERE template_id = $1 AND user_id = $2 RETURNING id',
+            // Delete from unified transactions table
+            const transactionsResult = await db.query(
+              'DELETE FROM transactions WHERE recurring_template_id = $1 AND user_id = $2 RETURNING id',
               [templateId, userId]
             );
-            deletedTransactionsCount += incomeResult.rows.length;
-            
-            // Delete from expenses table
-            const expensesResult = await db.query(
-              'DELETE FROM expenses WHERE template_id = $1 AND user_id = $2 RETURNING id',
-              [templateId, userId]
-            );
-            deletedTransactionsCount += expensesResult.rows.length;
+            deletedTransactionsCount += transactionsResult.rows.length;
             
             // Delete the template
             const templateResult = await db.query(
@@ -1268,7 +1261,7 @@ const transactionController = {
         SELECT t.*, c.name as category_name, rt.name as template_name
         FROM transactions t 
         LEFT JOIN categories c ON t.category_id = c.id
-        LEFT JOIN recurring_templates rt ON t.template_id = rt.id
+        LEFT JOIN recurring_templates rt ON t.recurring_template_id = rt.id
         WHERE t.user_id = $1 AND t.status = 'upcoming' AND t.deleted_at IS NULL
         ORDER BY t.date ASC, t.created_at ASC
       `;
@@ -1312,26 +1305,14 @@ const transactionController = {
       // Delete the upcoming transaction - FIXED for current schema
       let deleted = false;
       
-      // Try to delete from income table first
-      const deleteIncomeQuery = `
-        DELETE FROM income 
+      // Delete from unified transactions table
+      const deleteQuery = `
+        DELETE FROM transactions 
         WHERE id = $1 AND user_id = $2
         RETURNING id
       `;
-      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
-      
-      if (incomeResult.rows.length > 0) {
-        deleted = true;
-      } else {
-        // Try to delete from expenses table
-        const deleteExpenseQuery = `
-          DELETE FROM expenses 
-          WHERE id = $1 AND user_id = $2
-          RETURNING id
-        `;
-        const expenseResult = await db.query(deleteExpenseQuery, [id, userId]);
-        deleted = expenseResult.rows.length > 0;
-      }
+      const result = await db.query(deleteQuery, [id, userId]);
+      deleted = result.rows.length > 0;
 
       if (!deleted) {
         return res.status(404).json({
@@ -1386,26 +1367,17 @@ const transactionController = {
       `;
       const updateResult = await db.query(updateQuery, [id, userId]);
 
-      // Delete all future upcoming transactions for this template - FIXED for current schema
+      // Delete all future upcoming transactions for this template - FIXED for unified table
       let deletedCount = 0;
       
-      // Delete from income table
-      const deleteIncomeQuery = `
-        DELETE FROM income 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+      // Delete from unified transactions table
+      const deleteQuery = `
+        DELETE FROM transactions 
+        WHERE recurring_template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
-      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
-      deletedCount += incomeResult.rows.length;
-      
-      // Delete from expenses table
-      const deleteExpensesQuery = `
-        DELETE FROM expenses 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
-        RETURNING id
-      `;
-      const expensesResult = await db.query(deleteExpensesQuery, [id, userId]);
-      deletedCount += expensesResult.rows.length;
+      const result = await db.query(deleteQuery, [id, userId]);
+      deletedCount += result.rows.length;
 
       logger.info('Template generation stopped', { 
         userId, 
@@ -1451,26 +1423,17 @@ const transactionController = {
 
       const template = templateResult.rows[0];
 
-      // Remove existing upcoming transactions for this template - FIXED for current schema
+      // Remove existing upcoming transactions for this template - FIXED for unified table
       let deletedCount = 0;
       
-      // Delete from income table
-      const deleteIncomeQuery = `
-        DELETE FROM income 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
+      // Delete from unified transactions table
+      const deleteQuery = `
+        DELETE FROM transactions 
+        WHERE recurring_template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
         RETURNING id
       `;
-      const incomeResult = await db.query(deleteIncomeQuery, [id, userId]);
-      deletedCount += incomeResult.rows.length;
-      
-      // Delete from expenses table
-      const deleteExpensesQuery = `
-        DELETE FROM expenses 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
-        RETURNING id
-      `;
-      const expensesResult = await db.query(deleteExpensesQuery, [id, userId]);
-      deletedCount += expensesResult.rows.length;
+      const result = await db.query(deleteQuery, [id, userId]);
+      deletedCount += result.rows.length;
 
       // Generate new 3-month upcoming transactions
       const upcomingTransactions = await generateUpcomingTransactions(template);
@@ -1519,7 +1482,7 @@ async function generateTransactionsFromTemplate(template) {
     for (const dueDate of dueDates) {
       // Check if transaction already exists for this date and template - UNIFIED TABLE
       const dateStr = dueDate.toISOString().split('T')[0];
-      const existsQuery = `SELECT id FROM transactions WHERE template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
       const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
@@ -1627,17 +1590,10 @@ async function generateCurrentMonthTransactions(template, startDate, endDate) {
     const currentDates = calculateRecurringDatesInRange(template, startDate, endDate);
     
     for (const dueDate of currentDates) {
-      // Check if transaction already exists for this date and template - BACKWARD COMPATIBLE
+      // Check if transaction already exists for this date and template - UNIFIED TABLE
       const dateStr = dueDate.toISOString().split('T')[0];
-      let existsResult;
-      
-      if (template.type === 'income') {
-        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      } else {
-        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      }
+      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
         // Create new current transaction (normal status) using Transaction model
@@ -1688,14 +1644,8 @@ async function generateUpcomingTransactions(template) {
       const dateStr = dueDate.toISOString().split('T')[0];
       
       // Check if real transaction already exists for this date and template
-      let existsResult;
-      if (template.type === 'income') {
-        const existsQuery = `SELECT id FROM income WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      } else {
-        const existsQuery = `SELECT id FROM expenses WHERE template_id = $1 AND date = $2`;
-        existsResult = await db.query(existsQuery, [template.id, dateStr]);
-      }
+      const existsQuery = `SELECT id FROM transactions WHERE recurring_template_id = $1 AND date = $2 AND deleted_at IS NULL`;
+      const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
         // Create virtual upcoming transaction (not stored in DB, used for UI display)

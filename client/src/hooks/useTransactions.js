@@ -644,11 +644,12 @@ export const useTransactions = (options = {}) => {
 
   // ✅ CRITICAL FIX: Increase page size for better user experience
   const {
-    pageSize = 50, // ✅ INCREASED: Show more transactions per page
+    pageSize = 50,
     enableAI = true,
     enableRealTimeAnalysis = true,
     autoRefresh = false,
-    cacheStrategy = 'smart'
+    cacheStrategy = 'smart',
+    activeTab = 'all' // ✅ NEW: Active tab for smart filtering
   } = options;
 
   // Enhanced state
@@ -667,7 +668,7 @@ export const useTransactions = (options = {}) => {
 
   // ✅ Enhanced infinite query with AI analysis
   const transactionsQuery = useInfiniteQuery({
-    queryKey: ['transactions', user?.id, filters],
+    queryKey: ['transactions', user?.id, filters, activeTab],
     enabled: !!user?.id, // Only run if user is authenticated
     queryFn: async ({ pageParam = 0 }) => {
       const start = performance.now();
@@ -693,14 +694,29 @@ export const useTransactions = (options = {}) => {
         // 🚨 CRITICAL FIX: Handle frontend-only date filters
         const apiFilters = { ...filters };
         
-        // Remove frontend-only dateRange filters - these are handled in the UI
-        if (['all', 'current', 'future'].includes(apiFilters.dateRange)) {
-          delete apiFilters.dateRange;
-          delete apiFilters.dateFrom;
-          delete apiFilters.dateTo;
-          delete apiFilters.startDate;
-          delete apiFilters.endDate;
+        // ✅ SMART DATE FILTERING: Add date filters based on active tab
+        if (activeTab === 'all') {
+          // All tab: Only current month + past (no future transactions)
+          const now = new Date();
+          const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          endOfCurrentMonth.setHours(23, 59, 59, 999);
+          
+          apiFilters.dateTo = endOfCurrentMonth.toISOString().split('T')[0]; // YYYY-MM-DD format
+          console.log('📅 All tab - filtering up to:', apiFilters.dateTo);
+          
+        } else if (activeTab === 'upcoming') {
+          // Upcoming tab: Only future transactions (after today)
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(0, 0, 0, 0);
+          
+          apiFilters.dateFrom = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD format
+          console.log('📅 Upcoming tab - filtering from:', apiFilters.dateFrom);
         }
+        // No date filtering for recurring tab
+        
+        // Clean up old frontend-only filters
+        delete apiFilters.dateRange;
         
         console.log('🔍 API Request Debug:', {
           originalFilters: filters,
@@ -830,21 +846,7 @@ export const useTransactions = (options = {}) => {
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
     getNextPageParam: (lastPage, pages) => {
-      const nextPage = lastPage.hasMore ? pages.length : undefined;
-      console.log('🔍 Infinite Query - getNextPageParam:', {
-        lastPageHasMore: lastPage.hasMore,
-        lastPageTotal: lastPage.total,
-        lastPageTransactionCount: lastPage.transactions?.length,
-        currentPagesLength: pages.length,
-        nextPageIndex: nextPage,
-        allPagesInfo: pages.map((p, i) => ({
-          pageIndex: i,
-          transactionCount: p.transactions?.length,
-          hasMore: p.hasMore,
-          total: p.total
-        }))
-      });
-      return nextPage; // This gives us the 0-based page index for next page
+      return lastPage.hasMore ? pages.length : undefined;
     },
     staleTime: cacheStrategy === 'aggressive' ? 10 * 60 * 1000 : 2 * 60 * 1000,
     refetchInterval: autoRefresh ? 30 * 1000 : false
@@ -1198,7 +1200,6 @@ export const useTransactions = (options = {}) => {
   // ✅ Processed data
   const allTransactions = useMemo(() => {
     if (!transactionsQuery.data?.pages) {
-      console.log('🔍 allTransactions - No pages data');
       return [];
     }
     
@@ -1211,18 +1212,10 @@ export const useTransactions = (options = {}) => {
       return page.transactions;
     }) || [];
     
-    console.log('🔍 allTransactions processed:', {
-      totalPages: transactionsQuery.data.pages.length,
-      totalTransactions: flattened.length,
-      pagesInfo: transactionsQuery.data.pages.map((p, i) => ({
-        pageIndex: i,
-        transactionCount: p.transactions?.length,
-        hasMore: p.hasMore,
-        total: p.total
-      })),
-      hasNextPage: transactionsQuery.hasNextPage,
-      isFetchingNextPage: transactionsQuery.isFetchingNextPage
-    });
+    // Only log on significant changes (new pages loaded)
+    if (transactionsQuery.data.pages.length > 1 || flattened.length === 0) {
+      console.log('📊 Transactions loaded:', flattened.length, 'from', transactionsQuery.data.pages.length, 'pages');
+    }
     
     return flattened;
   }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage]);

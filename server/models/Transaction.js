@@ -235,48 +235,17 @@ class Transaction {
 
     let query;
 
-    if (type === 'income') {
-      query = `
-        SELECT COUNT(*) as total
-        FROM income i
-        LEFT JOIN categories c ON i.category_id = c.id
-        WHERE ${conditions.join(' AND ')} ${searchCondition}
-      `;
-    } else if (type === 'expense') {
-      query = `
-        SELECT COUNT(*) as total
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        WHERE ${conditions.join(' AND ')} ${searchCondition}
-      `;
-    } else {
-      // Get both income and expenses count
-      query = `
-        (
-          SELECT COUNT(*) as total
-          FROM income i
-          LEFT JOIN categories c ON i.category_id = c.id
-          WHERE ${conditions.join(' AND ')} ${searchCondition}
-        )
-        UNION ALL
-        (
-          SELECT COUNT(*) as total
-          FROM expenses e
-          LEFT JOIN categories c ON e.category_id = c.id
-          WHERE ${conditions.join(' AND ')} ${searchCondition}
-        )
-      `;
-    }
+    // ✅ FIXED: Use unified transactions table
+    query = `
+      SELECT COUNT(*) as total
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE ${conditions.join(' AND ')} ${searchCondition}
+    `;
 
     const result = await db.query(query, values);
     
-    if (type === 'income' || type === 'expense') {
-      return parseInt(result.rows[0].total) || 0;
-    } else {
-      // Sum both income and expense counts
-      const total = result.rows.reduce((sum, row) => sum + (parseInt(row.total) || 0), 0);
-      return total;
-    }
+    return parseInt(result.rows[0].total) || 0;
   }
 
   /**
@@ -582,40 +551,22 @@ class Transaction {
    */
   static async getRecent(userId, limit = 10) {
     try {
-      // ✅ FIXED: Use current database schema (income/expenses tables) - corrected query
+      // ✅ FIXED: Use unified transactions table
       const query = `
-        (
-          SELECT 
-            i.id,
-            i.amount,
-            'income' as type,
-            i.description,
-            i.date,
-            i.created_at,
-            c.name as category_name,
-            c.icon as category_icon,
-            c.color as category_color
-          FROM income i
-          LEFT JOIN categories c ON i.category_id = c.id
-          WHERE i.user_id = $1
-        )
-        UNION ALL
-        (
-          SELECT 
-            e.id,
-            e.amount,
-            'expense' as type,
-            e.description,
-            e.date,
-            e.created_at,
-            c.name as category_name,
-            c.icon as category_icon,
-            c.color as category_color
-          FROM expenses e
-          LEFT JOIN categories c ON e.category_id = c.id
-          WHERE e.user_id = $1
-        )
-        ORDER BY created_at DESC
+        SELECT 
+          t.id,
+          t.amount,
+          t.type,
+          t.description,
+          t.date,
+          t.created_at,
+          c.name as category_name,
+          c.icon as category_icon,
+          c.color as category_color
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+        ORDER BY t.created_at DESC
         LIMIT $2
       `;
 
@@ -635,57 +586,30 @@ class Transaction {
    */
   static async findById(transactionId, userId) {
     try {
-      // ✅ FIXED: Try both income and expenses tables
-      const incomeQuery = `
+      // ✅ FIXED: Use unified transactions table
+      const query = `
         SELECT 
-          i.id,
-          i.user_id,
-          i.category_id,
-          i.amount,
-          'income' as type,
-          i.description,
-          i.notes,
-          i.date,
-          i.template_id,
-          i.created_at,
-          i.updated_at,
+          t.id,
+          t.user_id,
+          t.category_id,
+          t.amount,
+          t.type,
+          t.description,
+          t.notes,
+          t.date,
+          t.template_id,
+          t.created_at,
+          t.updated_at,
           c.name as category_name,
           c.icon as category_icon,
           c.color as category_color
-        FROM income i
-        LEFT JOIN categories c ON i.category_id = c.id
-        WHERE i.id = $1 AND i.user_id = $2
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.id = $1 AND t.user_id = $2 AND t.deleted_at IS NULL
       `;
       
-      const expenseQuery = `
-        SELECT 
-          e.id,
-          e.user_id,
-          e.category_id,
-          e.amount,
-          'expense' as type,
-          e.description,
-          e.notes,
-          e.date,
-          e.template_id,
-          e.created_at,
-          e.updated_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        WHERE e.id = $1 AND e.user_id = $2
-      `;
-
-      // Try income first, then expenses
-      let result = await db.query(incomeQuery, [transactionId, userId]);
-      if (result.rows.length > 0) {
-        return result.rows[0];
-      }
-
-      result = await db.query(expenseQuery, [transactionId, userId]);
-      return result.rows[0] || null;
+      const result = await db.query(query, [transactionId, userId]);
+      return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
       logger.error('Transaction find by ID failed', { transactionId, userId, error: error.message });
       throw error;
@@ -787,27 +711,23 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      // ✅ FIXED: Delete from appropriate table based on transaction type
-      let query;
-      if (existing.type === 'income') {
-        query = `
-          DELETE FROM income 
-          WHERE id = $1 AND user_id = $2
-          RETURNING id
-        `;
-      } else {
-        query = `
-          DELETE FROM expenses 
-          WHERE id = $1 AND user_id = $2
-          RETURNING id
-        `;
-      }
+      // ✅ FIXED: Use unified transactions table (same as bulk delete)
+      const query = `
+        DELETE FROM transactions 
+        WHERE id = $1 AND user_id = $2
+        RETURNING id, type
+      `;
 
       const result = await db.query(query, [transactionId, userId]);
       const success = result.rows.length > 0;
 
       if (success) {
-        logger.info('Transaction soft deleted successfully', { transactionId, userId });
+        const deletedTransaction = result.rows[0];
+        logger.info(`Transaction deleted successfully`, { 
+          transactionId, 
+          userId, 
+          type: deletedTransaction.type 
+        });
       }
 
       return success;
@@ -825,44 +745,34 @@ class Transaction {
    */
   static async getSummary(userId, days = 30) {
     try {
-      // ✅ FIXED: Query both income and expenses tables separately
-      const incomeQuery = `
+      // ✅ FIXED: Use unified transactions table with GROUP BY
+      const query = `
         SELECT 
-          COUNT(*) as income_transactions,
-          COALESCE(SUM(amount), 0) as total_income,
-          COALESCE(AVG(amount), 0) as avg_income,
-          COUNT(DISTINCT category_id) as income_categories
-        FROM income
+          type,
+          COUNT(*) as transaction_count,
+          COALESCE(SUM(amount), 0) as total_amount,
+          COALESCE(AVG(amount), 0) as avg_amount,
+          COUNT(DISTINCT category_id) as categories_used
+        FROM transactions
         WHERE user_id = $1 
           AND date >= CURRENT_DATE - INTERVAL '${days} days'
+          AND deleted_at IS NULL
+        GROUP BY type
       `;
 
-      const expensesQuery = `
-        SELECT 
-          COUNT(*) as expense_transactions,
-          COALESCE(SUM(amount), 0) as total_expenses,
-          COALESCE(AVG(amount), 0) as avg_expense,
-          COUNT(DISTINCT category_id) as expense_categories
-        FROM expenses
-        WHERE user_id = $1 
-          AND date >= CURRENT_DATE - INTERVAL '${days} days'
-      `;
-
-      const [incomeResult, expensesResult] = await Promise.all([
-        db.query(incomeQuery, [userId]),
-        db.query(expensesQuery, [userId])
-      ]);
-
-      const incomeData = incomeResult.rows[0] || {};
-      const expenseData = expensesResult.rows[0] || {};
+      const result = await db.query(query, [userId]);
+      
+      // Process results into summary object
+      const incomeData = result.rows.find(row => row.type === 'income') || {};
+      const expenseData = result.rows.find(row => row.type === 'expense') || {};
 
       const summary = {
-        total_transactions: (parseInt(incomeData.income_transactions) || 0) + (parseInt(expenseData.expense_transactions) || 0),
-        total_income: parseFloat(incomeData.total_income) || 0,
-        total_expenses: parseFloat(expenseData.total_expenses) || 0,
-        avg_expense: parseFloat(expenseData.avg_expense) || 0,
-        avg_income: parseFloat(incomeData.avg_income) || 0,
-        categories_used: Math.max((parseInt(incomeData.income_categories) || 0), (parseInt(expenseData.expense_categories) || 0))
+        total_transactions: (parseInt(incomeData.transaction_count) || 0) + (parseInt(expenseData.transaction_count) || 0),
+        total_income: parseFloat(incomeData.total_amount) || 0,
+        total_expenses: parseFloat(expenseData.total_amount) || 0,
+        avg_expense: parseFloat(expenseData.avg_amount) || 0,
+        avg_income: parseFloat(incomeData.avg_amount) || 0,
+        categories_used: Math.max((parseInt(incomeData.categories_used) || 0), (parseInt(expenseData.categories_used) || 0))
       };
 
       // Calculate net balance
