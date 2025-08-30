@@ -31,7 +31,8 @@ const auth = async (req, res, next) => {
       path: req.path,
       url: req.url,
       hasAuth: !!req.header('Authorization'),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack.split('\n')[2] // Show where this auth call is from
     });
 
     const token = req.header('Authorization')?.replace('Bearer ', '');

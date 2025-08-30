@@ -17,7 +17,24 @@ const {
 } = require('../middleware/rateLimiter');
 
 // Apply authentication to all routes
+router.use((req, res, next) => {
+  console.error('🔥🔥🔥 TRANSACTION AUTH: About to apply auth middleware', {
+    method: req.method,
+    path: req.path,
+    hasUser: !!req.user,
+    hasAuth: !!req.header('Authorization')
+  });
+  next();
+});
 router.use(auth);
+router.use((req, res, next) => {
+  console.error('🔥🔥🔥 TRANSACTION AUTH: Auth middleware passed!', {
+    method: req.method,
+    path: req.path,
+    userId: req.user?.id
+  });
+  next();
+});
 
 /**
  * Dashboard & Summary Routes
