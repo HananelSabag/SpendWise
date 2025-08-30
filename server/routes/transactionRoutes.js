@@ -17,24 +17,7 @@ const {
 } = require('../middleware/rateLimiter');
 
 // Apply authentication to all routes
-router.use((req, res, next) => {
-  console.error('🔥🔥🔥 TRANSACTION AUTH: About to apply auth middleware', {
-    method: req.method,
-    path: req.path,
-    hasUser: !!req.user,
-    hasAuth: !!req.header('Authorization')
-  });
-  next();
-});
 router.use(auth);
-router.use((req, res, next) => {
-  console.error('🔥🔥🔥 TRANSACTION AUTH: Auth middleware passed!', {
-    method: req.method,
-    path: req.path,
-    userId: req.user?.id
-  });
-  next();
-});
 
 /**
  * Dashboard & Summary Routes
@@ -204,13 +187,7 @@ router.post('/templates/:id/regenerate',
 
 // Bulk delete transactions (no rate limit - destructive operations are naturally limited)
 // ✅ MOVED BEFORE /:type to avoid route conflicts - SPECIFIC ROUTES FIRST!
-console.error('🔥🔥🔥 ROUTE REGISTRATION: bulk-delete route being registered!');
-router.post('/bulk-delete', (req, res, next) => {
-  console.error('🔥🔥🔥 ROUTE HIT: bulk-delete route handler called!');
-  console.error('🔥🔥🔥 ROUTE METHOD:', req.method);
-  console.error('🔥🔥🔥 ROUTE PATH:', req.path);
-  next();
-}, transactionController.bulkDelete);
+router.post('/bulk-delete', transactionController.bulkDelete);
 
 // Create new transaction (one-time or recurring)
 router.post('/:type',

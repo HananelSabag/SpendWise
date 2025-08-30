@@ -25,28 +25,11 @@ const userCache = new LRUCache({
  */
 const auth = async (req, res, next) => {
   try {
-    // DEBUG: Log ALL requests to see if we reach this middleware
-    logger.error('🔍 AUTH MIDDLEWARE: Request received', {
-      method: req.method,
-      path: req.path,
-      url: req.url,
-      hasAuth: !!req.header('Authorization'),
-      timestamp: new Date().toISOString(),
-      stack: new Error().stack.split('\n')[2] // Show where this auth call is from
-    });
+
 
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      logger.error('🚫 BULK DELETE AUTH: No token provided', {
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        path: req.path,
-        method: req.method,
-        headers: req.headers,
-        body: req.body
-      });
-      
       return res.status(401).json({
         success: false,
         error: {

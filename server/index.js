@@ -25,33 +25,7 @@ const keepAlive = require('./utils/keepAlive');
 // Initialize Express app
 const app = express();
 
-// 🔥🔥🔥 RAW REQUEST LOGGER - CATCH EVERYTHING BEFORE ANY MIDDLEWARE!
-app.use((req, res, next) => {
-  console.error('🔥🔥🔥 RAW REQUEST CAPTURED:', {
-    method: req.method,
-    url: req.url,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    headers: {
-      'content-type': req.headers['content-type'],
-      'authorization': req.headers.authorization ? 'PRESENT' : 'MISSING',
-      'origin': req.headers.origin
-    },
-    timestamp: new Date().toISOString()
-  });
-  
-  // Special logging for bulk delete
-  if (req.url.includes('bulk-delete')) {
-    console.error('🚨🚨🚨 BULK DELETE REQUEST DETECTED!', {
-      method: req.method,
-      url: req.url,
-      body: req.body,
-      contentLength: req.headers['content-length']
-    });
-  }
-  
-  next();
-});
+
 
 // Trust proxy for production
 app.set('trust proxy', 1);
@@ -168,31 +142,12 @@ app.use(requestId);
 
 // Set up API rate limiter
 // API rate limiter
-app.use('/api', (req, res, next) => {
-  console.error('🔥🔥🔥 API LIMITER: Request passed through', {
-    method: req.method,
-    path: req.path,
-    url: req.url
-  });
-  next();
-}, apiLimiter);
+app.use('/api', apiLimiter);
 
 // Load user context early so admins can bypass maintenance
-app.use((req, res, next) => {
-  console.error('🔥🔥🔥 BEFORE OPTIONAL AUTH:', req.method, req.path);
-  next();
-});
 app.use(optionalAuth);
-app.use((req, res, next) => {
-  console.error('🔥🔥🔥 AFTER OPTIONAL AUTH:', req.method, req.path);
-  next();
-});
 // Global maintenance gate (place before route handlers)
 app.use(maintenanceGate);
-app.use((req, res, next) => {
-  console.error('🔥🔥🔥 AFTER MAINTENANCE GATE:', req.method, req.path);
-  next();
-});
 
 // Set up request logging
 // Request logging (production-safe)
@@ -270,14 +225,7 @@ try {
   logger.debug('✅ User routes loaded');
   
   logger.debug('Loading transaction routes...');
-  app.use(`${API_VERSION}/transactions`, (req, res, next) => {
-    console.error('🔥🔥🔥 TRANSACTION ROUTER: Request reached transaction router!', {
-      method: req.method,
-      path: req.path,
-      originalUrl: req.originalUrl
-    });
-    next();
-  }, require('./routes/transactionRoutes'));
+  app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
   logger.debug('✅ Transaction routes loaded');
   
   logger.debug('Loading category routes...');

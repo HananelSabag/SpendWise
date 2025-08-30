@@ -1085,31 +1085,16 @@ const transactionController = {
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
-    // IMMEDIATE DEBUG: This should be the very first thing that executes
-    console.error('🔥🔥🔥 CONTROLLER ENTRY: IMMEDIATE ENTRY LOG!!!');
-    console.error('🔥🔥🔥 REQUEST METHOD:', req.method);
-    console.error('🔥🔥🔥 REQUEST PATH:', req.path);
-    console.error('🔥🔥🔥 TIMESTAMP:', new Date().toISOString());
-    
-    // DEBUG: First thing - prove we reached the controller
-    logger.error('🔥 CONTROLLER REACHED: Fresh bulk delete controller hit!', {
-      timestamp: new Date().toISOString(),
-      method: req.method,
-      path: req.path
-    });
+
 
     const userId = req.user.id;
     const { transactionIds } = req.body;
 
-    logger.info('🔥 FRESH BULK DELETE: Request received', {
-      userId,
-      transactionIds,
-      count: transactionIds?.length
-    });
+
 
     // Simple validation
     if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
-      logger.error('🔥 FRESH BULK DELETE: Invalid transactionIds', { transactionIds });
+      logger.error('Invalid transactionIds', { transactionIds });
       return res.status(400).json({
         success: false,
         message: 'transactionIds must be a non-empty array'
@@ -1126,13 +1111,21 @@ const transactionController = {
       
       const result = await db.query(deleteQuery, [transactionIds, userId]);
       const deletedCount = result.rows.length;
+      
+      // ✅ Handle case where some/all transactions don't exist or were already deleted
+      if (deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No transactions found or transactions were already deleted',
+          data: {
+            deleted_count: 0,
+            summary: { successful: 0, failed: transactionIds.length },
+            deleted_transactions: []
+          }
+        });
+      }
 
-      logger.info('🔥 FRESH BULK DELETE: Success', {
-        userId,
-        requested: transactionIds.length,
-        deleted: deletedCount,
-        deletedIds: result.rows.map(r => r.id)
-      });
+
 
       // Response format that matches client expectations
       res.json({
@@ -1149,7 +1142,7 @@ const transactionController = {
       });
 
     } catch (error) {
-      logger.error('🔥 FRESH BULK DELETE: Failed', {
+      logger.error('Bulk delete failed', {
         userId,
         transactionIds,
         error: error.message

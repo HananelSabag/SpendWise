@@ -268,9 +268,19 @@ export const useTransactionActions = (context = 'transactions') => {
       const result = await transactionAPI.freshBulkDelete(transactionIds);
 
       if (result.success) {
-        // Invalidate and refresh data
+        // ✅ FULL REFRESH LIKE SINGLE DELETE: Complete query invalidation
         await invalidateRelevantQueries('critical');
-        refetchTransactions();
+        
+        // ✅ REFRESH TEMPLATES AND RECURRING (in case any deleted transactions were templates)
+        await queryClient.invalidateQueries({ queryKey: ['templates'] });
+        await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
+        
+        // ✅ DELAYED REFETCH FOR SMOOTH ANIMATION (just like single delete)
+        setTimeout(() => {
+          refetchTransactions();
+        }, 200);
+        
+        // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
         refreshAll();
         
         const deletedCount = result.data?.deleted_count || result.data?.summary?.successful || transactionIds.length;
