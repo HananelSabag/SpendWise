@@ -288,12 +288,22 @@ export default {
     negative: 'Negative'
   },
 
-  // ✅ MISSING: Tips section
+  // ✅ Enhanced Tips section with rotation
   tips: {
     title: 'Smart Tips 💡',
+    subtitle: 'Personalized insights for better financial health',
     savingTip: 'Saving 20% of your income will help you reach your savings goal faster',
     budgetTip: 'Track daily expenses to better control your budget',
-    categoryTip: 'Dividing expenses into categories will help you identify spending patterns'
+    categoryTip: 'Dividing expenses into categories will help you identify spending patterns',
+    progressTip: 'Track your progress with weekly goals and celebrate small wins',
+    recurringTip: 'Set up recurring transactions to save time and never miss a payment',
+    reviewTip: 'Review your spending monthly to identify areas for improvement',
+    trendTip: 'Look for spending trends to make better financial decisions',
+    quickTip: 'Use quick actions to add transactions in seconds',
+    goalTip: 'Set clear financial goals and break them into smaller milestones',
+    habitTip: 'Build healthy money habits by tracking small daily expenses',
+    rewardTip: 'Reward yourself when you reach your savings targets',
+    personalTip: 'Customize categories to match your personal spending style'
   },
 
   // Smart Suggestions

@@ -26,7 +26,7 @@ import { cn } from '../utils/helpers';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernQuickActionsBar from '../components/features/dashboard/ModernQuickActionsBar';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
-import SmartSuggestions from '../components/features/dashboard/actions/SmartSuggestions';
+
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 
@@ -68,6 +68,114 @@ const headerVariants = {
 };
 
 
+
+// ✅ Dynamic Tips Panel Component
+const DynamicTipsPanel = () => {
+  const { t } = useTranslation('dashboard');
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  // ✅ Expanded tips array with more variety
+  const allTips = useMemo(() => [
+    { icon: Target, text: t('tips.savingTip'), color: 'text-yellow-600' },
+    { icon: BarChart3, text: t('tips.budgetTip'), color: 'text-orange-600' },
+    { icon: Calendar, text: t('tips.categoryTip'), color: 'text-red-600' },
+    { icon: Heart, text: t('tips.progressTip'), color: 'text-pink-600' },
+    { icon: Clock, text: t('tips.recurringTip'), color: 'text-blue-600' },
+    { icon: Eye, text: t('tips.reviewTip'), color: 'text-green-600' },
+    { icon: TrendingUp, text: t('tips.trendTip'), color: 'text-purple-600' },
+    { icon: Zap, text: t('tips.quickTip'), color: 'text-indigo-600' },
+    { icon: Crown, text: t('tips.goalTip'), color: 'text-yellow-500' },
+    { icon: Activity, text: t('tips.habitTip'), color: 'text-emerald-600' },
+    { icon: Star, text: t('tips.rewardTip'), color: 'text-amber-600' },
+    { icon: User, text: t('tips.personalTip'), color: 'text-cyan-600' }
+  ], [t]);
+
+  // ✅ Get 4 rotating tips based on current index
+  const currentTips = useMemo(() => {
+    const tips = [];
+    for (let i = 0; i < 4; i++) {
+      tips.push(allTips[(currentTipIndex + i) % allTips.length]);
+    }
+    return tips;
+  }, [allTips, currentTipIndex]);
+
+  // ✅ Auto-rotate tips every 45 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        setCurrentTipIndex((prev) => (prev + 4) % allTips.length);
+        setIsVisible(true);
+      }, 300); // Brief pause for transition effect
+    }, 45000); // Change every 45 seconds
+
+    return () => clearInterval(interval);
+  }, [allTips.length]);
+
+  return (
+    <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+      <Card className="overflow-hidden shadow-2xl bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 dark:from-yellow-900/20 dark:via-orange-900/20 dark:to-red-900/20 border-2 border-yellow-200 dark:border-yellow-800">
+        <div className="p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center"
+            >
+              <Sparkles className="w-6 h-6 text-white" />
+            </motion.div>
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {t('tips.title')}
+              </h3>
+              <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                {t('tips.subtitle')}
+              </p>
+            </div>
+            {/* Tips counter */}
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded-full">
+              {Math.floor(currentTipIndex / 4) + 1} / {Math.ceil(allTips.length / 4)}
+            </div>
+          </div>
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentTipIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className="grid gap-4 md:grid-cols-2"
+            >
+              {currentTips.map((tip, index) => {
+                const Icon = tip.icon;
+                return (
+                  <motion.div
+                    key={`${currentTipIndex}-${index}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index, duration: 0.4 }}
+                    className="flex items-start gap-3 p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-800/70 transition-colors duration-200"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2 * index, type: "spring" }}
+                    >
+                      <Icon className={cn('w-5 h-5 mt-0.5', tip.color)} />
+                    </motion.div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{tip.text}</p>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </Card>
+    </motion.div>
+  );
+};
 
 // ✅ Stats Panel Component
 const StatsPanel = ({ dashboardData, formatCurrency, t }) => {
@@ -282,47 +390,7 @@ const ModernDashboard = () => {
     }
   }, [refreshDashboard, addNotification, t]);
 
-  // ✅ Accept suggestion handler
-  const handleAcceptSuggestion = useCallback(async (suggestion) => {
-    try {
-      const categoryName = suggestion.category || 'General';
-      const existingCategory = categories?.find(c => 
-        c.name.toLowerCase() === categoryName.toLowerCase()
-      );
-      
-      let categoryId = existingCategory?.id;
-      if (!categoryId) {
-        const newCategory = await createCategory({
-          name: categoryName,
-          icon: 'Tag',
-          color: '#3B82F6',
-          type: 'expense'
-        });
-        categoryId = newCategory?.id;
-      }
-      
-      const data = {
-        type: 'expense',
-        amount: Math.abs(Number(suggestion.amount || 0)) || 0,
-        description: suggestion.title || suggestion.description || 'Suggested expense',
-        categoryId,
-        date: new Date().toISOString().split('T')[0]
-      };
-      
-      await createTransaction(data);
-      addNotification({
-        type: 'success',
-        message: t('suggestions.transactionCreated', 'Transaction added from suggestion'),
-        duration: 2500
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        message: error?.message || t('suggestions.failed', 'Could not apply suggestion'),
-        duration: 3500
-      });
-    }
-  }, [createTransaction, categories, createCategory, addNotification, t]);
+
 
   // ✅ Loading state with enhanced UX
   if (isLoading && !dashboardData) {
@@ -456,16 +524,7 @@ const ModernDashboard = () => {
               <Card className="p-6 shadow-2xl border-2 border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                 <ModernQuickActionsBar />
               </Card>
-              
-              {/* Smart Suggestions - Only on larger screens */}
-              <div className="hidden xl:block">
-                <Card className="p-6 shadow-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-                  <SmartSuggestions 
-                    maxSuggestions={3} 
-                    onAccept={handleAcceptSuggestion}
-                  />
-                </Card>
-              </div>
+
             </div>
           </motion.div>
 
@@ -478,53 +537,8 @@ const ModernDashboard = () => {
               maxItems={6}
             />
 
-            {/* Tips Panel - Enhanced */}
-            <motion.div variants={itemVariants}>
-              <Card className="overflow-hidden shadow-2xl bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 dark:from-yellow-900/20 dark:via-orange-900/20 dark:to-red-900/20 border-2 border-yellow-200 dark:border-yellow-800">
-                <div className="p-8">
-                  <div className="flex items-center gap-4 mb-6">
-                    <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center"
-                    >
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </motion.div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {t('tips.title')}
-                      </h3>
-                      <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                        Personalized insights for better financial health
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {[
-                      { icon: Target, text: t('tips.savingTip'), color: 'text-yellow-600' },
-                      { icon: BarChart3, text: t('tips.budgetTip'), color: 'text-orange-600' },
-                      { icon: Calendar, text: t('tips.categoryTip'), color: 'text-red-600' },
-                      { icon: Heart, text: 'Track your progress with weekly goals', color: 'text-pink-600' }
-                    ].map((tip, index) => {
-                      const Icon = tip.icon;
-                      return (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.1 * index }}
-                          className="flex items-start gap-3 p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl"
-                        >
-                          <Icon className={cn('w-5 h-5 mt-0.5', tip.color)} />
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{tip.text}</p>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
+            {/* Dynamic Tips Panel - Enhanced */}
+            <DynamicTipsPanel />
           </motion.div>
         </div>
       </motion.div>

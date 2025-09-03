@@ -32,6 +32,7 @@ import { cn } from '../../../../utils/helpers';
 const TransactionFormTabs = ({
   mode = 'create', // create, edit, duplicate
   initialData = null,
+  initialTab = null, // 'one-time' or 'recurring' to override default
   onSubmit,
   onCancel,
   isLoading = false,
@@ -44,6 +45,10 @@ const TransactionFormTabs = ({
 
   // ✅ Tab state - חד פעמי או חוזר
   const [activeTab, setActiveTab] = useState(() => {
+    // ✅ Allow external override of initial tab
+    if (initialTab === 'recurring' || initialTab === 'one-time') {
+      return initialTab;
+    }
     // בעריכה - זהה את הסוג לפי הנתונים הקיימים
     if (mode === 'edit' && initialData?.template_id) {
       return 'recurring';

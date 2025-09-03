@@ -280,9 +280,19 @@ export default {
   
   tips: {
     title: 'טיפים חכמים 💡',
+    subtitle: 'תובנות אישיות לבריאות פיננסית טובה יותר',
     savingTip: 'שמירת 20% מההכנסות תביא לכם ליעד החיסכון מהר יותר',
     budgetTip: 'עקבו אחר הוצאות יומיות כדי לשלוט טוב יותר בתקציב',
-    categoryTip: 'חלקו הוצאות לקטגוריות יעזור לכם לזהות דפוסי הוצאה'
+    categoryTip: 'חלקו הוצאות לקטגוריות יעזור לכם לזהות דפוסי הוצאה',
+    progressTip: 'עקבו אחר ההתקדמות עם יעדים שבועיים וחגגו ניצחונות קטנים',
+    recurringTip: 'הגדירו עסקאות חוזרות כדי לחסוך זמן ולא לפספס תשלומים',
+    reviewTip: 'בדקו את ההוצאות שלכם מדי חודש כדי לזהות תחומים לשיפור',
+    trendTip: 'חפשו מגמות הוצאה כדי לקבל החלטות פיננסיות טובות יותר',
+    quickTip: 'השתמשו בפעולות מהירות כדי להוסיף עסקאות תוך שניות',
+    goalTip: 'קבעו יעדים פיננסיים ברורים וחלקו אותם לאבני דרך קטנות יותר',
+    habitTip: 'בנו הרגלי כסף בריאים על ידי מעקב אחר הוצאות יומיות קטנות',
+    rewardTip: 'תגמלו את עצמכם כשאתם מגיעים ליעדי החיסכון שלכם',
+    personalTip: 'התאימו קטגוריות לסגנון ההוצאות האישי שלכם'
   },
 
   // הצעות חכמות

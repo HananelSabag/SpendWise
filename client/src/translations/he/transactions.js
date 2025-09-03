@@ -236,6 +236,8 @@ export default {
     active: "פעיל",
     paused: "מושהה",
     nextRun: "הרצה הבאה",
+    created: "נוצר",
+    never: "לעולם לא",
     title: "עסקאות חוזרות",
     description: "נהלו את העסקאות החוזרות והתבניות שלכם",
     manage: "ניהול חוזרות",
@@ -331,7 +333,13 @@ export default {
     
     // Count
     occurrencesCount: "מופע {{count}}",
-    occurrencesCount_plural: "{{count}} מופעים"
+    occurrencesCount_plural: "{{count}} מופעים",
+    
+    // Summary stats for recurring tab
+    totalTemplates: "סה״כ תבניות",
+    activeTemplates: "תבניות פעילות",
+    monthlyIncome: "הכנסות חודשיות", 
+    monthlyExpenses: "הוצאות חודשיות"
   },
 
   // Short keys used by RecurringTransactionsManager
@@ -636,6 +644,7 @@ export default {
     totalTransactions: 'סה״כ קרובות',
     expectedIncome: 'הכנסות צפויות',
     expectedExpenses: 'הוצאות צפויות',
+    recurringTemplates: 'מתבניות',
     tomorrow: 'מחר',
     thisWeek: 'השבוע',
     later: 'מאוחר יותר'
@@ -662,6 +671,16 @@ export default {
     confirmDelete: 'למחוק את "{{name}}"?',
     deleteSuccess: 'תבנית נמחקה בהצלחה',
     deleteFailed: 'מחיקת התבנית נכשלה',
+    deleteTemplate: 'מחק תבנית',
+    deleteChoose: 'בחרו מה למחוק:',
+    deleteTemplateOnly: 'תבנית בלבד (שמור עסקאות)',
+    deleteTemplateOnlyDesc: 'השבתת תבנית אך שמירה על כל היסטוריית העסקאות',
+    deleteFuture: 'תבנית + עסקאות עתידיות',
+    deleteFutureDesc: 'הסרת תבנית וכל העסקאות העתידיות המתוכננות',
+    deleteCurrentAndFuture: 'תבנית + חודש נוכחי ועתידי',
+    deleteCurrentAndFutureDesc: 'הסרת תבנית ועסקאות מהחודש הנוכחי והלאה',
+    deleteAll: 'תבנית + כל העסקאות',
+    deleteAllDesc: 'הסרה מוחלטת של תבנית וכל היסטוריית העסקאות',
     statusUpdated: 'הסטטוס עודכן בהצלחה',
     statusUpdateFailed: 'עדכון הסטטוס נכשל',
     templateSaved: 'תבנית נשמרה בהצלחה',
@@ -708,6 +727,11 @@ export default {
     all: "כל העסקאות",
     upcoming: "קרובות",
     recurring: "חוזרות"
+  },
+
+  allTab: {
+    title: "העסקאות שלך",
+    description: "מציג את העסקאות שלך עם סינון חכם. גלול למטה כדי לטעון עוד עסקאות עבר."
   },
 
   advancedFilters: "מסננים מתקדמים",

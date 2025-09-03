@@ -142,7 +142,9 @@ router.post('/templates/bulk',
 // Update recurring template
 router.put('/templates/:id',
   createTransactionLimiter,
-  transactionController.update
+  routeLogger('UPDATE_TEMPLATE'),
+  transactionLogger('UPDATE_TEMPLATE'),
+  transactionController.updateRecurringTemplate
 );
 
 // Delete/deactivate recurring template

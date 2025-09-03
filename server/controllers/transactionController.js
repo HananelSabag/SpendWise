@@ -628,17 +628,77 @@ const transactionController = {
           });
         }
 
-        // Deactivate the template instead of hard delete
+        // ✅ ENHANCED: Smart delete based on query parameter
+        const deleteScope = req.query.scope || 'template_only'; // Default to template only
+        
+        let deletedTransactions = 0;
+        const today = new Date().toISOString().split('T')[0];
+        
+        switch (deleteScope) {
+          case 'all':
+            // Delete template and ALL transactions (past, current, future)
+            const allResult = await db.query(`
+              UPDATE transactions 
+              SET deleted_at = NOW(), 
+                  notes = COALESCE(notes, '') || ' [Template deleted: all occurrences]'
+              WHERE template_id = $1 AND user_id = $2 AND deleted_at IS NULL
+              RETURNING id
+            `, [id, userId]);
+            deletedTransactions = allResult.rows.length;
+            break;
+            
+          case 'future':
+            // Delete template and only FUTURE transactions
+            const futureResult = await db.query(`
+              UPDATE transactions 
+              SET deleted_at = NOW(), 
+                  notes = COALESCE(notes, '') || ' [Template deleted: future only]'
+              WHERE template_id = $1 AND user_id = $2 AND date > $3 AND deleted_at IS NULL
+              RETURNING id
+            `, [id, userId, today]);
+            deletedTransactions = futureResult.rows.length;
+            break;
+            
+          case 'current_and_future':
+            // Delete template and CURRENT MONTH + FUTURE transactions
+            const currentMonthStart = new Date();
+            currentMonthStart.setDate(1);
+            const currentMonthStartStr = currentMonthStart.toISOString().split('T')[0];
+            
+            const currentFutureResult = await db.query(`
+              UPDATE transactions 
+              SET deleted_at = NOW(), 
+                  notes = COALESCE(notes, '') || ' [Template deleted: current month and future]'
+              WHERE template_id = $1 AND user_id = $2 AND date >= $3 AND deleted_at IS NULL
+              RETURNING id
+            `, [id, userId, currentMonthStartStr]);
+            deletedTransactions = currentFutureResult.rows.length;
+            break;
+            
+          case 'template_only':
+          default:
+            // Only deactivate template, keep all transactions
+            deletedTransactions = 0;
+            break;
+        }
+
+        // Always deactivate the template
         const updateResult = await db.query(
           'UPDATE recurring_templates SET is_active = false, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id, name',
           [id, userId]
         );
 
-        logger.info('Template successfully deactivated', { 
+        logger.info('Template deletion completed', { 
           templateId: id, 
           templateName: updateResult.rows[0].name, 
-          userId 
+          userId,
+          deleteScope,
+          deletedTransactions
         });
+
+        const message = deletedTransactions > 0 
+          ? `Template deleted with ${deletedTransactions} transactions (${deleteScope})`
+          : 'Template deactivated successfully';
 
         return res.json({
           success: true,
@@ -646,9 +706,11 @@ const transactionController = {
             deleted: true,
             deactivated: true,
             id: id,
-            name: updateResult.rows[0].name
+            name: updateResult.rows[0].name,
+            deleteScope,
+            deletedTransactions
           },
-          message: 'Recurring template deactivated successfully'
+          message
         });
       }
 
@@ -837,6 +899,119 @@ const transactionController = {
       });
     } catch (error) {
       logger.error('Monthly summary failed', { userId, year, month, error: error.message });
+      throw error;
+    }
+  }),
+
+  /**
+   * Update recurring template - ENHANCED WITH PAUSE/RESUME LOGIC
+   * @route PUT /api/v1/transactions/templates/:id
+   */
+  updateRecurringTemplate: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const updateData = req.body;
+
+    try {
+      // Verify the template belongs to the user
+      const templateCheck = await db.query(
+        'SELECT id, user_id, is_active FROM recurring_templates WHERE id = $1 AND user_id = $2',
+        [id, userId]
+      );
+
+      if (templateCheck.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Recurring template not found'
+        });
+      }
+
+      const currentTemplate = templateCheck.rows[0];
+
+      // ✅ ENHANCED: Handle pause/resume logic
+      if ('is_active' in updateData) {
+        const newActiveStatus = updateData.is_active;
+        const wasActive = currentTemplate.is_active;
+
+        if (wasActive && !newActiveStatus) {
+          // PAUSING: Remove future generated transactions
+          logger.info('Pausing template - removing future transactions', {
+            templateId: id,
+            userId
+          });
+
+          const today = new Date().toISOString().split('T')[0];
+          const deletedCount = await db.query(`
+            UPDATE transactions 
+            SET deleted_at = NOW(), 
+                notes = COALESCE(notes, '') || ' [Paused at ${new Date().toISOString()}]'
+            WHERE template_id = $1 
+              AND user_id = $2 
+              AND date > $3
+              AND deleted_at IS NULL
+            RETURNING id
+          `, [id, userId, today]);
+
+          logger.info('Future transactions removed due to pause', {
+            templateId: id,
+            userId,
+            deletedCount: deletedCount.rows.length
+          });
+        } else if (!wasActive && newActiveStatus) {
+          // RESUMING: Regenerate future transactions for next 3 months
+          logger.info('Resuming template - regenerating future transactions', {
+            templateId: id,
+            userId
+          });
+
+          // Get the updated template data
+          const templateResult = await db.query(
+            'SELECT * FROM recurring_templates WHERE id = $1',
+            [id]
+          );
+          
+          if (templateResult.rows.length > 0) {
+            // Generate new transactions using RecurringEngine
+            const RecurringEngine = require('../utils/RecurringEngine');
+            const template = templateResult.rows[0];
+            
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 3);
+            
+            await RecurringEngine.generateTransactionsForTemplate(template, endDate);
+          }
+        }
+      }
+
+      // Use the RecurringTemplate model's update method
+      const updatedTemplate = await RecurringTemplate.update(id, updateData);
+
+      logger.info('Template updated successfully', {
+        templateId: id,
+        userId,
+        updatedFields: Object.keys(updateData)
+      });
+
+      res.json({
+        success: true,
+        data: updatedTemplate,
+        message: 'Recurring template updated successfully'
+      });
+
+    } catch (error) {
+      logger.error('Template update failed', {
+        templateId: id,
+        userId,
+        error: error.message
+      });
+      
+      if (error.details === 'Template not found') {
+        return res.status(404).json({
+          success: false,
+          error: 'Template not found'
+        });
+      }
+      
       throw error;
     }
   }),
@@ -1527,7 +1702,7 @@ async function generateTransactionsFromTemplate(template) {
       const existsResult = await db.query(existsQuery, [template.id, dateStr]);
       
       if (existsResult.rows.length === 0) {
-        // Create new transaction using Transaction model
+        // Create new transaction using Transaction model with timezone support
         const transactionData = {
           categoryId: template.category_id,
           amount: template.amount,
@@ -1535,7 +1710,11 @@ async function generateTransactionsFromTemplate(template) {
           description: template.description || template.name,
           notes: template.notes || `Generated from recurring template: ${template.name || 'Unnamed'}`,
           date: dateStr,
-          templateId: template.id
+          templateId: template.id,
+          // ✅ NEW: For recurring transactions, use user's timezone and current time 
+          timezone: template.timezone || 'UTC',
+          time: template.preferred_time || '09:00', // Default to 9 AM if no time specified
+          transaction_datetime: new Date(`${dateStr}T${template.preferred_time || '09:00'}:00`).toISOString()
         };
 
         // Use Transaction model's create method for backward compatibility
@@ -1645,7 +1824,11 @@ async function generateCurrentMonthTransactions(template, startDate, endDate) {
           description: template.description || template.name,
           notes: `Generated from recurring template: ${template.name}`,
           date: dateStr,
-          templateId: template.id
+          templateId: template.id,
+          // ✅ NEW: For recurring transactions, use template's timezone and time
+          timezone: template.timezone || 'UTC',
+          time: template.preferred_time || '09:00',
+          transaction_datetime: new Date(`${dateStr}T${template.preferred_time || '09:00'}:00`).toISOString()
           // No status field = normal confirmed transaction
         };
 

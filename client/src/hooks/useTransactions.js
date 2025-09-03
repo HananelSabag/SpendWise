@@ -668,7 +668,7 @@ export const useTransactions = (options = {}) => {
 
   // ✅ Enhanced infinite query with AI analysis
   const transactionsQuery = useInfiniteQuery({
-    queryKey: ['transactions', user?.id, filters, activeTab],
+    queryKey: ['transactions', user?.id, filters, activeTab, new Date().toISOString().split('T')[0]], // Add date to prevent stale cache
     enabled: !!user?.id, // Only run if user is authenticated
     queryFn: async ({ pageParam = 0 }) => {
       const start = performance.now();
@@ -705,13 +705,32 @@ export const useTransactions = (options = {}) => {
           console.log('📅 All tab - filtering up to:', apiFilters.dateTo);
           
         } else if (activeTab === 'upcoming') {
-          // Upcoming tab: Only future transactions (after today)
-          const tomorrow = new Date();
+          // ✅ UPCOMING TAB FIX: Get ALL future transactions from tomorrow onwards
+          console.log('📅 Upcoming tab - getting future transactions');
+          
+          // Get tomorrow in user's timezone  
+          const now = new Date();
+          const tomorrow = new Date(now);
           tomorrow.setDate(tomorrow.getDate() + 1);
           tomorrow.setHours(0, 0, 0, 0);
           
-          apiFilters.dateFrom = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD format
-          console.log('📅 Upcoming tab - filtering from:', apiFilters.dateFrom);
+          // Set date filter to get transactions from tomorrow onwards
+          apiFilters.dateFrom = tomorrow.toISOString().split('T')[0];
+          
+          // ✅ CRITICAL: Remove the dateTo filter that was set for "All" tab
+          delete apiFilters.dateTo;
+          
+          // Remove type filtering for upcoming tab to get all future transactions  
+          delete apiFilters.type;
+          delete apiFilters.recurring;
+          
+          console.log('📅 Upcoming date filter APPLIED:', {
+            tomorrow: tomorrow.toISOString(),
+            dateFrom: apiFilters.dateFrom,
+            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            filtersBeingUsed: apiFilters,
+            fullApiUrl: `GET /transactions?${new URLSearchParams(apiFilters).toString()}`
+          });
         }
         // No date filtering for recurring tab
         
@@ -722,7 +741,8 @@ export const useTransactions = (options = {}) => {
           originalFilters: filters,
           cleanedFilters: apiFilters,
           page: pageParam + 1,
-          limit: pageSize
+          limit: pageSize,
+          fullApiUrl: `GET /transactions?${new URLSearchParams({...apiFilters, page: pageParam + 1, limit: pageSize}).toString()}`
         });
 
         const response = await api.transactions.getAll({
@@ -739,6 +759,7 @@ export const useTransactions = (options = {}) => {
           dataKeys: response.data ? Object.keys(response.data) : null,
           paginationInfo: response.data?.pagination,
           transactionCount: response.data?.transactions?.length,
+          apiFiltersUsed: apiFilters,
           fullResponse: response
         });
 

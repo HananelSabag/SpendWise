@@ -360,21 +360,21 @@ const ModernTransactionCard = ({
         )}
       </AnimatePresence>
 
-      {/* ✨ Main Content */}
+      {/* ✨ Main Content - Mobile Optimized */}
       <div className={cn(
-        "flex items-center gap-3",
+        "flex gap-3",
         viewMode === 'grid' && "flex-col text-center",
         isRTL && "flex-row-reverse"
       )}>
         
-        {/* ✨ Category Icon */}
+        {/* ✨ Category Icon - Smaller on Mobile */}
         <motion.div
           variants={iconVariants}
           className="relative flex-shrink-0"
         >
           <div
             className={cn(
-              "relative rounded-2xl flex items-center justify-center shadow-lg border-2",
+              "relative rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg border-2",
               "transition-all duration-300",
               isIncome
                 ? "bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-900/40 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300"
@@ -382,8 +382,8 @@ const ModernTransactionCard = ({
               isHovered && "scale-110 shadow-xl"
             )}
           >
-            <div className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center">
-              <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={2} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 flex items-center justify-center">
+              <Icon className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7" strokeWidth={2} />
             </div>
             
             {/* ✨ Income/Expense Indicator */}
@@ -392,7 +392,7 @@ const ModernTransactionCard = ({
               animate={{ scale: 1 }}
               transition={{ delay: 0.2 }}
               className={cn(
-                "absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs",
+                "absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-white text-xs",
                 isIncome 
                   ? "bg-green-600 dark:bg-green-500" 
                   : "bg-red-600 dark:bg-red-500"
@@ -403,72 +403,29 @@ const ModernTransactionCard = ({
           </div>
         </motion.div>
 
-        {/* ✨ Transaction Details */}
+        {/* ✨ Transaction Details - Mobile Optimized Layout */}
         <div className={cn(
-          "flex-1 min-w-0",
-          viewMode === 'grid' && "text-center"
+          "flex-1 min-w-0 space-y-2",
+          viewMode === 'grid' && "text-center space-y-3"
         )}>
-          {/* Description and Type */}
-          <div className="flex items-start justify-between gap-2 mb-2">
+          {/* Top Row: Description and Amount */}
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <h4 className={cn(
-                "font-semibold text-gray-900 dark:text-white truncate",
+                "font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base",
                 viewMode === 'grid' ? "text-center" : "text-left"
               )}>
                 {transaction?.description || t('transactions.noDescription', 'No description')}
               </h4>
-              
-              {/* Category and Type */}
-              <div className={cn(
-                "flex items-center gap-2 mt-1",
-                viewMode === 'grid' && "justify-center"
-              )}>
-                <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                  {transaction?.category_name || transaction?.category?.name || t('categories.uncategorized', 'Uncategorized')}
-                </span>
-                <span className="text-gray-400">•</span>
-                <TransactionTypeBadge isIncome={isIncome} isRecurring={isRecurring} />
-              </div>
             </div>
-
-            {/* Action Menu */}
-            {viewMode !== 'grid' && (
-              <SmartActionMenu
-                transaction={transaction}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-              />
-            )}
-          </div>
-
-          {/* Date, Time and Amount */}
-          <div className={cn(
-            "flex items-center justify-between gap-3 flex-wrap",
-            viewMode === 'grid' && "flex-col gap-2"
-          )}>
-            {/* Date and Time */}
-            <div className={cn(
-              "flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400",
-              viewMode === 'grid' && "justify-center"
-            )}>
-              <Calendar className="w-4 h-4" />
-              <span>{getDateLabel()}</span>
-              <span className="text-gray-400">•</span>
-              <Clock className="w-4 h-4" />
-              <span>{transaction?.transaction_datetime ? getTimezoneDisplay() : getTimeLabel()}</span>
-            </div>
-
-            {/* Amount */}
+            
+            {/* Amount - Prominent on Mobile */}
             <motion.div
               variants={amountVariants}
-              className={cn(
-                "flex items-center gap-2",
-                viewMode === 'grid' && "justify-center"
-              )}
+              className="flex items-center gap-2"
             >
               <div className={cn(
-                "font-bold text-base md:text-lg leading-tight tabular-nums tracking-tight",
+                "font-bold text-base sm:text-lg leading-tight tabular-nums tracking-tight",
                 "whitespace-nowrap",
                 isIncome 
                   ? "text-green-600 dark:text-green-400" 
@@ -477,7 +434,7 @@ const ModernTransactionCard = ({
                 {isIncome ? '+' : '-'}{formatCurrency(amount)}
               </div>
               
-              {/* Selection Checkbox */}
+              {/* Selection Checkbox - Better positioned */}
               {onSelect && (
                 <button
                   onClick={(e) => {
@@ -485,7 +442,7 @@ const ModernTransactionCard = ({
                     onSelect(transaction.id, !isSelected);
                   }}
                   className={cn(
-                    "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
+                    "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ml-2",
                     isSelected
                       ? "bg-blue-500 border-blue-500 text-white"
                       : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
@@ -497,6 +454,43 @@ const ModernTransactionCard = ({
               )}
             </motion.div>
           </div>
+          
+          {/* Middle Row: Category and Type */}
+          <div className={cn(
+            "flex items-center gap-2",
+            viewMode === 'grid' && "justify-center"
+          )}>
+            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
+              {transaction?.category_name || transaction?.category?.name || t('categories.uncategorized', 'Uncategorized')}
+            </span>
+            <span className="text-gray-400 text-xs">•</span>
+            <TransactionTypeBadge isIncome={isIncome} isRecurring={isRecurring} />
+          </div>
+
+          {/* Bottom Row: Date and Time - Full Width */}
+          <div className={cn(
+            "flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400",
+            viewMode === 'grid' && "justify-center"
+          )}>
+            <Calendar className="w-3 h-3" />
+            <span>{getDateLabel()}</span>
+            <span className="text-gray-400">•</span>
+            <Clock className="w-3 h-3" />
+            <span className="hidden sm:inline">{transaction?.transaction_datetime ? getTimezoneDisplay() : getTimeLabel()}</span>
+            <span className="sm:hidden">{getTimeLabel().split(' ')[0]}</span>
+          </div>
+
+          {/* Action Menu - Better positioned for mobile */}
+          {viewMode !== 'grid' && (
+            <div className="flex justify-end">
+              <SmartActionMenu
+                transaction={transaction}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
+              />
+            </div>
+          )}
 
           {/* Grid View Action Menu */}
           {viewMode === 'grid' && (

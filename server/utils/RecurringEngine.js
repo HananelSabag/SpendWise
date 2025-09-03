@@ -183,12 +183,16 @@ class RecurringEngine {
    * 🎯 Generate transactions for a specific template
    */
   static async generateTransactionsForTemplate(template, endDate) {
-    // Find the last generated transaction for this template
+    // ✅ FIXED: Find the last generated transaction by description and notes (since template_id was null)
     const lastResult = await db.query(`
       SELECT MAX(date) as last_date
       FROM transactions
-      WHERE template_id = $1 AND deleted_at IS NULL AND type = $2
-    `, [template.id, template.type], 'get_last_generated');
+      WHERE user_id = $1 
+        AND description = $2 
+        AND type = $3
+        AND notes LIKE '%Auto-generated from recurring template%'
+        AND deleted_at IS NULL
+    `, [template.user_id, template.description, template.type], 'get_last_generated');
     
     const lastGeneratedDate = lastResult.rows[0]?.last_date;
     
@@ -225,7 +229,27 @@ class RecurringEngine {
         continue;
       }
       
-      // Add transaction to batch
+      // ✅ EXTRA PROTECTION: Check if transaction already exists for this date
+      const existingCheck = await db.query(`
+        SELECT id FROM transactions 
+        WHERE user_id = $1 
+          AND description = $2 
+          AND type = $3 
+          AND date = $4
+          AND deleted_at IS NULL
+      `, [template.user_id, template.description, template.type, this.formatDate(nextDate)]);
+      
+      if (existingCheck.rows.length > 0) {
+        logger.debug('Transaction already exists, skipping', {
+          templateId: template.id,
+          date: this.formatDate(nextDate),
+          description: template.description
+        });
+        nextDate = this.getNextOccurrenceDate(template, nextDate);
+        continue;
+      }
+      
+      // Add transaction to batch - ✅ TIMEZONE AWARE
       transactions.push({
         user_id: template.user_id,
         amount: template.amount,
@@ -233,7 +257,11 @@ class RecurringEngine {
         date: this.formatDate(nextDate),
         category_id: template.category_id,
         template_id: template.id,
-        notes: `Auto-generated from recurring template`
+        notes: `Auto-generated from recurring template`,
+        // ✅ NEW: Add timezone support for RecurringEngine
+        timezone: template.timezone || 'UTC',
+        time: template.preferred_time || '09:00',
+        transaction_datetime: new Date(`${this.formatDate(nextDate)}T${template.preferred_time || '09:00'}:00`).toISOString()
       });
       
       nextDate = this.getNextOccurrenceDate(template, nextDate);

@@ -82,7 +82,7 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
       variants={cardVariants}
       whileHover="hover"
       className={cn(
-        "relative overflow-hidden rounded-2xl p-6 shadow-xl border-2",
+        "relative overflow-hidden rounded-2xl p-3 sm:p-6 shadow-xl border-2",
         "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
         "border-gray-200 dark:border-gray-700",
         "hover:shadow-2xl transition-all duration-300"
@@ -99,10 +99,10 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
       
       <div className="relative flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
             {title}
           </p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {typeof value === 'number' && title.toLowerCase().includes('amount') 
               ? formatCurrency(value) 
               : value
@@ -124,33 +124,32 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
         </div>
         
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg",
+          "w-8 h-8 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-lg",
           color === 'green' && "bg-gradient-to-br from-green-500 to-emerald-600 text-white",
           color === 'purple' && "bg-gradient-to-br from-purple-500 to-violet-600 text-white",
           color === 'blue' && "bg-gradient-to-br from-blue-500 to-indigo-600 text-white",
           color === 'orange' && "bg-gradient-to-br from-orange-500 to-amber-600 text-white"
         )}>
-          <Icon className="w-6 h-6" />
+          <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
         </div>
       </div>
     </motion.div>
   );
 };
 
-// ✨ Modern Recurring Template Card
+// ✨ Modern Recurring Template Card (DUPLICATION REMOVED)
 const ModernTemplateCard = ({ 
   template, 
   onEdit, 
   onToggleStatus, 
-  onDelete, 
-  onDuplicate,
+  onDelete,
   className = '' 
 }) => {
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  const isActive = template.status === 'active';
+  const isActive = template.is_active;
   const isIncome = template.type === 'income';
   
   return (
@@ -199,7 +198,7 @@ const ModernTemplateCard = ({
                 {isIncome ? t('types.income') : t('types.expense')}
               </Badge>
               <Badge variant="outline" size="sm">
-                {template.frequency}
+                {template.interval_type || 'monthly'}
               </Badge>
             </div>
           </div>
@@ -268,14 +267,7 @@ const ModernTemplateCard = ({
             <Edit className="w-4 h-4" />
           </Button>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDuplicate(template)}
-            className="text-purple-600 hover:text-purple-700"
-          >
-            <Copy className="w-4 h-4" />
-          </Button>
+
           
           <Button
             variant="ghost"
@@ -298,19 +290,74 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
   const { formatCurrency } = useCurrency();
   const { isDark } = useTheme();
 
-  const [activeTab, setActiveTab] = useState('templates'); // 'templates' | 'upcoming'
+  // ✅ Calculate next run date for a template
+  const calculateNextRunDate = useCallback((template) => {
+    if (!template || !template.start_date || !template.is_active) return null;
+    
+    const now = new Date();
+    const startDate = new Date(template.start_date);
+    let nextDate = new Date(startDate);
+    
+    // If start date is in the future, return start date
+    if (startDate > now) return startDate;
+    
+    // Calculate next occurrence based on interval
+    switch (template.interval_type) {
+      case 'daily':
+        const daysDiff = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
+        nextDate.setDate(startDate.getDate() + daysDiff + 1);
+        break;
+        
+      case 'weekly':
+        const weeksDiff = Math.floor((now - startDate) / (7 * 24 * 60 * 60 * 1000));
+        nextDate.setDate(startDate.getDate() + ((weeksDiff + 1) * 7));
+        break;
+        
+      case 'monthly':
+        // Use day_of_month if specified, otherwise use start date's day
+        const targetDay = template.day_of_month || startDate.getDate();
+        nextDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
+        
+        // If we've passed this month's target day, move to next month
+        if (nextDate <= now) {
+          nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+        
+        // Handle month-end cases (day 31 in February, etc.)
+        if (nextDate.getDate() !== targetDay) {
+          nextDate.setDate(0); // Go to last day of previous month
+        }
+        break;
+        
+      default:
+        return null;
+    }
+    
+    // Check if we've passed the end date
+    if (template.end_date && nextDate > new Date(template.end_date)) {
+      return null;
+    }
+    
+    return nextDate;
+  }, []);
+
+  const [activeTab, setActiveTab] = useState('templates'); // Only 'templates' tab
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTemplate, setEditTemplate] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   // Data hooks
   const {
     recurringTransactions,
     stats: templateStats,
     isLoading: templatesLoading,
-    refetch: refetchTemplates
+    refetch: refetchTemplates,
+    updateRecurring,
+    deleteRecurring
   } = useRecurringTransactions();
 
   const {
@@ -371,8 +418,11 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
 
   const handleToggleStatus = useCallback(async (template) => {
     try {
-      const newStatus = template.status === 'active' ? 'paused' : 'active';
-      // API call would go here
+      const newStatus = !template.is_active;
+      
+      // Use the proper hook instead of direct fetch
+      await updateRecurring(template.id, { is_active: newStatus });
+      
       addNotification({
         type: 'success',
         message: t('recurring.statusUpdated', 'Status updated successfully'),
@@ -386,13 +436,20 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
         duration: 5000
       });
     }
-  }, [addNotification, t, refetchTemplates]);
+  }, [updateRecurring, addNotification, t, refetchTemplates]);
 
-  const handleDelete = useCallback(async (template) => {
-    if (!confirm(t('recurring.confirmDelete', { name: template.description }))) return;
+  const handleDelete = useCallback((template) => {
+    setTemplateToDelete(template);
+    setShowDeleteModal(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async (scope) => {
+    if (!templateToDelete) return;
     
     try {
-      // API call would go here
+      // Use the proper hook with scope parameter
+      await deleteRecurring(templateToDelete.id, { scope });
+      
       addNotification({
         type: 'success',
         message: t('recurring.deleteSuccess', 'Template deleted successfully'),
@@ -405,13 +462,22 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
         message: t('recurring.deleteFailed', 'Failed to delete template'),
         duration: 5000
       });
+    } finally {
+      setShowDeleteModal(false);
+      setTemplateToDelete(null);
     }
-  }, [addNotification, t, refetchTemplates]);
+  }, [templateToDelete, deleteRecurring, addNotification, t, refetchTemplates]);
 
-  const handleDuplicate = useCallback((template) => {
-    setEditTemplate({ ...template, id: null, description: `${template.description} (Copy)` });
-    setShowCreateModal(true);
+  const handleDeleteCancel = useCallback(() => {
+    setShowDeleteModal(false);
+    setTemplateToDelete(null);
   }, []);
+
+  // ✅ REMOVED: Duplication feature as requested by user
+  // const handleDuplicate = useCallback((template) => {
+  //   setEditTemplate({ ...template, id: null, description: `${template.description} (Copy)` });
+  //   setShowCreateModal(true);
+  // }, []);
 
   const handleCreateSuccess = useCallback(() => {
     setShowCreateModal(false);
@@ -452,57 +518,59 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           )}
           style={{ direction: isRTL ? 'rtl' : 'ltr' }}
         >
-          {/* ✨ Enhanced Header */}
+          {/* ✨ Enhanced Header - More Compact on Desktop */}
           <motion.div
             variants={headerVariants}
-            className="flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 p-6"
+            className="flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 p-3 sm:p-4"
           >
             <div className="flex items-center justify-between">
               {/* Title */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-violet-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl">
-                    <Repeat className="w-6 h-6 text-white" />
+                  <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 via-violet-600 to-pink-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl">
+                    <Repeat className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-white" />
+                  <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3 h-3 sm:w-5 sm:h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                   </div>
                 </div>
                 
                 <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                    {t('recurringManager.title', 'Recurring Transactions Manager')}
+                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                    {t('recurringManager.title', 'Recurring Manager')}
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 hidden sm:block">
                     {t('recurringManager.subtitle', 'Manage your recurring transactions')}
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-4"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t('actions.add', 'Add New')}
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('actions.add', 'Add New')}</span>
                 </Button>
                 
                 <Button
                   variant="ghost"
+                  size="sm"
                   onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 sm:p-2"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               </div>
             </div>
           </motion.div>
 
-          {/* ✨ Stats Grid - compact on mobile */}
-          <div className="flex-shrink-0 p-4 sm:p-6 bg-white/50 dark:bg-gray-900/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* ✨ Stats Grid - compact on mobile and desktop */}
+          <div className="flex-shrink-0 p-2 sm:p-4 bg-white/50 dark:bg-gray-900/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
               <ModernStatsCard
                 title={t('recurringManager.active', 'Active Templates')}
                 value={summary.totalActive}
@@ -531,33 +599,22 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           </div>
 
           {/* ✨ Tabs and Filters */}
-          <div className="flex-shrink-0 p-6 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mb-4 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1">
-              <button
-                onClick={() => setActiveTab('templates')}
-                className={cn(
-                  "flex-1 px-4 py-2 rounded-xl font-medium transition-all duration-200",
-                  activeTab === 'templates'
-                    ? "bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-lg"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                )}
-              >
-                <Settings className="w-4 h-4 mr-2 inline" />
-                {t('recurringManager.templates', 'Templates')}
-              </button>
-              <button
-                onClick={() => setActiveTab('upcoming')}
-                className={cn(
-                  "flex-1 px-4 py-2 rounded-xl font-medium transition-all duration-200",
-                  activeTab === 'upcoming'
-                    ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                )}
-              >
-                <Calendar className="w-4 h-4 mr-2 inline" />
-                {t('recurringManager.upcoming', 'Upcoming')}
-              </button>
+          <div className="flex-shrink-0 p-3 sm:p-4 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+            {/* Header - Templates Only */}
+            <div className="mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {t('recurringManager.templates', 'Templates')}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Manage your recurring transaction templates
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Search and Filters */}
@@ -604,77 +661,62 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           </div>
 
           {/* ✨ Content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-            {activeTab === 'templates' ? (
-              <div>
-                {templatesLoading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-4 text-gray-600 dark:text-gray-400">
-                        {t('recurringManager.loading', 'Loading templates...')}
-                      </p>
-                    </div>
-                  </div>
-                ) : filteredTemplates.length === 0 ? (
-                  <div className="text-center py-20">
-                    <div className="w-20 h-20 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-6">
-                      <Repeat className="w-10 h-10 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                      {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
-                        ? t('recurringManager.noMatches', 'No Matching Templates')
-                        : t('recurringManager.noRecurring', 'No Recurring Templates')
-                      }
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
-                      {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
-                        ? t('recurringManager.noMatchesDesc', 'Try adjusting your filters')
-                        : t('recurringManager.noRecurringDesc', 'Create recurring transactions to automate your finance tracking')
-                      }
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-4">
+            <div>
+              {templatesLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="text-center">
+                    <LoadingSpinner size="lg" />
+                    <p className="mt-4 text-gray-600 dark:text-gray-400">
+                      {t('recurringManager.loading', 'Loading templates...')}
                     </p>
-                    <Button
-                      onClick={() => setShowCreateModal(true)}
-                      className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('recurringManager.addFirst', 'Add First Template')}
-                    </Button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {filteredTemplates.map((template, index) => (
-                      <motion.div
-                        key={template.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <ModernTemplateCard
-                          template={template}
-                          onEdit={handleEdit}
-                          onToggleStatus={handleToggleStatus}
-                          onDelete={handleDelete}
-                          onDuplicate={handleDuplicate}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <div className="w-20 h-20 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-                  <Calendar className="w-10 h-10 text-green-600 dark:text-green-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('recurringManager.upcomingTitle', 'Upcoming Transactions')}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                  {t('recurringManager.upcomingDesc', 'Your upcoming recurring transactions will appear here')}
-                </p>
-              </div>
-            )}
+              ) : filteredTemplates.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="w-20 h-20 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-6">
+                    <Repeat className="w-10 h-10 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
+                      ? t('recurringManager.noMatches', 'No Matching Templates')
+                      : t('recurringManager.noRecurring', 'No Recurring Templates')
+                    }
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
+                    {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
+                      ? t('recurringManager.noMatchesDesc', 'Try adjusting your filters')
+                      : t('recurringManager.noRecurringDesc', 'Create recurring transactions to automate your finance tracking')
+                    }
+                  </p>
+                  <Button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('recurringManager.addFirst', 'Add First Template')}
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {filteredTemplates.map((template, index) => (
+                    <motion.div
+                      key={template.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <ModernTemplateCard
+                        template={template}
+                        onEdit={handleEdit}
+                        onToggleStatus={handleToggleStatus}
+                        onDelete={handleDelete}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -689,6 +731,129 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           initialData={editTemplate}
           mode={editTemplate ? 'edit' : 'create'}
         />
+
+        {/* 🗑️ Smart Delete Modal */}
+        <AnimatePresence>
+          {showDeleteModal && templateToDelete && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              onClick={handleDeleteCancel}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl",
+                  "border border-gray-200 dark:border-gray-700 overflow-hidden"
+                )}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {t('recurring.deleteTemplate', 'Delete Template')}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {templateToDelete.name || templateToDelete.description}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeleteCancel}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    {t('recurring.deleteChoose', 'Choose what to delete:')}
+                  </p>
+
+                  <div className="space-y-3">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      onClick={() => handleDeleteConfirm('template_only')}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {t('recurring.deleteTemplateOnly', 'Template only (keep transactions)')}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('recurring.deleteTemplateOnlyDesc', 'Deactivate template but keep all transaction history')}
+                        </div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                      onClick={() => handleDeleteConfirm('future')}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {t('recurring.deleteFuture', 'Template + future transactions')}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('recurring.deleteFutureDesc', 'Remove template and all future scheduled transactions')}
+                        </div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                      onClick={() => handleDeleteConfirm('current_and_future')}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {t('recurring.deleteCurrentAndFuture', 'Template + current month & future')}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('recurring.deleteCurrentAndFutureDesc', 'Remove template and transactions from this month forward')}
+                        </div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto p-4 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+                      onClick={() => handleDeleteConfirm('all')}
+                    >
+                      <div>
+                        <div className="font-medium text-red-600 dark:text-red-400">
+                          {t('recurring.deleteAll', 'Template + all transactions')}
+                        </div>
+                        <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                          {t('recurring.deleteAllDesc', 'Permanently remove template and entire transaction history')}
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-800/50">
+                  <Button
+                    variant="ghost"
+                    onClick={handleDeleteCancel}
+                  >
+                    {t('common.cancel', 'Cancel')}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AnimatePresence>
   );

@@ -26,6 +26,7 @@ import {
 import { useTransactions } from '../hooks/useTransactions';
 import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useCategory } from '../hooks/useCategory';
+import { useRecurringTransactions } from '../hooks/useRecurringTransactions';
 import { 
   Button, Input, Card, LoadingSpinner, Badge, Avatar,
   Tooltip, Switch
@@ -40,7 +41,7 @@ import EditTransactionModal from '../components/features/transactions/modals/Edi
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
-import UnifiedRecurringControlCenter from '../components/features/transactions/recurring/UnifiedRecurringControlCenter';
+import ModernRecurringManagerPanel from '../components/features/transactions/recurring/ModernRecurringManagerPanel';
 import useAutoRegeneration from '../hooks/useAutoRegeneration';
 
 import { cn } from '../utils/helpers';
@@ -130,10 +131,10 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
       variants={cardVariants}
       whileHover="hover"
       className={cn(
-        "relative overflow-hidden rounded-2xl p-6 shadow-xl border-2",
+        "relative overflow-hidden rounded-2xl p-3 sm:p-6 shadow-lg border-2",
         "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
         "border-gray-200 dark:border-gray-700",
-        "hover:shadow-2xl transition-all duration-300"
+        "hover:shadow-xl transition-all duration-300"
       )}
     >
       {/* Gradient Background */}
@@ -147,10 +148,10 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
       
       <div className="relative flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
             {title}
           </p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {typeof value === 'number' ? formatCurrency(value) : value}
           </p>
           {change && (
@@ -169,13 +170,13 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
         </div>
         
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg",
+          "w-8 h-8 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-lg",
           color === 'green' && "bg-gradient-to-br from-green-500 to-emerald-600 text-white",
           color === 'red' && "bg-gradient-to-br from-red-500 to-rose-600 text-white",
           color === 'blue' && "bg-gradient-to-br from-blue-500 to-indigo-600 text-white",
           color === 'purple' && "bg-gradient-to-br from-purple-500 to-violet-600 text-white"
         )}>
-          <Icon className="w-6 h-6" />
+          <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
         </div>
       </div>
     </motion.div>
@@ -315,28 +316,28 @@ const ModernDayHeader = ({ title, date, totalIncome, totalExpenses, count }) => 
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 mb-4 sticky top-0 z-10"
+      className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 mb-2 sm:mb-3 sticky top-0 z-10"
     >
-      <div className="flex items-start sm:items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-          <Calendar className="w-5 h-5" />
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
+          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
         </div>
         
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg">{title}</h3>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <Badge variant="outline" className="bg-white dark:bg-gray-800 whitespace-nowrap">
-              {count} {t('transactions.count', 'transactions')}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm truncate">{title}</h3>
+          <div className="flex items-center gap-1 sm:gap-2 text-xs">
+            <Badge variant="outline" className="bg-white dark:bg-gray-800 text-xs px-1 py-0">
+              {count}
             </Badge>
             
             {totalIncome > 0 && (
-              <span className="text-sm font-medium text-green-600 dark:text-green-400 whitespace-nowrap tabular-nums">
+              <span className="font-medium text-green-600 dark:text-green-400 tabular-nums">
                 +{formatCurrency(totalIncome)}
               </span>
             )}
             
             {totalExpenses > 0 && (
-              <span className="text-sm font-medium text-red-600 dark:text-red-400 whitespace-nowrap tabular-nums">
+              <span className="font-medium text-red-600 dark:text-red-400 tabular-nums">
                 -{formatCurrency(totalExpenses)}
               </span>
             )}
@@ -344,12 +345,12 @@ const ModernDayHeader = ({ title, date, totalIncome, totalExpenses, count }) => 
         </div>
       </div>
       
-      <div className="text-right shrink-0 ml-2">
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+      <div className="text-right shrink-0">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
           {t('transactions.net', 'Net')}
         </div>
         <div className={cn(
-          "font-semibold whitespace-nowrap tabular-nums text-base sm:text-lg",
+          "font-bold whitespace-nowrap tabular-nums text-xs sm:text-sm",
           totalIncome - totalExpenses >= 0 
             ? "text-green-600 dark:text-green-400" 
             : "text-red-600 dark:text-red-400"
@@ -571,7 +572,7 @@ const ModernTransactions = () => {
 
   // Custom date range removed - not needed for simplified tab-based filtering
 
-  // ✅ Hooks
+  // ✅ Hooks - Use same logic as all transactions (force activeTab='all' for consistent behavior)
   const {
     transactions: transactionsData,
     loading: transactionsLoading,
@@ -582,7 +583,7 @@ const ModernTransactions = () => {
   } = useTransactions({
     search: searchQuery,
     filters: filters,
-    activeTab: activeTab, // ✅ Pass active tab for smart filtering
+    activeTab: 'all', // ✅ Always use 'all' to get all transactions, then filter client-side
     pageSize: 30
   });
 
@@ -603,31 +604,32 @@ const ModernTransactions = () => {
     triggerRegeneration
   } = useAutoRegeneration();
 
-  // ✅ Processed transactions with tab-specific filtering
+  // ✅ Client-side filtering (same as all transactions tab logic + date filtering)
   const transactions = useMemo(() => {
     if (!transactionsData || !Array.isArray(transactionsData)) return [];
     
     let filtered = [...transactionsData];
     
-
-    
-    // ✅ SIMPLIFIED: Server now handles date filtering by tab
-    
-    // Apply recurring filter (without excessive logging)
+    // Apply recurring filter (same logic as all transactions tab)
     if (filters.recurring === 'recurring') {
       filtered = filtered.filter(t => t.template_id || t.is_recurring);
     } else if (filters.recurring === 'oneTime') {
       filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
     }
     
+    // ✅ NO CLIENT-SIDE FILTERING FOR UPCOMING - Let server handle it
+    // The server already filters for upcoming transactions in the API call
+    // Client-side filtering can cause race conditions and inconsistent results
+    
     console.log('✅ Client filtering applied:', {
       received: transactionsData.length,
       filtered: filtered.length,
-      tab: activeTab
+      tab: activeTab,
+      upcomingDateFilter: activeTab === 'upcoming' ? 'APPLIED' : 'NOT_APPLIED'
     });
     
     return filtered;
-  }, [transactionsData, filters.recurring, activeTab, filters]); // ✅ Dependencies: transactionsData, filters, activeTab
+  }, [transactionsData, filters.recurring, activeTab]);
 
   // ✅ Enhanced summary with recurring insights
   const summary = useMemo(() => {
@@ -671,6 +673,34 @@ const ModernTransactions = () => {
       recurringPercentage: transactions.length > 0 ? (recurringCount / transactions.length) * 100 : 0
     };
   }, [transactions]);
+
+  // ✅ Upcoming transactions summary (use same filtered data as the list)
+  const upcomingSummary = useMemo(() => {
+    // Use same filtered transactions data (if upcoming tab is active, it's already filtered for future dates)
+    const upcomingTransactions = activeTab === 'upcoming' ? transactions : [];
+
+    return {
+      totalCount: upcomingTransactions.length,
+      totalIncome: upcomingTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Math.abs(t.amount), 0),
+      totalExpenses: upcomingTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Math.abs(t.amount), 0),
+      recurringCount: upcomingTransactions.filter(t => t.template_id || t.is_recurring).length
+    };
+  }, [transactions, activeTab]);
+
+  // ✅ Recurring templates summary (using hook)
+  const { recurringTransactions: recurringTemplates } = useRecurringTransactions();
+  const recurringSummary = useMemo(() => {
+    if (!recurringTemplates) return { totalCount: 0, activeCount: 0, totalMonthlyIncome: 0, totalMonthlyExpenses: 0 };
+    
+    const active = recurringTemplates.filter(t => t.is_active);
+    
+    return {
+      totalCount: recurringTemplates.length,
+      activeCount: active.length,
+      totalMonthlyIncome: active.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+      totalMonthlyExpenses: active.filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+    };
+  }, [recurringTemplates]);
 
   // ✅ Event handlers
   const handleTransactionSuccess = useCallback((transaction) => {
@@ -825,14 +855,6 @@ const ModernTransactions = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <Button
-                onClick={handleAddTransaction}
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {t('actions.add', 'Add')}
-              </Button>
             </motion.div>
           </div>
         </div>
@@ -841,46 +863,11 @@ const ModernTransactions = () => {
       {/* ✨ Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* ✨ Enhanced Stats Grid */}
+        {/* ✨ Enhanced Tabs - Moved to top */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          <ModernStatsCard
-            title={t('transactions.stats.totalTransactions', 'Total Transactions')}
-            value={summary.count}
-            icon={Receipt}
-            color="blue"
-          />
-          <ModernStatsCard
-            title={t('transactions.stats.totalIncome', 'Total Income')}
-            value={summary.totalIncome}
-            icon={TrendingUp}
-            color="green"
-            trend="up"
-          />
-          <ModernStatsCard
-            title={t('transactions.stats.totalExpenses', 'Total Expenses')}
-            value={summary.totalExpenses}
-            icon={TrendingDown}
-            color="red"
-            trend="down"
-          />
-          <ModernStatsCard
-            title={t('transactions.stats.recurringTransactions', 'Recurring')}
-            value={`${summary.recurringCount} (${Math.round(summary.recurringPercentage)}%)`}
-            icon={Repeat}
-            color="purple"
-          />
-        </motion.div>
-
-        {/* ✨ Enhanced Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
           className="mb-8"
         >
           <div className="w-full">
@@ -922,6 +909,103 @@ const ModernTransactions = () => {
                 {t('transactions.tabs.recurring', 'Recurring')}
               </button>
             </div>
+
+        {/* ✨ Dynamic Stats Grid - Changes based on active tab */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-8 mt-6"
+        >
+          {activeTab === 'all' && (
+            <>
+              <ModernStatsCard
+                title={t('transactions.stats.totalTransactions', 'Total Transactions')}
+                value={summary.count}
+                icon={Receipt}
+                color="blue"
+              />
+              <ModernStatsCard
+                title={t('transactions.stats.totalIncome', 'Total Income')}
+                value={summary.totalIncome}
+                icon={TrendingUp}
+                color="green"
+                trend="up"
+              />
+              <ModernStatsCard
+                title={t('transactions.stats.totalExpenses', 'Total Expenses')}
+                value={summary.totalExpenses}
+                icon={TrendingDown}
+                color="red"
+                trend="down"
+              />
+              <ModernStatsCard
+                title={t('transactions.stats.recurringTransactions', 'Recurring')}
+                value={`${summary.recurringCount} (${Math.round(summary.recurringPercentage)}%)`}
+                icon={Repeat}
+                color="purple"
+              />
+            </>
+          )}
+          
+          {activeTab === 'upcoming' && (
+            <>
+              <ModernStatsCard
+                title={t('transactions.upcoming.totalTransactions', 'Total Upcoming')}
+                value={upcomingSummary.totalCount}
+                icon={Clock}
+                color="blue"
+              />
+              <ModernStatsCard
+                title={t('transactions.upcoming.expectedIncome', 'Expected Income')}
+                value={upcomingSummary.totalIncome}
+                icon={TrendingUp}
+                color="green"
+              />
+              <ModernStatsCard
+                title={t('transactions.upcoming.expectedExpenses', 'Expected Expenses')}
+                value={upcomingSummary.totalExpenses}
+                icon={TrendingDown}
+                color="red"
+              />
+              <ModernStatsCard
+                title={t('transactions.upcoming.recurringTemplates', 'From Templates')}
+                value={upcomingSummary.recurringCount}
+                icon={Repeat}
+                color="purple"
+              />
+            </>
+          )}
+          
+          {activeTab === 'recurring' && (
+            <>
+              <ModernStatsCard
+                title={t('transactions.recurring.totalTemplates', 'Total Templates')}
+                value={recurringSummary.totalCount}
+                icon={Target}
+                color="blue"
+              />
+              <ModernStatsCard
+                title={t('transactions.recurring.activeTemplates', 'Active Templates')}
+                value={recurringSummary.activeCount}
+                icon={CheckCircle}
+                color="green"
+              />
+              <ModernStatsCard
+                title={t('transactions.recurring.monthlyIncome', 'Monthly Income')}
+                value={recurringSummary.totalMonthlyIncome}
+                icon={TrendingUp}
+                color="green"
+              />
+              <ModernStatsCard
+                title={t('transactions.recurring.monthlyExpenses', 'Monthly Expenses')}
+                value={recurringSummary.totalMonthlyExpenses}
+                icon={TrendingDown}
+                color="red"
+              />
+            </>
+          )}
+        </motion.div>
 
             {/* ✨ All Transactions Content */}
             {activeTab === 'all' && (
@@ -1133,6 +1217,14 @@ const ModernTransactions = () => {
               <div className="mt-8">
                 <ModernUpcomingTransactions 
                   onOpenRecurringManager={() => setShowRecurringManager(true)}
+                  transactions={transactions || []}
+                  loading={transactionsLoading}
+                  // Add debug info to help troubleshoot
+                  debugInfo={{
+                    rawTransactionCount: transactionsData?.length || 0,
+                    filteredTransactionCount: transactions?.length || 0,
+                    activeTab
+                  }}
                 />
               </div>
             )}
@@ -1201,8 +1293,8 @@ const ModernTransactions = () => {
         />
       )}
 
-      {/* 🎛️ Unified Recurring Control Center - NO TABS! */}
-      <UnifiedRecurringControlCenter 
+      {/* 🎛️ Modern Recurring Manager Panel */}
+      <ModernRecurringManagerPanel 
         isOpen={showRecurringManager} 
         onClose={() => setShowRecurringManager(false)} 
       />

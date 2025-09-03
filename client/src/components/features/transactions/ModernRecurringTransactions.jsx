@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Settings, Plus, Edit, Trash2, Copy, Play, Pause, 
+  Settings, Plus, Edit, Trash2, Copy, Play, Pause, X,
   DollarSign, Repeat, Calendar, Clock, Target,
   AlertCircle, CheckCircle, TrendingUp, TrendingDown,
   Sparkles, Eye, BarChart3, Users
@@ -60,7 +60,7 @@ const cardVariants = {
 };
 
 // ✨ Modern Stats Card for Summary
-const RecurringSummaryCard = ({ title, value, icon: Icon, color = 'blue', trend }) => {
+const RecurringSummaryCard = ({ title, value, icon: Icon, color = 'blue', trend, isCurrency = true }) => {
   const { formatCurrency } = useCurrency();
   
   return (
@@ -88,7 +88,7 @@ const RecurringSummaryCard = ({ title, value, icon: Icon, color = 'blue', trend 
             {title}
           </p>
           <p className="text-lg font-bold text-gray-900 dark:text-white">
-            {typeof value === 'number' ? formatCurrency(value) : value}
+            {typeof value === 'number' && isCurrency ? formatCurrency(value) : value}
           </p>
         </div>
         
@@ -109,7 +109,8 @@ const RecurringSummaryCard = ({ title, value, icon: Icon, color = 'blue', trend 
 const RecurringTemplateCard = ({ 
   template, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onToggleStatus
 }) => {
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
@@ -204,22 +205,46 @@ const RecurringTemplateCard = ({
         </p>
       )}
 
-      {/* Actions */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <RecurringTransactionActions
-          template={template}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onSuccess={(action) => {
-            console.log('Template action completed:', action);
-            // Refetch data or handle success
-            if (action === 'template_deleted' || action === 'template_toggled') {
-              // Parent will handle data updates through hooks
-            }
-          }}
-          variant="inline"
-          showLabels={true}
-        />
+      {/* Actions - Mobile Optimized */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 overflow-hidden">
+        <div className="flex flex-wrap gap-2 sm:gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(template)}
+            className="flex-1 min-w-0 text-blue-600 hover:text-blue-700 text-xs sm:text-sm"
+          >
+            <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            <span className="truncate">Edit</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(template)}
+            className="flex-1 min-w-0 text-red-600 hover:text-red-700 text-xs sm:text-sm"
+          >
+            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            <span className="truncate">Delete</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const duplicateTemplate = {
+                ...template,
+                id: null,
+                name: `${template.name} (Copy)`
+              };
+              onEdit(duplicateTemplate);
+            }}
+            className="flex-1 min-w-0 text-purple-600 hover:text-purple-700 text-xs sm:text-sm"
+          >
+            <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            <span className="truncate">Copy</span>
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
@@ -232,6 +257,8 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
   const { isDark } = useTheme();
   
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
   
   // ✅ Get recurring transactions data
   const {
@@ -259,10 +286,10 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
       totalCount: templates.length,
       activeCount: active.length,
       pausedCount: paused.length,
-      totalMonthlyIncome: active.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
-      totalMonthlyExpenses: active.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
+      totalMonthlyIncome: active.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+      totalMonthlyExpenses: active.filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     };
-    summaryData.netMonthly = summaryData.totalMonthlyIncome - summaryData.totalMonthlyExpenses;
+    summaryData.netMonthly = (summaryData.totalMonthlyIncome || 0) - (summaryData.totalMonthlyExpenses || 0);
     
     return {
       activeTemplates: active,
@@ -288,26 +315,39 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
     onOpenRecurringManager(template);
   }, [onOpenRecurringManager]);
 
-  const handleDelete = useCallback(async (template) => {
-    if (!confirm(t('recurringManager.confirmDelete', { name: template.name }))) return;
+  const handleDelete = useCallback((template) => {
+    setTemplateToDelete(template);
+    setShowDeleteModal(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async (scope) => {
+    if (!templateToDelete) return;
     
     try {
-      await deleteTemplate(template.id);
+      await deleteTemplate(templateToDelete.id, { scope });
       refetch();
     } catch (error) {
       console.error('Failed to delete template:', error);
+    } finally {
+      setShowDeleteModal(false);
+      setTemplateToDelete(null);
     }
-  }, [deleteTemplate, refetch, t]);
+  }, [templateToDelete, deleteTemplate, refetch]);
 
-  const handleDuplicate = useCallback((template) => {
-    // Open manager with template data as starting point
-    const duplicateTemplate = {
-      ...template,
-      id: null,
-      name: `${template.name} (Copy)`
-    };
-    onOpenRecurringManager(duplicateTemplate);
-  }, [onOpenRecurringManager]);
+  const handleDeleteCancel = useCallback(() => {
+    setShowDeleteModal(false);
+    setTemplateToDelete(null);
+  }, []);
+
+  // ✅ REMOVED: Duplication feature as requested by user
+  // const handleDuplicate = useCallback((template) => {
+  //   const duplicateTemplate = {
+  //     ...template,
+  //     id: null,
+  //     name: `${template.name} (Copy)`
+  //   };
+  //   onOpenRecurringManager(duplicateTemplate);
+  // }, [onOpenRecurringManager]);
 
   if (isLoading) {
     return (
@@ -371,36 +411,44 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
       className="space-y-6"
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* ✨ Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <RecurringSummaryCard
-          title={t('recurringManager.total', 'Total Templates')}
-          value={summary.totalCount}
-          icon={Target}
-          color="blue"
-        />
-        <RecurringSummaryCard
-          title={t('recurringManager.totalAmount', 'Monthly Income')}
-          value={summary.totalMonthlyIncome}
-          icon={TrendingUp}
-          color="green"
-        />
-        <RecurringSummaryCard
-          title="Monthly Expenses"
-          value={summary.totalMonthlyExpenses}
-          icon={TrendingDown}
-          color="purple"
-        />
-      </div>
+
 
       {/* ✨ Recurring Templates List */}
       <Card className="overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
+        {/* Header - Mobile Optimized Layout */}
+        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+          {/* Mobile: Stacked Layout */}
+          <div className="block sm:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                  <Repeat className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Recurring Transactions
+                  </h2>
+                </div>
+              </div>
+              <Button
+                onClick={onOpenRecurringManager}
+                size="sm"
+                className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white"
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                Manage
+              </Button>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 ml-13">
+              {summary.totalCount} templates • {summary.activeCount} active
+            </p>
+          </div>
+
+          {/* Desktop: Original Layout */}
+          <div className="hidden sm:flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                <Repeat className="w-6 h-6" />
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <Repeat className="w-7 h-7" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -417,18 +465,8 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
                 onClick={onOpenRecurringManager}
                 className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                {t('recurringManager.addNew', 'Add New')}
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenRecurringManager}
-                className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300"
-              >
                 <Settings className="w-4 h-4 mr-2" />
-                {t('upcoming.manage', 'Manage')}
+                {t('recurringManager.title', 'Manage Templates')}
               </Button>
             </div>
           </div>
@@ -453,6 +491,7 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
                     template={template}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onToggleStatus={handleToggleStatus}
                   />
                 ))}
               </div>
@@ -476,6 +515,7 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
                     template={template}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onToggleStatus={handleToggleStatus}
                   />
                 ))}
               </div>
@@ -490,24 +530,135 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
               {summary.activeCount} active • {summary.pausedCount} paused
             </span>
             
-            <div className="flex items-center gap-4">
-              <span className="text-green-600 dark:text-green-400 font-medium">
-                Monthly Net: {formatCurrency(summary.netMonthly)}
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenRecurringManager}
-                className="text-purple-600 hover:text-purple-700"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                {t('upcoming.manageRecurring', 'Advanced Manager')}
-              </Button>
-            </div>
+            <span className="text-green-600 dark:text-green-400 font-medium">
+              Monthly Net: {formatCurrency(summary.netMonthly || 0)}
+            </span>
           </div>
         </div>
       </Card>
+
+      {/* 🗑️ Smart Delete Modal */}
+      <AnimatePresence>
+        {showDeleteModal && templateToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={handleDeleteCancel}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl",
+                "border border-gray-200 dark:border-gray-700 overflow-hidden"
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {t('recurring.deleteTemplate', 'Delete Template')}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {templateToDelete.name || templateToDelete.description}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteCancel}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  {t('recurring.deleteChoose', 'Choose what to delete:')}
+                </p>
+
+                <div className="space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    onClick={() => handleDeleteConfirm('template_only')}
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {t('recurring.deleteTemplateOnly', 'Template only (keep transactions)')}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('recurring.deleteTemplateOnlyDesc', 'Deactivate template but keep all transaction history')}
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-4 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                    onClick={() => handleDeleteConfirm('future')}
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {t('recurring.deleteFuture', 'Template + future transactions')}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('recurring.deleteFutureDesc', 'Remove template and all future scheduled transactions')}
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-4 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                    onClick={() => handleDeleteConfirm('current_and_future')}
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {t('recurring.deleteCurrentAndFuture', 'Template + current month & future')}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('recurring.deleteCurrentAndFutureDesc', 'Remove template and transactions from this month forward')}
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto p-4 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+                    onClick={() => handleDeleteConfirm('all')}
+                  >
+                    <div>
+                      <div className="font-medium text-red-600 dark:text-red-400">
+                        {t('recurring.deleteAll', 'Template + all transactions')}
+                      </div>
+                      <div className="text-xs text-red-500 dark:text-red-400 mt-1">
+                        {t('recurring.deleteAllDesc', 'Permanently remove template and entire transaction history')}
+                      </div>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-800/50">
+                <Button
+                  variant="ghost"
+                  onClick={handleDeleteCancel}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

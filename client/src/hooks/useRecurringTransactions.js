@@ -115,10 +115,10 @@ export const useRecurringTransactions = (options = {}) => {
     }
   });
 
-  // ✅ Delete recurring transaction mutation
+  // ✅ Delete recurring transaction mutation - ENHANCED WITH SMART DELETE
   const deleteRecurringMutation = useMutation({
-    mutationFn: async (id) => {
-      const response = await api.transactions.deleteRecurringTemplate(id);
+    mutationFn: async ({ id, options = {} }) => {
+      const response = await api.transactions.deleteRecurringTemplate(id, options);
       return response.data;
     },
     onSuccess: () => {
@@ -148,8 +148,8 @@ export const useRecurringTransactions = (options = {}) => {
     return updateRecurringMutation.mutateAsync({ id, updates });
   }, [updateRecurringMutation]);
 
-  const deleteRecurring = useCallback(async (id) => {
-    return deleteRecurringMutation.mutateAsync(id);
+  const deleteRecurring = useCallback(async (id, options = {}) => {
+    return deleteRecurringMutation.mutateAsync({ id, options });
   }, [deleteRecurringMutation]);
 
   const refreshRecurring = useCallback(() => {

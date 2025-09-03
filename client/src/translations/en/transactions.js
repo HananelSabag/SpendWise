@@ -235,6 +235,9 @@ export default {
     description: "Manage your recurring transactions and templates",
     manage: "Manage Recurring",
     tooltip: "Recurring Transaction",
+    created: "Created",
+    nextRun: "Next Run",
+    never: "Never",
     create: {
       title: "Create Recurring Transaction",
       subtitle: "Set up automatic transactions"
@@ -326,7 +329,13 @@ export default {
     
     // Count
     occurrencesCount: "{{count}} occurrence",
-    occurrencesCount_plural: "{{count}} occurrences"
+    occurrencesCount_plural: "{{count}} occurrences",
+    
+    // Summary stats for recurring tab
+    totalTemplates: "Total Templates",
+    activeTemplates: "Active Templates", 
+    monthlyIncome: "Monthly Income",
+    monthlyExpenses: "Monthly Expenses"
   },
 
   // Short keys used by RecurringTransactionsManager
@@ -631,6 +640,7 @@ export default {
     totalTransactions: 'Total Upcoming',
     expectedIncome: 'Expected Income',
     expectedExpenses: 'Expected Expenses',
+    recurringTemplates: 'From Templates',
     tomorrow: 'Tomorrow',
     thisWeek: 'This Week',
     later: 'Later'
@@ -657,6 +667,16 @@ export default {
     confirmDelete: 'Delete "{{name}}"?',
     deleteSuccess: 'Template deleted successfully',
     deleteFailed: 'Failed to delete template',
+    deleteTemplate: 'Delete Template',
+    deleteChoose: 'Choose what to delete:',
+    deleteTemplateOnly: 'Template only (keep transactions)',
+    deleteTemplateOnlyDesc: 'Deactivate template but keep all transaction history',
+    deleteFuture: 'Template + future transactions',
+    deleteFutureDesc: 'Remove template and all future scheduled transactions',
+    deleteCurrentAndFuture: 'Template + current month & future',
+    deleteCurrentAndFutureDesc: 'Remove template and transactions from this month forward',
+    deleteAll: 'Template + all transactions',
+    deleteAllDesc: 'Permanently remove template and entire transaction history',
     statusUpdated: 'Status updated successfully',
     statusUpdateFailed: 'Failed to update status',
     templateSaved: 'Template saved successfully',
@@ -703,6 +723,11 @@ export default {
     all: "All Transactions",
     upcoming: "Upcoming",
     recurring: "Recurring"
+  },
+
+  allTab: {
+    title: "Your Transactions",
+    description: "Showing your transactions with smart filtering. Scroll down to load more past transactions."
   },
 
   advancedFilters: "Advanced Filters",

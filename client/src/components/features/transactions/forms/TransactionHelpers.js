@@ -46,6 +46,8 @@ export const RECURRING_FREQUENCIES = [
 export const getDefaultFormData = (initialData = null, mode = 'create') => {
   const now = new Date();
   
+  const userTimezone = getUserTimezone();
+  
   const defaults = {
     type: TRANSACTION_TYPES.EXPENSE,
     amount: '',
@@ -53,6 +55,7 @@ export const getDefaultFormData = (initialData = null, mode = 'create') => {
     categoryId: '',
     date: now.toISOString().split('T')[0],
     time: now.toTimeString().slice(0, 5),
+    timezone: userTimezone, // ✅ NEW: Include user's timezone by default
     notes: '',
     // ⚠️ DISABLED: tags not supported by current server API 
     // tags: [],
@@ -202,9 +205,21 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     return recurringData;
   }
 
-  // ✅ NEW: Timezone-aware transaction formatting
+  // ✅ ENHANCED: Timezone-aware transaction formatting with explicit time handling
   const userTimezone = getUserTimezone();
-  const transactionDateTime = combineDateTimeWithTimezone(formData.date, formData.time, userTimezone);
+  
+  // ✅ CRITICAL: Use form's exact time if provided, otherwise current time
+  let transactionDateTime;
+  if (formData.transaction_datetime) {
+    // Form already provided exact datetime (e.g., from Quick Actions)
+    transactionDateTime = formData.transaction_datetime;
+  } else if (formData.time && formData.date) {
+    // Combine user's selected date and time with timezone
+    transactionDateTime = combineDateTimeWithTimezone(formData.date, formData.time, userTimezone);
+  } else {
+    // Fallback: use current moment in time
+    transactionDateTime = new Date().toISOString();
+  }
 
   const apiData = {
     type: formData.type,
@@ -212,8 +227,9 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     description: formData.description?.trim() || 'Transaction', // ✅ FIX: Ensure description is never empty
     categoryId: formData.categoryId || null,
     date: formData.date, // Keep for backward compatibility
-    transaction_datetime: transactionDateTime, // ✅ NEW: User's intended datetime with timezone
-    timezone: userTimezone, // ✅ NEW: User's timezone for server reference
+    time: formData.time, // ✅ NEW: User's selected time
+    transaction_datetime: transactionDateTime, // ✅ ENHANCED: User's exact intended datetime with timezone
+    timezone: formData.timezone || userTimezone, // ✅ NEW: User's timezone for server reference
     notes: formData.notes ? formData.notes.trim() : null
     // ⚠️ DISABLED: tags not supported by current server API
     // tags: formData.tags || []

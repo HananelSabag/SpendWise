@@ -93,9 +93,34 @@ const transactionAPI = {
    */
   async getAll(params = {}) {
     try {
+      console.log('🌐 Transactions API Call:', {
+        url: '/transactions',
+        params,
+        fullUrl: `/transactions?${new URLSearchParams(params).toString()}`,
+        timestamp: new Date().toISOString()
+      });
+
       const response = await apiClient.client.get('/transactions', { params });
+      
+      console.log('🌐 Transactions API Response:', {
+        url: '/transactions',
+        params,
+        responseSuccess: response?.data?.success,
+        transactionCount: response?.data?.data?.transactions?.length || 0,
+        firstTransactionDate: response?.data?.data?.transactions?.[0]?.date,
+        lastTransactionDate: response?.data?.data?.transactions?.[response?.data?.data?.transactions?.length - 1]?.date,
+        allDates: response?.data?.data?.transactions?.map(t => t.date).slice(0, 5), // First 5 dates
+        timestamp: new Date().toISOString()
+      });
+
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('🌐 Transactions API Error:', {
+        url: '/transactions',
+        params,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       console.error('TransactionAPI.getAll error:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
@@ -209,12 +234,16 @@ const transactionAPI = {
    * @returns {Promise<Object>} Created expense
    */
   async createQuickExpense(data) {
+    const now = new Date();
     const expenseData = {
       type: 'expense',
       amount: Math.abs(data.amount), // Ensure positive for expense
       description: data.description || 'Quick Expense',
       categoryId: data.categoryId || null, // Use default expense category if none provided
-      date: data.date || new Date().toISOString()
+      date: data.date || now.toISOString().split('T')[0],
+      time: data.time || now.toTimeString().slice(0, 5),
+      timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      transaction_datetime: data.transaction_datetime || now.toISOString()
     };
     
     return this.create('transaction', expenseData);
@@ -226,12 +255,16 @@ const transactionAPI = {
    * @returns {Promise<Object>} Created income
    */
   async createQuickIncome(data) {
+    const now = new Date();
     const incomeData = {
       type: 'income',
       amount: Math.abs(data.amount), // Ensure positive for income
       description: data.description || 'Quick Income',
       categoryId: data.categoryId || null, // Use default income category if none provided
-      date: data.date || new Date().toISOString()
+      date: data.date || now.toISOString().split('T')[0],
+      time: data.time || now.toTimeString().slice(0, 5),
+      timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      transaction_datetime: data.transaction_datetime || now.toISOString()
     };
     
     return this.create('transaction', incomeData);
@@ -295,7 +328,9 @@ const transactionAPI = {
       const endpoint = `/transactions/templates/bulk`;
       console.log('📤 Creating bulk recurring templates:', { endpoint, count: templates.length });
       
-      // Format each template consistently
+      // ✅ TIMEZONE FIX: Format each template consistently with timezone support
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       const formattedTemplates = templates.map(template => ({
         name: template.name,
         description: template.description || template.name,
@@ -305,7 +340,10 @@ const transactionAPI = {
         interval_type: template.interval_type || template.intervalType || 'monthly',
         day_of_month: template.day_of_month || template.dayOfMonth || 1,
         day_of_week: template.day_of_week || template.dayOfWeek || null,
-        is_active: template.is_active !== undefined ? template.is_active : (template.isActive !== undefined ? template.isActive : true)
+        is_active: template.is_active !== undefined ? template.is_active : (template.isActive !== undefined ? template.isActive : true),
+        // ✅ NEW: Add timezone support for onboarding templates
+        timezone: template.timezone || userTimezone,
+        preferred_time: template.preferred_time || '09:00' // Default to 9 AM for onboarding templates
       }));
       
       const response = await apiClient.client.post(endpoint, { templates: formattedTemplates });
@@ -333,13 +371,19 @@ const transactionAPI = {
   },
 
   /**
-   * Delete a recurring template
+   * Delete a recurring template - ENHANCED WITH SMART DELETE OPTIONS
    * @param {string} id - Template ID
+   * @param {Object} options - Delete options with scope
    * @returns {Promise<Object>} Deletion result
    */
-  async deleteRecurringTemplate(id) {
+  async deleteRecurringTemplate(id, options = {}) {
     try {
-      const response = await apiClient.client.delete(`/transactions/templates/${id}`);
+      const params = {};
+      if (options.scope) {
+        params.scope = options.scope;
+      }
+      
+      const response = await apiClient.client.delete(`/transactions/templates/${id}`, { params });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };

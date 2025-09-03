@@ -8,14 +8,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, Settings, ChevronDown, ChevronUp, ArrowRight, 
-  RefreshCw, Eye, EyeOff, Clock, Sparkles, TrendingUp,
-  TrendingDown, Zap, Target, Users, BarChart3, AlertCircle
+  Calendar, Settings, ArrowRight
 } from 'lucide-react';
 
 // ✅ Import stores and hooks
 import { useTranslation, useCurrency, useTheme } from '../../../stores';
-import { useUpcomingTransactions } from '../../../hooks/useUpcomingTransactions';
 import { Button, Card, LoadingSpinner, Badge } from '../../ui';
 import ModernTransactionCard from './ModernTransactionCard';
 import { cn, dateHelpers } from '../../../utils/helpers';
@@ -67,167 +64,143 @@ const headerVariants = {
   }
 };
 
-// ✨ Modern Stats Card for Summary
-const UpcomingSummaryCard = ({ title, value, icon: Icon, color = 'blue', trend }) => {
-  const { formatCurrency } = useCurrency();
-  
-  return (
-    <motion.div
-      variants={cardVariants}
-      whileHover="hover"
-      className={cn(
-        "relative overflow-hidden rounded-2xl p-4 shadow-lg border-2",
-        "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
-        "border-gray-200 dark:border-gray-700",
-        "hover:shadow-xl transition-all duration-300"
-      )}
-    >
-      {/* Gradient Background */}
-      <div className={cn(
-        "absolute inset-0 opacity-5",
-        color === 'green' && "bg-gradient-to-br from-green-400 to-emerald-600",
-        color === 'blue' && "bg-gradient-to-br from-blue-400 to-indigo-600",
-        color === 'purple' && "bg-gradient-to-br from-purple-400 to-violet-600"
-      )} />
-      
-      <div className="relative flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {title}
-          </p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
-            {typeof value === 'number' ? formatCurrency(value) : value}
-          </p>
-        </div>
-        
-        <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg",
-          color === 'green' && "bg-gradient-to-br from-green-500 to-emerald-600 text-white",
-          color === 'blue' && "bg-gradient-to-br from-blue-500 to-indigo-600 text-white",
-          color === 'purple' && "bg-gradient-to-br from-purple-500 to-violet-600 text-white"
-        )}>
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// ✨ Modern Group Header
-const GroupHeader = ({ title, count, totalAmount, isExpanded, onToggle }) => {
+// ✨ Modern Day Header Component (copied from ModernTransactions)
+const ModernDayHeader = ({ title, date, totalIncome, totalExpenses, count }) => {
   const { formatCurrency } = useCurrency();
   const { t } = useTranslation();
   
   return (
     <motion.div
-      variants={headerVariants}
-      className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center justify-between gap-2 p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 mb-2 sm:mb-3 sticky top-0 z-10"
     >
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-          <Calendar className="w-5 h-5" />
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
+          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
         </div>
         
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <div className="flex items-center gap-3 mt-1">
-            <Badge variant="outline" className="bg-white dark:bg-gray-800">
-              {count} {t('transactions.count', 'transactions')}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm truncate">{title}</h3>
+          <div className="flex items-center gap-1 sm:gap-2 text-xs">
+            <Badge variant="outline" className="bg-white dark:bg-gray-800 text-xs px-1 py-0">
+              {count}
             </Badge>
-            {totalAmount !== 0 && (
-              <span className={cn(
-                "text-sm font-medium",
-                totalAmount > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-              )}>
-                {formatCurrency(totalAmount)}
+            
+            {totalIncome > 0 && (
+              <span className="font-medium text-green-600 dark:text-green-400 tabular-nums">
+                +{formatCurrency(totalIncome)}
+              </span>
+            )}
+            
+            {totalExpenses > 0 && (
+              <span className="font-medium text-red-600 dark:text-red-400 tabular-nums">
+                -{formatCurrency(totalExpenses)}
               </span>
             )}
           </div>
         </div>
       </div>
       
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onToggle}
-        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-      >
-        {isExpanded ? (
-          <ChevronUp className="w-5 h-5" />
-        ) : (
-          <ChevronDown className="w-5 h-5" />
-        )}
-      </Button>
+      <div className="text-right shrink-0">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {t('transactions.net', 'Net')}
+        </div>
+        <div className={cn(
+          "font-bold whitespace-nowrap tabular-nums text-xs sm:text-sm",
+          totalIncome - totalExpenses >= 0 
+            ? "text-green-600 dark:text-green-400" 
+            : "text-red-600 dark:text-red-400"
+        )}>
+          {totalIncome - totalExpenses >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpenses)}
+        </div>
+      </div>
     </motion.div>
   );
 };
 
-// 🌟 MAIN MODERN UPCOMING TRANSACTIONS COMPONENT
-const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
+
+// 🌟 MAIN MODERN UPCOMING TRANSACTIONS COMPONENT  
+const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, loading, debugInfo }) => {
   const { t, isRTL } = useTranslation();
   const { formatCurrency } = useCurrency();
   const { isDark } = useTheme();
-  
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState('all');
-  
-  // ✅ Get upcoming transactions
-  const {
-    upcomingTransactions,
-    isLoading,
-    refetch
-  } = useUpcomingTransactions();
 
-  // ✅ Process and group upcoming transactions
-  const { futureTransactions, groupedTransactions, summary } = useMemo(() => {
-    if (!upcomingTransactions) return { futureTransactions: [], groupedTransactions: {}, summary: {} };
+  // ✅ Process transactions (already filtered for upcoming in ModernTransactions)
+  const { futureTransactions, summary, groupedTransactions } = useMemo(() => {
+    console.log('🔮 ModernUpcomingTransactions received:', {
+      transactionsCount: transactions?.length || 0,
+      isArray: Array.isArray(transactions),
+      hasTransactions: !!transactions,
+      debugInfo: debugInfo || 'No debug info'
+    });
     
+    if (!transactions || !Array.isArray(transactions)) {
+      console.log('🔮 ModernUpcomingTransactions: No transactions array detected');
+      return { futureTransactions: [], summary: {}, groupedTransactions: {} };
+    }
+    
+    // ✅ TIMEZONE AWARE: Use proper timezone-aware date filtering
     const now = new Date();
-    const future = upcomingTransactions
-      .filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        return transactionDate > now;
-      })
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(0, 20); // Show next 20 transactions
-
-    // Group by time periods
-    const groups = future.reduce((acc, transaction) => {
-      const date = new Date(transaction.date);
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      
-      let groupKey;
-      if (date.toDateString() === tomorrow.toDateString()) {
-        groupKey = 'tomorrow';
-      } else if (date <= nextWeek) {
-        groupKey = 'thisWeek';
-      } else {
-        groupKey = 'later';
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Get tomorrow in user's timezone (Israel is UTC+3)
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    console.log('🔮 Timezone debug:', {
+      userTimezone,
+      nowLocal: now.toLocaleString('en-US', { timeZone: userTimezone }),
+      nowUTC: now.toISOString(),
+      tomorrowLocal: tomorrow.toLocaleString('en-US', { timeZone: userTimezone }),
+      tomorrowUTC: tomorrow.toISOString()
+    });
+    
+    // ✅ FIXED: Filter for transactions from tomorrow onwards (not today)
+    const actuallyFuture = transactions.filter((transaction, index) => {
+      const dateStr = transaction.date || transaction.transaction_date || transaction.scheduled_date;
+      if (!dateStr) {
+        console.log(`🔮 Transaction ${index + 1}: NO DATE FOUND`, transaction);
+        return false;
       }
       
-      if (!acc[groupKey]) {
-        acc[groupKey] = {
-          title: groupKey === 'tomorrow' 
-            ? t('upcoming.tomorrow', 'Tomorrow')
-            : groupKey === 'thisWeek'
-            ? t('upcoming.thisWeek', 'This Week')
-            : t('upcoming.later', 'Later'),
-          transactions: [],
-          count: 0,
-          totalAmount: 0
-        };
+      const transactionDate = new Date(dateStr);
+      // ✅ CRITICAL FIX: Use tomorrow, not today (upcoming = future, not current)
+      const isFuture = transactionDate >= tomorrow;
+      
+      // Enhanced debugging for first few transactions
+      if (index < 5) {
+        console.log(`🔮 Transaction ${index + 1}:`, {
+          id: transaction.id,
+          description: transaction.description,
+          dateStr,
+          transactionDate: transactionDate.toISOString(),
+          tomorrowStart: tomorrow.toISOString(),
+          isFuture,
+          type: transaction.type,
+          amount: transaction.amount
+        });
       }
       
-      acc[groupKey].transactions.push(transaction);
-      acc[groupKey].count += 1;
-      acc[groupKey].totalAmount += transaction.amount || 0;
-      
-      return acc;
-    }, {});
+      return isFuture;
+    });
+    
+    console.log('🔮 After future filtering:', {
+      originalCount: transactions.length,
+      futureCount: actuallyFuture.length,
+      futureTransactions: actuallyFuture.slice(0, 3).map(t => ({
+        id: t.id,
+        description: t.description,
+        date: t.date || t.transaction_date,
+        type: t.type
+      }))
+    });
+    
+    // ✅ Use the actually future transactions and sort them
+    const future = actuallyFuture
+      .sort((a, b) => new Date(a.date || a.transaction_date) - new Date(b.date || b.transaction_date))
+      .slice(0, 50); // Show next 50 transactions
 
     const summaryData = {
       totalCount: future.length,
@@ -236,14 +209,91 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
       recurringCount: future.filter(t => t.template_id || t.is_recurring).length
     };
     
+    // ✨ Group future transactions by day (copied from ModernTransactionsList)
+    const grouped = future.reduce((groups, transaction, index) => {
+      const date = new Date(transaction.date || transaction.transaction_date);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      let groupKey;
+      let groupTitle;
+      
+      // Enhanced debugging for grouping
+      if (index < 3) {
+        console.log(`🔮 Grouping transaction ${index + 1}:`, {
+          id: transaction.id,
+          description: transaction.description,
+          date: date.toISOString(),
+          dateString: date.toDateString(),
+          tomorrowString: tomorrow.toDateString(),
+          isToday: date.toDateString() === today.toDateString(),
+          isTomorrow: date.toDateString() === tomorrow.toDateString()
+        });
+      }
+      
+      if (date.toDateString() === today.toDateString()) {
+        groupKey = 'today';
+        groupTitle = t('upcoming.today', 'Today');
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        groupKey = 'tomorrow';
+        groupTitle = t('upcoming.tomorrow', 'Tomorrow');
+      } else if (date >= today && date < new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+        groupKey = 'thisWeek';
+        groupTitle = t('upcoming.thisWeek', 'This Week');
+      } else {
+        // Use the date as key for other days
+        groupKey = date.toDateString();
+        groupTitle = date.toLocaleDateString(isRTL ? 'he-IL' : 'en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+          year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+        });
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          title: groupTitle,
+          date: date,
+          transactions: [],
+          totalIncome: 0,
+          totalExpenses: 0,
+          count: 0
+        };
+      }
+      
+      groups[groupKey].transactions.push(transaction);
+      groups[groupKey].count += 1;
+      
+      if (transaction.type === 'income') {
+        groups[groupKey].totalIncome += Math.abs(transaction.amount);
+      } else {
+        groups[groupKey].totalExpenses += Math.abs(transaction.amount);
+      }
+      
+      return groups;
+    }, {});
+    
+    console.log('🔮 Final grouping result:', {
+      futureCount: future.length,
+      groupKeys: Object.keys(grouped),
+      groupedCount: Object.keys(grouped).length,
+      groups: Object.entries(grouped).map(([key, group]) => ({
+        key,
+        title: group.title,
+        count: group.transactions.length
+      }))
+    });
+    
     return {
       futureTransactions: future,
-      groupedTransactions: groups,
-      summary: summaryData
+      summary: summaryData,
+      groupedTransactions: grouped
     };
-  }, [upcomingTransactions, t]);
+  }, [transactions, t, isRTL, debugInfo]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <motion.div
         variants={containerVariants}
@@ -255,7 +305,7 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
           <div className="flex items-center justify-center gap-3">
             <LoadingSpinner size="md" />
             <span className="text-gray-600 dark:text-gray-400">
-              {t('upcoming.loading', 'Loading upcoming transactions...')}
+              Loading upcoming transactions...
             </span>
           </div>
         </Card>
@@ -278,17 +328,22 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
             </div>
             <div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                {t('upcoming.noUpcoming', 'No Upcoming Transactions')}
+                No Upcoming Transactions
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
-                {t('upcoming.noUpcomingDesc', 'No future transactions scheduled. Set up recurring transactions to see them here.')}
+                No transactions scheduled for tomorrow and beyond. Set up recurring transactions or create future-dated transactions to see them here.
               </p>
+              {debugInfo && (
+                <div className="text-xs text-gray-500 mb-4 bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                  Debug: {debugInfo.rawTransactionCount} total → {debugInfo.filteredTransactionCount} filtered
+                </div>
+              )}
               <Button 
                 onClick={onOpenRecurringManager}
                 className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
               >
                 <Settings className="w-4 h-4 mr-2" />
-                {t('upcoming.manageRecurring', 'Manage Recurring')}
+                Manage Recurring
               </Button>
             </div>
           </div>
@@ -305,29 +360,7 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
       className="space-y-6"
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* ✨ Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UpcomingSummaryCard
-          title={t('upcoming.totalTransactions', 'Total Upcoming')}
-          value={summary.totalCount}
-          icon={Clock}
-          color="blue"
-        />
-        <UpcomingSummaryCard
-          title={t('upcoming.expectedIncome', 'Expected Income')}
-          value={summary.totalIncome}
-          icon={TrendingUp}
-          color="green"
-        />
-        <UpcomingSummaryCard
-          title={t('upcoming.expectedExpenses', 'Expected Expenses')}
-          value={summary.totalExpenses}
-          icon={TrendingDown}
-          color="purple"
-        />
-      </div>
-
-      {/* ✨ Upcoming Transactions by Groups */}
+      {/* ✨ Upcoming Transactions List - Same Format as All Transactions */}
       <Card className="overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -338,10 +371,10 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t('upcoming.title', 'Upcoming Transactions')}
+                  Upcoming Transactions
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('upcoming.subtitle', 'Your scheduled transactions')} • {summary.totalCount} {t('transactions.total', 'total')}
+                  Your scheduled transactions • {summary.totalCount} total
                 </p>
               </div>
             </div>
@@ -354,103 +387,92 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager }) => {
                 className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300"
               >
                 <Settings className="w-4 h-4 mr-2" />
-                {t('upcoming.manage', 'Manage')}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              >
-                {isExpanded ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
+                Manage
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="p-6 space-y-6"
-            >
-              {Object.entries(groupedTransactions).map(([groupKey, group]) => (
-                <div key={groupKey} className="space-y-4">
-                  <GroupHeader
+        {/* Content - Grouped by days like All Transactions */}
+        <div className="p-6">
+          <div className="space-y-6">
+            <AnimatePresence mode="popLayout">
+              {Object.entries(groupedTransactions).map(([groupKey, group], groupIndex) => (
+                <motion.div
+                  key={groupKey}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.4, 
+                    delay: groupIndex * 0.1,
+                    layout: { duration: 0.3 }
+                  }}
+                  className="space-y-4"
+                >
+                  {/* Day Header */}
+                  <ModernDayHeader
                     title={group.title}
+                    date={group.date}
+                    totalIncome={group.totalIncome}
+                    totalExpenses={group.totalExpenses}
                     count={group.count}
-                    totalAmount={group.totalAmount}
-                    isExpanded={selectedGroup === groupKey || selectedGroup === 'all'}
-                    onToggle={() => setSelectedGroup(
-                      selectedGroup === groupKey ? 'all' : groupKey
-                    )}
                   />
                   
-                  <AnimatePresence>
-                    {(selectedGroup === groupKey || selectedGroup === 'all') && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-3 pl-4"
-                      >
-                        {group.transactions.map((transaction, index) => (
-                          <motion.div
-                            key={transaction.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                          >
-                            <ModernTransactionCard
-                              transaction={transaction}
-                              viewMode="list"
-                              // Disable actions for upcoming transactions
-                              onEdit={() => {}}
-                              onDelete={() => {}}
-                              onDuplicate={() => {}}
-                            />
-                          </motion.div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                  {/* Transactions for this day */}
+                  <div className="space-y-3 pl-3 sm:pl-4">
+                    <AnimatePresence mode="popLayout">
+                      {group.transactions.map((transaction, index) => (
+                        <motion.div
+                          key={`${transaction.id}-${groupKey}-${index}`}
+                          layout
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ 
+                            duration: 0.3, 
+                            delay: index * 0.05,
+                            layout: { duration: 0.3 }
+                          }}
+                        >
+                          <ModernTransactionCard
+                            transaction={transaction}
+                            viewMode="list"
+                            // Disable actions for upcoming transactions
+                            onEdit={() => {}}
+                            onDelete={() => {}}
+                            onDuplicate={() => {}}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
               ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </AnimatePresence>
+          </div>
+        </div>
 
         {/* Footer */}
-        {isExpanded && (
-          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
-                {t('upcoming.showingNext', { count: futureTransactions.length })}
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenRecurringManager}
-                className="text-purple-600 hover:text-purple-700"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                {t('upcoming.manageRecurring', 'Manage Recurring')}
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
+        <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600 dark:text-gray-400">
+              Showing next {futureTransactions.length} transactions
+            </span>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenRecurringManager}
+              className="text-purple-600 hover:text-purple-700"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Manage Recurring
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
-        )}
+        </div>
       </Card>
     </motion.div>
   );

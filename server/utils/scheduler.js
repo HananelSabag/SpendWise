@@ -33,11 +33,8 @@ class Scheduler {
     }
 
     try {
-      // Daily recurring transaction generation (runs at 6 AM)
+      // ✅ FIXED: Single daily recurring job (runs at 6 AM) - no overlapping jobs
       this.scheduleJob('daily-recurring', '0 6 * * *', this.runRecurringGeneration.bind(this));
-      
-      // Weekly recurring transaction generation (runs Sunday at 7 AM)
-      this.scheduleJob('weekly-recurring', '0 7 * * 0', this.runRecurringGeneration.bind(this));
       
       // Daily token cleanup (runs at 2 AM)
       this.scheduleJob('token-cleanup', '0 2 * * *', this.runTokenCleanup.bind(this));
@@ -45,9 +42,23 @@ class Scheduler {
       // Weekly database maintenance (runs Saturday at 3 AM)
       this.scheduleJob('db-maintenance', '0 3 * * 6', this.runDatabaseMaintenance.bind(this));
       
-      // Startup generation (run once on server start)
-      setTimeout(() => {
-        this.runRecurringGeneration('startup');
+      // ✅ FIXED: Startup generation with better duplicate protection
+      setTimeout(async () => {
+        try {
+          // Only run if no recurring generation has happened in the last 6 hours
+          const lastRun = this.stats.lastRun ? new Date(this.stats.lastRun) : null;
+          const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+          
+          if (!lastRun || lastRun < sixHoursAgo) {
+            await this.runRecurringGeneration('startup');
+          } else {
+            logger.info('⏭️ Skipping startup recurring generation - recent run detected', {
+              lastRun: lastRun.toISOString()
+            });
+          }
+        } catch (error) {
+          logger.error('❌ Startup recurring generation failed', { error: error.message });
+        }
       }, 5000); // 5 second delay to ensure database is ready
 
       this.isInitialized = true;
@@ -120,9 +131,17 @@ class Scheduler {
   }
 
   /**
-   * 🔄 Run recurring transaction generation
+   * 🔄 Run recurring transaction generation with overlap protection
    */
   async runRecurringGeneration(trigger = 'scheduled') {
+    // ✅ PROTECTION: Prevent overlapping executions
+    if (this._recurringRunning) {
+      logger.warn('⚠️ Recurring generation already running, skipping', { trigger });
+      return { generated: 0, processed: 0, skipped: true };
+    }
+    
+    this._recurringRunning = true;
+    
     try {
       logger.info('🔄 Starting optimized recurring transaction generation', { trigger });
       
@@ -143,6 +162,8 @@ class Scheduler {
         timestamp: new Date().toISOString()
       });
       throw error;
+    } finally {
+      this._recurringRunning = false;
     }
   }
 

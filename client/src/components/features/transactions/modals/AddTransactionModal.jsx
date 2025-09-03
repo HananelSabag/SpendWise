@@ -30,6 +30,7 @@ const AddTransactionModal = ({
   onSuccess,
   defaultType = 'expense',
   defaultCategory = '',
+  initialTab = null, // 'one-time' or 'recurring' to open specific tab
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
@@ -106,6 +107,7 @@ const AddTransactionModal = ({
                 <TransactionFormTabs
                   mode="create"
                   initialData={defaultFormData}
+                  initialTab={initialTab}
                   onSubmit={handleSubmit}
                   onCancel={handleClose}
                   isLoading={isSubmitting || isLoading}

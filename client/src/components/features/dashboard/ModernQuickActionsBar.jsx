@@ -64,12 +64,19 @@ const ModernQuickActionsBar = ({ className = '' }) => {
         income: isHebrew ? 55 : 64   // Quick Income - Hebrew: 55, English: 64
       };
 
+      // ✅ FIX: Use proper timezone-aware datetime
+      const now = new Date();
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       const transactionData = {
         type: activeType,
         amount: Math.abs(numericAmount),
         description: `Quick ${activeType}`,
         categoryId: quickCategoryIds[activeType],
-        date: new Date().toLocaleDateString('en-CA'),
+        date: now.toLocaleDateString('en-CA'), // Keep for backward compatibility
+        time: now.toTimeString().slice(0, 5), // HH:MM format
+        timezone: userTimezone,
+        transaction_datetime: now.toISOString(), // Exact moment in ISO format
         notes: '',
         isRecurring: false
       };

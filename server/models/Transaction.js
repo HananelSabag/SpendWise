@@ -48,9 +48,27 @@ class Transaction {
         transactionData.templateId || null
       ];
 
-      // ✅ CRITICAL FIX: Use unified transactions table with type column AND transaction_datetime
+      // ✅ TIMEZONE FIX: Use client's timezone-aware datetime or current time
       const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
-      const transactionDateTime = new Date(transactionDate + 'T12:00:00Z').toISOString(); // Set to noon UTC
+      let transactionDateTime;
+      
+      if (transactionData.transaction_datetime) {
+        // Client provided timezone-aware datetime - use it directly
+        transactionDateTime = new Date(transactionData.transaction_datetime).toISOString();
+      } else if (transactionData.time && transactionData.timezone) {
+        // Combine date + time in user's timezone
+        try {
+          const dateTimeString = `${transactionDate}T${transactionData.time}:00`;
+          const localDateTime = new Date(dateTimeString);
+          transactionDateTime = localDateTime.toISOString();
+        } catch (error) {
+          console.warn('Failed to parse timezone data, using current time:', error);
+          transactionDateTime = new Date().toISOString();
+        }
+      } else {
+        // Fallback: use current time instead of forcing noon UTC
+        transactionDateTime = new Date().toISOString();
+      }
       
       query = `
         INSERT INTO transactions (
@@ -800,9 +818,27 @@ class Transaction {
       const createdTransactions = [];
 
       for (const transactionData of transactionsData) {
-        // ✅ CRITICAL FIX: Use unified transactions table with type column AND transaction_datetime
+        // ✅ TIMEZONE FIX: Use proper datetime for batch creation too
         const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
-        const transactionDateTime = new Date(transactionDate + 'T12:00:00Z').toISOString(); // Set to noon UTC
+        let transactionDateTime;
+        
+        if (transactionData.transaction_datetime) {
+          // Client provided timezone-aware datetime - use it directly
+          transactionDateTime = new Date(transactionData.transaction_datetime).toISOString();
+        } else if (transactionData.time && transactionData.timezone) {
+          // Combine date + time in user's timezone
+          try {
+            const dateTimeString = `${transactionDate}T${transactionData.time}:00`;
+            const localDateTime = new Date(dateTimeString);
+            transactionDateTime = localDateTime.toISOString();
+          } catch (error) {
+            console.warn('Failed to parse timezone data in batch, using current time:', error);
+            transactionDateTime = new Date().toISOString();
+          }
+        } else {
+          // Fallback: use current time for batch operations (recurring usually)
+          transactionDateTime = new Date().toISOString();
+        }
         
         const query = `
           INSERT INTO transactions (
