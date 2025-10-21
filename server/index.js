@@ -30,11 +30,24 @@ const logger = require('./utils/logger');
 console.log('✅ Logger loaded');
 
 console.log('📦 Loading middleware...');
+
+console.log('  ↳ Loading rateLimiter...');
 const { apiLimiter } = require('./middleware/rateLimiter');
+console.log('  ✅ rateLimiter loaded');
+
+console.log('  ↳ Loading requestId...');
 const requestId = require('./middleware/requestId');
+console.log('  ✅ requestId loaded');
+
+console.log('  ↳ Loading auth...');
 const { optionalAuth } = require('./middleware/auth');
+console.log('  ✅ auth loaded');
+
+console.log('  ↳ Loading maintenance...');
 const { maintenanceGate } = require('./middleware/maintenance');
-console.log('✅ Middleware loaded');
+console.log('  ✅ maintenance loaded');
+
+console.log('✅ All middleware loaded');
 
 // ✅ DISABLED: debugLogger causing production crashes
 // const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
