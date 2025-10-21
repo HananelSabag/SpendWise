@@ -6,6 +6,10 @@
  */
 
 import apiClient from './client.js';
+import { createLogger } from '../utils/logger';
+
+// Create logger instance
+const logger = createLogger('TransactionAPI');
 
 /**
  * 📊 Transaction API Module
@@ -27,43 +31,13 @@ const transactionAPI = {
       // ✅ FIX: Ensure proper endpoint structure for server routes
       const endpoint = `/transactions/${type}`;
       
-      // ✅ NEW: Log timezone-aware data for debugging
-      console.log('📤 Creating transaction:', { 
-        endpoint, 
-        type, 
-        data: {
-          ...data,
-          timezone: data.timezone || 'not provided',
-          transaction_datetime: data.transaction_datetime || 'not provided'
-        }
-      });
-      console.log('📤 Full API request details:', {
-        method: 'POST',
-        url: `${apiClient.client.defaults.baseURL}${endpoint}`,
-        headers: apiClient.client.defaults.headers,
-        data: data
-      });
+      logger.debug(`Creating ${type} transaction`, { endpoint });
       
       const response = await apiClient.client.post(endpoint, data);
-      console.log('✅ Transaction created successfully:', {
-        id: response.data.data?.id,
-        transaction_datetime: response.data.data?.transaction_datetime,
-        timezone: data.timezone
-      });
+      logger.success('Transaction created successfully');
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('❌ Transaction creation failed:', error);
-      console.error('❌ API Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          method: error.config?.method,
-          url: error.config?.url,
-          data: error.config?.data
-        }
-      });
+      logger.error('Transaction creation failed:', error.message);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },

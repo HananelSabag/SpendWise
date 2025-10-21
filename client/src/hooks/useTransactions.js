@@ -11,6 +11,7 @@ import { useApiQuery, useApiMutation } from './useApi';
 import { api } from '../api';
 import { useAuth } from './useAuth';
 import { useToast } from './useToast';
+import { createLogger } from '../utils/logger';
 
 // 🧠 AI-Powered Transaction Analytics Engine
 class TransactionAIEngine {
@@ -641,6 +642,7 @@ export const useTransactions = (options = {}) => {
   const { isAuthenticated, user } = useAuth();
   const toastService = useToast();
   const queryClient = useQueryClient();
+  const logger = useRef(createLogger('Transactions')).current;
 
   // ✅ CRITICAL FIX: Increase page size for better user experience
   const {
@@ -737,12 +739,10 @@ export const useTransactions = (options = {}) => {
         // Clean up old frontend-only filters
         delete apiFilters.dateRange;
         
-        console.log('🔍 API Request Debug:', {
-          originalFilters: filters,
-          cleanedFilters: apiFilters,
+        logger.debug('API Request:', {
+          filters: apiFilters,
           page: pageParam + 1,
-          limit: pageSize,
-          fullApiUrl: `GET /transactions?${new URLSearchParams({...apiFilters, page: pageParam + 1, limit: pageSize}).toString()}`
+          limit: pageSize
         });
 
         const response = await api.transactions.getAll({
@@ -751,16 +751,10 @@ export const useTransactions = (options = {}) => {
           ...apiFilters
         });
 
-        console.log('🔍 RAW API Response:', {
-          pageParam,
-          pageSize,
-          responseSuccess: response.success,
-          responseKeys: Object.keys(response),
-          dataKeys: response.data ? Object.keys(response.data) : null,
-          paginationInfo: response.data?.pagination,
-          transactionCount: response.data?.transactions?.length,
-          apiFiltersUsed: apiFilters,
-          fullResponse: response
+        logger.debug('API Response:', {
+          success: response.success,
+          count: response.data?.transactions?.length,
+          hasMore: response.data?.pagination?.hasMore
         });
 
         // ✅ FIXED: Handle API response structure properly
@@ -777,7 +771,7 @@ export const useTransactions = (options = {}) => {
         }
         
         if (!rawData) {
-          console.warn('⚠️ No data received from transactions API');
+          logger.warn('No data received from transactions API');
           return { transactions: [], hasMore: false, total: 0 };
         }
         
@@ -795,7 +789,7 @@ export const useTransactions = (options = {}) => {
           total = rawData.pagination?.total || rawData.summary?.total || rawData.transactions.length;
           hasMore = rawData.pagination?.hasMore || false;
         } else {
-          console.warn('⚠️ Unexpected data structure from transactions API:', rawData);
+          logger.warn('Unexpected data structure from transactions API');
           transactionsArray = [];
         }
 
@@ -922,14 +916,14 @@ export const useTransactions = (options = {}) => {
 
       // ✅ CRITICAL FIX: Route to correct API based on transaction type
       if (transactionData._isRecurring) {
-        console.log('🔄 Creating recurring template:', transactionData);
+        logger.debug('Creating recurring template');
         // Remove internal marker before sending to API
         const cleanData = { ...transactionData };
         delete cleanData._isRecurring;
         const response = await api.transactions.createRecurringTemplate(cleanData);
         return response.data;
       } else {
-        console.log('💰 Creating regular transaction:', transactionData);
+        logger.debug('Creating regular transaction');
         const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
         return response.data;
       }
@@ -937,12 +931,12 @@ export const useTransactions = (options = {}) => {
     onSuccess: (newTransaction) => {
       // ✅ FIXED: Safety check to ensure we have valid transaction data
       if (!newTransaction) {
-        console.warn('⚠️ Transaction creation succeeded but returned no data');
+        logger.warn('Transaction creation succeeded but returned no data');
         toastService.error('transactions.createFailed');
         return;
       }
 
-      console.log('✅ Transaction created successfully:', newTransaction);
+      logger.success('Transaction created successfully');
 
       // ✅ ENHANCED: Invalidate ALL relevant queries to ensure balance panel updates
       queryClient.invalidateQueries(['transactions']);
@@ -1108,7 +1102,7 @@ export const useTransactions = (options = {}) => {
       const response = await api.users.getProfile();
       return response.data;
     } catch (error) {
-      console.warn('Failed to get user context:', error);
+      logger.warn('Failed to get user context');
       return {};
     }
   }, []);
@@ -1227,16 +1221,13 @@ export const useTransactions = (options = {}) => {
     const flattened = transactionsQuery.data.pages.flatMap(page => {
       // ✅ FIXED: Safe access to page.transactions with fallback
       if (!page || !page.transactions || !Array.isArray(page.transactions)) {
-        console.warn('⚠️ Invalid page structure:', page);
+        logger.warn('Invalid page structure in query result');
         return [];
       }
       return page.transactions;
     }) || [];
     
-    // Only log on significant changes (new pages loaded)
-    if (transactionsQuery.data.pages.length > 1 || flattened.length === 0) {
-      console.log('📊 Transactions loaded:', flattened.length, 'from', transactionsQuery.data.pages.length, 'pages');
-    }
+    logger.debug(`Loaded ${flattened.length} transactions from ${transactionsQuery.data.pages.length} pages`);
     
     return flattened;
   }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage]);

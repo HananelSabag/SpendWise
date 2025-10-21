@@ -345,7 +345,36 @@ export const useToast = () => {
   }, [showToast]);
 
   const loading = useCallback((message, options = {}) => {
-    return showToast(message, 'loading', options);
+    const maxDuration = options.maxDuration || 30000; // 30s max for safety
+    const toastId = showToast(message, 'loading', {
+      ...options,
+      duration: Infinity // Keep for manual dismiss
+    });
+    
+    // ✅ FIX: Auto-dismiss loading toast after timeout to prevent infinite spinners
+    if (!options.skipAutoTimeout) {
+      const timeoutId = setTimeout(() => {
+        toast.dismiss(toastId);
+        // Optionally show timeout message
+        if (options.onTimeout) {
+          options.onTimeout();
+        } else if (options.showTimeoutMessage !== false) {
+          showToast(
+            'Request is taking longer than expected. Please check your connection.',
+            'warning',
+            { duration: 6000 }
+          );
+        }
+      }, maxDuration);
+      
+      // Store timeout ID for potential cleanup
+      if (typeof window !== 'undefined') {
+        if (!window.__toastTimeouts) window.__toastTimeouts = new Map();
+        window.__toastTimeouts.set(toastId, timeoutId);
+      }
+    }
+    
+    return toastId;
   }, [showToast]);
 
   // Promise-based loading toast
@@ -378,10 +407,20 @@ export const useToast = () => {
   // Dismiss functions
   const dismiss = useCallback((toastId) => {
     toast.dismiss(toastId);
+    // ✅ FIX: Clean up timeout when toast is manually dismissed
+    if (typeof window !== 'undefined' && window.__toastTimeouts?.has(toastId)) {
+      clearTimeout(window.__toastTimeouts.get(toastId));
+      window.__toastTimeouts.delete(toastId);
+    }
   }, []);
 
   const dismissAll = useCallback(() => {
     toast.dismiss();
+    // ✅ FIX: Clean up all timeouts when dismissing all toasts
+    if (typeof window !== 'undefined' && window.__toastTimeouts) {
+      window.__toastTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      window.__toastTimeouts.clear();
+    }
   }, []);
 
   return useMemo(() => ({

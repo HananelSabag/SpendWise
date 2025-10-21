@@ -312,15 +312,18 @@ class SpendWiseAPIClient {
     const retryCount = (requestConfig.retryCount || 0) + 1;
     
     if (retryCount > config.RETRY_ATTEMPTS) {
+      // ✅ FIX: Dismiss cold start toast on failure
+      try { toast.dismiss('cold-start'); } catch (_) {}
       throw new Error('Server is taking too long to respond. Please try again in a moment.');
     }
 
-    // Show cold start toast on first retry
+    // Show cold start toast on first retry (with auto-timeout)
     if (retryCount === 1 && !this.serverState.wakingUp) {
       this.serverState.wakingUp = true;
       toast.loading('Waking up server...', { 
         id: 'cold-start',
-        duration: 15000 
+        duration: 15000,
+        maxDuration: 30000 // Auto-dismiss after 30s
       });
     }
 
@@ -451,7 +454,11 @@ class SpendWiseAPIClient {
   // ✅ Manual Cache Management
   clearCache(pattern) {
     this.cache.clear(pattern);
-    try { toast.dismiss('cold-start'); } catch (_) {}
+    // ✅ FIX: Dismiss all loading-related toasts when clearing cache
+    try { 
+      toast.dismiss('cold-start');
+      toast.dismiss('connection-recovering');
+    } catch (_) {}
   }
 
   // ✅ HTTP Methods - Delegate to axios client

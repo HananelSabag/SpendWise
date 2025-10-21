@@ -48,3 +48,6 @@ export { default as useAutoRegeneration } from './useAutoRegeneration';
 
 // Translation hook (re-export from stores for convenience)
 export { useTranslation } from '../stores/translationStore';
+
+// Toast cleanup utility
+export { useToastCleanup, dismissLoadingToasts } from './useToastCleanup';

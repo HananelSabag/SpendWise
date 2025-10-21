@@ -191,6 +191,10 @@ const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { useToastCleanup } = require('./hooks/useToastCleanup');
+  
+  // ✅ Auto-dismiss loading toasts on navigation
+  useToastCleanup();
   
   // Set global navigation for error handling
   useEffect(() => {
