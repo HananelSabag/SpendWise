@@ -53,7 +53,8 @@ try {
 }));
 } catch (error) {
   logger.error('❌ Helmet setup failed:', error.message);
-  process.exit(1);
+  // Don't exit - helmet failure is not critical for startup
+  logger.warn('⚠️ Continuing without full helmet protection');
 }
 
 // Set up compression
@@ -120,7 +121,8 @@ try {
   }));
 } catch (error) {
   logger.error('❌ CORS setup failed:', error.message);
-  process.exit(1);
+  // Don't exit - CORS failure is not critical for startup
+  logger.warn('⚠️ Continuing with default CORS settings');
 }
 
 // Set up body parser
@@ -274,7 +276,8 @@ try {
   }
 } catch (error) {
   logger.error('❌ API routes loading failed:', error.message, { stack: error.stack });
-  process.exit(1);
+  // Don't exit - server can still respond to health checks
+  logger.warn('⚠️ Server starting with limited API functionality');
 }
 
 // Safe onboarding routes with error handling
@@ -442,6 +445,18 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// ✅ DIAGNOSTIC: Log environment status before starting
+logger.info('========================================');
+logger.info('🚀 SPENDWISE SERVER STARTUP DIAGNOSTIC');
+logger.info('========================================');
+logger.info('Node Version:', process.version);
+logger.info('Environment:', process.env.NODE_ENV || 'not set');
+logger.info('Port:', process.env.PORT || '5000 (default)');
+logger.info('DATABASE_URL:', process.env.DATABASE_URL ? '✅ SET' : '❌ MISSING');
+logger.info('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ MISSING');
+logger.info('ALLOWED_ORIGINS:', process.env.ALLOWED_ORIGINS || 'not set (using defaults)');
+logger.info('========================================');
 
 logger.info('STARTING SERVER...');
 startServer();

@@ -13,8 +13,10 @@ dotenv.config();
 // Parse Supabase DATABASE_URL
 const getDatabaseConfig = () => {
   if (!process.env.DATABASE_URL) {
-    logger.error('DATABASE_URL environment variable is required');
-    process.exit(1);
+    // ✅ FIXED: Throw error instead of exit - let index.js handle it
+    const errorMsg = '❌ DATABASE_URL environment variable is required. Check Render environment settings.';
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   const parsed = parse(process.env.DATABASE_URL);
@@ -33,7 +35,26 @@ const getDatabaseConfig = () => {
   };
 };
 
-const baseConfig = getDatabaseConfig();
+// ✅ FIXED: Wrap in try-catch to prevent module load crash
+let baseConfig;
+try {
+  baseConfig = getDatabaseConfig();
+} catch (error) {
+  // Log error but don't crash - let index.js handle missing DATABASE_URL
+  logger.error('⚠️ Database configuration failed:', error.message);
+  logger.error('⚠️ Server will attempt to start but database operations will fail');
+  logger.error('⚠️ Please add DATABASE_URL to Render environment variables');
+  // Create dummy config to prevent crash
+  baseConfig = {
+    user: 'placeholder',
+    password: 'placeholder',
+    host: 'localhost',
+    port: 5432,
+    database: 'placeholder',
+    ssl: false,
+    connectionType: 'error-fallback'
+  };
+}
 
 // 🚀 OPTIMIZED Database configuration for production
 const dbConfig = {
