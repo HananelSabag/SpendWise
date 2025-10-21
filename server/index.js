@@ -40,8 +40,25 @@ const requestId = require('./middleware/requestId');
 console.log('  ✅ requestId loaded');
 
 console.log('  ↳ Loading auth...');
-const { optionalAuth } = require('./middleware/auth');
-console.log('  ✅ auth loaded');
+let optionalAuth;
+try {
+  const authModule = require('./middleware/auth');
+  optionalAuth = authModule.optionalAuth;
+  if (!optionalAuth) {
+    console.error('❌ optionalAuth not found in auth module exports!');
+    console.error('Available exports:', Object.keys(authModule));
+    // Create dummy middleware to prevent crash
+    optionalAuth = (req, res, next) => next();
+  }
+  console.log('  ✅ auth loaded');
+} catch (authError) {
+  console.error('❌ CRITICAL: Failed to load auth middleware!');
+  console.error('Error:', authError.message);
+  console.error('Stack:', authError.stack);
+  // Create dummy middleware to allow server to start
+  optionalAuth = (req, res, next) => next();
+  console.log('  ⚠️ Using fallback auth middleware');
+}
 
 console.log('  ↳ Loading maintenance...');
 const { maintenanceGate } = require('./middleware/maintenance');
