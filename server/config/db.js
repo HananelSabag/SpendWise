@@ -299,11 +299,9 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Initialize optimized connection test
-testConnection().catch(() => {
-  logger.error('Failed to establish OPTIMIZED Supabase database connection');
-  process.exit(1);
-});
+// ✅ FIXED: Don't auto-connect on module load - let index.js handle retries
+// This prevents Render crashes when database is temporarily unavailable
+// Connection will be tested by index.js startServer() with proper retry logic
 
 // 🔗 Get client from pool for transactions
 const getClient = async () => {
