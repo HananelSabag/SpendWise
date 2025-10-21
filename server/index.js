@@ -3,6 +3,14 @@
  * Complete financial management API with Supabase integration
  */
 
+// ✅ EMERGENCY: Log BEFORE anything else to catch early crashes
+console.log('========================================');
+console.log('🚨 SERVER STARTING - EMERGENCY DIAGNOSTICS');
+console.log('========================================');
+console.log('Node Version:', process.version);
+console.log('Working Directory:', process.cwd());
+console.log('========================================');
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -10,22 +18,46 @@ const compression = require('compression');
 const dotenv = require('dotenv');
 
 // Load environment configuration
+console.log('📦 Loading environment variables...');
 dotenv.config();
+console.log('✅ Environment loaded');
+console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('JWT_SECRET present:', !!process.env.JWT_SECRET);
 
 // Load core modules
+console.log('📦 Loading logger...');
 const logger = require('./utils/logger');
+console.log('✅ Logger loaded');
+
+console.log('📦 Loading middleware...');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const requestId = require('./middleware/requestId');
 const { optionalAuth } = require('./middleware/auth');
 const { maintenanceGate } = require('./middleware/maintenance');
+console.log('✅ Middleware loaded');
+
 // ✅ DISABLED: debugLogger causing production crashes
 // const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
-const scheduler = require('./utils/scheduler');
+
+console.log('📦 Loading database config...');
 const db = require('./config/db');
+console.log('✅ Database config loaded');
+
+console.log('📦 Loading scheduler...');
+const scheduler = require('./utils/scheduler');
+console.log('✅ Scheduler loaded');
+
+console.log('📦 Loading keepAlive...');
 const keepAlive = require('./utils/keepAlive');
+console.log('✅ KeepAlive loaded');
 
 // Initialize Express app
+console.log('📦 Creating Express app...');
 const app = express();
+console.log('✅ Express app created');
+console.log('========================================');
+console.log('✅ ALL MODULES LOADED SUCCESSFULLY');
+console.log('========================================');
 
 
 

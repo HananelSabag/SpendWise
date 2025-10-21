@@ -79,8 +79,30 @@ const dbConfig = {
   application_name: `spendwise-${process.env.NODE_ENV || 'development'}-optimized`
 };
 
-// Create optimized connection pool
-const pool = new Pool(dbConfig);
+// Create optimized connection pool - with error handling
+console.log('📊 Creating database connection pool...');
+console.log('Database host:', dbConfig.host);
+console.log('Database port:', dbConfig.port);
+console.log('Database name:', dbConfig.database);
+console.log('Connection type:', dbConfig.connectionType);
+
+let pool;
+try {
+  pool = new Pool(dbConfig);
+  console.log('✅ Database pool created successfully');
+} catch (poolError) {
+  console.error('❌ Failed to create database pool:', poolError.message);
+  console.error('⚠️ Server will continue but database operations will fail');
+  // Create minimal pool to prevent crashes
+  pool = new Pool({
+    host: 'localhost',
+    port: 5432,
+    database: 'fallback',
+    user: 'fallback',
+    password: 'fallback',
+    max: 1
+  });
+}
 
 // 📊 Performance tracking for query optimization
 const queryStats = {
