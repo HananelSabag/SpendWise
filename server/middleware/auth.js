@@ -283,31 +283,60 @@ const auth = async (req, res, next) => {
 /**
  * 🔐 Optional Authentication Middleware
  * Adds user info if token is provided, but doesn't require it
+ * ✅ FIX: Never blocks requests, even with invalid tokens
  */
 const optionalAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
-    if (token) {
-      // Use the main auth middleware logic but don't fail if no token
-      await auth(req, res, (error) => {
-        if (error) {
-          // Log the error but continue without user
-          logger.debug('Optional auth failed, continuing without user', {
-            error: error.message,
-            ip: req.ip
-          });
-        }
-        next();
-      });
-    } else {
-      next();
+    if (!token) {
+      // No token provided - continue without user
+      return next();
     }
+    
+    // Try to verify token, but don't fail if invalid
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.userId;
+      
+      // Check cache first
+      const cacheKey = `user_${userId}`;
+      let user = userCache.get(cacheKey);
+      
+      if (!user) {
+        // Fetch user from database
+        const result = await db.query(
+          `SELECT id, email, name, role, is_active, onboarding_completed, google_id, avatar
+           FROM users 
+           WHERE id = $1 AND is_active = true`,
+          [userId]
+        );
+        
+        if (result.rows.length > 0) {
+          user = result.rows[0];
+          userCache.set(cacheKey, user);
+        }
+      }
+      
+      if (user) {
+        req.user = user;
+      }
+    } catch (tokenError) {
+      // Token invalid/expired - silently continue without user
+      // DO NOT log this as an error since it's expected on public routes
+      logger.debug('Optional auth: token verification failed, continuing without user', {
+        ip: req.ip,
+        path: req.path
+      });
+    }
+    
+    next();
   } catch (error) {
-    // Log error but continue without user
-    logger.debug('Optional auth error, continuing without user', {
+    // Unexpected error - log it but continue without user
+    logger.debug('Optional auth: unexpected error, continuing without user', {
       error: error.message,
-      ip: req.ip
+      ip: req.ip,
+      path: req.path
     });
     next();
   }
