@@ -23,6 +23,7 @@ import { StoreProvider, useAuth, useTranslation } from './stores';
 
 // ✅ Toast Provider
 import { ToastProvider } from './hooks/useToast';
+import { useToastCleanup } from './hooks/useToastCleanup';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 import ConnectionStatusOverlay from './components/common/ConnectionStatusOverlay';
@@ -191,7 +192,6 @@ const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { useToastCleanup } = require('./hooks/useToastCleanup');
   
   // ✅ Auto-dismiss loading toasts on navigation
   useToastCleanup();

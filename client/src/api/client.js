@@ -268,10 +268,13 @@ class SpendWiseAPIClient {
       }
     }
 
+    // ✅ FIX: Don't treat authentication errors as cold start
+    const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+    
     // Detect likely Render cold-start: timeout or 5xx when server not warm (after maintenance routing)
     const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
     const isServerError = !!error?.response && error.response.status >= 500;
-    const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError);
+    const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError) && !isAuthError;
 
     if (isLikelyColdStart) {
       try {

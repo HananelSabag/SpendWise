@@ -324,6 +324,18 @@ const userController = {
         error: error.message,
         duration: `${duration}ms`
       });
+      
+      // ✅ FIX: Return proper 401 for invalid credentials instead of 500
+      if (error.message === 'Invalid credentials') {
+        // Use centralized error code definition
+        throw { ...errorCodes.INVALID_CREDENTIALS };
+      }
+      
+      // Handle other authentication-related errors
+      if (error.code === 'EMAIL_NOT_VERIFIED') {
+        throw error; // Already has correct status
+      }
+      
       throw error;
     }
   }),

@@ -45,7 +45,9 @@ const ConnectionStatusOverlay = () => {
     const checkRetryState = () => {
       if (typeof window !== 'undefined' && window.authRecoveryManager) {
         const health = window.authRecoveryManager.getHealthStatus();
-        setRetryCount(health.consecutiveFailures || 0);
+        // Don't show banner for authentication errors (4xx), only connection issues
+        const failures = health.consecutiveFailures || 0;
+        setRetryCount(health.authFailureCount > 0 ? 0 : failures);
       }
     };
 

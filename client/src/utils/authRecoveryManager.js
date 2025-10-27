@@ -151,8 +151,15 @@ class AuthRecoveryManager {
 
     // HTTP status code errors
     const status = error.response.status;
+    const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
 
-    // Treat 401 as authentication error (token expired/invalid)
+    // ✅ FIX: Don't treat invalid credentials as auth error requiring recovery
+    // Invalid credentials = user mistake, not system failure
+    if (status === 401 && errorCode === 'INVALID_CREDENTIALS') {
+      return 'CLIENT_ERROR'; // User error, not auth recovery needed
+    }
+
+    // Treat 401 as authentication error (token expired/invalid) ONLY if not invalid credentials
     if (status === 401) {
       return 'AUTH_ERROR';
     }
