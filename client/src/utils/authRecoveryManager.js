@@ -71,6 +71,13 @@ class AuthRecoveryManager {
     const now = Date.now();
     const errorType = this.categorizeError(error);
     
+    // ✅ FIX: Don't count client errors (user input mistakes) as system failures
+    if (errorType === 'CLIENT_ERROR') {
+      // This is a user input error (wrong password, etc.), not a system issue
+      // Don't increment failure counters or trigger recovery
+      return errorType;
+    }
+    
     // Update health state
     this.healthState.consecutiveFailures++;
     this.healthState.lastFailureTime = now;
