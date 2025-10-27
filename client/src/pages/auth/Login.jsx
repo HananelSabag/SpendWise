@@ -126,7 +126,17 @@ const Login = () => {
               errorMessage = t('userNotFound');
               break;
             case 'ACCOUNT_BLOCKED':
+            case 'ACCOUNT_LOCKED':
               errorMessage = t('accountBlocked');
+              break;
+            case 'ACCOUNT_DEACTIVATED':
+              errorMessage = t('accountDeactivated') || 'Your account has been deactivated. Please contact support.';
+              break;
+            case 'GOOGLE_ONLY_USER':
+              errorMessage = t('googleOnlyUser') || 'This account uses Google sign-in. Please use the Google login button below.';
+              break;
+            case 'PASSWORD_NOT_SET':
+              errorMessage = t('passwordNotSet') || 'No password set for this account. Please login with Google or reset your password.';
               break;
             case 'ACCESS_DENIED':
               errorMessage = t('accessDenied');
@@ -154,7 +164,9 @@ const Login = () => {
           authToasts.loginFailed({ ...result.error, message: errorMessage });
           setErrors({ 
             general: errorMessage,
-            showSupportContact: ['ACCOUNT_BLOCKED', 'ACCESS_DENIED', 'SERVER_ERROR'].includes(errorCode)
+            code: errorCode,
+            showSupportContact: ['ACCOUNT_BLOCKED', 'ACCOUNT_DEACTIVATED', 'ACCESS_DENIED', 'SERVER_ERROR'].includes(errorCode),
+            highlightGoogleButton: ['GOOGLE_ONLY_USER', 'PASSWORD_NOT_SET'].includes(errorCode)
           });
         }
       }

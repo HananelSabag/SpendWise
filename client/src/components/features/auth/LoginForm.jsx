@@ -248,18 +248,38 @@ const LoginForm = ({
           </div>
         </div>
 
-        {/* Google Login */}
+        {/* Google Login - Highlighted when user should use Google */}
         {window.__SW_GOOGLE_OAUTH_ENABLED__ !== false && (
-          <SimpleGoogleButton
-            onSuccess={onGoogleLogin}
-            onError={(error) => {
-              addNotification({
-                type: 'error',
-                message: error.message || t('googleSignInFailed')
-              });
+          <motion.div
+            animate={errors.highlightGoogleButton ? {
+              scale: [1, 1.02, 1],
+              boxShadow: [
+                '0 0 0 0px rgba(59, 130, 246, 0)',
+                '0 0 0 4px rgba(59, 130, 246, 0.3)',
+                '0 0 0 0px rgba(59, 130, 246, 0)'
+              ]
+            } : {}}
+            transition={{
+              duration: 2,
+              repeat: errors.highlightGoogleButton ? Infinity : 0,
+              ease: "easeInOut"
             }}
-            disabled={isSubmitting}
-          />
+            className={cn(
+              "rounded-lg transition-all",
+              errors.highlightGoogleButton && "ring-2 ring-blue-500 ring-opacity-50"
+            )}
+          >
+            <SimpleGoogleButton
+              onSuccess={onGoogleLogin}
+              onError={(error) => {
+                addNotification({
+                  type: 'error',
+                  message: error.message || t('googleSignInFailed')
+                });
+              }}
+              disabled={isSubmitting}
+            />
+          </motion.div>
         )}
       </form>
     </div>

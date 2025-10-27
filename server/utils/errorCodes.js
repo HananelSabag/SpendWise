@@ -63,6 +63,31 @@ module.exports = {
     message: 'Authentication token expired',
     status: 401
   },
+  GOOGLE_ONLY_USER: {
+    code: 'GOOGLE_ONLY_USER',
+    message: 'This account uses Google sign-in. Please use the Google login button.',
+    status: 400
+  },
+  PASSWORD_NOT_SET: {
+    code: 'PASSWORD_NOT_SET',
+    message: 'Password not set for this account. Please set a password in your profile or login with Google.',
+    status: 400
+  },
+  EMAIL_NOT_VERIFIED: {
+    code: 'EMAIL_NOT_VERIFIED',
+    message: 'Please verify your email before logging in',
+    status: 403
+  },
+  ACCOUNT_LOCKED: {
+    code: 'ACCOUNT_LOCKED',
+    message: 'Account is temporarily locked due to multiple failed login attempts',
+    status: 403
+  },
+  ACCOUNT_DEACTIVATED: {
+    code: 'ACCOUNT_DEACTIVATED',
+    message: 'Account is deactivated. Please contact support.',
+    status: 403
+  },
 
   // --- Rate Limiting ---
   RATE_LIMIT_EXCEEDED: {

@@ -44,12 +44,12 @@ const auth = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (jwtError) {
-      logger.error('🚫 BULK DELETE AUTH: Invalid token', {
+      logger.warn('⚠️ JWT verification failed', {
         ip: req.ip,
         path: req.path,
         method: req.method,
-        tokenLength: token.length,
-        jwtError: jwtError.message
+        error: jwtError.message,
+        tokenLength: token.length
       });
       
       return res.status(401).json({

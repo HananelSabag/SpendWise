@@ -321,19 +321,19 @@ const userController = {
       const duration = Date.now() - start;
       logger.warn('❌ User login failed', {
         email,
-        error: error.message,
+        error: error.message || error.code,
+        errorCode: error.code,
         duration: `${duration}ms`
       });
       
-      // ✅ FIX: Return proper 401 for invalid credentials instead of 500
+      // ✅ Handle all auth-related errors with proper codes
       if (error.message === 'Invalid credentials') {
-        // Use centralized error code definition
         throw { ...errorCodes.INVALID_CREDENTIALS };
       }
       
-      // Handle other authentication-related errors
-      if (error.code === 'EMAIL_NOT_VERIFIED') {
-        throw error; // Already has correct status
+      // Pass through errors that already have proper error codes
+      if (error.code && ['EMAIL_NOT_VERIFIED', 'GOOGLE_ONLY_USER', 'PASSWORD_NOT_SET', 'ACCOUNT_DEACTIVATED', 'ACCOUNT_LOCKED'].includes(error.code)) {
+        throw error;
       }
       
       throw error;

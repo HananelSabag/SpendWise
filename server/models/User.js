@@ -282,7 +282,7 @@ class User {
 
       if (!user.is_active) {
         logger.warn('Authentication failed: Account deactivated', { email, userId: user.id });
-        throw new Error('Account is deactivated');
+        throw { ...errorCodes.ACCOUNT_DEACTIVATED };
       }
 
       // ✅ Check user authentication methods  
@@ -296,11 +296,11 @@ class User {
       if (!password) {
         // No password provided - suggest appropriate login method
         if (isGoogleUser && !hasPassword) {
-          throw new Error('This account uses Google sign-in. Please use the Google login button.');
+          throw { ...errorCodes.GOOGLE_ONLY_USER };
         } else if (!hasPassword) {
-          throw new Error('Password is required for this account.');
+          throw { ...errorCodes.PASSWORD_NOT_SET };
         } else {
-          throw new Error('Password is required.');
+          throw { ...errorCodes.MISSING_REQUIRED, message: 'Password is required' };
         }
       }
       
@@ -308,10 +308,12 @@ class User {
       if (!hasPassword) {
         if (isGoogleUser) {
           // Google user without password - provide helpful guidance
-          throw new Error('This account uses Google sign-in. Please use the Google login button.');
+          logger.info('Password login attempt for Google-only user', { email, userId: user.id });
+          throw { ...errorCodes.GOOGLE_ONLY_USER };
         } else {
           // Regular user without password - account setup issue
-          throw new Error('Password not set for this account. Please reset your password or contact support.');
+          logger.warn('Password login attempt for user without password', { email, userId: user.id });
+          throw { ...errorCodes.PASSWORD_NOT_SET };
         }
       }
       

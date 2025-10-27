@@ -77,6 +77,9 @@ export default {
   serverError: "Our server is currently experiencing issues. Please try again in a few moments.",
   timeoutError: "Connection timed out. Please check your internet connection and try again.",
   networkError: "Unable to connect to our servers. Please check your internet connection.",
+  accountDeactivated: "Your account has been deactivated. Please contact support for assistance.",
+  googleOnlyUser: "This account uses Google sign-in. Please use the 'Continue with Google' button below.",
+  passwordNotSet: "No password is set for this account. Please login with Google or use 'Forgot Password' to set one.",
   
   // Support messages
   contactSupport: "If this problem persists, please contact us at:",
