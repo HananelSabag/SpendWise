@@ -80,30 +80,24 @@ const ModernOnboardingModal = ({
     }
   });
 
-  // ✅ Handle completion
+  /**
+   * Handle onboarding completion
+   * Saves templates and marks onboarding as complete
+   */
   const handleComplete = async () => {
-    console.log('🎯 ModernOnboardingModal - Handling completion');
-    console.log('🎯 ModernOnboardingModal - previewOnly mode:', previewOnly);
-    console.log('🎯 ModernOnboardingModal - Current stepData:', stepData);
-    console.log('🎯 ModernOnboardingModal - Templates data:', stepData?.templates);
-    
     try {
+      // Preview mode: skip template saving
       if (previewOnly) {
-        console.log('⚠️ ModernOnboardingModal - PREVIEW ONLY MODE - Skipping template saving!');
         onComplete?.();
         onClose?.();
         return;
       }
       
-      // Set loading state
+      // Set loading state and complete onboarding
       setIsCompleting(true);
-      console.log('🔄 ModernOnboardingModal - Calling completeOnboarding...');
-      
       const result = await completeOnboarding();
-      console.log('🔄 ModernOnboardingModal - completeOnboarding result:', result);
       
       if (result) {
-        console.log('✅ ModernOnboardingModal - Completion successful');
         
         // ✅ Show success state
         setIsCompleted(true);
