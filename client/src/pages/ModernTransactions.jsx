@@ -543,6 +543,10 @@ const ModernTransactions = () => {
   const { addNotification } = useNotifications();
   const { isDark } = useTheme();
 
+  // ✅ Refs for IntersectionObserver
+  const loadMoreRef = useRef(null);
+  const observerRef = useRef(null);
+
   // ✅ State management
   const [activeTab, setActiveTab] = useState('all'); // all | upcoming | recurring
   const [showAddTransaction, setShowAddTransaction] = useState(false);
@@ -758,6 +762,39 @@ const ModernTransactions = () => {
       return newSet;
     });
   }, []);
+
+  // ✅ FIX: Proper IntersectionObserver setup with cleanup
+  useEffect(() => {
+    // Clean up previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // Only create observer if we have more to load and not currently loading
+    if (!hasMore || transactionsLoading || !loadMoreRef.current) {
+      return;
+    }
+
+    // Create new observer
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !transactionsLoading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    // Observe the element
+    observerRef.current.observe(loadMoreRef.current);
+
+    // Cleanup function
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, transactionsLoading, loadMore]);
 
   return (
     <motion.div
@@ -1157,23 +1194,10 @@ const ModernTransactions = () => {
                     multiSelectMode={multiSelectMode}
                   />
                   
-                  {/* ✅ Infinite Scroll Trigger */}
+                  {/* ✅ Infinite Scroll Trigger - Fixed with proper cleanup */}
                   {hasMore && (
                     <div 
-                      ref={(el) => {
-                        if (el && !transactionsLoading) {
-                          const observer = new IntersectionObserver(
-                            ([entry]) => {
-                              if (entry.isIntersecting) {
-                                loadMore();
-                              }
-                            },
-                            { threshold: 0.1 }
-                          );
-                          observer.observe(el);
-                          return () => observer.disconnect();
-                        }
-                      }}
+                      ref={loadMoreRef}
                       className="mt-6 h-20 flex justify-center items-center"
                     >
                       {transactionsLoading ? (
