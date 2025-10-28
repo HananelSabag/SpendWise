@@ -214,17 +214,10 @@ const Profile = () => {
           appStore.actions.setCurrency(preferencesData.currency_preference);
         }
 
-        // ✅ 4. Refresh user data to sync with database
-        const refreshResult = await useAuthStore.getState().actions.getProfile();
-        if (refreshResult.success) {
-          console.log('✅ Profile preferences updated and applied:', {
-            theme: preferencesData.theme_preference,
-            language: preferencesData.language_preference,
-            currency: preferencesData.currency_preference
-          });
-        }
+        // Refresh user data to sync with database
+        await useAuthStore.getState().actions.getProfile();
 
-        // ✅ 5. Show success notification
+        // Show success notification
         authToasts.preferencesUpdated();
         
       } else {

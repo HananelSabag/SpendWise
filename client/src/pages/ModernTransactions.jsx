@@ -617,16 +617,11 @@ const ModernTransactions = () => {
       filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
     }
     
-    // ✅ NO CLIENT-SIDE FILTERING FOR UPCOMING - Let server handle it
-    // The server already filters for upcoming transactions in the API call
-    // Client-side filtering can cause race conditions and inconsistent results
-    
-    console.log('✅ Client filtering applied:', {
-      received: transactionsData.length,
-      filtered: filtered.length,
-      tab: activeTab,
-      upcomingDateFilter: activeTab === 'upcoming' ? 'APPLIED' : 'NOT_APPLIED'
-    });
+    /**
+     * NO CLIENT-SIDE FILTERING FOR UPCOMING TRANSACTIONS
+     * The server already filters for upcoming transactions in the API call.
+     * Client-side filtering can cause race conditions and inconsistent results.
+     */
     
     return filtered;
   }, [transactionsData, filters.recurring, activeTab]);
@@ -646,22 +641,6 @@ const ModernTransactions = () => {
     
     const recurringCount = recurringTransactions.length;
     const oneTimeCount = transactions.length - recurringCount;
-    
-    // Debug logging to help identify recurring transactions
-    if (transactions.length > 0) {
-      console.log('📊 Transaction Summary Debug:', {
-        totalTransactions: transactions.length,
-        recurringCount,
-        oneTimeCount,
-        sampleTransactions: transactions.slice(0, 3).map(t => ({
-          id: t.id,
-          description: t.description,
-          template_id: t.template_id,
-          is_recurring: t.is_recurring,
-          category_name: t.category_name
-        }))
-      });
-    }
     
     return {
       totalIncome,

@@ -23,23 +23,17 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { t } = useTranslation('onboarding');
   const { refreshAll } = useBalanceRefresh();
 
-  // ✅ SIMPLIFIED: Just complete onboarding without complex setup
+  /**
+   * Complete onboarding process with template setup
+   * Uses bulk API to avoid rate limits when creating multiple templates
+   */
   const completeOnboarding = useCallback(async () => {
     try {
-      console.log('🎯 Starting simplified onboarding completion...');
-
-      // ✅ ENHANCED: Save templates and complete onboarding
+      // Save templates and complete onboarding
       const templates = stepData?.templates?.selectedTemplates || [];
       
-      console.log('🎯 DEBUG: Full stepData received:', stepData);
-      console.log('🎯 DEBUG: stepData.templates:', stepData?.templates);
-      console.log('🎯 DEBUG: Templates to save:', templates);
-      console.log('🎯 DEBUG: Templates length:', templates.length);
-      
-      // ✅ BULK SAVE TEMPLATES - AVOID RATE LIMITS
+      // Bulk save templates to avoid rate limits
       if (templates.length > 0) {
-        console.log('💾 Saving templates to database using BULK method to avoid rate limits...');
-        console.log('💾 Templates to save:', templates.length);
         
         try {
           // Format templates for bulk API
@@ -53,17 +47,12 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
             is_active: true
           }));
 
-          console.log('💾 Formatted templates for bulk creation:', formattedTemplates);
-
           // Use bulk API method directly
           const api = (await import('../api/transactions')).default;
           const result = await api.createBulkRecurringTemplates(formattedTemplates);
           
           if (result.success) {
-            console.log('✅ All templates saved successfully via bulk API!');
-            console.log('✅ Bulk result:', result.data.summary);
-            
-            // ✅ Show success toast with details
+            // Show success toast with details
             const summary = result.data.summary;
             addNotification(
               t('completion.templates_created', { 
@@ -73,9 +62,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
               'success'
             );
           } else {
-            console.warn('⚠️ Some templates failed to save:', result.error);
-            
-            // ⚠️ Show warning toast for partial failure
+            // Show warning toast for partial failure
             addNotification(
               t('completion.templates_partial_failure') || 'Some templates could not be created. Please try again.',
               'warning'
