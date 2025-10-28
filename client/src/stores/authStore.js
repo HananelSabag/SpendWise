@@ -243,15 +243,6 @@ export const useAuthStore = create(
               const result = await authAPI.getProfile();
               
               if (result.success) {
-                // 🔍 DEBUG: Log what auth store receives
-                console.log('🔍 CLIENT: Auth store received user data:', {
-                  hasPassword: result.user?.hasPassword,
-                  has_password: result.user?.has_password,
-                  oauth_provider: result.user?.oauth_provider,
-                  google_id: result.user?.google_id,
-                  userKeys: Object.keys(result.user || {})
-                });
-                
                 // Update user data in store with fresh server data
                 set((state) => {
                   state.user = result.user;

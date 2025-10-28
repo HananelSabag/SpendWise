@@ -81,9 +81,7 @@ const ModernQuickActionsBar = ({ className = '' }) => {
         isRecurring: false
       };
 
-      console.log('🚀 Quick Actions: Creating transaction with data:', transactionData);
       const result = await createTransaction(transactionData);
-      console.log('✅ Quick Actions: Transaction created successfully:', result);
 
       // Success
       addNotification({
@@ -100,13 +98,6 @@ const ModernQuickActionsBar = ({ className = '' }) => {
       setTimeout(() => amountInputRef.current?.focus(), 100);
 
     } catch (error) {
-      console.error('❌ Quick Actions: Transaction creation failed:', error);
-      console.error('❌ Quick Actions: Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response?.data,
-        stack: error.stack
-      });
       addNotification({
         type: 'error',
         message: t('quickActions.failed', 'Failed to add transaction. Please try again.'),

@@ -53,10 +53,8 @@ export const useRecurringTransactions = (options = {}) => {
           return response;
         }
         
-        console.warn('Unexpected recurring transactions response:', response);
         return [];
       } catch (error) {
-        console.error('Failed to fetch recurring transactions:', error);
         throw error;
       }
     },

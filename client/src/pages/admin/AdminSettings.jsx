@@ -96,7 +96,6 @@ const AdminSettings = () => {
         });
       }
     } catch (error) {
-      console.error('Settings load error:', error);
       addNotification({
         type: 'error',
         message: t('admin.settings.loadError', { fallback: 'Failed to load settings' })
@@ -137,7 +136,6 @@ const AdminSettings = () => {
         message: t('admin.settings.saved', { fallback: 'Settings saved successfully' })
       });
     } catch (error) {
-      console.error('Settings save error:', error);
       addNotification({
         type: 'error',
         message: t('admin.settings.saveError', { fallback: 'Failed to save settings' }) + ': ' + error.message

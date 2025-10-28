@@ -39,13 +39,11 @@ const AdminActivity = () => {
         setTotalCount(res.pagination?.total || activityData.length || 0);
         setError(null);
       } else {
-        console.error('Activity log error:', res.error);
         setError(res.error?.message || 'Failed to load activity');
         setActivities([]);
         setTotalCount(0);
       }
     } catch (err) {
-      console.error('Activity log loading error:', err);
       setError('Failed to load activity log');
       setActivities([]);
       setTotalCount(0);

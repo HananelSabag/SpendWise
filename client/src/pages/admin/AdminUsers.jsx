@@ -81,7 +81,6 @@ const AdminUsers = () => {
       setActionLoading(null);
     },
     onError: (error, userId) => {
-      console.error('Block user error:', error);
       addNotification({
         type: 'error',
         message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
@@ -103,7 +102,6 @@ const AdminUsers = () => {
       setActionLoading(null);
     },
     onError: (error, userId) => {
-      console.error('Unblock user error:', error);
       addNotification({
         type: 'error',
         message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
@@ -133,7 +131,6 @@ const AdminUsers = () => {
       });
     },
     onError: (error, variables) => {
-      console.error('Delete user error:', error);
       startTransition(() => {
         setActionLoading(null);
       });
@@ -326,7 +323,6 @@ const AdminUsers = () => {
                   throw new Error(result.error?.message || 'Bulk operation failed');
                 }
               } catch (error) {
-                console.error('Bulk action failed:', error);
                 addNotification({
                   type: 'error',
                   message: t('bulk.actionError', { fallback: 'Bulk action failed' }),
