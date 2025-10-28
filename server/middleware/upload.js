@@ -6,6 +6,7 @@
 
 const multer = require('multer');
 const supabaseStorage = require('../services/supabaseStorage');
+const logger = require('../utils/logger');
 
 // Use memory storage instead of disk storage (for Supabase upload)
 const storage = multer.memoryStorage();
@@ -79,7 +80,7 @@ const deleteOldProfilePicture = async (req, res, next) => {
         }
       }
     } catch (error) {
-      console.error('❌ [SUPABASE STORAGE] Error in deleteOldProfilePicture middleware:', error.message);
+      logger.error('[SUPABASE STORAGE] Error in deleteOldProfilePicture middleware:', error.message);
     }
   }
   next();
@@ -94,10 +95,10 @@ const uploadToSupabase = async (req, res, next) => {
       // Add Supabase result to request for route handler
       req.supabaseUpload = uploadResult;
       
-      console.log('✅ [SUPABASE STORAGE] File uploaded successfully:', uploadResult);
+      logger.info('[SUPABASE STORAGE] File uploaded successfully:', uploadResult.fileName);
       next();
     } catch (error) {
-      console.error('❌ [SUPABASE STORAGE] Upload failed:', error);
+      logger.error('[SUPABASE STORAGE] Upload failed:', error.message);
       return res.status(500).json({
         error: {
           code: 'UPLOAD_FAILED',

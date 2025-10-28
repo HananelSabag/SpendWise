@@ -62,7 +62,7 @@ class Transaction {
           const localDateTime = new Date(dateTimeString);
           transactionDateTime = localDateTime.toISOString();
         } catch (error) {
-          console.warn('Failed to parse timezone data, using current time:', error);
+          logger.warn('Failed to parse timezone data, using current time:', error.message);
           transactionDateTime = new Date().toISOString();
         }
       } else {
@@ -832,7 +832,7 @@ class Transaction {
             const localDateTime = new Date(dateTimeString);
             transactionDateTime = localDateTime.toISOString();
           } catch (error) {
-            console.warn('Failed to parse timezone data in batch, using current time:', error);
+            logger.warn('Failed to parse timezone data in batch, using current time:', error.message);
             transactionDateTime = new Date().toISOString();
           }
         } else {
