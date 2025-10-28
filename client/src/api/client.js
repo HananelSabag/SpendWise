@@ -218,7 +218,45 @@ class SpendWiseAPIClient {
       if (typeof window !== 'undefined' && window.__AUTH_LOGOUT_IN_PROGRESS__) {
         return Promise.reject(error);
       }
-      // Let auth recovery manager handle this, but still do legacy handling
+      
+      // ✅ FIX: Try to refresh token BEFORE logging out
+      // Check if this request was already retried after refresh
+      if (requestConfig && !requestConfig._isRetryAfterRefresh) {
+        try {
+          // Attempt token refresh
+          const refreshToken = localStorage.getItem('refreshToken');
+          if (refreshToken) {
+            // Call refresh endpoint directly (avoid circular dependency)
+            const refreshResponse = await this.client.post('/users/refresh-token', { refreshToken }, {
+              // Skip auth header for refresh endpoint
+              headers: { Authorization: undefined },
+              _skipAuthInterceptor: true
+            });
+            
+            const newToken = refreshResponse?.data?.data?.accessToken || refreshResponse?.data?.accessToken;
+            const newRefreshToken = refreshResponse?.data?.data?.refreshToken || refreshResponse?.data?.refreshToken;
+            
+            if (newToken) {
+              // Update tokens
+              localStorage.setItem('accessToken', newToken);
+              localStorage.setItem('authToken', newToken);
+              if (newRefreshToken) {
+                localStorage.setItem('refreshToken', newRefreshToken);
+              }
+              
+              // Retry the original request with new token
+              requestConfig.headers.Authorization = `Bearer ${newToken}`;
+              requestConfig._isRetryAfterRefresh = true; // Prevent infinite refresh loop
+              
+              return this.client.request(requestConfig);
+            }
+          }
+        } catch (refreshError) {
+          // Refresh failed, proceed to logout
+        }
+      }
+      
+      // If refresh failed or not available, log out
       this.handleAuthError();
       return Promise.reject(error);
     }
@@ -341,14 +379,18 @@ class SpendWiseAPIClient {
 
   // ✅ Handle Authentication Errors
   handleAuthError() {
+    // ✅ FIX: Check if token exists BEFORE removing it
+    const hadToken = !!localStorage.getItem('accessToken');
+    
     // Clear auth data
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
     this.cache.clear();
     
     // User feedback on expiry
     try {
       // Only show session expired if there was a token
-      const hadToken = !!localStorage.getItem('accessToken');
       if (hadToken && window.authToasts?.sessionExpired) {
         window.authToasts.sessionExpired();
       }
