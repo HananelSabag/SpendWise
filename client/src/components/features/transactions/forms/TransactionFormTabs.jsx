@@ -132,7 +132,6 @@ const TransactionFormTabs = ({
 
   // ✅ Handle form field changes
   const handleFieldChange = useCallback((field, value) => {
-    console.log('📝 TransactionFormTabs: Field changed:', { field, value, currentFormData: formData });
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -154,7 +153,6 @@ const TransactionFormTabs = ({
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    console.log('🔒 Form submission triggered ONLY by explicit button click');
     setIsDirty(true);
 
     // Validate form

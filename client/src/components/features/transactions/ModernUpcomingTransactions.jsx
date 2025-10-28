@@ -128,15 +128,7 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, load
 
   // ✅ Process transactions (already filtered for upcoming in ModernTransactions)
   const { futureTransactions, summary, groupedTransactions } = useMemo(() => {
-    console.log('🔮 ModernUpcomingTransactions received:', {
-      transactionsCount: transactions?.length || 0,
-      isArray: Array.isArray(transactions),
-      hasTransactions: !!transactions,
-      debugInfo: debugInfo || 'No debug info'
-    });
-    
     if (!transactions || !Array.isArray(transactions)) {
-      console.log('🔮 ModernUpcomingTransactions: No transactions array detected');
       return { futureTransactions: [], summary: {}, groupedTransactions: {} };
     }
     
@@ -149,19 +141,10 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, load
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
     
-    console.log('🔮 Timezone debug:', {
-      userTimezone,
-      nowLocal: now.toLocaleString('en-US', { timeZone: userTimezone }),
-      nowUTC: now.toISOString(),
-      tomorrowLocal: tomorrow.toLocaleString('en-US', { timeZone: userTimezone }),
-      tomorrowUTC: tomorrow.toISOString()
-    });
-    
     // ✅ FIXED: Filter for transactions from tomorrow onwards (not today)
     const actuallyFuture = transactions.filter((transaction, index) => {
       const dateStr = transaction.date || transaction.transaction_date || transaction.scheduled_date;
       if (!dateStr) {
-        console.log(`🔮 Transaction ${index + 1}: NO DATE FOUND`, transaction);
         return false;
       }
       
@@ -169,32 +152,7 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, load
       // ✅ CRITICAL FIX: Use tomorrow, not today (upcoming = future, not current)
       const isFuture = transactionDate >= tomorrow;
       
-      // Enhanced debugging for first few transactions
-      if (index < 5) {
-        console.log(`🔮 Transaction ${index + 1}:`, {
-          id: transaction.id,
-          description: transaction.description,
-          dateStr,
-          transactionDate: transactionDate.toISOString(),
-          tomorrowStart: tomorrow.toISOString(),
-          isFuture,
-          type: transaction.type,
-          amount: transaction.amount
-        });
-      }
-      
       return isFuture;
-    });
-    
-    console.log('🔮 After future filtering:', {
-      originalCount: transactions.length,
-      futureCount: actuallyFuture.length,
-      futureTransactions: actuallyFuture.slice(0, 3).map(t => ({
-        id: t.id,
-        description: t.description,
-        date: t.date || t.transaction_date,
-        type: t.type
-      }))
     });
     
     // ✅ Use the actually future transactions and sort them
@@ -218,19 +176,6 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, load
       
       let groupKey;
       let groupTitle;
-      
-      // Enhanced debugging for grouping
-      if (index < 3) {
-        console.log(`🔮 Grouping transaction ${index + 1}:`, {
-          id: transaction.id,
-          description: transaction.description,
-          date: date.toISOString(),
-          dateString: date.toDateString(),
-          tomorrowString: tomorrow.toDateString(),
-          isToday: date.toDateString() === today.toDateString(),
-          isTomorrow: date.toDateString() === tomorrow.toDateString()
-        });
-      }
       
       if (date.toDateString() === today.toDateString()) {
         groupKey = 'today';
@@ -274,17 +219,6 @@ const ModernUpcomingTransactions = ({ onOpenRecurringManager, transactions, load
       
       return groups;
     }, {});
-    
-    console.log('🔮 Final grouping result:', {
-      futureCount: future.length,
-      groupKeys: Object.keys(grouped),
-      groupedCount: Object.keys(grouped).length,
-      groups: Object.entries(grouped).map(([key, group]) => ({
-        key,
-        title: group.title,
-        count: group.transactions.length
-      }))
-    });
     
     return {
       futureTransactions: future,
