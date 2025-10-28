@@ -904,15 +904,6 @@ export const useTransactions = (options = {}) => {
   const createTransactionMutation = useMutation({
     mutationFn: async (transactionData) => {
       performanceRef.current.recordMutation();
-      
-      // AI pre-processing
-      if (enableAI && transactionData.description) {
-        // TODO: Add category suggestion logic or remove AI categorization
-        // const categorySuggestion = await api.categories.getAll();
-        // For now, skip AI categorization
-
-        // Skip AI categorization for now
-      }
 
       // ✅ CRITICAL FIX: Route to correct API based on transaction type
       if (transactionData._isRecurring) {

@@ -339,16 +339,6 @@ const ModernRecurringTransactions = ({ onOpenRecurringManager }) => {
     setTemplateToDelete(null);
   }, []);
 
-  // ✅ REMOVED: Duplication feature as requested by user
-  // const handleDuplicate = useCallback((template) => {
-  //   const duplicateTemplate = {
-  //     ...template,
-  //     id: null,
-  //     name: `${template.name} (Copy)`
-  //   };
-  //   onOpenRecurringManager(duplicateTemplate);
-  // }, [onOpenRecurringManager]);
-
   if (isLoading) {
     return (
       <motion.div
