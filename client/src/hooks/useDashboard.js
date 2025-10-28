@@ -71,16 +71,19 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       try {
         const result = await api.transactions.getDashboardData({ date: formattedDate });
         
-        // Removed debug logging to prevent re-renders
-        
         if (result.success) {
           return { data: result.data };
         } else {
+          // ✅ FIX: Throw error instead of silently returning null
           throw new Error(result.error?.message || 'Failed to fetch dashboard data');
         }
       } catch (error) {
-        // Return safe data to avoid query undefined errors; let interceptors handle auth
-        return { data: null };
+        // ✅ FIX: Only catch auth errors silently, let other errors propagate
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return { data: null, authError: true };
+        }
+        // Let React Query handle the error properly
+        throw error;
       }
     },
     ...queryConfigs.dynamic,
@@ -115,20 +118,49 @@ export const useDashboard = (date = null, forceRefresh = null) => {
       if (response.data && response.data.summary) {
         // This is the /transactions/dashboard format
         const { summary, recent_transactions = [] } = response.data;
+        
+        // ✅ FIX: Parse values properly - they might be strings from DB
+        const totalIncome = parseFloat(summary.total_income) || 0;
+        const totalExpenses = parseFloat(summary.total_expenses) || 0;
+        const netBalance = parseFloat(summary.net_balance) || 0;
+        const transactionCount = parseInt(summary.total_transactions || summary.transaction_count || 0);
+        
+        // ✅ FIX: Calculate top category from recent transactions
+        const categoryCount = {};
+        (recent_transactions || []).forEach(tx => {
+          if (tx.type === 'expense' && tx.category_name) {
+            categoryCount[tx.category_name] = (categoryCount[tx.category_name] || 0) + Math.abs(parseFloat(tx.amount) || 0);
+          }
+        });
+        const topCategoryEntry = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0];
+        const topCategory = topCategoryEntry ? {
+          name: topCategoryEntry[0],
+          total: topCategoryEntry[1],
+          percentage: totalExpenses > 0 ? Math.round((topCategoryEntry[1] / totalExpenses) * 100) : 0
+        } : null;
+        
         dashboardData = {
           balance: { 
-            current: summary.net_balance || 0, 
+            current: netBalance, 
             currency: 'ILS' 
           },
           monthlyStats: { 
-            income: summary.total_income || 0, 
-            expenses: summary.total_expenses || 0, 
-            net: summary.net_balance || 0 
+            income: totalIncome, 
+            expenses: totalExpenses, 
+            net: netBalance,
+            transactionCount: transactionCount // ✅ FIX: Properly extract and convert transaction count
           },
-          recentTransactions: recent_transactions,
+          topCategory: topCategory, // ✅ FIX: Add top category calculation
+          recentTransactions: recent_transactions || [],
           chartData: [],
-          summary: summary,
-          isEmpty: (summary.total_transactions || 0) === 0
+          summary: {
+            ...summary,
+            total_income: totalIncome,
+            total_expenses: totalExpenses,
+            net_balance: netBalance,
+            total_transactions: transactionCount
+          },
+          isEmpty: transactionCount === 0
         };
       }
       // Check if this is the analytics format
