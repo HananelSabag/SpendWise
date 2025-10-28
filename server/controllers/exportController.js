@@ -592,44 +592,77 @@ const generatePDFReport = async (exportData, includeAnalytics) => {
         yPos += 30;
       }
       
-      // ✅ ANALYTICS & INSIGHTS SECTION
-      if (includeAnalytics && exportData.analytics) {
+      // ✅ ANALYTICS & INSIGHTS SECTION - ENHANCED LAYOUT
+      if (includeAnalytics && exportData.analytics && exportData.analytics.spendingPatterns) {
         // Check if we need a new page
-        if (yPos > 600) {
+        if (yPos > 550) {
           doc.addPage();
           yPos = 50;
         }
         
-        doc.fontSize(16).fillColor('#374151').text('Financial Insights & Analytics', 50, yPos);
-        yPos += 25;
+        doc.fontSize(18).fillColor('#1e40af').text('Financial Insights & Analytics', 50, yPos);
+        yPos += 35;
         
-        // Analytics card with beautiful design
-        doc.rect(50, yPos, 510, 120).fillAndStroke('#f0f9ff', '#0284c7');
+        const patterns = exportData.analytics.spendingPatterns;
         
-        doc.fontSize(14).fillColor('#0c4a6e');
-        doc.text('KEY INSIGHTS', 70, yPos + 20);
+        // ✅ TWO-COLUMN LAYOUT FOR STATISTICS CARDS
+        // Left Column - Spending Averages
+        doc.rect(50, yPos, 240, 90).fillAndStroke('#f0f9ff', '#3b82f6');
+        doc.fontSize(12).fillColor('#1e40af').text('SPENDING AVERAGES', 70, yPos + 15);
+        doc.fontSize(10).fillColor('#374151');
+        doc.text(`Daily: ${patterns.avgDailySpending?.toFixed(2) || 'N/A'} ${exportData.user.currency_preference}`, 70, yPos + 40);
+        doc.text(`Monthly: ${patterns.avgMonthlySpending?.toFixed(2) || 'N/A'} ${exportData.user.currency_preference}`, 70, yPos + 60);
         
-        doc.fontSize(11).fillColor('#374151');
+        // Right Column - Financial Summary
+        doc.rect(320, yPos, 240, 90).fillAndStroke('#fef3c7', '#f59e0b');
+        doc.fontSize(12).fillColor('#92400e').text('FINANCIAL SUMMARY', 340, yPos + 15);
+        doc.fontSize(10).fillColor('#374151');
+        doc.text(`Total Income: ${patterns.totalIncome?.toFixed(2) || 'N/A'} ${exportData.user.currency_preference}`, 340, yPos + 40);
+        doc.text(`Total Expenses: ${patterns.totalExpenses?.toFixed(2) || 'N/A'} ${exportData.user.currency_preference}`, 340, yPos + 60);
         
-        // Display analytics data without emojis
-        if (exportData.analytics.spendingPatterns) {
-          const patterns = exportData.analytics.spendingPatterns;
-          doc.text(`Average Daily Spending: ${patterns.avgDailySpending?.toFixed(2) || 'N/A'}`, 70, yPos + 45);
-          doc.text(`Average Monthly Spending: ${patterns.avgMonthlySpending?.toFixed(2) || 'N/A'}`, 70, yPos + 65);
-          doc.text(`Spending Trend: ${patterns.trendDirection || 'Stable'}`, 320, yPos + 45);
-          
+        yPos += 110;
+        
+        // ✅ SECOND ROW - Trend and Top Categories
+        // Left Column - Spending Trend
+        const trendColor = patterns.trendDirection === 'increasing' ? '#dc2626' : 
+                          patterns.trendDirection === 'decreasing' ? '#059669' : '#3b82f6';
+        const trendBg = patterns.trendDirection === 'increasing' ? '#fef2f2' : 
+                        patterns.trendDirection === 'decreasing' ? '#ecfdf5' : '#eff6ff';
+        
+        doc.rect(50, yPos, 240, 70).fillAndStroke(trendBg, trendColor);
+        doc.fontSize(12).fillColor(trendColor).text('SPENDING TREND', 70, yPos + 15);
+        doc.fontSize(14).fillColor(trendColor).text(patterns.trendDirection?.toUpperCase() || 'STABLE', 70, yPos + 40);
+        
+        // Right Column - Savings Rate
+        const savingsColor = patterns.savingsRate >= 20 ? '#059669' : 
+                            patterns.savingsRate >= 10 ? '#3b82f6' : '#dc2626';
+        const savingsBg = patterns.savingsRate >= 20 ? '#ecfdf5' : 
+                         patterns.savingsRate >= 10 ? '#eff6ff' : '#fef2f2';
+        
+        doc.rect(320, yPos, 240, 70).fillAndStroke(savingsBg, savingsColor);
+        doc.fontSize(12).fillColor(savingsColor).text('SAVINGS RATE', 340, yPos + 15);
+        doc.fontSize(20).fillColor(savingsColor).text(`${patterns.savingsRate?.toFixed(1) || '0'}%`, 340, yPos + 35);
+        
+        yPos += 90;
+        
+        // ✅ TOP CATEGORIES ROW
+        if (patterns.biggestExpenseCategory || patterns.biggestIncomeCategory) {
+          // Left - Top Expense
           if (patterns.biggestExpenseCategory) {
-            doc.text(`Top Expense Category: ${patterns.biggestExpenseCategory.category_name}`, 320, yPos + 65);
+            doc.rect(50, yPos, 240, 60).fillAndStroke('#fef2f2', '#dc2626');
+            doc.fontSize(11).fillColor('#7f1d1d').text('TOP EXPENSE CATEGORY', 70, yPos + 12);
+            doc.fontSize(13).fillColor('#dc2626').text(patterns.biggestExpenseCategory.category_name || 'N/A', 70, yPos + 32);
           }
           
+          // Right - Top Income
           if (patterns.biggestIncomeCategory) {
-            doc.text(`Top Income Category: ${patterns.biggestIncomeCategory.category_name}`, 320, yPos + 85);
+            doc.rect(320, yPos, 240, 60).fillAndStroke('#ecfdf5', '#059669');
+            doc.fontSize(11).fillColor('#065f46').text('TOP INCOME SOURCE', 340, yPos + 12);
+            doc.fontSize(13).fillColor('#059669').text(patterns.biggestIncomeCategory.category_name || 'N/A', 340, yPos + 32);
           }
-        } else {
-          doc.text('Analytics data not available', 70, yPos + 45);
+          
+          yPos += 80;
         }
-        
-        yPos += 130;
       }
       
       // ✅ FIXED: Skip footer to avoid page indexing issues entirely

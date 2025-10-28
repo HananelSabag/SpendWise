@@ -576,11 +576,51 @@ class User {
 
       const categoryAnalysisResult = await db.query(categoryAnalysisQuery, [userId]);
 
-      // ✅ FIXED: Skip analytics function entirely since it doesn't exist in production
-      const analyticsResult = { rows: [{ analytics: null }] };
-      logger.info('Using analytics fallback since get_user_analytics function does not exist in production', { userId });
-
-      // ✅ Build comprehensive export data (matching controller expectations)
+      // ✅ FIX: Calculate real analytics from transactions instead of hardcoded zeros
+      const transactions = transactionsResult.rows;
+      
+      // Calculate active days
+      const uniqueDays = new Set(transactions.map(t => t.date?.toISOString?.()?.split('T')[0] || ''));
+      const activeDays = uniqueDays.size;
+      
+      // Get first and last transaction dates
+      const sortedDates = transactions.map(t => new Date(t.date || t.created_at)).sort((a, b) => a - b);
+      const firstTransaction = sortedDates[0] || null;
+      const lastTransaction = sortedDates[sortedDates.length - 1] || null;
+      
+      // Calculate spending patterns from actual data
+      const totalExpenses = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      const totalIncome = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // Calculate averages
+      const daysSinceFirst = firstTransaction 
+        ? Math.max(1, Math.ceil((Date.now() - firstTransaction.getTime()) / (1000 * 60 * 60 * 24)))
+        : 1;
+      
+      const avgDailySpending = totalExpenses / daysSinceFirst;
+      const avgMonthlySpending = totalExpenses / Math.max(1, monthlySummaryResult.rows.length);
+      const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+      
+      // Calculate trend (compare last 3 months vs previous 3 months)
+      const recentMonths = monthlySummaryResult.rows.slice(0, 3);
+      const previousMonths = monthlySummaryResult.rows.slice(3, 6);
+      const recentAvg = recentMonths.reduce((sum, m) => sum + parseFloat(m.monthly_expenses || 0), 0) / Math.max(1, recentMonths.length);
+      const previousAvg = previousMonths.reduce((sum, m) => sum + parseFloat(m.monthly_expenses || 0), 0) / Math.max(1, previousMonths.length);
+      
+      let trendDirection = 'stable';
+      if (recentAvg > previousAvg * 1.1) trendDirection = 'increasing';
+      else if (recentAvg < previousAvg * 0.9) trendDirection = 'decreasing';
+      
+      // Get top categories by amount (not just first match!)
+      const expenseCategories = categoryAnalysisResult.rows.filter(c => c.type === 'expense');
+      const incomeCategories = categoryAnalysisResult.rows.filter(c => c.type === 'income');
+      
+      // ✅ Build comprehensive export data with REAL analytics
       const exportData = {
         user: {
           id: user.id,
@@ -590,28 +630,29 @@ class User {
           language_preference: user.language_preference,
           theme_preference: user.theme_preference,
           currency_preference: user.currency_preference,
-          // Enhanced user stats (expected by controller)
-          total_transactions: transactionsResult.rows.length,
-          active_days: analyticsResult.rows[0]?.analytics?.user_profile?.active_days || 0,
-          first_transaction: analyticsResult.rows[0]?.analytics?.user_profile?.first_transaction || null,
-          last_transaction: analyticsResult.rows[0]?.analytics?.user_profile?.last_transaction || null
+          total_transactions: transactions.length,
+          active_days: activeDays,
+          first_transaction: firstTransaction,
+          last_transaction: lastTransaction
         },
-        transactions: transactionsResult.rows,
+        transactions,
         monthly_summary: monthlySummaryResult.rows,
         category_analysis: categoryAnalysisResult.rows,
-        analytics: analyticsResult.rows[0]?.analytics || {
+        analytics: {
           spendingPatterns: {
-            avgDailySpending: 0,
-            avgMonthlySpending: 0,
-            savingsRate: 0,
-            trendDirection: 'stable',
-            biggestExpenseCategory: categoryAnalysisResult.rows.find(c => c.type === 'expense') || null,
-            biggestIncomeCategory: categoryAnalysisResult.rows.find(c => c.type === 'income') || null
+            avgDailySpending: parseFloat(avgDailySpending.toFixed(2)),
+            avgMonthlySpending: parseFloat(avgMonthlySpending.toFixed(2)),
+            totalIncome: parseFloat(totalIncome.toFixed(2)),
+            totalExpenses: parseFloat(totalExpenses.toFixed(2)),
+            savingsRate: parseFloat(savingsRate.toFixed(2)),
+            trendDirection,
+            biggestExpenseCategory: expenseCategories[0] || null,
+            biggestIncomeCategory: incomeCategories[0] || null
           },
           insights: []
         },
         exportDate: new Date().toISOString(),
-        totalTransactions: transactionsResult.rows.length
+        totalTransactions: transactions.length
       };
 
       logger.info('✅ Enhanced export data generated', { 
