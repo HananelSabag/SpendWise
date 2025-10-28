@@ -43,17 +43,20 @@ const TransactionFormTabs = ({
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
 
-  // ✅ Tab state - חד פעמי או חוזר
+  /**
+   * Tab state - Determines if transaction is one-time or recurring
+   * @type {'one-time' | 'recurring'}
+   */
   const [activeTab, setActiveTab] = useState(() => {
-    // ✅ Allow external override of initial tab
+    // Allow external override of initial tab
     if (initialTab === 'recurring' || initialTab === 'one-time') {
       return initialTab;
     }
-    // בעריכה - זהה את הסוג לפי הנתונים הקיימים
+    // In edit mode - detect type from existing data
     if (mode === 'edit' && initialData?.template_id) {
       return 'recurring';
     }
-    return 'one-time'; // ברירת מחדל
+    return 'one-time'; // Default to one-time transaction
   });
 
   // ✅ Centralized form state
@@ -65,7 +68,10 @@ const TransactionFormTabs = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  // ✅ עדכון formData כאשר משנים טאב
+  /**
+   * Update formData when switching tabs
+   * Ensures proper field structure for one-time vs recurring transactions
+   */
   useEffect(() => {
     setFormData(prev => ({
       ...prev,

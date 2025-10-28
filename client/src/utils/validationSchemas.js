@@ -55,9 +55,12 @@ export const userSchemas = {
     path: ["currentPassword"],
   }),
   
-  // ✅ JSONB preferences validation - פתרון מלא לפער
+  /**
+   * JSONB preferences validation schema
+   * Validates user preferences stored in PostgreSQL JSONB column
+   */
   preferences: {
-    // Profile picture validation - רק זה קיים
+    // Profile picture validation
     profilePicture: {
       required: false,
       fileTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
@@ -349,7 +352,11 @@ export const imageValidation = {
     });
   },
   
-  // ✅ פונקציה נוספת לטיפול בתמונות
+  /**
+   * Get image dimensions from file
+   * @param {File} file - Image file to analyze
+   * @returns {Promise<{width: number, height: number}>} Image dimensions
+   */
   getImageDimensions: (file) => {
     return new Promise((resolve, reject) => {
       const img = new Image();

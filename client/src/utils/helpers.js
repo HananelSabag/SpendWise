@@ -223,13 +223,22 @@ export const numbers = {
     return isNaN(parsed) ? 0 : parsed;
   },
   
-  // ✅ הוספת פונקציות חדשות לעיבוד נתוני dashboard
+  /**
+   * Ensures value is a valid number, returns default if not
+   * @param {*} value - Value to validate
+   * @param {number} defaultValue - Fallback value
+   * @returns {number} Valid number or default
+   */
   ensureNumber: (value, defaultValue = 0) => {
     if (value == null || isNaN(value)) return defaultValue;
     return typeof value === 'number' ? value : parseFloat(value) || defaultValue;
   },
   
-  // עיבוד balance data מהשרת
+  /**
+   * Process balance data from server API
+   * @param {Object} rawBalance - Raw balance data from API
+   * @returns {Object} Normalized balance with income, expenses, and balance
+   */
   processBalanceData: (rawBalance) => {
     if (!rawBalance || typeof rawBalance !== 'object') {
       return { income: 0, expenses: 0, balance: 0, total: 0 };
