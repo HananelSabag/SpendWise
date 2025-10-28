@@ -66,9 +66,6 @@ console.log('  ✅ maintenance loaded');
 
 console.log('✅ All middleware loaded');
 
-// ✅ DISABLED: debugLogger causing production crashes
-// const { debugLogger, googleOAuthDebugger } = require('./middleware/debugLogger');
-
 console.log('📦 Loading database config...');
 const db = require('./config/db');
 console.log('✅ Database config loaded');
@@ -215,14 +212,6 @@ app.use(optionalAuth);
 // Global maintenance gate (place before route handlers)
 app.use(maintenanceGate);
 
-// Set up comprehensive debugging
-// 🔍 COMPREHENSIVE DEBUG LOGGING - All environments (production-safe)
-// ✅ DISABLED: debugLogger causing production crashes with Buffer.byteLength on objects
-// app.use(debugLogger);
-
-// ✅ DISABLED: Google OAuth debugging (part of debugLogger module)
-// app.use(googleOAuthDebugger);
-
 // Legacy request logging (keeping for compatibility)
 if (process.env.NODE_ENV !== 'production') {
   logger.info('🔍 Enhanced debugging enabled for development');
@@ -328,14 +317,7 @@ try {
     logger.error('❌ Auth status routes failed:', error.message);
   }
 
-  // 🔍 NEW: Comprehensive debugging and monitoring routes
-  try {
-    logger.debug('Loading debug routes...');
-    app.use(`${API_VERSION}/debug`, require('./routes/debugRoutes'));
-    logger.debug('✅ Debug routes loaded');
-  } catch (error) {
-    logger.error('❌ Debug routes failed:', error.message);
-  }
+  // ✅ REMOVED: Debug routes (debugLogger was causing production crashes and has been removed)
 } catch (error) {
   logger.error('❌ API routes loading failed:', error.message, { stack: error.stack });
   // Don't exit - server can still respond to health checks
