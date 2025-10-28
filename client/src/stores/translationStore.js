@@ -248,7 +248,6 @@ export const useTranslationStore = create(
           // Set language and load core translations
           setLanguage: async (languageCode) => {
             if (!SUPPORTED_LANGUAGES[languageCode]) {
-              console.warn(`Unsupported language: ${languageCode}`);
               return false;
             }
 
@@ -359,8 +358,6 @@ export const useTranslationStore = create(
 
               return moduleData;
             } catch (error) {
-              console.warn(`Failed to load translation module ${moduleKey}:`, error);
-              
               translationCache.setLoaded(moduleKey);
               set((state) => {
                 state.loadingModules = state.loadingModules.filter(key => key !== moduleKey);
@@ -643,7 +640,7 @@ export const useAuthTranslation = () => {
         try {
           await store.actions.loadTranslationModule('auth');
         } catch (error) {
-          console.warn('Failed to preload auth translations:', error);
+          // Silently fail - auth translations will be loaded on demand
         }
       }
     };
@@ -680,31 +677,20 @@ if (typeof window !== 'undefined') {
   }
   
   // ✅ DEBUG: Log translation initialization
-  if (import.meta.env.DEV) {
-    console.log('🌐 Translation store init:', {
-      savedLanguage,
-      browserLanguage: navigator.language,
-      finalLanguage: savedLanguage
-    });
-  }
-  
   const store = useTranslationStore.getState();
   store.actions.setLanguage(savedLanguage);
   
-  // Subscribe to language changes for debugging
-  if (import.meta.env.DEV) {
-    useTranslationStore.subscribe(
-      (state) => state.currentLanguage,
-      (language) => {
-        console.log('🌐 Language changed to:', language);
-        try {
-          // Keep persistent preference for next login via Profile, but also honor session scope
-          localStorage.setItem('spendwise-language', language);
-          sessionStorage.setItem('spendwise-session-language', language);
-        } catch (_) {}
-      }
-    );
-  }
+  // Subscribe to language changes to keep localStorage in sync
+  useTranslationStore.subscribe(
+    (state) => state.currentLanguage,
+    (language) => {
+      try {
+        // Keep persistent preference for next login via Profile, but also honor session scope
+        localStorage.setItem('spendwise-language', language);
+        sessionStorage.setItem('spendwise-session-language', language);
+      } catch (_) {}
+    }
+  );
 }
 
 export default useTranslationStore; 

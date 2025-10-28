@@ -356,9 +356,6 @@ export const useAppStore = create(
               state.exchangeRatesLastError = lastError ? String(lastError.message || lastError) : 'Unknown error';
               state.exchangeRatesBackoffUntil = Date.now() + 5 * 60 * 1000;
             });
-            if (import.meta.env.DEV) {
-              console.warn('updateExchangeRates error:', lastError);
-            }
             return false;
           },
 
@@ -407,14 +404,11 @@ export const useAppStore = create(
                 if (parsed.currency && CURRENCIES[parsed.currency]) {
                   get().actions.setCurrency(parsed.currency);
                 }
-                
-                console.log('✅ Guest preferences loaded from session:', parsed);
               } else {
                 // Set default guest preferences
                 get().actions.setGuestDefaults();
               }
             } catch (error) {
-              console.warn('Failed to load guest preferences, using defaults:', error);
               get().actions.setGuestDefaults();
             }
           },
@@ -426,8 +420,6 @@ export const useAppStore = create(
             
             // Save defaults to session storage
             get().actions.saveGuestPreferences();
-            
-            console.log('✅ Guest default preferences applied');
           },
 
           saveGuestPreferences: () => {
@@ -440,18 +432,16 @@ export const useAppStore = create(
               };
               
               sessionStorage.setItem('spendwise-guest-preferences', JSON.stringify(guestPrefs));
-              console.log('✅ Guest preferences saved to session:', guestPrefs);
             } catch (error) {
-              console.warn('Failed to save guest preferences:', error);
+              // Silently fail - sessionStorage might be unavailable
             }
           },
 
           clearGuestPreferences: () => {
             try {
               sessionStorage.removeItem('spendwise-guest-preferences');
-              console.log('✅ Guest preferences cleared from session');
             } catch (error) {
-              console.warn('Failed to clear guest preferences:', error);
+              // Silently fail - sessionStorage might be unavailable
             }
           },
 
@@ -742,16 +732,6 @@ if (typeof window !== 'undefined') {
   // Apply initial settings
   store.actions.updateResolvedTheme();
   store.actions.applyAccessibilitySettings();
-  
-  // Debug logging
-  if (import.meta.env.VITE_DEBUG_MODE === 'true') {
-    useAppStore.subscribe(
-      (state) => state.currentTheme,
-      (theme) => {
-        console.log('🎨 Theme changed to:', theme);
-      }
-    );
-  }
 }
 
 export default useAppStore; 
