@@ -362,16 +362,20 @@ const generateTokens = (user) => {
     role: user.role || 'user'
   };
 
+  // ✅ FIX: Use environment variables with fallback to defaults
+  const accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || process.env.JWT_EXPIRE_TIME || '15m';
+  const refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || process.env.JWT_REFRESH_EXPIRE_TIME || '7d';
+
   const accessToken = jwt.sign(
     payload,
     process.env.JWT_SECRET,
-    { expiresIn: '15m' } // 15 minutes
+    { expiresIn: accessTokenExpiry }
   );
 
   const refreshToken = jwt.sign(
     payload,
     process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-    { expiresIn: '7d' } // 7 days
+    { expiresIn: refreshTokenExpiry }
   );
 
   return { accessToken, refreshToken };
