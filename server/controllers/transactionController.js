@@ -278,24 +278,94 @@ const transactionController = {
   /**
    * Get user analytics data
    * @route GET /api/v1/analytics/user
+   * ✅ FIXED: Now calls SQL analytics function instead of returning empty arrays
    */
   getUserAnalytics: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const months = parseInt(req.query.months) || 1;
+    const months = parseInt(req.query.months) || 12;
 
     try {
-      const summary = await Transaction.getSummary(userId, months * 30);
-      const transactions = await Transaction.findByUser(userId, { limit: 100 });
+      // ✅ FIX: Call the powerful SQL analytics function
+      const analyticsQuery = `
+        SELECT get_user_analytics($1::INTEGER, $2::INTEGER) as analytics
+      `;
+      const result = await db.query(analyticsQuery, [userId, months]);
+      const analyticsData = result.rows[0]?.analytics || {};
+
+      // ✅ Get recent transactions for context
+      const transactions = await Transaction.findByUser(userId, { limit: 50 });
+
+      // ✅ Parse and format the analytics data
+      const insights = [];
+      const trends = [];
+      const categories = [];
+
+      // Extract insights from spending patterns
+      if (analyticsData.spending_patterns) {
+        const patterns = analyticsData.spending_patterns;
+        
+        if (patterns.avg_monthly_spending) {
+          insights.push({
+            type: 'spending',
+            title: 'Average Monthly Spending',
+            value: parseFloat(patterns.avg_monthly_spending || 0),
+            change: null
+          });
+        }
+
+        if (patterns.avg_daily_spending) {
+          insights.push({
+            type: 'spending',
+            title: 'Average Daily Spending',
+            value: parseFloat(patterns.avg_daily_spending || 0),
+            change: null
+          });
+        }
+
+        if (patterns.spending_variance) {
+          insights.push({
+            type: 'info',
+            title: 'Spending Consistency',
+            value: parseFloat(patterns.spending_variance || 0),
+            description: patterns.spending_variance > 500 ? 'High variance' : 'Stable spending'
+          });
+        }
+
+        // Top expense categories
+        if (patterns.top_expense_categories && Array.isArray(patterns.top_expense_categories)) {
+          patterns.top_expense_categories.forEach(cat => {
+            categories.push({
+              name: cat.category || 'Unknown',
+              amount: parseFloat(cat.amount || 0),
+              count: parseInt(cat.count || 0)
+            });
+          });
+        }
+
+        // Monthly trends
+        if (patterns.monthly_trends && Array.isArray(patterns.monthly_trends)) {
+          patterns.monthly_trends.forEach(trend => {
+            trends.push({
+              month: trend.month,
+              income: parseFloat(trend.income || 0),
+              expenses: parseFloat(trend.expenses || 0),
+              savings: parseFloat(trend.savings || 0),
+              savingsRate: parseFloat(trend.savings_rate || 0)
+            });
+          });
+        }
+      }
 
       res.json({
         success: true,
         data: {
-          insights: [],
-          trends: [],
-          categories: [],
+          insights,
+          trends,
+          categories,
           transactions: transactions,
           period: `${months} months`,
-          generatedAt: new Date().toISOString()
+          generatedAt: new Date().toISOString(),
+          rawAnalytics: analyticsData // Include raw data for debugging
         }
       });
     } catch (error) {
