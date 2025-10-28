@@ -204,14 +204,6 @@ export const useModernOnboardingState = (options = {}) => {
         [stepId]: merge ? { ...prev[stepId], ...data } : data
       };
 
-      // Validate the updated data
-      if (enableValidation) {
-        const validation = validateStep(stepId, newData[stepId]);
-        if (!validation.isValid) {
-          console.warn(`Step ${stepId} validation failed:`, validation.errors);
-        }
-      }
-
       return newData;
     });
 
@@ -222,7 +214,7 @@ export const useModernOnboardingState = (options = {}) => {
       try {
         localStorage.setItem('modern_onboarding_step_data', JSON.stringify(stepData));
       } catch (error) {
-        console.warn('Failed to persist onboarding data:', error);
+        // Silently fail - localStorage might be unavailable
       }
     }
   }, [enableValidation, validateStep, persistData, stepData]);
@@ -238,7 +230,7 @@ export const useModernOnboardingState = (options = {}) => {
         setStepData(prev => ({ ...prev, ...parsed }));
       }
     } catch (error) {
-      console.warn('Failed to load persisted onboarding data:', error);
+      // Silently fail - localStorage might be unavailable or corrupted
     }
   }, [persistData]);
 
@@ -249,7 +241,7 @@ export const useModernOnboardingState = (options = {}) => {
       localStorage.removeItem('onboarding_step_data'); // Clear old data too
       setHasUnsavedChanges(false);
     } catch (error) {
-      console.warn('Failed to clear persisted data:', error);
+      // Silently fail - localStorage might be unavailable
     }
   }, []);
 

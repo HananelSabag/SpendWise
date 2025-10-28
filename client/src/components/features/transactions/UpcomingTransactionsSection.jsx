@@ -327,15 +327,11 @@ const UpcomingTransactionsSection = () => {
                       <SimpleTransactionCard
                         transaction={transaction}
                         onSelect={undefined}
-                        onEdit={(tx) => {
-                          console.log('Edit upcoming transaction:', tx);
-                        }}
+                        onEdit={undefined}
                         onDelete={(tx) => {
                           deleteUpcoming(tx.id);
                         }}
-                        onDuplicate={(tx) => {
-                          console.log('Duplicate upcoming transaction:', tx);
-                        }}
+                        onDuplicate={undefined}
                         className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-900/10"
                       />
                     </motion.div>

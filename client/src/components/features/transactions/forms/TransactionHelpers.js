@@ -129,7 +129,6 @@ export const getUserTimezone = () => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   } catch (error) {
-    console.warn('Failed to detect user timezone, using UTC', error);
     return 'UTC';
   }
 };
@@ -160,7 +159,6 @@ export const combineDateTimeWithTimezone = (date, time, timezone = null) => {
     
     return new Date(dateTime.getTime() - (dateTime.getTimezoneOffset() * 60000)).toISOString();
   } catch (error) {
-    console.warn('Failed to combine date/time with timezone', { date, time, timezone, error });
     return new Date(`${date}T12:00:00`).toISOString(); // Fallback to noon UTC
   }
 };

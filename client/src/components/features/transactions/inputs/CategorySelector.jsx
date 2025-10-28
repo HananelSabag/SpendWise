@@ -104,7 +104,6 @@ const CategorySelector = ({
 
   // ✅ Handle category selection
   const handleCategorySelect = useCallback((categoryId) => {
-    console.log('🏷️ CategorySelector: Category selected:', { categoryId, transactionType });
     onChange?.(categoryId);
     setIsOpen(false);
     setSearchQuery('');
