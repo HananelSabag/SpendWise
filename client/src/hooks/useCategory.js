@@ -403,18 +403,19 @@ export const useCategory = (type = null) => {
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // ✅ User transactions for pattern analysis
+  // ✅ User transactions for pattern analysis - OPTIMIZED: Only load when AI suggestions are needed
   const { data: recentTransactions } = useQuery({
     queryKey: ['transactions', 'recent', user?.id],
     queryFn: async () => {
       const response = await api.transactions.getRecent(100);
       return response.data;
     },
-    enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
+    // ✅ PERFORMANCE FIX: Only fetch when aiEnabled AND we don't already have the data
+    enabled: false, // Disabled by default - only enable when specifically needed for AI analysis
     staleTime: 30 * 60 * 1000, // 30 minutes - transactions don't change frequently
   });
 
-  // ✅ Smart category suggestions
+  // ✅ Smart category suggestions - OPTIMIZED: Disabled by default for performance
   const smartSuggestionsQuery = useQuery({
     queryKey: ['smart-suggestions', user?.id],
     queryFn: async () => {
@@ -423,7 +424,8 @@ export const useCategory = (type = null) => {
       performanceRef.current.recordAISuggestion();
       return suggestions;
     },
-    enabled: isAuthenticated && aiEnabled && !!user?.id && !!localStorage.getItem('accessToken'),
+    // ✅ PERFORMANCE FIX: Disable expensive AI suggestions on dashboard - only enable in transaction forms
+    enabled: false, // Enable manually when needed (e.g., in transaction creation forms)
     staleTime: 2 * 60 * 60 * 1000, // 2 hours - AI suggestions change rarely
   });
 
