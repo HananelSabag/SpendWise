@@ -108,15 +108,34 @@ const Profile = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      authToasts.avatarTooLarge();
+    // ✅ Import image processor
+    const { validateImageFile, processImageForUpload } = await import('../utils/imageProcessor');
+    
+    // ✅ Validate file (allows up to 10MB for Live Photos)
+    const validation = validateImageFile(file, { maxSizeMB: 10 });
+    if (!validation.valid) {
+      authToasts.toast.error(validation.error);
       return;
     }
 
     setIsUploadingAvatar(true);
     try {
+      // ✅ Process image (handles Live Photos, HEIC, and compression)
+      const { file: processedFile, wasProcessed, originalSize, newSize } = await processImageForUpload(file, {
+        maxSizeMB: 5, // Target 5MB after processing
+        maxWidthOrHeight: 2048,
+        quality: 0.85
+      });
+      
+      // Show processing info if image was processed
+      if (wasProcessed) {
+        const originalMB = (originalSize / 1024 / 1024).toFixed(2);
+        const newMB = (newSize / 1024 / 1024).toFixed(2);
+        console.log(`✅ Image processed: ${originalMB}MB → ${newMB}MB`);
+      }
+      
       const formData = new FormData();
-      formData.append('profilePicture', file);
+      formData.append('profilePicture', processedFile);
       
       const response = await api.users.uploadAvatar(formData);
       
@@ -342,7 +361,7 @@ const Profile = () => {
             <Upload className="w-5 h-5 text-white" />
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               onChange={handleAvatarUpload}
               className="hidden"
               disabled={isUploadingAvatar}
@@ -922,7 +941,7 @@ const Profile = () => {
                       </Button>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         onChange={handleAvatarUpload}
                         className="hidden"
                         disabled={isUploadingAvatar}

@@ -96,25 +96,42 @@ const ModernProfileStep = ({
 
   const isHybridAuth = isHybridUser;
 
-  // ✅ Handle profile picture upload - ENHANCED
+  // ✅ Handle profile picture upload - ENHANCED with Live Photo support
   const handleProfilePictureUpload = useCallback(async (file) => {
     if (!file) return;
 
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      console.error('Profile picture must be smaller than 5MB');
-      // Show user-friendly error
-      const { toast } = await import('react-hot-toast');
-      toast.error('Profile picture must be smaller than 5MB');
+    // ✅ Import image processor
+    const { validateImageFile, processImageForUpload } = await import('../../../../utils/imageProcessor');
+    const { toast } = await import('react-hot-toast');
+    
+    // ✅ Validate file (allows up to 10MB for Live Photos)
+    const validation = validateImageFile(file, { maxSizeMB: 10 });
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
     try {
       setIsUploading(true);
       
+      // ✅ Process image (handles Live Photos, HEIC, and compression)
+      const { file: processedFile, wasProcessed, originalSize, newSize } = await processImageForUpload(file, {
+        maxSizeMB: 5, // Target 5MB after processing
+        maxWidthOrHeight: 2048,
+        quality: 0.85
+      });
+      
+      // Show processing info if image was processed
+      if (wasProcessed) {
+        const originalMB = (originalSize / 1024 / 1024).toFixed(2);
+        const newMB = (newSize / 1024 / 1024).toFixed(2);
+        console.log(`✅ Image processed: ${originalMB}MB → ${newMB}MB`);
+        toast.success(`Image optimized: ${originalMB}MB → ${newMB}MB`, { duration: 2000 });
+      }
+      
       // ✅ Upload to server immediately during onboarding
       const formData = new FormData();
-      formData.append('profilePicture', file);
+      formData.append('profilePicture', processedFile);
       
       // Import the API
       const { api } = await import('../../../../api');
@@ -135,7 +152,6 @@ const ModernProfileStep = ({
         onDataUpdate(newData);
         
         // Show success message
-        const { toast } = await import('react-hot-toast');
         toast.success('Profile picture uploaded successfully!');
       } else {
         throw new Error(response.error?.message || 'Upload failed');
@@ -324,7 +340,7 @@ const ModernProfileStep = ({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     onChange={(e) => handleProfilePictureUpload(e.target.files[0])}
                     className="hidden"
                   />

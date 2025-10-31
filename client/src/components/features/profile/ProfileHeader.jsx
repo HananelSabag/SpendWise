@@ -165,21 +165,16 @@ const ProfileHeader = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type and size
-    if (!file.type.startsWith('image/')) {
+    // ✅ Import image processor
+    const { validateImageFile, processImageForUpload } = await import('../../../utils/imageProcessor');
+    
+    // ✅ Validate file (allows up to 10MB for Live Photos)
+    const validation = validateImageFile(file, { maxSizeMB: 10 });
+    if (!validation.valid) {
       addNotification({
         type: 'error',
-        message: t('avatar.invalidFileType', 'Invalid file type. Please select an image.'),
-        duration: 3000
-      });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      addNotification({
-        type: 'error',
-        message: t('avatar.fileTooLarge', 'File too large. Please select an image smaller than 5MB.'),
-        duration: 3000
+        message: validation.error,
+        duration: 4000
       });
       return;
     }
@@ -187,17 +182,36 @@ const ProfileHeader = ({
     setIsUploading(true);
     
     try {
+      // ✅ Process image (handles Live Photos, HEIC, and compression)
+      const { file: processedFile, wasProcessed, originalSize, newSize } = await processImageForUpload(file, {
+        maxSizeMB: 5, // Target 5MB after processing
+        maxWidthOrHeight: 2048,
+        quality: 0.85
+      });
+      
+      // Show processing info if image was processed
+      if (wasProcessed) {
+        const originalMB = (originalSize / 1024 / 1024).toFixed(2);
+        const newMB = (newSize / 1024 / 1024).toFixed(2);
+        console.log(`✅ Image processed: ${originalMB}MB → ${newMB}MB`);
+        addNotification({
+          type: 'info',
+          message: `Image optimized: ${originalMB}MB → ${newMB}MB`,
+          duration: 3000
+        });
+      }
+      
       // Create preview
-      const previewUrl = URL.createObjectURL(file);
+      const previewUrl = URL.createObjectURL(processedFile);
       setAvatarPreview(previewUrl);
 
       // ✅ Upload directly using API if no onAvatarUpload callback provided
       if (onAvatarUpload) {
-        await onAvatarUpload(file);
+        await onAvatarUpload(processedFile);
       } else {
         // Direct API upload
         const formData = new FormData();
-        formData.append('profilePicture', file);
+        formData.append('profilePicture', processedFile);
         
         // Import the API
         const { api } = await import('../../../api');
@@ -297,7 +311,7 @@ const ProfileHeader = ({
               )}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleAvatarUpload}
                 disabled={isUploading}
                 className="hidden"

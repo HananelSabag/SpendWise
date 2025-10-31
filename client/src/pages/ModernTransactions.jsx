@@ -37,6 +37,7 @@ import ModernTransactionCard from '../components/features/transactions/ModernTra
 import ModernUpcomingTransactions from '../components/features/transactions/ModernUpcomingTransactions';
 import ModernRecurringTransactions from '../components/features/transactions/ModernRecurringTransactions';
 import FutureTransactionsCollapsible from '../components/features/transactions/FutureTransactionsCollapsible';
+import QuickMonthSelector from '../components/features/transactions/QuickMonthSelector';
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
 import RecurringSetupModal from '../components/features/transactions/modals/RecurringSetupModal';
@@ -202,54 +203,94 @@ const AdvancedFilters = ({
       exit="exit"
       className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
-            <Filter className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('transactions.advancedFilters', 'Advanced Filters')}
-          </h3>
+          <div>
+            <h3 className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white">
+              {t('transactions.advancedFilters', 'Filters')}
+            </h3>
+            {(() => {
+              const activeCount = [
+                filters.type !== 'all',
+                filters.category !== 'all',
+                filters.recurring !== 'all',
+                filters.amountMin,
+                filters.amountMax
+              ].filter(Boolean).length;
+              return activeCount > 0 && (
+                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                  {activeCount} {activeCount === 1 ? 'filter' : 'filters'} active
+                </p>
+              );
+            })()}
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          <FilterX className="w-4 h-4 mr-2" />
-          {t('actions.clearAll', 'Clear All')}
-        </Button>
+        {(() => {
+          const hasActiveFilters = [
+            filters.type !== 'all',
+            filters.category !== 'all',
+            filters.recurring !== 'all',
+            filters.amountMin,
+            filters.amountMax
+          ].some(Boolean);
+          return hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs sm:text-sm shrink-0"
+            >
+              <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">{t('actions.clearAll', 'Clear')}</span>
+              <span className="sm:hidden">Clear</span>
+            </Button>
+          );
+        })()}
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Note: Date Range filter removed - All Transactions tab automatically shows current + past only */}
-
+      <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* Transaction Type */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('filters.type.label', 'Type')}
+          <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1 sm:gap-2">
+            <ArrowLeftRight className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+            <span>{t('filters.type.label', 'Type')}</span>
+            {filters.type !== 'all' && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-600 rounded-full shrink-0 animate-pulse" />}
           </label>
           <select
             value={filters.type}
             onChange={(e) => onFilterChange({ type: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            className={cn(
+              "w-full px-3 py-2 border-2 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs sm:text-sm font-medium",
+              filters.type !== 'all' 
+                ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/10"
+                : "border-gray-300 dark:border-gray-600"
+            )}
           >
             <option value="all">{t('filters.type.all', 'All Types')}</option>
-            <option value="income">{t('transactions.types.income', 'Income')}</option>
-            <option value="expense">{t('transactions.types.expense', 'Expense')}</option>
+            <option value="income">💰 {t('transactions.types.income', 'Income')}</option>
+            <option value="expense">💸 {t('transactions.types.expense', 'Expense')}</option>
           </select>
         </div>
 
         {/* Category */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('filters.category.label', 'Category')}
+          <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1 sm:gap-2">
+            <Layers className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+            <span>{t('filters.category.label', 'Category')}</span>
+            {filters.category !== 'all' && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-600 rounded-full shrink-0 animate-pulse" />}
           </label>
           <select
             value={filters.category}
             onChange={(e) => onFilterChange({ category: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            className={cn(
+              "w-full px-3 py-2 border-2 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs sm:text-sm font-medium",
+              filters.category !== 'all' 
+                ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/10"
+                : "border-gray-300 dark:border-gray-600"
+            )}
           >
             <option value="all">{t('filters.category.all', 'All Categories')}</option>
             {categories?.map(category => (
@@ -263,44 +304,57 @@ const AdvancedFilters = ({
         {/* Recurring Filter */}
         {showRecurringFilter && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('filters.recurring.label', 'Recurring Status')}
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1 sm:gap-2">
+              <Repeat className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+              <span>{t('filters.recurring.label', 'Type')}</span>
+              {filters.recurring !== 'all' && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-600 rounded-full shrink-0 animate-pulse" />}
             </label>
             <select
               value={filters.recurring || 'all'}
               onChange={(e) => onFilterChange({ recurring: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+              className={cn(
+                "w-full px-3 py-2 border-2 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs sm:text-sm font-medium",
+                filters.recurring !== 'all' 
+                  ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/10"
+                  : "border-gray-300 dark:border-gray-600"
+              )}
             >
-              <option value="all">{t('filters.recurring.all', 'All Transactions')}</option>
-              <option value="recurring">{t('filters.recurring.recurring', 'Recurring Only')}</option>
-              <option value="oneTime">{t('filters.recurring.oneTime', 'One-Time Only')}</option>
+              <option value="all">{t('filters.recurring.all', 'All')}</option>
+              <option value="recurring">🔄 {t('filters.recurring.recurring', 'Recurring')}</option>
+              <option value="oneTime">⚡ {t('filters.recurring.oneTime', 'One-Time')}</option>
             </select>
           </div>
         )}
       </div>
 
       {/* Amount Range */}
-      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-          {t('filters.amountRange', 'Amount Range')}
+      <div className="mt-3 sm:mt-4 md:mt-6 pt-3 sm:pt-4 md:pt-6 border-t-2 border-gray-300 dark:border-gray-600">
+        <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
+          <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+          <span>{t('filters.amountRange', 'Amount Range')}</span>
+          {(filters.amountMin || filters.amountMax) && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-600 rounded-full shrink-0 animate-pulse" />}
         </label>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <Input
-              type="number"
-              placeholder={t('filters.minAmount', 'Min Amount')}
-              value={filters.amountMin}
-              onChange={(e) => onFilterChange({ amountMin: e.target.value })}
-            />
-          </div>
-          <div>
-            <Input
-              type="number"
-              placeholder={t('filters.maxAmount', 'Max Amount')}
-              value={filters.amountMax}
-              onChange={(e) => onFilterChange({ amountMax: e.target.value })}
-            />
-          </div>
+        <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-2">
+          <Input
+            type="number"
+            placeholder={t('filters.minAmount', 'Min')}
+            value={filters.amountMin}
+            onChange={(e) => onFilterChange({ amountMin: e.target.value })}
+            className={cn(
+              "text-xs sm:text-sm font-medium",
+              filters.amountMin && "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/10"
+            )}
+          />
+          <Input
+            type="number"
+            placeholder={t('filters.maxAmount', 'Max')}
+            value={filters.amountMax}
+            onChange={(e) => onFilterChange({ amountMax: e.target.value })}
+            className={cn(
+              "text-xs sm:text-sm font-medium",
+              filters.amountMax && "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/10"
+            )}
+          />
         </div>
       </div>
     </motion.div>
@@ -552,95 +606,137 @@ const ModernTransactionsList = ({
     );
   }
 
+  // Get array of month keys for navigation
+  const monthKeys = Object.keys(groupedTransactions);
+  
   return (
     <div className="space-y-8">
       <AnimatePresence mode="popLayout">
-        {Object.entries(groupedTransactions).map(([monthKey, month], monthIndex) => (
-          <motion.div
-            key={monthKey}
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ 
-              duration: 0.5, 
-              delay: monthIndex * 0.1,
-              layout: { duration: 0.3 }
-            }}
-            className="space-y-4"
-          >
-            {/* Month Header */}
-            <ModernMonthHeader
-              title={month.title}
-              totalIncome={month.totalIncome}
-              totalExpenses={month.totalExpenses}
-              count={month.count}
-            />
-            
-            {/* Days within the month */}
-            <div className="space-y-6 pl-2 sm:pl-4">
-              <AnimatePresence mode="popLayout">
-                {Object.entries(month.days).map(([dayKey, day], dayIndex) => (
-                  <motion.div
-                    key={`${monthKey}-${dayKey}`}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ 
-                      duration: 0.4, 
-                      delay: dayIndex * 0.05,
-                      layout: { duration: 0.3 }
-                    }}
-                    className="space-y-3"
-                  >
-                    {/* Day Header */}
-                    <ModernDayHeader
-                      title={day.title}
-                      date={day.date}
-                      totalIncome={day.totalIncome}
-                      totalExpenses={day.totalExpenses}
-                      count={day.count}
-                    />
-                    
-                    {/* Transactions for this day */}
-                    <div className={cn(
-                      "space-y-3 pl-3 sm:pl-4",
-                      viewMode === 'grid' && "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 space-y-0 pl-0"
-                    )}>
-                      <AnimatePresence mode="popLayout">
-                        {day.transactions.map((transaction, index) => (
-                          <motion.div
-                            key={`${transaction.id}-${monthKey}-${dayKey}-${index}`}
-                            layout
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ 
-                              duration: 0.3, 
-                              delay: index * 0.03,
-                              layout: { duration: 0.3 }
-                            }}
-                          >
-                            <ModernTransactionCard
-                              transaction={transaction}
-                              onEdit={() => onEdit(transaction)}
-                              onDelete={() => onDelete(transaction)}
-                              onDuplicate={() => onDuplicate(transaction)}
-                              isSelected={selectedIds?.has(transaction.id)}
-                              onSelect={multiSelectMode ? onSelect : undefined}
-                              viewMode={viewMode}
-                            />
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+        {Object.entries(groupedTransactions).map(([monthKey, month], monthIndex) => {
+          // Find if there's a previous month
+          const currentIndex = monthKeys.indexOf(monthKey);
+          const nextMonthKey = monthKeys[currentIndex + 1]; // Next in array is previous in time (sorted newest first)
+          
+          return (
+            <motion.div
+              key={monthKey}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ 
+                duration: 0.5, 
+                delay: monthIndex * 0.1,
+                layout: { duration: 0.3 }
+              }}
+              className="space-y-4"
+            >
+            {/* Month Header with data attribute for scrolling */}
+            <div data-month-key={monthKey}>
+              <ModernMonthHeader
+                title={month.title}
+                totalIncome={month.totalIncome}
+                totalExpenses={month.totalExpenses}
+                count={month.count}
+              />
             </div>
-          </motion.div>
-        ))}
+              
+              {/* Days within the month */}
+              <div className="space-y-6 pl-2 sm:pl-4">
+                <AnimatePresence mode="popLayout">
+                  {Object.entries(month.days).map(([dayKey, day], dayIndex) => (
+                    <motion.div
+                      key={`${monthKey}-${dayKey}`}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ 
+                        duration: 0.4, 
+                        delay: dayIndex * 0.05,
+                        layout: { duration: 0.3 }
+                      }}
+                      className="space-y-3"
+                    >
+                      {/* Day Header */}
+                      <ModernDayHeader
+                        title={day.title}
+                        date={day.date}
+                        totalIncome={day.totalIncome}
+                        totalExpenses={day.totalExpenses}
+                        count={day.count}
+                      />
+                      
+                      {/* Transactions for this day */}
+                      <div className={cn(
+                        "space-y-3 pl-3 sm:pl-4",
+                        viewMode === 'grid' && "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 space-y-0 pl-0"
+                      )}>
+                        <AnimatePresence mode="popLayout">
+                          {day.transactions.map((transaction, index) => (
+                            <motion.div
+                              key={`${transaction.id}-${monthKey}-${dayKey}-${index}`}
+                              layout
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              transition={{ 
+                                duration: 0.3, 
+                                delay: index * 0.03,
+                                layout: { duration: 0.3 }
+                              }}
+                            >
+                              <ModernTransactionCard
+                                transaction={transaction}
+                                onEdit={() => onEdit(transaction)}
+                                onDelete={() => onDelete(transaction)}
+                                onDuplicate={() => onDuplicate(transaction)}
+                                isSelected={selectedIds?.has(transaction.id)}
+                                onSelect={multiSelectMode ? onSelect : undefined}
+                                viewMode={viewMode}
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+              
+              {/* Load Previous Month Button */}
+              {nextMonthKey && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-6 flex justify-center"
+                >
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Scroll to next month (which is previous in time)
+                      const nextMonthElement = document.querySelector(`[data-month-key="${nextMonthKey}"]`);
+                      if (nextMonthElement) {
+                        nextMonthElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                    className="group relative px-6 py-3 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/40 dark:hover:to-purple-900/40 text-indigo-700 dark:text-indigo-300 font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+                      <span className="text-sm sm:text-base">
+                        {t('transactions.loadPreviousMonth', 'Load Previous Month')}
+                      </span>
+                      <ArrowDown className="w-4 h-4 opacity-70" />
+                    </div>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-400/0 via-purple-400/10 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
     </div>
   );
@@ -683,7 +779,8 @@ const ModernTransactions = () => {
     amountMin: '',
     amountMax: '',
     sortBy: 'date',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    month: 'all' // NEW: Month filter
   });
 
   // Custom date range removed - not needed for simplified tab-based filtering
@@ -726,21 +823,71 @@ const ModernTransactions = () => {
     
     let filtered = [...transactionsData];
     
-    // Apply recurring filter (same logic as all transactions tab)
+    // Apply type filter
+    if (filters.type && filters.type !== 'all') {
+      filtered = filtered.filter(t => t.type === filters.type);
+    }
+    
+    // Apply category filter
+    if (filters.category && filters.category !== 'all') {
+      filtered = filtered.filter(t => t.category_id === parseInt(filters.category));
+    }
+    
+    // Apply recurring filter
     if (filters.recurring === 'recurring') {
       filtered = filtered.filter(t => t.template_id || t.is_recurring);
     } else if (filters.recurring === 'oneTime') {
       filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
     }
     
-    /**
-     * NO CLIENT-SIDE FILTERING FOR UPCOMING TRANSACTIONS
-     * The server already filters for upcoming transactions in the API call.
-     * Client-side filtering can cause race conditions and inconsistent results.
-     */
+    // Apply month filter
+    if (filters.month && filters.month !== 'all') {
+      filtered = filtered.filter(t => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === filters.month;
+      });
+    }
+    
+    // Apply amount range filter
+    if (filters.amountMin) {
+      const minAmount = parseFloat(filters.amountMin);
+      if (!isNaN(minAmount)) {
+        filtered = filtered.filter(t => Math.abs(parseFloat(t.amount)) >= minAmount);
+      }
+    }
+    if (filters.amountMax) {
+      const maxAmount = parseFloat(filters.amountMax);
+      if (!isNaN(maxAmount)) {
+        filtered = filtered.filter(t => Math.abs(parseFloat(t.amount)) <= maxAmount);
+      }
+    }
     
     return filtered;
-  }, [transactionsData, filters.recurring, activeTab]);
+  }, [transactionsData, filters.type, filters.category, filters.recurring, filters.month, filters.amountMin, filters.amountMax, activeTab]);
+
+  // ✅ Get available months from all transactions
+  const availableMonths = useMemo(() => {
+    if (!transactionsData || !Array.isArray(transactionsData)) return [];
+    
+    const monthsSet = new Set();
+    transactionsData.forEach(t => {
+      const date = new Date(t.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthsSet.add(monthKey);
+    });
+    
+    // Convert to array and sort (newest first)
+    return Array.from(monthsSet).sort((a, b) => b.localeCompare(a)).map(monthKey => {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return {
+        key: monthKey,
+        label: date.toLocaleDateString(isRTL ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' }),
+        shortLabel: date.toLocaleDateString(isRTL ? 'he-IL' : 'en-US', { month: 'short', year: 'numeric' })
+      };
+    });
+  }, [transactionsData, isRTL]);
 
   // ✅ Enhanced summary with recurring insights
   const summary = useMemo(() => {
@@ -847,7 +994,8 @@ const ModernTransactions = () => {
       amountMin: '',
       amountMax: '',
       sortBy: 'date',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      month: 'all'
     });
     setSearchQuery('');
   }, []);
@@ -1086,22 +1234,6 @@ const ModernTransactions = () => {
             {/* ✨ All Transactions Content */}
             {activeTab === 'all' && (
               <div className="mt-8 space-y-6">
-                      {/* ✅ Simple explanation of what this tab shows */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                {t('transactions.allTab.title', 'Your Transactions')}
-              </h3>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                {t('transactions.allTab.description', 'Showing your transactions with smart filtering. Scroll down to load more past transactions.')}
-              </p>
-            </div>
-          </div>
-        </div>
               {/* ✨ Enhanced Search and Controls */}
               <Card className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
                 <div className="flex flex-col lg:flex-row gap-4">
@@ -1120,20 +1252,28 @@ const ModernTransactions = () => {
                   </div>
 
                   {/* Controls */}
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    {/* Month Selector */}
+                    <QuickMonthSelector
+                      availableMonths={availableMonths}
+                      selectedMonth={filters.month}
+                      onMonthChange={(month) => handleFilterChange({ month })}
+                    />
+                    
                     <Button
                       variant={showFilters ? 'default' : 'outline'}
                       onClick={() => setShowFilters(!showFilters)}
-                      className="h-12 px-6 rounded-xl"
+                      className="h-10 sm:h-12 px-3 sm:px-6 rounded-xl text-xs sm:text-sm"
                     >
-                      <Filter className="w-4 h-4 mr-2" />
-                      {t('actions.filters', 'Filters')}
+                      <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">{t('actions.filters', 'Filters')}</span>
+                      <span className="sm:hidden">Filter</span>
                     </Button>
 
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'outline'}
                       onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                      className="h-12 px-4 rounded-xl"
+                      className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl hidden sm:flex"
                     >
                       {viewMode === 'list' ? (
                         <Grid3X3 className="w-4 h-4" />
@@ -1148,9 +1288,9 @@ const ModernTransactions = () => {
                         setMultiSelectMode(!multiSelectMode);
                         if (!multiSelectMode) setSelectedIds(new Set());
                       }}
-                      className="h-12 px-6 rounded-xl"
+                      className="h-10 sm:h-12 px-3 sm:px-6 rounded-xl text-xs sm:text-sm hidden sm:flex"
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       {t('actions.select', 'Select')}
                     </Button>
                   </div>
