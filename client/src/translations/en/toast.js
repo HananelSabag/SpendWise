@@ -31,6 +31,12 @@ export default {
     connectionRecovering: "Attempting to reconnect to server...",
     connectionRestored: "Connection to server restored successfully! 🎉",
     connectionFailed: "Failed to connect to server. Please try again.",
+    
+    // ✅ NEW: Authentication/Session Validation Toasts
+    authenticating: "Authenticating user...",
+    validatingSession: "Validating session...",
+    loadingData: "Loading data...",
+    
     autoLogoutAuthFailure: "Automatically signed out due to authentication issues",
     autoLogoutStuckState: "Automatically signed out due to connection issues",
     autoLogoutRecoveryFailed: "Automatically signed out - unable to recover connection",

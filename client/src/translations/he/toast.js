@@ -31,6 +31,12 @@ export default {
     connectionRecovering: "מנסה להתחבר מחדש לשרת...",
     connectionRestored: "החיבור לשרת התאושש בהצלחה! 🎉",
     connectionFailed: "נכשל בחיבור לשרת. אנא נסו שוב.",
+    
+    // ✅ חדש: הודעות אימות משתמש והפעלת מערכת
+    authenticating: "מאמת משתמש...",
+    validatingSession: "מאמת הפעלה...",
+    loadingData: "טוען נתונים...",
+    
     autoLogoutAuthFailure: "נותקתם אוטומטית עקב בעיות אימות",
     autoLogoutStuckState: "נותקתם אוטומטית עקב בעיות חיבור", 
     autoLogoutRecoveryFailed: "נותקתם אוטומטית - לא ניתן לשחזר את החיבור",

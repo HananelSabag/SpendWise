@@ -142,10 +142,48 @@ export const useAuthToasts = () => {
       toast.error(message || t('auth.connectionFailed', 'Failed to connect to server. Please try again.'));
     },
 
+    // ✅ NEW: Authentication/Session Validation Toasts (distinct from connection issues)
+    authenticating: (message) => {
+      // Ensure single loading instance
+      const id = 'auth-validating';
+      toast.dismiss(id);
+      return toast.loading(
+        message || t('auth.authenticating', 'Authenticating user...'),
+        { id, duration: 3000 } // Auto-dismiss after 3s if not manually dismissed
+      );
+    },
+
+    validatingSession: (message) => {
+      const id = 'auth-validating';
+      toast.dismiss(id);
+      return toast.loading(
+        message || t('auth.validatingSession', 'Validating session...'),
+        { id, duration: 3000 }
+      );
+    },
+
+    loadingData: (message) => {
+      const id = 'auth-validating';
+      toast.dismiss(id);
+      return toast.loading(
+        message || t('auth.loadingData', 'Loading data...'),
+        { id, duration: 3000 }
+      );
+    },
+
+    authenticationRestored: (message) => {
+      toast.dismiss('auth-validating');
+      // Success message is optional - can be silent for smooth UX
+      if (message) {
+        toast.success(message);
+      }
+    },
+
     autoLogout: (reason) => {
       // Dismiss any loading/recovery toasts first to avoid overlap
       try {
         toast.dismiss('connection-recovering');
+        toast.dismiss('auth-validating');
       } catch (_) {}
       const messages = {
         auth_failure: t('auth.autoLogoutAuthFailure', 'Automatically signed out due to authentication issues'),

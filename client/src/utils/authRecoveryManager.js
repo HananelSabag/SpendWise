@@ -132,14 +132,21 @@ class AuthRecoveryManager {
       isRecovering: false
     };
 
-    // Dismiss loading toast and show recovery success message if we were recovering
+    // ✅ FIX: Dismiss loading toast silently (no success message for normal recovery)
     if (wasRecovering) {
       // Dismiss any ongoing recovery toast
       if (this.recoveryToastId && window.authToasts?.dismiss) {
         window.authToasts.dismiss(this.recoveryToastId);
         this.recoveryToastId = null;
       }
-      this.showRecoveryNotification('success', 'החיבור לשרת התאושש בהצלחה! 🎉');
+      // Also dismiss auth-validating toast
+      try {
+        if (window.authToasts?.dismiss) {
+          window.authToasts.dismiss('auth-validating');
+        }
+      } catch (_) {}
+      // Silent success - no need to show success toast for normal refresh token validation
+      this.showRecoveryNotification('success');
       // silent
     }
   }
@@ -302,7 +309,8 @@ class AuthRecoveryManager {
   async recoverFromAuthError() {
     // silent
     
-    this.showRecoveryNotification('info');
+    // ✅ FIX: Use authenticating/validating toast instead of connection recovery toast
+    this.showRecoveryNotification('authenticating');
 
     // If user is on blocked page or session marked as blocked, do NOT force logout
     try {
@@ -482,7 +490,8 @@ class AuthRecoveryManager {
             window.authToasts.dismiss(this.recoveryToastId);
             this.recoveryToastId = null;
           }
-          window.authToasts.connectionRestored?.(message);
+          // ✅ FIX: Silent success for auth recovery (no need to show success toast)
+          window.authToasts.authenticationRestored?.();
           break;
         case 'warning':
           window.authToasts.connectionIssue?.(message);
@@ -495,6 +504,7 @@ class AuthRecoveryManager {
           window.authToasts.connectionFailed?.(message);
           break;
         case 'info':
+          // Network/connection recovery (server issues)
           // Avoid stacking multiple loading toasts
           if (!this.recoveryToastId) {
             // use a fixed id to prevent duplicates across components
@@ -502,13 +512,28 @@ class AuthRecoveryManager {
             this.recoveryToastId = window.authToasts.connectionRecovering?.(message);
           }
           break;
+        case 'authenticating':
+          // ✅ NEW: Authentication/session validation (refresh token)
+          // Avoid stacking multiple loading toasts
+          if (!this.recoveryToastId) {
+            try { if (window.authToasts?.dismiss) window.authToasts.dismiss('auth-validating'); } catch (_) {}
+            this.recoveryToastId = window.authToasts.validatingSession?.(message);
+          }
+          break;
+        case 'loading':
+          // Generic loading state
+          if (!this.recoveryToastId) {
+            try { if (window.authToasts?.dismiss) window.authToasts.dismiss('auth-validating'); } catch (_) {}
+            this.recoveryToastId = window.authToasts.loadingData?.(message);
+          }
+          break;
       }
     }
 
-    // Fallback to browser notification if available
-    if ('Notification' in window && Notification.permission === 'granted') {
+    // Fallback to browser notification if available (only for critical issues)
+    if (type === 'error' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification('SpendWise - Connection', {
-        body: message,
+        body: message || 'Connection issue detected',
         icon: '/favicon.ico'
       });
     }
