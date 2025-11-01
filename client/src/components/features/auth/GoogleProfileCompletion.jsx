@@ -271,7 +271,7 @@ const GoogleProfileCompletion = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               onChange={handleProfilePictureChange}
               className="hidden"
             />
