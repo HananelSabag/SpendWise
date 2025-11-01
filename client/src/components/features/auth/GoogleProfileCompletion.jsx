@@ -59,35 +59,56 @@ const GoogleProfileCompletion = ({
     }
   }, [errors]);
 
-  // ✅ Handle profile picture upload
-  const handleProfilePictureChange = useCallback((e) => {
+  // ✅ Handle profile picture upload with Live Photo support
+  const handleProfilePictureChange = useCallback(async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
+    if (!file) return;
+
+    try {
+      // ✅ Import image processor
+      const { validateImageFile, processImageForUpload } = await import('../../../utils/imageProcessor');
+      
+      // ✅ Validate file (allows up to 10MB for Live Photos)
+      const validation = validateImageFile(file, { maxSizeMB: 10 });
+      if (!validation.valid) {
         addNotification({
           type: 'error',
-          message: t('profilePictureInvalidType')
+          message: validation.error
         });
         return;
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // ✅ Process image (handles Live Photos, HEIC, and compression)
+      const { file: processedFile, wasProcessed, originalSize, newSize } = await processImageForUpload(file, {
+        maxSizeMB: 5, // Target 5MB after processing
+        maxWidthOrHeight: 2048,
+        quality: 0.85
+      });
+      
+      // Show processing info if image was processed
+      if (wasProcessed) {
+        const originalMB = (originalSize / 1024 / 1024).toFixed(2);
+        const newMB = (newSize / 1024 / 1024).toFixed(2);
+        console.log(`✅ Image processed: ${originalMB}MB → ${newMB}MB`);
         addNotification({
-          type: 'error',
-          message: t('profilePictureTooLarge')
+          type: 'success',
+          message: `Image optimized: ${originalMB}MB → ${newMB}MB`
         });
-        return;
       }
 
-      // Create preview
+      // Create preview from processed file
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfilePicture(e.target.result);
-        setProfilePictureFile(file);
+        setProfilePictureFile(processedFile); // Use processed file
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      addNotification({
+        type: 'error',
+        message: t('profilePictureUploadError', { fallback: 'Failed to process image' })
+      });
     }
   }, [addNotification, t]);
 
