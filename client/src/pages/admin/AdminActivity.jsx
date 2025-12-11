@@ -25,6 +25,24 @@ const AdminActivity = () => {
   });
   const [refreshing, setRefreshing] = useState(false);
 
+  // ✅ Helper to get target user display info (handles deleted users)
+  const getTargetUserInfo = (activity) => {
+    // Check if action_details has original info (for deleted users)
+    const details = activity.action_details || {};
+    const isDeleted = activity.action_type?.includes('deleted') || 
+                      activity.target_username?.includes('_deleted_') ||
+                      activity.target_username?.includes('.deleted.');
+    
+    return {
+      username: isDeleted && details.target_username_original 
+        ? `${details.target_username_original} (deleted)` 
+        : (activity.target_username || '-'),
+      email: isDeleted && details.target_email_original 
+        ? details.target_email_original 
+        : (activity.target_user?.email || activity.target_email || '')
+    };
+  };
+
   // Load activity log with filters
   const loadActivities = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -206,19 +224,23 @@ const AdminActivity = () => {
               <>
                 {/* Mobile cards */}
                 <div className="grid grid-cols-1 gap-3 md:hidden">
-                  {activities.map((a) => (
-                    <div key={a.id} className="rounded-lg border border-purple-200 dark:border-purple-800 p-4">
-                      <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                        {a.action_type?.replace(/_/g, ' ') || 'Unknown Action'}
+                  {activities.map((a) => {
+                    const targetInfo = getTargetUserInfo(a);
+                    return (
+                      <div key={a.id} className="rounded-lg border border-purple-200 dark:border-purple-800 p-4">
+                        <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                          {a.action_type?.replace(/_/g, ' ') || 'Unknown Action'}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                          {a.admin_username || a.admin_email || 'Admin'} • {a.created_at ? new Date(a.created_at).toLocaleString() : 'Invalid Date'}
+                        </div>
+                        <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                          <span className="font-medium">{targetInfo.username}</span>
+                          {targetInfo.email && <span className="text-xs ml-1 text-gray-500">({targetInfo.email})</span>}
+                        </div>
                       </div>
-                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                        {a.admin_username || a.admin_email || 'Admin'} • {a.created_at ? new Date(a.created_at).toLocaleString() : 'Invalid Date'}
-                      </div>
-                      <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                        {a.target_user?.email || a.target_email || '-'}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Desktop table */}
@@ -233,33 +255,36 @@ const AdminActivity = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {activities.map((a) => (
-                        <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            {a.created_at ? (
-                              <div>
-                                <div className="font-medium">{new Date(a.created_at).toLocaleDateString()}</div>
-                                <div className="text-xs text-gray-500">{new Date(a.created_at).toLocaleTimeString()}</div>
-                              </div>
-                            ) : (
-                              <span className="text-red-500 italic">Invalid Date</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            <div className="font-medium">{a.admin_username || 'Admin'}</div>
-                            <div className="text-xs text-gray-500">{a.admin_email || ''}</div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              {a.action_type?.replace(/_/g, ' ') || 'Unknown'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            <div className="font-medium">{a.target_username || '-'}</div>
-                            <div className="text-xs text-gray-500">{a.target_user?.email || a.target_email || ''}</div>
-                          </td>
-                        </tr>
-                      ))}
+                      {activities.map((a) => {
+                        const targetInfo = getTargetUserInfo(a);
+                        return (
+                          <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              {a.created_at ? (
+                                <div>
+                                  <div className="font-medium">{new Date(a.created_at).toLocaleDateString()}</div>
+                                  <div className="text-xs text-gray-500">{new Date(a.created_at).toLocaleTimeString()}</div>
+                                </div>
+                              ) : (
+                                <span className="text-red-500 italic">Invalid Date</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              <div className="font-medium">{a.admin_username || 'Admin'}</div>
+                              <div className="text-xs text-gray-500">{a.admin_email || ''}</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                {a.action_type?.replace(/_/g, ' ') || 'Unknown'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                              <div className="font-medium">{targetInfo.username}</div>
+                              <div className="text-xs text-gray-500">{targetInfo.email}</div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

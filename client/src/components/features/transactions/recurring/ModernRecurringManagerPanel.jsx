@@ -137,7 +137,7 @@ const ModernStatsCard = ({ title, value, change, icon: Icon, color = 'blue', tre
   );
 };
 
-// ✨ Modern Recurring Template Card (DUPLICATION REMOVED)
+// ✨ Modern Recurring Template Card - MOBILE OPTIMIZED
 const ModernTemplateCard = ({ 
   template, 
   onEdit, 
@@ -145,9 +145,8 @@ const ModernTemplateCard = ({
   onDelete,
   className = '' 
 }) => {
-  const { t } = useTranslation();
+  const { t, isRTL } = useTranslation();
   const { formatCurrency } = useCurrency();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const isActive = template.is_active;
   const isIncome = template.type === 'income';
@@ -157,7 +156,7 @@ const ModernTemplateCard = ({
       variants={cardVariants}
       whileHover="hover"
       className={cn(
-        "relative group rounded-2xl p-6 shadow-lg border-2 transition-all duration-300",
+        "relative group rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 transition-all duration-300",
         "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900",
         isActive 
           ? "border-purple-200 dark:border-purple-800"
@@ -166,116 +165,112 @@ const ModernTemplateCard = ({
         className
       )}
     >
-      {/* Status Indicator */}
-      <div className="absolute top-4 right-4">
+      {/* Status Indicator - Mobile Optimized */}
+      <div className={cn("absolute top-3 sm:top-4", isRTL ? "left-3 sm:left-4" : "right-3 sm:right-4")}>
         <div className={cn(
-          "w-3 h-3 rounded-full",
-          isActive ? "bg-green-500" : "bg-gray-400"
+          "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full",
+          isActive ? "bg-green-500 animate-pulse" : "bg-gray-400"
         )} />
       </div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg",
-            isIncome
-              ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
-              : "bg-gradient-to-br from-red-500 to-rose-600 text-white"
-          )}>
-            <Repeat className="w-6 h-6" />
-          </div>
-          
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-              {template.description || t('transactions.noDescription', 'No description')}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge 
-                variant={isIncome ? 'success' : 'destructive'}
-                size="sm"
-              >
-                {isIncome ? t('types.income') : t('types.expense')}
-              </Badge>
-              <Badge variant="outline" size="sm">
-                {template.interval_type || 'monthly'}
-              </Badge>
-            </div>
+      {/* Header - Compact on Mobile */}
+      <div className="flex items-start gap-3 mb-3 sm:mb-4">
+        <div className={cn(
+          "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0",
+          isIncome
+            ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+            : "bg-gradient-to-br from-red-500 to-rose-600 text-white"
+        )}>
+          <Repeat className="w-5 h-5 sm:w-6 sm:h-6" />
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base truncate pr-6">
+            {template.description || template.name || t('transactions.noDescription', 'No description')}
+          </h3>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
+            <Badge 
+              variant={isIncome ? 'success' : 'destructive'}
+              className="text-xs px-1.5 py-0.5"
+            >
+              {isIncome ? t('types.income', 'Income') : t('types.expense', 'Expense')}
+            </Badge>
+            <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+              {t(`recurringManager.frequency.${template.interval_type}`, template.interval_type || 'monthly')}
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* Amount */}
-      <div className="mb-4">
+      {/* Amount - Prominent */}
+      <div className="mb-3 sm:mb-4">
         <div className={cn(
-          "text-2xl font-bold",
+          "text-xl sm:text-2xl font-bold tabular-nums",
           isIncome ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
         )}>
           {isIncome ? '+' : '-'}{formatCurrency(Math.abs(template.amount))}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-        <div>
-          <p className="text-gray-500 dark:text-gray-400">{t('recurring.created')}</p>
-          <p className="font-medium text-gray-900 dark:text-white">
+      {/* Stats - Compact Grid */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3">
+          <p className="text-gray-500 dark:text-gray-400 text-xs">{t('recurringManager.created', 'Created')}</p>
+          <p className="font-medium text-gray-900 dark:text-white truncate">
             {dateHelpers.formatMedium(new Date(template.created_at))}
           </p>
         </div>
-        <div>
-          <p className="text-gray-500 dark:text-gray-400">{t('recurring.nextRun')}</p>
-          <p className="font-medium text-gray-900 dark:text-white">
-            {template.next_run ? dateHelpers.formatMedium(new Date(template.next_run)) : t('recurring.never')}
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3">
+          <p className="text-gray-500 dark:text-gray-400 text-xs">{t('recurringManager.nextRun', 'Next Run')}</p>
+          <p className="font-medium text-gray-900 dark:text-white truncate">
+            {template.next_run ? dateHelpers.formatMedium(new Date(template.next_run)) : t('recurringManager.never', 'Never')}
           </p>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+      {/* Actions - Touch-Friendly */}
+      <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => onToggleStatus(template)}
           className={cn(
-            "text-xs",
+            "text-xs sm:text-sm min-h-[36px] sm:min-h-[40px] px-2 sm:px-3",
             isActive 
-              ? "text-orange-600 hover:text-orange-700" 
-              : "text-green-600 hover:text-green-700"
+              ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20" 
+              : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
           )}
         >
           {isActive ? (
             <>
-              <Pause className="w-4 h-4 mr-1" />
-              {t('actions.pause')}
+              <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">{t('actions.pause', 'Pause')}</span>
             </>
           ) : (
             <>
-              <Play className="w-4 h-4 mr-1" />
-              {t('actions.resume')}
+              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">{t('actions.resume', 'Resume')}</span>
             </>
           )}
         </Button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onEdit(template)}
-            className="text-blue-600 hover:text-blue-700"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 min-h-[36px] sm:min-h-[40px] min-w-[36px] sm:min-w-[40px] p-0"
           >
-            <Edit className="w-4 h-4" />
+            <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
-          
-
           
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onDelete(template)}
-            className="text-red-600 hover:text-red-700"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[36px] sm:min-h-[40px] min-w-[36px] sm:min-w-[40px] p-0"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </div>
@@ -660,30 +655,30 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
             </div>
           </div>
 
-          {/* ✨ Content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-4">
+          {/* ✨ Content - Mobile Optimized */}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
             <div>
               {templatesLoading ? (
-                <div className="flex items-center justify-center py-20">
+                <div className="flex items-center justify-center py-12 sm:py-20">
                   <div className="text-center">
                     <LoadingSpinner size="lg" />
-                    <p className="mt-4 text-gray-600 dark:text-gray-400">
+                    <p className="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                       {t('recurringManager.loading', 'Loading templates...')}
                     </p>
                   </div>
                 </div>
               ) : filteredTemplates.length === 0 ? (
-                <div className="text-center py-20">
-                  <div className="w-20 h-20 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-6">
-                    <Repeat className="w-10 h-10 text-purple-600 dark:text-purple-400" />
+                <div className="text-center py-12 sm:py-20 px-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                    <Repeat className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
                     {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
                       ? t('recurringManager.noMatches', 'No Matching Templates')
                       : t('recurringManager.noRecurring', 'No Recurring Templates')
                     }
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6 sm:mb-8">
                     {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
                       ? t('recurringManager.noMatchesDesc', 'Try adjusting your filters')
                       : t('recurringManager.noRecurringDesc', 'Create recurring transactions to automate your finance tracking')
@@ -691,20 +686,20 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
                   </p>
                   <Button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
+                    className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-sm sm:text-base px-4 sm:px-6"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t('recurringManager.addFirst', 'Add First Template')}
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                   {filteredTemplates.map((template, index) => (
                     <motion.div
                       key={template.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: Math.min(index * 0.03, 0.3) }}
                     >
                       <ModernTemplateCard
                         template={template}

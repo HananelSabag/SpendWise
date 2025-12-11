@@ -14,7 +14,8 @@ import {
   Repeat, Zap, Eye, EyeOff, BarChart3, Grid3X3, List,
   SortAsc, SortDesc, Users, Target, Settings, Sparkles,
   CreditCard, Receipt, PiggyBank, Wallet, ArrowUp, ArrowDown,
-  ChevronDown, ChevronUp, FilterX, Layers, Archive, AlertTriangle
+  ChevronDown, ChevronUp, FilterX, Layers, Archive, AlertTriangle,
+  Loader2
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -704,36 +705,7 @@ const ModernTransactionsList = ({
                 </AnimatePresence>
               </div>
               
-              {/* Load Previous Month Button */}
-              {nextMonthKey && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="mt-6 flex justify-center"
-                >
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      // Scroll to next month (which is previous in time)
-                      const nextMonthElement = document.querySelector(`[data-month-key="${nextMonthKey}"]`);
-                      if (nextMonthElement) {
-                        nextMonthElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    }}
-                    className="group relative px-6 py-3 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/40 dark:hover:to-purple-900/40 text-indigo-700 dark:text-indigo-300 font-semibold shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-3">
-                      <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-                      <span className="text-sm sm:text-base">
-                        {t('transactions.loadPreviousMonth', 'Load Previous Month')}
-                      </span>
-                      <ArrowDown className="w-4 h-4 opacity-70" />
-                    </div>
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-400/0 via-purple-400/10 to-indigo-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </Button>
-                </motion.div>
-              )}
+              {/* Month Separator - Visual only, no misleading button */}
             </motion.div>
           );
         })}
@@ -785,7 +757,7 @@ const ModernTransactions = () => {
 
   // Custom date range removed - not needed for simplified tab-based filtering
 
-  // ✅ Hooks - Use same logic as all transactions (force activeTab='all' for consistent behavior)
+  // ✅ Hooks - Pass filters to server for efficient pagination
   const {
     transactions: transactionsData,
     loading: transactionsLoading,
@@ -795,9 +767,14 @@ const ModernTransactions = () => {
     fetchNextPage: loadMore
   } = useTransactions({
     search: searchQuery,
-    filters: filters,
-    activeTab: 'all', // ✅ Always use 'all' to get all transactions, then filter client-side
-    pageSize: 30
+    filters: {
+      type: filters.type,
+      category: filters.category,
+      month: filters.month,
+      search: searchQuery
+    },
+    activeTab: 'all', // ✅ Server-side date filtering based on tab
+    pageSize: 50 // ✅ Increased page size for better UX
   });
 
 
@@ -817,39 +794,21 @@ const ModernTransactions = () => {
     triggerRegeneration
   } = useAutoRegeneration();
 
-  // ✅ Client-side filtering (same as all transactions tab logic + date filtering)
+  // ✅ Client-side filtering - MINIMAL (server does most work now)
+  // Only filter things server can't handle: recurring/oneTime, amount range
   const transactions = useMemo(() => {
     if (!transactionsData || !Array.isArray(transactionsData)) return [];
     
     let filtered = [...transactionsData];
     
-    // Apply type filter
-    if (filters.type && filters.type !== 'all') {
-      filtered = filtered.filter(t => t.type === filters.type);
-    }
-    
-    // Apply category filter
-    if (filters.category && filters.category !== 'all') {
-      filtered = filtered.filter(t => t.category_id === parseInt(filters.category));
-    }
-    
-    // Apply recurring filter
+    // Apply recurring filter (client-side only - based on template_id presence)
     if (filters.recurring === 'recurring') {
       filtered = filtered.filter(t => t.template_id || t.is_recurring);
     } else if (filters.recurring === 'oneTime') {
       filtered = filtered.filter(t => !t.template_id && !t.is_recurring);
     }
     
-    // Apply month filter
-    if (filters.month && filters.month !== 'all') {
-      filtered = filtered.filter(t => {
-        const date = new Date(t.date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        return monthKey === filters.month;
-      });
-    }
-    
-    // Apply amount range filter
+    // Apply amount range filter (client-side for now)
     if (filters.amountMin) {
       const minAmount = parseFloat(filters.amountMin);
       if (!isNaN(minAmount)) {
@@ -864,7 +823,7 @@ const ModernTransactions = () => {
     }
     
     return filtered;
-  }, [transactionsData, filters.type, filters.category, filters.recurring, filters.month, filters.amountMin, filters.amountMax, activeTab]);
+  }, [transactionsData, filters.recurring, filters.amountMin, filters.amountMax]);
 
   // ✅ Get available months from all transactions
   const availableMonths = useMemo(() => {
@@ -1400,21 +1359,60 @@ const ModernTransactions = () => {
                     multiSelectMode={multiSelectMode}
                   />
                   
-                  {/* ✅ Infinite Scroll Trigger - Fixed with proper cleanup */}
-                  {hasMore && (
-                    <div 
-                      ref={loadMoreRef}
-                      className="mt-6 h-20 flex justify-center items-center"
-                    >
-                      {transactionsLoading ? (
-                        <LoadingSpinner size="md" />
-                      ) : (
-                        <div className="text-gray-400 text-sm">
-                          {t('transactions.scrollForMore', 'Scroll for more transactions')}
+                  {/* ✅ Smart Load More - Manual button + auto-trigger */}
+                  <div ref={loadMoreRef} className="mt-8">
+                    {transactionsLoading ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center py-8"
+                      >
+                        <LoadingSpinner size="lg" />
+                        <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm">
+                          {t('transactions.loadingMore', 'Loading more transactions...')}
+                        </p>
+                      </motion.div>
+                    ) : hasMore ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center justify-center py-6 space-y-4"
+                      >
+                        <Button
+                          variant="outline"
+                          onClick={() => loadMore()}
+                          className="group relative px-8 py-4 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/40 dark:hover:to-purple-900/40 text-indigo-700 dark:text-indigo-300 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                          <div className="flex items-center gap-3">
+                            <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                            <span className="text-sm sm:text-base">
+                              {t('transactions.loadMore', 'Load More Transactions')}
+                            </span>
+                            <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+                          </div>
+                        </Button>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {t('transactions.scrollHint', 'or scroll down to auto-load')}
+                        </p>
+                      </motion.div>
+                    ) : transactions?.length > 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center py-8 text-center"
+                      >
+                        <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/30 dark:to-emerald-900/30 rounded-full flex items-center justify-center mb-4">
+                          <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <p className="text-gray-600 dark:text-gray-400 font-medium">
+                          {t('transactions.allLoaded', 'All transactions loaded')}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                          {t('transactions.totalCount', '{{count}} transactions', { count: transactions.length })}
+                        </p>
+                      </motion.div>
+                    ) : null}
+                  </div>
 
                 </div>
               </Card>

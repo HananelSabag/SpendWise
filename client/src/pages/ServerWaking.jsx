@@ -38,6 +38,20 @@ const ServerWaking = () => {
             const returnTo = sessionStorage.getItem('serverWakingReturnTo') || '/';
             sessionStorage.removeItem('serverWakingReturnTo');
             window.__SERVER_WAKING__ = false;
+            
+            // ✅ FIX: Dismiss all connection-related toasts on successful wake
+            try {
+              if (window.authToasts?.dismiss) {
+                window.authToasts.dismiss('cold-start');
+                window.authToasts.dismiss('connection-recovering');
+                window.authToasts.dismiss('auth-validating');
+              }
+              // Also reset auth recovery manager state
+              if (window.authRecoveryManager?.resetHealthState) {
+                window.authRecoveryManager.resetHealthState();
+              }
+            } catch (_) {}
+            
             if (window.spendWiseNavigate) window.spendWiseNavigate(returnTo, { replace: true });
             else window.location.replace(returnTo);
           } catch (_) {}

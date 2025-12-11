@@ -668,7 +668,7 @@ export const useTransactions = (options = {}) => {
   const [selectedTransactions, setSelectedTransactions] = useState(new Set());
   const performanceRef = useRef(TransactionPerformanceMonitor);
 
-  // ✅ Enhanced infinite query with AI analysis
+  // ✅ Enhanced infinite query with AI analysis - FIXED SERVER-SIDE FILTERING
   const transactionsQuery = useInfiniteQuery({
     queryKey: ['transactions', user?.id, filters, activeTab, new Date().toISOString().split('T')[0]], // Add date to prevent stale cache
     enabled: !!user?.id, // Only run if user is authenticated
@@ -693,51 +693,60 @@ export const useTransactions = (options = {}) => {
           performanceRef.current.recordCacheMiss();
         }
 
-        // 🚨 CRITICAL FIX: Handle frontend-only date filters
-        const apiFilters = { ...filters };
+        // ✅ FIXED: Build server-side filters properly
+        const apiFilters = {};
+        
+        // Pass type filter to server
+        if (filters.type && filters.type !== 'all') {
+          apiFilters.type = filters.type;
+        }
+        
+        // Pass category filter to server
+        if (filters.category && filters.category !== 'all') {
+          apiFilters.category = filters.category;
+        }
+        
+        // Pass search to server
+        if (filters.search) {
+          apiFilters.search = filters.search;
+        }
         
         // ✅ SMART DATE FILTERING: Add date filters based on active tab
         if (activeTab === 'all') {
-          // All tab: Only current month + past (no future transactions)
+          // All tab: Only current month + past (no future transactions beyond current month end)
           const now = new Date();
           const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           endOfCurrentMonth.setHours(23, 59, 59, 999);
           
-          apiFilters.dateTo = endOfCurrentMonth.toISOString().split('T')[0]; // YYYY-MM-DD format
-          console.log('📅 All tab - filtering up to:', apiFilters.dateTo);
+          apiFilters.dateTo = endOfCurrentMonth.toISOString().split('T')[0];
+          
+          // If month filter is set, use it for date range
+          if (filters.month && filters.month !== 'all') {
+            const [year, month] = filters.month.split('-');
+            const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const endOfMonth = new Date(parseInt(year), parseInt(month), 0);
+            apiFilters.dateFrom = startOfMonth.toISOString().split('T')[0];
+            apiFilters.dateTo = endOfMonth.toISOString().split('T')[0];
+          }
+          
+          logger.debug('📅 All tab - date filter:', { 
+            dateFrom: apiFilters.dateFrom,
+            dateTo: apiFilters.dateTo 
+          });
           
         } else if (activeTab === 'upcoming') {
-          // ✅ UPCOMING TAB FIX: Get ALL future transactions from tomorrow onwards
-          console.log('📅 Upcoming tab - getting future transactions');
-          
-          // Get tomorrow in user's timezone  
+          // ✅ UPCOMING TAB: Get ALL future transactions from tomorrow onwards
           const now = new Date();
           const tomorrow = new Date(now);
           tomorrow.setDate(tomorrow.getDate() + 1);
           tomorrow.setHours(0, 0, 0, 0);
           
-          // Set date filter to get transactions from tomorrow onwards
           apiFilters.dateFrom = tomorrow.toISOString().split('T')[0];
           
-          // ✅ CRITICAL: Remove the dateTo filter that was set for "All" tab
-          delete apiFilters.dateTo;
-          
-          // Remove type filtering for upcoming tab to get all future transactions  
-          delete apiFilters.type;
-          delete apiFilters.recurring;
-          
-          console.log('📅 Upcoming date filter APPLIED:', {
-            tomorrow: tomorrow.toISOString(),
-            dateFrom: apiFilters.dateFrom,
-            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            filtersBeingUsed: apiFilters,
-            fullApiUrl: `GET /transactions?${new URLSearchParams(apiFilters).toString()}`
+          logger.debug('📅 Upcoming tab - date filter:', { 
+            dateFrom: apiFilters.dateFrom 
           });
         }
-        // No date filtering for recurring tab
-        
-        // Clean up old frontend-only filters
-        delete apiFilters.dateRange;
         
         logger.debug('API Request:', {
           filters: apiFilters,

@@ -77,6 +77,14 @@ class AuthRecoveryManager {
       // Don't increment failure counters or trigger recovery
       return errorType;
     }
+
+    // ✅ FIX: Don't trigger recovery when server is waking up (cold start)
+    // The ServerWaking page handles this case gracefully
+    if (typeof window !== 'undefined' && window.__SERVER_WAKING__) {
+      // Server is waking up - don't show connection failure toasts or trigger recovery
+      // The waking page will handle the UI feedback
+      return errorType;
+    }
     
     // Update health state
     this.healthState.consecutiveFailures++;
@@ -119,6 +127,7 @@ class AuthRecoveryManager {
    */
   handleApiSuccess() {
     const wasRecovering = this.healthState.isRecovering;
+    const hadFailures = this.healthState.consecutiveFailures > 0;
     
     // Reset failure counters on success
     this.healthState = {
@@ -132,22 +141,28 @@ class AuthRecoveryManager {
       isRecovering: false
     };
 
-    // ✅ FIX: Dismiss loading toast silently (no success message for normal recovery)
-    if (wasRecovering) {
-      // Dismiss any ongoing recovery toast
-      if (this.recoveryToastId && window.authToasts?.dismiss) {
-        window.authToasts.dismiss(this.recoveryToastId);
-        this.recoveryToastId = null;
-      }
-      // Also dismiss auth-validating toast
+    // ✅ FIX: Always dismiss connection-related toasts on success
+    // This ensures toasts are cleaned up even if we weren't officially "recovering"
+    if (wasRecovering || hadFailures) {
       try {
         if (window.authToasts?.dismiss) {
+          // Dismiss all connection-related toasts
+          window.authToasts.dismiss('cold-start');
+          window.authToasts.dismiss('connection-recovering');
           window.authToasts.dismiss('auth-validating');
+          
+          // Also dismiss the tracked recovery toast
+          if (this.recoveryToastId) {
+            window.authToasts.dismiss(this.recoveryToastId);
+            this.recoveryToastId = null;
+          }
         }
       } catch (_) {}
-      // Silent success - no need to show success toast for normal refresh token validation
-      this.showRecoveryNotification('success');
-      // silent
+      
+      // Silent success - no need to show success toast for normal recovery
+      if (wasRecovering) {
+        this.showRecoveryNotification('success');
+      }
     }
   }
 

@@ -403,15 +403,21 @@ class AdminController {
 
           await db.query(query, params);
 
-          // Log admin activity
+          // Log admin activity - include original user info for deleted users
           const activityQuery = `
-            INSERT INTO admin_activity_log (admin_id, admin_username, action_type, target_user_id, details, created_at)
+            INSERT INTO admin_activity_log (admin_id, admin_username, action_type, target_user_id, action_details, created_at)
             VALUES ($1, $2, $3, $4, $5, NOW())
           `;
           const adminUsername = req.user.username || req.user.email;
-          const details = reason ? JSON.stringify({ reason, bulk: true }) : JSON.stringify({ bulk: true });
+          // ✅ FIX: Save original target user info for activity log (especially for deleted users)
+          const details = {
+            reason: reason || null,
+            bulk: true,
+            target_username_original: targetUser.username,
+            target_email_original: targetUser.email
+          };
           
-          await db.query(activityQuery, [adminId, adminUsername, actionType, userId, details]);
+          await db.query(activityQuery, [adminId, adminUsername, actionType, userId, JSON.stringify(details)]);
 
           results.successful++;
           
