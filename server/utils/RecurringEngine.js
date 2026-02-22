@@ -69,7 +69,8 @@ class RecurringEngine {
         
       case 'monthly':
         if (template.day_of_month !== null) {
-          // Move to next month, then set the day
+          // Set day to 1 first to prevent setMonth overflow (e.g. Jan 31 → Mar 2 instead of Feb 29)
+          date.setDate(1);
           date.setMonth(date.getMonth() + 1);
           const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
           const targetDay = Math.min(template.day_of_month, daysInMonth);
