@@ -175,7 +175,7 @@ class AdminController {
           u.email_verified,
           u.onboarding_completed,
           u.created_at,
-          u.last_login,
+          u.last_login_at,
           u.language_preference,
           u.currency_preference,
           u.avatar,
@@ -917,7 +917,7 @@ class AdminController {
             COUNT(*) FILTER (WHERE role = 'admin') as admin_users,
             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as new_users_24h,
             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_7d,
-            COUNT(*) FILTER (WHERE last_login >= NOW() - INTERVAL '7 days') as active_users_7d
+            COUNT(*) FILTER (WHERE last_login_at >= NOW() - INTERVAL '7 days') as active_users_7d
           FROM users
         `, [], 'admin_user_stats'),
         

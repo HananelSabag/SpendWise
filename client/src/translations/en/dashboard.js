@@ -344,5 +344,8 @@ export default {
   categories: {
     food: 'Food & Dining',
     savings: 'Savings'
-  }
+  },
+
+  dashboardError: 'Dashboard Error',
+  dashboardErrorMessage: 'Unable to load dashboard data'
 }; 

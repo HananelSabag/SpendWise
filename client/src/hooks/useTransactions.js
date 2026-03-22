@@ -670,7 +670,7 @@ export const useTransactions = (options = {}) => {
 
   // ✅ Enhanced infinite query with AI analysis - FIXED SERVER-SIDE FILTERING
   const transactionsQuery = useInfiniteQuery({
-    queryKey: ['transactions', user?.id, filters, activeTab, new Date().toISOString().split('T')[0]], // Add date to prevent stale cache
+    queryKey: ['transactions', user?.id, filters, activeTab],
     enabled: !!user?.id, // Only run if user is authenticated
     queryFn: async ({ pageParam = 0 }) => {
       const start = performance.now();
@@ -766,18 +766,8 @@ export const useTransactions = (options = {}) => {
           hasMore: response.data?.pagination?.hasMore
         });
 
-        // ✅ FIXED: Handle API response structure properly
-        let rawData;
-        if (response.success && response.data) {
-          // Check if response.data has its own success/data structure (nested)
-          if (response.data.success && response.data.data) {
-            rawData = response.data.data; // Double nested
-          } else {
-            rawData = response.data; // Normal
-          }
-        } else {
-          rawData = response;
-        }
+        // Handle API response structure - always unwrap to the data layer
+        let rawData = response?.data || response;
         
         if (!rawData) {
           logger.warn('No data received from transactions API');
@@ -816,7 +806,7 @@ export const useTransactions = (options = {}) => {
         // Structure the data properly for infinite query
         const data = {
           transactions: transformedTransactions,
-          hasMore: hasMore || (transformedTransactions.length === pageSize),
+          hasMore: Boolean(hasMore),
           total: total,
           page: pageParam,
           limit: pageSize
@@ -869,8 +859,8 @@ export const useTransactions = (options = {}) => {
       }
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
-    getNextPageParam: (lastPage, pages) => {
-      return lastPage.hasMore ? pages.length : undefined;
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasMore ? lastPage.page + 1 : undefined;
     },
     staleTime: cacheStrategy === 'aggressive' ? 10 * 60 * 1000 : 2 * 60 * 1000,
     refetchInterval: autoRefresh ? 30 * 1000 : false
@@ -1230,7 +1220,7 @@ export const useTransactions = (options = {}) => {
     logger.debug(`Loaded ${flattened.length} transactions from ${transactionsQuery.data.pages.length} pages`);
     
     return flattened;
-  }, [transactionsQuery.data, transactionsQuery.hasNextPage, transactionsQuery.isFetchingNextPage]);
+  }, [transactionsQuery.data]);
 
   const batchInsights = useMemo(() => {
     // ✅ FIXED: Safe access to batchInsights

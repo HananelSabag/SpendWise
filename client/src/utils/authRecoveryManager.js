@@ -78,6 +78,12 @@ class AuthRecoveryManager {
       return errorType;
     }
 
+    // ✅ FIX: Don't count server-side 5xx errors as auth/connection failures
+    // A broken server endpoint (e.g. querying a dropped column) must not trigger auto-logout
+    if (errorType === 'SERVER_ERROR') {
+      return errorType;
+    }
+
     // ✅ FIX: Don't trigger recovery when server is waking up (cold start)
     // The ServerWaking page handles this case gracefully
     if (typeof window !== 'undefined' && window.__SERVER_WAKING__) {

@@ -80,8 +80,8 @@ const auth = async (req, res, next) => {
           language_preference,
           currency_preference,
           theme_preference,
-          last_login
-        FROM users 
+          last_login_at
+        FROM users
         WHERE id = $1`,
         [userId],
         'auth_user_lookup'
@@ -211,22 +211,22 @@ const auth = async (req, res, next) => {
 
     // Update last login time periodically (not on every request for performance)
     const now = new Date();
-    const lastLogin = new Date(user.last_login);
+    const lastLogin = new Date(user.last_login_at || 0);
     const timeSinceLastUpdate = now - lastLogin;
-    
-    // Update last_login if it's been more than 1 hour
+
+    // Update last_login_at if it's been more than 1 hour
     if (timeSinceLastUpdate > 60 * 60 * 1000) {
       // Don't await this to avoid blocking the request
       db.query(
-        'UPDATE users SET last_login = NOW() WHERE id = $1',
+        'UPDATE users SET last_login_at = NOW() WHERE id = $1',
         [userId],
         'auth_update_last_login'
       ).catch(error => {
-        logger.error('Error updating last_login', { userId, error: error.message });
+        logger.error('Error updating last_login_at', { userId, error: error.message });
       });
-      
+
       // Update cache
-      user.last_login = now;
+      user.last_login_at = now;
       userCache.set(cacheKey, user);
     }
 

@@ -25,6 +25,7 @@ import {
 
 // API, hooks and components
 import { useTransactions } from '../hooks/useTransactions';
+import { useDebounce } from '../hooks/useDebounce';
 import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useCategory } from '../hooks/useCategory';
 import { useRecurringTransactions } from '../hooks/useRecurringTransactions';
@@ -588,6 +589,7 @@ const ModernTransactionsList = ({
   }
 
   if (!transactions?.length) {
+    const isSearching = Boolean(debouncedSearch || filters.type !== 'all' || filters.category !== 'all' || filters.month !== 'all');
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -595,14 +597,35 @@ const ModernTransactionsList = ({
         className="text-center py-20"
       >
         <div className="w-20 h-20 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-          <Receipt className="w-10 h-10 text-gray-400" />
+          {isSearching ? (
+            <Search className="w-10 h-10 text-gray-400" />
+          ) : (
+            <Receipt className="w-10 h-10 text-gray-400" />
+          )}
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          {t('transactions.empty.title', 'No Transactions Found')}
+          {isSearching
+            ? t('transactions.empty.noResults', 'No results found')
+            : t('transactions.empty.title', 'No Transactions Found')}
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-          {t('transactions.empty.description', 'Start tracking your finances by adding your first transaction.')}
+        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-4">
+          {isSearching
+            ? t('transactions.empty.noResultsDesc', 'Try adjusting your search or filters.')
+            : t('transactions.empty.description', 'Start tracking your finances by adding your first transaction.')}
         </p>
+        {isSearching && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchQuery('');
+              setFilters({ category: 'all', type: 'all', recurring: 'all', amountMin: '', amountMax: '', sortBy: 'date', sortOrder: 'desc', month: 'all' });
+            }}
+            className="text-sm"
+          >
+            <X className="w-4 h-4 mr-2" />
+            {t('transactions.empty.clearFilters', 'Clear filters')}
+          </Button>
+        )}
       </motion.div>
     );
   }
@@ -755,7 +778,8 @@ const ModernTransactions = () => {
     month: 'all' // NEW: Month filter
   });
 
-  // Custom date range removed - not needed for simplified tab-based filtering
+  // Debounce search to prevent a new API call on every keystroke
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // ✅ Hooks - Pass filters to server for efficient pagination
   const {
@@ -764,17 +788,18 @@ const ModernTransactions = () => {
     error: transactionsError,
     refetch: refetchTransactions,
     hasNextPage: hasMore,
-    fetchNextPage: loadMore
+    fetchNextPage: loadMore,
+    isFetchingNextPage
   } = useTransactions({
-    search: searchQuery,
+    search: debouncedSearch,
     filters: {
       type: filters.type,
       category: filters.category,
       month: filters.month,
-      search: searchQuery
+      search: debouncedSearch
     },
-    activeTab: 'all', // ✅ Server-side date filtering based on tab
-    pageSize: 50 // ✅ Increased page size for better UX
+    activeTab: 'all',
+    pageSize: 50
   });
 
 
@@ -971,38 +996,33 @@ const ModernTransactions = () => {
     });
   }, []);
 
-  // ✅ FIX: Proper IntersectionObserver setup with cleanup
+  // IntersectionObserver for auto load-more — guarded by isFetchingNextPage to prevent double-fires
   useEffect(() => {
-    // Clean up previous observer
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
 
-    // Only create observer if we have more to load and not currently loading
-    if (!hasMore || transactionsLoading || !loadMoreRef.current) {
+    if (!hasMore || !loadMoreRef.current) {
       return;
     }
 
-    // Create new observer
     observerRef.current = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMore && !transactionsLoading) {
+        if (entry.isIntersecting && hasMore && !isFetchingNextPage) {
           loadMore();
         }
       },
       { threshold: 0.1, rootMargin: '100px' }
     );
 
-    // Observe the element
     observerRef.current.observe(loadMoreRef.current);
 
-    // Cleanup function
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, transactionsLoading, loadMore]);
+  }, [hasMore, isFetchingNextPage]);
 
   return (
     <motion.div
@@ -1222,11 +1242,25 @@ const ModernTransactions = () => {
                     <Button
                       variant={showFilters ? 'default' : 'outline'}
                       onClick={() => setShowFilters(!showFilters)}
-                      className="h-10 sm:h-12 px-3 sm:px-6 rounded-xl text-xs sm:text-sm"
+                      className="relative h-10 sm:h-12 px-3 sm:px-6 rounded-xl text-xs sm:text-sm"
                     >
                       <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       <span className="hidden sm:inline">{t('actions.filters', 'Filters')}</span>
                       <span className="sm:hidden">Filter</span>
+                      {(() => {
+                        const activeCount = [
+                          filters.type !== 'all',
+                          filters.category !== 'all',
+                          filters.recurring !== 'all',
+                          filters.amountMin !== '',
+                          filters.amountMax !== ''
+                        ].filter(Boolean).length;
+                        return activeCount > 0 ? (
+                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {activeCount}
+                          </span>
+                        ) : null;
+                      })()}
                     </Button>
 
                     <Button
@@ -1359,24 +1393,23 @@ const ModernTransactions = () => {
                     multiSelectMode={multiSelectMode}
                   />
                   
-                  {/* ✅ Smart Load More - Manual button + auto-trigger */}
+                  {/* Load More — skeleton during fetch, button when more available */}
                   <div ref={loadMoreRef} className="mt-8">
-                    {transactionsLoading ? (
+                    {isFetchingNextPage ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="flex flex-col items-center justify-center py-8"
+                        className="space-y-3 px-1"
                       >
-                        <LoadingSpinner size="lg" />
-                        <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm">
-                          {t('transactions.loadingMore', 'Loading more transactions...')}
-                        </p>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                        ))}
                       </motion.div>
                     ) : hasMore ? (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex flex-col items-center justify-center py-6 space-y-4"
+                        className="flex flex-col items-center justify-center py-6 space-y-3"
                       >
                         <Button
                           variant="outline"
@@ -1384,16 +1417,12 @@ const ModernTransactions = () => {
                           className="group relative px-8 py-4 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/40 dark:hover:to-purple-900/40 text-indigo-700 dark:text-indigo-300 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                         >
                           <div className="flex items-center gap-3">
-                            <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                            <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
                             <span className="text-sm sm:text-base">
                               {t('transactions.loadMore', 'Load More Transactions')}
                             </span>
-                            <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
                           </div>
                         </Button>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                          {t('transactions.scrollHint', 'or scroll down to auto-load')}
-                        </p>
                       </motion.div>
                     ) : transactions?.length > 0 ? (
                       <motion.div
