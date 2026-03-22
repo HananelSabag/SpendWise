@@ -1,425 +1,210 @@
 /**
- * 📋 MODERN RECENT TRANSACTIONS WIDGET - Revolutionary Design
- * Features: Advanced animations, Interactive cards, Smart filtering,
- * Gesture support, Real-time updates, Beautiful micro-interactions
- * @version 4.0.0 - REVOLUTIONARY REDESIGN
+ * ModernRecentTransactionsWidget — recent transactions list for dashboard.
+ * Shows the last N transactions with category icon, description, date, amount.
+ * CRASH FIX: processedTransactions always returns {recent, total} object.
  */
 
-import React, { useMemo, useCallback, useState, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion';
-import { 
-  ArrowRight, ArrowUpRight, ArrowDownRight, Calendar, RefreshCw,
-  TrendingUp, TrendingDown, Filter, Search, MoreHorizontal,
-  Sparkles, Clock, Eye, EyeOff, Target, Zap, Star,
-  Coffee, Car, ShoppingBag, Home, Heart, Gift, DollarSign,
-  Smartphone, Music, Receipt, Plus
-} from 'lucide-react';
-
-// ✅ Import stores and hooks
-import { 
-  useTranslation, 
-  useCurrency,
-  useNotifications 
-} from '../../../stores';
+import React, { useMemo, useCallback, useState } from 'react';
+import { ArrowRight, Plus, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation, useCurrency } from '../../../stores';
 import { useTransactions } from '../../../hooks/useTransactions';
-import { Button, Card, LoadingSpinner, Badge, Input } from '../../ui';
 import { cn } from '../../../utils/helpers';
-import ModernTransactionCard from '../transactions/ModernTransactionCard';
 
-// ✅ Category icons mapping
-const CATEGORY_ICONS = {
-  'food': Coffee,
-  'transport': Car,
-  'shopping': ShoppingBag,
-  'entertainment': Music,
-  'bills': Receipt,
-  'health': Heart,
-  'home': Home,
-  'salary': DollarSign,
-  'investment': TrendingUp,
-  'freelance': Star,
-  'gift': Gift,
-  'technology': Smartphone,
-  'other': Plus
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+const formatRelativeDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '';
+  const now = new Date();
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-// ✅ Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    transition: {
-      duration: 0.4,
-      ease: [0.23, 1, 0.32, 1]
-    }
-  }
-};
-
-const cardVariants = {
-  hover: { 
-    scale: 1.02, 
-    y: -4,
-    transition: { duration: 0.2 }
-  },
-  tap: { 
-    scale: 0.98,
-    transition: { duration: 0.1 }
-  }
-};
-
-// ✅ SIMPLIFIED: Use ModernTransactionCard for consistency
-const TransactionItem = ({ transaction, onTransactionClick }) => {
+const CategoryBadge = ({ category, type }) => {
+  const initial = (category || (type === 'income' ? 'I' : 'E')).charAt(0).toUpperCase();
   return (
-    <motion.div variants={itemVariants}>
-      <ModernTransactionCard
-        transaction={transaction}
-        viewMode="list"
-        onEdit={() => onTransactionClick?.(transaction)}
-        className="mb-2"
-      />
-    </motion.div>
-  );
-};
-
-// ✅ Enhanced Header Component
-const WidgetHeader = ({ 
-  title, 
-  onViewAll, 
-  totalCount, 
-  showingCount
-}) => {
-  return (
-    <div className="space-y-4">
-      {/* Main header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {title}
-            </h3>
-            <p className="text-sm text-gray-500">
-              Showing {showingCount} of {totalCount} transactions
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* View all button */}
-          {totalCount > 0 && (
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onViewAll}
-                className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-              >
-                <span className="hidden sm:inline mr-2">View All</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
-        </div>
-      </div>
+    <div className={cn(
+      'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
+      type === 'income'
+        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+        : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+    )}>
+      {initial}
     </div>
   );
 };
 
-// ✅ Filter Panel Component
-const FilterPanel = ({ onSearchChange, searchValue }) => {
+// ─── Transaction row ─────────────────────────────────────────────────────────
+
+const TxRow = ({ transaction, formatCurrency }) => {
+  const isIncome = transaction.type === 'income';
+  const amount = parseFloat(transaction.amount) || 0;
+  const dateStr = transaction.transaction_datetime || transaction.created_at || transaction.date;
+
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0"
     >
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <Input
-            type="text"
-            placeholder="Search transactions..."
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-white dark:bg-gray-700"
-            icon={Search}
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="text-green-600">
-            <TrendingUp className="w-4 h-4 mr-1" />
-            Income
-          </Button>
-          <Button variant="ghost" size="sm" className="text-red-600">
-            <TrendingDown className="w-4 h-4 mr-1" />
-            Expense
-          </Button>
-        </div>
+      <CategoryBadge category={transaction.category_name} type={transaction.type} />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+          {transaction.description || transaction.category_name || (isIncome ? 'Income' : 'Expense')}
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          {transaction.category_name && (
+            <span className="mr-1">{transaction.category_name} · </span>
+          )}
+          {formatRelativeDate(dateStr)}
+        </p>
       </div>
+
+      <span className={cn(
+        'text-sm font-bold flex-shrink-0',
+        isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'
+      )}>
+        {isIncome ? '+' : '-'}{formatCurrency(Math.abs(amount))}
+      </span>
     </motion.div>
   );
 };
 
-/**
- * 📋 Modern Recent Transactions Widget Component
- */
-const ModernRecentTransactionsWidget = ({ 
-  className = '',
+// ─── Main component ──────────────────────────────────────────────────────────
+
+const ModernRecentTransactionsWidget = ({
   onViewAll,
-  onAddTransaction,
-  maxItems = 5
+  maxItems = 5,
 }) => {
-  const { t, isRTL } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
-  const { addNotification } = useNotifications();
-  
-  // ✅ Local state
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // ✅ Get transactions data
-  const { 
-    transactions: allTransactions, 
-    loading, 
-    refetch,
-    error 
-  } = useTransactions({
-    pageSize: 50, // Get more for filtering
+
+  const { transactions: allTransactions, loading, refetch } = useTransactions({
+    pageSize: 50,
     enableAI: false,
     context: 'dashboard',
-    autoRefresh: true
+    autoRefresh: true,
   });
 
-  // ✅ Filter and process transactions
-  const processedTransactions = useMemo(() => {
-    if (!allTransactions || !Array.isArray(allTransactions)) return [];
-    
-    const now = new Date();
-    
-    let filtered = allTransactions
-      // Only include past and present transactions
-      .filter(transaction => {
-        // ✅ TIMEZONE-AWARE: Use transaction_datetime for filtering
-        const transactionDate = new Date(transaction.transaction_datetime || transaction.created_at || transaction.date);
-        if (transactionDate > now) return false;
-        if (transaction.is_recurring && transactionDate > now) return false;
-        if (transaction.is_template) return false;
-        return true;
-      })
-      // Apply search filter
-      .filter(transaction => {
-        if (!searchTerm) return true;
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          transaction.description?.toLowerCase().includes(searchLower) ||
-          transaction.category_name?.toLowerCase().includes(searchLower)
-        );
-      })
-      // Sort by date (most recent first) - TIMEZONE-AWARE
-      .sort((a, b) => {
-        const dateA = new Date(a.transaction_datetime || a.created_at || a.date);
-        const dateB = new Date(b.transaction_datetime || b.created_at || b.date);
-        return dateB - dateA;
-      });
+  const [refreshing, setRefreshing] = useState(false);
 
-    return {
-      recent: filtered.slice(0, maxItems),
-      total: filtered.length
-    };
-  }, [allTransactions, searchTerm, maxItems]);
-
-  // ✅ Handle refresh
   const handleRefresh = useCallback(async () => {
-    try {
-      await refetch();
-      addNotification({
-        type: 'success',
-        message: t('recentTransactions.refreshed', 'Transactions updated'),
-        duration: 2000
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        message: t('recentTransactions.refreshFailed', 'Failed to refresh transactions'),
-        duration: 3000
-      });
-    }
-  }, [refetch, addNotification, t]);
+    setRefreshing(true);
+    try { await refetch?.(); } finally { setRefreshing(false); }
+  }, [refetch]);
 
-  // ✅ Handle view all
-  const handleViewAll = useCallback(() => {
-    if (onViewAll) {
-      onViewAll();
-    } else {
-      window.location.href = '/transactions';
+  // ✅ CRASH FIX: always return { recent, total } — never bare array
+  const processedTransactions = useMemo(() => {
+    if (!allTransactions || !Array.isArray(allTransactions)) {
+      return { recent: [], total: 0 };
     }
-  }, [onViewAll]);
+    const now = new Date();
+    const filtered = allTransactions
+      .filter(tx => {
+        const d = new Date(tx.transaction_datetime || tx.created_at || tx.date);
+        return !isNaN(d) && d <= now && !tx.is_template;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.transaction_datetime || a.created_at || a.date);
+        const db = new Date(b.transaction_datetime || b.created_at || b.date);
+        return db - da;
+      });
+    return { recent: filtered.slice(0, maxItems), total: filtered.length };
+  }, [allTransactions, maxItems]);
 
-  // ✅ Handle transaction click
-  const handleTransactionClick = useCallback((transaction) => {
-    // Future: Open transaction details modal
-    addNotification({
-      type: 'info',
-      message: 'Transaction details coming soon!',
-      duration: 2000
-    });
-  }, [addNotification]);
+  const { recent, total } = processedTransactions;
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className={cn('', className)}
-    >
-      <Card className="overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl">
-        <div className="p-6">
-          {/* Enhanced Header */}
-          <WidgetHeader
-            title={t('recentTransactions.title', 'Recent Transactions')}
-            onViewAll={handleViewAll}
-            totalCount={processedTransactions.total}
-            showingCount={processedTransactions.recent.length}
-          />
-
-          {/* Filter Panel disabled per product request */}
-
-          {/* Content */}
-          <div className="mt-6">
-            {loading && processedTransactions.recent.length === 0 ? (
-              /* Enhanced Loading State */
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center justify-center py-12"
-              >
-                <div className="text-center">
-                  <div className="w-12 h-12 mx-auto mb-4">
-                    <LoadingSpinner size="lg" />
-                  </div>
-                  <p className="text-gray-500 font-medium">
-                    {t('recentTransactions.loading', 'Loading transactions...')}
-                  </p>
-                </div>
-              </motion.div>
-            ) : error ? (
-              /* Enhanced Error State */
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-12"
-              >
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ArrowUpRight className="w-8 h-8 text-red-600" />
-                </div>
-                <p className="text-red-600 dark:text-red-400 mb-4 font-medium">
-                  {t('recentTransactions.error', 'Failed to load transactions')}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  className="border-red-300 text-red-600 hover:bg-red-50"
-                >
-                  {t('common.retry', 'Try Again')}
-                </Button>
-              </motion.div>
-            ) : processedTransactions.recent.length === 0 ? (
-              /* Enhanced Empty State */
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-12"
-              >
-                <motion.div
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <Target className="w-8 h-8 text-blue-500" />
-                </motion.div>
-                <p className="text-gray-500 mb-4 text-lg font-medium">
-                  {searchTerm 
-                    ? 'No transactions match your search'
-                    : t('recentTransactions.noTransactions', 'No transactions yet')}
-                </p>
-                {!searchTerm && (
-                  <>
-                    <p className="text-sm text-gray-400 mb-6">
-                      {t('recentTransactions.getStarted', 'Start tracking your finances by adding your first transaction')}
-                    </p>
-                    <Button
-                      onClick={onAddTransaction}
-                      className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold"
-                    >
-                      <Plus className="w-5 h-5 mr-2" />
-                      {t('recentTransactions.addFirst', 'Add Transaction')}
-                    </Button>
-                  </>
-                )}
-              </motion.div>
-            ) : (
-              /* Enhanced Transaction List */
-              <motion.div
-                variants={containerVariants}
-                className="space-y-3"
-              >
-                {processedTransactions.recent.map((transaction, index) => (
-                  <TransactionItem
-                    key={transaction.id || index}
-                    transaction={transaction}
-                    onTransactionClick={handleTransactionClick}
-                  />
-                ))}
-                
-                {/* Enhanced Footer */}
-                {processedTransactions.total > maxItems && (
-                  <motion.div
-                    variants={itemVariants}
-                    className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          Showing {processedTransactions.recent.length} of {processedTransactions.total}
-                        </span>
-                      </div>
-                      
-                      <motion.button
-                        whileHover={{ scale: 1.05, x: 4 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleViewAll}
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm group"
-                      >
-                        <span>See all transactions</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            {t('recentTransactions.title')}
+          </h3>
+          {total > 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {t('recentTransactions.showingCount', { count: recent.length, total })}
+            </p>
+          )}
         </div>
-      </Card>
-    </motion.div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+          </button>
+          {total > 0 && (
+            <button
+              onClick={onViewAll}
+              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors"
+            >
+              {t('recentTransactions.viewAll')}
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4">
+        {loading && recent.length === 0 ? (
+          /* Skeleton */
+          <div className="py-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0 animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700" />
+                <div className="flex-1">
+                  <div className="h-3 w-32 bg-gray-100 dark:bg-gray-700 rounded mb-1.5" />
+                  <div className="h-2.5 w-20 bg-gray-100 dark:bg-gray-700 rounded" />
+                </div>
+                <div className="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : recent.length === 0 ? (
+          /* Empty state */
+          <div className="py-8 text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-2">
+              <Plus className="w-5 h-5 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('recentTransactions.noTransactions')}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {t('recentTransactions.getStarted')}
+            </p>
+          </div>
+        ) : (
+          /* Transaction list */
+          <AnimatePresence initial={false}>
+            {recent.map(tx => (
+              <TxRow key={tx.id} transaction={tx} formatCurrency={formatCurrency} />
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* Footer — view all link (only when there are more) */}
+      {total > maxItems && (
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={onViewAll}
+            className="w-full text-sm text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors flex items-center justify-center gap-1"
+          >
+            {t('recentTransactions.seeMore')} ({total - maxItems} more)
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
