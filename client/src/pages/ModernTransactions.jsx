@@ -300,8 +300,7 @@ const TransactionList = ({
                       onDelete={onDelete}
                       onDuplicate={onDuplicate}
                       isSelected={selectedIds?.has(tx.id)}
-                      onSelect={onSelect}
-                      multiSelectMode={multiSelectMode}
+                      onSelect={multiSelectMode ? onSelect : undefined}
                     />
                   ))}
                 </div>
