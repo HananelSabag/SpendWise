@@ -26,7 +26,7 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
           } catch (_) {}
         }
       }}
-      className="fixed bottom-6 left-6 z-[10000] group focus:outline-none"
+      className="hidden md:block fixed bottom-6 left-6 z-[10000] group focus:outline-none"
     >
       {/* Glow */}
       <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500/30 to-indigo-500/30 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />

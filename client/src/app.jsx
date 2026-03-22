@@ -17,6 +17,7 @@ import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
 import AccessibilityFab from './components/common/AccessibilityFab.jsx';
 import ModernOnboardingManager from './components/common/ModernOnboardingManager';
+import MobileBottomNav from './components/common/MobileBottomNav';
 
 // ✅ Zustand stores
 import { StoreProvider, useAuth, useTranslation } from './stores';
@@ -248,8 +249,11 @@ const AppContent = () => {
       
       {/* Header */}
       {isAuthenticated && <Header />}
-      
-      <main className="flex-grow">
+
+      {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
+      {isAuthenticated && <MobileBottomNav />}
+
+      <main className="flex-grow lg:pb-0 pb-20">
         <Routes>
           {/* ✅ Public Routes */}
           <Route path="/login" element={
