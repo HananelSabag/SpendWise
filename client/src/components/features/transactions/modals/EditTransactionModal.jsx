@@ -244,21 +244,19 @@ const EditTransactionModal = ({
                 </div>
               </div>
 
-              {/* Compact Body */}
-              <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
-                <div className="max-w-none mx-auto">
-                  <TransactionForm
-                    mode={mode}
-                    initialData={transaction}
-                    onSubmit={handleSubmit}
-                    onCancel={handleClose}
-                    isLoading={isSubmitting || isLoading}
-                    showRecurring={mode !== 'view'}
-                    showAdvanced={mode !== 'view'}
-                    className="w-full"
-                    hideHeader
-                  />
-                </div>
+              {/* Form Body */}
+              <div className="p-4 sm:p-5">
+                <TransactionForm
+                  mode={mode}
+                  initialData={transaction}
+                  onSubmit={handleSubmit}
+                  onCancel={handleClose}
+                  isLoading={isSubmitting || isLoading}
+                  showRecurring={mode !== 'view'}
+                  showAdvanced={mode !== 'view'}
+                  className="w-full"
+                  hideHeader
+                />
               </div>
             </motion.div>
           ) : (

@@ -7,10 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CreditCard, Repeat, Calendar, Clock, Save, X, 
-  AlertCircle, CheckCircle, Target, Zap 
-} from 'lucide-react';
+import { CreditCard, Repeat, Save, X } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -20,7 +17,7 @@ import {
   useNotifications
 } from '../../../../stores';
 
-import { Button, LoadingSpinner, Card, Badge } from '../../../ui';
+import { Button, LoadingSpinner, Badge } from '../../../ui';
 import TransactionFormFields from './TransactionFormFields';
 import { validateTransaction } from './TransactionValidation';
 import { formatTransactionForAPI, getDefaultFormData } from './TransactionHelpers';
@@ -221,19 +218,31 @@ const TransactionFormTabs = ({
       className={cn("space-y-6", className)}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* Header with Type Selection (compact) */}
-      <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-700">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {mode === 'edit' ? t('form.editTransaction') : t('form.addTransaction')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('form.selectType', { fallback: 'Choose the type of transaction you want to create' })}
-          </p>
+      {/* Header with Type Selection */}
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center shadow-md shrink-0",
+            activeTab === 'recurring'
+              ? "bg-gradient-to-br from-purple-500 to-violet-600"
+              : "bg-gradient-to-br from-blue-500 to-indigo-600"
+          )}>
+            {activeTab === 'recurring' ? <Repeat className="w-5 h-5 text-white" /> : <CreditCard className="w-5 h-5 text-white" />}
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">
+              {mode === 'edit' ? t('form.editTransaction') : t('form.addTransaction')}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {activeTab === 'recurring'
+                ? t('form.recurringSubtitle', { fallback: 'Automatic recurring template' })
+                : t('form.oneTimeSubtitle', { fallback: 'One-time transaction' })}
+            </p>
+          </div>
         </div>
 
-        {/* Compact segmented control instead of large cards */}
-        <div className="inline-flex bg-white dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700 shadow-sm" style={{ direction: 'ltr' }}>
+        {/* Tab toggle */}
+        <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shrink-0" style={{ direction: 'ltr' }}>
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -243,32 +252,20 @@ const TransactionFormTabs = ({
                 type="button"
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                   isActive
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 )}
                 disabled={mode === 'edit'}
               >
-                <TabIcon className="w-4 h-4" />
-                <span>{tab.id === 'recurring' ? t('tabs.recurring.title', { fallback: 'Recurring Transaction' }) : t('tabs.oneTime.title', { fallback: 'One-time Transaction' })}</span>
+                <TabIcon className="w-3.5 h-3.5" />
+                <span>{tab.id === 'recurring' ? t('tabs.recurring.title', { fallback: 'Recurring' }) : t('tabs.oneTime.title', { fallback: 'One-time' })}</span>
               </button>
             );
           })}
         </div>
-
-        {/* Mode indicator for edit */}
-        {mode === 'edit' && (
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse text-yellow-800 dark:text-yellow-200">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {t('form.editMode', { fallback: 'In edit mode - cannot change transaction type' })}
-              </span>
-            </div>
-          </div>
-        )}
-      </Card>
+      </div>
 
       {/* Form Content */}
       <AnimatePresence mode="wait">
@@ -279,66 +276,10 @@ const TransactionFormTabs = ({
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="p-6 sm:p-8 md:p-10 lg:p-12 bg-white dark:bg-gray-800 shadow-xl rounded-3xl border-0">
-            {/* Enhanced Form Header - Better Mobile Layout */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 md:pb-8 mb-6 md:mb-8 border-b-2 border-gradient-to-r from-blue-200 to-purple-200 dark:from-blue-800 dark:to-purple-800 space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4 rtl:space-x-reverse flex-1">
-                {/* Enhanced Tab icon */}
-                <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300",
-                  activeTab === 'recurring' 
-                    ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
-                    : "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
-                )}>
-                  {activeTab === 'recurring' ? (
-                    <Repeat className="w-8 h-8" />
-                  ) : (
-                    <CreditCard className="w-8 h-8" />
-                  )}
-                </div>
-                
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    {tabs.find(tab => tab.id === activeTab)?.title}
-                  </h3>
-                  <p className="text-lg text-gray-600 dark:text-gray-400">
-                    {activeTab === 'recurring' 
-                      ? t('form.recurringSubtitle', { fallback: 'Set up template for automatic transactions' })
-                      : t('form.oneTimeSubtitle', { fallback: 'One-time transaction details' })
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Form status indicators */}
-              <div className="flex items-center gap-2">
-                {isDirty && (
-                  <div className="flex items-center space-x-1 rtl:space-x-reverse text-orange-600 dark:text-orange-400">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-xs font-medium">{t('form.unsaved')}</span>
-                  </div>
-                )}
-                
-                {!isValid && isDirty && (
-                  <div className="flex items-center space-x-1 rtl:space-x-reverse text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-xs font-medium">{t('form.invalid')}</span>
-                  </div>
-                )}
-                
-                {isValid && isDirty && !isSubmitting && (
-                  <div className="flex items-center space-x-1 rtl:space-x-reverse text-green-600 dark:text-green-400">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-xs font-medium">{t('form.valid')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Enhanced Form Fields - Better Desktop Layout */}
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 lg:gap-8">
-                <div className="xl:col-span-3 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5">
+              <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 lg:gap-6">
+                <div className="xl:col-span-3 space-y-4">
                   <TransactionFormFields
                     formData={formData}
                     validationErrors={validationErrors}
@@ -349,127 +290,93 @@ const TransactionFormTabs = ({
                   />
                 </div>
                 
-                {/* Enhanced Preview Panel - Better Desktop Integration */}
+                {/* Preview Panel (desktop only) */}
                 <div className="hidden xl:block xl:col-span-2">
-                  <Card className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
-                    <div className={cn(
-                      "flex items-center space-x-3 rtl:space-x-reverse mb-6",
-                      activeTab === 'recurring' ? "text-purple-600" : "text-blue-600"
-                    )}>
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        activeTab === 'recurring' 
-                          ? "bg-purple-100 dark:bg-purple-900/30"
-                          : "bg-blue-100 dark:bg-blue-900/30"
-                      )}>
-                        {activeTab === 'recurring' ? (
-                          <Repeat className="w-5 h-5" />
-                        ) : (
-                          <CreditCard className="w-5 h-5" />
-                        )}
-                      </div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {activeTab === 'recurring' 
-                          ? t('recurring.preview.title', { fallback: 'Recurring Preview' })
-                          : t('form.editTransaction', { fallback: 'Transaction Summary' })}
-                      </h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">{t('fields.amount.label', { fallback: 'Amount' })}:</span>
-                        <span className={cn(
-                          "font-bold text-lg",
-                          formData.type === 'income' ? "text-green-600" : "text-red-600"
-                        )}>
+                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {activeTab === 'recurring'
+                        ? t('recurring.preview.title', { fallback: 'Recurring Preview' })
+                        : t('form.editTransaction', { fallback: 'Summary' })}
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('fields.amount.label', { fallback: 'Amount' })}</span>
+                        <span className={cn("text-sm font-bold", formData.type === 'income' ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                           {formatCurrency(formData.amount || 0)}
                         </span>
                       </div>
-                      
-                      <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <span className="text-gray-600 dark:text-gray-400">{t('fields.type.label', { fallback: 'Type' })}:</span>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('fields.type.label', { fallback: 'Type' })}</span>
                         <Badge variant={formData.type === 'income' ? 'success' : 'destructive'}>
                           {formData.type === 'income' ? t('types.income', { fallback: 'Income' }) : t('types.expense', { fallback: 'Expense' })}
                         </Badge>
                       </div>
-                      
                       {formData.description && (
-                        <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                          <span className="text-gray-600 dark:text-gray-400 block mb-1">{t('fields.description.label', { fallback: 'Description' })}:</span>
-                          <p className="font-medium text-gray-900 dark:text-white">{formData.description}</p>
+                        <div className="py-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">{t('fields.description.label', { fallback: 'Description' })}</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{formData.description}</p>
                         </div>
                       )}
-                      
                       {activeTab === 'recurring' && (
-                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                          <div className="flex items-center space-x-2 rtl:space-x-reverse text-purple-600 dark:text-purple-400 mb-2">
-                            <Repeat className="w-4 h-4" />
-                            <span className="font-medium">{t('labels.recurring', { fallback: 'Recurring' })}</span>
+                        <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                          <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 mb-1">
+                            <Repeat className="w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">{t('labels.recurring', { fallback: 'Recurring' })}</span>
                           </div>
-                          <p className="text-sm text-purple-700 dark:text-purple-300">
-                            {t('recurring.description', { fallback: 'This will be created as a template and generated automatically by the chosen frequency.' })}
+                          <p className="text-xs text-purple-700 dark:text-purple-300">
+                            {t('recurring.description', { fallback: 'Template auto-generates transactions by frequency.' })}
                           </p>
                         </div>
                       )}
                     </div>
-                  </Card>
+                  </div>
                 </div>
               </div>
 
-              {/* Enhanced Form Actions - Better Mobile Layout */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-8 space-y-4 sm:space-y-0">
-                {/* Left side - Additional info */}
-                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  {isDirty && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
-                      <span>{t('form.unsavedChanges')}</span>
-                    </div>
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
+                {isDirty && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">{t('form.unsavedChanges')}</span>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSubmitting || isLoading}
+                  className="px-4 py-2 h-auto text-sm"
+                >
+                  <X className="w-3.5 h-3.5 mr-1.5" />
+                  {t('form.cancel')}
+                </Button>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!isValid || isSubmitting || isLoading}
+                  className={cn(
+                    "px-5 py-2 h-auto text-sm",
+                    activeTab === 'recurring'
+                      ? "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                   )}
-                </div>
-
-                {/* Right side - Action buttons */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    disabled={isSubmitting || isLoading}
-                    className="px-6 py-2.5 h-auto"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    {t('form.cancel')}
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={!isValid || isSubmitting || isLoading}
-                    className={cn(
-                      "min-w-[140px] px-6 py-2.5 h-auto",
-                      activeTab === 'recurring'
-                        ? "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
-                        : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                    )}
-                  >
-                    {isSubmitting || isLoading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : activeTab === 'recurring' ? (
-                      <Repeat className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
-                    )}
-                    {isSubmitting 
-                      ? t('form.saving')
-                      : activeTab === 'recurring'
-                        ? (mode === 'create' ? t('form.createTemplate') : t('form.updateTemplate'))
-                        : (mode === 'create' ? t('form.create') : t('form.update'))
-                    }
-                  </Button>
-                </div>
+                >
+                  {isSubmitting || isLoading ? (
+                    <LoadingSpinner size="sm" className="mr-1.5" />
+                  ) : activeTab === 'recurring' ? (
+                    <Repeat className="w-3.5 h-3.5 mr-1.5" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  {isSubmitting
+                    ? t('form.saving')
+                    : activeTab === 'recurring'
+                      ? (mode === 'create' ? t('form.createTemplate') : t('form.updateTemplate'))
+                      : (mode === 'create' ? t('form.create') : t('form.update'))
+                  }
+                </Button>
               </div>
             </form>
-          </Card>
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>

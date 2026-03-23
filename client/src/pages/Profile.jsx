@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  User, Settings, Shield, Download, Upload, ZoomIn,
+  User, Settings, Shield, Download, Upload,
   Eye, EyeOff, FileSpreadsheet, Braces, FileText, CheckCircle
 } from 'lucide-react';
 
@@ -312,15 +312,20 @@ const ExportTab = ({ t }) => {
 // ── Tab navigation ────────────────────────────────────────────────────────────
 
 const HorizontalTabs = ({ active, onChange, t }) => (
-  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-x-auto">
+  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
     {TABS.map(tab => {
       const Icon = tab.icon;
+      const isActive = active === tab.id;
       return (
         <button key={tab.id} onClick={() => onChange(tab.id)}
-          className={cn('flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-1 justify-center',
-            active === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300')}>
-          <Icon className="w-3.5 h-3.5" />
-          {t(tab.labelKey, tab.id)}
+          className={cn(
+            'flex-1 flex flex-col items-center gap-1 py-2 px-1.5 rounded-lg text-xs font-medium transition-all',
+            isActive
+              ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          )}>
+          <Icon className="w-4 h-4" />
+          <span className="whitespace-nowrap leading-tight">{t(tab.labelKey, tab.id)}</span>
         </button>
       );
     })}
@@ -328,15 +333,20 @@ const HorizontalTabs = ({ active, onChange, t }) => (
 );
 
 const SidebarTabs = ({ active, onChange, t }) => (
-  <div className="w-48 shrink-0 space-y-1">
+  <div className="w-44 shrink-0 space-y-0.5">
     {TABS.map(tab => {
       const Icon = tab.icon;
+      const isActive = active === tab.id;
       return (
         <button key={tab.id} onClick={() => onChange(tab.id)}
-          className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left',
-            active === tab.id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white')}>
-          <Icon className="w-4 h-4" />
-          {t(tab.labelKey, tab.id)}
+          className={cn(
+            'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left',
+            isActive
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+          )}>
+          <Icon className="w-4 h-4 shrink-0" />
+          <span>{t(tab.labelKey, tab.id)}</span>
         </button>
       );
     })}
@@ -376,8 +386,13 @@ const Profile = () => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         {/* Mobile header */}
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Profile</h1>
+        <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 px-4 py-3">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Profile</h1>
+          </div>
           <HorizontalTabs active={activeTab} onChange={setActiveTab} t={t} />
         </div>
         <div className="px-4 py-4">{tabContent}</div>
@@ -386,7 +401,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Desktop header */}
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
         <div className="max-w-5xl mx-auto px-6 py-5">

@@ -112,8 +112,12 @@ const TemplateCard = ({ template, onEdit, onToggleStatus, onDelete }) => {
         </div>
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2">
           <p className="text-gray-400 dark:text-gray-500">{t('recurringManager.nextRun', 'Next Run')}</p>
-          <p className="font-medium text-gray-900 dark:text-white truncate">
-            {template.next_run ? dateHelpers.formatMedium(new Date(template.next_run)) : t('recurringManager.never', 'Never')}
+          <p className={cn("font-medium truncate", !isActive ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-900 dark:text-white")}>
+            {!isActive
+              ? t('actions.pause', 'Paused')
+              : template.next_run
+                ? dateHelpers.formatMedium(new Date(template.next_run))
+                : t('recurringManager.indefinite', 'Ongoing')}
           </p>
         </div>
       </div>
@@ -146,53 +150,48 @@ const TemplateCard = ({ template, onEdit, onToggleStatus, onDelete }) => {
   );
 };
 
-// ── Delete Scope Modal ────────────────────────────────────────────────────────
+// ── Delete Confirm Modal ──────────────────────────────────────────────────────
 const DeleteScopeModal = ({ isOpen, template, onConfirm, onCancel }) => {
   const { t } = useTranslation();
   if (!isOpen || !template) return null;
 
-  const options = [
-    { scope: 'template_only', label: t('recurring.deleteTemplateOnly', 'Template only (keep transactions)'), desc: t('recurring.deleteTemplateOnlyDesc', 'Deactivate template but keep all transaction history'), color: 'blue' },
-    { scope: 'future',        label: t('recurring.deleteFuture', 'Template + future transactions'), desc: t('recurring.deleteFutureDesc', 'Remove template and all future scheduled transactions'), color: 'yellow' },
-    { scope: 'current_and_future', label: t('recurring.deleteCurrentAndFuture', 'Template + current month & future'), desc: t('recurring.deleteCurrentAndFutureDesc', 'Remove template and transactions from this month forward'), color: 'orange' },
-    { scope: 'all',           label: t('recurring.deleteAll', 'Template + all transactions'), desc: t('recurring.deleteAllDesc', 'Permanently remove template and entire transaction history'), color: 'red' },
-  ];
-
-  const hoverMap = { blue: 'hover:bg-blue-50 dark:hover:bg-blue-900/20', yellow: 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20', orange: 'hover:bg-orange-50 dark:hover:bg-orange-900/20', red: 'hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800' };
-  const textMap  = { blue: 'text-gray-900 dark:text-white', yellow: 'text-gray-900 dark:text-white', orange: 'text-gray-900 dark:text-white', red: 'text-red-600 dark:text-red-400' };
-
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onCancel}>
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('recurring.deleteTemplate', 'Delete Template')}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{template.description || template.name}</p>
+        <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center shrink-0">
+              <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('recurring.deleteTemplate', 'Delete Template')}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[200px]">{template.description || template.name}</p>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-1">
-            <X className="w-5 h-5" />
-          </Button>
         </div>
 
-        {/* Options */}
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('recurring.deleteChoose', 'Choose what to delete:')}</p>
-          {options.map(({ scope, label, desc, color }) => (
-            <button
-              key={scope}
-              onClick={() => onConfirm(scope)}
-              className={cn('w-full text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors', hoverMap[color])}
-            >
-              <div className={cn('font-medium text-sm', textMap[color])}>{label}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
-            </button>
-          ))}
+        {/* Options — simplified to 2 choices */}
+        <div className="p-4 space-y-2">
+          <button
+            onClick={() => onConfirm('template_only')}
+            className="w-full text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+          >
+            <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('recurring.deleteTemplateOnly', 'Stop schedule only')}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteTemplateOnlyDesc', 'Keep existing transaction history')}</div>
+          </button>
+          <button
+            onClick={() => onConfirm('all')}
+            className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            <div className="font-semibold text-sm text-red-600 dark:text-red-400">{t('recurring.deleteAll', 'Delete everything')}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteAllDesc', 'Remove template and all transaction history')}</div>
+          </button>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-5 pt-0">
-          <Button variant="ghost" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>
+        <div className="flex justify-end px-4 pb-4">
+          <Button variant="ghost" size="sm" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>
         </div>
       </div>
     </div>
@@ -224,7 +223,8 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
         const q = searchQuery.toLowerCase();
         if (!tmpl.description?.toLowerCase().includes(q) && !tmpl.category_name?.toLowerCase().includes(q)) return false;
       }
-      if (statusFilter !== 'all' && tmpl.status !== statusFilter) return false;
+      if (statusFilter === 'active' && !tmpl.is_active) return false;
+      if (statusFilter === 'paused' && tmpl.is_active) return false;
       if (typeFilter !== 'all' && tmpl.type !== typeFilter) return false;
       return true;
     });
@@ -335,9 +335,9 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           <div className="flex gap-2">
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-              <option value="all">{t('recurringManager.filter.allStatus', 'All Status')}</option>
-              <option value="active">{t('recurringManager.filter.active', 'Active')}</option>
-              <option value="paused">{t('recurringManager.filter.paused', 'Paused')}</option>
+              <option value="all">{t('recurringManager.filter.allStatus', 'All')}</option>
+              <option value="active">{t('recurringManager.filter.active', 'Active only')}</option>
+              <option value="paused">{t('recurringManager.filter.paused', 'Paused only')}</option>
             </select>
             <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">

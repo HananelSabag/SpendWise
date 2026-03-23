@@ -102,19 +102,16 @@ const AddTransactionModal = ({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Enhanced Modal Body - Optimized for Desktop & Mobile */}
-            <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-[500px] md:min-h-[600px]">
-              <div className="max-w-none mx-auto">
-                <TransactionFormTabs
-                  mode="create"
-                  initialData={defaultFormData}
-                  initialTab={initialTab}
-                  onSubmit={handleSubmit}
-                  onCancel={handleClose}
-                  isLoading={isSubmitting || isLoading}
-                  className="w-full"
-                />
-              </div>
+            <div className="p-4 sm:p-5">
+              <TransactionFormTabs
+                mode="create"
+                initialData={defaultFormData}
+                initialTab={initialTab}
+                onSubmit={handleSubmit}
+                onCancel={handleClose}
+                isLoading={isSubmitting || isLoading}
+                className="w-full"
+              />
             </div>
           </motion.div>
       </AnimatePresence>

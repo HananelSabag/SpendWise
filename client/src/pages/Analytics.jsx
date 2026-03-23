@@ -297,9 +297,14 @@ const RecentList = ({ summary, formatCurrency, t }) => {
 const MobileAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t, navigate, refetch, isRefreshing, setIsRefreshing }) => (
   <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
     {/* Sticky header */}
-    <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('analytics.title','Analytics')}</h1>
+    <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 px-4 py-3">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
+            <BarChart3 className="w-4 h-4 text-white" />
+          </div>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('analytics.title','Analytics')}</h1>
+        </div>
         <button onClick={async () => { setIsRefreshing(true); await refetch(); setIsRefreshing(false); }}
           className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <RefreshCw className={cn('w-4 h-4 text-gray-500', isRefreshing && 'animate-spin')} />
@@ -314,35 +319,62 @@ const MobileAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t
 
       {/* Health score */}
       {summary && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+              <Target className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('health.financialHealth','Financial Health')}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('health.yourScore','Your score this period')}</p>
+            </div>
+          </div>
           <HealthScore summary={summary} t={t} />
         </div>
       )}
 
       {/* Monthly trends chart */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-blue-500" />
-          {t('analytics.monthlyTrends','Monthly Trends')}
-        </h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <TrendingUp className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('analytics.monthlyTrends','Monthly Trends')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.incomeVsExpenses','Income vs Expenses')}</p>
+          </div>
+        </div>
         <TrendsChart trends={trends} formatCurrency={formatCurrency} t={t} />
       </div>
 
       {/* Category breakdown */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <PieChart className="w-4 h-4 text-purple-500" />
-          {t('analytics.topCategories','Top Spending Categories')}
-        </h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <PieChart className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('analytics.topCategories','Top Spending Categories')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.topCategoriesDesc','Where your money goes')}</p>
+          </div>
+        </div>
         <CategoryChart trends={trends} summary={summary} formatCurrency={formatCurrency} t={t} />
       </div>
 
       {/* Recent transactions */}
       {summary?.recentTransactions?.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('analytics.recentTransactions','Recent Transactions')}</h3>
-            <button onClick={() => navigate('/transactions')} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <Activity className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('analytics.recentTransactions','Recent Transactions')}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.lastActivity','Latest activity')}</p>
+              </div>
+            </div>
+            <button onClick={() => navigate('/transactions')} className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">
               {t('actions.viewAll','View all')}
             </button>
           </div>
@@ -354,7 +386,7 @@ const MobileAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t
 );
 
 const DesktopAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t, navigate, refetch, isRefreshing, setIsRefreshing }) => (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
     {/* Header */}
     <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
@@ -390,11 +422,16 @@ const DesktopAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, 
         {/* Left — Trends chart (2/3 width) */}
         <div className="xl:col-span-2 space-y-6">
           {/* Monthly trends */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-500" />
-              {t('analytics.monthlyTrends','Monthly Income vs Expenses')}
-            </h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('analytics.monthlyTrends','Monthly Income vs Expenses')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.trendsSubtitle','Track your financial flow over time')}</p>
+              </div>
+            </div>
             <TrendsChart trends={trends} formatCurrency={formatCurrency} t={t} />
             {/* Legend */}
             <div className="flex items-center gap-6 mt-3 pl-2">
@@ -404,10 +441,18 @@ const DesktopAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, 
           </div>
 
           {/* Recent transactions */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('analytics.recentTransactions','Recent Transactions')}</h3>
-              <button onClick={() => navigate('/transactions')} className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                  <Activity className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('analytics.recentTransactions','Recent Transactions')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.lastActivity','Latest activity')}</p>
+                </div>
+              </div>
+              <button onClick={() => navigate('/transactions')} className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1">
                 {t('actions.viewAll','View all')} →
               </button>
             </div>
@@ -418,31 +463,41 @@ const DesktopAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, 
         {/* Right — Category & Health (1/3 width) */}
         <div className="space-y-6">
           {/* Financial health */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-green-500" />
-              {t('health.financialHealth','Financial Health')}
-            </h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <Target className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('health.financialHealth','Financial Health')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('health.yourScore','Your score this period')}</p>
+              </div>
+            </div>
             <HealthScore summary={summary} t={t} />
             {/* Extra stats */}
             <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="text-center">
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{summary?.summary?.totalTransactions || 0}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{summary?.summary?.totalTransactions || 0}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">{t('stats.transactions','Transactions')}</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{summary?.summary?.categoriesUsed || 0}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{summary?.summary?.categoriesUsed || 0}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">{t('stats.categories','Categories')}</p>
               </div>
             </div>
           </div>
 
           {/* Category breakdown */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <PieChart className="w-5 h-5 text-purple-500" />
-              {t('analytics.topCategories','Top Categories')}
-            </h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <PieChart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('analytics.topCategories','Top Categories')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.topCategoriesDesc','Where your money goes')}</p>
+              </div>
+            </div>
             <CategoryChart trends={trends} summary={summary} formatCurrency={formatCurrency} t={t} />
           </div>
         </div>
