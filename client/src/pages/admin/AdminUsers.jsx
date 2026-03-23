@@ -337,6 +337,8 @@ const AdminUsers = () => {
               setSelectedUser(null);
             }}
             title={t('users.userDetails', { fallback: 'User Details' })}
+            sheet
+            drawerWidth={520}
           >
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
