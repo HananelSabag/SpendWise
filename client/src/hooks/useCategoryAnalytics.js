@@ -31,7 +31,7 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!api?.analytics?.getUserAnalytics, // Only run if function exists
   });
 
@@ -86,19 +86,13 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
     }
   }, [rawAnalytics]);
 
-  // Helper function to calculate growth with defensive checks
+  // Growth = comparison of current vs previous period amounts if provided by API
   const calculateGrowth = (category) => {
-    try {
-      // Mock growth calculation - in real app would compare with previous period
-      const currentAmount = category?.total_amount || 0;
-      const mockPreviousAmount = currentAmount * (0.8 + Math.random() * 0.4);
-      return currentAmount > 0 && mockPreviousAmount > 0 
-        ? ((currentAmount - mockPreviousAmount) / mockPreviousAmount) * 100 
-        : 0;
-    } catch (error) {
-      console.error('Error calculating growth:', error);
-      return 0;
-    }
+    const current = category?.total_amount || 0;
+    const previous = category?.previous_amount || 0;
+    if (current === 0 && previous === 0) return 0;
+    if (previous === 0) return 100;
+    return ((current - previous) / previous) * 100;
   };
 
   return {

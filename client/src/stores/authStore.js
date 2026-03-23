@@ -77,9 +77,10 @@ export const useAuthStore = create(
                 const userData = result.user;
                 
                 // ✅ Login success - user data received
-                
+
                 set((state) => {
                   state.isAuthenticated = true;
+                  state.initialized = true; // Ensure queries aren't blocked after re-login
                   state.user = userData;
                   state.userRole = userData?.role || 'user';
                   state.isAdmin = ['admin', 'super_admin'].includes(userData?.role || 'user');
@@ -138,6 +139,7 @@ export const useAuthStore = create(
                 
                 set((state) => {
                   state.isAuthenticated = true;
+                  state.initialized = true; // Ensure queries aren't blocked after re-login
                   state.user = userData;
                   state.userRole = userData?.role || 'user';
                   state.isAdmin = ['admin', 'super_admin'].includes(userData?.role || 'user');

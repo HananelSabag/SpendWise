@@ -43,16 +43,12 @@ export const auth = {
    */
   login: async (credentials) => {
     try {
-      console.log(`🔑 [AUTH-LOGIN] Attempting login for: ${credentials.email}`);
       const response = await authAPI.login(credentials);
       const { data } = response.data;
-      
-      console.log(`✅ [AUTH-LOGIN] Login response:`, data);
-      
+
       // Store tokens
       if (data.accessToken && data.refreshToken) {
         tokenManager.setTokens(data.accessToken, data.refreshToken);
-        console.log(`✅ [AUTH-LOGIN] Tokens stored successfully`);
       }
       
       return {

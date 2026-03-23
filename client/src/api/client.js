@@ -425,9 +425,9 @@ class SpendWiseAPIClient {
       }
     } else {
       // Already on auth page, just clear the auth state
-      if (window.spendWiseAuthStore) {
-        window.spendWiseAuthStore.getState().actions.reset();
-      }
+      try {
+        window.spendWiseStores?.auth?.getState?.()?.actions?.reset?.();
+      } catch (_) {}
     }
   }
 

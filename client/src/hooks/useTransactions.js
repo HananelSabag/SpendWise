@@ -248,7 +248,8 @@ export const useTransactions = (options = {}) => {
     refetchInterval: autoRefresh ? 30 * 1000 : false
   });
 
-  // ✅ Transaction analytics query
+  // ✅ Transaction analytics query — opt-in only (enableAI=false by default)
+  // This prevents an extra API call on every useTransactions mount (e.g. via useTransactionActions)
   const analyticsQuery = useQuery({
     queryKey: ['transaction-analytics', user?.id, filters.dateRange],
     queryFn: async () => {
@@ -257,7 +258,7 @@ export const useTransactions = (options = {}) => {
       });
       return response.data;
     },
-    enabled: isAuthenticated && !!user?.id,
+    enabled: isAuthenticated && !!user?.id && enableAI,
     staleTime: 5 * 60 * 1000
   });
 
@@ -310,16 +311,14 @@ export const useTransactions = (options = {}) => {
 
       logger.success('Transaction created successfully');
 
-      // ✅ ENHANCED: Invalidate ALL relevant queries to ensure balance panel updates
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['transaction-analytics']);
-      queryClient.invalidateQueries(['dashboard']);
-      
-      // Force immediate refetch for dashboard and transactions
-      queryClient.refetchQueries(['transactions'], { active: true });
-      queryClient.refetchQueries(['dashboard'], { active: true });
-      
-      // Clear cache
+      // Invalidate relevant queries — invalidateQueries already triggers refetch for active observers,
+      // no need to call refetchQueries separately (that would send duplicate API calls).
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+
+      // Clear custom in-memory cache
       TransactionCacheManager.invalidatePattern('transactions');
       
       toastService.success('transactions.createSuccess');
@@ -341,20 +340,21 @@ export const useTransactions = (options = {}) => {
   const createBatchMutation = useMutation({
     mutationFn: async (transactionsData) => {
       performanceRef.current.recordMutation();
-      
-      // Process batch transactions individually for now
-      const results = [];
-      for (const transactionData of transactionsData) {
-        const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
-        if (response.success) {
-          results.push(response.data);
-        }
-      }
+
+      // Process batch transactions in parallel
+      const responses = await Promise.allSettled(
+        transactionsData.map(transactionData =>
+          api.transactions.create(transactionData.type || 'expense', transactionData)
+        )
+      );
+      const results = responses
+        .filter(r => r.status === 'fulfilled' && r.value?.success)
+        .map(r => r.value.data);
       return { transactions: results };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['transaction-analytics']);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
       TransactionCacheManager.clear();
       
       toastService.success('transactions.batchCreateSuccess', { 
@@ -383,8 +383,10 @@ export const useTransactions = (options = {}) => {
       return response.data;
     },
     onSuccess: (updatedTransaction) => {
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['transaction-analytics']);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       TransactionCacheManager.invalidatePattern('transactions');
       
       toastService.success('transactions.updateSuccess');
@@ -416,10 +418,12 @@ export const useTransactions = (options = {}) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['transaction-analytics']);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       TransactionCacheManager.invalidatePattern('transactions');
-      
+
       toastService.success('transactions.deleteSuccess');
     },
     onError: (error) => {
@@ -435,25 +439,26 @@ export const useTransactions = (options = {}) => {
 
       const allTx = transactionsQuery.data?.pages?.flatMap(p => p?.transactions || []) || [];
 
-      const results = [];
-      for (const id of transactionIds) {
-        if (operation === 'delete') {
-          let typeForDelete = 'expense';
-          const tx = allTx.find(t => t.id === id);
-          if (tx?.type === 'income' || tx?.type === 'expense') {
-            typeForDelete = tx.type;
-          } else if (typeof tx?.amount === 'number') {
-            typeForDelete = tx.amount > 0 ? 'income' : 'expense';
-          }
-          const result = await api.transactions.delete(typeForDelete, id);
-          results.push(result);
-        }
+      if (operation === 'delete') {
+        const results = await Promise.allSettled(
+          transactionIds.map(id => {
+            let typeForDelete = 'expense';
+            const tx = allTx.find(t => t.id === id);
+            if (tx?.type === 'income' || tx?.type === 'expense') {
+              typeForDelete = tx.type;
+            } else if (typeof tx?.amount === 'number') {
+              typeForDelete = tx.amount > 0 ? 'income' : 'expense';
+            }
+            return api.transactions.delete(typeForDelete, id);
+          })
+        );
+        return { data: results };
       }
-      return { data: results };
+      return { data: [] };
     },
     onSuccess: (result, variables) => {
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['transaction-analytics']);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
       TransactionCacheManager.clear();
       
       toastService.success(`transactions.bulk.${variables.operation}Success`, {
@@ -629,11 +634,11 @@ export const useTransactions = (options = {}) => {
     insightsLoading: insightsQuery.isLoading,
     
     // Mutation states
-    creating: createTransactionMutation.isLoading,
-    batchCreating: createBatchMutation.isLoading,
-    updating: updateTransactionMutation.isLoading,
-    deleting: deleteTransactionMutation.isLoading,
-    bulkProcessing: bulkOperationMutation.isLoading,
+    creating: createTransactionMutation.isPending,
+    batchCreating: createBatchMutation.isPending,
+    updating: updateTransactionMutation.isPending,
+    deleting: deleteTransactionMutation.isPending,
+    bulkProcessing: bulkOperationMutation.isPending,
     
     // Error states
     error: transactionsQuery.error,
@@ -671,29 +676,6 @@ export const useTransactions = (options = {}) => {
     refetch: transactionsQuery.refetch,
     refetchAnalytics: analyticsQuery.refetch,
     refetchInsights: insightsQuery.refetch
-  };
-};
-
-/**
- * 📋 useTransactionTemplates Hook - Transaction Templates Management
- */
-export const useTransactionTemplates = () => {
-  const { user } = useAuth();
-  
-  return {
-    templates: [],
-    createTemplate: async (transaction) => {
-      // Template creation logic
-      return { success: true };
-    },
-    deleteTemplate: async (templateId) => {
-      // Template deletion logic
-      return { success: true };
-    },
-    applyTemplate: async (templateId, overrides = {}) => {
-      // Template application logic
-      return { success: true };
-    }
   };
 };
 

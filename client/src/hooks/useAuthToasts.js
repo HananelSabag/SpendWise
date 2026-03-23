@@ -149,7 +149,7 @@ export const useAuthToasts = () => {
       toast.dismiss(id);
       return toast.loading(
         message || t('auth.authenticating', 'Authenticating user...'),
-        { id, duration: 3000 } // Auto-dismiss after 3s if not manually dismissed
+        { id }
       );
     },
 
@@ -158,7 +158,7 @@ export const useAuthToasts = () => {
       toast.dismiss(id);
       return toast.loading(
         message || t('auth.validatingSession', 'Validating session...'),
-        { id, duration: 3000 }
+        { id }
       );
     },
 
@@ -167,7 +167,7 @@ export const useAuthToasts = () => {
       toast.dismiss(id);
       return toast.loading(
         message || t('auth.loadingData', 'Loading data...'),
-        { id, duration: 3000 }
+        { id }
       );
     },
 
@@ -259,15 +259,21 @@ export const useAuthToasts = () => {
 
     // ✅ Loading Toasts (for long operations)
     signingIn: () => {
-      return toast.loading(t('loading.connecting', 'Connecting...'));
+      const id = 'auth-signing-in';
+      toast.dismiss(id);
+      return toast.loading(t('loading.connecting', 'Connecting...'), { id });
     },
 
     signingUp: () => {
-      return toast.loading(t('loading.processing', 'Creating your account...'));
+      const id = 'auth-signing-up';
+      toast.dismiss(id);
+      return toast.loading(t('loading.processing', 'Creating your account...'), { id });
     },
 
     signingOut: () => {
-      return toast.loading(t('loading.signingOut', 'Signing out...'));
+      const id = 'auth-signing-out';
+      toast.dismiss(id);
+      return toast.loading(t('loading.signingOut', 'Signing out...'), { id });
     },
 
     uploadingAvatar: () => {

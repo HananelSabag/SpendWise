@@ -121,8 +121,8 @@ export const useAutoRegeneration = () => {
       const totalGenerated = results.reduce((sum, r) => sum + (r.count || 0), 0);
 
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries(['upcomingTransactions']);
-      queryClient.invalidateQueries(['regenerationStatus']);
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['regenerationStatus'] });
 
       addNotification({
         type: 'success',

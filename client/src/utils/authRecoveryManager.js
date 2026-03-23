@@ -306,12 +306,18 @@ class AuthRecoveryManager {
           
         case 'NETWORK_ERROR':
         case 'TIMEOUT_ERROR':
-          // Set lightweight UI hints; avoid aggressive re-tries (waking page now handles cold start)
-          this.showRecoveryNotification('info');
-          // If offline, show warning; waking page will take over if needed via api client
-          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            this.showRecoveryNotification('warning');
+          // Show a single UI hint; ConnectionStatusOverlay handles the banner.
+          // Only show toast if we're online (offline banner is shown by overlay, not toast).
+          if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+            this.showRecoveryNotification('info');
           }
+          // Dismiss any lingering loading toast immediately since we're not staying in recovery mode
+          setTimeout(() => {
+            if (this.recoveryToastId) {
+              try { if (window.authToasts?.dismiss) window.authToasts.dismiss(this.recoveryToastId); } catch (_) {}
+              this.recoveryToastId = null;
+            }
+          }, 3000);
           this.healthState.isRecovering = false;
           break;
           

@@ -1,194 +1,99 @@
 /**
  * 💰 BALANCE HOOK - DEDICATED BALANCE PANEL DATA MANAGEMENT
- * Simple hook that connects to the dedicated balance endpoint
- * Features: Real-time updates, Auto-refresh on transaction changes, Optimized caching
- * @version 1.0.0 - CLEAN & ALIGNED
+ * Uses React Query for proper caching — no more refetch on every mount.
+ * @version 2.0.0 - React Query migration
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import { useNotifications } from '../stores';
 import { useBalanceContext } from '../contexts/BalanceContext';
+
+const BALANCE_QUERY_KEY = ['balance'];
 
 /**
  * 💰 Balance Hook - Get balance data for all periods
- * @param {Object} options - Hook options
+ * @param {Object} options
  * @returns {Object} Balance data and methods
  */
 export const useBalance = (options = {}) => {
   const {
     autoRefresh = true,
-    refreshInterval = 30000, // 30 seconds
-    onError = null
+    refreshInterval = 5 * 60 * 1000 // 5 minutes (was 30 seconds — way too aggressive)
   } = options;
 
-  // State management
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastFetch, setLastFetch] = useState(null);
-
-  // Notifications for errors
-  const { addNotification } = useNotifications();
-
-  // Balance context for global refresh management
+  const queryClient = useQueryClient();
   const { registerRefresh } = useBalanceContext();
 
-  // Refs for cleanup
-  const intervalRef = useRef(null);
-  const mountedRef = useRef(true);
+  const balanceQuery = useQuery({
+    queryKey: BALANCE_QUERY_KEY,
+    queryFn: async () => {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      if (!token) return null;
 
-  /**
-   * Fetch balance data from server
-   */
-  const fetchBalance = useCallback(async (showLoading = true) => {
-    if (!mountedRef.current) return;
-
-    try {
-      if (showLoading) {
-        setLoading(true);
-      }
-      setError(null);
-
-      console.log('📊 useBalance: Fetching balance data...');
       const response = await api.transactions.getBalanceData();
-
-      if (!mountedRef.current) return;
-
       if (response.success) {
-        setData(response.data.data);
-        setLastFetch(new Date());
-        console.log('✅ useBalance: Balance data updated:', response.data.data);
-      } else {
-        throw new Error(response.error?.message || 'Failed to fetch balance data');
+        return response.data?.data ?? response.data ?? null;
       }
-    } catch (err) {
-      if (!mountedRef.current) return;
+      throw new Error(response.error?.message || 'Failed to fetch balance data');
+    },
+    staleTime: 5 * 60 * 1000,   // 5 minutes — don't refetch if data is fresh
+    gcTime: 30 * 60 * 1000,     // 30 minutes in memory
+    refetchOnMount: false,       // Use cache if available
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    retry: false,
+    enabled: !!(localStorage.getItem('accessToken') || localStorage.getItem('authToken'))
+  });
 
-      console.error('❌ useBalance: Failed to fetch balance data:', err);
-      setError(err);
-
-      // Show user notification
-      if (onError) {
-        onError(err);
-      } else {
-        addNotification({
-          type: 'error',
-          title: 'Balance Update Failed',
-          message: 'Failed to update balance data. Please try again.',
-          duration: 5000
-        });
-      }
-    } finally {
-      if (mountedRef.current && showLoading) {
-        setLoading(false);
-      }
-    }
-  }, [onError, addNotification]);
-
-  /**
-   * Manual refresh function
-   */
+  /** Manual refresh — invalidates and refetches */
   const refresh = useCallback(() => {
-    fetchBalance(true);
-  }, [fetchBalance]);
+    queryClient.invalidateQueries({ queryKey: BALANCE_QUERY_KEY });
+    balanceQuery.refetch();
+  }, [queryClient, balanceQuery]);
 
-  /**
-   * Silent refresh (for auto-updates)
-   */
+  /** Silent refresh — invalidates without showing loading state */
   const silentRefresh = useCallback(() => {
-    fetchBalance(false);
-  }, [fetchBalance]);
+    queryClient.invalidateQueries({ queryKey: BALANCE_QUERY_KEY });
+  }, [queryClient]);
 
-  // Initial fetch on mount
+  // Register with BalanceContext so transaction mutations can trigger a refresh
   useEffect(() => {
-    mountedRef.current = true;
-    fetchBalance(true);
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchBalance]);
-
-  // Register with balance context for global refresh
-  useEffect(() => {
-    const refreshFunctions = {
-      normal: refresh,
-      silent: silentRefresh
-    };
-    
-    const unregister = registerRefresh(refreshFunctions);
-    
+    const unregister = registerRefresh({ normal: refresh, silent: silentRefresh });
     return unregister;
   }, [registerRefresh, refresh, silentRefresh]);
 
-  // Auto-refresh interval
-  useEffect(() => {
-    if (autoRefresh && refreshInterval > 0) {
-      intervalRef.current = setInterval(() => {
-        silentRefresh();
-      }, refreshInterval);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    }
-  }, [autoRefresh, refreshInterval, silentRefresh]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-
-  /**
-   * Get balance for specific period
-   */
-  const getBalance = useCallback((period) => {
-    if (!data?.balance) return null;
-    return data.balance[period] || null;
-  }, [data]);
-
-  /**
-   * Get metadata
-   */
-  const getMetadata = useCallback(() => {
-    return data?.metadata || null;
-  }, [data]);
+  const balanceData = balanceQuery.data?.balance ?? balanceQuery.data ?? null;
+  const metadata = balanceQuery.data?.metadata ?? null;
 
   return {
     // Data
-    data: data?.balance || null,
-    metadata: data?.metadata || null,
-    
+    data: balanceData,
+    metadata,
+
     // State
-    loading,
-    error,
-    lastFetch,
-    
+    loading: balanceQuery.isLoading,
+    error: balanceQuery.error,
+    lastFetch: balanceQuery.dataUpdatedAt ? new Date(balanceQuery.dataUpdatedAt) : null,
+
     // Methods
     refresh,
     silentRefresh,
-    getBalance,
-    getMetadata,
-    
-    // Helper getters
-    daily: data?.balance?.daily || null,
-    weekly: data?.balance?.weekly || null,
-    monthly: data?.balance?.monthly || null,
-    yearly: data?.balance?.yearly || null,
-    
+    getBalance: (period) => balanceData?.[period] ?? null,
+    getMetadata: () => metadata,
+
+    // Period shortcuts
+    daily: balanceData?.daily ?? null,
+    weekly: balanceData?.weekly ?? null,
+    monthly: balanceData?.monthly ?? null,
+    yearly: balanceData?.yearly ?? null,
+
     // Status
-    isLoading: loading,
-    isError: !!error,
-    isEmpty: !data?.balance,
-    isReady: !loading && !error && !!data?.balance
+    isLoading: balanceQuery.isLoading,
+    isError: balanceQuery.isError,
+    isEmpty: !balanceData,
+    isReady: !balanceQuery.isLoading && !balanceQuery.isError && !!balanceData
   };
 };
 

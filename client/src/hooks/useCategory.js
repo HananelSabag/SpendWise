@@ -384,7 +384,7 @@ export const useCategory = (type = null) => {
     },
     enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
     staleTime: 60 * 60 * 1000, // 1 hour - categories rarely change
-    cacheTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 
   // ✅ Category analytics query - temporarily disabled to prevent crashes
@@ -443,11 +443,11 @@ export const useCategory = (type = null) => {
     },
     onSuccess: (newCategory) => {
       // ✅ FIXED: Invalidate all related queries when category is created
-      queryClient.invalidateQueries(['categories']);
-      queryClient.invalidateQueries(['category-analytics']);
-      queryClient.invalidateQueries(['transactions']); // ✅ This fixes the category recognition issue!
-      queryClient.invalidateQueries(['dashboard']);
-      queryClient.invalidateQueries(['balance']);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       toastService.success('categories.createSuccess', { name: newCategory.name });
     },
     onError: (error) => {
@@ -464,11 +464,11 @@ export const useCategory = (type = null) => {
     },
     onSuccess: (updatedCategory) => {
       // ✅ FIXED: Invalidate all related queries when category is updated
-      queryClient.invalidateQueries(['categories']);
-      queryClient.invalidateQueries(['category-analytics']);
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['dashboard']);
-      queryClient.invalidateQueries(['balance']);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       toastService.success('categories.updateSuccess', { name: updatedCategory.name });
     },
     onError: (error) => {
@@ -485,11 +485,11 @@ export const useCategory = (type = null) => {
     },
     onSuccess: () => {
       // ✅ FIXED: Invalidate all related queries when category is deleted
-      queryClient.invalidateQueries(['categories']);
-      queryClient.invalidateQueries(['category-analytics']);
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['dashboard']);
-      queryClient.invalidateQueries(['balance']);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       toastService.success('categories.deleteSuccess');
     },
     onError: (error) => {
@@ -501,21 +501,17 @@ export const useCategory = (type = null) => {
   // ✅ Bulk operations mutation
   const bulkOperationMutation = useMutation({
     mutationFn: async ({ operation, categoryIds, data = {} }) => {
-      // TODO: Implement bulk operations with new API structure
-      // For now, handle operations individually
-      const results = [];
-      for (const id of categoryIds) {
-        if (operation === 'delete') {
-          const result = await api.categories.delete(id);
-          results.push(result);
-        }
+      if (operation === 'delete') {
+        const results = await Promise.allSettled(
+          categoryIds.map(id => api.categories.delete(id))
+        );
+        return { data: results };
       }
-      return { data: results };
-      return response.data;
+      return { data: [] };
     },
     onSuccess: (result, variables) => {
-      queryClient.invalidateQueries(['categories']);
-      queryClient.invalidateQueries(['category-analytics']);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category-analytics'] });
       toastService.success(`categories.bulk.${variables.operation}Success`, { 
         count: variables.categoryIds.length 
       });
@@ -720,10 +716,10 @@ export const useCategory = (type = null) => {
     analyticsError: analyticsQuery.error,
     
     // Mutations
-    creating: createCategoryMutation.isLoading,
-    updating: updateCategoryMutation.isLoading,
-    deleting: deleteCategoryMutation.isLoading,
-    bulkProcessing: bulkOperationMutation.isLoading,
+    creating: createCategoryMutation.isPending,
+    updating: updateCategoryMutation.isPending,
+    deleting: deleteCategoryMutation.isPending,
+    bulkProcessing: bulkOperationMutation.isPending,
     
     // Enhanced operations
     createCategory,

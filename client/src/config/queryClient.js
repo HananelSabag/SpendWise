@@ -21,7 +21,7 @@ export const cacheConfigs = {
   // Static data - very long cache
   static: {
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    cacheTime: 48 * 60 * 60 * 1000, // 48 hours
+    gcTime: 48 * 60 * 60 * 1000, // 48 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
@@ -30,7 +30,7 @@ export const cacheConfigs = {
   // User data - medium cache
   user: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true
@@ -39,7 +39,7 @@ export const cacheConfigs = {
   // Dynamic data - short cache
   dynamic: {
     staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true
@@ -48,7 +48,7 @@ export const cacheConfigs = {
   // Real-time data - minimal cache
   realtime: {
     staleTime: 0,
-    cacheTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 1 * 60 * 1000, // 1 minute
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true
@@ -60,7 +60,7 @@ export const queryConfigs = {
   // Dashboard - frequently accessed
   dashboard: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -68,7 +68,7 @@ export const queryConfigs = {
   // Categories - rarely change
   categories: {
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    cacheTime: 48 * 60 * 60 * 1000, // 48 hours
+    gcTime: 48 * 60 * 60 * 1000, // 48 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -76,7 +76,7 @@ export const queryConfigs = {
   // Profile - important but stable
   profile: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 60 * 60 * 1000, // 1 hour
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -84,7 +84,7 @@ export const queryConfigs = {
   // Recurring transactions
   recurring: {
     staleTime: 10 * 60 * 1000, // 10 minutes
-    cacheTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 60 * 60 * 1000, // 1 hour
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -92,7 +92,7 @@ export const queryConfigs = {
   // Transaction lists
   transactions: {
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -100,7 +100,7 @@ export const queryConfigs = {
   // Templates
   templates: {
     staleTime: 30 * 60 * 1000, // 30 minutes
-    cacheTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -108,7 +108,7 @@ export const queryConfigs = {
   // Exchange rates
   exchangeRates: {
     staleTime: 4 * 60 * 60 * 1000, // 4 hours
-    cacheTime: 12 * 60 * 60 * 1000, // 12 hours
+    gcTime: 12 * 60 * 60 * 1000, // 12 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false
   }
@@ -161,7 +161,7 @@ export const queryClient = new QueryClient({
     queries: {
       // Default configuration
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 30 * 60 * 1000, // 30 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
       refetchOnMount: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
@@ -190,21 +190,6 @@ export const queryClient = new QueryClient({
       
       // Garbage collection
       gcTime: 30 * 60 * 1000, // 30 minutes default
-      
-      // Development-only logging
-      ...(isDevelopment && {
-        onSuccess: (data) => {
-          if (enableQueryLogging) {
-            console.log('✅ [Query Success]', { 
-              dataSize: JSON.stringify(data).length,
-              timestamp: new Date().toISOString()
-            });
-          }
-        },
-        onError: (error) => {
-          console.error('❌ [Query Error]', error);
-        }
-      })
     },
     
     mutations: {
@@ -334,7 +319,7 @@ if (!isDevelopment) {
       
       // Remove queries older than 2 hours that aren't being observed
       if (age > 2 * 60 * 60 * 1000 && query.getObserversCount() === 0) {
-        queryClient.removeQueries(query.queryKey);
+        queryClient.removeQueries({ queryKey: query.queryKey });
       }
     });
   }, 30 * 60 * 1000); // Every 30 minutes

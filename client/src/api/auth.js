@@ -198,56 +198,12 @@ export const authAPI = {
     }
   },
 
-  // ✅ Simple Google Login (processes credential from button)
-  async processGoogleCredential(credential) {
-    try {
-
-
-      if (!credential) {
-        throw new Error('No Google credential provided');
-      }
-
-      // Parse the JWT credential
-      const userInfo = simpleGoogleAuth.parseCredential(credential);
-
-
-      // Send to backend for processing
-      const response = await api.client.post('/users/google-auth', {
-        credential: credential,
-        userInfo: userInfo
-      });
-
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || 'Google authentication failed');
-      }
-
-      const userData = normalizeUserData(response.data.user);
-      console.log('✅ Google authentication successful:', userData);
-
-      return {
-        success: true,
-        user: userData,
-        token: response.data.token,
-        refreshToken: response.data.refreshToken
-      };
-
-    } catch (error) {
-      console.error('❌ Google credential processing error:', error);
-      
-      return {
-        success: false,
-        error: {
-          message: error.message || 'Google authentication failed',
-          code: 'GOOGLE_AUTH_ERROR',
-          status: error.response?.status || 0
-        }
-      };
-    }
+  // ✅ Process Google credential (shared logic)
+  // googleLogin is an alias for backwards-compatibility with older call sites
+  async googleLogin(credential) {
+    return this.processGoogleCredential(credential);
   },
 
-  // Removed deprecated googleButtonLogin – use SimpleGoogleButton component
-
-  // ✅ Process Google credential (shared logic)
   async processGoogleCredential(credential) {
     // ✅ Validate credential
     if (!credential || typeof credential !== 'string') {

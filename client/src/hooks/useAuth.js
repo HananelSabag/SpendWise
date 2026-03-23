@@ -46,11 +46,7 @@ export const useAuth = () => {
   // ✅ Simple login without AI security
   const login = useCallback(async (email, password) => {
     try {
-      console.log('🔑 useAuth login called', { email });
-      
       const result = await actions.login(email, password);
-      console.log('🔑 useAuth login result:', result);
-      
       if (result.success) {
         queryClient.invalidateQueries();
         return { success: true, user: result.user };
@@ -58,7 +54,6 @@ export const useAuth = () => {
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('🔑 useAuth login error:', error);
       return { success: false, error: { message: error.message } };
     }
   }, [actions, queryClient]);

@@ -62,7 +62,9 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   // ✅ ENHANCED: Dashboard query with unified API integration
   const dashboardQuery = useQuery({
     queryKey,
-    enabled: initialized && isAuthenticated, // ✅ Only run when user is authenticated
+    // Run as soon as we have a token — don't gate on `initialized` which resets to false on logout
+    // causing the query to stay disabled after a re-login without a page reload.
+    enabled: isAuthenticated && !!(localStorage.getItem('accessToken') || localStorage.getItem('authToken')),
     queryFn: async () => {
       // Gate calls without token to avoid triggering auth recovery and 401 spam
       const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
@@ -86,7 +88,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
         throw error;
       }
     },
-    ...queryConfigs.dynamic,
+    ...queryConfigs.dashboard,
     retry: (failureCount, error) => {
       if (error?.response?.status === 401) return false;
       if (error?.response?.status >= 500 && failureCount < 2) return true;

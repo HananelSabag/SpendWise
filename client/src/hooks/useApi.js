@@ -65,7 +65,7 @@ const queryConfigs = {
   // Static data - long cache
   static: {
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    cacheTime: 48 * 60 * 60 * 1000, // 48 hours
+    gcTime: 48 * 60 * 60 * 1000, // 48 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -73,7 +73,7 @@ const queryConfigs = {
   // User data - medium cache
   user: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -81,7 +81,7 @@ const queryConfigs = {
   // Dynamic data - short cache
   dynamic: {
     staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -89,7 +89,7 @@ const queryConfigs = {
   // Real-time data - no cache
   realtime: {
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true
   }

@@ -23,9 +23,8 @@ export {
 export { useAuth } from './useAuth';
 
 // Transactions - Only actual exports
-export { 
-  default as useTransactions,
-  useTransactionTemplates
+export {
+  default as useTransactions
 } from './useTransactions';
 
 // Balance Panel - DEDICATED BALANCE HOOK  

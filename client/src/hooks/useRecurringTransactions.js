@@ -72,10 +72,10 @@ export const useRecurringTransactions = (options = {}) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['recurringTransactions']);
-      queryClient.invalidateQueries(['upcomingTransactions']);
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addNotification({
         type: 'success',
         message: 'Recurring transaction created successfully'
@@ -96,10 +96,10 @@ export const useRecurringTransactions = (options = {}) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['recurringTransactions']);
-      queryClient.invalidateQueries(['upcomingTransactions']);
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addNotification({
         type: 'success',
         message: 'Recurring transaction updated successfully'
@@ -120,10 +120,10 @@ export const useRecurringTransactions = (options = {}) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['recurringTransactions']);
-      queryClient.invalidateQueries(['upcomingTransactions']);
-      queryClient.invalidateQueries(['transactions']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addNotification({
         type: 'success',
         message: 'Recurring transaction deleted successfully'

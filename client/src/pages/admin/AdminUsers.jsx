@@ -72,7 +72,7 @@ const AdminUsers = () => {
   const blockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.blockUser(userId),
     onSuccess: (data, userId) => {
-      queryClient.invalidateQueries(['admin', 'users']);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       addNotification({
         type: 'success',
         message: t('actions.userBlocked', { fallback: 'User blocked successfully' }),
@@ -93,7 +93,7 @@ const AdminUsers = () => {
   const unblockUserMutation = useMutation({
     mutationFn: (userId) => api.admin.unblockUser(userId),
     onSuccess: (data, userId) => {
-      queryClient.invalidateQueries(['admin', 'users']);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       addNotification({
         type: 'success',
         message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }),
@@ -116,7 +116,7 @@ const AdminUsers = () => {
     onSuccess: (data, variables) => {
               // Use startTransition to prevent multiple renders
         startTransition(() => {
-          queryClient.invalidateQueries(['admin', 'users']);
+          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           setActionLoading(null);
           setShowUserModal(false);
           setShowDeleteDialog(false);
@@ -467,7 +467,7 @@ const AdminUsers = () => {
                   setActionLoading(pendingRoleUser.id);
                   try {
                     await api.client.post(`/admin/users/${pendingRoleUser.id}/manage`, { action: 'change_role', role: selectedRole });
-                    queryClient.invalidateQueries(['admin', 'users']);
+                    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
                     addNotification({ type: 'success', message: t('dialogs.roleChange.success', { fallback: 'User role updated successfully' }) });
                     setShowRoleDialog(false);
                   } catch (e) {

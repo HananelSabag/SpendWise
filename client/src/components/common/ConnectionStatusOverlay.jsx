@@ -38,7 +38,7 @@ const ConnectionStatusOverlay = () => {
     
     const interval = setInterval(() => {
       setServerWaking(!!window.__SERVER_WAKING__);
-    }, 500);
+    }, 2000);
     
     return () => {
       window.removeEventListener('online', handleOnline);

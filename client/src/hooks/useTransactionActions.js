@@ -72,9 +72,9 @@ export const useTransactionActions = (context = 'transactions') => {
     createTransaction: baseCreateTransaction,
     updateTransaction: baseUpdateTransaction,
     deleteTransaction: baseDeleteTransaction,
-    isCreating,
-    isUpdating,
-    isDeleting,
+    creating: isCreating,
+    updating: isUpdating,
+    deleting: isDeleting,
     refetch: refetchTransactions
   } = useTransactions({ strategy: contextConfig.strategy });
 
@@ -101,41 +101,14 @@ export const useTransactionActions = (context = 'transactions') => {
     
     const queriesToInvalidate = priorityMap[priority] || priorityMap.high;
     
-    // ✅ FIXED: Invalidate infinite queries properly + balance/dashboard keys
-    const invalidatePromises = queriesToInvalidate.map((queryKey) => {
-      return queryClient.invalidateQueries({
-        queryKey: [queryKey],
-        exact: false
-      });
-    });
-    // Also ensure balance and dashboard are included for UI sync
-    invalidatePromises.push(
-      queryClient.invalidateQueries({ queryKey: ['balance'], exact: false }),
-      queryClient.invalidateQueries({ queryKey: ['dashboard'], exact: false })
+    // Build a deduplicated set of keys to invalidate (priorityMap may already include dashboard/balance)
+    const allKeys = new Set([...queriesToInvalidate, 'balance', 'dashboard']);
+    const invalidatePromises = Array.from(allKeys).map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey: [queryKey], exact: false })
     );
     await Promise.allSettled(invalidatePromises);
-    
-    // ✅ NEW: For high priority operations, force immediate refresh
-    if (priority === 'critical' || priority === 'high') {
-      // Refetch active transaction queries
-      await queryClient.refetchQueries({ 
-        queryKey: ['transactions'], 
-        type: 'active',
-        exact: false
-      });
-      
-      // Always refetch dashboard and balance when visible
-      await queryClient.refetchQueries({ 
-        queryKey: ['dashboard'], 
-        type: 'active',
-        exact: false
-      });
-      await queryClient.refetchQueries({ 
-        queryKey: ['balance'], 
-        type: 'active',
-        exact: false
-      });
-    }
+    // Note: invalidateQueries already triggers refetch for active observers — no need for
+    // a separate refetchQueries call which would send duplicate API requests.
   }, [queryClient, context]);
 
   /**
@@ -430,8 +403,8 @@ export const useTransactionActions = (context = 'transactions') => {
       
       // Enhanced invalidation for recurring templates
       await invalidateRelevantQueries('high');
-      queryClient.invalidateQueries(['recurringTransactions']);
-      queryClient.invalidateQueries(['upcomingTransactions']);
+      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
       
       refreshAll();
       
@@ -452,8 +425,8 @@ export const useTransactionActions = (context = 'transactions') => {
       
       // Enhanced invalidation for recurring templates
       await invalidateRelevantQueries('high');
-      queryClient.invalidateQueries(['recurringTransactions']);
-      queryClient.invalidateQueries(['upcomingTransactions']);
+      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
       
       refreshAll();
       
@@ -480,9 +453,9 @@ export const useTransactionActions = (context = 'transactions') => {
       if (result.success) {
         // Enhanced invalidation for template deletion
         await invalidateRelevantQueries('critical');
-        queryClient.invalidateQueries(['recurringTransactions']);
-        queryClient.invalidateQueries(['upcomingTransactions']);
-        queryClient.invalidateQueries(['templates']);
+        queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
+        queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+        queryClient.invalidateQueries({ queryKey: ['templates'] });
         
         setTimeout(() => {
           refetchTransactions();
@@ -491,14 +464,7 @@ export const useTransactionActions = (context = 'transactions') => {
         refreshAll();
         logAction('Template deleted successfully');
         
-        // 🎉 ADD TOAST NOTIFICATION FOR TEMPLATE DELETION SUCCESS
-        const { useNotifications } = await import('../stores');
-        const { addNotification } = useNotifications.getState();
-        addNotification({
-          type: 'success',
-          message: 'Template deleted successfully! 🗑️',
-          duration: 3000
-        });
+        toastService.success('Template deleted successfully');
         
         return result.data;
       } else {

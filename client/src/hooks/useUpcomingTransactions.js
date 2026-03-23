@@ -28,7 +28,7 @@ export const useUpcomingTransactions = () => {
       }
       throw new Error(response.error?.message || 'Failed to fetch upcoming transactions');
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes — was 30s which caused refetch on every mount
     refetchOnWindowFocus: false
   });
 
@@ -54,7 +54,7 @@ export const useUpcomingTransactions = () => {
       });
       
       // Invalidate related queries
-      queryClient.invalidateQueries(['transactions']);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
     onError: (error) => {
       addNotification({
@@ -76,8 +76,8 @@ export const useUpcomingTransactions = () => {
     },
     onSuccess: (data) => {
       // Refetch upcoming transactions to reflect changes
-      queryClient.invalidateQueries(['upcomingTransactions']);
-      queryClient.invalidateQueries(['recurringTemplates']);
+      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['recurringTemplates'] });
       
       addNotification({
         type: 'success',
