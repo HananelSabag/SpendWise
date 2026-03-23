@@ -98,7 +98,7 @@ const BottomSheet = ({
             )}
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="flex-1 overflow-y-auto overscroll-contain" style={{ touchAction: 'pan-y' }}>
               {children}
             </div>
           </motion.div>

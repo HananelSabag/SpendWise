@@ -5,52 +5,40 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   Repeat, Plus, Search, X, Play, Pause, Edit, Trash2,
-  DollarSign, BarChart3, Sparkles, Settings, TrendingUp, TrendingDown
+  DollarSign,
 } from 'lucide-react';
 
 import { useTranslation, useNotifications, useCurrency } from '../../../../stores';
 import { useRecurringTransactions } from '../../../../hooks/useRecurringTransactions';
-import { useUpcomingTransactions } from '../../../../hooks/useUpcomingTransactions';
-import { Button, Input, LoadingSpinner, Badge, SideDrawer } from '../../../ui';
+import { Button, Input, LoadingSpinner, Badge, SideDrawer, Modal } from '../../../ui';
 import BottomSheet from '../../../common/BottomSheet';
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 import { cn, dateHelpers } from '../../../../utils/helpers';
 import RecurringSetupModal from '../modals/RecurringSetupModal';
 
-// ── Stats Card ────────────────────────────────────────────────────────────────
-const StatsCard = ({ title, value, icon: Icon, color = 'blue' }) => {
+// ── Compact stats bar ─────────────────────────────────────────────────────────
+const StatsBar = ({ summary }) => {
   const { formatCurrency } = useCurrency();
-  const colorMap = {
-    green:  'from-green-500 to-emerald-600',
-    purple: 'from-purple-500 to-violet-600',
-    blue:   'from-blue-500 to-indigo-600',
-    orange: 'from-orange-500 to-amber-600',
-  };
-  const bgMap = {
-    green:  'from-green-400 to-emerald-600',
-    purple: 'from-purple-400 to-violet-600',
-    blue:   'from-blue-400 to-indigo-600',
-    orange: 'from-orange-400 to-amber-600',
-  };
-
   return (
-    <div className="relative overflow-hidden rounded-2xl p-3 sm:p-5 shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <div className={`absolute inset-0 opacity-5 bg-gradient-to-br ${bgMap[color]}`} />
-      <div className="relative flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 truncate">{title}</p>
-          <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {typeof value === 'number' && (color === 'blue' || color === 'orange')
-              ? formatCurrency(value)
-              : value}
-          </p>
+    <div className="flex items-center gap-4 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm">
+      <div className="flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+        <span className="font-semibold text-gray-900 dark:text-white">{summary.totalActive}</span>
+        <span className="text-gray-500 dark:text-gray-400">active</span>
+      </div>
+      {summary.totalPaused > 0 && (
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
+          <span className="font-semibold text-gray-900 dark:text-white">{summary.totalPaused}</span>
+          <span className="text-gray-500 dark:text-gray-400">paused</span>
         </div>
-        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-gradient-to-br ${colorMap[color]} text-white shadow-lg shrink-0 ml-2`}>
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-        </div>
+      )}
+      <div className="flex items-center gap-1.5 ml-auto">
+        <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(summary.totalAmount)}</span>
+        <span className="text-gray-500 dark:text-gray-400">/mo</span>
       </div>
     </div>
   );
@@ -153,48 +141,33 @@ const TemplateCard = ({ template, onEdit, onToggleStatus, onDelete }) => {
 // ── Delete Confirm Modal ──────────────────────────────────────────────────────
 const DeleteScopeModal = ({ isOpen, template, onConfirm, onCancel }) => {
   const { t } = useTranslation();
-  if (!isOpen || !template) return null;
-
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onCancel}>
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center shrink-0">
-              <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">{t('recurring.deleteTemplate', 'Delete Template')}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[200px]">{template.description || template.name}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Options — simplified to 2 choices */}
-        <div className="p-4 space-y-2">
-          <button
-            onClick={() => onConfirm('template_only')}
-            className="w-full text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
-          >
-            <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('recurring.deleteTemplateOnly', 'Stop schedule only')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteTemplateOnlyDesc', 'Keep existing transaction history')}</div>
-          </button>
-          <button
-            onClick={() => onConfirm('all')}
-            className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            <div className="font-semibold text-sm text-red-600 dark:text-red-400">{t('recurring.deleteAll', 'Delete everything')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteAllDesc', 'Remove template and all transaction history')}</div>
-          </button>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end px-4 pb-4">
-          <Button variant="ghost" size="sm" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onCancel} title={t('recurring.deleteTemplate', 'Delete Template')} size="sm">
+      <div className="p-4 space-y-2">
+        {template && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">
+            {template.description || template.name}
+          </p>
+        )}
+        <button
+          onClick={() => onConfirm('template_only')}
+          className="w-full text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+        >
+          <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('recurring.deleteTemplateOnly', 'Stop schedule only')}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteTemplateOnlyDesc', 'Keep existing transaction history')}</div>
+        </button>
+        <button
+          onClick={() => onConfirm('all')}
+          className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <div className="font-semibold text-sm text-red-600 dark:text-red-400">{t('recurring.deleteAll', 'Delete everything')}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteAllDesc', 'Remove template and all transaction history')}</div>
+        </button>
       </div>
-    </div>
+      <div className="flex justify-end px-4 pb-4">
+        <Button variant="ghost" size="sm" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>
+      </div>
+    </Modal>
   );
 };
 
@@ -204,16 +177,14 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
   const { addNotification } = useNotifications();
   const isMobile = useIsMobile();
 
-  const [searchQuery, setSearchQuery]       = useState('');
-  const [statusFilter, setStatusFilter]     = useState('all');
-  const [typeFilter, setTypeFilter]         = useState('all');
+  const [searchQuery, setSearchQuery]         = useState('');
+  const [statusFilter, setStatusFilter]       = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editTemplate, setEditTemplate]     = useState(null);
+  const [editTemplate, setEditTemplate]       = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
 
   const { recurringTransactions, isLoading: templatesLoading, refetch: refetchTemplates, updateRecurring, deleteRecurring } = useRecurringTransactions();
-  const { upcomingTransactions } = useUpcomingTransactions();
 
   // Filtered list
   const filteredTemplates = useMemo(() => {
@@ -225,10 +196,9 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
       }
       if (statusFilter === 'active' && !tmpl.is_active) return false;
       if (statusFilter === 'paused' && tmpl.is_active) return false;
-      if (typeFilter !== 'all' && tmpl.type !== typeFilter) return false;
       return true;
     });
-  }, [recurringTransactions, searchQuery, statusFilter, typeFilter]);
+  }, [recurringTransactions, searchQuery, statusFilter]);
 
   // Stats
   const summary = useMemo(() => {
@@ -273,90 +243,46 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
     addNotification({ type: 'success', message: t('recurring.templateSaved', 'Template saved'), duration: 3000 });
   }, [addNotification, t, refetchTemplates]);
 
-  // Shared panel content
+  // Shared panel content (no internal header — BottomSheet/SideDrawer provides title + close)
   const panelContent = (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="flex flex-col h-full" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
 
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Repeat className="w-5 h-5 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                <Sparkles className="w-2.5 h-2.5 text-white" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('recurringManager.title', 'Recurring Manager')}</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{filteredTemplates.length} {t('recurringManager.templates', 'templates')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => { setEditTemplate(null); setShowCreateModal(true); }}
-              size="sm"
-              className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white text-xs"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              {t('actions.add', 'Add')}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Compact stats */}
+      <StatsBar summary={summary} />
 
-      {/* Stats */}
-      <div className="flex-shrink-0 p-3 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <StatsCard title={t('recurringManager.active', 'Active')}      value={summary.totalActive}  icon={Play}       color="green"  />
-          <StatsCard title={t('recurringManager.paused', 'Paused')}      value={summary.totalPaused}  icon={Pause}      color="orange" />
-          <StatsCard title={t('recurringManager.totalAmount', 'Monthly')} value={summary.totalAmount}  icon={DollarSign} color="blue"   />
-          <StatsCard title={t('recurringManager.avgAmount', 'Average')}   value={summary.avgAmount}    icon={BarChart3}  color="purple" />
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex-shrink-0 p-3 bg-white/60 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row gap-2">
+      {/* Filters + Add button */}
+      <div className="flex-shrink-0 px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder={t('recurringManager.searchPlaceholder', 'Search templates...')}
+              placeholder={t('recurringManager.searchPlaceholder', 'Search...')}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-9 h-9 text-sm rounded-xl"
             />
           </div>
-          <div className="flex gap-2">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-              <option value="all">{t('recurringManager.filter.allStatus', 'All')}</option>
-              <option value="active">{t('recurringManager.filter.active', 'Active only')}</option>
-              <option value="paused">{t('recurringManager.filter.paused', 'Paused only')}</option>
-            </select>
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-              <option value="all">{t('recurringManager.filter.allTypes', 'All Types')}</option>
-              <option value="income">{t('types.income', 'Income')}</option>
-              <option value="expense">{t('types.expense', 'Expense')}</option>
-            </select>
-          </div>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+          </select>
+          <Button
+            onClick={() => { setEditTemplate(null); setShowCreateModal(true); }}
+            size="sm"
+            className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3">
         {templatesLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <LoadingSpinner size="lg" />
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('recurringManager.loading', 'Loading templates...')}</p>
-            </div>
+            <LoadingSpinner size="lg" />
           </div>
         ) : filteredTemplates.length === 0 ? (
           <div className="text-center py-16 px-4">
@@ -364,16 +290,16 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
               <Repeat className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
+              {searchQuery || statusFilter !== 'all'
                 ? t('recurringManager.noMatches', 'No Matching Templates')
                 : t('recurringManager.noRecurring', 'No Recurring Templates')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-6">
-              {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
+              {searchQuery || statusFilter !== 'all'
                 ? t('recurringManager.noMatchesDesc', 'Try adjusting your filters')
                 : t('recurringManager.noRecurringDesc', 'Create recurring transactions to automate your finance tracking')}
             </p>
-            {!searchQuery && statusFilter === 'all' && typeFilter === 'all' && (
+            {!searchQuery && statusFilter === 'all' && (
               <Button onClick={() => { setEditTemplate(null); setShowCreateModal(true); }}
                 className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700">
                 <Plus className="w-4 h-4 mr-2" />
@@ -382,7 +308,7 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {filteredTemplates.map(template => (
               <TemplateCard
                 key={template.id}
