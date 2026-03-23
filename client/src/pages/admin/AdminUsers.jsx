@@ -6,7 +6,6 @@
 
 import React, { useState, useMemo, useCallback, startTransition } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Search, Filter, UserCheck,
@@ -220,43 +219,39 @@ const AdminUsers = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className={cn('min-h-screen bg-gray-50 dark:bg-gray-900')}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header banner (replaces old header) */}
-        <Card className="mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Link to="/admin" className="text-white/90 hover:text-white">
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <div>
-                  <h1 className="text-xl md:text-2xl font-semibold">{t('users.title', { fallback: 'User Management' })}</h1>
-                  <p className="text-white/90 text-sm mt-1">
-                    {t('users.subtitle', { fallback: 'Manage {{total}} users across the platform', total: totalUsers.toLocaleString() })}
-                  </p>
-                </div>
-              </div>
-              <div className="hidden sm:block">
-                <Badge variant="secondary">{totalUsers.toLocaleString()}</Badge>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      {/* Sticky Page Header */}
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 h-16">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-lg">S</span>
             </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              {t('users.title', { fallback: 'User Management' })}
+            </h1>
           </div>
-        </Card>
+        </div>
+      </div>
 
-        {/* Revolutionary Modern Users Table */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back link */}
+        <div className="mb-6">
+          <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+            {t('common.backToDashboard', { fallback: 'Back to Dashboard' })}
+          </Link>
+        </div>
+
+        {/* Modern Users Table */}
+        <div>
           <ModernUsersTable
             users={safeUsers}
             currentUser={currentUser}
@@ -331,7 +326,7 @@ const AdminUsers = () => {
               }
             }}
           />
-        </motion.div>
+        </div>
 
         {/* User Details Modal */}
         {selectedUser && (
