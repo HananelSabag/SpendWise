@@ -122,10 +122,6 @@ export const ExchangeCalculator = createLazyComponent(
   'ExchangeCalculator'
 );
 
-export const ExportModal = createLazyComponent(
-  () => import('../components/features/profile/ExportModal'),
-  'ExportModal'
-);
 
 // ✅ Utility Components - Rarely Used
 export const AccessibilityStatement = createLazyComponent(
