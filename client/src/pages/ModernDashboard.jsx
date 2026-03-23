@@ -6,17 +6,16 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   RefreshCw, TrendingUp, Activity, Target, Crown,
-  Plus, ArrowUpRight, ArrowDownRight, BarChart3,
+  Plus, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
-import { Card, Button } from '../components/ui';
+import { Card, Button, Avatar } from '../components/ui';
 
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernQuickActionsBar from '../components/features/dashboard/ModernQuickActionsBar';
@@ -153,10 +152,10 @@ const DashboardError = ({ onRetry, t }) => {
 
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
-const MobileDashboard = ({ greeting, dashboardData, handleRefresh, isRefreshing, t, navigate }) => (
+const MobileDashboard = ({ greeting, user, dashboardData, t, navigate }) => (
   <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
     {/* Greeting bar */}
-    <div className="bg-white dark:bg-gray-900 px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+    <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
@@ -166,12 +165,11 @@ const MobileDashboard = ({ greeting, dashboardData, handleRefresh, isRefreshing,
             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          <RefreshCw className={cn('w-4 h-4 text-gray-500', isRefreshing && 'animate-spin')} />
-        </button>
+        <Avatar
+          src={user?.avatar || user?.profile_picture_url || user?.picture}
+          fallback={user?.firstName?.charAt(0) || user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+          className="w-9 h-9 rounded-full border-2 border-gray-100 dark:border-gray-700 shrink-0"
+        />
       </div>
     </div>
 
@@ -194,32 +192,23 @@ const MobileDashboard = ({ greeting, dashboardData, handleRefresh, isRefreshing,
 // ─── Desktop layout ───────────────────────────────────────────────────────────
 
 const DesktopDashboard = ({
-  greeting, dashboardData, handleRefresh, isRefreshing,
+  greeting, user, dashboardData,
   formatCurrency, t, navigate,
 }) => (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
     {/* Page header */}
     <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-              <BarChart3 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <span className="text-white font-bold text-lg">S</span>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-            Refresh
-          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -307,17 +296,11 @@ const ModernDashboard = () => {
   // ── Loading ──
   if (isLoading && !dashboardData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
         <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-            className="w-14 h-14 mx-auto mb-4"
-          >
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-              <BarChart3 className="w-7 h-7 text-white" />
-            </div>
-          </motion.div>
+          <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-2xl">S</span>
+          </div>
           <p className="text-base font-medium text-gray-500 dark:text-gray-400">
             {t('loadingDashboard')}
           </p>
@@ -333,9 +316,8 @@ const ModernDashboard = () => {
 
   const sharedProps = {
     greeting,
+    user,
     dashboardData,
-    handleRefresh,
-    isRefreshing,
     formatCurrency,
     t,
     navigate,

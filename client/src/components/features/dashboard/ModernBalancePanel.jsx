@@ -4,8 +4,8 @@
  * Clean design, mobile-first. No unnecessary animations.
  */
 
-import React, { useState, useCallback } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import React, { useState } from 'react';
+import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useBalance } from '../../../hooks';
 import { cn } from '../../../utils/helpers';
@@ -19,15 +19,9 @@ const SkeletonBox = ({ className }) => (
 const ModernBalancePanel = ({ className = '' }) => {
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
-  const { data, loading, error, refresh } = useBalance({ autoRefresh: true });
+  const { data, loading, error } = useBalance({ autoRefresh: true });
 
   const [period, setPeriod] = useState('monthly');
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try { await refresh(); } finally { setRefreshing(false); }
-  }, [refresh]);
 
   const periodData = data?.[period] || { income: 0, expenses: 0, total: 0 };
   const net = periodData.total ?? (periodData.income - Math.abs(periodData.expenses));
@@ -56,19 +50,10 @@ const ModernBalancePanel = ({ className = '' }) => {
     <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
       {/* Gradient header */}
       <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white">
-        {/* Title + refresh */}
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2 opacity-90">
-            <Wallet className="w-4 h-4" />
-            <span className="text-sm font-medium">{t('balance.title')}</span>
-          </div>
-          <button
-            onClick={handleRefresh}
-            className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
-            aria-label="Refresh balance"
-          >
-            <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
-          </button>
+        {/* Title */}
+        <div className="flex items-center gap-2 opacity-90 mb-1">
+          <Wallet className="w-4 h-4" />
+          <span className="text-sm font-medium">{t('balance.title')}</span>
         </div>
 
         {/* Net amount */}
