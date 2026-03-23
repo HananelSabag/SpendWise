@@ -1,30 +1,16 @@
 /**
- * 🏷️ CATEGORY SELECTOR - Enhanced Category Picker
- * New clean architecture component - eliminates duplication
- * Features: Inline creation, Search, Icons, Mobile-first, Accessibility
- * @version 3.0.0 - TRANSACTION REDESIGN
+ * 🏷️ CATEGORY SELECTOR — Compact dropdown with search and inline creation
  */
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronDown, Search, Plus, Check, AlertCircle, 
-  Tag, Palette, X, Sparkles 
-} from 'lucide-react';
-
-// ✅ Import Zustand stores
+import { ChevronDown, Search, Plus, Check, AlertCircle, Tag, X } from 'lucide-react';
 import { useTranslation } from '../../../../stores';
-
-// ✅ Import category hook
 import { useCategory } from '../../../../hooks/useCategory';
-
 import { Button } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 import { getIconComponent } from '../../../../config/categoryIcons';
 
-/**
- * 🏷️ Category Selector Component
- */
 const CategorySelector = ({
   value = '',
   onChange,
@@ -33,429 +19,304 @@ const CategorySelector = ({
   required = false,
   disabled = false,
   placeholder,
-  className = ''
+  className = '',
 }) => {
   const { t, currentLanguage } = useTranslation('transactions');
   const { categories, createCategory, isLoading } = useCategory();
-  
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryIcon, setNewCategoryIcon] = useState('Tag');
-  const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');
-  
-  const dropdownRef = useRef(null);
-  const searchInputRef = useRef(null);
 
-  // ✅ Filter categories by transaction type and search
-  const filteredCategories = useMemo(() => {
-    if (!categories) return [];
-    
-    const detectLanguage = (name) => /[\u0590-\u05FF]/.test(name) ? 'he' : 'en';
+  const [isOpen, setIsOpen]               = useState(false);
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [showCreate, setShowCreate]       = useState(false);
+  const [newName, setNewName]             = useState('');
+  const [newIcon, setNewIcon]             = useState('Tag');
+  const [newColor, setNewColor]           = useState('#3B82F6');
 
-    let filtered = categories.filter(category => {
-      // Filter by transaction type if category has type preference
-      if (category.type && category.type !== transactionType) return false;
-      // Language-specific: prefer categories matching UI language
-      const lang = category.language || detectLanguage(category.name || '');
-      if (lang !== currentLanguage) return false;
-      
-      // Filter by search query
-      if (searchQuery) {
-        const name = category.localized_name?.[currentLanguage] || category.name || '';
-        return name.toLowerCase().includes(searchQuery.toLowerCase());
-      }
-      
-      return true;
-    });
+  const dropdownRef   = useRef(null);
+  const searchRef     = useRef(null);
 
-    return filtered.map(cat => ({
-      ...cat,
-      displayName: cat.localized_name?.[currentLanguage] || cat.name
-    }));
-  }, [categories, transactionType, searchQuery, currentLanguage]);
-
-  // ✅ Selected category
-  const selectedCategory = useMemo(() => {
-    return categories?.find(cat => cat.id === value);
-  }, [categories, value]);
-
-  // ✅ Handle click outside
+  // Close on outside click
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
-        setShowCreateForm(false);
+        setShowCreate(false);
         setSearchQuery('');
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ✅ Focus search input when dropdown opens
+  // Focus search when dropdown opens
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
+    if (isOpen && searchRef.current) setTimeout(() => searchRef.current?.focus(), 80);
   }, [isOpen]);
 
-  // ✅ Handle category selection
-  const handleCategorySelect = useCallback((categoryId) => {
-    onChange?.(categoryId);
+  // Filtered categories
+  const filtered = useMemo(() => {
+    if (!categories) return [];
+    const detectLang = (name) => /[\u0590-\u05FF]/.test(name) ? 'he' : 'en';
+    return categories
+      .filter(cat => {
+        if (cat.type && cat.type !== transactionType) return false;
+        const lang = cat.language || detectLang(cat.name || '');
+        if (lang !== currentLanguage) return false;
+        if (searchQuery) {
+          const name = cat.localized_name?.[currentLanguage] || cat.name || '';
+          return name.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return true;
+      })
+      .map(cat => ({ ...cat, displayName: cat.localized_name?.[currentLanguage] || cat.name }));
+  }, [categories, transactionType, searchQuery, currentLanguage]);
+
+  const selected = useMemo(() => categories?.find(c => c.id === value), [categories, value]);
+
+  const handleSelect = useCallback((id) => {
+    onChange?.(id);
     setIsOpen(false);
     setSearchQuery('');
-  }, [onChange, transactionType]);
+  }, [onChange]);
 
-  // ✅ Handle create new category
-  const handleCreateCategory = useCallback(async () => {
-    if (!newCategoryName.trim()) return;
-
+  const handleCreate = useCallback(async () => {
+    if (!newName.trim()) return;
     try {
-      const newCategory = await createCategory({
-        name: newCategoryName.trim(),
-        icon: newCategoryIcon,
-        color: newCategoryColor,
-        type: transactionType
-      });
-
-      onChange?.(newCategory.id);
-      setShowCreateForm(false);
+      const cat = await createCategory({ name: newName.trim(), icon: newIcon, color: newColor, type: transactionType });
+      onChange?.(cat.id);
+      setShowCreate(false);
       setIsOpen(false);
-      setNewCategoryName('');
-      setNewCategoryIcon('Tag');
-      setNewCategoryColor('#3B82F6');
-    } catch (error) {
-      console.error('Failed to create category:', error);
-    }
-  }, [newCategoryName, newCategoryIcon, newCategoryColor, transactionType, createCategory, onChange]);
+      setNewName('');
+    } catch {}
+  }, [newName, newIcon, newColor, transactionType, createCategory, onChange]);
 
-  // ✅ Available colors for new categories
-  const colorOptions = [
-    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', 
-    '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16',
-    '#F97316', '#6366F1', '#14B8A6', '#F43F5E'
-  ];
-
-  // ✅ Available icons for new categories
-  const iconOptions = [
-    'Tag', 'Home', 'Car', 'Coffee', 'Gift', 'Heart',
-    'Music', 'Book', 'Gamepad2', 'Palette', 'Plane', 'Smartphone'
-  ];
+  const colorOptions = ['#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#F97316'];
+  const iconOptions  = ['Tag','Home','Car','Coffee','Gift','Heart','Music','Book','Plane','Smartphone'];
 
   return (
-    <div className={cn("space-y-2 relative", className)} ref={dropdownRef}>
-      {/* Label */}
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        {t('fields.category.label')}
-        {required && <span className="text-red-500 ml-1">*</span>}
+    <div className={cn('relative space-y-1.5', className)} ref={dropdownRef}>
+      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {t('fields.category.label', 'Category')}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
 
-      {/* Selector Button */}
+      {/* Trigger button */}
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(v => !v)}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center justify-between px-5 py-4 md:py-5 text-left min-h-[70px] md:min-h-[80px]",
-          "border-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md",
-          "bg-white dark:bg-gray-800",
-          "text-gray-900 dark:text-white",
-          
-          // Focus/active styles
-          isOpen && "ring-2 ring-blue-500 ring-opacity-50 border-blue-500",
-          
-          // Error styles
-          error ? [
-            "border-red-300 dark:border-red-600",
-            "bg-red-50 dark:bg-red-900/10"
-          ] : [
-            "border-gray-300 dark:border-gray-600",
-            "hover:border-gray-400 dark:hover:border-gray-500"
-          ],
-          
-          // Disabled styles
-          disabled && "opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700"
+          'w-full flex h-11 items-center gap-2.5 rounded-xl border px-3 text-left transition-all',
+          'bg-white dark:bg-gray-800',
+          isOpen ? 'ring-2 ring-blue-400/20 border-blue-400 dark:border-blue-500' : '',
+          error
+            ? 'border-red-300 dark:border-red-600'
+            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+          disabled && 'cursor-not-allowed opacity-50'
         )}
       >
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {selectedCategory ? (
-            <>
-              {/* Category Icon */}
-              <div 
-                className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md"
-                style={{ backgroundColor: selectedCategory.color }}
-              >
-                {React.createElement(
-                  getIconComponent(selectedCategory.icon),
-                  { className: "w-6 h-6 md:w-7 md:h-7 text-white" }
-                )}
-              </div>
-              
-              {/* Enhanced Category Name */}
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-lg md:text-xl truncate block">
-                  {selectedCategory.localized_name?.[currentLanguage] || selectedCategory.name}
-                </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedCategory.type === 'income' ? t('types.income') : t('types.expense')}
-                </span>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Enhanced Placeholder Icon */}
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                <Tag className="w-6 h-6 md:w-7 md:h-7 text-gray-400" />
-              </div>
-              
-              {/* Enhanced Placeholder Text */}
-              <div className="flex-1 min-w-0">
-                <span className="text-gray-500 dark:text-gray-400 truncate text-lg md:text-xl font-medium block">
-                  {placeholder || t('fields.category.placeholder')}
-                </span>
-                <span className="text-sm text-gray-400 dark:text-gray-500">
-                  {t('fields.category.helper', { fallback: 'Choose a category from the list or create a new one' })}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Dropdown Icon */}
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+        {selected ? (
+          <>
+            <div className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center" style={{ backgroundColor: selected.color }}>
+              {React.createElement(getIconComponent(selected.icon), { className: 'w-3.5 h-3.5 text-white' })}
+            </div>
+            <span className="flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">
+              {selected.localized_name?.[currentLanguage] || selected.name}
+            </span>
+          </>
+        ) : (
+          <>
+            <div className="w-7 h-7 shrink-0 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <Tag className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+            <span className="flex-1 truncate text-sm text-gray-400 dark:text-gray-500">
+              {placeholder || t('fields.category.placeholder', 'Select a category')}
+            </span>
+          </>
+        )}
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
         </motion.div>
       </button>
 
-      {/* Dropdown - Mobile Optimized */}
+      {/* Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Mobile Backdrop */}
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden" onClick={() => setIsOpen(false)} />
-            
+            {/* Mobile backdrop */}
+            <div className="fixed inset-0 z-40 sm:hidden bg-black/40" onClick={() => setIsOpen(false)} />
+
             <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
               className={cn(
-                "z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden",
-                // Mobile: Full screen modal
-                "fixed inset-x-4 top-20 bottom-20 sm:relative sm:inset-auto sm:top-auto sm:bottom-auto",
-                // Desktop: Dropdown anchored to field
-                "sm:absolute sm:left-0 sm:right-auto sm:w-full sm:mt-1 sm:max-h-80"
+                'z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden',
+                // Mobile: centered modal
+                'fixed inset-x-4 top-[15%] bottom-[15%] sm:inset-auto',
+                // Desktop: dropdown below button
+                'sm:absolute sm:left-0 sm:w-full sm:top-[calc(100%+4px)] sm:max-h-72 sm:bottom-auto'
               )}
             >
-            {!showCreateForm ? (
-              <>
-                {/* Mobile Header */}
-                <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 sm:hidden">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('fields.category.label')}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Search Input */}
-                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={t('fields.category.search')}
-                      className="w-full pl-10 pr-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Categories List */}
-                <div className="flex-1 overflow-y-auto sm:max-h-48">
-                  {filteredCategories.length > 0 ? (
-                    <div className="p-2">
-                      {filteredCategories.map((category) => {
-                        return (
-                          <button
-                            key={category.id}
-                            type="button"
-                            onClick={() => handleCategorySelect(category.id)}
-                            className={cn(
-                              "w-full flex items-center space-x-3 px-3 py-4 sm:py-2 rounded-lg transition-colors text-left",
-                              "hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600",
-                              "touch-manipulation min-h-[60px] sm:min-h-auto",
-                              value === category.id && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                            )}
-                          >
-                            <div 
-                              className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: category.color }}
-                            >
-                              {React.createElement(getIconComponent(category.icon), { className: "w-5 h-5 sm:w-4 sm:h-4 text-white" })}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium block truncate text-base sm:text-sm">
-                                {category.displayName || category.name}
-                              </span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400 block sm:hidden">
-                                {category.type === 'income' ? t('types.income') : t('types.expense')}
-                              </span>
-                            </div>
-                            
-                            {value === category.id && (
-                              <Check className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      {searchQuery ? t('fields.category.noResults') : t('fields.category.empty')}
-                    </div>
-                  )}
-                </div>
-
-                {/* Create New Button - Mobile Optimized */}
-                <div className="p-3 sm:p-2 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(true)}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-4 sm:py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors touch-manipulation min-h-[56px] sm:min-h-auto"
-                  >
-                    <Plus className="w-5 h-5 sm:w-4 sm:h-4" />
-                    <span className="font-medium text-base sm:text-sm">
-                      {t('fields.category.createNew')}
+              {!showCreate ? (
+                <div className="flex flex-col h-full">
+                  {/* Mobile header */}
+                  <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-gray-700 sm:hidden">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('fields.category.label', 'Category')}
                     </span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* Create Category Form */
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900 dark:text-white">
-                    {t('fields.category.newCategory')}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Category Name */}
-                <input
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder={t('fields.category.namePlaceholder')}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  autoFocus
-                />
-
-                {/* Color Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('fields.category.color')}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {colorOptions.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setNewCategoryColor(color)}
-                        className={cn(
-                          "w-8 h-8 rounded-lg border-2 transition-all",
-                          newCategoryColor === color 
-                            ? "border-gray-900 dark:border-white scale-110" 
-                            : "border-gray-300 dark:border-gray-600 hover:scale-105"
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
+                    <button type="button" onClick={() => setIsOpen(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                </div>
 
-                {/* Icon Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('fields.category.icon')}
-                  </label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {iconOptions.map((iconName) => {
-                      return (
+                  {/* Search */}
+                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        ref={searchRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder={t('fields.category.search', 'Search...')}
+                        className="w-full h-8 pl-8 pr-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* List */}
+                  <div className="flex-1 overflow-y-auto py-1">
+                    {filtered.length > 0 ? (
+                      filtered.map(cat => (
                         <button
-                          key={iconName}
+                          key={cat.id}
                           type="button"
-                          onClick={() => setNewCategoryIcon(iconName)}
+                          onClick={() => handleSelect(cat.id)}
                           className={cn(
-                            "w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all",
-                            newCategoryIcon === iconName 
-                              ? "border-gray-900 dark:border-white bg-gray-100 dark:bg-gray-700" 
-                              : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            'w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors',
+                            value === cat.id
+                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                           )}
                         >
-                          {React.createElement(getIconComponent(iconName), { className: "w-5 h-5 text-gray-600 dark:text-gray-400" })}
+                          <div className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color }}>
+                            {React.createElement(getIconComponent(cat.icon), { className: 'w-3.5 h-3.5 text-white' })}
+                          </div>
+                          <span className={cn(
+                            'flex-1 truncate text-sm font-medium',
+                            value === cat.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
+                          )}>
+                            {cat.displayName}
+                          </span>
+                          {value === cat.id && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />}
                         </button>
-                      );
-                    })}
+                      ))
+                    ) : (
+                      <div className="px-3 py-6 text-center text-sm text-gray-400">
+                        {searchQuery ? t('fields.category.noResults', 'No results') : t('fields.category.empty', 'No categories')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Create new */}
+                  <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreate(true)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {t('fields.category.createNew', 'Create new category')}
+                    </button>
                   </div>
                 </div>
+              ) : (
+                /* Create form */
+                <div className="p-4 space-y-4 overflow-y-auto max-h-full">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('fields.category.newCategory', 'New Category')}
+                    </span>
+                    <button type="button" onClick={() => setShowCreate(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                {/* Actions */}
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreateForm(false)}
-                    className="flex-1"
-                  >
-                    {t('actions.cancel')}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleCreateCategory}
-                    disabled={!newCategoryName.trim() || isLoading}
-                    className="flex-1"
-                  >
-                    {isLoading ? t('actions.creating') : t('actions.create')}
-                  </Button>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder={t('fields.category.namePlaceholder', 'Category name')}
+                    autoFocus
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+                  />
+
+                  {/* Color */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('fields.category.color', 'Color')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {colorOptions.map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewColor(c)}
+                          className={cn('w-7 h-7 rounded-lg border-2 transition-all', newColor === c ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent hover:scale-105')}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Icon */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('fields.category.icon', 'Icon')}</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {iconOptions.map(ic => (
+                        <button
+                          key={ic}
+                          type="button"
+                          onClick={() => setNewIcon(ic)}
+                          className={cn(
+                            'h-9 w-full rounded-lg border-2 flex items-center justify-center transition-all',
+                            newIcon === ic
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                              : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          )}
+                        >
+                          {React.createElement(getIconComponent(ic), { className: 'w-4 h-4 text-gray-600 dark:text-gray-400' })}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button variant="outline" onClick={() => setShowCreate(false)} className="flex-1 h-9 text-sm">
+                      {t('actions.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleCreate}
+                      disabled={!newName.trim() || isLoading}
+                      className="flex-1 h-9 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isLoading ? t('actions.creating', 'Creating...') : t('actions.create', 'Create')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </motion.div>
+              )}
+            </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* Error Message */}
       {error && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm text-red-600 dark:text-red-400 flex items-center space-x-1"
-        >
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
-        </motion.p>
+        <p className="flex items-center gap-1 text-xs text-red-500">
+          <AlertCircle className="w-3.5 h-3.5" />{error}
+        </p>
       )}
     </div>
   );
 };
 
-export default CategorySelector; 
+export default CategorySelector;

@@ -7,7 +7,6 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CheckCircle, CreditCard, Repeat } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {

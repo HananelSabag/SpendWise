@@ -214,8 +214,8 @@ const TransactionFormTabs = ({
   }, [isDirty, onCancel, t]);
 
   return (
-    <div 
-      className={cn("space-y-6", className)}
+    <div
+      className={cn("space-y-4", className)}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       {/* Header with Type Selection */}
@@ -276,8 +276,7 @@ const TransactionFormTabs = ({
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5">
+          <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 lg:gap-6">
                 <div className="xl:col-span-3 space-y-4">
                   <TransactionFormFields
@@ -376,7 +375,6 @@ const TransactionFormTabs = ({
                 </Button>
               </div>
             </form>
-          </div>
         </motion.div>
       </AnimatePresence>
     </div>

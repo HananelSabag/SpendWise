@@ -7,10 +7,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Edit3, X, CheckCircle, Copy, Trash2, 
-  MoreVertical, Calendar, AlertTriangle 
-} from 'lucide-react';
+import { CheckCircle, Copy, Trash2, MoreVertical, Calendar, AlertTriangle } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -211,40 +208,6 @@ const EditTransactionModal = ({
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Compact Modal Header */}
-              {/* Header area removed; title shown in modal header */}
-              <div className="relative p-0">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${modalConfig.bgColor}`}>
-                    <IconComponent className={`w-5 h-5 ${modalConfig.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">{modalConfig.subtitle}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  {/* Action Menu */}
-                  {actionMenuItems.length > 0 && (
-                    <Dropdown
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isSubmitting}
-                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                        >
-                          <MoreVertical className="w-5 h-5" />
-                        </Button>
-                      }
-                      items={actionMenuItems}
-                    />
-                  )}
-                  {/* Note: No inner close button to avoid duplicate X */}
-                </div>
-              </div>
-
-              {/* Form Body */}
               <div className="p-4 sm:p-5">
                 <TransactionForm
                   mode={mode}
@@ -252,10 +215,9 @@ const EditTransactionModal = ({
                   onSubmit={handleSubmit}
                   onCancel={handleClose}
                   isLoading={isSubmitting || isLoading}
-                  showRecurring={mode !== 'view'}
+                  showRecurring={false}
                   showAdvanced={mode !== 'view'}
                   className="w-full"
-                  hideHeader
                 />
               </div>
             </motion.div>

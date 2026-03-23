@@ -1,22 +1,12 @@
 /**
- * 📅 DATE TIME PICKER - Enhanced Date & Time Selection
- * New clean architecture component - eliminates duplication
- * Features: Combined date/time, Quick presets, Mobile-first, Accessibility
- * @version 3.0.0 - TRANSACTION REDESIGN
+ * 📅 DATE TIME PICKER — Clean, compact date + time inputs
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Clock, ChevronDown, AlertCircle } from 'lucide-react';
-
-// ✅ Import Zustand stores
+import React, { useCallback, useMemo } from 'react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../../../../stores';
-
 import { cn } from '../../../../utils/helpers';
 
-/**
- * 📅 Date Time Picker Component
- */
 const DateTimePicker = ({
   date = '',
   time = '',
@@ -26,300 +16,101 @@ const DateTimePicker = ({
   required = false,
   disabled = false,
   showTime = true,
-  showPresets = true,
-  collapsed = false,
-  className = ''
+  className = '',
+  // ignored legacy props
+  showPresets,
+  collapsed,
 }) => {
   const { t } = useTranslation('transactions');
-  
-  const [showDatePresets, setShowDatePresets] = useState(false);
-  const [isCollapsedOpen, setIsCollapsedOpen] = useState(false);
 
-  // ✅ Date presets
-  const datePresets = useMemo(() => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay());
-    
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-
-    return [
-      {
-        label: t('datePicker.today'),
-        date: today.toISOString().split('T')[0],
-        time: new Date().toTimeString().slice(0, 5)
-      },
-      {
-        label: t('datePicker.yesterday'),
-        date: yesterday.toISOString().split('T')[0],
-        time: '12:00'
-      },
-      {
-        label: t('datePicker.thisWeek'),
-        date: thisWeekStart.toISOString().split('T')[0],
-        time: '09:00'
-      },
-      {
-        label: t('datePicker.lastWeek'),
-        date: lastWeekStart.toISOString().split('T')[0],
-        time: '09:00'
-      },
-      {
-        label: t('datePicker.thisMonth'),
-        date: thisMonthStart.toISOString().split('T')[0],
-        time: '09:00'
-      },
-      {
-        label: t('datePicker.lastMonth'),
-        date: lastMonthStart.toISOString().split('T')[0],
-        time: '09:00'
-      }
-    ];
-  }, [t]);
-
-  // ✅ Quick time presets
-  const timePresets = [
-    '09:00', '12:00', '15:00', '18:00', '21:00'
-  ];
-
-  // ✅ Handle preset selection
-  const handlePresetSelect = useCallback((preset) => {
-    onDateChange?.(preset.date);
-    if (showTime && onTimeChange) {
-      onTimeChange(preset.time);
-    }
-    setShowDatePresets(false);
-  }, [onDateChange, onTimeChange, showTime]);
-
-  // ✅ Handle time preset
-  const handleTimePreset = useCallback((timeValue) => {
-    onTimeChange?.(timeValue);
-  }, [onTimeChange]);
-
-  // ✅ Format display date
-  const formatDisplayDate = useCallback((dateString) => {
-    if (!dateString) return '';
-    
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (dateString === today.toISOString().split('T')[0]) {
-      return t('datePicker.today');
-    }
-    
-    if (dateString === yesterday.toISOString().split('T')[0]) {
-      return t('datePicker.yesterday');
-    }
-    
-    return date.toLocaleDateString();
-  }, [t]);
+  // Human-readable date label
+  const dateLabel = useMemo(() => {
+    if (!date) return '';
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (date === today) return t('datePicker.today', 'Today');
+    if (date === yesterday) return t('datePicker.yesterday', 'Yesterday');
+    return new Date(date).toLocaleDateString();
+  }, [date, t]);
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {/* Label */}
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        {t('fields.date.label')}
-        {required && <span className="text-red-500 ml-1">*</span>}
+    <div className={cn('space-y-1.5', className)}>
+      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {t('fields.date.label', 'Date')}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
 
-      {collapsed && !isCollapsedOpen ? (
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {formatDisplayDate(date)}
-          </div>
-          <button
-            type="button"
-            className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
-            onClick={() => setIsCollapsedOpen(true)}
-          >
-            {t('datePicker.change', { fallback: 'Change' })}
-          </button>
+      <div className={cn('flex gap-2', showTime ? 'flex-row' : '')}>
+        {/* Date input */}
+        <div className="relative flex-1">
+          <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="date"
+            value={date}
+            onChange={e => onDateChange?.(e.target.value)}
+            disabled={disabled}
+            className={cn(
+              'w-full h-11 pl-9 pr-3 rounded-xl border text-sm font-medium transition-all outline-none',
+              'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
+              'focus:ring-2 focus:ring-blue-400/20 focus:border-blue-400 dark:focus:border-blue-500',
+              error
+                ? 'border-red-300 dark:border-red-600'
+                : 'border-gray-200 dark:border-gray-700',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
+          />
         </div>
-      ) : null}
 
-      <div className={cn("grid gap-3", (showTime && !collapsed) || (collapsed && isCollapsedOpen && showTime) ? "md:grid-cols-2" : "md:grid-cols-1") }>
-        {/* Date Input */}
-        <div className="space-y-2">
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <Calendar className="w-5 h-5" />
-            </div>
-            
+        {/* Time input */}
+        {showTime && (
+          <div className="relative w-28">
+            <Clock className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
-              type="date"
-              value={date}
-              onChange={(e) => onDateChange?.(e.target.value)}
+              type="time"
+              value={time}
+              onChange={e => onTimeChange?.(e.target.value)}
               disabled={disabled}
               className={cn(
-                "w-full pl-11 pr-4 py-3 border rounded-lg transition-all duration-200",
-                "bg-white dark:bg-gray-800",
-                "text-gray-900 dark:text-white",
-                "focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-                
-                // Error styles
-                error ? [
-                  "border-red-300 dark:border-red-600",
-                  "bg-red-50 dark:bg-red-900/10"
-                ] : [
-                  "border-gray-300 dark:border-gray-600",
-                  "hover:border-gray-400 dark:hover:border-gray-500"
-                ],
-                
-                // Disabled styles
-                disabled && "opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700"
+                'w-full h-11 pl-8 pr-2 rounded-xl border text-sm font-medium transition-all outline-none',
+                'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
+                'focus:ring-2 focus:ring-blue-400/20 focus:border-blue-400 dark:focus:border-blue-500',
+                'border-gray-200 dark:border-gray-700',
+                disabled && 'opacity-50 cursor-not-allowed'
               )}
             />
-
-            {/* Date Presets Button */}
-            {showPresets && !disabled && (
-              <button
-                type="button"
-                onClick={() => setShowDatePresets(!showDatePresets)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Date Presets Dropdown */}
-          {showPresets && showDatePresets && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute z-50 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-            >
-              <div className="p-2">
-                {datePresets.map((preset, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePresetSelect(preset)}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {preset.label}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(preset.date).toLocaleDateString()}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Current Date Display */}
-          {date && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {formatDisplayDate(date)}
-            </p>
-          )}
-        </div>
-
-        {/* Time Input */}
-        {showTime && (!collapsed || (collapsed && isCollapsedOpen)) && (
-          <div className="space-y-2">
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                <Clock className="w-5 h-5" />
-              </div>
-              
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => onTimeChange?.(e.target.value)}
-                disabled={disabled}
-                className={cn(
-                  "w-full pl-11 pr-4 py-3 border rounded-lg transition-all duration-200",
-                  "bg-white dark:bg-gray-800",
-                  "text-gray-900 dark:text-white",
-                  "focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-                  
-                  // Error styles
-                  error ? [
-                    "border-red-300 dark:border-red-600",
-                    "bg-red-50 dark:bg-red-900/10"
-                  ] : [
-                    "border-gray-300 dark:border-gray-600",
-                    "hover:border-gray-400 dark:hover:border-gray-500"
-                  ],
-                  
-                  // Disabled styles
-                  disabled && "opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700"
-                )}
-              />
-            </div>
-
-            {/* Time Presets */}
-            {showPresets && !disabled && (
-              <div className="flex flex-wrap gap-1">
-                {timePresets.map((timeValue) => (
-                  <button
-                    key={timeValue}
-                    onClick={() => handleTimePreset(timeValue)}
-                    className={cn(
-                      "px-2 py-1 text-xs rounded border transition-colors",
-                      time === timeValue
-                        ? "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300"
-                        : "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    {timeValue}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Collapse close */}
-      {collapsed && isCollapsedOpen && (
-        <div>
+      {/* Quick date chips */}
+      <div className="flex gap-1.5">
+        {[
+          { label: t('datePicker.today', 'Today'), value: new Date().toISOString().split('T')[0] },
+          { label: t('datePicker.yesterday', 'Yesterday'), value: new Date(Date.now() - 86400000).toISOString().split('T')[0] },
+        ].map(chip => (
           <button
+            key={chip.label}
             type="button"
-            className="text-sm text-gray-600 dark:text-gray-300 hover:underline"
-            onClick={() => setIsCollapsedOpen(false)}
+            onClick={() => onDateChange?.(chip.value)}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+              date === chip.value
+                ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            )}
           >
-            {t('datePicker.done', { fallback: 'Done' })}
+            {chip.label}
           </button>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* Error Message */}
       {error && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm text-red-600 dark:text-red-400 flex items-center space-x-1"
-        >
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
-        </motion.p>
-      )}
-
-      {/* Helper Text */}
-      {!error && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {showTime 
-            ? t('fields.date.helperWithTime')
-            : t('fields.date.helper')
-          }
+        <p className="flex items-center gap-1 text-xs text-red-500">
+          <AlertCircle className="w-3.5 h-3.5" />{error}
         </p>
       )}
     </div>
   );
 };
 
-export default DateTimePicker; 
+export default DateTimePicker;
