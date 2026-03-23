@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Check, Briefcase, Home, Smartphone, Heart, Music, Car,
   DollarSign, CreditCard, Utensils, Zap, Wifi, Shield, 
@@ -69,7 +68,6 @@ const FinalTemplatesStep = ({
         newTemplate
       ];
       setSelectedTemplates(newSelected);
-      console.log('🎯 FinalTemplatesStep: Updating templates data:', { selectedTemplates: newSelected });
       onDataUpdate({ selectedTemplates: newSelected });
     } else {
       // Remove if amount is cleared or invalid
@@ -124,8 +122,7 @@ const FinalTemplatesStep = ({
     };
 
     return (
-      <motion.div
-        layout
+      <div
         onClick={handleCardClick}
         className={cn(
           "relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer",
@@ -133,15 +130,12 @@ const FinalTemplatesStep = ({
           isSelected
             ? cn(
                 "border-green-500 shadow-green-100 dark:shadow-green-900/20",
-                isIncome 
-                  ? "bg-green-50 dark:bg-green-900/10" 
+                isIncome
+                  ? "bg-green-50 dark:bg-green-900/10"
                   : "bg-red-50 dark:bg-red-900/10"
               )
             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800"
         )}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -2 }}
       >
         {/* Template Header */}
         <div className="flex items-center space-x-3 mb-3">
@@ -170,75 +164,53 @@ const FinalTemplatesStep = ({
             </p>
           </div>
           {isSelected && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="flex items-center space-x-2"
-            >
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-            </motion.div>
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+              <Check className="w-4 h-4 text-white" />
+            </div>
           )}
         </div>
 
         {/* Amount Input or Display */}
-        <AnimatePresence mode="wait">
-          {isSelected ? (
-            <motion.div
-              key="selected"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-3"
+        {isSelected ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <span className={cn(
+                "text-2xl font-bold",
+                isIncome ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+              )}>
+                {isIncome ? '+' : '-'}{formatCurrency(selectedTemplate.amount)}
+              </span>
+            </div>
+            <Button
+              onClick={(e) => { e.stopPropagation(); removeTemplate(template.id); }}
+              size="sm"
+              variant="outline"
+              className="w-full text-xs"
             >
-              <div className="text-center">
-                <span className={cn(
-                  "text-2xl font-bold",
-                  isIncome ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                )}>
-                  {isIncome ? '+' : '-'}{formatCurrency(selectedTemplate.amount)}
-                </span>
-              </div>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTemplate(template.id);
-                }}
-                size="sm"
-                variant="outline"
-                className="w-full text-xs"
-              >
-                {t('templates.remove', 'Remove')}
-              </Button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="input"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <Input
-                ref={inputRef}
-                type="number"
-                value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                placeholder={t('templates.enterAmount', 'Enter amount')}
-                className="text-center text-lg font-medium"
-                min="0"
-                step="0.01"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <p className="text-xs text-gray-400 text-center mt-2">
-                {t('templates.autoSelect', 'Press Enter or click away to select')}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+              {t('templates.remove', 'Remove')}
+            </Button>
+          </div>
+        ) : (
+          <div>
+            <Input
+              ref={inputRef}
+              type="number"
+              value={amount}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              placeholder={t('templates.enterAmount', 'Enter amount')}
+              className="text-center text-lg font-medium"
+              min="0"
+              step="0.01"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="text-xs text-gray-400 text-center mt-2">
+              {t('templates.autoSelect', 'Press Enter or click away to select')}
+            </p>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -277,8 +249,6 @@ const FinalTemplatesStep = ({
 
         const newSelected = [...selectedTemplates, newTemplate];
         setSelectedTemplates(newSelected);
-        console.log('🎯 FinalTemplatesStep: Adding custom template:', newTemplate);
-        console.log('🎯 FinalTemplatesStep: New selected templates:', newSelected);
         onDataUpdate({ selectedTemplates: newSelected });
         
         // Reset form
@@ -290,12 +260,7 @@ const FinalTemplatesStep = ({
     };
     
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700"
-      >
+      <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700">
         <div className="flex items-center space-x-2 mb-4">
           <Sparkles className="w-5 h-5 text-blue-600" />
           <h3 className="font-semibold text-blue-900 dark:text-blue-100">
@@ -347,7 +312,7 @@ const FinalTemplatesStep = ({
             </Button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -411,86 +376,66 @@ const FinalTemplatesStep = ({
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <AnimatePresence>
-          {currentTemplates.map((template) => (
-            <TemplateCard key={template.id} template={template} />
-          ))}
-        </AnimatePresence>
+        {currentTemplates.map((template) => (
+          <TemplateCard key={template.id} template={template} />
+        ))}
       </div>
 
       {/* Quick Custom Template */}
       <div className="max-w-md mx-auto">
-        <AnimatePresence>
-          {!showCustomForm ? (
-            <motion.div
-              key="add-button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <Button
-                onClick={() => setShowCustomForm(true)}
-                variant="outline"
-                className="w-full border-dashed border-2 py-8 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <div className="flex flex-col items-center space-y-2">
-                  <Plus className="w-6 h-6" />
-                  <span className="font-medium">{t('templates.addCustom', 'Add Custom Template')}</span>
-                  <span className="text-xs opacity-75">
-                    {t('templates.customHint', 'Create your own recurring transaction')}
-                  </span>
-                </div>
-              </Button>
-            </motion.div>
-          ) : (
-            <CustomTemplateForm />
-          )}
-        </AnimatePresence>
+        {!showCustomForm ? (
+          <Button
+            onClick={() => setShowCustomForm(true)}
+            variant="outline"
+            className="w-full border-dashed border-2 py-8 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <div className="flex flex-col items-center space-y-2">
+              <Plus className="w-6 h-6" />
+              <span className="font-medium">{t('templates.addCustom', 'Add Custom Template')}</span>
+              <span className="text-xs opacity-75">
+                {t('templates.customHint', 'Create your own recurring transaction')}
+              </span>
+            </div>
+          </Button>
+        ) : (
+          <CustomTemplateForm />
+        )}
       </div>
 
       {/* Summary */}
-      <AnimatePresence>
-        {selectedTemplates.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center"
-          >
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <Check className="w-5 h-5 text-green-600" />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('templates.selected', '{{count}} template(s) selected', { count: selectedTemplates.length })}
+      {selectedTemplates.length > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
+          <div className="flex items-center justify-center space-x-2 mb-2">
+            <Check className="w-5 h-5 text-green-600" />
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('templates.selected', '{{count}} template(s) selected', { count: selectedTemplates.length })}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {t('templates.readyToCreate', 'These will be saved as recurring transaction templates')}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {selectedTemplates.slice(0, 3).map((template) => (
+              <span
+                key={template.id}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium",
+                  template.type === 'income'
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                    : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                )}
+              >
+                {template.name}: {formatCurrency(template.amount)}
               </span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('templates.readyToCreate', 'These will be saved as recurring transaction templates')}
-            </p>
-            
-            {/* Quick preview */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {selectedTemplates.slice(0, 3).map((template) => (
-                <span
-                  key={template.id}
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium",
-                    template.type === 'income'
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                      : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                  )}
-                >
-                  {template.name}: {formatCurrency(template.amount)}
-                </span>
-              ))}
-              {selectedTemplates.length > 3 && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  +{selectedTemplates.length - 3} more
-                </span>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ))}
+            {selectedTemplates.length > 3 && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                +{selectedTemplates.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

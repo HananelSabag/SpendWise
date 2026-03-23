@@ -6,11 +6,10 @@
  */
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-  ArrowLeft, ArrowRight, 
-  X, Sparkles, 
-  Loader2, CheckCircle 
+import {
+  ArrowLeft, ArrowRight,
+  Sparkles,
+  Loader2, CheckCircle
 } from 'lucide-react';
 
 import { Button } from '../../../ui';
@@ -69,21 +68,6 @@ const ModernOnboardingFooter = ({
     }
   };
 
-  // ✅ Button animation variants
-  const buttonVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.2 }
-    },
-    hover: { 
-      scale: 1.05,
-      transition: { duration: 0.1 }
-    },
-    tap: { scale: 0.95 }
-  };
-
   return (
     <div className={cn(
       "flex items-center justify-between gap-4",
@@ -91,35 +75,18 @@ const ModernOnboardingFooter = ({
       "bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700"
     )}>
       
-      {/* ✅ LEFT SIDE: Previous button (for steps 2 & 3) */}
+      {/* LEFT: Previous button (steps 2 & 3) */}
       <div className="flex items-center">
         {(isSecondStep || isLastStep) && canGoPrevious && (
-          <motion.div
-            variants={buttonVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover="hover"
-            whileTap="tap"
+          <Button
+            variant="outline"
+            onClick={onPrevious}
+            disabled={isCompleting}
+            className="flex items-center gap-2 h-10 px-4 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 border-gray-300 dark:border-gray-600"
           >
-            <Button
-              variant="outline"
-              onClick={onPrevious}
-              disabled={isCompleting}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3",
-                "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
-                "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700",
-                "transition-all duration-200"
-              )}
-            >
-              {isRTL ? (
-                <ArrowRight className="w-4 h-4" />
-              ) : (
-                <ArrowLeft className="w-4 h-4" />
-              )}
-              {texts.back}
-            </Button>
-          </motion.div>
+            {isRTL ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+            {texts.back}
+          </Button>
         )}
       </div>
 
@@ -144,83 +111,44 @@ const ModernOnboardingFooter = ({
       {/* ✅ RIGHT SIDE: Primary + Secondary actions */}
       <div className="flex items-center gap-3">
         
-        {/* ✅ STEP 1: Show "Finish Now" button */}
+        {/* STEP 1: "Skip Setup" button */}
         {isFirstStep && (
-          <motion.div
-            variants={buttonVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover="hover"
-            whileTap="tap"
+          <Button
+            variant="outline"
+            onClick={handleSecondaryAction}
+            disabled={isCompleting || !isValid}
+            className="flex items-center gap-2 h-10 px-4 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20"
           >
-            <Button
-              variant="outline"
-              onClick={handleSecondaryAction}
-              disabled={isCompleting || !isValid}
-              className={cn(
-                "flex items-center gap-2 px-4 py-3",
-                "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300",
-                "border-blue-300 hover:border-blue-400 dark:border-blue-600 dark:hover:border-blue-500",
-                "bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30",
-                "transition-all duration-200"
-              )}
-            >
-              <Sparkles className="w-4 h-4" />
-              {texts.finishNow}
-            </Button>
-          </motion.div>
+            <Sparkles className="w-4 h-4" />
+            {texts.finishNow}
+          </Button>
         )}
 
-        {/* ✅ PRIMARY ACTION: Next/Finish button */}
-        <motion.div
-          variants={buttonVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover="hover"
-          whileTap="tap"
+        {/* PRIMARY ACTION: Next / Finish */}
+        <Button
+          onClick={handlePrimaryAction}
+          disabled={isCompleting || (!canGoNext && !isLastStep) || !isValid}
+          className={cn(
+            "flex items-center gap-2 h-10 px-4 text-sm font-semibold text-white min-w-[100px]",
+            isCompleted
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-blue-600 hover:bg-blue-700",
+            isCompleting && "opacity-75 cursor-not-allowed"
+          )}
         >
-          <Button
-            onClick={handlePrimaryAction}
-            disabled={isCompleting || (!canGoNext && !isLastStep) || !isValid}
-            className={cn(
-              "flex items-center gap-2 px-6 py-3",
-              isCompleted 
-                ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-                : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700",
-              "text-white font-semibold",
-              "shadow-lg hover:shadow-xl",
-              "transition-all duration-200",
-              "min-w-[120px]",
-              isCompleting && "opacity-75 cursor-not-allowed"
-            )}
-          >
-            {isCompleted ? (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                Success!
-              </>
-            ) : isCompleting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {texts.completing}
-              </>
-            ) : isLastStep ? (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                {texts.finish}
-              </>
-            ) : (
-              <>
-                {texts.next}
-                {isRTL ? (
-                  <ArrowLeft className="w-4 h-4" />
-                ) : (
-                  <ArrowRight className="w-4 h-4" />
-                )}
-              </>
-            )}
-          </Button>
-        </motion.div>
+          {isCompleted ? (
+            <><CheckCircle className="w-4 h-4" />Success!</>
+          ) : isCompleting ? (
+            <><Loader2 className="w-4 h-4 animate-spin" />{texts.completing}</>
+          ) : isLastStep ? (
+            <><CheckCircle className="w-4 h-4" />{texts.finish}</>
+          ) : (
+            <>
+              {texts.next}
+              {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );

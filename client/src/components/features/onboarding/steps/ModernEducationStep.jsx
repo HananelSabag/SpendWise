@@ -9,10 +9,9 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Repeat, Calendar, DollarSign, Coffee, Car, Home,
-  Briefcase, TrendingUp, ArrowRight, CheckCircle,
-  Clock, Zap, BarChart3, Eye, EyeOff, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Lightbulb, Target,
-  GraduationCap
+  Briefcase, TrendingUp, CheckCircle, AlertCircle,
+  Clock, BarChart3, Eye, EyeOff, RefreshCw,
+  ArrowUpRight, ArrowDownRight, Lightbulb, Target
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -119,11 +118,7 @@ const ModernEducationStep = ({
     const IconComponent = transaction.icon;
     
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -2, scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+      <div
         className={cn("cursor-pointer", className)}
         onClick={onClick}
       >
@@ -250,7 +245,7 @@ const ModernEducationStep = ({
             </div>
           </div>
         </Card>
-      </motion.div>
+      </div>
     );
   };
 
@@ -261,16 +256,9 @@ const ModernEducationStep = ({
 
     return (
       <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-2xl p-6">
-        {/* Animated background */}
+        {/* Static background */}
         <div className="absolute inset-0 opacity-10">
-          <motion.div
-            animate={{
-              backgroundPosition: ['0% 0%', '100% 100%'],
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500"
-            style={{ backgroundSize: '200% 200%' }}
-          />
+          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500" />
         </div>
 
         <div className="relative z-10">
@@ -319,41 +307,26 @@ const ModernEducationStep = ({
           {/* Main balance */}
           <div className="mb-6">
             <div className="flex items-baseline space-x-4">
-              <motion.div
-                key={balanceVisible ? currentBalance : 'hidden'}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, type: "spring" }}
-                className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white"
-              >
+              <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
                 {balanceVisible ? formatCurrency(currentBalance) : '••••••'}
-              </motion.div>
+              </div>
 
               {/* Change indicator */}
               {balanceVisible && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className={cn(
-                    "flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium",
-                    isPositiveChange 
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                      : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                  )}
-                >
+                <div className={cn(
+                  "flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium",
+                  isPositiveChange
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                    : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                )}>
                   {isPositiveChange ? (
                     <ArrowUpRight className="w-4 h-4" />
                   ) : (
                     <ArrowDownRight className="w-4 h-4" />
                   )}
-                  <span>
-                    {isPositiveChange ? '+' : ''}{formatCurrency(balanceChange)}
-                  </span>
-                  <span className="text-xs opacity-75">
-                    ({changePercentage.toFixed(1)}%)
-                  </span>
-                </motion.div>
+                  <span>{isPositiveChange ? '+' : ''}{formatCurrency(balanceChange)}</span>
+                  <span className="text-xs opacity-75">({changePercentage.toFixed(1)}%)</span>
+                </div>
               )}
             </div>
 
@@ -431,44 +404,16 @@ const ModernEducationStep = ({
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="min-h-full"
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      {/* Enhanced Header */}
-      <div className="text-center mb-8">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="w-20 h-20 mx-auto bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center mb-4 shadow-lg"
-        >
-          <GraduationCap className="w-10 h-10 text-white" />
-        </motion.div>
-        
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 dark:text-white">
-          Learn Your Financial Dashboard 📊
-        </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 mb-2">
-          Understanding how SpendWise tracks and displays your money
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          This foundation will help you make better financial decisions
-        </p>
-      </div>
-
+    <div className="min-h-full" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Section Navigation */}
       <div className="flex justify-center mb-8 overflow-x-auto">
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 min-w-max">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
-              <motion.button
+              <button
                 key={section.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                type="button"
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
                   "flex items-center px-4 py-3 rounded-lg font-medium transition-all text-sm whitespace-nowrap",
@@ -479,7 +424,7 @@ const ModernEducationStep = ({
               >
                 <Icon className="w-4 h-4 mr-2" />
                 {section.label}
-              </motion.button>
+              </button>
             );
           })}
         </div>
@@ -643,11 +588,7 @@ const ModernEducationStep = ({
               </div>
 
               {selectedExamples.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-                >
+                <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <div className="flex items-center mb-2">
                     <Lightbulb className="w-5 h-5 text-blue-600 mr-2" />
                     <h4 className="font-semibold text-blue-900 dark:text-blue-100">
@@ -658,7 +599,7 @@ const ModernEducationStep = ({
                     Notice how recurring transactions have purple styling, special badges, and show their next occurrence. 
                     This makes it easy to spot automated transactions in your list!
                   </p>
-                </motion.div>
+                </div>
               )}
             </Card>
           </motion.div>
@@ -856,8 +797,7 @@ const ModernEducationStep = ({
         )}
       </AnimatePresence>
 
-      {/* Navigation buttons handled by modal footer */}
-    </motion.div>
+    </div>
   );
 };
 

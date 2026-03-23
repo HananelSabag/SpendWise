@@ -34,7 +34,7 @@ const AddTransactionModal = ({
 }) => {
   const { t } = useTranslation('transactions');
   const { addNotification } = useNotifications();
-  const { createTransaction, isLoading } = useTransactionActions();
+  const { createTransaction, isOperating: isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 

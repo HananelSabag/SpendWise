@@ -7,10 +7,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Globe, ChevronLeft
-} from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Globe, ChevronLeft } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API
 import { 
@@ -36,7 +34,6 @@ const Register = () => {
   // ✅ Zustand stores
   const { register, isAuthenticated, googleLogin } = useAuth();
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
-  const { isDark } = useTheme();
   const { addNotification } = useNotifications();
   const authToasts = useAuthToasts(); // ✅ Enhanced auth toasts
 
@@ -254,202 +251,104 @@ const Register = () => {
     }
   }, [registrationStep, handleGoogleProfileSkip]);
 
-  // ✅ Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Guest Settings */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       <GuestSettings />
 
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 5, 0]
-          }}
-          transition={{ 
-            duration: 25, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-          className="w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-600 rounded-full absolute -top-48 -right-48 opacity-20"
-        />
-        <motion.div
-          animate={{ 
-            scale: [1, 1.1, 1],
-            rotate: [0, -8, 0]
-          }}
-          transition={{ 
-            duration: 20, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-          className="w-80 h-80 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-full absolute -bottom-40 -left-40 opacity-20"
-        />
+      {/* Static decorative blobs — no infinite animation */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div className="w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full absolute -top-48 -right-48 opacity-10" />
+        <div className="w-80 h-80 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full absolute -bottom-40 -left-40 opacity-10" />
       </div>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 w-full max-w-md"
-      >
+      <div className="relative z-10 w-full max-w-md" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         {/* Header */}
-        <motion.div variants={itemVariants} className="text-center mb-8">
-          <div
-            className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
-          >
-            <span className="text-white font-bold text-3xl">S</span>
+        <div className="text-center mb-7">
+          <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+            <span className="text-white font-bold text-2xl">S</span>
           </div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {registrationStep === 'form' ? t('createAccount') :
-             registrationStep === 'googleProfile' ? t('completeYourProfile') :
-             t('welcomeAboard')}
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {registrationStep === 'form'         ? t('createAccount', 'Create account') :
+             registrationStep === 'googleProfile' ? t('completeYourProfile', 'Complete your profile') :
+             t('welcomeAboard', 'Welcome aboard!')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {registrationStep === 'form' ? t('joinSpendWise') :
-             registrationStep === 'googleProfile' ? t('addDetailsToPersonalizeExperience') :
-             t('readyToStart')}
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {registrationStep === 'form'         ? t('joinSpendWise', 'Join SpendWise today') :
+             registrationStep === 'googleProfile' ? t('addDetailsToPersonalizeExperience', 'A few details to personalise your experience') :
+             t('readyToStart', "You're all set!")}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Progress Indicator */}
-        {registrationStep !== 'complete' && (
-          <motion.div variants={itemVariants} className="mb-8">
-            <div className="flex items-center justify-center space-x-2">
-              <div className={cn(
-                "w-3 h-3 rounded-full transition-colors",
-                registrationStep === 'form' ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-              )} />
-            {/* Progress simplified to single step */}
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 px-1">
-              <span>{t('account')}</span>
-              <span>{isGoogleUser ? t('profile') : t('security')}</span>
-              {isGoogleUser && <span>{t('complete')}</span>}
-            </div>
-          </motion.div>
-        )}
+        {/* Steps */}
+        <AnimatePresence mode="wait">
+          {registrationStep === 'form' && (
+            <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <RegistrationForm
+                onSubmit={handleRegistrationSubmit}
+                onGoogleRegister={handleGoogleRegister}
+                isSubmitting={isSubmitting}
+                isGoogleLoading={isGoogleLoading}
+                errors={errors}
+              />
+            </motion.div>
+          )}
+          {registrationStep === 'googleProfile' && (
+            <motion.div key="googleProfile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              <GoogleProfileCompletion
+                onComplete={handleGoogleProfileComplete}
+                onSkip={handleGoogleProfileSkip}
+                initialUserData={userData}
+              />
+            </motion.div>
+          )}
+          {registrationStep === 'complete' && (
+            <motion.div key="complete" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+              <RegistrationComplete
+                userName={userData?.firstName}
+                userEmail={userData?.email}
+                securityScore={securityData?.securityScore || 50}
+                onContinue={handleRegistrationComplete}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Registration Steps */}
-        <motion.div variants={itemVariants}>
-          <AnimatePresence mode="wait">
-            {registrationStep === 'form' && (
-              <motion.div
-                key="form"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <RegistrationForm
-                  onSubmit={handleRegistrationSubmit}
-                  onGoogleRegister={handleGoogleRegister}
-                  isSubmitting={isSubmitting}
-                  isGoogleLoading={isGoogleLoading}
-                  errors={errors}
-                />
-              </motion.div>
-            )}
-            
-            {/* Security step removed from flow */}
-
-            {registrationStep === 'googleProfile' && (
-              <motion.div
-                key="googleProfile"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <GoogleProfileCompletion
-                  onComplete={handleGoogleProfileComplete}
-                  onSkip={handleGoogleProfileSkip}
-                  initialUserData={userData}
-                />
-              </motion.div>
-            )}
-            
-            {registrationStep === 'complete' && (
-              <motion.div
-                key="complete"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <RegistrationComplete
-                  userName={userData?.firstName}
-                  userEmail={userData?.email}
-                  securityScore={securityData?.securityScore || 50}
-                  onContinue={handleRegistrationComplete}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Navigation */}
-        {(registrationStep === 'googleProfile') && (
-          <motion.div variants={itemVariants} className="mt-6">
-            <Button
-              variant="ghost"
-              onClick={handleStepBack}
-              className="w-full"
-            >
-              <ChevronLeft className={cn("w-4 h-4 mr-2", isRTL && "ml-2 mr-0 rotate-180")} />
-              {registrationStep === 'security' ? t('backToForm') : t('skipProfile')}
+        {/* Back / skip for googleProfile */}
+        {registrationStep === 'googleProfile' && (
+          <div className="mt-5">
+            <Button variant="ghost" onClick={handleStepBack} className="w-full text-sm">
+              <ChevronLeft className={cn('w-4 h-4 mr-1.5', isRTL && 'ml-1.5 mr-0 rotate-180')} />
+              {t('skipProfile', 'Skip for now')}
             </Button>
-          </motion.div>
+          </div>
         )}
 
         {/* Login link */}
         {registrationStep === 'form' && (
-          <motion.div variants={itemVariants} className="text-center mt-6">
-            <p className="text-gray-600 dark:text-gray-400">
-              {t('alreadyHaveAccount')}{' '}
-              <Link
-                to="/auth/login"
-                className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-              >
-                {t('signIn')}
+          <div className="text-center mt-5">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('alreadyHaveAccount', 'Already have an account?')}{' '}
+              <Link to="/auth/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                {t('signIn', 'Sign in')}
               </Link>
             </p>
-          </motion.div>
+          </div>
         )}
 
-        {/* Language selector */}
+        {/* Language toggle */}
         {registrationStep === 'form' && (
-          <motion.div variants={itemVariants} className="text-center mt-4">
+          <div className="text-center mt-3">
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               onClick={() => setLanguage(currentLanguage === 'en' ? 'he' : 'en')}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
-              <Globe className="w-4 h-4 mr-2" />
+              <Globe className="w-3.5 h-3.5 mr-1.5" />
               {currentLanguage === 'en' ? 'עברית' : 'English'}
             </Button>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 };

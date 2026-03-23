@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Copy, Trash2, MoreVertical, Calendar, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Copy, Trash2, MoreVertical, Calendar, AlertTriangle, Pencil } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import {
@@ -36,7 +36,7 @@ const EditTransactionModal = ({
 }) => {
   const { t } = useTranslation('transactions');
   const { addNotification } = useNotifications();
-  const { updateTransaction, deleteTransaction, isLoading } = useTransactionActions();
+  const { updateTransaction, deleteTransaction, isOperating: isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -65,7 +65,7 @@ const EditTransactionModal = ({
         return {
           title: t('modals.edit.edit.title'),
           subtitle: t('modals.edit.edit.subtitle'),
-          icon: Edit3,
+          icon: Pencil,
           color: 'text-blue-600 dark:text-blue-400',
           bgColor: 'bg-blue-100 dark:bg-blue-900/30'
         };

@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Camera, Upload, X, Eye, EyeOff, Globe,
   DollarSign, Palette, Shield, Check, AlertCircle,
@@ -249,54 +248,9 @@ const ModernProfileStep = ({
 
 
 
-  // ✅ Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: 0.4,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="min-h-full"
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      {/* Enhanced Header */}
-      <motion.div variants={itemVariants} className="text-center mb-8">
-        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
-          <User className="w-10 h-10 text-white" />
-        </div>
-        
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 dark:text-white">
-          Welcome to SpendWise! 👋
-        </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 mb-2">
-          Let's set up your profile and preferences
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          This will personalize your experience and ensure everything works perfectly
-        </p>
-      </motion.div>
-
-      {/* Single Page Content - No tabs */}
-      <motion.div
-        variants={itemVariants}
-        className="max-w-6xl mx-auto"
-      >
+    <div className="min-h-full" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      <div className="max-w-6xl mx-auto">
         <div className="grid gap-8">
           {/* Profile Section */}
           <Card className="p-8">
@@ -318,9 +272,8 @@ const ModernProfileStep = ({
                       className="w-32 h-32 border-4 border-white shadow-xl"
                     />
                     
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
+                    <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
                       className="absolute -bottom-2 -right-2 w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-white transition-colors"
@@ -330,7 +283,7 @@ const ModernProfileStep = ({
                       ) : (
                         <Camera className="w-5 h-5" />
                       )}
-                    </motion.button>
+                    </button>
                   </div>
                   
                   <p className="text-sm text-gray-500 mt-4">
@@ -562,10 +515,9 @@ const ModernProfileStep = ({
                 </label>
                 <div className="grid grid-cols-1 gap-3">
                   {languageOptions.map((option) => (
-                    <motion.button
+                    <button
                       key={option.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      type="button"
                       onClick={() => handleInputChange('language', option.value)}
                       className={cn(
                         "p-4 rounded-xl border-2 transition-all text-left",
@@ -586,7 +538,7 @@ const ModernProfileStep = ({
                           <Check className="w-5 h-5 text-blue-600" />
                         )}
                       </div>
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -598,10 +550,9 @@ const ModernProfileStep = ({
                 </label>
                 <div className="grid grid-cols-1 gap-2">
                   {currencyOptions.map((option) => (
-                    <motion.button
+                    <button
                       key={option.value}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                      type="button"
                       onClick={() => handleInputChange('currency', option.value)}
                       className={cn(
                         "p-3 rounded-lg border-2 transition-all text-left",
@@ -624,7 +575,7 @@ const ModernProfileStep = ({
                           )}
                         </div>
                       </div>
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -641,10 +592,9 @@ const ModernProfileStep = ({
                 {themeOptions.map((option) => {
                   const Icon = option.icon;
                   return (
-                    <motion.button
+                    <button
                       key={option.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      type="button"
                       onClick={() => handleInputChange('theme', option.value)}
                       className={cn(
                         "w-full p-4 rounded-xl border-2 transition-all text-left",
@@ -679,17 +629,15 @@ const ModernProfileStep = ({
                           <Check className="w-5 h-5 text-indigo-600" />
                         )}
                       </div>
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
             </Card>
           </div>
         </div>
-      </motion.div>
-
-      {/* Navigation handled by modal footer */}
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

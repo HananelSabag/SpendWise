@@ -7,10 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  Globe
-} from 'lucide-react';
+import { Globe } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API
 import { 
@@ -34,7 +31,6 @@ const Login = () => {
   // ✅ Zustand stores
   const { login, isAuthenticated, googleLogin } = useAuth();
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
-  const { isDark } = useTheme();
   const { addNotification } = useNotifications();
 
   const navigate = useNavigate();
@@ -243,116 +239,59 @@ const Login = () => {
     }
   }, [googleLogin, authToasts, t, location, navigate]);
 
-  // ✅ Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Guest Settings */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       <GuestSettings />
 
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 5, 0]
-          }}
-          transition={{ 
-            duration: 25, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-          className="w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full absolute -top-48 -right-48 opacity-20"
-        />
-        <motion.div
-          animate={{ 
-            scale: [1, 1.1, 1],
-            rotate: [0, -8, 0]
-          }}
-          transition={{ 
-            duration: 20, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-          className="w-80 h-80 bg-gradient-to-br from-green-400 to-cyan-600 rounded-full absolute -bottom-40 -left-40 opacity-20"
-        />
+      {/* Static decorative blobs — no infinite animation */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div className="w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full absolute -top-48 -right-48 opacity-10" />
+        <div className="w-80 h-80 bg-gradient-to-br from-indigo-400 to-cyan-500 rounded-full absolute -bottom-40 -left-40 opacity-10" />
       </div>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 w-full max-w-md"
-      >
+      <div className="relative z-10 w-full max-w-md" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         {/* Header */}
-        <motion.div variants={itemVariants} className="text-center mb-8">
-          <div
-            className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
-          >
-            <span className="text-white font-bold text-3xl">S</span>
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+            <span className="text-white font-bold text-2xl">S</span>
           </div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('welcomeBack')}
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {t('welcomeBack', 'Welcome back')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('signInToContinue')}
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t('signInToContinue', 'Sign in to continue to SpendWise')}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Login Form */}
-        <motion.div variants={itemVariants}>
-          <LoginForm
-            onSubmit={handleLoginSubmit}
-            onGoogleLogin={handleGoogleLogin}
-            isSubmitting={isSubmitting}
-            isGoogleLoading={isGoogleLoading}
-            errors={errors}
-          />
-        </motion.div>
+        <LoginForm
+          onSubmit={handleLoginSubmit}
+          onGoogleLogin={handleGoogleLogin}
+          isSubmitting={isSubmitting}
+          isGoogleLoading={isGoogleLoading}
+          errors={errors}
+        />
 
-        {/* Register link */}
-        <motion.div variants={itemVariants} className="text-center mt-6">
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('dontHaveAccount')}{' '}
-            <Link
-              to="/register"
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-            >
-              {t('signUp')}
+        <div className="text-center mt-5">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t('dontHaveAccount', "Don't have an account?")}{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+              {t('signUp', 'Sign up')}
             </Link>
           </p>
-        </motion.div>
+        </div>
 
-        {/* Language selector */}
-        <motion.div variants={itemVariants} className="text-center mt-4">
+        <div className="text-center mt-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLanguage(currentLanguage === 'en' ? 'he' : 'en')}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
-            <Globe className="w-4 h-4 mr-2" />
+            <Globe className="w-3.5 h-3.5 mr-1.5" />
             {currentLanguage === 'en' ? 'עברית' : 'English'}
           </Button>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 };
