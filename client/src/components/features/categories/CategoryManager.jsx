@@ -7,9 +7,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, Search, Filter, Grid, List, Settings, X,
-  BarChart3, Download, RefreshCw, Eye, EyeOff
+import {
+  Plus, Search, Filter, Grid, List, X,
+  BarChart3, Eye, EyeOff
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
@@ -23,14 +23,14 @@ import {
 import CategoryForm from './forms/CategoryForm';
 import CategoryGrid from './components/CategoryGrid';
 import CategoryList from './components/CategoryList';
-// import CategoryAnalytics from './analytics/CategoryAnalytics'; // TEMP: Commented out to fix bind error
+import CategoryAnalytics from './analytics/CategoryAnalytics';
 
 // ✅ Import UI components
 import { Button, Input, Card, Modal, Dropdown, Badge } from '../../ui';
 
 // ✅ Import hooks
 import { useCategory } from '../../../hooks/useCategory';
-// import { useCategoryAnalytics } from '../../../hooks/useCategoryAnalytics'; // TEMP: Commented out
+import { useCategoryAnalytics } from '../../../hooks/useCategoryAnalytics';
 import { useCategorySelection } from '../../../hooks/useCategorySelection';
 
 // ✅ Import utilities
@@ -71,7 +71,7 @@ const CategoryManager = ({
     toggleVisibility
   } = useCategory();
 
-  // const { analytics } = useCategoryAnalytics(); // TEMP: Commented out
+  const { analytics: categoryAnalytics } = useCategoryAnalytics();
 
   // ✅ Selection hook
   const {
@@ -395,12 +395,12 @@ const CategoryManager = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="h-full flex items-center justify-center"
+                className="h-full"
               >
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{t('analytics.comingSoon', 'Analytics coming soon')}</p>
-                </div>
+                <CategoryAnalytics
+                  categories={processedCategories}
+                  analytics={categoryAnalytics}
+                />
               </motion.div>
             )}
           </AnimatePresence>

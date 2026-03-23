@@ -9,7 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Globe, ChevronLeft, ChevronRight
+  Globe, ChevronLeft
 } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API

@@ -7,10 +7,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Filter, ArrowLeftRight, TrendingUp, TrendingDown,
+  Search, Filter, ArrowLeftRight,
   X, CheckCircle, List, Grid3X3, Repeat, Receipt, Layers,
   ChevronDown, AlertTriangle, Trash2, RefreshCw, Calendar,
-  DollarSign, Target,
+  DollarSign,
 } from 'lucide-react';
 
 import { useTranslation, useCurrency, useNotifications } from '../stores';
