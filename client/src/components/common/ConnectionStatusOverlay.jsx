@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Wifi, WifiOff, RefreshCw, Server, X } from 'lucide-react';
 
 const ConnectionStatusOverlay = () => {
@@ -7,6 +7,13 @@ const ConnectionStatusOverlay = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [countdown, setCountdown] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  // Don't show connection-issue banner during the first 6s — server may still be waking
+  const mountedAt = useRef(Date.now());
+  const [pastStartupDelay, setPastStartupDelay] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setPastStartupDelay(true), 6000);
+    return () => clearTimeout(id);
+  }, []);
 
   // Reset dismissed state when connection is restored
   useEffect(() => {
@@ -88,7 +95,15 @@ const ConnectionStatusOverlay = () => {
     }
   }, []);
 
-  const visible = useMemo(() => !dismissed && (isOffline || serverWaking || retryCount > 0), [dismissed, isOffline, serverWaking, retryCount]);
+  // Show offline immediately; server-waking and connection-issues only after startup delay + ≥2 failures
+  const visible = useMemo(() => {
+    if (dismissed) return false;
+    if (isOffline) return true;
+    if (!pastStartupDelay) return false;
+    if (serverWaking) return true;
+    if (retryCount >= 2) return true;
+    return false;
+  }, [dismissed, isOffline, serverWaking, retryCount, pastStartupDelay]);
   
   if (!visible) return null;
 

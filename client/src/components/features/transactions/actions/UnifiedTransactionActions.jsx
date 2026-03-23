@@ -21,6 +21,7 @@ import { useNotifications } from '../../../../stores';
  */
 const UnifiedTransactionActions = () => {
   const [showAdd, setShowAdd] = React.useState(false);
+  const [addDefaultType, setAddDefaultType] = React.useState('expense');
   const [showEdit, setShowEdit] = React.useState(false);
   const [showDelete, setShowDelete] = React.useState(false);
   const [showRecurringSetup, setShowRecurringSetup] = React.useState(false);
@@ -32,7 +33,8 @@ const UnifiedTransactionActions = () => {
   const { addNotification } = useNotifications();
 
   // Handlers
-  const handleAdd = React.useCallback(() => {
+  const handleAdd = React.useCallback((type = 'expense') => {
+    setAddDefaultType(type);
     setShowAdd(true);
   }, []);
 
@@ -64,7 +66,7 @@ const UnifiedTransactionActions = () => {
 
   // Event listeners
   React.useEffect(() => {
-    const onAdd = () => handleAdd();
+    const onAdd = (e) => handleAdd(e?.detail?.type || 'expense');
     const onEdit = (e) => handleEdit(e?.detail?.tx || e?.detail || null);
     const onDuplicate = (e) => handleDuplicate(e?.detail?.tx || e?.detail || null);
     const onDelete = (e) => handleDelete(e?.detail?.tx || e?.detail || null);
@@ -121,6 +123,7 @@ const UnifiedTransactionActions = () => {
         isOpen={showAdd}
         onClose={() => setShowAdd(false)}
         onSuccess={handleSuccess}
+        defaultType={addDefaultType}
       />
 
       {/* Edit / Duplicate */}

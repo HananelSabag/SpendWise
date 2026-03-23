@@ -156,7 +156,7 @@ class Transaction {
       search = null
     } = options;
 
-    const conditions = ['t.user_id = $1'];
+    const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
     const values = [userId];
     let paramCount = 2;
 
@@ -326,7 +326,7 @@ class Transaction {
       sortOrder = 'DESC'
     } = options;
 
-    const conditions = ['t.user_id = $1'];
+    const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
     const values = [userId];
     let paramCount = 2;
 

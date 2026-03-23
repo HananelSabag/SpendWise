@@ -94,5 +94,24 @@ export default {
     completed: "Completed",
     pending: "Pending",
     failed: "Failed"
-  }
+  },
+
+  // Month filter
+  month: {
+    all: "All Months"
+  },
+
+  // Visibility
+  showHidden: "Show Hidden",
+  hideHidden: "Hide Hidden",
+
+  // Admin user filters
+  role: "Role",
+  allRoles: "All Roles",
+  verified: "Verified",
+  unverified: "Unverified",
+  activity: "Activity",
+  activeUsers: "Active Users",
+  inactiveUsers: "Inactive Users",
+  allActivity: "All Activity"
 };

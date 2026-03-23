@@ -454,6 +454,8 @@ const AccessibilityStatement = ({
       isOpen={isOpen}
       onClose={onClose}
       title={t('statement.title')}
+      sheet
+      drawerWidth={800}
       maxWidth="4xl"
     >
       <div 

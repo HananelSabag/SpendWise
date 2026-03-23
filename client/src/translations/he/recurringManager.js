@@ -47,7 +47,8 @@ export default {
     weekly: 'שבועי',
     monthly: 'חודשי',
     yearly: 'שנתי'
-  }
+  },
+  monthly: 'נטו חודשי'
 };
 
 

@@ -148,8 +148,8 @@ export const useTransactions = (options = {}) => {
           hasMore: response.data?.pagination?.hasMore
         });
 
-        // Handle API response structure - always unwrap to the data layer
-        let rawData = response?.data || response;
+        // Handle API response structure - unwrap nested { success, data: { success, data: { transactions } } }
+        let rawData = response?.data?.data || response?.data || response;
         
         if (!rawData) {
           logger.warn('No data received from transactions API');

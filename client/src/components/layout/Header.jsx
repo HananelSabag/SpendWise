@@ -8,13 +8,12 @@
 import React, { useState, useCallback, Suspense, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { DollarSign, Shield, Wrench } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import { 
-  useAuth, 
-  useTranslation, 
-  useTheme,
+  useAuth,
+  useTranslation,
   useIsAdmin,
   useIsSuperAdmin
 } from '../../stores';
@@ -38,8 +37,7 @@ const ModernOnboardingModal = React.lazy(() => import('../features/onboarding/Mo
 const Header = () => {
   // ✅ Zustand stores
   const { user, isAuthenticated } = useAuth();
-  const { t, isRTL } = useTranslation();
-  const { isDark } = useTheme();
+  const { t } = useTranslation();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
   const maintenanceMode = useAppStore((s) => s.maintenanceMode);
@@ -61,15 +59,26 @@ const Header = () => {
     setActiveModal(null);
   }, []);
 
-  // ✅ Allow desktop user menu to open onboarding via window event
+  // ✅ Window event listeners — used by MobileBottomNav quick-action menu
   useEffect(() => {
-    const open = () => setActiveModal('onboarding');
-    const close = () => setActiveModal(null);
-    window.addEventListener('open-onboarding', open);
-    window.addEventListener('close-onboarding', close);
+    const openOnboarding  = () => setActiveModal('onboarding');
+    const closeOnboarding = () => setActiveModal(null);
+    const openCategories  = () => setActiveModal('categories');
+    const openRecurring   = () => setActiveModal('recurring');
+    const openExchange    = () => setActiveModal('exchange');
+
+    window.addEventListener('open-onboarding',  openOnboarding);
+    window.addEventListener('close-onboarding', closeOnboarding);
+    window.addEventListener('open-categories',  openCategories);
+    window.addEventListener('open-recurring',   openRecurring);
+    window.addEventListener('open-exchange',    openExchange);
+
     return () => {
-      window.removeEventListener('open-onboarding', open);
-      window.removeEventListener('close-onboarding', close);
+      window.removeEventListener('open-onboarding',  openOnboarding);
+      window.removeEventListener('close-onboarding', closeOnboarding);
+      window.removeEventListener('open-categories',  openCategories);
+      window.removeEventListener('open-recurring',   openRecurring);
+      window.removeEventListener('open-exchange',    openExchange);
     };
   }, []);
 
@@ -86,6 +95,7 @@ const Header = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className={cn(
+          "hidden lg:block",
           "sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700",
           "supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-gray-900/60"
         )}

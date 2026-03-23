@@ -19,6 +19,7 @@ export default {
   delete: 'מחק',
   edit: 'ערוך',
   add: 'הוסף',
+  more: 'עוד',
   remove: 'הסר',
   create: 'צור',
   update: 'עדכן',

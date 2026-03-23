@@ -47,7 +47,8 @@ export default {
     weekly: 'Weekly',
     monthly: 'Monthly',
     yearly: 'Yearly'
-  }
+  },
+  monthly: 'Monthly Net'
 };
 
 

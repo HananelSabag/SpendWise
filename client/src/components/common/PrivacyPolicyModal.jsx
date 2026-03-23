@@ -106,6 +106,8 @@ const PrivacyPolicyModal = ({ isOpen, onClose, onAccept }) => {
       isOpen={isOpen}
       onClose={onClose}
       title={t('privacy.title')}
+      sheet
+      drawerWidth={720}
       maxWidth="2xl"
       className="max-h-[90vh]"
     >

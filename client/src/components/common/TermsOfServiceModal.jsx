@@ -62,6 +62,8 @@ const TermsOfServiceModal = ({ isOpen, onClose, onAccept }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      sheet
+      drawerWidth={720}
       title={t('terms.title')}
       maxWidth="2xl"
       className="max-h-[90vh]"

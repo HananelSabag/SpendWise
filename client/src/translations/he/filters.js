@@ -94,5 +94,24 @@ export default {
     completed: "הושלם",
     pending: "ממתין",
     failed: "נכשל"
-  }
+  },
+
+  // Month filter
+  month: {
+    all: "כל החודשים"
+  },
+
+  // Visibility
+  showHidden: "הצג מוסתרים",
+  hideHidden: "הסתר מוסתרים",
+
+  // Admin user filters
+  role: "תפקיד",
+  allRoles: "כל התפקידים",
+  verified: "מאומת",
+  unverified: "לא מאומת",
+  activity: "פעילות",
+  activeUsers: "משתמשים פעילים",
+  inactiveUsers: "משתמשים לא פעילים",
+  allActivity: "כל הפעילות"
 };

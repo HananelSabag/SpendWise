@@ -11,6 +11,9 @@
 # ===================================
 # These files contain sensitive information and must never be committed
 
+# MCP config (contains access tokens)
+.mcp.json
+
 # Environment variables (CRITICAL - Contains secrets)
 .env
 .env.local

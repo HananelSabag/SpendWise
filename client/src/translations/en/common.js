@@ -19,6 +19,8 @@ export default {
   delete: 'Delete',
   edit: 'Edit',
   add: 'Add',
+  more: 'More',
+  quickActions: 'Quick Actions',
   remove: 'Remove',
   create: 'Create',
   update: 'Update',

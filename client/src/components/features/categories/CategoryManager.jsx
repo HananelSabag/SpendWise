@@ -416,9 +416,10 @@ const CategoryManager = ({
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             title={t('form.addCategory')}
+            sheet
+            drawerWidth={640}
             size="4xl"
             className="z-[60]"
-            mobileFullScreen={true}
           >
             <CategoryForm
               onClose={() => setShowCreateModal(false)}
@@ -436,9 +437,10 @@ const CategoryManager = ({
               setEditingCategory(null);
             }}
             title={t('form.editCategory')}
+            sheet
+            drawerWidth={640}
             size="4xl"
             className="z-[60]"
-            mobileFullScreen={true}
           >
             <CategoryForm
               onClose={() => {

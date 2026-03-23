@@ -273,10 +273,10 @@ const TransactionList = ({
           <Receipt className="w-8 h-8 text-gray-400" />
         </div>
         <p className="text-gray-600 dark:text-gray-400 font-medium">
-          {t('emptyState.noTransactions', 'No transactions found')}
+          {t('empty.noTransactions', 'No transactions found')}
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-          {t('emptyState.tryChangingFilters', 'Try adjusting your filters or add a new transaction')}
+          {t('empty.noFilteredTransactions', 'Try adjusting your filters or add a new transaction')}
         </p>
       </div>
     );
