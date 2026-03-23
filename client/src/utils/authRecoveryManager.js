@@ -120,8 +120,9 @@ class AuthRecoveryManager {
       this.triggerRecovery(errorType);
     }
 
-    // Check for stuck state
-    if (this.isInStuckState()) {
+    // Check for stuck state — only if not already recovering (prevents toast storm
+    // when multiple queries fail simultaneously on page load)
+    if (!this.healthState.isRecovering && this.isInStuckState()) {
       this.handleStuckState();
     }
 
@@ -261,8 +262,9 @@ class AuthRecoveryManager {
    * Handle stuck authentication state
    */
   async handleStuckState() {
-    // silent
-    
+    if (this.healthState.isRecovering) return;
+    this.healthState.isRecovering = true;
+
     this.showRecoveryNotification('warning');
     
     // Try to validate current token first

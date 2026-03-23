@@ -120,7 +120,9 @@ export const useAuthToasts = () => {
 
     // ✅ NEW: Connection Recovery Toasts
     connectionIssue: (message) => {
-      toast.warning(message || t('auth.connectionIssue', 'Connection issue detected...'));
+      const id = 'connection-issue';
+      toast.dismiss(id);
+      toast.warning(message || t('auth.connectionIssue', 'Connection issue detected...'), { id });
     },
 
     connectionRecovering: (message) => {
