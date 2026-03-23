@@ -6,8 +6,8 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import {
-  Repeat, Plus, Search, X, Play, Pause, Edit, Trash2,
-  DollarSign,
+  Repeat, Plus, Search, Play, Pause, Edit, Trash2,
+  DollarSign, AlertTriangle, StopCircle,
 } from 'lucide-react';
 
 import { useTranslation, useNotifications, useCurrency } from '../../../../stores';
@@ -140,30 +140,57 @@ const TemplateCard = ({ template, onEdit, onToggleStatus, onDelete }) => {
 const DeleteScopeModal = ({ isOpen, template, onConfirm, onCancel }) => {
   const { t } = useTranslation();
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} title={t('recurring.deleteTemplate', 'Delete Template')} size="sm">
-      <div className="p-4 space-y-2">
+    <Modal isOpen={isOpen} onClose={onCancel} title={t('recurring.deleteTemplate', 'Remove Recurring Schedule')} size="sm">
+      <div className="px-4 pb-5 space-y-3">
+        {/* Context */}
         {template && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">
-            {template.description || template.name}
-          </p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+            <Repeat className="w-4 h-4 text-purple-500 shrink-0" />
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+              {template.description || template.name}
+            </span>
+          </div>
         )}
+
+        {/* Recommended: stop only */}
         <button
           onClick={() => onConfirm('template_only')}
-          className="w-full text-left p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+          className="w-full text-left p-4 rounded-xl border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
         >
-          <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('recurring.deleteTemplateOnly', 'Stop schedule only')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteTemplateOnlyDesc', 'Keep existing transaction history')}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <StopCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="font-semibold text-sm text-blue-800 dark:text-blue-200">
+              {t('recurring.deleteTemplateOnly', 'Stop future payments')}
+            </span>
+            <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800/60 px-1.5 py-0.5 rounded">
+              {t('common.recommended', 'Recommended')}
+            </span>
+          </div>
+          <p className="text-xs text-blue-600 dark:text-blue-400 pl-6">
+            {t('recurring.deleteTemplateOnlyDesc', 'Keeps your existing transaction history intact')}
+          </p>
         </button>
+
+        {/* Danger: delete all */}
         <button
           onClick={() => onConfirm('all')}
-          className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         >
-          <div className="font-semibold text-sm text-red-600 dark:text-red-400">{t('recurring.deleteAll', 'Delete everything')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('recurring.deleteAllDesc', 'Remove template and all transaction history')}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+            <span className="font-semibold text-sm text-red-600 dark:text-red-400">
+              {t('recurring.deleteAll', 'Delete everything')}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 pl-6">
+            {t('recurring.deleteAllDesc', 'Permanently removes this schedule and all its transaction history')}
+          </p>
         </button>
-      </div>
-      <div className="flex justify-end px-4 pb-4">
-        <Button variant="ghost" size="sm" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>
+
+        {/* Cancel */}
+        <Button variant="ghost" size="sm" onClick={onCancel} className="w-full mt-1 text-gray-500">
+          {t('common.cancel', 'Cancel')}
+        </Button>
       </div>
     </Modal>
   );

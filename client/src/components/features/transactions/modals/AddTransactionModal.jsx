@@ -91,7 +91,7 @@ const AddTransactionModal = ({
       size="6xl"
       className={cn("backdrop-blur-sm", className)}
       sheet
-      drawerWidth={640}
+      drawerWidth={760}
     >
       <AnimatePresence mode="wait">
         <motion.div

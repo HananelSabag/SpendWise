@@ -1,18 +1,17 @@
 /**
- * TABS TRANSLATIONS - English
- * Auto-generated translation file
+ * TABS TRANSLATIONS - Hebrew
  */
 
 export default {
-  changeWarning: "Change Warning",
+  changeWarning: "מעבר בין לשוניות ימחק שינויים לא שמורים",
   oneTime: {
-    description: "One Time description",
-    subtitle: "One Time subtitle",
-    title: "One Time"
+    description: "עסקה שמתבצעת פעם אחת",
+    subtitle: "חד-פעמי",
+    title: "חד-פעמי"
   },
   recurring: {
-    description: "Recurring description",
-    subtitle: "Recurring subtitle",
-    title: "Recurring"
+    description: "עסקה שחוזרת אוטומטית",
+    subtitle: "חוזר",
+    title: "חוזר"
   }
 };

@@ -310,7 +310,7 @@ export default {
       allWarning: "זה ימחק את כל המופעים של העסקה החוזרת הזו.",
       futureWarning: "זה ימחק את המופע הזה ואת כל העתידיים."
     },
-    confirmDelete: "Confirm Delete"
+    confirmDelete: "אשר מחיקה"
   },
   status: {
     completed: "הושלם",
@@ -627,9 +627,9 @@ export default {
     title: "לא נמצאו עסקאות",
     description: "התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה."
   },
-  addExpense: "Add Expense",
-  addIncome: "Add Income",
-  andMore: "And More",
-  futureTransactions: "Future Transactions",
-  noFutureTransactions: "No Future Transactions"
+  addExpense: "הוסף הוצאה",
+  addIncome: "הוסף הכנסה",
+  andMore: "ועוד {{count}}",
+  futureTransactions: "עסקאות עתידיות",
+  noFutureTransactions: "אין עסקאות עתידיות"
 };

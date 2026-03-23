@@ -1,24 +1,23 @@
 /**
- * TEMPLATES TRANSLATIONS - English
- * Auto-generated translation file
+ * TEMPLATES TRANSLATIONS - Hebrew
  */
 
 export default {
-  addCustom: "Add Custom",
-  autoSelect: "Auto Select",
+  addCustom: "הוסף מותאם אישית",
+  autoSelect: "בחירה אוטומטית",
   categories: {
-    essential: "Essential",
-    income: "Income"
+    essential: "חיוני",
+    income: "הכנסה"
   },
-  createCustom: "Create Custom",
-  customAmount: "Custom Amount",
-  customHint: "Custom Hint",
-  customName: "Custom Name",
-  enterAmount: "Enter Amount",
-  info: "Info",
-  readyToCreate: "Ready To Create",
-  remove: "Remove",
-  selected: "Selected",
-  subtitle: "Subtitle",
-  title: "Title"
+  createCustom: "צור מותאם אישית",
+  customAmount: "סכום מותאם",
+  customHint: "הזן סכום ושם",
+  customName: "שם מותאם",
+  enterAmount: "הזן סכום",
+  info: "מידע",
+  readyToCreate: "מוכן ליצירה",
+  remove: "הסר",
+  selected: "נבחר",
+  subtitle: "בחר קטגוריות להוספה אוטומטית",
+  title: "תבניות"
 };

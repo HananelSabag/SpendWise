@@ -1,58 +1,57 @@
 /**
- * VALIDATION TRANSLATIONS - English
- * Auto-generated translation file
+ * VALIDATION TRANSLATIONS - Hebrew
  */
 
 export default {
   amount: {
-    format: "Format",
-    invalid: "Invalid",
-    required: "Required",
-    tooLarge: "Too Large",
-    tooSmall: "Too Small"
+    format: "פורמט סכום לא תקין",
+    invalid: "סכום לא תקין",
+    required: "יש להזין סכום",
+    tooLarge: "הסכום גדול מדי",
+    tooSmall: "הסכום קטן מדי"
   },
   color: {
-    invalid: "Invalid",
-    required: "Required"
+    invalid: "צבע לא תקין",
+    required: "יש לבחור צבע"
   },
   date: {
-    invalid: "Invalid",
-    required: "Required",
-    tooFuture: "Too Future",
-    tooPast: "Too Past"
+    invalid: "תאריך לא תקין",
+    required: "יש לבחור תאריך",
+    tooFuture: "התאריך רחוק מדי בעתיד",
+    tooPast: "התאריך ישן מדי"
   },
   description: {
-    required: "Required",
-    tooLong: "Too Long",
-    tooShort: "Too Short"
+    required: "יש להזין תיאור",
+    tooLong: "התיאור ארוך מדי",
+    tooShort: "התיאור קצר מדי"
   },
   icon: {
-    invalid: "Invalid",
-    required: "Required"
+    invalid: "אייקון לא תקין",
+    required: "יש לבחור אייקון"
   },
-  invalidEmail: "Invalid Email",
+  invalidEmail: "כתובת אימייל לא תקינה",
   name: {
-    duplicate: "Duplicate",
-    invalidCharacters: "Invalid Characters",
-    required: "Required",
-    tooLong: "Too Long",
-    tooShort: "Too Short"
+    duplicate: "שם כבר קיים",
+    invalidCharacters: "שם מכיל תווים לא תקינים",
+    required: "יש להזין שם",
+    tooLong: "השם ארוך מדי",
+    tooShort: "השם קצר מדי"
   },
   recurring: {
     endDate: {
-      afterStart: "After Start"
+      afterStart: "תאריך סיום חייב להיות אחרי תאריך ההתחלה"
     },
     frequency: {
-      invalid: "Invalid",
-      required: "Required"
+      invalid: "תדירות לא תקינה",
+      required: "יש לבחור תדירות"
     },
     interval: {
-      max: "Max",
-      min: "Min"
+      max: "המרווח גדול מדי",
+      min: "המרווח קטן מדי"
     }
   },
   type: {
-    invalid: "Invalid",
-    required: "Required"
+    invalid: "סוג לא תקין",
+    required: "יש לבחור סוג"
   }
 };

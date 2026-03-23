@@ -83,7 +83,7 @@ export default {
     duplicateTransactionWarning: "העסקה הזו עלולה להיות כפולה",
     securityAlert: "התראת אבטחה: העסקה סומנה לבדיקה",
     batchSecurityAlert: "התראת אבטחה: מספר עסקאות סומנו לבדיקה",
-    deleteSuccess: "Delete Success"
+    deleteSuccess: "העסקה נמחקה בהצלחה!"
   },
   categories: {
     categoryCreated: "הקטגוריה נוצרה בהצלחה!",
@@ -159,8 +159,8 @@ export default {
     feedbackSubmitted: "תודה על המשוב שלכם!",
     supportTicketCreated: "פנייה לתמיכה נוצרה בהצלחה!",
     bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!",
-    delete: "Successfully deleted!",
-    bulkDeleteSuccess: "{{count}} transactions deleted successfully!"
+    delete: "נמחק בהצלחה!",
+    bulkDeleteSuccess: "{{count}} עסקאות נמחקו בהצלחה!"
   },
   error: {
     operationFailed: "הפעולה נכשלה. אנא נסו שוב.",

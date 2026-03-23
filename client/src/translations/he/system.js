@@ -1,13 +1,12 @@
 /**
- * SYSTEM TRANSLATIONS - English
- * Auto-generated translation file
+ * SYSTEM TRANSLATIONS - Hebrew
  */
 
 export default {
-  connected: "Connected",
-  database: "Database",
-  online: "Online",
-  security: "Security",
-  server: "Server",
-  status: "Status"
+  connected: "מחובר",
+  database: "מסד נתונים",
+  online: "מקוון",
+  security: "אבטחה",
+  server: "שרת",
+  status: "סטטוס"
 };

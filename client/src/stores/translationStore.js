@@ -278,8 +278,19 @@ export const useTranslationStore = create(
               'views', 'pages', 'actions', 'summary', 'search', 'transactions',
               'categories', 'filters', 'exchange', 'empty', 'date', 'recurringManager',
               'types',
-              // Ensure these are available immediately for admin users screens
-              'status', 'roles', 'users', 'table'
+              // Admin screens
+              'status', 'roles', 'users', 'table',
+              // New modules
+              'analytics', 'balance', 'bulk', 'buttons', 'account', 'activity',
+              'completion', 'confirmations', 'dashboardPage', 'datePicker', 'delete',
+              'dialogs', 'export', 'features', 'fields', 'form', 'frequencies',
+              'grid', 'groups', 'health', 'iconSelector', 'labels', 'list',
+              'loading', 'maintenance', 'modal', 'modals', 'multiSelect',
+              'notifications', 'password', 'personal', 'preview', 'privacy',
+              'progress', 'prompt', 'quickActions', 'recentTransactions', 'recurring',
+              'sections', 'selection', 'sort', 'statement', 'stats', 'steps',
+              'success', 'system', 'tabs', 'templates', 'terms', 'timeAgo',
+              'validation', 'viewModes'
             ];
             const { currentLanguage } = get();
             

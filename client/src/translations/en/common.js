@@ -9,6 +9,7 @@ export default {
     message: "The service is under maintenance. Please try again later.",
     thanks: "Thank you for your patience."
   },
+  recommended: "Recommended",
   appName: "SpendWise",
   save: "Save",
   saving: "Saving...",

@@ -1,19 +1,18 @@
 /**
- * STEPS TRANSLATIONS - English
- * Auto-generated translation file
+ * STEPS TRANSLATIONS - Hebrew
  */
 
 export default {
   education: {
-    subtitle: "Education subtitle",
-    title: "Education"
+    subtitle: "למד כיצד להשתמש ב-SpendWise",
+    title: "לימוד"
   },
   profile: {
-    subtitle: "Profile subtitle",
-    title: "Profile"
+    subtitle: "הגדר את הפרופיל שלך",
+    title: "פרופיל"
   },
   templates: {
-    subtitle: "Templates subtitle",
-    title: "Templates"
+    subtitle: "בחר תבניות עסקאות להתחלה",
+    title: "תבניות"
   }
 };

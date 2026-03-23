@@ -1,12 +1,11 @@
 /**
- * SORT TRANSLATIONS - English
- * Auto-generated translation file
+ * SORT TRANSLATIONS - Hebrew
  */
 
 export default {
-  created: "Created",
-  label: "Label",
-  name: "Name",
-  type: "Type",
-  usage: "Usage"
+  created: "תאריך יצירה",
+  label: "מיון לפי",
+  name: "שם",
+  type: "סוג",
+  usage: "שימוש"
 };

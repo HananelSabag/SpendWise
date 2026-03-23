@@ -1,44 +1,43 @@
 /**
- * TERMS TRANSLATIONS - English
- * Auto-generated translation file
+ * TERMS TRANSLATIONS - Hebrew
  */
 
 export default {
-  accept: "Accept",
+  accept: "קיבלתי",
   additional: {
-    dataProtection: "Data Protection",
-    support: "Support",
-    title: "Additional",
-    userRights: "User Rights"
+    dataProtection: "הגנת מידע",
+    support: "תמיכה",
+    title: "מידע נוסף",
+    userRights: "זכויות משתמש"
   },
   header: {
-    description: "Header description",
-    title: "Header"
+    description: "תנאים ותנאים לשימוש ב-SpendWise",
+    title: "תנאי שימוש"
   },
-  lastUpdated: "Last Updated",
+  lastUpdated: "עדכון אחרון",
   links: {
-    contact: "Contact",
-    cookies: "Cookies",
-    privacy: "Privacy"
+    contact: "יצירת קשר",
+    cookies: "עוגיות",
+    privacy: "פרטיות"
   },
-  scrollToRead: "Scroll To Read",
+  scrollToRead: "גלול לקרוא את התנאים המלאים",
   sections: {
     agreement: {
-      content: "Agreement content",
-      title: "Agreement"
+      content: "בהרשמה לשירות אתה מסכים לתנאים אלה",
+      title: "הסכם"
     },
     liability: {
-      content: "Liability content",
-      title: "Liability"
+      content: "SpendWise אינה אחראית לנזקים הנובעים מהשימוש בשירות",
+      title: "הגבלת אחריות"
     },
     privacy: {
-      content: "Privacy content",
-      title: "Privacy"
+      content: "מדיניות הפרטיות שלנו מסבירה כיצד אנו מטפלים בנתונים שלך",
+      title: "פרטיות"
     },
     services: {
-      content: "Services content",
-      title: "Services"
+      content: "SpendWise מספקת כלים לניהול פיננסי אישי",
+      title: "שירותים"
     }
   },
-  title: "Title"
+  title: "תנאי שימוש"
 };

@@ -8,8 +8,8 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, CreditCard, MoreHorizontal, BarChart3, User,
-  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield
+  Home, CreditCard, Plus, BarChart3, User,
+  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -138,20 +138,26 @@ const MobileBottomNav = () => {
               <div key="menu" className="flex flex-col items-center -mt-5 mb-1">
                 <motion.button
                   whileTap={{ scale: 0.92 }}
-                  onClick={() => setMenuOpen(true)}
-                  aria-label="Quick actions"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label={menuOpen ? 'Close quick actions' : 'Quick actions'}
                   className={cn(
                     'w-14 h-14 rounded-full',
                     'bg-gradient-to-br from-blue-600 to-indigo-600',
                     'shadow-lg shadow-blue-500/40',
                     'flex items-center justify-center',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                    'transition-all'
                   )}
                 >
-                  <MoreHorizontal className="w-7 h-7 text-white" />
+                  <motion.div
+                    animate={{ rotate: menuOpen ? 45 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Plus className="w-7 h-7 text-white" />
+                  </motion.div>
                 </motion.button>
                 <span className="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                  {t('common.more') || 'More'}
+                  {t('common.add') || 'Add'}
                 </span>
               </div>
             );

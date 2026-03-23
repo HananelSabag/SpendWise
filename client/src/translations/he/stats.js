@@ -1,21 +1,20 @@
 /**
- * STATS TRANSLATIONS - English
- * Auto-generated translation file
+ * STATS TRANSLATIONS - Hebrew
  */
 
 export default {
-  activeUsers: "Active Users",
-  amount: "Amount",
-  avgTransaction: "Avg Transaction",
-  categories: "Categories",
-  expenses: "Expenses",
-  income: "Income",
-  monthlyBalance: "Monthly Balance",
-  net: "Net",
-  savingsRate: "Savings Rate",
-  topCategory: "Top Category",
-  totalRevenue: "Total Revenue",
-  totalTransactions: "Total Transactions",
-  totalUsers: "Total Users",
-  transactions: "Transactions"
+  activeUsers: "משתמשים פעילים",
+  amount: "סכום",
+  avgTransaction: "ממוצע עסקה",
+  categories: "קטגוריות",
+  expenses: "הוצאות",
+  income: "הכנסות",
+  monthlyBalance: "יתרה חודשית",
+  net: "נטו",
+  savingsRate: "שיעור חיסכון",
+  topCategory: "קטגוריה מובילה",
+  totalRevenue: "הכנסה כוללת",
+  totalTransactions: "סה\"כ עסקאות",
+  totalUsers: "סה\"כ משתמשים",
+  transactions: "עסקאות"
 };

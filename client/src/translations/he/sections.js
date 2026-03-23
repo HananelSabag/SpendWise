@@ -1,11 +1,10 @@
 /**
- * SECTIONS TRANSLATIONS - English
- * Auto-generated translation file
+ * SECTIONS TRANSLATIONS - Hebrew
  */
 
 export default {
-  advanced: "Advanced",
-  basicInfo: "Basic Info",
-  preview: "Preview",
-  visual: "Visual"
+  advanced: "הגדרות מתקדמות",
+  basicInfo: "מידע בסיסי",
+  preview: "תצוגה מקדימה",
+  visual: "עיצוב"
 };

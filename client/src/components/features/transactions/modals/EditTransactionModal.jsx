@@ -197,7 +197,7 @@ const EditTransactionModal = ({
         size="5xl"
         className={cn("backdrop-blur-sm", className)}
         sheet
-        drawerWidth={600}
+        drawerWidth={760}
       >
         <AnimatePresence mode="wait">
           {!showSuccess ? (

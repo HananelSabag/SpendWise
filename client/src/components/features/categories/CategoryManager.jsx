@@ -181,7 +181,7 @@ const CategoryManager = ({
         onClose={onClose}
         title={t('title')}
         sheet
-        drawerWidth={780}
+        drawerWidth={1060}
       >
         <div className={cn('p-4 space-y-4', className)} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
           {/* Quick Actions */}
@@ -309,7 +309,7 @@ const CategoryManager = ({
         onClose={() => setShowCreateModal(false)}
         title={t('form.addCategory')}
         sheet
-        drawerWidth={640}
+        drawerWidth={720}
         size="4xl"
       >
         <CategoryForm
@@ -324,7 +324,7 @@ const CategoryManager = ({
         onClose={() => { setShowEditModal(false); setEditingCategory(null); }}
         title={t('form.editCategory')}
         sheet
-        drawerWidth={640}
+        drawerWidth={720}
         size="4xl"
       >
         <CategoryForm

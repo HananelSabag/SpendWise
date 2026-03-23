@@ -1,10 +1,9 @@
 /**
- * VIEW MODES TRANSLATIONS - English
- * Auto-generated translation file
+ * VIEW MODES TRANSLATIONS - Hebrew
  */
 
 export default {
-  analytics: "Analytics",
-  grid: "Grid",
-  list: "List"
+  analytics: "ניתוחים",
+  grid: "רשת",
+  list: "רשימה"
 };

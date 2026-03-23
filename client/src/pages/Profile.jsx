@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   User, Settings, Shield, Download, Upload,
-  Eye, EyeOff, FileSpreadsheet, Braces, FileText, CheckCircle
+  Eye, EyeOff, FileSpreadsheet, Braces, FileText
 } from 'lucide-react';
 
 import {
@@ -302,7 +302,7 @@ const ExportTab = ({ t }) => {
             <p className="font-semibold text-gray-900 dark:text-white text-sm">{label}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
           </div>
-          {isExporting ? <LoadingSpinner size="sm" /> : <CheckCircle className="w-4 h-4 text-gray-300 dark:text-gray-600" />}
+          {isExporting ? <LoadingSpinner size="sm" /> : <Download className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
         </button>
       ))}
     </div>

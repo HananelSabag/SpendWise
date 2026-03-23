@@ -285,76 +285,98 @@ const transactionController = {
     const months = parseInt(req.query.months) || 12;
 
     try {
-      // ✅ FIX: Call the powerful SQL analytics function
-      const analyticsQuery = `
-        SELECT get_user_analytics($1::INTEGER, $2::INTEGER) as analytics
-      `;
-      const result = await db.query(analyticsQuery, [userId, months]);
-      const analyticsData = result.rows[0]?.analytics || {};
+      // Monthly income vs expenses trends
+      const trendsResult = await db.query(`
+        SELECT
+          TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month,
+          COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS income,
+          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses
+        FROM transactions
+        WHERE user_id = $1
+          AND date >= DATE_TRUNC('month', NOW() - ($2 - 1) * INTERVAL '1 month')
+        GROUP BY DATE_TRUNC('month', date)
+        ORDER BY DATE_TRUNC('month', date)
+      `, [userId, months]);
 
-      // ✅ Get recent transactions for context
+      const trends = trendsResult.rows.map(r => ({
+        month: r.month,
+        income: parseFloat(r.income),
+        expenses: parseFloat(r.expenses),
+        savings: parseFloat(r.income) - parseFloat(r.expenses),
+        savingsRate: parseFloat(r.income) > 0
+          ? ((parseFloat(r.income) - parseFloat(r.expenses)) / parseFloat(r.income)) * 100
+          : 0
+      }));
+
+      // Spending by category
+      const categoriesResult = await db.query(`
+        SELECT
+          COALESCE(c.name, 'General') AS name,
+          SUM(t.amount) AS amount,
+          COUNT(*) AS count
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+          AND t.type = 'expense'
+          AND t.date >= NOW() - $2 * INTERVAL '1 month'
+        GROUP BY c.name
+        ORDER BY amount DESC
+        LIMIT 10
+      `, [userId, months]);
+
+      const categories = categoriesResult.rows.map(r => ({
+        name: r.name,
+        amount: parseFloat(r.amount),
+        count: parseInt(r.count)
+      }));
+
+      // Summary insights
+      const summaryResult = await db.query(`
+        SELECT
+          COALESCE(AVG(monthly_expense), 0) AS avg_monthly_spending,
+          COALESCE(AVG(monthly_expense) / 30.0, 0) AS avg_daily_spending,
+          COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS total_income,
+          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS total_expenses
+        FROM (
+          SELECT
+            DATE_TRUNC('month', date) AS month,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS monthly_expense,
+            type,
+            amount
+          FROM transactions
+          WHERE user_id = $1
+            AND date >= NOW() - $2 * INTERVAL '1 month'
+          GROUP BY DATE_TRUNC('month', date), type, amount
+        ) sub
+      `, [userId, months]);
+
+      const summary = summaryResult.rows[0] || {};
+
+      const insights = [
+        {
+          type: 'spending',
+          title: 'Average Monthly Spending',
+          value: parseFloat(summary.avg_monthly_spending || 0)
+        },
+        {
+          type: 'spending',
+          title: 'Average Daily Spending',
+          value: parseFloat(summary.avg_daily_spending || 0)
+        },
+        {
+          type: 'info',
+          title: 'Total Income',
+          value: parseFloat(summary.total_income || 0)
+        },
+        {
+          type: 'info',
+          title: 'Total Expenses',
+          value: parseFloat(summary.total_expenses || 0)
+        }
+      ];
+
+      // Recent transactions for context
       const transactions = await Transaction.findByUser(userId, { limit: 50 });
-
-      // ✅ Parse and format the analytics data
-      const insights = [];
-      const trends = [];
-      const categories = [];
-
-      // Extract insights from spending patterns
-      if (analyticsData.spending_patterns) {
-        const patterns = analyticsData.spending_patterns;
-        
-        if (patterns.avg_monthly_spending) {
-          insights.push({
-            type: 'spending',
-            title: 'Average Monthly Spending',
-            value: parseFloat(patterns.avg_monthly_spending || 0),
-            change: null
-          });
-        }
-
-        if (patterns.avg_daily_spending) {
-          insights.push({
-            type: 'spending',
-            title: 'Average Daily Spending',
-            value: parseFloat(patterns.avg_daily_spending || 0),
-            change: null
-          });
-        }
-
-        if (patterns.spending_variance) {
-          insights.push({
-            type: 'info',
-            title: 'Spending Consistency',
-            value: parseFloat(patterns.spending_variance || 0),
-            description: patterns.spending_variance > 500 ? 'High variance' : 'Stable spending'
-          });
-        }
-
-        // Top expense categories
-        if (patterns.top_expense_categories && Array.isArray(patterns.top_expense_categories)) {
-          patterns.top_expense_categories.forEach(cat => {
-            categories.push({
-              name: cat.category || 'Unknown',
-              amount: parseFloat(cat.amount || 0),
-              count: parseInt(cat.count || 0)
-            });
-          });
-        }
-
-        // Monthly trends
-        if (patterns.monthly_trends && Array.isArray(patterns.monthly_trends)) {
-          patterns.monthly_trends.forEach(trend => {
-            trends.push({
-              month: trend.month,
-              income: parseFloat(trend.income || 0),
-              expenses: parseFloat(trend.expenses || 0),
-              savings: parseFloat(trend.savings || 0),
-              savingsRate: parseFloat(trend.savings_rate || 0)
-            });
-          });
-        }
-      }
 
       res.json({
         success: true,
@@ -362,10 +384,9 @@ const transactionController = {
           insights,
           trends,
           categories,
-          transactions: transactions,
+          transactions,
           period: `${months} months`,
-          generatedAt: new Date().toISOString(),
-          rawAnalytics: analyticsData // Include raw data for debugging
+          generatedAt: new Date().toISOString()
         }
       });
     } catch (error) {
@@ -524,24 +545,24 @@ const transactionController = {
       } else if (category_name) {
         // Try to find existing category by name (exact match first, then case-insensitive)
         const categoryQuery = `
-          SELECT id FROM categories 
+          SELECT id FROM categories
           WHERE name = $1 AND (user_id = $2 OR user_id IS NULL)
           ORDER BY user_id DESC NULLS LAST
           LIMIT 1
         `;
         let categoryResult = await db.query(categoryQuery, [category_name, userId]);
-        
+
         // If exact match not found, try case-insensitive
         if (categoryResult.rows.length === 0) {
           const categoryQueryInsensitive = `
-            SELECT id FROM categories 
+            SELECT id FROM categories
             WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
             ORDER BY user_id DESC NULLS LAST
             LIMIT 1
           `;
           categoryResult = await db.query(categoryQueryInsensitive, [category_name, userId]);
         }
-        
+
         if (categoryResult.rows.length > 0) {
           finalCategoryId = categoryResult.rows[0].id;
         } else {
@@ -553,12 +574,22 @@ const transactionController = {
           `;
           const createResult = await db.query(createCategoryQuery, [category_name, userId]);
           finalCategoryId = createResult.rows[0].id;
-          
+
           logger.info('Created new category for transaction', {
             userId,
             categoryName: category_name,
             categoryId: finalCategoryId
           });
+        }
+      }
+
+      // Fallback to General category if none provided
+      if (!finalCategoryId) {
+        const generalResult = await db.query(
+          `SELECT id FROM categories WHERE name = 'General' AND user_id IS NULL LIMIT 1`
+        );
+        if (generalResult.rows.length > 0) {
+          finalCategoryId = generalResult.rows[0].id;
         }
       }
 
@@ -1141,12 +1172,22 @@ const transactionController = {
           `;
           const createResult = await db.query(createCategoryQuery, [category_name, userId]);
           finalCategoryId = createResult.rows[0].id;
-          
+
           logger.info('Created new category for recurring template', {
             userId,
             categoryName: category_name,
             categoryId: finalCategoryId
           });
+        }
+      }
+
+      // Fallback to General category if none provided
+      if (!finalCategoryId) {
+        const generalResult = await db.query(
+          `SELECT id FROM categories WHERE name = 'General' AND user_id IS NULL LIMIT 1`
+        );
+        if (generalResult.rows.length > 0) {
+          finalCategoryId = generalResult.rows[0].id;
         }
       }
 

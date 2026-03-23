@@ -1,10 +1,9 @@
 /**
- * TIME AGO TRANSLATIONS - English
- * Auto-generated translation file
+ * TIME AGO TRANSLATIONS - Hebrew
  */
 
 export default {
-  hoursAgo: "Hours Ago",
-  justNow: "Just Now",
-  minutesAgo: "Minutes Ago"
+  hoursAgo: "לפני {{count}} שעות",
+  justNow: "עכשיו",
+  minutesAgo: "לפני {{count}} דקות"
 };

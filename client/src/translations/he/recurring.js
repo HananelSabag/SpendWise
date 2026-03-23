@@ -17,6 +17,7 @@ export default {
   deleteTemplateOnlyDesc: "תבניות קיימות לא יימחקו",
   description: "עסקאות שחוזרות אוטומטית",
   modal: {
+    subtitle: "הגדר עסקאות חוזרות אוטומטיות",
     createTitle: "יצירת עסקה חוזרת",
     editTitle: "עריכת עסקה חוזרת"
   },
@@ -42,7 +43,8 @@ export default {
   success: {
     recurringMessage: "עסקה חוזרת נוצרה ותוסיף אוטומטית",
     singleMessage: "העסקה נוספה בהצלחה",
-    title: "הצלחה!"
+    title: "הצלחה!",
+    updatedTitle: "עסקה חוזרת עודכנה"
   },
   summary: {
     frequency: "תדירות",

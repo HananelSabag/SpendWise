@@ -4,6 +4,7 @@
  */
 
 export default {
+  recommended: "מומלץ",
   maintenance: {
     title: "נחזור בקרוב",
     message: "המערכת נמצאת בתחזוקה. נסו שוב מאוחר יותר.",

@@ -93,19 +93,36 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear, categories }) => {
       </div>
 
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-        {/* Type */}
+        {/* Type — button group */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
             <ArrowLeftRight className="w-3 h-3" />
             {t('filters.type.label', 'Type')}
-            {filters.type !== 'all' && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
           </label>
-          <select value={filters.type} onChange={(e) => onFilterChange({ type: e.target.value })}
-            className={selectClass(filters.type !== 'all')}>
-            <option value="all">{t('filters.type.all', 'All Types')}</option>
-            <option value="income">💰 {t('transactions.types.income', 'Income')}</option>
-            <option value="expense">💸 {t('transactions.types.expense', 'Expense')}</option>
-          </select>
+          <div className="flex rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600 divide-x divide-gray-200 dark:divide-gray-600">
+            {[
+              { value: 'all',     label: t('filters.type.all', 'All') },
+              { value: 'income',  label: t('transactions.types.income', 'Income') },
+              { value: 'expense', label: t('transactions.types.expense', 'Expense') },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => onFilterChange({ type: value })}
+                className={cn(
+                  'flex-1 py-2 text-xs font-semibold transition-colors',
+                  filters.type === value
+                    ? value === 'income'
+                      ? 'bg-green-500 text-white border-green-500'
+                      : value === 'expense'
+                        ? 'bg-red-500 text-white border-red-500'
+                        : 'bg-indigo-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Category */}
@@ -122,19 +139,32 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear, categories }) => {
           </select>
         </div>
 
-        {/* Recurring */}
+        {/* Recurring — button group */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
             <Repeat className="w-3 h-3" />
-            {t('filters.recurring.label', 'Recurring')}
-            {filters.recurring !== 'all' && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
+            {t('filters.recurring.label', 'Schedule')}
           </label>
-          <select value={filters.recurring} onChange={(e) => onFilterChange({ recurring: e.target.value })}
-            className={selectClass(filters.recurring !== 'all')}>
-            <option value="all">{t('filters.recurring.all', 'All')}</option>
-            <option value="recurring">🔄 {t('filters.recurring.recurring', 'Recurring')}</option>
-            <option value="oneTime">⚡ {t('filters.recurring.oneTime', 'One-Time')}</option>
-          </select>
+          <div className="flex rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600 divide-x divide-gray-200 dark:divide-gray-600">
+            {[
+              { value: 'all',       label: t('filters.recurring.all', 'All') },
+              { value: 'recurring', label: t('filters.recurring.recurring', 'Recurring') },
+              { value: 'oneTime',   label: t('filters.recurring.oneTime', 'One-time') },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => onFilterChange({ recurring: value })}
+                className={cn(
+                  'flex-1 py-2 text-xs font-semibold transition-colors',
+                  filters.recurring === value
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

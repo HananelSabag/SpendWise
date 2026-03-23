@@ -1,10 +1,9 @@
 /**
- * SELECTION TRANSLATIONS - English
- * Auto-generated translation file
+ * SELECTION TRANSLATIONS - Hebrew
  */
 
 export default {
-  clear: "Clear",
-  count: "Count",
-  summary: "Summary"
+  clear: "נקה בחירה",
+  count: "{{count}} נבחרו",
+  summary: "{{count}} פריטים נבחרו"
 };

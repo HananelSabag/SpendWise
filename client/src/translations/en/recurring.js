@@ -17,6 +17,7 @@ export default {
   deleteTemplateOnlyDesc: "Delete Template Only Desc",
   description: "Description",
   modal: {
+    subtitle: "Set up automatic recurring transactions",
     createTitle: "Create Title",
     editTitle: "Edit Title"
   },
@@ -42,7 +43,8 @@ export default {
   success: {
     recurringMessage: "Recurring Message",
     singleMessage: "Single Message",
-    title: "Success"
+    title: "Success",
+    updatedTitle: "Recurring Transaction Updated"
   },
   summary: {
     frequency: "Frequency",
