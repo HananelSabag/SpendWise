@@ -6,15 +6,11 @@
  */
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Edit, Trash2, Play, Pause, Copy, StopCircle, 
-  Settings, AlertTriangle, CheckCircle, Clock 
-} from 'lucide-react';
+import { Edit, Trash2, Play, Pause, Copy, StopCircle, Clock } from 'lucide-react';
 
 import { useTranslation } from '../../../../stores';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
-import { Button } from '../../../ui';
+import { Button, Modal } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
 const RecurringTransactionActions = ({ 
@@ -106,97 +102,61 @@ const RecurringTransactionActions = ({
     }
   };
 
-  // ✅ DELETE MODAL for complex recurring deletion options
+  // Delete modal for recurring transaction instances
   const DeleteModal = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={() => setShowDeleteModal(false)}
+    <Modal
+      isOpen={showDeleteModal}
+      onClose={() => setShowDeleteModal(false)}
+      title={t('transactions.delete.recurring.title', 'Delete Recurring Transaction')}
+      size="sm"
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('transactions.delete.recurring.title', 'Delete Recurring Transaction')}
-          </h3>
-        </div>
-
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <div className="p-4 space-y-3">
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
           {t('transactions.delete.recurring.options', 'What would you like to delete?')}
         </p>
-
-        <div className="space-y-3">
-          {/* Delete Current Only */}
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => {
-              handleDeleteInstance('current');
-              setShowDeleteModal(false);
-            }}
-            disabled={isLoading}
-          >
-            <Clock className="w-4 h-4 mr-3" />
-            <div className="text-left">
-              <div className="font-medium">{t('transactions.delete.recurring.single', 'This Occurrence Only')}</div>
-              <div className="text-xs text-gray-500">{t('transactions.delete.recurring.singleDescription', 'Delete only this single transaction')}</div>
-            </div>
-          </Button>
-
-          {/* Delete Future */}
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => {
-              handleDeleteInstance('future');
-              setShowDeleteModal(false);
-            }}
-            disabled={isLoading}
-          >
-            <StopCircle className="w-4 h-4 mr-3" />
-            <div className="text-left">
-              <div className="font-medium">{t('transactions.delete.recurring.future', 'This and Future')}</div>
-              <div className="text-xs text-gray-500">{t('transactions.delete.recurring.futureDescription', 'Delete this and all future occurrences')}</div>
-            </div>
-          </Button>
-
-          {/* Delete All */}
-          <Button
-            variant="destructive"
-            className="w-full justify-start"
-            onClick={() => {
-              handleDeleteInstance('all');
-              setShowDeleteModal(false);
-            }}
-            disabled={isLoading}
-          >
-            <Trash2 className="w-4 h-4 mr-3" />
-            <div className="text-left">
-              <div className="font-medium">{t('transactions.delete.recurring.all', 'All Occurrences')}</div>
-              <div className="text-xs text-gray-500">{t('transactions.delete.recurring.allDescription', 'Delete all past and future occurrences')}</div>
-            </div>
-          </Button>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => setShowDeleteModal(false)}
-          >
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={() => { handleDeleteInstance('current'); setShowDeleteModal(false); }}
+          disabled={isLoading}
+        >
+          <Clock className="w-4 h-4 mr-3" />
+          <div className="text-left">
+            <div className="font-medium text-sm">{t('transactions.delete.recurring.single', 'This Occurrence Only')}</div>
+            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.singleDescription', 'Delete only this single transaction')}</div>
+          </div>
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={() => { handleDeleteInstance('future'); setShowDeleteModal(false); }}
+          disabled={isLoading}
+        >
+          <StopCircle className="w-4 h-4 mr-3" />
+          <div className="text-left">
+            <div className="font-medium text-sm">{t('transactions.delete.recurring.future', 'This and Future')}</div>
+            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.futureDescription', 'Delete this and all future occurrences')}</div>
+          </div>
+        </Button>
+        <Button
+          variant="destructive"
+          className="w-full justify-start"
+          onClick={() => { handleDeleteInstance('all'); setShowDeleteModal(false); }}
+          disabled={isLoading}
+        >
+          <Trash2 className="w-4 h-4 mr-3" />
+          <div className="text-left">
+            <div className="font-medium text-sm">{t('transactions.delete.recurring.all', 'All Occurrences')}</div>
+            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.allDescription', 'Delete all past and future occurrences')}</div>
+          </div>
+        </Button>
+        <div className="pt-2">
+          <Button variant="outline" className="w-full" onClick={() => setShowDeleteModal(false)}>
             {t('common.cancel', 'Cancel')}
           </Button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </Modal>
   );
 
   // ✅ RENDER ACTIONS BASED ON VARIANT

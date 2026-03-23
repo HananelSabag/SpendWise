@@ -19,7 +19,7 @@ import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useCategory } from '../hooks/useCategory';
 import { useRecurringTransactions } from '../hooks/useRecurringTransactions';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Button, Input, Card, LoadingSpinner, Badge } from '../components/ui';
+import { Button, Input, Card, LoadingSpinner, Badge, Modal } from '../components/ui';
 import { cn } from '../utils/helpers';
 
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
@@ -348,35 +348,24 @@ const StatsRow = ({ summary, recurringSummary, activeTab, formatCurrency }) => {
 
 // ─── Bulk delete modal ────────────────────────────────────────────────────────
 
-const BulkDeleteModal = ({ count, onClose, onConfirm }) => (
-  <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-    onClick={onClose}>
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl"
-      onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-          <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Transactions</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{count} selected</p>
-        </div>
-      </div>
-      <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
+const BulkDeleteModal = ({ isOpen, count, onClose, onConfirm }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Delete Transactions" size="sm">
+    <div className="p-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{count} selected</p>
+      <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
         <div className="flex items-center text-red-800 dark:text-red-200 gap-2">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm">This action cannot be undone.</p>
         </div>
       </div>
       <div className="flex gap-3">
         <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-        <Button variant="destructive" onClick={onConfirm}
-          className="flex-1 bg-red-600 hover:bg-red-700 text-white">
+        <Button variant="destructive" onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
           <Trash2 className="w-4 h-4 mr-2" /> Delete All
         </Button>
       </div>
     </div>
-  </div>
+  </Modal>
 );
 
 // ─── Load more section ────────────────────────────────────────────────────────
@@ -1029,11 +1018,11 @@ const ModernTransactions = () => {
         onClose={() => setShowRecurringManager(false)}
       />
 
-      {showBulkDeleteModal && (
-        <BulkDeleteModal
-          count={selectedIds.size}
-          onClose={() => setShowBulkDeleteModal(false)}
-          onConfirm={async () => {
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        count={selectedIds.size}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={async () => {
             const idsToDelete = Array.from(selectedIds);
             try {
               await freshBulkDelete(idsToDelete);
@@ -1045,7 +1034,6 @@ const ModernTransactions = () => {
             }
           }}
         />
-      )}
 
       <FloatingAddTransactionButton onClick={() => setShowAddTransaction(true)} />
     </>

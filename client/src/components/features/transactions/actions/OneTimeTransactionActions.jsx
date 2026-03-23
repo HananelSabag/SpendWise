@@ -6,15 +6,11 @@
  */
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Edit, Trash2, Copy, AlertTriangle, MoreVertical,
-  DollarSign, Receipt, Eye
-} from 'lucide-react';
+import { Edit, Trash2, Copy, AlertTriangle, MoreVertical } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../../../../stores';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
-import { Button } from '../../../ui';
+import { Button, Modal } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
 const OneTimeTransactionActions = ({ 
@@ -82,72 +78,36 @@ const OneTimeTransactionActions = ({
     }
   };
 
-  // ✅ SIMPLE DELETE CONFIRMATION MODAL
+  // Delete confirmation modal
   const DeleteModal = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={() => setShowDeleteModal(false)}
+    <Modal
+      isOpen={showDeleteModal}
+      onClose={() => setShowDeleteModal(false)}
+      title={t('transactions.delete.title', 'Delete Transaction')}
+      size="sm"
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('transactions.delete.title', 'Delete Transaction')}
-          </h3>
-        </div>
-
-        <p className="text-gray-600 dark:text-gray-400 mb-2">
-          {t('transactions.delete.description', 'Are you sure you want to delete this transaction?')}
-        </p>
-
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-6">
-          <div className="font-medium text-gray-900 dark:text-white">
-            {transaction.description}
-          </div>
-          <div className={cn(
-            "text-lg font-bold",
-            transaction.type === 'income' ? "text-green-600" : "text-red-600"
-          )}>
+      <div className="p-4">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+          <div className="font-medium text-gray-900 dark:text-white">{transaction.description}</div>
+          <div className={cn('text-lg font-bold', transaction.type === 'income' ? 'text-green-600' : 'text-red-600')}>
             {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
           </div>
-          <div className="text-sm text-gray-500">
-            {new Date(transaction.date).toLocaleDateString()}
-          </div>
+          <div className="text-sm text-gray-500">{new Date(transaction.date).toLocaleDateString()}</div>
         </div>
-
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           {t('transactions.delete.warning', 'This action cannot be undone.')}
         </p>
-
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => setShowDeleteModal(false)}
-          >
+          <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
             {t('common.cancel', 'Cancel')}
           </Button>
-          <Button
-            variant="destructive"
-            className="flex-1"
-            onClick={handleActualDelete}
-            disabled={isLoading}
-          >
+          <Button variant="destructive" className="flex-1" onClick={handleActualDelete} disabled={isLoading}>
             <Trash2 className="w-4 h-4 mr-2" />
             {isLoading ? t('actions.deleting', 'Deleting...') : t('actions.delete', 'Delete')}
           </Button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </Modal>
   );
 
   // ✅ RENDER ACTIONS BASED ON VARIANT
