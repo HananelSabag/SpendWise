@@ -108,7 +108,7 @@ const AdminActivity = () => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('admin.filters', { fallback: 'Filters' })}
+                {t('admin.filtersTitle', { fallback: 'Filters' })}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('admin.filtersDescription', { fallback: 'Filter and search activity logs' })}
@@ -146,7 +146,7 @@ const AdminActivity = () => {
                 <option value="user_delete">{t('admin.userDelete', { fallback: 'User Delete' })}</option>
                 <option value="user_block">{t('admin.userBlock', { fallback: 'User Block' })}</option>
                 <option value="user_change_role">{t('admin.roleChange', { fallback: 'Role Change' })}</option>
-                <option value="settings">{t('admin.settings', { fallback: 'Settings' })}</option>
+                <option value="settings">{t('admin.settingsAction', { fallback: 'Settings' })}</option>
               </select>
             </div>
             

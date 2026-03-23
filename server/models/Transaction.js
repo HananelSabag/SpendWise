@@ -849,14 +849,14 @@ class Transaction {
 
         const values = [
           userId,
-          transactionData.categoryId || null,
+          transactionData.categoryId || transactionData.category_id || null,
           parseFloat(transactionData.amount),
           transactionData.type || 'expense', // ✅ CRITICAL: Must provide type!
           transactionData.description || '',
           transactionData.notes || '',
           transactionDate, // Date field
           transactionDateTime, // DateTime field for constraint
-          transactionData.templateId || null
+          transactionData.templateId || transactionData.template_id || null
         ];
 
         const result = await client.query(query, values);

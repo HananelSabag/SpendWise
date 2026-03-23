@@ -5,28 +5,22 @@
  */
 
 export default {
-  // Page titles and navigation
   title: "Transactions",
   subtitle: "Manage your financial transactions",
   total: "total",
   loading: "Loading transactions...",
-  
-  // Transaction types
   types: {
     income: "Income",
     expense: "Expense",
     transfer: "Transfer",
     all: "All Types"
   },
-  // Aliases for legacy keys used in some components
   transaction: {
     type: {
       income: "Income",
       expense: "Expense"
     }
   },
-
-  // Transaction fields
   fields: {
     description: {
       label: "Description",
@@ -38,7 +32,7 @@ export default {
       helper: "Enter the transaction amount"
     },
     category: {
-      label: "Category", 
+      label: "Category",
       placeholder: "Select a category",
       search: "Search categories...",
       createNew: "Create new category",
@@ -77,24 +71,18 @@ export default {
       title: "Advanced Settings"
     }
   },
-
-  // Frequencies
   frequencies: {
     daily: "Daily",
-    weekly: "Weekly", 
+    weekly: "Weekly",
     monthly: "Monthly",
     quarterly: "Quarterly",
     yearly: "Yearly"
   },
-
-  // End types
   endTypes: {
     never: "Never",
     date: "On Date",
     occurrences: "After Count"
   },
-
-  // Placeholders
   placeholders: {
     description: "Enter transaction description",
     amount: "0.00",
@@ -104,8 +92,6 @@ export default {
     addTags: "Add tags...",
     notes: "Additional notes..."
   },
-
-  // Actions
   actions: {
     add: "Add Transaction",
     addTransaction: "Add Transaction",
@@ -129,10 +115,10 @@ export default {
     selectAll: "Select All",
     deselectAll: "Deselect All",
     bulkActions: "Bulk Actions",
-    viewDetails: "View Details"
+    viewDetails: "View Details",
+    options: "Options",
+    select: "Select"
   },
-
-  // Labels
   labels: {
     recurring: "Recurring",
     oneTime: "One-time",
@@ -145,22 +131,17 @@ export default {
     pending: "Pending",
     failed: "Failed"
   },
-
-  // View modes
   viewMode: {
     cards: "Cards",
     list: "List",
     compact: "Compact",
     table: "Table"
   },
-
-  // Search and filters
   search: {
     placeholder: "Search by description, category, or amount...",
     noResults: "No transactions found",
     results: "{{count}} results found"
   },
-
   filter: {
     title: "Filters",
     types: "Transaction Types",
@@ -172,8 +153,6 @@ export default {
     hasReceipt: "Has Receipt",
     isRecurring: "Is Recurring"
   },
-
-  // Sorting
   sort: {
     title: "Sort By",
     date: "Date",
@@ -184,8 +163,6 @@ export default {
     status: "Status",
     created: "Created Date"
   },
-
-  // Date ranges
   dateRange: {
     title: "Date Range",
     all: "All Time",
@@ -199,8 +176,6 @@ export default {
     year: "This Year",
     custom: "Custom Range"
   },
-
-  // Statistics
   statistics: {
     total: "Total",
     income: "Income",
@@ -211,8 +186,6 @@ export default {
     highest: "Highest",
     lowest: "Lowest"
   },
-
-  // Empty states
   emptyStates: {
     noTransactions: "No transactions yet",
     noTransactionsDesc: "Start by adding your first transaction",
@@ -221,15 +194,11 @@ export default {
     noRecurring: "No recurring transactions",
     noRecurringDesc: "Set up recurring transactions to automate your finances"
   },
-
-  // Selection
   selection: {
     count: "{{count}} selected",
     none: "None selected",
     all: "All selected"
   },
-
-  // Recurring transactions
   recurring: {
     title: "Recurring Transactions",
     description: "Manage your recurring transactions and templates",
@@ -264,8 +233,6 @@ export default {
       createTitle: "Create Recurring Transaction",
       editTitle: "Edit Recurring Transaction"
     },
-    
-    // Frequency
     frequency: {
       title: "Frequency",
       daily: "Daily",
@@ -276,8 +243,6 @@ export default {
       yearly: "Yearly",
       custom: "Custom"
     },
-
-    // Interval
     interval: {
       title: "Repeat Every",
       every: "Every",
@@ -290,8 +255,6 @@ export default {
       yearly: "{{count}} year",
       yearly_plural: "{{count}} years"
     },
-
-    // End types
     endType: {
       title: "End Date",
       never: "Never",
@@ -301,55 +264,40 @@ export default {
       occurrences: "After Count",
       occurrencesDesc: "End after a number of occurrences"
     },
-
-    // Other fields
     startDate: "Start Date",
     endDate: "End Date",
     maxOccurrences: "Number of Occurrences",
     isActive: "Active",
     nextDate: "Next Transaction",
     lastDate: "Last Transaction",
-    
-    // Summary
     summary: {
       title: "Summary",
       preview: "Preview Upcoming Transactions"
     },
-
-    // Preview
     preview: {
       title: "Upcoming Transactions",
       moreTransactions: "...and more"
     },
-
-    // Actions
     pause: "Pause",
     resume: "Resume",
     skip: "Skip Next",
-    
-    // Count
     occurrencesCount: "{{count}} occurrence",
     occurrencesCount_plural: "{{count}} occurrences",
-    
-    // Summary stats for recurring tab
     totalTemplates: "Total Templates",
-    activeTemplates: "Active Templates", 
+    activeTemplates: "Active Templates",
     monthlyIncome: "Monthly Income",
-    monthlyExpenses: "Monthly Expenses"
+    monthlyExpenses: "Monthly Expenses",
+    active: "Active",
+    paused: "Paused"
   },
-
-  // Short keys used by RecurringTransactionsManager
   recurringShort: {
     loading: "Loading recurring transactions..."
   },
-
-  // Delete confirmations
   delete: {
     title: "Delete Transaction",
     description: "Are you sure you want to delete this transaction?",
     warning: "This action cannot be undone.",
     confirm: "Delete Transaction",
-    
     recurring: {
       title: "Delete Recurring Transaction",
       options: "What would you like to delete?",
@@ -361,10 +309,9 @@ export default {
       allDescription: "Delete all past and future occurrences",
       allWarning: "This will delete ALL occurrences of this recurring transaction.",
       futureWarning: "This will delete this occurrence and all future ones."
-    }
+    },
+    confirmDelete: "Confirm Delete"
   },
-
-  // Transaction status
   status: {
     completed: "Completed",
     pending: "Pending",
@@ -373,8 +320,6 @@ export default {
     scheduled: "Scheduled",
     processing: "Processing"
   },
-
-  // Categories
   categories: {
     title: "Categories",
     add: "Add Category",
@@ -383,15 +328,12 @@ export default {
     income: "Income Categories",
     expense: "Expense Categories",
     uncategorized: "Uncategorized",
-    
-    // Default categories
     salary: "Salary",
     freelance: "Freelance",
     investment: "Investment",
     business: "Business",
     gifts: "Gifts",
     other: "Other",
-    
     food: "Food & Dining",
     transportation: "Transportation",
     shopping: "Shopping",
@@ -403,8 +345,6 @@ export default {
     home: "Home & Garden",
     personal: "Personal Care"
   },
-
-  // Tags
   tags: {
     title: "Tags",
     add: "Add Tag",
@@ -418,8 +358,6 @@ export default {
     onetime: "One-time",
     tax: "Tax Deductible"
   },
-
-  // Validation
   validation: {
     descriptionRequired: "Description is required",
     amountRequired: "Amount is required and must be greater than 0",
@@ -434,8 +372,6 @@ export default {
     intervalRequired: "Interval must be at least 1",
     pleaseFixErrors: "Please fix the errors above"
   },
-
-  // Success messages
   success: {
     transactionAdded: "Transaction added successfully",
     transactionUpdated: "Transaction updated successfully",
@@ -446,8 +382,6 @@ export default {
     dataExported: "Data exported successfully",
     refreshed: "Transactions refreshed"
   },
-
-  // Error messages
   errors: {
     addingFailed: "Failed to add transaction",
     updatingFailed: "Failed to update transaction",
@@ -461,8 +395,6 @@ export default {
     networkError: "Network error occurred",
     serverError: "Server error occurred"
   },
-
-  // Loading states (renamed to avoid clobbering top-level "loading")
   loadingStates: {
     loading: "Loading transactions...",
     saving: "Saving transaction...",
@@ -471,8 +403,6 @@ export default {
     exporting: "Exporting data...",
     refreshing: "Refreshing..."
   },
-
-  // Export/Import
   export: {
     title: "Export Transactions",
     format: "Export Format",
@@ -487,7 +417,6 @@ export default {
     pdf: "PDF Report",
     json: "JSON Data"
   },
-
   import: {
     title: "Import Transactions",
     selectFile: "Select File",
@@ -498,8 +427,6 @@ export default {
     skipDuplicates: "Skip Duplicates",
     updateExisting: "Update Existing"
   },
-
-  // Receipts
   receipts: {
     title: "Receipt",
     upload: "Upload Receipt",
@@ -510,8 +437,6 @@ export default {
     maxSize: "Maximum file size: 10MB",
     supportedFormats: "Supported formats: JPG, PNG, PDF"
   },
-
-  // Analytics
   analytics: {
     title: "Transaction Analytics",
     trends: "Trends",
@@ -520,8 +445,6 @@ export default {
     comparison: "Period Comparison",
     insights: "Insights"
   },
-
-  // Modals
   modals: {
     add: {
       title: "Add New Transaction",
@@ -543,22 +466,11 @@ export default {
       warning: "This action cannot be undone."
     }
   },
-
-  // Tabs
   tabs: {
-    oneTime: {
-      title: "One-time Transaction",
-      subtitle: "Single transaction",
-      description: "Create a single transaction that will be executed once"
-    },
-    recurring: {
-      title: "Recurring Transaction", 
-      subtitle: "Automatic transaction",
-      description: "Create a template that will generate transactions automatically in the future"
-    }
+    all: "All Transactions",
+    upcoming: "Upcoming",
+    recurring: "Recurring"
   },
-
-  // Form header tab labels (used by modal header selector)
   formTabs: {
     oneTime: {
       title: "One-time Transaction",
@@ -572,13 +484,9 @@ export default {
     },
     changeWarning: "Changing the tab will reset the form. Continue?"
   },
-
-  // Badges
   badges: {
     advanced: "Advanced"
   },
-
-  // Forms
   form: {
     addTransaction: "Add Transaction",
     cancel: "Cancel",
@@ -601,111 +509,101 @@ export default {
     editMode: "In edit mode - cannot change transaction type",
     unsavedChanges: "You have unsaved changes"
   },
-
-  // Date picker
   datePicker: {
     today: "Today",
-    yesterday: "Yesterday", 
+    yesterday: "Yesterday",
     thisWeek: "This Week",
     lastWeek: "Last Week",
     thisMonth: "This Month",
     lastMonth: "Last Month"
   },
-
-  // Notes suggestions
   notes: {
     suggestions: {
       receipt: "Has receipt",
-      business: "Business expense", 
+      business: "Business expense",
       personal: "Personal expense",
       gift: "Gift",
       emergency: "Emergency"
     }
   },
-
-  // Upcoming Transactions
   upcoming: {
-    title: 'Upcoming Transactions',
-    subtitle: 'Your scheduled transactions',
-    loading: 'Loading upcoming transactions...',
-    noUpcoming: 'No Upcoming Transactions',
-    noUpcomingDesc: 'No future transactions scheduled. Set up recurring transactions to see them here.',
-    nextCount: 'Next {{count}} transactions',
-    manage: 'Manage',
-    manageRecurring: 'Manage Recurring',
-    transactions: 'transactions',
-    totalAmount: 'Total',
-    showingNext: 'Showing next {{count}} transactions',
-    viewAll: 'View All',
-    totalTransactions: 'Total Upcoming',
-    expectedIncome: 'Expected Income',
-    expectedExpenses: 'Expected Expenses',
-    recurringTemplates: 'From Templates',
-    tomorrow: 'Tomorrow',
-    thisWeek: 'This Week',
-    later: 'Later'
+    title: "Upcoming Transactions",
+    subtitle: "Your scheduled transactions",
+    loading: "Loading upcoming transactions...",
+    noUpcoming: "No Upcoming Transactions",
+    noUpcomingDesc: "No future transactions scheduled. Set up recurring transactions to see them here.",
+    nextCount: "Next {{count}} transactions",
+    manage: "Manage",
+    manageRecurring: "Manage Recurring",
+    transactions: "transactions",
+    totalAmount: "Total",
+    showingNext: "Showing next {{count}} transactions",
+    viewAll: "View All",
+    totalTransactions: "Total Upcoming",
+    expectedIncome: "Expected Income",
+    expectedExpenses: "Expected Expenses",
+    recurringTemplates: "From Templates",
+    tomorrow: "Tomorrow",
+    thisWeek: "This Week",
+    later: "Later"
   },
-
-  // Enhanced Recurring Manager
   recurringManager: {
-    title: 'Recurring Transactions Manager',
-    subtitle: 'Manage your recurring transactions',
-    active: 'Active',
-    paused: 'Paused',
-    total: 'Total',
-    totalAmount: 'Total Monthly',
-    avgAmount: 'Average Amount',
-    addNew: 'Add New',
-    addFirst: 'Add First Template',
-    created: 'Created',
-    totalRuns: 'Total Runs',
-    lastRun: 'Last Run',
-    nextRun: 'Next Run',
-    never: 'Never',
-    indefinite: 'Indefinite',
-    endDate: 'End Date',
-    confirmDelete: 'Delete "{{name}}"?',
-    deleteSuccess: 'Template deleted successfully',
-    deleteFailed: 'Failed to delete template',
-    deleteTemplate: 'Delete Template',
-    deleteChoose: 'Choose what to delete:',
-    deleteTemplateOnly: 'Template only (keep transactions)',
-    deleteTemplateOnlyDesc: 'Deactivate template but keep all transaction history',
-    deleteFuture: 'Template + future transactions',
-    deleteFutureDesc: 'Remove template and all future scheduled transactions',
-    deleteCurrentAndFuture: 'Template + current month & future',
-    deleteCurrentAndFutureDesc: 'Remove template and transactions from this month forward',
-    deleteAll: 'Template + all transactions',
-    deleteAllDesc: 'Permanently remove template and entire transaction history',
-    statusUpdated: 'Status updated successfully',
-    statusUpdateFailed: 'Failed to update status',
-    templateSaved: 'Template saved successfully',
-    noRecurring: 'No Recurring Templates',
-    noRecurringDesc: 'Create recurring transactions to automate your finance tracking',
-    noMatches: 'No Matching Templates',
-    noMatchesDesc: 'Try adjusting your filters',
-    loading: 'Loading templates...',
-    loadError: 'Failed to load recurring transactions',
-    searchPlaceholder: 'Search templates...',
-    templates: 'Templates',
-    upcoming: 'Upcoming',
-    upcomingTitle: 'Upcoming Transactions',
-    upcomingDesc: 'Your upcoming recurring transactions will appear here',
+    title: "Recurring Transactions Manager",
+    subtitle: "Manage your recurring transactions",
+    active: "Active",
+    paused: "Paused",
+    total: "Total",
+    totalAmount: "Total Monthly",
+    avgAmount: "Average Amount",
+    addNew: "Add New",
+    addFirst: "Add First Template",
+    created: "Created",
+    totalRuns: "Total Runs",
+    lastRun: "Last Run",
+    nextRun: "Next Run",
+    never: "Never",
+    indefinite: "Indefinite",
+    endDate: "End Date",
+    confirmDelete: "Delete \"{{name}}\"?",
+    deleteSuccess: "Template deleted successfully",
+    deleteFailed: "Failed to delete template",
+    deleteTemplate: "Delete Template",
+    deleteChoose: "Choose what to delete:",
+    deleteTemplateOnly: "Template only (keep transactions)",
+    deleteTemplateOnlyDesc: "Deactivate template but keep all transaction history",
+    deleteFuture: "Template + future transactions",
+    deleteFutureDesc: "Remove template and all future scheduled transactions",
+    deleteCurrentAndFuture: "Template + current month & future",
+    deleteCurrentAndFutureDesc: "Remove template and transactions from this month forward",
+    deleteAll: "Template + all transactions",
+    deleteAllDesc: "Permanently remove template and entire transaction history",
+    statusUpdated: "Status updated successfully",
+    statusUpdateFailed: "Failed to update status",
+    templateSaved: "Template saved successfully",
+    noRecurring: "No Recurring Templates",
+    noRecurringDesc: "Create recurring transactions to automate your finance tracking",
+    noMatches: "No Matching Templates",
+    noMatchesDesc: "Try adjusting your filters",
+    loading: "Loading templates...",
+    loadError: "Failed to load recurring transactions",
+    searchPlaceholder: "Search templates...",
+    templates: "Templates",
+    upcoming: "Upcoming",
+    upcomingTitle: "Upcoming Transactions",
+    upcomingDesc: "Your upcoming recurring transactions will appear here",
     filter: {
-      allStatus: 'All Status',
-      active: 'Active Only',
-      paused: 'Paused Only',
-      allTypes: 'All Types'
+      allStatus: "All Status",
+      active: "Active Only",
+      paused: "Paused Only",
+      allTypes: "All Types"
     },
     frequency: {
-      daily: 'Daily',
-      weekly: 'Weekly',
-      monthly: 'Monthly',
-      yearly: 'Yearly'
+      daily: "Daily",
+      weekly: "Weekly",
+      monthly: "Monthly",
+      yearly: "Yearly"
     }
   },
-
-    // Modern page features
   stats: {
     totalTransactions: "Total Transactions",
     totalIncome: "Total Income",
@@ -714,32 +612,24 @@ export default {
     netAmount: "Net Amount",
     averageTransaction: "Average Transaction"
   },
-
-  // Additional labels
   count: "transactions",
   net: "Net",
-
-  tabs: {
-    all: "All Transactions",
-    upcoming: "Upcoming",
-    recurring: "Recurring"
-  },
-
   allTab: {
     title: "Your Transactions",
     description: "Showing your transactions with smart filtering. Scroll down to load more past transactions."
   },
-
   advancedFilters: "Advanced Filters",
   selected: "selected",
   bulkActions: "Choose an action to apply to selected transactions",
   noDescription: "No description",
   autoGenerating: "Auto-generating...",
-
-  
-
   empty: {
     title: "No Transactions Found",
     description: "Start tracking your finances by adding your first transaction."
-  }
-}; 
+  },
+  addExpense: "Add Expense",
+  addIncome: "Add Income",
+  andMore: "And More",
+  futureTransactions: "Future Transactions",
+  noFutureTransactions: "No Future Transactions"
+};

@@ -5,28 +5,22 @@
  */
 
 export default {
-  // Page titles and navigation
   title: "עסקאות",
   subtitle: "נהלו את העסקאות הפיננסיות שלכם",
   total: "סה״כ",
   loading: "טוען עסקאות...",
-  
-  // Transaction types
   types: {
     income: "הכנסה",
-    expense: "הוצאה", 
+    expense: "הוצאה",
     transfer: "העברה",
     all: "כל הסוגים"
   },
-  // Aliases for legacy keys
   transaction: {
     type: {
       income: "הכנסה",
       expense: "הוצאה"
     }
   },
-
-  // Transaction fields
   fields: {
     description: {
       label: "תיאור",
@@ -38,7 +32,7 @@ export default {
       helper: "הכניסו את סכום העסקה"
     },
     category: {
-      label: "קטגוריה", 
+      label: "קטגוריה",
       placeholder: "בחרו קטגוריה",
       search: "חפשו קטגוריות...",
       createNew: "צרו קטגוריה חדשה",
@@ -77,24 +71,18 @@ export default {
       title: "הגדרות מתקדמות"
     }
   },
-
-  // Frequencies
   frequencies: {
     daily: "יומית",
-    weekly: "שבועית", 
+    weekly: "שבועית",
     monthly: "חודשית",
     quarterly: "רבעונית",
     yearly: "שנתית"
   },
-
-  // End types
   endTypes: {
     never: "לעולם לא",
     date: "בתאריך",
     occurrences: "אחרי מספר"
   },
-
-  // Placeholders
   placeholders: {
     description: "הכניסו תיאור עסקה",
     amount: "0.00",
@@ -104,8 +92,6 @@ export default {
     addTags: "הוסיפו תגיות...",
     notes: "הערות נוספות..."
   },
-
-  // Actions
   actions: {
     add: "הוסף עסקה",
     addTransaction: "הוסף עסקה",
@@ -133,8 +119,6 @@ export default {
     viewDetails: "הצג פרטים",
     select: "בחר"
   },
-
-  // Labels
   labels: {
     recurring: "חוזר",
     oneTime: "חד פעמי",
@@ -147,22 +131,17 @@ export default {
     pending: "ממתין",
     failed: "נכשל"
   },
-
-  // View modes
   viewMode: {
     cards: "כרטיסים",
     list: "רשימה",
     compact: "קומפקטי",
     table: "טבלה"
   },
-
-  // Search and filters
   search: {
     placeholder: "חפש לפי תיאור, קטגוריה או סכום...",
     noResults: "לא נמצאו עסקאות",
     results: "נמצאו {{count}} תוצאות"
   },
-
   filter: {
     title: "מסננים",
     types: "סוגי עסקאות",
@@ -174,8 +153,6 @@ export default {
     hasReceipt: "יש קבלה",
     isRecurring: "חוזר"
   },
-
-  // Sorting
   sort: {
     title: "מיין לפי",
     date: "תאריך",
@@ -186,8 +163,6 @@ export default {
     status: "סטטוס",
     created: "תאריך יצירה"
   },
-
-  // Date ranges
   dateRange: {
     title: "טווח תאריכים",
     all: "כל הזמן",
@@ -201,8 +176,6 @@ export default {
     year: "השנה",
     custom: "טווח מותאם"
   },
-
-  // Statistics
   statistics: {
     total: "סך הכל",
     income: "הכנסות",
@@ -213,8 +186,6 @@ export default {
     highest: "הגבוה ביותר",
     lowest: "הנמוך ביותר"
   },
-
-  // Empty states
   emptyStates: {
     noTransactions: "אין עסקאות עדיין",
     noTransactionsDesc: "התחילו בהוספת העסקה הראשונה שלכם",
@@ -223,15 +194,11 @@ export default {
     noRecurring: "אין עסקאות חוזרות",
     noRecurringDesc: "הגדירו עסקאות חוזרות כדי לאוטמט את הכספים שלכם"
   },
-
-  // Selection
   selection: {
     count: "{{count}} נבחרו",
     none: "לא נבחר כלום",
     all: "הכל נבחר"
   },
-
-  // Recurring transactions
   recurring: {
     active: "פעיל",
     paused: "מושהה",
@@ -268,8 +235,6 @@ export default {
       createTitle: "צור עסקה חוזרת",
       editTitle: "ערוך עסקה חוזרת"
     },
-    
-    // Frequency
     frequency: {
       title: "תדירות",
       daily: "יומית",
@@ -280,8 +245,6 @@ export default {
       yearly: "שנתית",
       custom: "מותאמת"
     },
-
-    // Interval
     interval: {
       title: "חזור כל",
       every: "כל",
@@ -294,8 +257,6 @@ export default {
       yearly: "שנה {{count}}",
       yearly_plural: "{{count}} שנים"
     },
-
-    // End types
     endType: {
       title: "תאריך סיום",
       never: "לעולם לא",
@@ -305,55 +266,38 @@ export default {
       occurrences: "אחרי מספר",
       occurrencesDesc: "סיום אחרי מספר מופעים"
     },
-
-    // Other fields
     startDate: "תאריך התחלה",
     endDate: "תאריך סיום",
     maxOccurrences: "מספר מופעים",
     isActive: "פעיל",
     nextDate: "עסקה הבאה",
     lastDate: "עסקה אחרונה",
-    
-    // Summary
     summary: {
       title: "סיכום",
       preview: "תצוגה מקדימה של עסקאות קרובות"
     },
-
-    // Preview
     preview: {
       title: "עסקאות קרובות",
       moreTransactions: "...ועוד"
     },
-
-    // Actions
     pause: "השהה",
     resume: "המשך",
     skip: "דלג על הבא",
-    
-    // Count
     occurrencesCount: "מופע {{count}}",
     occurrencesCount_plural: "{{count}} מופעים",
-    
-    // Summary stats for recurring tab
     totalTemplates: "סה״כ תבניות",
     activeTemplates: "תבניות פעילות",
-    monthlyIncome: "הכנסות חודשיות", 
+    monthlyIncome: "הכנסות חודשיות",
     monthlyExpenses: "הוצאות חודשיות"
   },
-
-  // Short keys used by RecurringTransactionsManager
   recurringShort: {
     loading: "טוען עסקאות חוזרות..."
   },
-
-  // Delete confirmations
   delete: {
     title: "מחק עסקה",
     description: "האם אתם בטוחים שברצונכם למחוק את העסקה הזו?",
     warning: "פעולה זו לא ניתנת לביטול.",
     confirm: "מחק עסקה",
-    
     recurring: {
       title: "מחק עסקה חוזרת",
       options: "מה תרצו למחוק?",
@@ -365,10 +309,9 @@ export default {
       allDescription: "מחק את כל המופעים העבר והעתיד",
       allWarning: "זה ימחק את כל המופעים של העסקה החוזרת הזו.",
       futureWarning: "זה ימחק את המופע הזה ואת כל העתידיים."
-    }
+    },
+    confirmDelete: "Confirm Delete"
   },
-
-  // Transaction status
   status: {
     completed: "הושלם",
     pending: "ממתין",
@@ -377,8 +320,6 @@ export default {
     scheduled: "מתוזמן",
     processing: "מעובד"
   },
-
-  // Categories
   categories: {
     title: "קטגוריות",
     add: "הוסף קטגוריה",
@@ -387,15 +328,12 @@ export default {
     income: "קטגוריות הכנסה",
     expense: "קטגוריות הוצאה",
     uncategorized: "ללא קטגוריה",
-    
-    // Default categories
     salary: "משכורת",
     freelance: "עבודה עצמאית",
     investment: "השקעות",
     business: "עסקים",
     gifts: "מתנות",
     other: "אחר",
-    
     food: "אוכל ומסעדות",
     transportation: "תחבורה",
     shopping: "קניות",
@@ -407,8 +345,6 @@ export default {
     home: "בית וגינה",
     personal: "טיפוח אישי"
   },
-
-  // Tags
   tags: {
     title: "תגיות",
     add: "הוסף תגית",
@@ -422,8 +358,6 @@ export default {
     onetime: "חד פעמי",
     tax: "ניתן לניכוי במס"
   },
-
-  // Validation
   validation: {
     descriptionRequired: "תיאור נדרש",
     amountRequired: "סכום נדרש וחייב להיות גדול מ-0",
@@ -438,8 +372,6 @@ export default {
     intervalRequired: "מרווח חייב להיות לפחות 1",
     pleaseFixErrors: "אנא תקנו את השגיאות למעלה"
   },
-
-  // Success messages
   success: {
     transactionAdded: "העסקה נוספה בהצלחה",
     transactionUpdated: "העסקה עודכנה בהצלחה",
@@ -450,8 +382,6 @@ export default {
     dataExported: "נתונים יוצאו בהצלחה",
     refreshed: "עסקאות רוענו"
   },
-
-  // Error messages
   errors: {
     addingFailed: "הוספת העסקה נכשלה",
     updatingFailed: "עדכון העסקה נכשל",
@@ -465,8 +395,6 @@ export default {
     networkError: "שגיאת רשת התרחשה",
     serverError: "שגיאת שרת התרחשה"
   },
-
-  // Loading states (renamed to avoid clobbering top-level "loading")
   loadingStates: {
     loading: "טוען עסקאות...",
     saving: "שומר עסקה...",
@@ -475,8 +403,6 @@ export default {
     exporting: "מייצא נתונים...",
     refreshing: "מרענן..."
   },
-
-  // Export/Import
   export: {
     title: "ייצא עסקאות",
     format: "פורמט ייצוא",
@@ -491,7 +417,6 @@ export default {
     pdf: "דוח PDF",
     json: "נתוני JSON"
   },
-
   import: {
     title: "ייבא עסקאות",
     selectFile: "בחר קובץ",
@@ -502,8 +427,6 @@ export default {
     skipDuplicates: "דלג על כפולות",
     updateExisting: "עדכן קיימות"
   },
-
-  // Receipts
   receipts: {
     title: "קבלה",
     upload: "העלה קבלה",
@@ -514,8 +437,6 @@ export default {
     maxSize: "גודל קובץ מקסימלי: 10MB",
     supportedFormats: "פורמטים נתמכים: JPG, PNG, PDF"
   },
-
-  // Analytics
   analytics: {
     title: "ניתוח עסקאות",
     trends: "מגמות",
@@ -524,8 +445,6 @@ export default {
     comparison: "השוואת תקופות",
     insights: "תובנות"
   },
-
-  // Modals
   modals: {
     add: {
       title: "הוסף עסקה חדשה",
@@ -547,22 +466,11 @@ export default {
       warning: "פעולה זו לא ניתנת לביטול."
     }
   },
-
-  // Tabs
   tabs: {
-    oneTime: {
-      title: "עסקה חד פעמית",
-      subtitle: "עסקה אחת בלבד",
-      description: "צור עסקה יחידה שתבוצע פעם אחת"
-    },
-    recurring: {
-      title: "עסקה חוזרת",
-      subtitle: "עסקה אוטומטית", 
-      description: "צור תבנית שתיצור עסקאות אוטומטית בעתיד"
-    }
+    all: "כל העסקאות",
+    upcoming: "קרובות",
+    recurring: "חוזרות"
   },
-
-  // Form header tab labels (used by modal header selector)
   formTabs: {
     oneTime: {
       title: "עסקה חד פעמית",
@@ -576,13 +484,9 @@ export default {
     },
     changeWarning: "שינוי הטאב יאפס את הטופס. להמשיך?"
   },
-
-  // Badges
   badges: {
     advanced: "מתקדם"
   },
-
-  // Forms
   form: {
     addTransaction: "הוסף עסקה",
     cancel: "בטל",
@@ -605,18 +509,14 @@ export default {
     editMode: "במצב עריכה - לא ניתן לשנות את סוג העסקה",
     unsavedChanges: "יש לך שינויים שלא נשמרו"
   },
-
-  // Date picker
   datePicker: {
     today: "היום",
-    yesterday: "אתמול", 
+    yesterday: "אתמול",
     thisWeek: "השבוע",
     lastWeek: "השבוע שעבר",
     thisMonth: "החודש",
     lastMonth: "החודש שעבר"
   },
-
-  // Notes suggestions
   notes: {
     suggestions: {
       receipt: "יש קבלה",
@@ -626,90 +526,84 @@ export default {
       emergency: "חירום"
     }
   },
-
-  // Upcoming Transactions
   upcoming: {
-    title: 'עסקאות קרובות',
-    subtitle: 'העסקאות המתוכננות שלכם',
-    loading: 'טוען עסקאות קרובות...',
-    noUpcoming: 'אין עסקאות קרובות',
-    noUpcomingDesc: 'אין עסקאות עתידיות מתוכננות. הגדירו עסקאות חוזרות כדי לראות אותן כאן.',
-    nextCount: 'הבאות {{count}} עסקאות',
-    manage: 'ניהול',
-    manageRecurring: 'ניהול חוזרות',
-    transactions: 'עסקאות',
-    totalAmount: 'סה"כ',
-    showingNext: 'מציג את {{count}} הקרובות',
-    viewAll: 'הצג הכל',
-    totalTransactions: 'סה״כ קרובות',
-    expectedIncome: 'הכנסות צפויות',
-    expectedExpenses: 'הוצאות צפויות',
-    recurringTemplates: 'מתבניות',
-    tomorrow: 'מחר',
-    thisWeek: 'השבוע',
-    later: 'מאוחר יותר'
+    title: "עסקאות קרובות",
+    subtitle: "העסקאות המתוכננות שלכם",
+    loading: "טוען עסקאות קרובות...",
+    noUpcoming: "אין עסקאות קרובות",
+    noUpcomingDesc: "אין עסקאות עתידיות מתוכננות. הגדירו עסקאות חוזרות כדי לראות אותן כאן.",
+    nextCount: "הבאות {{count}} עסקאות",
+    manage: "ניהול",
+    manageRecurring: "ניהול חוזרות",
+    transactions: "עסקאות",
+    totalAmount: "סה\"כ",
+    showingNext: "מציג את {{count}} הקרובות",
+    viewAll: "הצג הכל",
+    totalTransactions: "סה״כ קרובות",
+    expectedIncome: "הכנסות צפויות",
+    expectedExpenses: "הוצאות צפויות",
+    recurringTemplates: "מתבניות",
+    tomorrow: "מחר",
+    thisWeek: "השבוע",
+    later: "מאוחר יותר"
   },
-
-  // Enhanced Recurring Manager
   recurringManager: {
-    title: 'מנהל עסקאות חוזרות',
-    subtitle: 'נהלו את העסקאות החוזרות שלכם',
-    active: 'פעיל',
-    paused: 'מושהה',
-    total: 'סה״כ',
-    totalAmount: 'סה״כ חודשי',
-    avgAmount: 'סכום ממוצע',
-    addNew: 'הוסף חדש',
-    addFirst: 'הוסף תבנית ראשונה',
-    created: 'נוצר',
-    totalRuns: 'סה״כ הרצות',
-    lastRun: 'הרצה אחרונה',
-    nextRun: 'הרצה הבאה',
-    never: 'לעולם לא',
-    indefinite: 'בלתי מוגבל',
-    endDate: 'תאריך סיום',
-    confirmDelete: 'למחוק את "{{name}}"?',
-    deleteSuccess: 'תבנית נמחקה בהצלחה',
-    deleteFailed: 'מחיקת התבנית נכשלה',
-    deleteTemplate: 'מחק תבנית',
-    deleteChoose: 'בחרו מה למחוק:',
-    deleteTemplateOnly: 'תבנית בלבד (שמור עסקאות)',
-    deleteTemplateOnlyDesc: 'השבתת תבנית אך שמירה על כל היסטוריית העסקאות',
-    deleteFuture: 'תבנית + עסקאות עתידיות',
-    deleteFutureDesc: 'הסרת תבנית וכל העסקאות העתידיות המתוכננות',
-    deleteCurrentAndFuture: 'תבנית + חודש נוכחי ועתידי',
-    deleteCurrentAndFutureDesc: 'הסרת תבנית ועסקאות מהחודש הנוכחי והלאה',
-    deleteAll: 'תבנית + כל העסקאות',
-    deleteAllDesc: 'הסרה מוחלטת של תבנית וכל היסטוריית העסקאות',
-    statusUpdated: 'הסטטוס עודכן בהצלחה',
-    statusUpdateFailed: 'עדכון הסטטוס נכשל',
-    templateSaved: 'תבנית נשמרה בהצלחה',
-    noRecurring: 'אין תבניות חוזרות',
-    noRecurringDesc: 'צרו עסקאות חוזרות כדי להוסיף אוטומציה למעקב הפיננסי',
-    noMatches: 'אין תבניות מתאימות',
-    noMatchesDesc: 'נסו לשנות את המסננים',
-    loading: 'טוען תבניות...',
-    loadError: 'טעינת עסקאות חוזרות נכשלה',
-    searchPlaceholder: 'חפשו תבניות...',
-    templates: 'תבניות',
-    upcoming: 'קרובות',
-    upcomingTitle: 'עסקאות קרובות',
-    upcomingDesc: 'העסקאות החוזרות הקרובות שלכם יופיעו כאן',
+    title: "מנהל עסקאות חוזרות",
+    subtitle: "נהלו את העסקאות החוזרות שלכם",
+    active: "פעיל",
+    paused: "מושהה",
+    total: "סה״כ",
+    totalAmount: "סה״כ חודשי",
+    avgAmount: "סכום ממוצע",
+    addNew: "הוסף חדש",
+    addFirst: "הוסף תבנית ראשונה",
+    created: "נוצר",
+    totalRuns: "סה״כ הרצות",
+    lastRun: "הרצה אחרונה",
+    nextRun: "הרצה הבאה",
+    never: "לעולם לא",
+    indefinite: "בלתי מוגבל",
+    endDate: "תאריך סיום",
+    confirmDelete: "למחוק את \"{{name}}\"?",
+    deleteSuccess: "תבנית נמחקה בהצלחה",
+    deleteFailed: "מחיקת התבנית נכשלה",
+    deleteTemplate: "מחק תבנית",
+    deleteChoose: "בחרו מה למחוק:",
+    deleteTemplateOnly: "תבנית בלבד (שמור עסקאות)",
+    deleteTemplateOnlyDesc: "השבתת תבנית אך שמירה על כל היסטוריית העסקאות",
+    deleteFuture: "תבנית + עסקאות עתידיות",
+    deleteFutureDesc: "הסרת תבנית וכל העסקאות העתידיות המתוכננות",
+    deleteCurrentAndFuture: "תבנית + חודש נוכחי ועתידי",
+    deleteCurrentAndFutureDesc: "הסרת תבנית ועסקאות מהחודש הנוכחי והלאה",
+    deleteAll: "תבנית + כל העסקאות",
+    deleteAllDesc: "הסרה מוחלטת של תבנית וכל היסטוריית העסקאות",
+    statusUpdated: "הסטטוס עודכן בהצלחה",
+    statusUpdateFailed: "עדכון הסטטוס נכשל",
+    templateSaved: "תבנית נשמרה בהצלחה",
+    noRecurring: "אין תבניות חוזרות",
+    noRecurringDesc: "צרו עסקאות חוזרות כדי להוסיף אוטומציה למעקב הפיננסי",
+    noMatches: "אין תבניות מתאימות",
+    noMatchesDesc: "נסו לשנות את המסננים",
+    loading: "טוען תבניות...",
+    loadError: "טעינת עסקאות חוזרות נכשלה",
+    searchPlaceholder: "חפשו תבניות...",
+    templates: "תבניות",
+    upcoming: "קרובות",
+    upcomingTitle: "עסקאות קרובות",
+    upcomingDesc: "העסקאות החוזרות הקרובות שלכם יופיעו כאן",
     filter: {
-      allStatus: 'כל הסטטוסים',
-      active: 'פעילות בלבד',
-      paused: 'מושהות בלבד',
-      allTypes: 'כל הסוגים'
+      allStatus: "כל הסטטוסים",
+      active: "פעילות בלבד",
+      paused: "מושהות בלבד",
+      allTypes: "כל הסוגים"
     },
     frequency: {
-      daily: 'יומי',
-      weekly: 'שבועי',
-      monthly: 'חודשי',
-      yearly: 'שנתי'
+      daily: "יומי",
+      weekly: "שבועי",
+      monthly: "חודשי",
+      yearly: "שנתי"
     }
   },
-
-  // Modern page features
   stats: {
     totalTransactions: "סה״כ עסקאות",
     totalIncome: "סה״כ הכנסות",
@@ -718,32 +612,24 @@ export default {
     netAmount: "סכום נטו",
     averageTransaction: "עסקה ממוצעת"
   },
-
-  // Additional labels
   count: "עסקאות",
   net: "נטו",
-
-  tabs: {
-    all: "כל העסקאות",
-    upcoming: "קרובות",
-    recurring: "חוזרות"
-  },
-
   allTab: {
     title: "העסקאות שלך",
     description: "מציג את העסקאות שלך עם סינון חכם. גלול למטה כדי לטעון עוד עסקאות עבר."
   },
-
   advancedFilters: "מסננים מתקדמים",
   selected: "נבחרו",
   bulkActions: "בחרו פעולה להחיל על העסקאות הנבחרות",
   noDescription: "ללא תיאור",
   autoGenerating: "יוצר אוטומטית...",
-
-  
-
   empty: {
     title: "לא נמצאו עסקאות",
     description: "התחילו לעקוב אחר הכספים שלכם על ידי הוספת העסקה הראשונה."
-  }
-}; 
+  },
+  addExpense: "Add Expense",
+  addIncome: "Add Income",
+  andMore: "And More",
+  futureTransactions: "Future Transactions",
+  noFutureTransactions: "No Future Transactions"
+};

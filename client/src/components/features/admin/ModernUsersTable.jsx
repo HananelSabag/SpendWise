@@ -490,7 +490,7 @@ const ModernUsersTable = ({
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    {t('filters.status', { fallback: 'Status' })}
+                    {t('filters.statusLabel', { fallback: 'Status' })}
                   </label>
                   <select
                     value={filterConfig.status}

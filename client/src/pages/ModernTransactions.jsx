@@ -142,7 +142,7 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear, categories }) => {
       <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
         <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-2">
           <DollarSign className="w-3 h-3" />
-          {t('filters.amountRange', 'Amount Range')}
+          {t('filters.amountRangeLabel', 'Amount Range')}
           {(filters.amountMin || filters.amountMax) && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
         </label>
         <div className="grid grid-cols-2 gap-2">

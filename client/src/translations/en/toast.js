@@ -5,7 +5,6 @@
  */
 
 export default {
-  // ✅ Authentication Toasts
   auth: {
     loginSuccess: "Welcome back!",
     loginFailed: "Login failed. Please check your credentials.",
@@ -25,25 +24,18 @@ export default {
     accountLocked: "Account temporarily locked due to security reasons.",
     invalidCredentials: "Invalid email or password. Please try again.",
     networkError: "Network error. Please check your connection and try again.",
-    
-    // ✅ NEW: Connection Recovery Toasts
     connectionIssue: "Connection issue detected...",
     connectionRecovering: "Attempting to reconnect to server...",
     connectionRestored: "Connection to server restored successfully! 🎉",
     connectionFailed: "Failed to connect to server. Please try again.",
-    
-    // ✅ NEW: Authentication/Session Validation Toasts
     authenticating: "Authenticating user...",
     validatingSession: "Validating session...",
     loadingData: "Loading data...",
-    
     autoLogoutAuthFailure: "Automatically signed out due to authentication issues",
     autoLogoutStuckState: "Automatically signed out due to connection issues",
     autoLogoutRecoveryFailed: "Automatically signed out - unable to recover connection",
     autoLogoutMultipleFailures: "Automatically signed out due to multiple failures"
   },
-
-  // ✅ Profile Management Toasts
   profile: {
     profileUpdated: "Profile updated successfully!",
     profileUpdateFailed: "Failed to update profile. Please try again.",
@@ -59,11 +51,9 @@ export default {
     currentPasswordWrong: "Current password is incorrect",
     requiredFieldsMissing: "Please fill in all required fields"
   },
-
-  // ✅ Data Export Toasts
   export: {
     csvExportStarted: "CSV export started - download will begin shortly",
-    jsonExportStarted: "JSON export started - download will begin shortly", 
+    jsonExportStarted: "JSON export started - download will begin shortly",
     pdfExportStarted: "PDF export started - download will begin shortly",
     exportCompleted: "Data export completed successfully!",
     exportFailed: "Data export failed. Please try again.",
@@ -73,15 +63,13 @@ export default {
     noDataToExport: "No data available to export",
     exportTooLarge: "Export data is too large. Please try with a smaller date range."
   },
-
-  // ✅ Transaction Management Toasts
   transactions: {
     transactionCreated: "Transaction created successfully!",
     createSuccess: "Transaction created successfully!",
     transactionUpdated: "Transaction updated successfully!",
     transactionDeleted: "Transaction deleted successfully!",
     transactionCreateFailed: "Failed to create transaction. Please try again.",
-    transactionUpdateFailed: "Failed to update transaction. Please try again.", 
+    transactionUpdateFailed: "Failed to update transaction. Please try again.",
     transactionDeleteFailed: "Failed to delete transaction. Please try again.",
     bulkDeleteSuccess: "{{count}} transactions deleted successfully!",
     bulkDeletePartialFail: "{{failed}} transactions failed to delete",
@@ -94,10 +82,9 @@ export default {
     bulkImportFailed: "Bulk import failed. Please check your file format.",
     duplicateTransactionWarning: "This transaction might be a duplicate",
     securityAlert: "Security Alert: Transaction flagged for review",
-    batchSecurityAlert: "Security Alert: Multiple transactions flagged for review"
+    batchSecurityAlert: "Security Alert: Multiple transactions flagged for review",
+    deleteSuccess: "Delete Success"
   },
-
-  // ✅ Category Management Toasts  
   categories: {
     categoryCreated: "Category created successfully!",
     categoryUpdated: "Category updated successfully!",
@@ -111,8 +98,6 @@ export default {
     invalidCategoryIcon: "Please select a valid category icon",
     categoryLimitReached: "Maximum number of categories reached"
   },
-
-  // ✅ Settings & Preferences Toasts
   settings: {
     settingsSaved: "Settings saved successfully!",
     settingsResetToDefault: "Settings reset to default values",
@@ -128,8 +113,6 @@ export default {
     accessibilityEnabled: "Accessibility features enabled",
     accessibilityDisabled: "Accessibility features disabled"
   },
-
-  // ✅ Data & Sync Toasts
   data: {
     dataLoaded: "Data loaded successfully!",
     dataRefreshed: "Data refreshed successfully!",
@@ -143,8 +126,6 @@ export default {
     backupRestored: "Data backup restored successfully!",
     backupFailed: "Backup operation failed. Please try again."
   },
-
-  // ✅ Validation & Error Toasts
   validation: {
     requiredField: "This field is required",
     invalidEmail: "Please enter a valid email address",
@@ -157,8 +138,6 @@ export default {
     invalidFileType: "Invalid file type. Allowed types: {allowedTypes}",
     characterLimit: "Maximum {limit} characters allowed"
   },
-
-  // ✅ System & Technical Toasts
   system: {
     pageNotFound: "Page not found. Redirecting to dashboard...",
     accessDenied: "Access denied. You don't have permission to view this page.",
@@ -170,8 +149,6 @@ export default {
     cookiesRequired: "Cookies are required for this application to work properly",
     storageQuotaExceeded: "Storage quota exceeded. Please clear some data."
   },
-
-  // ✅ Success Actions
   success: {
     actionCompleted: "Action completed successfully!",
     changesSaved: "Your changes have been saved",
@@ -185,15 +162,11 @@ export default {
     delete: "Successfully deleted!",
     bulkDeleteSuccess: "{{count}} transactions deleted successfully!"
   },
-
-  // ✅ Error Actions
   error: {
     operationFailed: "Operation failed. Please try again.",
     bulkOperationFailed: "Bulk {{operation}} operation failed. Please try again.",
     bulkOperationPartialFail: "{{failed}} {{operation}} operations failed"
   },
-
-  // ✅ Loading & Progress
   loading: {
     pleaseWait: "Please wait...",
     loading: "Loading...",
@@ -207,8 +180,6 @@ export default {
     almostDone: "Almost done...",
     signingOut: "Signing out..."
   },
-
-  // ✅ Common Actions
   common: {
     copied: "Copied to clipboard!",
     linkCopied: "Link copied to clipboard!",
@@ -223,4 +194,4 @@ export default {
     filterApplied: "Filter applied successfully",
     sortApplied: "Sort applied successfully"
   }
-}; 
+};

@@ -5,104 +5,134 @@
 
 export default {
   statement: {
-    title: 'Accessibility Statement',
-    quickSettings: 'Quick Accessibility Settings',
-    openAccessibilityMenu: 'Open accessibility menu',
-    
-    // Overview
+    title: "Accessibility Statement",
+    quickSettings: "Quick Accessibility Settings",
+    openAccessibilityMenu: "Open accessibility menu",
     overview: {
-      introduction: 'SpendWise is committed to providing equal access to all users',
-      scope: 'This statement applies to the entire application and related content',
-      compliance: 'We comply with WCAG 2.1 Level AA standards',
-      lastUpdated: 'Last updated',
+      introduction: "SpendWise is committed to providing equal access to all users",
+      scope: "This statement applies to the entire application and related content",
+      compliance: "We comply with WCAG 2.1 Level AA standards",
+      lastUpdated: "Last updated",
       commitment: {
-        title: 'Our Commitment to Accessibility',
-        description: 'We believe technology should be accessible to everyone'
+        title: "Our Commitment to Accessibility",
+        description: "We believe technology should be accessible to everyone"
       }
     },
-    
-    // Sections
     sections: {
-      overview: 'Overview',
-      features: 'Accessibility Features',
-      standards: 'Standards & Compliance',
-      limitations: 'Known Limitations',
-      contact: 'Contact Us'
+      overview: "Overview",
+      features: "Accessibility Features",
+      standards: "Standards & Compliance",
+      limitations: "Known Limitations",
+      contact: "Contact Us"
     },
-    
-    // Features
     features: {
       screenReader: {
-        title: 'Screen Reader Support',
-        description: 'Full support for leading screen readers',
-        detail1: 'Structured content with hierarchical headings',
-        detail2: 'Labels and descriptions for all elements',
-        detail3: 'Accessible status messages and alerts'
+        title: "Screen Reader Support",
+        description: "Full support for leading screen readers",
+        detail1: "Structured content with hierarchical headings",
+        detail2: "Labels and descriptions for all elements",
+        detail3: "Accessible status messages and alerts"
       },
       keyboard: {
-        title: 'Keyboard Navigation',
-        description: 'Complete navigation using keyboard only',
-        detail1: 'Tab navigation between elements',
-        detail2: 'Actions with Enter and Space',
-        detail3: 'Convenient keyboard shortcuts'
+        title: "Keyboard Navigation",
+        description: "Complete navigation using keyboard only",
+        detail1: "Tab navigation between elements",
+        detail2: "Actions with Enter and Space",
+        detail3: "Convenient keyboard shortcuts"
       },
       visual: {
-        title: 'Visual Adaptations',
-        description: 'Customization options for all visual needs',
-        detail1: 'Font size adjustment',
-        detail2: 'High contrast modes',
-        detail3: 'Light and dark themes'
+        title: "Visual Adaptations",
+        description: "Customization options for all visual needs",
+        detail1: "Font size adjustment",
+        detail2: "High contrast modes",
+        detail3: "Light and dark themes"
       },
       mobile: {
-        title: 'Mobile Accessibility',
-        description: 'Optimized for mobile devices',
-        detail1: 'Accessible touch screens',
-        detail2: 'Zoom and magnification',
-        detail3: 'Gesture navigation'
+        title: "Mobile Accessibility",
+        description: "Optimized for mobile devices",
+        detail1: "Accessible touch screens",
+        detail2: "Zoom and magnification",
+        detail3: "Gesture navigation"
       },
       cognitive: {
-        title: 'Cognitive Support',
-        description: 'Simple and clear design',
-        detail1: 'Intuitive interface',
-        detail2: 'Clear instructions',
-        detail3: 'Error prevention'
+        title: "Cognitive Support",
+        description: "Simple and clear design",
+        detail1: "Intuitive interface",
+        detail2: "Clear instructions",
+        detail3: "Error prevention"
       }
     },
-    
-    // Standards
     standards: {
       wcag: {
-        description: 'Compliant with WCAG 2.1 Level AA standards'
+        description: "Compliant with WCAG 2.1 Level AA standards"
       },
       section508: {
-        description: 'Meets Section 508 requirements'
+        description: "Meets Section 508 requirements"
       },
       ada: {
-        description: 'Compliant with ADA requirements'
+        description: "Compliant with ADA requirements"
       },
       en301549: {
-        description: 'Meets European standard EN 301 549'
+        description: "Meets European standard EN 301 549"
       }
     },
-    
-    // Limitations
     limitations: {
       charts: {
-        issue: 'Complex charts may require textual description',
-        impact: 'May affect understanding of graphical data',
-        workaround: 'We provide data tables as alternatives'
+        issue: "Complex charts may require textual description",
+        impact: "May affect understanding of graphical data",
+        workaround: "We provide data tables as alternatives"
       },
       pdf: {
-        issue: 'External PDF files may not be fully accessible',
-        impact: 'PDF content may be difficult to access',
-        workaround: 'We provide alternative HTML versions'
+        issue: "External PDF files may not be fully accessible",
+        impact: "PDF content may be difficult to access",
+        workaround: "We provide alternative HTML versions"
       }
     },
-    
-    // Footer
     footer: {
-      lastUpdated: 'Last updated',
-      viewHistory: 'View change history'
+      lastUpdated: "Last updated",
+      viewHistory: "View change history"
     }
-  }
-}; 
+  },
+  activityLogLabel: "Activity Log Label",
+  contrast: {
+    high: "High",
+    normal: "Normal",
+    title: "Contrast"
+  },
+  focusVisible: {
+    title: "Focus Visible"
+  },
+  fontSize: {
+    extraLarge: "Extra Large",
+    large: "Large",
+    normal: "Normal",
+    small: "Small",
+    title: "Font Size"
+  },
+  manageUsersLabel: "Manage Users Label",
+  motionReduced: {
+    title: "Motion Reduced"
+  },
+  screenReader: {
+    title: "Screen Reader"
+  },
+  settings: {
+    reset: "Reset",
+    save: "Save",
+    saved: "Saved",
+    saveFailed: "Save Failed",
+    unsavedChanges: "Unsaved Changes"
+  },
+  sound: {
+    title: "Sound"
+  },
+  subtitle: "Subtitle",
+  systemSettingsLabel: "System Settings Label",
+  theme: {
+    auto: "Auto",
+    dark: "Dark",
+    light: "Light",
+    title: "Theme"
+  },
+  title: "Title"
+};

@@ -5,11 +5,12 @@
  */
 
 export default {
-  // Date range filters
+  amountRangeLabel: "Amount Range",
+  statusLabel: "Status",
   dateRange: {
     all: "All Time",
     today: "Today",
-    yesterday: "Yesterday", 
+    yesterday: "Yesterday",
     week: "This Week",
     lastWeek: "Last Week",
     month: "This Month",
@@ -20,8 +21,6 @@ export default {
     lastYear: "Last Year",
     custom: "Custom Range"
   },
-
-  // Transaction type filters
   type: {
     all: "All Types",
     income: "Income",
@@ -29,27 +28,24 @@ export default {
     transfer: "Transfer",
     label: "Type"
   },
-
-  // Recurring filters
   recurring: {
     all: "All Transactions",
-    recurring: "Recurring Only", 
+    recurring: "Recurring Only",
     oneTime: "One-Time Only",
     label: "Recurring Status"
   },
-
-  // Filter labels
   category: {
     all: "All Categories",
     label: "Category"
   },
-
-  amountRange: "Amount Range",
+  amountRange: {
+    min: "Minimum Amount",
+    max: "Maximum Amount",
+    any: "Any Amount"
+  },
   minAmount: "Min Amount",
   maxAmount: "Max Amount",
   clearAll: "Clear All",
-
-  // Sort options
   sortBy: {
     date: "Date",
     amount: "Amount",
@@ -58,54 +54,31 @@ export default {
     type: "Type",
     created: "Created Date"
   },
-
-  // Sort order
   ascending: "Ascending",
   descending: "Descending",
-
-  // Filter actions
   apply: "Apply Filters",
   clear: "Clear Filters",
   reset: "Reset",
   show: "Show Filters",
   hide: "Hide Filters",
-
-  // Search
   search: "Search",
   searchPlaceholder: "Search transactions...",
   noResults: "No results found",
-  
-  // Amount range
-  amountRange: {
-    min: "Minimum Amount",
-    max: "Maximum Amount",
-    any: "Any Amount"
-  },
-
-  // Categories
   categories: {
     all: "All Categories",
     uncategorized: "Uncategorized"
   },
-
-  // Status filters
   status: {
     all: "All Statuses",
     completed: "Completed",
     pending: "Pending",
     failed: "Failed"
   },
-
-  // Month filter
   month: {
     all: "All Months"
   },
-
-  // Visibility
   showHidden: "Show Hidden",
   hideHidden: "Hide Hidden",
-
-  // Admin user filters
   role: "Role",
   allRoles: "All Roles",
   verified: "Verified",
@@ -113,5 +86,7 @@ export default {
   activity: "Activity",
   activeUsers: "Active Users",
   inactiveUsers: "Inactive Users",
-  allActivity: "All Activity"
+  allActivity: "All Activity",
+  allStatuses: "All Statuses",
+  allVerified: "All Verified"
 };

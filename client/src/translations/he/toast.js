@@ -5,7 +5,6 @@
  */
 
 export default {
-  // ✅ Authentication Toasts
   auth: {
     loginSuccess: "ברוכים השבים!",
     loginFailed: "ההתחברות נכשלה. אנא בדקו את פרטי הגישה שלכם.",
@@ -25,25 +24,18 @@ export default {
     accountLocked: "החשבון נחסם זמנית מסיבות אבטחה.",
     invalidCredentials: "אימייל או סיסמה שגויים. אנא נסו שוב.",
     networkError: "שגיאת רשת. אנא בדקו את החיבור שלכם ונסו שוב.",
-    
-    // ✅ חדש: הודעות התאוששות חיבור
     connectionIssue: "זוהתה בעיה בחיבור לשרת...",
     connectionRecovering: "מנסה להתחבר מחדש לשרת...",
     connectionRestored: "החיבור לשרת התאושש בהצלחה! 🎉",
     connectionFailed: "נכשל בחיבור לשרת. אנא נסו שוב.",
-    
-    // ✅ חדש: הודעות אימות משתמש והפעלת מערכת
     authenticating: "מאמת משתמש...",
     validatingSession: "מאמת הפעלה...",
     loadingData: "טוען נתונים...",
-    
     autoLogoutAuthFailure: "נותקתם אוטומטית עקב בעיות אימות",
-    autoLogoutStuckState: "נותקתם אוטומטית עקב בעיות חיבור", 
+    autoLogoutStuckState: "נותקתם אוטומטית עקב בעיות חיבור",
     autoLogoutRecoveryFailed: "נותקתם אוטומטית - לא ניתן לשחזר את החיבור",
     autoLogoutMultipleFailures: "נותקתם אוטומטית עקב מספר כשלונות"
   },
-
-  // ✅ Profile Management Toasts
   profile: {
     profileUpdated: "הפרופיל עודכן בהצלחה!",
     profileUpdateFailed: "עדכון הפרופיל נכשל. אנא נסו שוב.",
@@ -59,8 +51,6 @@ export default {
     currentPasswordWrong: "הסיסמה הנוכחית שגויה",
     requiredFieldsMissing: "אנא מלאו את כל השדות הנדרשים"
   },
-
-  // ✅ Data Export Toasts
   export: {
     csvExportStarted: "יצוא CSV החל - ההורדה תתחיל בקרוב",
     jsonExportStarted: "יצוא JSON החל - ההורדה תתחיל בקרוב",
@@ -73,8 +63,6 @@ export default {
     noDataToExport: "אין נתונים זמינים ליצוא",
     exportTooLarge: "נתוני היצוא גדולים מדי. אנא נסו עם טווח תאריכים קטן יותר."
   },
-
-  // ✅ Transaction Management Toasts
   transactions: {
     transactionCreated: "העסקה נוצרה בהצלחה!",
     createSuccess: "העסקה נוצרה בהצלחה!",
@@ -94,10 +82,9 @@ export default {
     bulkImportFailed: "היבוא ההמוני נכשל. אנא בדקו את פורמט הקובץ.",
     duplicateTransactionWarning: "העסקה הזו עלולה להיות כפולה",
     securityAlert: "התראת אבטחה: העסקה סומנה לבדיקה",
-    batchSecurityAlert: "התראת אבטחה: מספר עסקאות סומנו לבדיקה"
+    batchSecurityAlert: "התראת אבטחה: מספר עסקאות סומנו לבדיקה",
+    deleteSuccess: "Delete Success"
   },
-
-  // ✅ Category Management Toasts
   categories: {
     categoryCreated: "הקטגוריה נוצרה בהצלחה!",
     categoryUpdated: "הקטגוריה עודכנה בהצלחה!",
@@ -111,8 +98,6 @@ export default {
     invalidCategoryIcon: "אנא בחרו סמל קטגוריה תקין",
     categoryLimitReached: "הגעתם למספר המקסימלי של קטגוריות"
   },
-
-  // ✅ Settings & Preferences Toasts
   settings: {
     settingsSaved: "ההגדרות נשמרו בהצלחה!",
     settingsResetToDefault: "ההגדרות אופסו לערכי ברירת המחדל",
@@ -128,8 +113,6 @@ export default {
     accessibilityEnabled: "תכונות נגישות הופעלו",
     accessibilityDisabled: "תכונות נגישות בוטלו"
   },
-
-  // ✅ Data & Sync Toasts
   data: {
     dataLoaded: "הנתונים נטענו בהצלחה!",
     dataRefreshed: "הנתונים רוענו בהצלחה!",
@@ -143,8 +126,6 @@ export default {
     backupRestored: "גיבוי נתונים שוחזר בהצלחה!",
     backupFailed: "פעולת הגיבוי נכשלה. אנא נסו שוב."
   },
-
-  // ✅ Validation & Error Toasts
   validation: {
     requiredField: "שדה זה נדרש",
     invalidEmail: "אנא הזינו כתובת אימייל תקינה",
@@ -157,8 +138,6 @@ export default {
     invalidFileType: "סוג קובץ לא תקין. סוגים מותרים: {allowedTypes}",
     characterLimit: "מותרים עד {limit} תווים"
   },
-
-  // ✅ System & Technical Toasts
   system: {
     pageNotFound: "הדף לא נמצא. מפנה ללוח הבקרה...",
     accessDenied: "הגישה נדחתה. אין לכם הרשאה לצפות בדף זה.",
@@ -170,8 +149,6 @@ export default {
     cookiesRequired: "נדרשים עוגיות כדי שהאפליקציה תעבוד כראוי",
     storageQuotaExceeded: "מכסת האחסון חרגה. אנא מחקו מידע כלשהו."
   },
-
-  // ✅ Success Actions
   success: {
     actionCompleted: "הפעולה הושלמה בהצלחה!",
     changesSaved: "השינויים שלכם נשמרו",
@@ -181,17 +158,15 @@ export default {
     invitationSent: "ההזמנה נשלחה בהצלחה!",
     feedbackSubmitted: "תודה על המשוב שלכם!",
     supportTicketCreated: "פנייה לתמיכה נוצרה בהצלחה!",
-    bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!"
+    bulkOperationSuccess: "{{count}} פעולות {{operation}} הושלמו בהצלחה!",
+    delete: "Successfully deleted!",
+    bulkDeleteSuccess: "{{count}} transactions deleted successfully!"
   },
-
-  // ✅ Error Actions
   error: {
     operationFailed: "הפעולה נכשלה. אנא נסו שוב.",
     bulkOperationFailed: "פעולת {{operation}} קבוצתית נכשלה. אנא נסו שוב.",
     bulkOperationPartialFail: "{{failed}} פעולות {{operation}} נכשלו"
   },
-
-  // ✅ Loading & Progress
   loading: {
     pleaseWait: "אנא המתינו...",
     loading: "טוען...",
@@ -205,8 +180,6 @@ export default {
     almostDone: "כמעט סיימנו...",
     signingOut: "מתנתק..."
   },
-
-  // ✅ Common Actions
   common: {
     copied: "הועתק ללוח!",
     linkCopied: "הקישור הועתק ללוח!",
@@ -221,4 +194,4 @@ export default {
     filterApplied: "הסינון הוחל בהצלחה",
     sortApplied: "המיון הוחל בהצלחה"
   }
-}; 
+};

@@ -4,40 +4,32 @@
  */
 
 export default {
-  // ניווט ראשי
-  navigation: 'ניווט',
-  dashboard: 'לוח בקרה',
-  transactions: 'עסקאות',
-  categories: 'קטגוריות',
-  analytics: 'אנליטיקה',
-  profile: 'פרופיל',
-  settings: 'הגדרות',
-  admin: 'מנהל',
-  contactSupport: 'צור קשר עם התמיכה',
-  
-  // ניווט מנהל
-  adminDashboard: 'לוח בקרה מנהל',
-  userManagement: 'ניהול משתמשים',
-  systemStats: 'סטטיסטיקות מערכת',
-  systemSettings: 'הגדרות מערכת',
-  activityLog: 'יומן פעילות',
-  administration: 'ניהול',
-  
-  // תפריט משתמש
-  profileDesc: 'נהל את הגדרות החשבון וההעדפות שלך',
-  settingsDesc: 'התאם הגדרות אפליקציה והעדפות',
-  help: 'עזרה',
-  helpDesc: 'קבל תמיכה ותיעוד',
-  
-  // נייד
-  mobileMenu: 'תפריט נייד',
-  
-  // פירורי לחם
-  home: 'בית',
-  back: 'חזור',
-  
-  // ניווט מהיר
-  overview: 'סקירה',
-  recent: 'אחרונים',
-  favorites: 'מועדפים'
-}; 
+  navigation: "ניווט",
+  dashboard: "לוח בקרה",
+  backToDashboard: "חזרה ללוח הבקרה",
+  transactions: "עסקאות",
+  categories: "קטגוריות",
+  analytics: "אנליטיקה",
+  profile: "פרופיל",
+  settings: "הגדרות",
+  admin: "מנהל",
+  contactSupport: "צור קשר עם התמיכה",
+  adminDashboard: "לוח בקרה מנהל",
+  userManagement: "ניהול משתמשים",
+  systemStats: "סטטיסטיקות מערכת",
+  systemSettings: "הגדרות מערכת",
+  activityLog: "יומן פעילות",
+  administration: "ניהול",
+  profileDesc: "נהל את הגדרות החשבון וההעדפות שלך",
+  settingsDesc: "התאם הגדרות אפליקציה והעדפות",
+  help: "עזרה",
+  helpDesc: "קבל תמיכה ותיעוד",
+  mobileMenu: "תפריט נייד",
+  home: "בית",
+  back: "חזור",
+  overview: "סקירה",
+  recent: "אחרונים",
+  favorites: "מועדפים",
+  exchange: "המרת מטבעות",
+  recurring: "עסקאות חוזרות"
+};
