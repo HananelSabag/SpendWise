@@ -12,9 +12,7 @@ import {
 
 import { useTranslation, useNotifications, useCurrency } from '../../../../stores';
 import { useRecurringTransactions } from '../../../../hooks/useRecurringTransactions';
-import { Button, Input, LoadingSpinner, Badge, SideDrawer, Modal } from '../../../ui';
-import BottomSheet from '../../../common/BottomSheet';
-import { useIsMobile } from '../../../../hooks/useIsMobile';
+import { Button, Input, LoadingSpinner, Badge, Modal } from '../../../ui';
 import { cn, dateHelpers } from '../../../../utils/helpers';
 import RecurringSetupModal from '../modals/RecurringSetupModal';
 
@@ -175,7 +173,6 @@ const DeleteScopeModal = ({ isOpen, template, onConfirm, onCancel }) => {
 const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => {
   const { t, isRTL } = useTranslation();
   const { addNotification } = useNotifications();
-  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery]         = useState('');
   const [statusFilter, setStatusFilter]       = useState('all');
@@ -326,15 +323,15 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
 
   return (
     <>
-      {isMobile ? (
-        <BottomSheet isOpen={isOpen} onClose={onClose} title={t('recurringManager.title', 'Recurring Manager')}>
-          {panelContent}
-        </BottomSheet>
-      ) : (
-        <SideDrawer isOpen={isOpen} onClose={onClose} closeable={false} width={780}>
-          {panelContent}
-        </SideDrawer>
-      )}
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t('recurringManager.title', 'Recurring Manager')}
+        sheet
+        drawerWidth={780}
+      >
+        {panelContent}
+      </Modal>
 
       {/* Modals rendered at root level — no z-index conflicts */}
       <RecurringSetupModal
