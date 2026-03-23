@@ -226,6 +226,8 @@ const RecurringSetupModal = ({
       onClose={handleClose}
       size="3xl"
       className={className}
+      sheet
+      drawerWidth={560}
     >
       <AnimatePresence mode="wait">
         {!showSuccess ? (

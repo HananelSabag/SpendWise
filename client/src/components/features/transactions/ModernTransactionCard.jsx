@@ -1,210 +1,51 @@
 /**
- * 🎨 MODERN TRANSACTION CARD - Revolutionary Design
- * Features: Stunning visuals, Recurring vs One-time distinction, Perfect animations
- * Mobile-first, Accessibility compliant, Premium UX
- * @version 1.0.0 - REVOLUTIONARY DESIGN
+ * 💳 TRANSACTION CARD
+ * Mobile-first, accessible, smart action routing
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MoreVertical, Edit, Trash2, Copy, Repeat, Clock, 
-  Calendar, ArrowUpRight, ArrowDownRight, Sparkles,
-  Zap, Target, Star, Bookmark, Eye, DollarSign,
-  CreditCard, Wallet, PiggyBank, Receipt, Tag
-} from 'lucide-react';
+import { Repeat, Calendar, Clock, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-import { useTranslation, useCurrency, useTheme } from '../../../stores';
+import { useTranslation, useCurrency } from '../../../stores';
 import { getIconComponent } from '../../../config/categoryIcons';
 import { cn, dateHelpers } from '../../../utils/helpers';
-import { Button, Badge, Tooltip } from '../../ui';
-
-// ✅ DEDICATED ACTION COMPONENTS
+import { Tooltip } from '../../ui';
 import RecurringTransactionActions from './actions/RecurringTransactionActions';
 import OneTimeTransactionActions from './actions/OneTimeTransactionActions';
 
-// ✨ Enhanced Animation Variants
-const cardVariants = {
-  initial: { 
-    opacity: 0, 
-    y: 20, 
-    scale: 0.95,
-    rotateX: -10
-  },
-  animate: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    rotateX: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.25, 0.1, 0.25, 1]
-    }
-  },
-  hover: { 
-    y: -8,
-    scale: 1.02,
-    rotateX: 2,
-    transition: {
-      duration: 0.2,
-      ease: [0.25, 0.1, 0.25, 1]
-    }
-  },
-  tap: { 
-    scale: 0.98,
-    transition: { duration: 0.1 }
-  }
-};
+// ── Sub-components ────────────────────────────────────────────────────────────
 
-const iconVariants = {
-  initial: { scale: 0.8, rotate: -10 },
-  animate: { 
-    scale: 1, 
-    rotate: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.25, 0.1, 0.25, 1]
-    }
-  },
-  hover: { 
-    scale: 1.1,
-    rotate: 5,
-    transition: { duration: 0.2 }
-  }
-};
-
-const amountVariants = {
-  initial: { opacity: 0, x: 20 },
-  animate: { 
-    opacity: 1, 
-    x: 0,
-    transition: {
-      duration: 0.4,
-      delay: 0.1,
-      ease: [0.25, 0.1, 0.25, 1]
-    }
-  }
-};
-
-const menuVariants = {
-  initial: { opacity: 0, scale: 0.8, y: -10 },
-  animate: { 
-    opacity: 1, 
-    scale: 1, 
-    y: 0,
-    transition: {
-      duration: 0.2,
-      ease: [0.25, 0.1, 0.25, 1]
-    }
-  },
-  exit: { 
-    opacity: 0, 
-    scale: 0.8, 
-    y: -10,
-    transition: { duration: 0.15 }
-  }
-};
-
-// ✨ Recurring Transaction Indicator
-const RecurringIndicator = ({ transaction, className = '' }) => {
+const RecurringBadge = ({ transaction }) => {
   const { t } = useTranslation();
-  const isRecurring = transaction?.template_id || transaction?.is_recurring;
-  
-  if (!isRecurring) return null;
-
+  if (!transaction?.template_id && !transaction?.is_recurring) return null;
   return (
-    <motion.div
-      initial={{ scale: 0, rotate: -180 }}
-      animate={{ scale: 1, rotate: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className={cn(
-        "absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center",
-        "bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg",
-        "border-2 border-white dark:border-gray-800",
-        className
-      )}
-    >
+    <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-md border-2 border-white dark:border-gray-800 flex items-center justify-center">
       <Tooltip content={t('transactions.recurring.tooltip', 'Recurring Transaction')}>
-        <Repeat className="w-4 h-4" />
+        <Repeat className="w-3 h-3" />
       </Tooltip>
-    </motion.div>
+    </div>
   );
 };
 
-// ✨ Transaction Type Badge
-const TransactionTypeBadge = ({ isIncome, isRecurring, className = '' }) => {
+const TypeBadge = ({ isIncome, isRecurring }) => {
   const { t } = useTranslation();
-  
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay: 0.15 }}
-      className={cn(
-        "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium",
-        isIncome 
-          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-          : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
-        className
-      )}
-    >
-      {isIncome ? (
-        <ArrowUpRight className="w-3 h-3" />
-      ) : (
-        <ArrowDownRight className="w-3 h-3" />
-      )}
-      <span>
-        {isIncome 
-          ? t('transactions.types.income', 'Income')
-          : t('transactions.types.expense', 'Expense')
-        }
-      </span>
-      {isRecurring && (
-        <Repeat className="w-3 h-3 ml-1 text-purple-500" />
-      )}
-    </motion.div>
+    <span className={cn(
+      'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border',
+      isIncome
+        ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+        : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+    )}>
+      {isIncome ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+      {isIncome ? t('transactions.types.income', 'Income') : t('transactions.types.expense', 'Expense')}
+      {isRecurring && <Repeat className="w-3 h-3 ml-0.5 text-purple-500" />}
+    </span>
   );
 };
 
-// ✅ SMART ACTION MENU - Routes to appropriate action component
-const SmartActionMenu = ({ 
-  transaction, 
-  onEdit, 
-  onDelete, 
-  onDuplicate, 
-  className = '' 
-}) => {
-  // ✅ Determine if this is a recurring transaction
-  const isRecurring = transaction?.template_id || transaction?.is_recurring;
-  
-  // ✅ Use dedicated action component based on transaction type
-  if (isRecurring) {
-    return (
-      <RecurringTransactionActions
-        transaction={transaction}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onSuccess={() => {}} // Parent will handle success
-        variant="compact"
-        className={className}
-      />
-    );
-  }
+// ── Main Card ─────────────────────────────────────────────────────────────────
 
-  return (
-    <OneTimeTransactionActions
-      transaction={transaction}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onDuplicate={onDuplicate}
-      onSuccess={() => {}} // Parent will handle success
-      variant="compact"
-      className={className}
-    />
-  );
-};
-
-// 🎨 MAIN MODERN TRANSACTION CARD COMPONENT
 const ModernTransactionCard = ({
   transaction,
   isSelected = false,
@@ -217,327 +58,159 @@ const ModernTransactionCard = ({
 }) => {
   const { t, isRTL } = useTranslation();
   const { formatCurrency } = useCurrency();
-  const { isDark } = useTheme();
-  
-  const [isHovered, setIsHovered] = useState(false);
 
-  // ✅ Transaction properties with enhanced logic
-  const isIncome = transaction?.type === 'income';
-  const isRecurring = transaction?.template_id || transaction?.is_recurring;
-  const amount = Math.abs(transaction?.amount || 0);
-  const categoryKey = transaction?.category_name?.toLowerCase() || 'other';
-  
-  // ✅ TIMEZONE-AWARE date handling - Use user's intended transaction time
-  const getTransactionDateTime = () => {
-    // Prioritize transaction_datetime (user's intended time) over created_at (server time)
-    const datetime = transaction?.transaction_datetime || transaction?.created_at || transaction?.date;
-    return new Date(datetime);
-  };
+  const isIncome   = transaction?.type === 'income';
+  const isRecurring = Boolean(transaction?.template_id || transaction?.is_recurring);
+  const amount     = Math.abs(transaction?.amount || 0);
 
-  const date = getTransactionDateTime();
-  const isToday = date.toDateString() === new Date().toDateString();
-  const isYesterday = date.toDateString() === new Date(Date.now() - 86400000).toDateString();
-  
-  const getDateLabel = () => {
-    if (isToday) return t('date.today', 'Today');
-    if (isYesterday) return t('date.yesterday', 'Yesterday');
-    return date.toLocaleDateString();
-  };
-
-  const getTimeLabel = () => {
-    if (isToday) {
-      // ✅ NEW: Show user's intended time in 24-hour format
-      const timeString = date.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false // Use 24-hour format
-      });
-      
-      return timeString;
-    }
-    return dateHelpers.fromNow(date);
-  };
-
-  const getTimezoneDisplay = () => {
-    // ✅ NEW: Show timezone in requested format like "israel 21:23"
-    if (transaction?.transaction_datetime) {
-      try {
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const timeString = date.toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: false
-        });
-        
-        // Convert timezone to friendly name
-        const timezoneName = userTimezone.split('/').pop()?.toLowerCase() || 'local';
-        const friendlyName = timezoneName === 'jerusalem' ? 'israel' : timezoneName;
-        
-        return `${friendlyName} ${timeString}`;
-      } catch (error) {
-        return getTimeLabel();
-      }
-    }
-    return getTimeLabel();
-  };
-
-  // ✅ Category icon with fallback
-  const Icon = useMemo(() => {
-    try {
-      return getIconComponent(
-        transaction?.category_icon || 
-        transaction?.category?.icon || 
-        'Receipt'
-      );
-    } catch {
-      return Receipt;
-    }
+  // Date / time helpers
+  const date = useMemo(() => {
+    const raw = transaction?.transaction_datetime || transaction?.created_at || transaction?.date;
+    return raw ? new Date(raw) : new Date();
   }, [transaction]);
 
-  // ✅ Enhanced card styling based on type and mode
-  const cardClasses = cn(
-    // Base styles
-    "relative group transition-all duration-300 ease-out",
-    "bg-gradient-to-br border-2 shadow-lg hover:shadow-2xl",
-    "transform-gpu perspective-1000",
-    
-    // Responsive sizing
-    viewMode === 'grid' 
-      ? "rounded-2xl p-6" 
-      : "rounded-xl p-4 md:p-5",
-    
-    // Theme and selection states
-    isSelected 
-      ? "ring-4 ring-blue-500 ring-opacity-50 bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-600"
-      : isDark
-        ? "from-gray-800 to-gray-850 border-gray-700 hover:border-gray-600"
-        : "from-white to-gray-50 border-gray-200 hover:border-gray-300",
-    
-    // Recurring transaction special styling
-    isRecurring && !isSelected && cn(
-      "border-purple-200 dark:border-purple-800",
-      isDark 
-        ? "from-purple-900/10 to-violet-900/10" 
-        : "from-purple-50 to-violet-50"
-    ),
-    
-    // Income/Expense accent
-    !isSelected && !isRecurring && cn(
-      isIncome 
-        ? "border-l-4 border-l-green-400 dark:border-l-green-500"
-        : "border-l-4 border-l-red-400 dark:border-l-red-500"
-    ),
-    
-    className
-  );
+  const dateLabel = useMemo(() => {
+    const today     = new Date();
+    const yesterday = new Date(Date.now() - 86_400_000);
+    if (date.toDateString() === today.toDateString())     return t('date.today', 'Today');
+    if (date.toDateString() === yesterday.toDateString()) return t('date.yesterday', 'Yesterday');
+    return date.toLocaleDateString();
+  }, [date, t]);
+
+  const timeLabel = useMemo(() => {
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      if (transaction?.transaction_datetime) {
+        try {
+          const tz   = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const name = tz.split('/').pop()?.toLowerCase().replace('jerusalem', 'israel') ?? 'local';
+          const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+          return `${name} ${time}`;
+        } catch { /* fallthrough */ }
+      }
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    return dateHelpers.fromNow(date);
+  }, [date, transaction]);
+
+  // Category icon
+  const Icon = useMemo(() => {
+    try { return getIconComponent(transaction?.category_icon || transaction?.category?.icon || 'Receipt'); }
+    catch { return null; }
+  }, [transaction]);
+
+  const isGrid = viewMode === 'grid';
 
   return (
     <motion.div
-      variants={cardVariants}
-      initial="initial"
-      animate="animate"
-      whileHover="hover"
-      whileTap="tap"
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      className={cn(cardClasses, "overflow-visible")}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className={cn(
+        'relative group transition-shadow duration-200',
+        'bg-white dark:bg-gray-800 border-2 shadow-sm hover:shadow-md',
+        isGrid ? 'rounded-2xl p-5' : 'rounded-xl p-4',
+        isSelected
+          ? 'ring-2 ring-blue-500 ring-offset-1 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+          : isRecurring
+            ? 'border-purple-200 dark:border-purple-800'
+            : isIncome
+              ? 'border-l-4 border-l-green-400 dark:border-l-green-500 border-t-gray-200 border-r-gray-200 border-b-gray-200 dark:border-t-gray-700 dark:border-r-gray-700 dark:border-b-gray-700'
+              : 'border-l-4 border-l-red-400 dark:border-l-red-500 border-t-gray-200 border-r-gray-200 border-b-gray-200 dark:border-t-gray-700 dark:border-r-gray-700 dark:border-b-gray-700',
+        className
+      )}
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
-      {/* ✨ Recurring Transaction Indicator */}
-      <RecurringIndicator transaction={transaction} />
-
-      {/* ✨ Selection Indicator */}
+      {/* Selection check */}
       <AnimatePresence>
         {isSelected && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
             className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold z-10"
-          >
-            ✓
-          </motion.div>
+          >✓</motion.div>
         )}
       </AnimatePresence>
 
-      {/* ✨ Main Content - Mobile Optimized */}
-      <div className={cn(
-        "flex gap-3",
-        viewMode === 'grid' && "flex-col text-center",
-        isRTL && "flex-row-reverse"
-      )}>
-        
-        {/* ✨ Category Icon - Smaller on Mobile */}
-        <motion.div
-          variants={iconVariants}
-          className="relative flex-shrink-0"
-        >
-          <div
-            className={cn(
-              "relative rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg border-2",
-              "transition-all duration-300",
-              isIncome
-                ? "bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-900/40 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300"
-                : "bg-gradient-to-br from-red-100 to-rose-200 dark:from-red-900/40 dark:to-rose-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300",
-              isHovered && "scale-110 shadow-xl"
-            )}
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 flex items-center justify-center">
-              <Icon className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7" strokeWidth={2} />
+      <div className={cn('flex gap-3', isGrid && 'flex-col items-center text-center', isRTL && !isGrid && 'flex-row-reverse')}>
+        {/* Category icon */}
+        <div className="relative flex-shrink-0">
+          <div className={cn(
+            'rounded-xl flex items-center justify-center shadow-md border',
+            isGrid ? 'w-14 h-14' : 'w-10 h-10 sm:w-12 sm:h-12',
+            isIncome
+              ? 'bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-900/40 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
+              : 'bg-gradient-to-br from-red-100 to-rose-200 dark:from-red-900/40 dark:to-rose-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
+          )}>
+            {Icon && <Icon className={cn('stroke-2', isGrid ? 'w-7 h-7' : 'w-5 h-5 sm:w-6 sm:h-6')} />}
+            {/* +/- dot */}
+            <div className={cn(
+              'absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold',
+              isIncome ? 'bg-green-600 dark:bg-green-500' : 'bg-red-600 dark:bg-red-500'
+            )}>
+              {isIncome ? '+' : '−'}
             </div>
-            
-            {/* ✨ Income/Expense Indicator */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className={cn(
-                "absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-white text-xs",
-                isIncome 
-                  ? "bg-green-600 dark:bg-green-500" 
-                  : "bg-red-600 dark:bg-red-500"
-              )}
-            >
-              {isIncome ? '+' : '-'}
-            </motion.div>
           </div>
-        </motion.div>
+          <RecurringBadge transaction={transaction} />
+        </div>
 
-        {/* ✨ Transaction Details - Mobile Optimized Layout */}
-        <div className={cn(
-          "flex-1 min-w-0 space-y-2",
-          viewMode === 'grid' && "text-center space-y-3"
-        )}>
-          {/* Top Row: Description and Amount */}
+        {/* Details */}
+        <div className={cn('flex-1 min-w-0 space-y-1.5', isGrid && 'w-full')}>
+          {/* Description + Amount */}
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <h4 className={cn(
-                "font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base",
-                viewMode === 'grid' ? "text-center" : "text-left"
+            <h4 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base truncate">
+              {transaction?.description || t('transactions.noDescription', 'No description')}
+            </h4>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={cn(
+                'font-bold text-sm sm:text-base tabular-nums whitespace-nowrap',
+                isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               )}>
-                {transaction?.description || t('transactions.noDescription', 'No description')}
-              </h4>
-            </div>
-            
-            {/* Amount - Prominent on Mobile */}
-            <motion.div
-              variants={amountVariants}
-              className="flex items-center gap-2"
-            >
-              <div className={cn(
-                "font-bold text-base sm:text-lg leading-tight tabular-nums tracking-tight",
-                "whitespace-nowrap",
-                isIncome 
-                  ? "text-green-600 dark:text-green-400" 
-                  : "text-red-600 dark:text-red-400"
-              )}>
-                {isIncome ? '+' : '-'}{formatCurrency(amount)}
-              </div>
-              
-              {/* Selection Checkbox - Better positioned */}
+                {isIncome ? '+' : '−'}{formatCurrency(amount)}
+              </span>
+              {/* Select checkbox */}
               {onSelect && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(transaction.id, !isSelected);
-                  }}
+                  onClick={e => { e.stopPropagation(); onSelect(transaction.id, !isSelected); }}
                   className={cn(
-                    "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ml-2",
-                    isSelected
-                      ? "bg-blue-500 border-blue-500 text-white"
-                      : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+                    'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
+                    isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
                   )}
                   aria-label={t('actions.select', 'Select')}
                 >
                   {isSelected && <span className="text-xs leading-none">✓</span>}
                 </button>
               )}
-            </motion.div>
+            </div>
           </div>
-          
-          {/* Middle Row: Category and Type */}
-          <div className={cn(
-            "flex items-center gap-2",
-            viewMode === 'grid' && "justify-center"
-          )}>
-            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
+
+          {/* Category + type */}
+          <div className={cn('flex items-center gap-2 flex-wrap', isGrid && 'justify-center')}>
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {transaction?.category_name || transaction?.category?.name || t('categories.uncategorized', 'Uncategorized')}
             </span>
-            <span className="text-gray-400 text-xs">•</span>
-            <TransactionTypeBadge isIncome={isIncome} isRecurring={isRecurring} />
+            <span className="text-gray-300 dark:text-gray-600 text-xs">•</span>
+            <TypeBadge isIncome={isIncome} isRecurring={isRecurring} />
           </div>
 
-          {/* Bottom Row: Date and Time - Full Width */}
-          <div className={cn(
-            "flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400",
-            viewMode === 'grid' && "justify-center"
-          )}>
+          {/* Date + time */}
+          <div className={cn('flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500', isGrid && 'justify-center')}>
             <Calendar className="w-3 h-3" />
-            <span>{getDateLabel()}</span>
-            <span className="text-gray-400">•</span>
+            <span>{dateLabel}</span>
+            <span className="text-gray-300 dark:text-gray-600">•</span>
             <Clock className="w-3 h-3" />
-            <span className="hidden sm:inline">{transaction?.transaction_datetime ? getTimezoneDisplay() : getTimeLabel()}</span>
-            <span className="sm:hidden">{getTimeLabel().split(' ')[0]}</span>
+            <span>{timeLabel}</span>
           </div>
 
-          {/* Action Menu - Better positioned for mobile */}
-          {viewMode !== 'grid' && (
-            <div className="flex justify-end">
-              <SmartActionMenu
-                transaction={transaction}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-              />
-            </div>
-          )}
-
-          {/* Grid View Action Menu */}
-          {viewMode === 'grid' && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <SmartActionMenu
-                transaction={transaction}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-                className="mx-auto"
-              />
-            </div>
-          )}
+          {/* Actions */}
+          <div className={cn('flex', isGrid ? 'justify-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-700' : 'justify-end')}>
+            {isRecurring ? (
+              <RecurringTransactionActions transaction={transaction} onEdit={onEdit} onDelete={onDelete} onSuccess={() => {}} variant="compact" />
+            ) : (
+              <OneTimeTransactionActions transaction={transaction} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} onSuccess={() => {}} variant="compact" />
+            )}
+          </div>
         </div>
       </div>
-
-      {/* ✨ Recurring Pattern Overlay */}
-      {isRecurring && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.05 }}
-          className="absolute inset-0 pointer-events-none rounded-xl"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              45deg,
-              currentColor,
-              currentColor 1px,
-              transparent 1px,
-              transparent 10px
-            )`,
-            color: isIncome ? '#10b981' : '#f59e0b'
-          }}
-        />
-      )}
-
-      {/* ✨ Hover Glow Effect */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isHovered ? 0.1 : 0 }}
-        transition={{ duration: 0.3 }}
-        className={cn(
-          "absolute inset-0 rounded-xl pointer-events-none",
-          isIncome 
-            ? "bg-green-400" 
-            : "bg-red-400"
-        )}
-      />
     </motion.div>
   );
 };

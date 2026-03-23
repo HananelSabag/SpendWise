@@ -9,6 +9,7 @@ export { default as Badge } from './Badge';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Avatar } from './Avatar'; // Add Avatar export
 export { default as Modal } from './Modal';
+export { default as SideDrawer } from './SideDrawer';
 export { default as Alert } from './Alert';
 export { default as Dropdown } from './Dropdown';
 export { default as Tooltip } from './Tooltip';

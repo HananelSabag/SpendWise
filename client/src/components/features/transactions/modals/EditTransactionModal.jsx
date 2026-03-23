@@ -199,7 +199,8 @@ const EditTransactionModal = ({
         title={modalConfig.title}
         size="5xl"
         className={cn("backdrop-blur-sm", className)}
-        mobileFullScreen={true}
+        sheet
+        drawerWidth={600}
       >
         <AnimatePresence mode="wait">
           {!showSuccess ? (

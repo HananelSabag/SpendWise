@@ -1,7 +1,8 @@
 /**
  * 🪟 MODAL COMPONENT - Mobile-First Responsive Modal
- * Features: Zustand stores, RTL support, Touch-optimized, Mobile slide-up
- * @version 2.0.0
+ * When sheet={true}: BottomSheet on mobile, SideDrawer on desktop.
+ * When sheet={false} (default): centered modal on all viewports.
+ * @version 3.0.0
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -9,9 +10,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-// ✅ NEW: Import Zustand stores (replaces Context API!)
 import { useTranslation } from '../../stores';
-
+import { useIsMobile } from '../../hooks/useIsMobile';
+import BottomSheet from '../common/BottomSheet';
+import SideDrawer from './SideDrawer';
 import { cn } from '../../utils/helpers';
 
 const Modal = ({
@@ -25,17 +27,70 @@ const Modal = ({
   className = '',
   overlayClassName = '',
   mobileFullScreen = false,
+  sheet = false,   // when true: BottomSheet on mobile, SideDrawer on desktop
+  drawerWidth = 520,
   ...props
 }) => {
-  // ✅ NEW: Zustand stores (replacing Context API)
+  // ── All hooks MUST be called unconditionally (Rules of Hooks) ─────────────
+  const isMobile = useIsMobile();
   const { t, isRTL } = useTranslation();
-
   const modalRef = useRef(null);
 
-  // ✅ Enhanced size configurations for better desktop experience
+  // ESC key + scroll lock — only for centered modal mode
+  useEffect(() => {
+    if (sheet) return; // sheet components manage their own ESC + scroll lock
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && closeable && isOpen) onClose?.();
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, closeable, onClose, sheet]);
+
+  // Focus first element on open — only for centered modal mode
+  useEffect(() => {
+    if (sheet) return;
+    if (isOpen && modalRef.current) {
+      const focusable = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      focusable[0]?.focus();
+    }
+  }, [isOpen, sheet]);
+
+  // ── Sheet mode — delegate to BottomSheet / SideDrawer ────────────────────
+  if (sheet) {
+    if (isMobile) {
+      return (
+        <BottomSheet isOpen={isOpen} onClose={onClose} title={title}>
+          {children}
+        </BottomSheet>
+      );
+    }
+    return (
+      <SideDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={title}
+        width={drawerWidth}
+        closeable={closeable}
+        closeOnOverlayClick={closeOnOverlayClick}
+        className={className}
+      >
+        {children}
+      </SideDrawer>
+    );
+  }
+
+  // ── Centered modal mode (original behaviour) ──────────────────────────────
   const sizes = {
     xs: 'max-w-xs',
-    sm: 'max-w-sm', 
+    sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
@@ -45,51 +100,15 @@ const Modal = ({
     '5xl': 'max-w-5xl',
     '6xl': 'max-w-6xl',
     '7xl': 'max-w-7xl',
-    full: 'max-w-full'
+    full: 'max-w-full',
   };
 
-  // ✅ Handle ESC key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && closeable && isOpen) {
-        onClose?.();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, closeable, onClose]);
-
-  // ✅ Handle overlay click
   const handleOverlayClick = (e) => {
     if (closeOnOverlayClick && closeable && e.target === e.currentTarget) {
       onClose?.();
     }
   };
 
-  // ✅ Focus management
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      // Focus first focusable element
-      const focusableElements = modalRef.current.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      const firstElement = focusableElements[0];
-      if (firstElement) {
-        firstElement.focus();
-      }
-    }
-  }, [isOpen]);
-
-  // ✅ Don't render if not open
   if (!isOpen) return null;
 
   const modalContent = (

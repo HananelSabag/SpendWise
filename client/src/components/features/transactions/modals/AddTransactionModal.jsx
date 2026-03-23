@@ -91,7 +91,8 @@ const AddTransactionModal = ({
       title={t('modals.add.title')}
       size="6xl"
       className={cn("backdrop-blur-sm", className)}
-      mobileFullScreen={true}
+      sheet
+      drawerWidth={640}
     >
       <AnimatePresence mode="wait">
         <motion.div
