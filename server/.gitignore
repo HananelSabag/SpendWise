@@ -1,47 +1,46 @@
-# Environment variables
+# Dependencies
+node_modules/
+
+# Environment variables (CRITICAL: never commit secrets)
 .env
 .env.local
-.env.production
 .env.development
+.env.production
+.env.test
 .env.*.local
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
 
 # Database files
 *.db
 *.sqlite
+*.sqlite3
 
-# Log files
-logs
-*.log
+# Package manager lock files
+package-lock.json
+yarn.lock
 
-# Node modules
-node_modules
-
-# Build output
-dist
-build
+# Runtime data
+pids/
+*.pid
+*.pid.lock
 
 # Temporary files
-tmp
-temp
+tmp/
+temp/
 
-# IDE and editor folders
-.vscode
-.idea
-*.sublime-project
-*.sublime-workspace
-
-# OS generated files
+# OS files
 .DS_Store
 Thumbs.db
 
-# NPM package lock
-package-lock.json
-
-# Yarn lock file
-yarn.lock
-
-# Environment variable files
-.env
-.env.local
-.env.development
-.env.production
+# Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
