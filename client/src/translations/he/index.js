@@ -45,9 +45,9 @@ import completion from './completion.js';
 import confirmations from './confirmations.js';
 import dashboardPage from './dashboardPage.js';
 import datePicker from './datePicker.js';
-import delete from './delete.js';
+import deleteTranslations from './delete.js';
 import dialogs from './dialogs.js';
-import export from './export.js';
+import exportTranslations from './export.js';
 import features from './features.js';
 import fields from './fields.js';
 import form from './form.js';
@@ -129,9 +129,9 @@ export default {
   confirmations,
   dashboardPage,
   datePicker,
-  delete,
+  delete: deleteTranslations,
   dialogs,
-  export,
+  export: exportTranslations,
   features,
   fields,
   form,
