@@ -135,15 +135,15 @@ const MobileBottomNav = () => {
           // Center slot — menu button
           if (tab === null) {
             return (
-              <div key="menu" className="flex flex-col items-center -mt-5 mb-1">
+              <div key="menu" className="flex flex-col items-center -mt-6 mb-1">
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   onClick={() => setMenuOpen((v) => !v)}
                   aria-label={menuOpen ? 'Close quick actions' : 'Quick actions'}
                   className={cn(
-                    'w-14 h-14 rounded-full',
+                    'w-16 h-16 rounded-full',
                     'bg-gradient-to-br from-blue-600 to-indigo-600',
-                    'shadow-lg shadow-blue-500/40',
+                    'shadow-xl shadow-blue-500/50',
                     'flex items-center justify-center',
                     'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                     'transition-all'
@@ -153,7 +153,7 @@ const MobileBottomNav = () => {
                     animate={{ rotate: menuOpen ? 45 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Plus className="w-7 h-7 text-white" />
+                    <Plus className="w-8 h-8 text-white" />
                   </motion.div>
                 </motion.button>
                 <span className="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -212,7 +212,7 @@ const MobileBottomNav = () => {
         onClose={() => setMenuOpen(false)}
         title={t('common.quickActions') || 'Quick Actions'}
       >
-        <div className="grid grid-cols-2 gap-3 pb-4">
+        <div className="grid grid-cols-2 gap-4 pb-6">
           {menuActions.map((action) => {
             const Icon = action.icon;
             return (
@@ -220,13 +220,13 @@ const MobileBottomNav = () => {
                 key={action.key}
                 onClick={action.action}
                 className={cn(
-                  'flex items-center gap-3 p-4 rounded-xl',
+                  'flex items-center gap-3 p-5 rounded-2xl',
                   action.bg,
                   'active:scale-95 transition-transform'
                 )}
               >
-                <Icon className={cn('w-5 h-5 shrink-0', action.color)} />
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-left">
+                <Icon className={cn('w-6 h-6 shrink-0', action.color)} />
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 text-left">
                   {action.label}
                 </span>
               </button>

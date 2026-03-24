@@ -228,11 +228,24 @@ const DesktopDashboard = ({
   formatCurrency, t, navigate,
 }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-      </p>
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+      <button
+        onClick={() => navigate('/profile')}
+        title="Go to profile"
+        className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      >
+        <Avatar
+          src={user?.avatar || user?.profile_picture_url || user?.picture}
+          fallback={user?.firstName?.charAt(0) || user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+          className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-gray-800 shadow-md hover:opacity-80 transition-opacity"
+        />
+      </button>
     </div>
 
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">

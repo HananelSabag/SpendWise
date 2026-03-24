@@ -604,13 +604,11 @@ const DesktopTransactions = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('page.title', 'Transactions')}
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
         {isRegenerating && (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            {t('autoGenerating', 'Auto-generating...')}
+            Auto-generating...
           </div>
         )}
       </div>
