@@ -15,6 +15,14 @@ import { clearStorageFromURL } from './utils/clearStorage.js';
 // ✅ Clear storage based on URL parameters (for dev mode)
 clearStorageFromURL();
 
+// ✅ Auto-reload on stale chunk after a new Vercel deployment.
+// Vite renames JS chunks on every build (content hash). If the browser has
+// an old index.html cached and tries to load a chunk that no longer exists
+// on the CDN, it gets a fetch error. Reloading fetches fresh HTML + new chunks.
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload();
+});
+
 /**
  * 🚨 Application Error Fallback
  */
