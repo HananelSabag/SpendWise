@@ -232,7 +232,3 @@ doc/**
 doc/current-fix.md
 **/*workflow*.md
 **/workflow_state.md
-
-# Stray debug files accidentally created during diagnostics
-how --name-only HEAD~1
-t --oneline HEAD~5..HEAD

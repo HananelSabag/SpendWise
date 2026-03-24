@@ -4,14 +4,14 @@ A modern, full-stack expense tracking application built with React and Node.js, 
 
 ## 👨‍💻 Author & Portfolio Project
 
-**Hananel Sabag** - Software Engineer  
+**Hananel Sabag** - Software Engineer
 💼 GitHub: [@HananelSabag](https://github.com/HananelSabag)
 
 > **Portfolio Showcase Project** - This project demonstrates full-stack development skills including React, Node.js, PostgreSQL, authentication, real-time features, and production deployment. Created as part of my software engineering portfolio.
 
 ## ⚠️ **Important Notice - Portfolio Project**
 
-This repository is shared for **educational and portfolio demonstration purposes only**. 
+This repository is shared for **educational and portfolio demonstration purposes only**.
 
 ### 📋 **Viewing & Learning**
 - ✅ **Clone and explore** the codebase to see implementation patterns
@@ -43,6 +43,9 @@ SpendWise is a comprehensive personal finance management tool that helps users t
 - **Data Export** - Export transactions in CSV, JSON, and PDF formats
 - **Category Management** - Custom categories with icons and descriptions
 - **Dark/Light Themes** - User preference-based theme switching
+- **Automated Testing** - Unit and integration test suite (Vitest for frontend, Jest for backend)
+- **CI/CD Pipeline** - GitHub Actions for automated testing and linting on every push
+- **Row-Level Security (RLS)** - Supabase RLS policies for data isolation per user
 
 ## 🛠 Tech Stack
 
@@ -55,6 +58,7 @@ SpendWise is a comprehensive personal finance management tool that helps users t
 - **Charts**: Recharts for data visualization
 - **Icons**: Lucide React + Heroicons
 - **PWA**: Vite PWA plugin with Workbox
+- **Testing**: Vitest + React Testing Library
 
 ### Backend
 - **Runtime**: Node.js 18+
@@ -66,6 +70,7 @@ SpendWise is a comprehensive personal finance management tool that helps users t
 - **Security**: Helmet, CORS, XSS protection, rate limiting
 - **Logging**: Winston with daily log rotation
 - **Scheduling**: Node-cron for automated tasks
+- **Testing**: Jest with supertest
 
 ### Database & Hosting
 - **Database**: Supabase (PostgreSQL)
@@ -73,28 +78,33 @@ SpendWise is a comprehensive personal finance management tool that helps users t
 - **Frontend Hosting**: Vercel
 - **File Storage**: Server-based uploads with CORS support
 
+### CI/CD
+- GitHub Actions
+
 ## 📁 Project Structure
 
 ```
 SpendWise/
+├── .github/                # CI/CD workflows (GitHub Actions)
 ├── client/                 # Frontend React application
 │   ├── src/
 │   │   ├── components/     # Reusable UI components
-│   │   ├── pages/         # Main application pages
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── context/       # React context providers
-│   │   ├── utils/         # Utility functions
-│   │   └── config/        # Configuration files
-│   ├── public/            # Static assets
-│   └── dist/              # Production build output
-├── server/                # Backend Node.js application
-│   ├── routes/            # API route definitions
-│   ├── controllers/       # Business logic controllers
-│   ├── middleware/        # Express middleware
-│   ├── config/            # Database and app configuration
-│   ├── utils/             # Server utilities
-│   └── uploads/           # File upload storage
-└── mcp-tools/             # Development tools and scripts
+│   │   ├── pages/          # Main application pages
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── context/        # React context providers
+│   │   ├── utils/          # Utility functions
+│   │   └── config/         # Configuration files
+│   ├── public/             # Static assets
+│   └── dist/               # Production build output
+├── server/                 # Backend Node.js application
+│   ├── routes/             # API route definitions
+│   ├── controllers/        # Business logic controllers
+│   ├── middleware/          # Express middleware
+│   ├── config/             # Database and app configuration
+│   ├── utils/              # Server utilities
+│   ├── __tests__/          # Backend test suite (Jest)
+│   └── uploads/            # File upload storage
+└── mcp-tools/              # MCP server for AI-powered database queries
 ```
 
 ## 🚀 Quick Start (For Learning & Development)
@@ -115,9 +125,6 @@ cd SpendWise
 ### 2. Install Dependencies
 
 ```bash
-# Install root dependencies
-npm install
-
 # Install client dependencies
 cd client
 npm install
@@ -203,17 +210,29 @@ npm run dev:mobile
 ## 🧪 Testing
 
 ```bash
-# Run frontend tests
+# Run frontend tests (Vitest)
 cd client
 npm run test
 
-# Run backend tests
-cd server
-npm run test
+# Run frontend tests with coverage
+cd client
+npm run test:coverage
 
-# Lint code
+# Run backend tests (Jest)
+cd server
+npm test
+
+# Lint frontend code
+cd client
 npm run lint
 ```
+
+## 🔄 CI/CD Pipeline
+
+Every push to `main` triggers the GitHub Actions pipeline which:
+- Runs all frontend tests (Vitest)
+- Runs all backend tests (Jest)
+- Lints the frontend codebase (ESLint)
 
 ## 📄 License
 
@@ -233,7 +252,7 @@ This is a portfolio project, but feedback and suggestions are welcome:
 
 For questions about this project or collaboration opportunities:
 
-**Hananel Sabag**  
+**Hananel Sabag**
 💼 GitHub: [@HananelSabag](https://github.com/HananelSabag)
 
 ---
