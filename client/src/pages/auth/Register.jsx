@@ -26,7 +26,7 @@ import RegistrationComplete from '../../components/features/auth/RegistrationCom
 import GoogleProfileCompletion from '../../components/features/auth/GoogleProfileCompletion';
 import GuestSettings from '../../components/common/GuestSettings';
 
-import { api } from '../../api';
+import { api, authAPI } from '../../api';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
@@ -137,7 +137,6 @@ const Register = () => {
       if (credential) {
         // Direct credential from SimpleGoogleButton
         if (import.meta.env.DEV) console.log('🔍 Processing Google credential for registration...');
-        const { authAPI } = await import('../../api');
         result = await authAPI.processGoogleCredential(credential);
       } else {
         // This shouldn't happen anymore with SimpleGoogleButton

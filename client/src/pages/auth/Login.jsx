@@ -23,7 +23,7 @@ import { useAuthToasts } from '../../hooks/useAuthToasts';
 import LoginForm from '../../components/features/auth/LoginForm';
 import GuestSettings from '../../components/common/GuestSettings';
 
-import { api } from '../../api';
+import { api, authAPI } from '../../api';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
@@ -197,7 +197,6 @@ const Login = () => {
       if (credential) {
         // Direct credential from SimpleGoogleButton
         // silent
-        const { authAPI } = await import('../../api');
         result = await authAPI.processGoogleCredential(credential);
       } else {
         // This shouldn't happen anymore with SimpleGoogleButton

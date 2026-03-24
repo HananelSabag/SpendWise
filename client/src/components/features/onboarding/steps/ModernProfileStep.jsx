@@ -23,6 +23,11 @@ import {
 import { Button, Input, Card, Avatar, Badge, Switch } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 import AuthStatusDetector from '../../auth/AuthStatusDetector';
+import { toast } from 'react-hot-toast';
+import { api } from '../../../../api';
+import { authAPI } from '../../../../api/auth.js';
+import { simpleGoogleAuth } from '../../../../services/simpleGoogleAuth.js';
+import { useAuthStore } from '../../../../stores/authStore.js';
 
 /**
  * 👤 Modern Profile Step Component
@@ -101,7 +106,6 @@ const ModernProfileStep = ({
 
     // ✅ Import image processor
     const { validateImageFile, processImageForUpload } = await import('../../../../utils/imageProcessor');
-    const { toast } = await import('react-hot-toast');
     
     // ✅ Validate file (allows up to 10MB for Live Photos)
     const validation = validateImageFile(file, { maxSizeMB: 10 });
@@ -132,8 +136,6 @@ const ModernProfileStep = ({
       const formData = new FormData();
       formData.append('profilePicture', processedFile);
       
-      // Import the API
-      const { api } = await import('../../../../api');
       const response = await api.users.uploadAvatar(formData);
       
       if (response.success) {
@@ -158,8 +160,6 @@ const ModernProfileStep = ({
     } catch (error) {
       console.error('Profile picture upload error:', error);
       
-      // Show user-friendly error
-      const { toast } = await import('react-hot-toast');
       toast.error(error.message || 'Failed to upload profile picture. Please try again.');
       
       // Keep local preview only
@@ -347,10 +347,6 @@ const ModernProfileStep = ({
                     }}
                     onGoogleLink={async () => {
                       try {
-                        // Import Google auth service
-                        const { simpleGoogleAuth } = await import('../../../../services/simpleGoogleAuth.js');
-                        const { authAPI } = await import('../../../../api/auth.js');
-                        
                         // Initialize Google auth and get credential
                         await simpleGoogleAuth.initializeGoogle();
                         const credential = await simpleGoogleAuth.signIn();
@@ -361,20 +357,17 @@ const ModernProfileStep = ({
                           
                           if (result.success) {
                             // Update auth store with new user data
-                            const { useAuthStore } = await import('../../../../stores/authStore.js');
                             useAuthStore.getState().actions.setUser(result.user);
                             
                             // Also refresh profile to get latest data
                             await useAuthStore.getState().actions.getProfile();
                             
                             // Show success message
-                            const { toast } = await import('react-hot-toast');
                             toast.success('Google account linked successfully! You can now use both login methods.');
                           }
                         }
                       } catch (error) {
                         console.error('Google linking failed:', error);
-                        const { toast } = await import('react-hot-toast');
                         toast.error('Failed to link Google account. Please try again.');
                       }
                     }}
@@ -449,9 +442,6 @@ const ModernProfileStep = ({
                                     try {
                                       setIsLoading(true);
                                       
-                                      // Import auth API
-                                      const { authAPI } = await import('../../../../api/auth.js');
-                                      
                                       // Call setPassword API for Google-only users
                                       const result = await authAPI.setPassword({
                                         newPassword: profileData.password
@@ -459,13 +449,11 @@ const ModernProfileStep = ({
                                       
                                       if (result.success) {
                                         // Success - refresh user data and close form
-                                        const { useAuthStore } = await import('../../../../stores/authStore.js');
                                         await useAuthStore.getState().actions.getProfile();
                                         
                                         setShowPasswordSetup(false);
                                         
                                         // Show success message
-                                        const { toast } = await import('react-hot-toast');
                                         toast.success('Password set successfully! You can now use both login methods.');
                                         
                                         // Clear password fields
@@ -476,7 +464,6 @@ const ModernProfileStep = ({
                                       }
                                     } catch (error) {
                                       console.error('Password setup failed:', error);
-                                      const { toast } = await import('react-hot-toast');
                                       toast.error(error.message || 'Failed to set password. Please try again.');
                                     } finally {
                                       setIsLoading(false);

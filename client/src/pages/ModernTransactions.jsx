@@ -603,22 +603,16 @@ const DesktopTransactions = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Transactions</h1>
-            {isRegenerating && (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                Auto-generating...
-              </div>
-            )}
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t('page.title', 'Transactions')}
+        </h1>
+        {isRegenerating && (
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            {t('autoGenerating', 'Auto-generating...')}
           </div>
-        </div>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-5">

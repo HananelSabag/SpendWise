@@ -402,22 +402,15 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Desktop header */}
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-        <div className="max-w-5xl mx-auto px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Account Settings</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Manage your profile and preferences</p>
-            </div>
-          </div>
+      <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
+        <div className="mb-7">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t('tabs.accountSettings', 'Account Settings')}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {t('tabs.accountSettingsDesc', 'Manage your profile and preferences')}
+          </p>
         </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex gap-8">
           <SidebarTabs active={activeTab} onChange={setActiveTab} t={t} />
           <div className="flex-1 min-w-0">{tabContent}</div>

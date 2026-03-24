@@ -163,21 +163,13 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      {/* Sticky Page Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 h-16">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
-            </h1>
-          </div>
-        </div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-0">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
+        </h1>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         {/* Enhanced KPI Cards - Mobile Optimized */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 mb-6 sm:mb-8">
           <div>

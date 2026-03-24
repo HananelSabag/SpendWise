@@ -228,24 +228,14 @@ const DesktopDashboard = ({
   formatCurrency, t, navigate,
 }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-    {/* Page header */}
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
-            <span className="text-white font-bold text-lg">S</span>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+      </p>
     </div>
 
-    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
       {/* Balance panel */}
       <ModernBalancePanel />
 

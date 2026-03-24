@@ -14,6 +14,8 @@ import { Button, Card } from '../../ui';
 import { cn } from '../../../utils/helpers';
 import { authStatusAPI } from '../../../api/authStatus';
 import { toast } from 'react-hot-toast';
+import { simpleGoogleAuth } from '../../../services/simpleGoogleAuth.js';
+import { authAPI } from '../../../api/auth.js';
 
 const AuthStatusDetector = ({ 
   className = "", 
@@ -77,10 +79,6 @@ const AuthStatusDetector = ({
   const handleGoogleLink = async () => {
     try {
       if (context === 'profile') {
-        // Import Google auth service for profile context
-        const { simpleGoogleAuth } = await import('../../../services/simpleGoogleAuth.js');
-        const { authAPI } = await import('../../../api/auth.js');
-        
         await simpleGoogleAuth.initializeGoogle();
         const credential = await simpleGoogleAuth.signIn();
         

@@ -27,12 +27,12 @@ import HeaderActions from './HeaderActions';
 
 import { cn } from '../../utils/helpers';
 import { LoadingSpinner } from '../ui';
+import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 
 // ✅ Lazy-loaded modals for performance
 const CategoryManager = React.lazy(() => import('../features/categories/CategoryManager'));
 const RecurringManagerPanel = React.lazy(() => import('../features/transactions/recurring/ModernRecurringManagerPanel.jsx'));
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
-const ModernOnboardingModal = React.lazy(() => import('../features/onboarding/ModernOnboardingModal'));
 
 const Header = () => {
   // ✅ Zustand stores

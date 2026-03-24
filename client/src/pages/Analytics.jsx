@@ -387,32 +387,24 @@ const MobileAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t
 
 const DesktopAnalytics = ({ period, setPeriod, summary, trends, formatCurrency, t, navigate, refetch, isRefreshing, setIsRefreshing }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-    {/* Header */}
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
-              <BarChart3 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('analytics.title','Analytics')}</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.subtitle','Financial insights & trends')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <PeriodTabs period={period} onChange={setPeriod} />
-            <button onClick={async () => { setIsRefreshing(true); await refetch(); setIsRefreshing(false); }}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-              <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-              {t('actions.refresh','Refresh')}
-            </button>
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('analytics.title', 'Analytics')}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('analytics.subtitle', 'Financial insights & trends')}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <PeriodTabs period={period} onChange={setPeriod} />
+        <button
+          onClick={async () => { setIsRefreshing(true); await refetch(); setIsRefreshing(false); }}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        >
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          {t('actions.refresh', 'Refresh')}
+        </button>
       </div>
     </div>
 
-    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
       {/* Summary cards row */}
       <SummaryCards summary={summary} formatCurrency={formatCurrency} t={t} />
 

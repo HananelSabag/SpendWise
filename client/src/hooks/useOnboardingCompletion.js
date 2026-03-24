@@ -7,6 +7,7 @@
 import { useCallback } from 'react';
 import { useAuth, useNotifications, useTranslation } from '../stores';
 import { api } from '../api';
+import transactionsAPI from '../api/transactions';
 import { useBalanceRefresh } from '../contexts/BalanceContext';
 
 /**
@@ -48,8 +49,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
           }));
 
           // Use bulk API method directly
-          const api = (await import('../api/transactions')).default;
-          const result = await api.createBulkRecurringTemplates(formattedTemplates);
+          const result = await transactionsAPI.createBulkRecurringTemplates(formattedTemplates);
           
           if (result.success) {
             // Show success toast with details

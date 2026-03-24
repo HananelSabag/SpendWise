@@ -306,8 +306,8 @@ const optionalAuth = async (req, res, next) => {
       if (!user) {
         // Fetch user from database
         const result = await db.query(
-          `SELECT id, email, name, role, is_active, onboarding_completed, google_id, avatar
-           FROM users 
+          `SELECT id, email, first_name, last_name, role, is_active, onboarding_completed, google_id, avatar
+           FROM users
            WHERE id = $1 AND is_active = true`,
           [userId]
         );
