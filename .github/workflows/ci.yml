@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Server — Jest tests
+  # ─────────────────────────────────────────────────────────────────
+  server-tests:
+    name: Server Tests (Jest)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci_test_jwt_secret_not_for_production
+          JWT_REFRESH_SECRET: ci_test_refresh_secret_not_for_production
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-coverage
+          path: server/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────
+  # Client — Vitest tests + lint
+  # ─────────────────────────────────────────────────────────────────
+  client-tests:
+    name: Client Tests (Vitest)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+        continue-on-error: true   # warn but don't block on type errors
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --run
+        env:
+          NODE_ENV: test
+          VITE_API_URL: http://localhost:5000
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-coverage
+          path: client/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────
+  # Build check — ensure the Vite build succeeds
+  # ─────────────────────────────────────────────────────────────────
+  client-build:
+    name: Client Build (Vite)
+    runs-on: ubuntu-latest
+    needs: client-tests
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: https://spendwise-server.onrender.com
+
+  # ─────────────────────────────────────────────────────────────────
+  # Status summary — all jobs must pass
+  # ─────────────────────────────────────────────────────────────────
+  ci-pass:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [server-tests, client-tests, client-build]
+    steps:
+      - run: echo "All CI checks passed."
