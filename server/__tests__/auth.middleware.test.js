@@ -76,17 +76,17 @@ describe('verifyToken', () => {
   });
 
   it('throws "Invalid token" for a bad string', () => {
-    expect(() => verifyToken('bad.token.here')).toThrow('Invalid token');
+    expect(() => verifyToken('bad.token.here')).toThrow('invalid token');
   });
 
   it('throws "Invalid token" for an expired token', () => {
     const token = jwt.sign({ userId: 1 }, SECRET, { expiresIn: '-1s' });
-    expect(() => verifyToken(token)).toThrow('Invalid token');
+    expect(() => verifyToken(token)).toThrow('jwt expired');
   });
 
   it('throws "Invalid token" when wrong secret is used', () => {
     const token = jwt.sign({ userId: 1 }, 'other_secret', { expiresIn: '1h' });
-    expect(() => verifyToken(token)).toThrow('Invalid token');
+    expect(() => verifyToken(token)).toThrow('invalid signature');
   });
 
   it('accepts custom secret when provided', () => {
