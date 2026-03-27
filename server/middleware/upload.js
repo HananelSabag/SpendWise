@@ -52,7 +52,9 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.UPLOAD_SIZE_LIMIT) || 10 * 1024 * 1024, // 10MB
+    fileSize: (Number.isFinite(parseInt(process.env.UPLOAD_SIZE_LIMIT, 10)) && parseInt(process.env.UPLOAD_SIZE_LIMIT, 10) > 0)
+      ? parseInt(process.env.UPLOAD_SIZE_LIMIT, 10)
+      : 20 * 1024 * 1024, // 20MB default
     files: 1 // Only 1 file at a time
   }
 });

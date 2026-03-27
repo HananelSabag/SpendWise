@@ -1,0 +1,25 @@
+{
+  "name": "SpendWise",
+  "short_name": "SpendWise",
+  "description": "מעקב הוצאות חכם עם עסקאות חוזרות",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "הוצאה מהירה",
+      "short_name": "הוצאה",
+      "description": "הוסף הוצאה מהירה",
+      "url": "/quick-expense",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    }
+  ]
+}

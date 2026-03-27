@@ -14,6 +14,7 @@ class Scheduler {
   constructor() {
     this.jobs = new Map();
     this.isInitialized = false;
+    this.startupTimer = null;
     this.stats = {
       totalJobs: 0,
       successfulRuns: 0,
@@ -43,7 +44,7 @@ class Scheduler {
       this.scheduleJob('db-maintenance', '0 3 * * 6', this.runDatabaseMaintenance.bind(this));
       
       // ✅ FIXED: Startup generation with better duplicate protection
-      setTimeout(async () => {
+      this.startupTimer = setTimeout(async () => {
         try {
           // Only run if no recurring generation has happened in the last 6 hours
           const lastRun = this.stats.lastRun ? new Date(this.stats.lastRun) : null;
@@ -224,7 +225,7 @@ class Scheduler {
 
       for (const table of tables) {
         try {
-          await db.query(`VACUUM ANALYZE ${table}`, [], `vacuum_${table}`);
+          await db.query(`VACUUM ANALYZE "${table}"`, [], `vacuum_${table}`);
           results.push({ table, status: 'success' });
           logger.info(`✅ VACUUM ANALYZE completed for ${table}`);
         } catch (error) {
@@ -260,14 +261,20 @@ class Scheduler {
    */
   stop() {
     try {
+      // Cancel the startup delay timer if it hasn't fired yet
+      if (this.startupTimer) {
+        clearTimeout(this.startupTimer);
+        this.startupTimer = null;
+      }
+
       for (const [name, job] of this.jobs) {
         job.destroy();
         logger.info(`⏹️ Stopped job: ${name}`);
       }
-      
+
       this.jobs.clear();
       this.isInitialized = false;
-      
+
       logger.info('✅ All scheduled jobs stopped');
 
     } catch (error) {

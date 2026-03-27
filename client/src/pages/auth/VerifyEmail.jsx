@@ -5,7 +5,7 @@
  * @version 2.0.0 - COMPLETE REFACTOR
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -49,6 +49,7 @@ const VerifyEmail = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [userEmail, setUserEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const cooldownIntervalRef = useRef(null); // fixes VERIFY-1: allows cleanup on unmount
 
   // ✅ Handle verification on mount
   useEffect(() => {
@@ -100,6 +101,11 @@ const VerifyEmail = () => {
     verifyToken();
   }, [token, addNotification, t, navigate]);
 
+  // Cleanup cooldown interval on unmount (fixes VERIFY-1)
+  useEffect(() => {
+    return () => { if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current); };
+  }, []);
+
   // ✅ Handle resend verification email
   const handleResendVerification = useCallback(async () => {
     if (isResending || resendCooldown > 0) return;
@@ -119,10 +125,10 @@ const VerifyEmail = () => {
         
         // Start cooldown
         setResendCooldown(60);
-        const cooldownInterval = setInterval(() => {
+        cooldownIntervalRef.current = setInterval(() => {
           setResendCooldown(prev => {
             if (prev <= 1) {
-              clearInterval(cooldownInterval);
+              clearInterval(cooldownIntervalRef.current);
               return 0;
             }
             return prev - 1;

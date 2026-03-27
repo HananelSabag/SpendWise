@@ -87,13 +87,19 @@ const UnifiedTransactionActions = () => {
     };
   }, [handleAdd, handleEdit, handleDuplicate, handleDelete, handleRecurring]);
 
-  // Success handler: soft-close and let existing invalidation logic run via hooks inside modals
+  // Success handler: close modals and broadcast so pages can refresh their data
   const handleSuccess = React.useCallback(() => {
     setShowAdd(false);
     setShowEdit(false);
     setShowDelete(false);
     setShowRecurringSetup(false);
     setSelectedTx(null);
+    // Notify Dashboard (useDashboard listens to 'transaction-added')
+    // and Transactions page (listens to 'transactions:refetch')
+    try {
+      window.dispatchEvent(new CustomEvent('transaction-added'));
+      window.dispatchEvent(new CustomEvent('transactions:refetch'));
+    } catch (_) {}
   }, []);
 
   // ✅ Handle delete success with actual API call

@@ -5,7 +5,7 @@
  * @version 2.0.0 - ENHANCED FOR TRANSACTIONS
  */
 
-import React, { createContext, useContext, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useRef } from 'react';
 
 // Create the context
 const BalanceContext = createContext(null);
@@ -121,14 +121,23 @@ export const BalanceProvider = ({ children }) => {
     });
   }, []);
 
-  const contextValue = {
+  // useMemo so the value object is stable — consumers only re-render when a
+  // callback reference actually changes (fixes BAL-1).
+  const contextValue = useMemo(() => ({
     registerRefresh,
     registerTransactionRefresh,
     triggerBalanceRefresh,
     triggerTransactionRefresh,
     triggerAllRefresh,
     triggerSilentRefresh
-  };
+  }), [
+    registerRefresh,
+    registerTransactionRefresh,
+    triggerBalanceRefresh,
+    triggerTransactionRefresh,
+    triggerAllRefresh,
+    triggerSilentRefresh
+  ]);
 
   return (
     <BalanceContext.Provider value={contextValue}>

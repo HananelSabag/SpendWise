@@ -47,11 +47,16 @@ export const useBalance = (options = {}) => {
     enabled: !!(localStorage.getItem('accessToken') || localStorage.getItem('authToken'))
   });
 
+  // Destructure refetch so useCallback depends on the stable function reference
+  // (React Query guarantees refetch stability), not the whole query object which
+  // is a new reference on every render.
+  const { refetch: queryRefetch } = balanceQuery;
+
   /** Manual refresh — invalidates and refetches */
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: BALANCE_QUERY_KEY });
-    balanceQuery.refetch();
-  }, [queryClient, balanceQuery]);
+    queryRefetch();
+  }, [queryClient, queryRefetch]);
 
   /** Silent refresh — invalidates without showing loading state */
   const silentRefresh = useCallback(() => {

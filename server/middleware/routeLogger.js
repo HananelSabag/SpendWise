@@ -63,17 +63,18 @@ const authLogger = (operation) => {
       userId: req.user?.id
     });
 
-    // Track auth results
+    // Track auth results — fire once per request only
     const originalSend = res.send;
     const originalJson = res.json;
-    
+    let logged = false;
+
     res.send = function(data) {
-      logAuthResult(operation, req, res, data);
+      if (!logged) { logged = true; logAuthResult(operation, req, res, data); }
       return originalSend.call(this, data);
     };
-    
+
     res.json = function(data) {
-      logAuthResult(operation, req, res, data);
+      if (!logged) { logged = true; logAuthResult(operation, req, res, data); }
       return originalJson.call(this, data);
     };
 

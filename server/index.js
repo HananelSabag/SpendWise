@@ -91,25 +91,10 @@ console.log('========================================');
 // Trust proxy for production
 app.set('trust proxy', 1);
 
-// Set up helmet security
+// Set up security headers (advancedSecurityHeaders from security middleware)
+const { advancedSecurityHeaders } = require('./middleware/security');
 try {
-  app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http://localhost:5000", "http://localhost:3000", "http://localhost:5173"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+  app.use(advancedSecurityHeaders);
 } catch (error) {
   logger.error('❌ Helmet setup failed:', error.message);
   // Don't exit - helmet failure is not critical for startup
@@ -163,8 +148,8 @@ try {
         return callback(null, true);
       }
       
-      // Allow dev servers
-      if (origin.includes(':5173') || origin.includes(':3000')) {
+      // Allow dev servers (development only)
+      if (process.env.NODE_ENV !== 'production' && (origin.includes(':5173') || origin.includes(':3000'))) {
         logger.info(`🌐 Allowing dev server origin: ${origin}`);
         return callback(null, true);
       }
@@ -191,7 +176,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Set up static files
 // Serve static files from uploads directory
-app.use('/uploads', express.static('uploads', {
+app.use('/uploads', express.static(require('path').join(__dirname, 'uploads'), {
   setHeaders: (res, path) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -221,19 +206,6 @@ if (process.env.NODE_ENV !== 'production') {
 // Enhanced health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const origin = req.headers.origin;
-    
-    // Set CORS headers for health check
-    if (origin && (allowedOrigins.includes(origin) || 
-        process.env.NODE_ENV !== 'production' && (
-          isLocalNetworkIP(origin) || 
-          origin.includes(':5173') || 
-          origin.includes(':3000')
-        ))) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-    }
-    
     const dbHealth = await db.healthCheck();
     
     res.json({ 
@@ -317,7 +289,20 @@ try {
     logger.error('❌ Auth status routes failed:', error.message);
   }
 
-  // ✅ REMOVED: Debug routes (debugLogger was causing production crashes and has been removed)
+  // Health and performance monitoring routes
+  try {
+    app.use(`${API_VERSION}/health`, require('./routes/healthRoutes'));
+    logger.debug('✅ Health routes loaded');
+  } catch (error) {
+    logger.error('❌ Health routes failed:', error.message);
+  }
+
+  try {
+    app.use(`${API_VERSION}/performance`, require('./routes/performance'));
+    logger.debug('✅ Performance routes loaded');
+  } catch (error) {
+    logger.error('❌ Performance routes failed:', error.message);
+  }
 } catch (error) {
   logger.error('❌ API routes loading failed:', error.message, { stack: error.stack });
   // Don't exit - server can still respond to health checks
@@ -368,43 +353,10 @@ app.use((req, res, next) => {
   }
 });
 
-// FIXED: Simple, working global response handler (replaces problematic ./middleware/errorHandler.js)
-app.use((err, req, res, next) => {
-  try {
-    // Safe logging
-    // Safe logging - already done by logger below
-    if (logger && typeof logger.error === 'function') {
-      logger.error('Request processing issue:', {
-        message: err.message,
-        stack: err.stack,
-        url: req.url,
-        method: req.method
-      });
-    }
-
-    // Handle specific response types
-    const status = err.status || err.statusCode || 500;
-    const code = err.code || 'INTERNAL_ERROR';
-    
-    res.status(status).json({
-      error: {
-        code,
-        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (handlerError) {
-    // Fallback if response handler itself fails
-    logger.error('Response handler failed:', handlerError.message);
-    res.status(500).json({
-      error: {
-        code: 'HANDLER_ERROR',
-        message: 'Internal server error',
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
+// Centralized error handling
+const { errorHandler, corsErrorHandler } = require('./middleware/errorHandler');
+app.use(corsErrorHandler);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
@@ -454,15 +406,19 @@ const startServer = async () => {
     // Graceful shutdown
     const gracefulShutdown = async (signal) => {
       logger.info(`${signal} received, shutting down gracefully`);
-      
+
       server.close(() => {
         logger.info('HTTP server closed');
       });
-      
+
+      // Stop scheduled jobs before closing the DB pool
+      scheduler.stop();
+      logger.info('Scheduler stopped');
+
       // Close database connections
       await db.gracefulShutdown();
       logger.info('Supabase database connections closed');
-      
+
       process.exit(0);
     };
 
@@ -478,9 +434,7 @@ const startServer = async () => {
 
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      if (process.env.NODE_ENV !== 'production') {
-        gracefulShutdown('UNHANDLED_REJECTION');
-      }
+      gracefulShutdown('UNHANDLED_REJECTION');
     });
 
   } catch (err) {
@@ -501,6 +455,14 @@ logger.info('DATABASE_URL:', process.env.DATABASE_URL ? '✅ SET' : '❌ MISSING
 logger.info('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ MISSING');
 logger.info('ALLOWED_ORIGINS:', process.env.ALLOWED_ORIGINS || 'not set (using defaults)');
 logger.info('========================================');
+
+// Abort startup if critical secrets are missing
+const missingSecrets = ['JWT_SECRET', 'JWT_REFRESH_SECRET'].filter(k => !process.env[k]);
+if (missingSecrets.length > 0) {
+  logger.error(`FATAL: Missing required environment variables: ${missingSecrets.join(', ')}`);
+  logger.error('Server cannot start without these secrets. Add them to your .env file.');
+  process.exit(1);
+}
 
 logger.info('STARTING SERVER...');
 startServer();

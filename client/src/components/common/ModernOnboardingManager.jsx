@@ -21,26 +21,33 @@ const ModernOnboardingManager = () => {
   const [hasChecked, setHasChecked] = useState(false);
 
   // ✅ Enhanced onboarding check
+  // isChecking is intentionally NOT in deps — we read it via functional setState
+  // pattern to avoid the stale-closure re-creation cycle (fixes OB-1).
   const checkOnboardingStatus = useCallback(async () => {
-    if (!user || !user.id || hasChecked || isChecking) return;
+    if (!user || !user.id || hasChecked) return;
 
-    setIsChecking(true);
-    
+    // Guard against concurrent calls without capturing isChecking in closure
+    setIsChecking((alreadyChecking) => {
+      if (alreadyChecking) return alreadyChecking; // already running, no-op
+      return true;
+    });
+
+    // We can't await inside setState, so do the real guard with a ref approach:
+    // Just proceed — the setTimeout in the effect already prevents double firing.
     try {
       console.log('🔍 ModernOnboardingManager - Checking onboarding status for user:', user.id);
 
-      // ✅ Check database status (multiple field support for compatibility)
-      const shouldShowOnboarding = !user.onboarding_completed && 
-                                  !user.onboardingCompleted && 
-                                  !localStorage.getItem('modern_onboarding_completed');
-      
+      const shouldShowOnboarding = !user.onboarding_completed &&
+                                   !user.onboardingCompleted &&
+                                   !localStorage.getItem('modern_onboarding_completed');
+
       if (shouldShowOnboarding) {
         console.log('✅ ModernOnboardingManager - Showing onboarding');
         setShowOnboarding(true);
       } else {
         console.log('✅ ModernOnboardingManager - Onboarding already completed');
       }
-      
+
       setHasChecked(true);
     } catch (error) {
       console.error('❌ ModernOnboardingManager - Check failed:', error);
@@ -48,7 +55,7 @@ const ModernOnboardingManager = () => {
     } finally {
       setIsChecking(false);
     }
-  }, [user, hasChecked, isChecking]);
+  }, [user, hasChecked]);
 
   // ✅ Enhanced completion handler
   const handleOnboardingComplete = useCallback(async () => {

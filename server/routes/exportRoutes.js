@@ -15,8 +15,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 // Apply authentication to all export routes
 router.use(auth);
 
-// Apply rate limiting to all export routes
-router.use(apiLimiter);
+// Apply export-specific rate limiting (3 exports per 24h per user — heavier than general API limit)
+router.use(securityMiddleware.export);
 
 /**
  * @route   GET /api/v1/export/options

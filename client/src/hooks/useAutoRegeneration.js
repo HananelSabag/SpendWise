@@ -148,9 +148,11 @@ export const useAutoRegeneration = () => {
   });
 
   // ✅ MANUAL REGENERATION TRIGGER
+  // Use mutateAsync directly (stable reference from React Query) to avoid
+  // recreating this callback on every render when the mutation object changes.
   const triggerRegeneration = useCallback(() => {
     return autoRegenerateMutation.mutateAsync();
-  }, [autoRegenerateMutation]);
+  }, [autoRegenerateMutation.mutateAsync]);
 
   // ✅ AUTO-TRIGGER EFFECT
   useEffect(() => {

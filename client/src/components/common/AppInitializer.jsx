@@ -11,26 +11,28 @@ import { useAppStore } from '../../stores/appStore';
 
 const AppInitializer = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
-  const authActions = useAuthStore((state) => state.actions);
-  const getAuthState = useAuthStore.getState;
-  
+
   useEffect(() => {
+    // Use getState() directly — avoids subscribing to the store and prevents
+    // this effect from re-running on every auth state change (fixes INIT-1).
     const initializeApp = async () => {
       try {
+        const authActions = useAuthStore.getState().actions;
+
         // Initialize auth store synchronously
         authActions.initialize();
 
-        // If already authenticated (token in storage), fetch fresh profile and sync preferences immediately
+        // If already authenticated (token in storage), fetch fresh profile
         try {
           const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
           if (token && typeof authActions.getProfile === 'function') {
             await authActions.getProfile();
           }
         } catch (_) {}
-        
+
         // Load admin system settings ONLY for authenticated admins
         try {
-          const { isAuthenticated, user } = getAuthState();
+          const { isAuthenticated, user } = useAuthStore.getState();
           const role = user?.role;
           const isAdmin = role === 'admin' || role === 'super_admin' || user?.isAdmin || user?.isSuperAdmin;
           if (isAuthenticated && isAdmin) {
@@ -47,8 +49,7 @@ const AppInitializer = ({ children }) => {
             window.__SW_SUPPORT_EMAIL__ = supportEmail;
           }
         } catch (_) {}
-        
-        // Mark as initialized
+
         setIsInitialized(true);
       } catch (_) {
         setIsInitialized(true);
@@ -56,7 +57,7 @@ const AppInitializer = ({ children }) => {
     };
 
     initializeApp();
-  }, [authActions]);
+  }, []); // Empty deps — runs once on mount only
 
   return (
     <>

@@ -145,7 +145,7 @@ const TransactionFormTabs = ({
         [field]: null
       }));
     }
-  }, [isDirty, validationErrors, formData]);
+  }, [isDirty, validationErrors]); // formData removed — function uses setFormData(prev=>) updater only, never reads formData directly (fixes FORM-TABS-1)
 
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (e) => {

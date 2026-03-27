@@ -12,7 +12,9 @@ export default {
     personal: "מידע אישי",
     preferences: "העדפות",
     security: "אבטחה",
-    export: "ייצוא נתונים"
+    export: "ייצוא נתונים",
+    accountSettings: "הגדרות חשבון",
+    accountSettingsDesc: "נהל את הפרופיל וההעדפות שלך"
   },
   messages: {
     loading: "טוען...",
@@ -35,7 +37,13 @@ export default {
     birthday: "תאריך לידה",
     bio: "ביוגרפיה",
     bioPlaceholder: "ספר לנו על עצמך...",
-    memberSince: "חבר מאז"
+    memberSince: "חבר מאז",
+    changePhoto: "שנה תמונה",
+    setPhoto: "קבע תמונה",
+    newPhotoDesc: "זו תהיה תמונת הפרופיל החדשה שלך",
+    processingImage: "מעבד תמונה…",
+    imageTooLargeAfterCompression: "התמונה גדולה מדי לאחר דחיסה ({{size}}MB). בחר תמונה קטנה יותר.",
+    imageProcessingFailed: "עיבוד התמונה נכשל. נסה תמונה אחרת."
   },
   preferences: {
     title: "העדפות יישום",
@@ -50,6 +58,11 @@ export default {
     theme: "ערכת נושא",
     currency: "מטבע",
     savePreferences: "שמור העדפות",
+    themeOptions: {
+      system: "אוטומטי",
+      light: "בהיר",
+      dark: "כהה"
+    },
     display: {
       title: "תצוגה",
       theme: "ערכת נושא",
@@ -71,6 +84,12 @@ export default {
       requirements: "הסיסמה חייבת להיות באורך של 8 תווים לפחות",
       policy: "הסיסמה חייבת לכלול לפחות אות אחת ומספר אחד"
     },
+    setPassword: "קבע סיסמה",
+    updatePassword: "עדכן סיסמה",
+    googleSignInNote: "התחברת עם Google. ניתן להוסיף סיסמה כדי להתחבר גם עם אימייל.",
+    currentPasswordPlaceholder: "סיסמה נוכחית",
+    newPasswordPlaceholder: "סיסמה חדשה (8 תווים לפחות, אות + ספרה)",
+    confirmPasswordPlaceholder: "אימות סיסמה חדשה",
     twoFactor: {
       title: "הפעלה דו-שלבית",
       subtitle: "הוסף רובד אבטחה נוסף לחשבון שלך",
@@ -104,6 +123,12 @@ export default {
       pdf: "PDF",
       excel: "Excel"
     },
+    csvLabel: "ייצוא כ-CSV",
+    csvDesc: "פורמט גיליון אלקטרוני עבור Excel / Google Sheets",
+    jsonLabel: "ייצוא כ-JSON",
+    jsonDesc: "פורמט נתונים גולמי למפתחים",
+    pdfLabel: "ייצוא כ-PDF",
+    pdfDesc: "דוח מעוצב מוכן להדפסה או שיתוף",
     dateRange: {
       title: "בחר תקופה",
       all: "כל התקופה",

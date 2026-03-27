@@ -267,22 +267,23 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   });
 
   // Enhanced refresh function with loading state
+  const { refetch: queryRefetch } = dashboardQuery;
   const refreshDashboard = useCallback(async () => {
     try {
       await queryClient.invalidateQueries({ queryKey });
-      await dashboardQuery.refetch();
-      
+      await queryRefetch();
+
       // Dispatch event for other components
       window.dispatchEvent(new CustomEvent('dashboard-refreshed', {
         detail: { date: formattedDate }
       }));
-      
+
       return { success: true };
     } catch (error) {
       console.error('Dashboard refresh failed:', error);
       return { success: false, error };
     }
-  }, [queryClient, queryKey, dashboardQuery, formattedDate]);
+  }, [queryClient, queryKey, queryRefetch, formattedDate]);
 
   // ✅ FIX: Computed loading states
   const isLoading = dashboardQuery.isLoading || dashboardQuery.isFetching;

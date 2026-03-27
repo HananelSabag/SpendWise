@@ -172,6 +172,27 @@ const ActivityIndicator = ({ lastLogin, totalTransactions }) => {
   );
 };
 
+// ✅ Sortable column header — defined at module level so React doesn't remount on every render (fixes MOD-USERS-1)
+const SortableHeader = ({ column, children, sortConfig, onSort }) => (
+  <button
+    onClick={() => onSort(column)}
+    className="flex items-center gap-1 text-left w-full hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+  >
+    {children}
+    {sortConfig.key === column && (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+      >
+        {sortConfig.direction === 'asc' ?
+          <SortAsc className="w-4 h-4" /> :
+          <SortDesc className="w-4 h-4" />
+        }
+      </motion.div>
+    )}
+  </button>
+);
+
 // ✅ Main component
 const ModernUsersTable = ({
   users = [],
@@ -742,27 +763,6 @@ const ModernUsersTable = ({
     </motion.div>
   );
 
-  // ✅ Table view component with sortable headers
-  const SortableHeader = ({ column, children }) => (
-    <button
-      onClick={() => handleSort(column)}
-      className="flex items-center gap-1 text-left w-full hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-    >
-      {children}
-      {sortConfig.key === column && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          {sortConfig.direction === 'asc' ? 
-            <SortAsc className="w-4 h-4" /> : 
-            <SortDesc className="w-4 h-4" />
-          }
-        </motion.div>
-      )}
-    </button>
-  );
-
   const TableView = () => (
     <Card className="overflow-hidden">
       {/* Mobile view - enhanced cards */}
@@ -990,17 +990,17 @@ const ModernUsersTable = ({
                 </th>
               )}
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <SortableHeader column="first_name">
+                <SortableHeader column="first_name" sortConfig={sortConfig} onSort={handleSort}>
                   {t('table.user', { fallback: 'User' })}
                 </SortableHeader>
               </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <SortableHeader column="role">
+                <SortableHeader column="role" sortConfig={sortConfig} onSort={handleSort}>
                   {t('table.role', { fallback: 'Role' })}
                 </SortableHeader>
               </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <SortableHeader column="status">
+                <SortableHeader column="status" sortConfig={sortConfig} onSort={handleSort}>
                   {t('table.status', { fallback: 'Status' })}
                 </SortableHeader>
               </th>
@@ -1008,12 +1008,12 @@ const ModernUsersTable = ({
                 {t('table.activity', { fallback: 'Activity' })}
               </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <SortableHeader column="total_transactions">
+                <SortableHeader column="total_transactions" sortConfig={sortConfig} onSort={handleSort}>
                   {t('fields.transactionCount', { fallback: 'Transactions' })}
                 </SortableHeader>
               </th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <SortableHeader column="created_at">
+                <SortableHeader column="created_at" sortConfig={sortConfig} onSort={handleSort}>
                   {t('table.joinDate', { fallback: 'Join Date' })}
                 </SortableHeader>
               </th>
@@ -1212,11 +1212,12 @@ const ModernUsersTable = ({
     );
   }
 
-  // ✅ Main render
+  // ✅ Main render — TableHeader/GridView/TableView called as functions (not components) so React
+  // doesn't see new component types on each render and won't remount their DOM subtrees (fixes MOD-USERS-1)
   return (
     <div className="space-y-6">
-      <TableHeader />
-      {viewMode === 'grid' ? <GridView /> : <TableView />}
+      {TableHeader()}
+      {viewMode === 'grid' ? GridView() : TableView()}
     </div>
   );
 };

@@ -109,6 +109,11 @@ export const ServerWaking = createLazyComponent(
   'ServerWaking'
 );
 
+export const QuickExpensePage = createLazyComponent(
+  () => import('../pages/QuickExpensePage.jsx'),
+  'QuickExpensePage'
+);
+
 // ✅ Feature Components - Conditional Loading
 export const CategoryManager = createLazyComponent(
   () => import('../components/features/categories/CategoryManager'),

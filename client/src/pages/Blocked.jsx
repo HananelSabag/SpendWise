@@ -13,6 +13,9 @@ const Blocked = () => {
   const intervalRef = useRef(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [tick, setTick] = useState(0);
+  // Refs mirror state so the stale-closure interval callback always reads current values (fixes BLOCKED-1)
+  const checkingRef = useRef(false);
+  const cooldownUntilRef = useRef(0);
 
   // Mark blocked session for other subsystems (auth recovery, client handlers)
   try {
@@ -31,11 +34,13 @@ const Blocked = () => {
     navigate('/', { replace: true });
   };
 
-  // Manual check handler
+  // Manual check handler — reads refs so the interval callback (captured once with [] deps) always
+  // sees the current checking/cooldownUntil values, not the stale initial ones (fixes BLOCKED-1)
   const checkUnblocked = async () => {
     const nowTs = Date.now();
-    if (checking) return;
-    if (nowTs < cooldownUntil) return;
+    if (checkingRef.current) return;
+    if (nowTs < cooldownUntilRef.current) return;
+    checkingRef.current = true;
     setChecking(true);
     try {
       const result = await getProfile();
@@ -47,9 +52,12 @@ const Blocked = () => {
     } catch (_) {
       // ignore
     } finally {
+      checkingRef.current = false;
       setChecking(false);
       // Apply cooldown (anti-spam)
-      setCooldownUntil(Date.now() + 10000); // 10s cooldown
+      const until = Date.now() + 10000; // 10s cooldown
+      cooldownUntilRef.current = until;
+      setCooldownUntil(until);
     }
   };
 

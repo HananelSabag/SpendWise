@@ -696,23 +696,18 @@ export const useAuth = () => {
   return {
     // State
     ...store,
-    
+
     // Actions
     login: store.actions.login,
-    googleLogin: store.actions.googleLogin, // ✅ ADD: Export googleLogin method
+    googleLogin: store.actions.googleLogin,
     register: store.actions.register,
     logout: store.actions.logout,
     updateProfile: store.actions.updateProfile,
-    getProfile: store.actions.getProfile, // ✅ ADD: Export getProfile method
+    getProfile: store.actions.getProfile,
     verifyEmail: store.actions.verifyEmail,
-    
+
     // Utilities
-    reset: store.actions.reset,
-    setupBiometric: store.actions.setupBiometric,
-    
-    // Session management
-    extendSession: store.actions.extendSession,
-    checkSession: store.actions.checkSession
+    reset: store.actions.reset
   };
 };
 

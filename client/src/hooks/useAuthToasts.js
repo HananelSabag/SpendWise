@@ -4,6 +4,7 @@
  * @version 1.0.0
  */
 
+import { useMemo } from 'react';
 import { useToast } from './useToast';
 import { useTranslation } from '../stores';
 
@@ -11,7 +12,9 @@ export const useAuthToasts = () => {
   const toast = useToast();
   const { t } = useTranslation('toast');
 
-  return {
+  // useMemo so the returned object keeps a stable reference between renders —
+  // only rebuilds when toast or t actually change (fixes ATOP-1).
+  return useMemo(() => ({
     // ✅ Login Toasts
     loginSuccess: (user) => {
       const message = user?.first_name 
@@ -290,5 +293,5 @@ export const useAuthToasts = () => {
     dismiss: toast.dismiss,
     dismissAll: toast.dismissAll,
     toast: toast // ✅ Direct access to toast methods
-  };
+  }), [toast, t]);
 }; 

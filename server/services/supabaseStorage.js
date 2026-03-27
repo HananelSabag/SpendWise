@@ -5,6 +5,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { generateShortToken } = require('../utils/tokenGenerator');
+const logger = require('../utils/logger');
 
 // Extract Supabase URL from DATABASE_URL if SUPABASE_URL is not set
 const getSupabaseUrl = () => {

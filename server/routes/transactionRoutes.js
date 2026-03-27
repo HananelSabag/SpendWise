@@ -174,58 +174,54 @@ router.post('/fix-onboarding-current-month',
   transactionController.generateMissingCurrentMonthTransactions
 );
 
-// 🧪 TEST: Onboarding template creation with prepared templates
-router.post('/test-onboarding-templates',
-  createTransactionLimiter,
-  routeLogger('TEST_ONBOARDING_TEMPLATES'),
-  async (req, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // 🎯 Prepared templates from onboarding (same as FinalTemplatesStep.jsx)
-      const preparedTemplates = [
-        // Income templates
-        { name: 'Monthly Salary', type: 'income', amount: 5000, category_name: 'Salary' },
-        { name: 'Freelance Work', type: 'income', amount: 2000, category_name: 'Freelance' },
-        
-        // Expense templates
-        { name: 'Rent/Mortgage', type: 'expense', amount: 1200, category_name: 'Housing' },
-        { name: 'Phone & Internet', type: 'expense', amount: 80, category_name: 'Utilities' },
-        { name: 'Groceries', type: 'expense', amount: 400, category_name: 'Food' },
-        { name: 'Insurance', type: 'expense', amount: 200, category_name: 'Insurance' },
-        { name: 'Gym Membership', type: 'expense', amount: 50, category_name: 'Health' },
-        { name: 'Streaming Services', type: 'expense', amount: 25, category_name: 'Entertainment' }
-      ];
-      
-      // Format for bulk creation
-      const formattedTemplates = preparedTemplates.map(template => ({
-        ...template,
-        description: template.name,
-        interval_type: 'monthly',
-        day_of_month: 1,
-        is_active: true
-      }));
-      
-      // Create via bulk endpoint
-      const result = await transactionController.createBulkRecurringTemplates({
-        user: req.user,
-        body: { templates: formattedTemplates }
-      }, res);
-      
-      // This will be handled by the controller method
-      
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'TEST_ONBOARDING_ERROR',
-          message: 'Failed to test onboarding templates',
-          details: error.message
+// 🧪 TEST: Onboarding template creation — development only
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/test-onboarding-templates',
+    createTransactionLimiter,
+    routeLogger('TEST_ONBOARDING_TEMPLATES'),
+    async (req, res) => {
+      try {
+        const preparedTemplates = [
+          // Income templates
+          { name: 'Monthly Salary', type: 'income', amount: 5000, category_name: 'Salary' },
+          { name: 'Freelance Work', type: 'income', amount: 2000, category_name: 'Freelance' },
+
+          // Expense templates
+          { name: 'Rent/Mortgage', type: 'expense', amount: 1200, category_name: 'Housing' },
+          { name: 'Phone & Internet', type: 'expense', amount: 80, category_name: 'Utilities' },
+          { name: 'Groceries', type: 'expense', amount: 400, category_name: 'Food' },
+          { name: 'Insurance', type: 'expense', amount: 200, category_name: 'Insurance' },
+          { name: 'Gym Membership', type: 'expense', amount: 50, category_name: 'Health' },
+          { name: 'Streaming Services', type: 'expense', amount: 25, category_name: 'Entertainment' }
+        ];
+
+        const formattedTemplates = preparedTemplates.map(template => ({
+          ...template,
+          description: template.name,
+          interval_type: 'monthly',
+          day_of_month: 1,
+          is_active: true
+        }));
+
+        // Inject into req.body and call controller normally so it owns the response
+        req.body = { templates: formattedTemplates };
+        return transactionController.createBulkRecurringTemplates(req, res);
+
+      } catch (error) {
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            error: {
+              code: 'TEST_ONBOARDING_ERROR',
+              message: 'Failed to test onboarding templates',
+              details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            }
+          });
         }
-      });
+      }
     }
-  }
-);
+  );
+}
 
 // ✅ UPCOMING TRANSACTIONS MANAGEMENT
 // Get upcoming transactions for user
@@ -257,9 +253,10 @@ router.post('/templates/:id/regenerate',
  * Create, update, delete individual transactions
  */
 
-// Bulk delete transactions (no rate limit - destructive operations are naturally limited)
+// Bulk delete transactions — rate limited to prevent mass-deletion abuse
 // ✅ MOVED BEFORE /:type to avoid route conflicts - SPECIFIC ROUTES FIRST!
-router.post('/bulk-delete', 
+router.post('/bulk-delete',
+  createTransactionLimiter,
   bulkOperationLogger('DELETE_TRANSACTIONS'),
   transactionController.bulkDelete
 );

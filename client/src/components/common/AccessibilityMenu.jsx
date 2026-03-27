@@ -55,7 +55,8 @@ const AccessibilityMenu = ({
         contrast
       });
     }
-  }, [isOpen, originalSettings, fontSize, reducedMotion, screenReader, announcements, focusVisible, theme, contrast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, originalSettings]);
 
   // Font size options
   const fontSizeOptions = [

@@ -10,7 +10,12 @@ const logger = require('../utils/logger');
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.initializeTransporter();
+    // initializeTransporter is async; attach a catch so the unhandled rejection
+    // doesn't crash the process if SMTP is misconfigured at startup.
+    this.initializeTransporter().catch((err) => {
+      logger.error('Email service failed to initialize:', err.message);
+      this.transporter = null;
+    });
   }
 
   async initializeTransporter() {

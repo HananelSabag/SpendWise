@@ -108,7 +108,7 @@ router.post('/complete', auth, async (req, res) => {
       error: {
         ...errorCodes.INTERNAL_ERROR,
         details: 'Failed to complete onboarding',
-        debug: error.message
+        debug: process.env.NODE_ENV === 'development' ? error.message : undefined
       }
     });
   }

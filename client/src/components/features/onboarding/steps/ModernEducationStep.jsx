@@ -20,10 +20,187 @@ import { useTranslation, useCurrency } from '../../../../stores';
 import { Button, Card, Badge } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
+// ── Module-level sub-components (stable references) ──────────────────────────
+
+const DemoTransactionCard = ({ transaction, isRecurring = false, className = '', isSelected = false, onClick }) => {
+  const { formatCurrency } = useCurrency();
+  const isIncome = transaction.type === 'income';
+  const IconComponent = transaction.icon;
+
+  return (
+    <div
+      className={cn("cursor-pointer", className)}
+      onClick={onClick}
+    >
+      <Card className={cn(
+        "p-5 transition-all duration-300 rounded-xl relative overflow-hidden",
+        isSelected ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20" : "",
+        isRecurring ? [
+          "bg-gradient-to-r from-purple-50 via-purple-25 to-indigo-50 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-indigo-900/30",
+          "border-l-4 border-l-purple-500 dark:border-l-purple-400",
+          "border-2 border-purple-200 dark:border-purple-600",
+          "shadow-lg shadow-purple-100/50 dark:shadow-purple-900/30"
+        ] : [
+          "border-2 border-gray-200 dark:border-gray-700",
+          "bg-white dark:bg-gray-800",
+          "hover:shadow-lg"
+        ]
+      )}>
+        {isRecurring && (
+          <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
+            <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-600 transform rotate-45 translate-x-8 -translate-y-8" />
+          </div>
+        )}
+        {isRecurring && (
+          <div className="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
+            <Repeat className="w-4 h-4 text-white" />
+          </div>
+        )}
+        <div className="flex items-start gap-4 w-full relative z-10">
+          <div className={cn(
+            "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg border-2 flex-shrink-0",
+            isRecurring ? [
+              isIncome
+                ? "bg-gradient-to-br from-green-400 via-green-500 to-purple-500 text-white border-purple-300"
+                : "bg-gradient-to-br from-red-400 via-red-500 to-purple-500 text-white border-purple-300"
+            ] : [
+              isIncome
+                ? "bg-gradient-to-br from-green-50 to-green-100 text-green-600 border-green-200"
+                : "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border-red-200"
+            ]
+          )}>
+            <IconComponent className="w-7 h-7" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className={cn(
+                    "font-semibold text-lg leading-tight",
+                    isRecurring ? "text-purple-900 dark:text-purple-100" : "text-gray-900 dark:text-white"
+                  )}>
+                    {transaction.description}
+                  </h4>
+                  {isRecurring && (
+                    <Badge variant="secondary" size="sm" className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300 font-medium shadow-sm">
+                      <Repeat className="w-3 h-3 mr-1" />Auto
+                    </Badge>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">{transaction.category}</span>
+                    {isRecurring ? (
+                      <span className="text-purple-600 dark:text-purple-400">• {transaction.frequency}</span>
+                    ) : (
+                      <span>• {transaction.date}</span>
+                    )}
+                  </div>
+                  {isRecurring && (
+                    <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                      Next: {transaction.nextDate}
+                    </div>
+                  )}
+                  {!isRecurring && transaction.location && (
+                    <div className="text-xs text-gray-500">📍 {transaction.location}</div>
+                  )}
+                </div>
+              </div>
+              <div className="text-right ml-4">
+                <div className={cn(
+                  "font-bold text-xl mb-1",
+                  isIncome
+                    ? isRecurring ? "text-green-700" : "text-green-600"
+                    : isRecurring ? "text-red-700" : "text-red-600"
+                )}>
+                  {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
+                </div>
+                {isRecurring && <div className="text-xs text-purple-600 font-medium">Monthly</div>}
+                {isSelected && <div className="text-xs text-blue-600 font-medium mt-1">✓ Selected</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+const BalancePanelDemo = ({ balanceVisible, onToggleVisible, currentBalance, balanceChange }) => {
+  const { formatCurrency } = useCurrency();
+  const isPositiveChange = balanceChange > 0;
+  const changePercentage = (Math.abs(balanceChange) / currentBalance) * 100;
+
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-2xl p-6">
+      <div className="absolute inset-0 opacity-10">
+        <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500" />
+      </div>
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Total Balance</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Across all accounts</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={onToggleVisible} className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50">
+              {balanceVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50">
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="mb-6">
+          <div className="flex items-baseline space-x-4">
+            <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              {balanceVisible ? formatCurrency(currentBalance) : '••••••'}
+            </div>
+            {balanceVisible && (
+              <div className={cn(
+                "flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium",
+                isPositiveChange
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+              )}>
+                {isPositiveChange ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                <span>{isPositiveChange ? '+' : ''}{formatCurrency(balanceChange)}</span>
+                <span className="text-xs opacity-75">({changePercentage.toFixed(1)}%)</span>
+              </div>
+            )}
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Compared to last month</p>
+        </div>
+        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20 dark:border-gray-700/50">
+          <div className="text-center">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(3247.92)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Income</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(2905.42)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Expenses</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(342.50)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Savings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 /**
  * 📚 Modern Education Step Component
  */
-const ModernEducationStep = ({ 
+const ModernEducationStep = ({
   data = {}, 
   onDataUpdate, 
   onNext, 
@@ -110,263 +287,6 @@ const ModernEducationStep = ({
         template_id: 'sub_001'
       }
     ]
-  };
-
-  // ✅ Enhanced demo transaction card
-  const DemoTransactionCard = ({ transaction, isRecurring = false, className = '', isSelected = false, onClick }) => {
-    const isIncome = transaction.type === 'income';
-    const IconComponent = transaction.icon;
-    
-    return (
-      <div
-        className={cn("cursor-pointer", className)}
-        onClick={onClick}
-      >
-        <Card className={cn(
-          "p-5 transition-all duration-300 rounded-xl relative overflow-hidden",
-          isSelected ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20" : "",
-          isRecurring ? [
-            "bg-gradient-to-r from-purple-50 via-purple-25 to-indigo-50 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-indigo-900/30",
-            "border-l-4 border-l-purple-500 dark:border-l-purple-400",
-            "border-2 border-purple-200 dark:border-purple-600",
-            "shadow-lg shadow-purple-100/50 dark:shadow-purple-900/30"
-          ] : [
-            "border-2 border-gray-200 dark:border-gray-700",
-            "bg-white dark:bg-gray-800",
-            "hover:shadow-lg"
-          ]
-        )}>
-          {/* Background pattern for recurring */}
-          {isRecurring && (
-            <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
-              <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-600 transform rotate-45 translate-x-8 -translate-y-8" />
-            </div>
-          )}
-
-          {/* Recurring indicator badge */}
-          {isRecurring && (
-            <div className="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
-              <Repeat className="w-4 h-4 text-white" />
-            </div>
-          )}
-          
-          {/* Main content */}
-          <div className="flex items-start gap-4 w-full relative z-10">
-            {/* Enhanced icon */}
-            <div className={cn(
-              "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg border-2 flex-shrink-0",
-              isRecurring ? [
-                isIncome 
-                  ? "bg-gradient-to-br from-green-400 via-green-500 to-purple-500 text-white border-purple-300"
-                  : "bg-gradient-to-br from-red-400 via-red-500 to-purple-500 text-white border-purple-300"
-              ] : [
-                isIncome 
-                  ? "bg-gradient-to-br from-green-50 to-green-100 text-green-600 border-green-200"
-                  : "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border-red-200"
-              ]
-            )}>
-              <IconComponent className="w-7 h-7" />
-            </div>
-            
-            {/* Details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className={cn(
-                      "font-semibold text-lg leading-tight",
-                      isRecurring 
-                        ? "text-purple-900 dark:text-purple-100" 
-                        : "text-gray-900 dark:text-white"
-                    )}>
-                      {transaction.description}
-                    </h4>
-                    
-                    {isRecurring && (
-                      <Badge 
-                        variant="secondary" 
-                        size="sm" 
-                        className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300 font-medium shadow-sm"
-                      >
-                        <Repeat className="w-3 h-3 mr-1" />
-                        Auto
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">{transaction.category}</span>
-                      {isRecurring ? (
-                        <span className="text-purple-600 dark:text-purple-400">
-                          • {transaction.frequency}
-                        </span>
-                      ) : (
-                        <span>• {transaction.date}</span>
-                      )}
-                    </div>
-                    
-                    {isRecurring && (
-                      <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                        Next: {transaction.nextDate}
-                      </div>
-                    )}
-                    
-                    {!isRecurring && transaction.location && (
-                      <div className="text-xs text-gray-500">
-                        📍 {transaction.location}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Amount */}
-                <div className="text-right ml-4">
-                  <div className={cn(
-                    "font-bold text-xl mb-1",
-                    isIncome 
-                      ? isRecurring ? "text-green-700" : "text-green-600"
-                      : isRecurring ? "text-red-700" : "text-red-600"
-                  )}>
-                    {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </div>
-                  {isRecurring && (
-                    <div className="text-xs text-purple-600 font-medium">
-                      Monthly
-                    </div>
-                  )}
-                  {isSelected && (
-                    <div className="text-xs text-blue-600 font-medium mt-1">
-                      ✓ Selected
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
-  // ✅ Balance panel demo component
-  const BalancePanelDemo = () => {
-    const isPositiveChange = balanceChange > 0;
-    const changePercentage = (Math.abs(balanceChange) / currentBalance) * 100;
-
-    return (
-      <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-2xl p-6">
-        {/* Static background */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500" />
-        </div>
-
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Total Balance
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Across all accounts
-                </p>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setBalanceVisible(!balanceVisible)}
-                className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50"
-              >
-                {balanceVisible ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Main balance */}
-          <div className="mb-6">
-            <div className="flex items-baseline space-x-4">
-              <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-                {balanceVisible ? formatCurrency(currentBalance) : '••••••'}
-              </div>
-
-              {/* Change indicator */}
-              {balanceVisible && (
-                <div className={cn(
-                  "flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium",
-                  isPositiveChange
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                    : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                )}>
-                  {isPositiveChange ? (
-                    <ArrowUpRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4" />
-                  )}
-                  <span>{isPositiveChange ? '+' : ''}{formatCurrency(balanceChange)}</span>
-                  <span className="text-xs opacity-75">({changePercentage.toFixed(1)}%)</span>
-                </div>
-              )}
-            </div>
-
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Compared to last month
-            </p>
-          </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20 dark:border-gray-700/50">
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatCurrency(3247.92)}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                Income
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatCurrency(2905.42)}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                Expenses
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatCurrency(342.50)}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                Savings
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   // ✅ Handle example selection
@@ -508,7 +428,7 @@ const ModernEducationStep = ({
                   </div>
                 </div>
 
-                <BalancePanelDemo />
+                <BalancePanelDemo balanceVisible={balanceVisible} onToggleVisible={() => setBalanceVisible(v => !v)} currentBalance={currentBalance} balanceChange={balanceChange} />
 
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center text-sm">
@@ -624,7 +544,7 @@ const ModernEducationStep = ({
               </div>
 
               <div className="mb-8">
-                <BalancePanelDemo />
+                <BalancePanelDemo balanceVisible={balanceVisible} onToggleVisible={() => setBalanceVisible(v => !v)} currentBalance={currentBalance} balanceChange={balanceChange} />
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">

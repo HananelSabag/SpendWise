@@ -13,6 +13,63 @@ import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 import { Button, Modal } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
+// Defined outside parent to prevent remount on every render
+const DeleteModal = ({ showDeleteModal, setShowDeleteModal, transaction, t, handleDeleteInstance, isLoading }) => (
+  <Modal
+    isOpen={showDeleteModal}
+    onClose={() => setShowDeleteModal(false)}
+    title={t('transactions.delete.recurring.title', 'Delete Recurring Transaction')}
+    size="sm"
+  >
+    <div className="p-4 space-y-3">
+      <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+        {t('transactions.delete.recurring.options', 'What would you like to delete?')}
+      </p>
+      <Button
+        variant="outline"
+        className="w-full justify-start"
+        onClick={() => { handleDeleteInstance('current'); setShowDeleteModal(false); }}
+        disabled={isLoading}
+      >
+        <Clock className="w-4 h-4 mr-3" />
+        <div className="text-left">
+          <div className="font-medium text-sm">{t('transactions.delete.recurring.single', 'This Occurrence Only')}</div>
+          <div className="text-xs text-gray-500">{t('transactions.delete.recurring.singleDescription', 'Delete only this single transaction')}</div>
+        </div>
+      </Button>
+      <Button
+        variant="outline"
+        className="w-full justify-start"
+        onClick={() => { handleDeleteInstance('future'); setShowDeleteModal(false); }}
+        disabled={isLoading}
+      >
+        <StopCircle className="w-4 h-4 mr-3" />
+        <div className="text-left">
+          <div className="font-medium text-sm">{t('transactions.delete.recurring.future', 'This and Future')}</div>
+          <div className="text-xs text-gray-500">{t('transactions.delete.recurring.futureDescription', 'Delete this and all future occurrences')}</div>
+        </div>
+      </Button>
+      <Button
+        variant="destructive"
+        className="w-full justify-start"
+        onClick={() => { handleDeleteInstance('all'); setShowDeleteModal(false); }}
+        disabled={isLoading}
+      >
+        <Trash2 className="w-4 h-4 mr-3" />
+        <div className="text-left">
+          <div className="font-medium text-sm">{t('transactions.delete.recurring.all', 'All Occurrences')}</div>
+          <div className="text-xs text-gray-500">{t('transactions.delete.recurring.allDescription', 'Delete all past and future occurrences')}</div>
+        </div>
+      </Button>
+      <div className="pt-2">
+        <Button variant="outline" className="w-full" onClick={() => setShowDeleteModal(false)}>
+          {t('common.cancel', 'Cancel')}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);
+
 const RecurringTransactionActions = ({ 
   transaction, 
   template, 
@@ -102,62 +159,6 @@ const RecurringTransactionActions = ({
     }
   };
 
-  // Delete modal for recurring transaction instances
-  const DeleteModal = () => (
-    <Modal
-      isOpen={showDeleteModal}
-      onClose={() => setShowDeleteModal(false)}
-      title={t('transactions.delete.recurring.title', 'Delete Recurring Transaction')}
-      size="sm"
-    >
-      <div className="p-4 space-y-3">
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-          {t('transactions.delete.recurring.options', 'What would you like to delete?')}
-        </p>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => { handleDeleteInstance('current'); setShowDeleteModal(false); }}
-          disabled={isLoading}
-        >
-          <Clock className="w-4 h-4 mr-3" />
-          <div className="text-left">
-            <div className="font-medium text-sm">{t('transactions.delete.recurring.single', 'This Occurrence Only')}</div>
-            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.singleDescription', 'Delete only this single transaction')}</div>
-          </div>
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => { handleDeleteInstance('future'); setShowDeleteModal(false); }}
-          disabled={isLoading}
-        >
-          <StopCircle className="w-4 h-4 mr-3" />
-          <div className="text-left">
-            <div className="font-medium text-sm">{t('transactions.delete.recurring.future', 'This and Future')}</div>
-            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.futureDescription', 'Delete this and all future occurrences')}</div>
-          </div>
-        </Button>
-        <Button
-          variant="destructive"
-          className="w-full justify-start"
-          onClick={() => { handleDeleteInstance('all'); setShowDeleteModal(false); }}
-          disabled={isLoading}
-        >
-          <Trash2 className="w-4 h-4 mr-3" />
-          <div className="text-left">
-            <div className="font-medium text-sm">{t('transactions.delete.recurring.all', 'All Occurrences')}</div>
-            <div className="text-xs text-gray-500">{t('transactions.delete.recurring.allDescription', 'Delete all past and future occurrences')}</div>
-          </div>
-        </Button>
-        <div className="pt-2">
-          <Button variant="outline" className="w-full" onClick={() => setShowDeleteModal(false)}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
 
   // ✅ RENDER ACTIONS BASED ON VARIANT
   if (variant === "inline") {
@@ -179,12 +180,12 @@ const RecurringTransactionActions = ({
               {isActive ? (
                 <>
                   <Pause className="w-3 h-3 mr-1" />
-                  Pause
+                  {t('actions.pause')}
                 </>
               ) : (
                 <>
                   <Play className="w-3 h-3 mr-1" />
-                  Resume
+                  {t('actions.resume')}
                 </>
               )}
             </Button>
@@ -196,9 +197,9 @@ const RecurringTransactionActions = ({
               className="text-blue-600 hover:text-blue-700 text-xs"
             >
               <Edit className="w-3 h-3 mr-1" />
-              Edit
+              {t('actions.edit')}
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -206,7 +207,7 @@ const RecurringTransactionActions = ({
               className="text-purple-600 hover:text-purple-700 text-xs"
             >
               <Copy className="w-3 h-3 mr-1" />
-              Copy
+              {t('actions.copy')}
             </Button>
             
             <Button
@@ -229,9 +230,9 @@ const RecurringTransactionActions = ({
               className="text-blue-600 hover:text-blue-700 text-xs"
             >
               <Edit className="w-3 h-3 mr-1" />
-              Edit
+              {t('actions.edit')}
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -240,12 +241,21 @@ const RecurringTransactionActions = ({
               className="text-red-600 hover:text-red-700 text-xs"
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Delete
+              {t('actions.delete')}
             </Button>
           </>
         )}
 
-        {showDeleteModal && <DeleteModal />}
+        {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            t={t}
+            handleDeleteInstance={handleDeleteInstance}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     );
   }
@@ -272,7 +282,16 @@ const RecurringTransactionActions = ({
           <Trash2 className="w-4 h-4" />
         </Button>
 
-        {showDeleteModal && <DeleteModal />}
+        {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            t={t}
+            handleDeleteInstance={handleDeleteInstance}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     );
   }
@@ -288,9 +307,9 @@ const RecurringTransactionActions = ({
           onClick={isTemplate ? handleEditTemplate : handleEditInstance}
         >
           <Edit className="w-4 h-4 mr-1" />
-          Edit
+          {t('actions.edit')}
         </Button>
-        
+
         <Button
           variant="outline"
           size="sm"
@@ -298,11 +317,20 @@ const RecurringTransactionActions = ({
           disabled={isLoading}
         >
           <Trash2 className="w-4 h-4 mr-1" />
-          Delete
+          {t('actions.delete')}
         </Button>
       </div>
 
-      {showDeleteModal && <DeleteModal />}
+      {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            t={t}
+            handleDeleteInstance={handleDeleteInstance}
+            isLoading={isLoading}
+          />
+        )}
     </div>
   );
 };

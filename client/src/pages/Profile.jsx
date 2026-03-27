@@ -4,10 +4,11 @@
  * All functionality preserved: personal info, preferences, security, export.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  User, Settings, Shield, Download, Upload,
-  Eye, EyeOff, FileSpreadsheet, Braces, FileText
+  User, Settings, Shield, Download, Camera,
+  Eye, EyeOff, FileSpreadsheet, Braces, FileText,
+  X, Check, Loader2, AlertTriangle
 } from 'lucide-react';
 
 import {
@@ -36,27 +37,72 @@ const TABS = [
 // ── Avatar Section ────────────────────────────────────────────────────────────
 
 const AvatarSection = ({ user, authToasts }) => {
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [preview, setPreview]       = useState(null); // { url, file, finalSizeMB, originalSizeMB, wasCompressed }
+  const fileInputRef                = useRef(null);
+  const { t } = useTranslation('profile');
 
-  const handleUpload = useCallback(async (e) => {
+  // Cleanup object URL when dialog closes
+  useEffect(() => {
+    return () => { if (preview?.url) URL.revokeObjectURL(preview.url); };
+  }, []); // eslint-disable-line
+
+  const handleFileSelect = useCallback(async (e) => {
     const file = e.target.files?.[0];
+    if (e.target) e.target.value = ''; // reset so same file can be re-selected
     if (!file) return;
 
     const { validateImageFile, processImageForUpload } = await import('../utils/imageProcessor');
-    const validation = validateImageFile(file, { maxSizeMB: 10 });
-    if (!validation.valid) { authToasts.toast?.error(validation.error); return; }
 
+    // Pre-validation: allow up to 50MB (Live Photos / Motion Photos embed video data)
+    const validation = validateImageFile(file, { maxSizeMB: 50 });
+    if (!validation.valid) {
+      authToasts.toast?.error(validation.error);
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const { file: processed, originalSize, newSize } = await processImageForUpload(file, {
+        maxSizeMB: 5, maxWidthOrHeight: 2048, quality: 0.85,
+      });
+
+      const finalSizeMB = processed.size / (1024 * 1024);
+      if (finalSizeMB > 20) {
+        authToasts.toast?.error(t('personal.imageTooLargeAfterCompression', { size: finalSizeMB.toFixed(1) }) || `Image too large after compression (${finalSizeMB.toFixed(1)}MB). Please choose a smaller image.`);
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(processed);
+      setPreview({
+        url: previewUrl,
+        file: processed,
+        finalSizeMB: finalSizeMB.toFixed(1),
+        originalSizeMB: (originalSize / 1024 / 1024).toFixed(1),
+        wasCompressed: newSize < originalSize * 0.95,
+      });
+    } catch {
+      authToasts.toast?.error(t('personal.imageProcessingFailed') || 'Failed to process image. Please try another photo.');
+    } finally {
+      setProcessing(false);
+    }
+  }, [authToasts]);
+
+  const handleConfirmUpload = useCallback(async () => {
+    if (!preview?.file) return;
+    const fileToUpload = preview.file;
+    const urlToRevoke  = preview.url;
+
+    setPreview(null);
     setUploading(true);
     try {
-      const { file: processed } = await processImageForUpload(file, { maxSizeMB: 5, maxWidthOrHeight: 2048, quality: 0.85 });
       const formData = new FormData();
-      formData.append('profilePicture', processed);
-
+      formData.append('profilePicture', fileToUpload);
       const res = await api.users.uploadAvatar(formData);
       if (res.success) {
         const url = res.data?.data?.url || res.data?.url;
         useAuthStore.setState({ user: { ...useAuthStore.getState().user, avatar: url, avatar_url: url } });
-        // Refresh avatar images in DOM
         document.querySelectorAll('img').forEach(img => {
           if (img.src?.includes('supabase') || img.alt === 'Profile') img.src = url + '?t=' + Date.now();
         });
@@ -68,47 +114,174 @@ const AvatarSection = ({ user, authToasts }) => {
       authToasts.avatarUploadFailed?.();
     } finally {
       setUploading(false);
-      if (e.target) e.target.value = '';
+      URL.revokeObjectURL(urlToRevoke);
     }
-  }, [authToasts]);
+  }, [preview, authToasts]);
+
+  const handleCancelPreview = useCallback(() => {
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  }, [preview]);
+
+  const busy = uploading || processing;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-      <div className="relative shrink-0">
-        <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-blue-100 dark:ring-blue-900/40">
-          <Avatar
-            src={user?.avatar}
-            alt={user?.name || user?.email}
-            size="xl"
-            fallback={(user?.name || user?.email || '?').charAt(0).toUpperCase()}
-            className="w-full h-full"
-          />
-          {uploading && (
-            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-              <LoadingSpinner size="sm" className="text-white" />
+    <>
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+        {/* Avatar + camera button */}
+        <div className="relative shrink-0">
+          <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-blue-100 dark:ring-blue-900/40">
+            <Avatar
+              src={user?.avatar}
+              alt={user?.name || user?.email}
+              size="xl"
+              fallback={(user?.name || user?.email || '?').charAt(0).toUpperCase()}
+              className="w-full h-full"
+            />
+          </div>
+          {/* Loading overlay */}
+          {busy && (
+            <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-white animate-spin" />
             </div>
           )}
+          {/* Camera trigger */}
+          <label className={cn(
+            'absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center',
+            'shadow-md border-2 border-white dark:border-gray-800 transition-colors cursor-pointer',
+            busy ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          )}>
+            <Camera className="w-3.5 h-3.5 text-white" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.heic,.heif"
+              onChange={handleFileSelect}
+              className="hidden"
+              disabled={busy}
+            />
+          </label>
         </div>
-        <label className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center cursor-pointer shadow-md border-2 border-white dark:border-gray-800 transition-colors">
-          <Upload className="w-3.5 h-3.5 text-white" />
-          <input type="file" accept="image/*,.heic,.heif" onChange={handleUpload} className="hidden" disabled={uploading} />
-        </label>
+
+        {/* User info */}
+        <div className="text-center sm:text-left">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            {user?.name || user?.email?.split('@')[0]}
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            {t('personal.memberSince') || 'Member since'} {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
+          </p>
+          {processing && (
+            <p className="text-xs text-blue-500 dark:text-blue-400 mt-1.5 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {t('personal.processingImage') || 'Processing image…'}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="text-center sm:text-left">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || user?.email?.split('@')[0]}</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-          Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
-        </p>
-      </div>
-    </div>
+
+      {/* ── Preview / Confirm dialog ───────────────────────────────────── */}
+      {preview && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={handleCancelPreview}
+          />
+
+          {/* Sheet */}
+          <div className="relative z-10 w-full sm:max-w-sm bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl shadow-2xl px-6 pb-8 pt-5">
+            {/* Mobile drag handle */}
+            <div className="sm:hidden absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+
+            {/* Header */}
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('personal.changePhoto') || 'Change Photo'}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {t('personal.newPhotoDesc') || 'This will be your new profile picture'}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelPreview}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 ml-3"
+              >
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Preview image */}
+            <div className="flex justify-center mb-5">
+              <div className="relative">
+                <img
+                  src={preview.url}
+                  alt="Preview"
+                  className="w-36 h-36 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-xl"
+                />
+                {preview.wasCompressed && (
+                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-md">
+                    Optimized ✓
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Size info */}
+            <div className="flex justify-center mb-6">
+              {preview.wasCompressed ? (
+                <div className="flex items-center gap-2 text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <span className="line-through text-gray-400">{preview.originalSizeMB}MB</span>
+                  <span>→</span>
+                  <span className="font-semibold">{preview.finalSizeMB}MB</span>
+                </div>
+              ) : (
+                <span className="text-xs text-gray-400 dark:text-gray-500">{preview.finalSizeMB}MB</span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleCancelPreview}
+                className="flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-gray-200 dark:border-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+                {t('actions.cancel') || 'Cancel'}
+              </button>
+              <button
+                onClick={handleConfirmUpload}
+                className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+              >
+                <Check className="w-4 h-4" />
+                {t('personal.setPhoto') || 'Set Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
 // ── Preferences Tab ───────────────────────────────────────────────────────────
 
+// Defined at module level so React sees a stable component reference across renders.
+// If defined inside PreferencesTab, React would remount all <select> elements on
+// every re-render because the component identity would change each time.
+const Row = ({ label, value, onChange, options }) => (
+  <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-700 last:border-0">
+    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="text-sm px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  </div>
+);
+
 const PreferencesTab = ({ user, authToasts }) => {
   const { updateProfile } = useAuth();
+  const { t } = useTranslation('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [prefs, setPrefs] = useState({
     language_preference: user?.language_preference || 'en',
@@ -149,28 +322,18 @@ const PreferencesTab = ({ user, authToasts }) => {
     }
   };
 
-  const Row = ({ label, value, onChange, options }) => (
-    <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-700 last:border-0">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="text-sm px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 py-2">
-        <Row label="Language" value={prefs.language_preference} onChange={v => setPrefs(p => ({...p, language_preference: v}))}
+        <Row label={t('preferences.language.language') || 'Language'} value={prefs.language_preference} onChange={v => setPrefs(p => ({...p, language_preference: v}))}
           options={[{ value: 'en', label: 'English' }, { value: 'he', label: 'עברית (Hebrew)' }]} />
-        <Row label="Theme" value={prefs.theme_preference} onChange={v => setPrefs(p => ({...p, theme_preference: v}))}
-          options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
-        <Row label="Currency" value={prefs.currency_preference} onChange={v => setPrefs(p => ({...p, currency_preference: v}))}
+        <Row label={t('preferences.display.theme') || 'Theme'} value={prefs.theme_preference} onChange={v => setPrefs(p => ({...p, theme_preference: v}))}
+          options={[{ value: 'system', label: t('preferences.themeOptions.system') || 'System' }, { value: 'light', label: t('preferences.themeOptions.light') || 'Light' }, { value: 'dark', label: t('preferences.themeOptions.dark') || 'Dark' }]} />
+        <Row label={t('preferences.language.currency') || 'Currency'} value={prefs.currency_preference} onChange={v => setPrefs(p => ({...p, currency_preference: v}))}
           options={[{ value: 'ILS', label: '₪ Israeli Shekel' }, { value: 'USD', label: '$ US Dollar' }, { value: 'EUR', label: '€ Euro' }, { value: 'GBP', label: '£ British Pound' }, { value: 'JPY', label: '¥ Japanese Yen' }, { value: 'CAD', label: 'C$ Canadian Dollar' }, { value: 'AUD', label: 'A$ Australian Dollar' }]} />
       </div>
       <Button onClick={handleSave} isLoading={isLoading} disabled={isLoading} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
-        Save Preferences
+        {t('preferences.savePreferences') || 'Save Preferences'}
       </Button>
     </div>
   );
@@ -179,6 +342,7 @@ const PreferencesTab = ({ user, authToasts }) => {
 // ── Security Tab ──────────────────────────────────────────────────────────────
 
 const SecurityTab = ({ authToasts }) => {
+  const { t } = useTranslation('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState(null);
   const [showCurrent, setShowCurrent] = useState(false);
@@ -226,13 +390,13 @@ const SecurityTab = ({ authToasts }) => {
       <AuthStatusDetector />
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 space-y-4">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-          {isGoogleOnly ? 'Set Password' : 'Change Password'}
+          {isGoogleOnly ? (t('security.setPassword') || 'Set Password') : (t('security.password.title') || 'Change Password')}
         </h3>
 
         {isGoogleOnly && (
           <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
             <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>You signed in with Google. You can add a password to also sign in with email.</span>
+            <span>{t('security.googleSignInNote') || 'You signed in with Google. You can add a password to also sign in with email.'}</span>
           </div>
         )}
 
@@ -241,7 +405,7 @@ const SecurityTab = ({ authToasts }) => {
             <div className="relative">
               <Input
                 type={showCurrent ? 'text' : 'password'}
-                placeholder="Current password"
+                placeholder={t('security.currentPasswordPlaceholder') || 'Current password'}
                 value={form.currentPassword}
                 onChange={e => setForm(p => ({...p, currentPassword: e.target.value}))}
                 className="pr-10"
@@ -254,7 +418,7 @@ const SecurityTab = ({ authToasts }) => {
           <div className="relative">
             <Input
               type={showNew ? 'text' : 'password'}
-              placeholder="New password (min. 8 chars, letter + number)"
+              placeholder={t('security.newPasswordPlaceholder') || 'New password (min. 8 chars, letter + number)'}
               value={form.newPassword}
               onChange={e => setForm(p => ({...p, newPassword: e.target.value}))}
               className="pr-10"
@@ -265,14 +429,14 @@ const SecurityTab = ({ authToasts }) => {
           </div>
           <Input
             type="password"
-            placeholder="Confirm new password"
+            placeholder={t('security.confirmPasswordPlaceholder') || 'Confirm new password'}
             value={form.confirmPassword}
             onChange={e => setForm(p => ({...p, confirmPassword: e.target.value}))}
           />
         </div>
 
         <Button onClick={handleSubmit} isLoading={isLoading} disabled={isLoading} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
-          {isGoogleOnly ? 'Set Password' : 'Update Password'}
+          {isGoogleOnly ? (t('security.setPassword') || 'Set Password') : (t('security.updatePassword') || 'Update Password')}
         </Button>
       </div>
     </div>
@@ -285,9 +449,9 @@ const ExportTab = ({ t }) => {
   const { exportAsCSV, exportAsJSON, exportAsPDF, isExporting } = useExport();
 
   const exports = [
-    { label: 'Export as CSV',  desc: 'Spreadsheet format for Excel / Google Sheets', icon: FileSpreadsheet, color: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400', action: exportAsCSV },
-    { label: 'Export as JSON', desc: 'Raw data format for developers',                icon: Braces,          color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400',  action: exportAsJSON },
-    { label: 'Export as PDF',  desc: 'Formatted report ready to print or share',      icon: FileText,        color: 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400',   action: exportAsPDF  },
+    { label: t('export.csvLabel') || 'Export as CSV',  desc: t('export.csvDesc') || 'Spreadsheet format for Excel / Google Sheets', icon: FileSpreadsheet, color: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400', action: exportAsCSV },
+    { label: t('export.jsonLabel') || 'Export as JSON', desc: t('export.jsonDesc') || 'Raw data format for developers',               icon: Braces,          color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400',  action: exportAsJSON },
+    { label: t('export.pdfLabel') || 'Export as PDF',  desc: t('export.pdfDesc') || 'Formatted report ready to print or share',      icon: FileText,        color: 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400',   action: exportAsPDF  },
   ];
 
   return (
@@ -391,7 +555,7 @@ const Profile = () => {
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
               <User className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Profile</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('page.title') || 'Profile'}</h1>
           </div>
           <HorizontalTabs active={activeTab} onChange={setActiveTab} t={t} />
         </div>
@@ -405,10 +569,10 @@ const Profile = () => {
       <div className="max-w-5xl mx-auto px-6 pt-6 pb-8">
         <div className="mb-7">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('tabs.accountSettings', 'Account Settings')}
+            {t('tabs.accountSettings') || 'Account Settings'}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {t('tabs.accountSettingsDesc', 'Manage your profile and preferences')}
+            {t('tabs.accountSettingsDesc') || 'Manage your profile and preferences'}
           </p>
         </div>
         <div className="flex gap-8">

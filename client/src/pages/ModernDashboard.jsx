@@ -322,15 +322,8 @@ const ModernDashboard = () => {
     }
   }, [refreshDashboard, addNotification, t]);
 
-  // Listen for add transaction event (from bottom nav / quick add buttons)
-  useEffect(() => {
-    const onAdd = (e) => {
-      setAddTransactionType(e?.detail?.type || 'expense');
-      setShowAddTransaction(true);
-    };
-    window.addEventListener('transaction:add', onAdd);
-    return () => window.removeEventListener('transaction:add', onAdd);
-  }, []);
+  // NOTE: 'transaction:add' on mobile is handled globally by UnifiedTransactionActions.
+  // Desktop FAB below uses a direct onClick so onSuccess → dashboard-refresh-requested fires.
 
   // ── Loading ──
   if (isLoading && !dashboardData) {

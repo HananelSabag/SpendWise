@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import React from 'react'; // Added for React.useEffect
+import React, { useMemo, useCallback } from 'react';
 
 // ✅ Supported Languages
 export const SUPPORTED_LANGUAGES = {
@@ -579,44 +579,48 @@ export const translationSelectors = {
 };
 
 // ✅ Main translation hook (replaces useLanguage)
+// Uses individual stable selectors so the returned object is memoized —
+// components only re-render when currentLanguage or isRTL actually changes,
+// and the `t` function reference stays stable between renders.
 export const useTranslation = (module = null) => {
-  const store = useTranslationStore();
-  
-  // Enhanced t function with auto-loading
-  const t = async (key, options = {}) => {
-    let translation = store.actions.translate(key, { ...options, module });
-    
-    // If translation not found and not a fallback, try to auto-load
+  const currentLanguage = useTranslationStore((s) => s.currentLanguage);
+  const isRTL = useTranslationStore((s) => s.isRTL);
+  const translate = useTranslationStore((s) => s.actions.translate);
+  const autoLoadForKey = useTranslationStore((s) => s.actions.autoLoadForKey);
+  const setLanguage = useTranslationStore((s) => s.actions.setLanguage);
+  const loadTranslationModule = useTranslationStore((s) => s.actions.loadTranslationModule);
+  const preloadModules = useTranslationStore((s) => s.actions.preloadModules);
+  const clearCache = useTranslationStore((s) => s.actions.clearCache);
+  const getCacheStats = useTranslationStore((s) => s.actions.getCacheStats);
+
+  // Stable sync t — recreates only when currentLanguage or module changes
+  const tSync = useCallback((key, options = {}) => {
+    return translate(key, { ...options, module });
+  }, [translate, module, currentLanguage]); // currentLanguage so cache re-reads after lang switch
+
+  // Stable async t — recreates only when currentLanguage or module changes
+  const tAsync = useCallback(async (key, options = {}) => {
+    let translation = translate(key, { ...options, module });
     if (translation === key || translation === options.fallback) {
-      const loaded = await store.actions.autoLoadForKey(key);
+      const loaded = await autoLoadForKey(key);
       if (loaded) {
-        // Try again after loading
-        translation = store.actions.translate(key, { ...options, module });
+        translation = translate(key, { ...options, module });
       }
     }
-    
     return translation;
-  };
+  }, [translate, autoLoadForKey, module, currentLanguage]);
 
-  // Sync t function (for immediate use, uses fallback if not loaded)
-  const tSync = (key, options = {}) => {
-    return store.actions.translate(key, { ...options, module });
-  };
-
-  // ✅ FIXED: Return sync function as default (components expect immediate results)
-  const translationFunction = tSync;
-
-  return {
-    t: tSync, // Immediate translation
-    tAsync: t, // Async translation with auto-loading
-    currentLanguage: store.currentLanguage,
-    isRTL: store.isRTL,
-    setLanguage: store.actions.setLanguage,
-    loadModule: store.actions.loadTranslationModule,
-    preloadModules: store.actions.preloadModules,
-    clearCache: store.actions.clearCache,
-    getCacheStats: store.actions.getCacheStats
-  };
+  return useMemo(() => ({
+    t: tSync,
+    tAsync,
+    currentLanguage,
+    isRTL,
+    setLanguage,
+    loadModule: loadTranslationModule,
+    preloadModules,
+    clearCache,
+    getCacheStats
+  }), [tSync, tAsync, currentLanguage, isRTL, setLanguage, loadTranslationModule, preloadModules, clearCache, getCacheStats]);
 };
 
 // ✅ Specific module hooks for common use cases

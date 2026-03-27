@@ -197,6 +197,10 @@ export const useModernOnboardingState = (options = {}) => {
   }, [enableValidation, user]);
 
   // ✅ Enhanced step data update handler
+  // localStorage write is inside setStepData so it uses the fresh computed value,
+  // not a stale closure. Deps reduced to just [persistData] — stepData, validateStep,
+  // and enableValidation are not needed here and were causing this callback to
+  // recreate on every single field change (circular recreation chain).
   const updateStepData = useCallback((stepId, data, merge = true) => {
     setStepData(prev => {
       const newData = {
@@ -204,20 +208,20 @@ export const useModernOnboardingState = (options = {}) => {
         [stepId]: merge ? { ...prev[stepId], ...data } : data
       };
 
+      // Persist inside setter so we always write the fresh value, not stale closure
+      if (persistData) {
+        try {
+          localStorage.setItem('modern_onboarding_step_data', JSON.stringify(newData));
+        } catch (error) {
+          // Silently fail - localStorage might be unavailable
+        }
+      }
+
       return newData;
     });
 
     setHasUnsavedChanges(true);
-
-    // Persist data if enabled
-    if (persistData) {
-      try {
-        localStorage.setItem('modern_onboarding_step_data', JSON.stringify(stepData));
-      } catch (error) {
-        // Silently fail - localStorage might be unavailable
-      }
-    }
-  }, [enableValidation, validateStep, persistData, stepData]);
+  }, [persistData]);
 
   // ✅ Load persisted data on mount
   const loadPersistedData = useCallback(() => {

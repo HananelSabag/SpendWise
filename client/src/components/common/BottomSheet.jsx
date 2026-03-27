@@ -50,6 +50,7 @@ const BottomSheet = ({
             key="sheet"
             drag="y"
             dragControls={dragControls}
+            dragListener={false}
             dragConstraints={{ top: 0 }}
             dragElastic={0.15}
             onDragEnd={(_, info) => {
@@ -67,12 +68,12 @@ const BottomSheet = ({
               heightClass,
               className
             )}
-            style={{ touchAction: 'none' }}
           >
-            {/* Drag handle area — captures drag */}
+            {/* Drag handle area — only this element initiates drag */}
             <div
               onPointerDown={(e) => dragControls.start(e)}
               className="flex-shrink-0 flex flex-col items-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+              style={{ touchAction: 'none' }}
             >
               <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
             </div>

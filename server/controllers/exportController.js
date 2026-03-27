@@ -330,21 +330,24 @@ const exportAsPDF = asyncHandler(async (req, res) => {
     
     res.send(pdfBuffer);
   } catch (error) {
-    logger.error('❌ PDF export failed with error', { 
-      userId, 
-      error: error.message, 
+    logger.error('❌ PDF export failed with error', {
+      userId,
+      error: error.message,
       stack: error.stack,
       name: error.name
     });
-    
-    res.status(500).json({
-      error: {
-        code: 'PDF_GENERATION_FAILED',
-        message: 'Failed to generate PDF report. Please try again.',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        timestamp: new Date().toISOString()
-      }
-    });
+
+    // Guard against double-response if res.send(pdfBuffer) already wrote headers
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: {
+          code: 'PDF_GENERATION_FAILED',
+          message: 'Failed to generate PDF report. Please try again.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
   }
 });
 

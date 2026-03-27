@@ -964,16 +964,14 @@ const ModernTransactions = () => {
     return () => observerRef.current?.disconnect();
   }, [hasMore, isFetchingNextPage, loadMore]);
 
-  // ── Listen for add transaction event from bottom nav / floating button ──
+  // ── 'transaction:add' on mobile is handled globally by UnifiedTransactionActions.
+  // Desktop FAB below uses direct onClick. After UnifiedTransactionActions closes its
+  // modal it dispatches 'transactions:refetch' so we stay in sync.
   useEffect(() => {
-    const onAdd = (e) => {
-      setModalMode('create');
-      setSelectedTransaction(null);
-      setShowAddTransaction(true);
-    };
-    window.addEventListener('transaction:add', onAdd);
-    return () => window.removeEventListener('transaction:add', onAdd);
-  }, []);
+    const onRefetch = () => refetchTransactions();
+    window.addEventListener('transactions:refetch', onRefetch);
+    return () => window.removeEventListener('transactions:refetch', onRefetch);
+  }, [refetchTransactions]);
 
   // ── Shared props ──
   const sharedProps = {

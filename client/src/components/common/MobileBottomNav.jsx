@@ -9,7 +9,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, Plus, BarChart3, User,
-  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, X
+  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, X, HelpCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -72,48 +72,56 @@ const MobileBottomNav = () => {
       key: 'add-expense',
       label: t('transactions.addExpense') || 'Add Expense',
       icon: MinusCircle,
-      color: 'text-red-500',
-      bg: 'bg-red-50 dark:bg-red-900/20',
+      gradient: 'from-red-400 to-rose-600',
+      shadow: 'shadow-red-400/40',
       action: () => { setMenuOpen(false); dispatch('transaction:add', { type: 'expense' }); },
     },
     {
       key: 'add-income',
       label: t('transactions.addIncome') || 'Add Income',
       icon: PlusCircle,
-      color: 'text-green-500',
-      bg: 'bg-green-50 dark:bg-green-900/20',
+      gradient: 'from-emerald-400 to-green-600',
+      shadow: 'shadow-emerald-400/40',
       action: () => { setMenuOpen(false); dispatch('transaction:add', { type: 'income' }); },
     },
     {
       key: 'categories',
       label: t('nav.categories') || 'Categories',
       icon: Tag,
-      color: 'text-blue-500',
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      gradient: 'from-blue-400 to-indigo-600',
+      shadow: 'shadow-blue-400/40',
       action: () => { setMenuOpen(false); dispatch('open-categories'); },
     },
     {
       key: 'recurring',
       label: t('nav.recurring') || 'Recurring',
       icon: RepeatIcon,
-      color: 'text-purple-500',
-      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      gradient: 'from-violet-400 to-purple-600',
+      shadow: 'shadow-violet-400/40',
       action: () => { setMenuOpen(false); dispatch('open-recurring'); },
     },
     {
       key: 'exchange',
       label: t('nav.exchange') || 'Exchange',
       icon: Calculator,
-      color: 'text-orange-500',
-      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      gradient: 'from-amber-400 to-orange-500',
+      shadow: 'shadow-amber-400/40',
       action: () => { setMenuOpen(false); dispatch('open-exchange'); },
+    },
+    {
+      key: 'help',
+      label: t('nav.help') || 'Help & Guide',
+      icon: HelpCircle,
+      gradient: 'from-teal-400 to-cyan-600',
+      shadow: 'shadow-teal-400/40',
+      action: () => { setMenuOpen(false); dispatch('open-onboarding'); },
     },
     ...(isAdmin ? [{
       key: 'admin',
       label: t('nav.admin') || 'Admin Panel',
       icon: Shield,
-      color: 'text-yellow-600',
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+      gradient: 'from-yellow-400 to-amber-600',
+      shadow: 'shadow-yellow-400/40',
       action: () => { setMenuOpen(false); navigate('/admin'); },
     }] : []),
   ];
@@ -139,7 +147,7 @@ const MobileBottomNav = () => {
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   onClick={() => setMenuOpen((v) => !v)}
-                  aria-label={menuOpen ? 'Close quick actions' : 'Quick actions'}
+                  aria-label={menuOpen ? (t('common.closeMenu') || 'Close menu') : (t('common.openMenu') || 'Open menu')}
                   className={cn(
                     'w-16 h-16 rounded-full',
                     'bg-gradient-to-br from-blue-600 to-indigo-600',
@@ -157,7 +165,7 @@ const MobileBottomNav = () => {
                   </motion.div>
                 </motion.button>
                 <span className="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                  {t('common.add') || 'Add'}
+                  {t('common.menu') || 'Menu'}
                 </span>
               </div>
             );
@@ -212,24 +220,38 @@ const MobileBottomNav = () => {
         onClose={() => setMenuOpen(false)}
         title={t('common.quickActions') || 'Quick Actions'}
       >
-        <div className="grid grid-cols-2 gap-4 pb-6">
-          {menuActions.map((action) => {
+        <div className="grid grid-cols-3 gap-3 pb-4">
+          {menuActions.map((action, i) => {
             const Icon = action.icon;
             return (
-              <button
+              <motion.button
                 key={action.key}
+                initial={{ opacity: 0, y: 16, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: i * 0.04, type: 'spring', stiffness: 360, damping: 28 }}
                 onClick={action.action}
                 className={cn(
-                  'flex items-center gap-3 p-5 rounded-2xl',
-                  action.bg,
-                  'active:scale-95 transition-transform'
+                  'flex flex-col items-center gap-2.5 py-5 px-2 rounded-2xl',
+                  'bg-white dark:bg-gray-800',
+                  'border border-gray-100 dark:border-gray-700/60',
+                  'shadow-sm hover:shadow-md',
+                  'active:scale-95 transition-all duration-150'
                 )}
               >
-                <Icon className={cn('w-6 h-6 shrink-0', action.color)} />
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 text-left">
+                {/* Gradient icon circle */}
+                <div className={cn(
+                  'w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg',
+                  'bg-gradient-to-br',
+                  action.gradient,
+                  action.shadow
+                )}>
+                  <Icon className="w-7 h-7 text-white" strokeWidth={1.75} />
+                </div>
+                {/* Label */}
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight px-1">
                   {action.label}
                 </span>
-              </button>
+              </motion.button>
             );
           })}
         </div>

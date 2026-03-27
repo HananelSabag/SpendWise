@@ -10,6 +10,16 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { LRUCache } = require('lru-cache');
 
+// Abort startup if critical JWT secrets are missing
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+if (!process.env.JWT_REFRESH_SECRET) {
+  console.error('FATAL: JWT_REFRESH_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+
 // Enhanced user cache with role support
 const userCache = new LRUCache({
   max: 1000,
@@ -153,13 +163,19 @@ const auth = async (req, res, next) => {
           restrictionReason = activeRestrictions.find(r => r.restriction_type === 'blocked')?.reason || activeRestrictions[0].reason || 'Account restricted';
         }
       } catch (restrictionError) {
-        // Log the error but don't block authentication if restrictions table doesn't exist
-        logger.warn('⚠️ User restrictions check failed', {
+        // DB-12 fix: fail closed on restriction query errors — do not cache, force re-check next request
+        logger.error('🚨 User restrictions check failed — denying request as a safety measure', {
           userId,
           error: restrictionError.message,
           stack: restrictionError.stack
         });
-        // Continue with authentication - assume no restrictions
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Authentication service temporarily unavailable. Please try again.'
+          }
+        });
       }
 
       // Add restrictions to user object (error-safe)
@@ -374,7 +390,7 @@ const generateTokens = (user) => {
 
   const refreshToken = jwt.sign(
     payload,
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    process.env.JWT_REFRESH_SECRET,
     { expiresIn: refreshTokenExpiry }
   );
 
@@ -389,7 +405,9 @@ const verifyToken = (token, secret = process.env.JWT_SECRET) => {
   try {
     return jwt.verify(token, secret);
   } catch (error) {
-    throw new Error('Invalid token');
+    // Re-throw the original JWT error (TokenExpiredError, JsonWebTokenError, etc.)
+    // so callers and the error handler can distinguish expired vs tampered tokens.
+    throw error;
   }
 };
 

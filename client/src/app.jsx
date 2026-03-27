@@ -54,50 +54,50 @@ const RouteLoadingFallback = ({ route = 'page' }) => (
   </div>
 );
 
-// ✅ Route Error Boundary
-const RouteErrorBoundary = ({ children, routeName }) => {
-  const ErrorFallback = ({ error, resetErrorBoundary }) => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center p-8 max-w-md">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          Page Error
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Something went wrong loading this page.
-        </p>
-        <div className="flex gap-3 justify-center">
-          <button
-            onClick={resetErrorBoundary}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Try Again
-          </button>
-          <button
-            onClick={() => window.location.href = '/'}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Go Home
-          </button>
-        </div>
+// ✅ Route Error Fallback — defined OUTSIDE RouteErrorBoundary so React sees
+// a stable component type and never needlessly remounts the error boundary.
+const RouteErrorFallback = ({ error, resetErrorBoundary }) => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="text-center p-8 max-w-md">
+      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Page Error
+      </h3>
+      <p className="text-gray-600 dark:text-gray-400 mb-4">
+        Something went wrong loading this page.
+      </p>
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={resetErrorBoundary}
+          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => window.location.href = '/'}
+          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          Go Home
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 
-  return (
-    <ErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onError={(error) => console.error(`Route error in ${routeName}:`, error)}
-      onReset={() => window.location.reload()}
-    >
-      {children}
-    </ErrorBoundary>
-  );
-};
+// ✅ Route Error Boundary
+const RouteErrorBoundary = ({ children, routeName }) => (
+  <ErrorBoundary
+    FallbackComponent={RouteErrorFallback}
+    onError={(error) => console.error(`Route error in ${routeName}:`, error)}
+    onReset={() => window.location.reload()}
+  >
+    {children}
+  </ErrorBoundary>
+);
 
 // ✅ Role-Based Route Protection - FIXED
 const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false }) => {
@@ -196,7 +196,9 @@ const AppContent = () => {
   
   // ✅ Auto-dismiss loading toasts on navigation
   useToastCleanup();
-  
+
+  const isQuickExpensePage = location.pathname === '/quick-expense';
+
   // Set global navigation for error handling
   useEffect(() => {
     window.spendWiseNavigate = navigate;
@@ -248,10 +250,10 @@ const AppContent = () => {
       {isAuthenticated && <ModernOnboardingManager />}
       
       {/* Header */}
-      {isAuthenticated && <Header />}
+      {isAuthenticated && !isQuickExpensePage && <Header />}
 
       {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
-      {isAuthenticated && <MobileBottomNav />}
+      {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
 
       <main className="flex-grow lg:pb-0 pb-20">
         <Routes>
@@ -346,6 +348,17 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          {/* ✅ Quick Expense Route */}
+          <Route path="/quick-expense" element={
+            <ProtectedRoute>
+              <RouteErrorBoundary routeName="QuickExpense">
+                <Suspense fallback={<RouteLoadingFallback route="quick expense" />}>
+                  <LazyComponents.QuickExpensePage />
+                </Suspense>
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          } />
+
           {/* ✅ Admin Routes */}
           <Route path="/admin" element={
             <ProtectedRoute adminOnly={true}>
@@ -427,7 +440,7 @@ const AppContent = () => {
       </main>
       
       {/* Footer & Accessibility */}
-      {isAuthenticated && <Footer />}
+      {isAuthenticated && !isQuickExpensePage && <Footer />}
       {/* Floating accessibility button (works on mobile and desktop) */}
       {isAuthenticated && <AccessibilityFab />}
       {/* Global unified transaction actions (modals orchestrator) */}

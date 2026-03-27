@@ -114,45 +114,7 @@ export const useOnboardingNavigation = (onboardingState, options = {}) => {
     return goToStep(currentStep - 1, true); // Force navigation backwards
   }, [canGoBack, goToStep, currentStep]);
 
-  // ✅ Skip current step
-  const skipStep = useCallback(() => {
-    if (!currentStepConfig.canSkip) {
-      addNotification({
-        type: 'warning',
-        message: 'This step cannot be skipped',
-        duration: 3000
-      });
-      return false;
-    }
-
-    if (isLastStep) {
-      // If last step, treat skip as completion
-      return handleComplete();
-    }
-
-    // Skip to next step
-    const success = goToStep(currentStep + 1, true); // Force skip
-    
-    if (success) {
-      onSkip?.(currentStepConfig.id, currentStep);
-      addNotification({
-        type: 'info',
-        message: `Skipped ${currentStepConfig.title}`,
-        duration: 2000
-      });
-    }
-
-    return success;
-  }, [
-    currentStepConfig, 
-    isLastStep, 
-    goToStep, 
-    currentStep, 
-    onSkip, 
-    addNotification
-  ]);
-
-  // ✅ Handle completion
+  // ✅ Handle completion — defined before skipStep so skipStep can reference it safely
   const handleComplete = useCallback(() => {
     if (isCompleting) {
       console.warn('Completion already in progress');
@@ -178,12 +140,51 @@ export const useOnboardingNavigation = (onboardingState, options = {}) => {
     onComplete?.();
     return true;
   }, [
-    isCompleting, 
-    enableValidation, 
-    steps, 
-    validateStep, 
-    stepData, 
-    onComplete, 
+    isCompleting,
+    enableValidation,
+    steps,
+    validateStep,
+    stepData,
+    onComplete,
+    addNotification
+  ]);
+
+  // ✅ Skip current step
+  const skipStep = useCallback(() => {
+    if (!currentStepConfig.canSkip) {
+      addNotification({
+        type: 'warning',
+        message: 'This step cannot be skipped',
+        duration: 3000
+      });
+      return false;
+    }
+
+    if (isLastStep) {
+      // If last step, treat skip as completion
+      return handleComplete();
+    }
+
+    // Skip to next step
+    const success = goToStep(currentStep + 1, true); // Force skip
+
+    if (success) {
+      onSkip?.(currentStepConfig.id, currentStep);
+      addNotification({
+        type: 'info',
+        message: `Skipped ${currentStepConfig.title}`,
+        duration: 2000
+      });
+    }
+
+    return success;
+  }, [
+    currentStepConfig,
+    isLastStep,
+    handleComplete,
+    goToStep,
+    currentStep,
+    onSkip,
     addNotification
   ]);
 

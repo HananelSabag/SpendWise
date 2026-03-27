@@ -6,12 +6,27 @@
 
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { auth, requireAdmin } = require('../middleware/auth');
 const userController = require('../controllers/userController');
 const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
 const { emailVerificationLimiter, authLimiter } = require('../middleware/rateLimiter');
+const rateLimit = require('express-rate-limit');
 const { securityMiddleware } = require('../middleware/security'); // 🛡️ Enhanced security
+
+// Per-email rate limiter for resend-verification (prevents spam targeting a specific address)
+const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  keyGenerator: (req) => req.body?.email || req.ip,
+  message: {
+    error: {
+      code: 'RESEND_LIMIT',
+      message: 'Too many verification emails sent to this address, please try again later',
+      retryAfter: 900
+    }
+  }
+});
 const {
   authLogger,
   userOperationLogger,
@@ -27,8 +42,8 @@ const {
  * @desc    Register a new user with enhanced validation
  * @access  Public
  */
-router.post('/register', 
-  authLimiter,
+router.post('/register',
+  securityMiddleware.auth,
   validate.userRegistration,
   authLogger('REGISTER'),
   userController.register
@@ -40,7 +55,7 @@ router.post('/register',
  * @access  Public
  */
 router.post('/login',
-  authLimiter,
+  securityMiddleware.auth,
   validate.userLogin,
   authLogger('LOGIN'),
   userController.login
@@ -48,14 +63,14 @@ router.post('/login',
 /**
  * 🔑 Password Reset Flow
  */
-router.post('/password-reset', authLimiter, userController.requestPasswordReset);
+router.post('/password-reset', securityMiddleware.auth, userController.requestPasswordReset);
 router.get('/password-reset/validate/:token', authLimiter, userController.validatePasswordResetToken);
-router.post('/password-reset/confirm', authLimiter, userController.confirmPasswordReset);
+router.post('/password-reset/confirm', securityMiddleware.auth, userController.confirmPasswordReset);
 
 /**
  * ✉️ Resend Verification
  */
-router.post('/resend-verification', emailVerificationLimiter, userController.resendVerification);
+router.post('/resend-verification', resendVerificationLimiter, userController.resendVerification);
 
 
 /**
@@ -246,7 +261,7 @@ router.post('/set-password',
  */
 router.get('/performance',
   auth,
-  // NOTE: Admin middleware should be added for production security
+  requireAdmin,
   userController.getPerformanceStats
 );
 

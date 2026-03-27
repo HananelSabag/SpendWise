@@ -329,7 +329,7 @@ const ExchangeCalculator = ({
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
               {t('exchange.history', 'Recent')}
             </p>
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
               {history.slice(0, 5).map(item => (
                 <button
                   key={item.id}
@@ -339,7 +339,7 @@ const ExchangeCalculator = ({
                     setToCurrency(item.toCurrency);
                     setAmount(item.amount.toString());
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                 >
                   <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-white">
                     <span>{formatCurrency(item.amount, item.fromCurrency)}</span>

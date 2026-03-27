@@ -35,6 +35,16 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
     enabled: !!api?.analytics?.getUserAnalytics, // Only run if function exists
   });
 
+  // Growth = comparison of current vs previous period amounts if provided by API
+  // Defined BEFORE the useMemo that calls it to avoid temporal dead zone
+  const calculateGrowth = (category) => {
+    const current = category?.total_amount || 0;
+    const previous = category?.previous_amount || 0;
+    if (current === 0 && previous === 0) return 0;
+    if (previous === 0) return 100;
+    return ((current - previous) / previous) * 100;
+  };
+
   // Process and structure analytics data with defensive checks
   const analytics = useMemo(() => {
     if (!rawAnalytics) return null;
@@ -47,7 +57,7 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
         topCategories: (categories || [])
           .sort((a, b) => (b?.total_amount || 0) - (a?.total_amount || 0))
           .slice(0, 5),
-        
+
         // Category growth trends
         trends: (categories || []).map(cat => ({
           id: cat?.id,
@@ -63,17 +73,17 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
           totalCategories: (categories || []).length,
           activeCategories: (categories || []).filter(c => (c?.transaction_count || 0) > 0).length,
           topSpending: categories?.[0]?.total_amount || 0,
-          avgPerCategory: (categories || []).length > 0 
-            ? (categories || []).reduce((sum, c) => sum + (c?.total_amount || 0), 0) / (categories || []).length 
+          avgPerCategory: (categories || []).length > 0
+            ? (categories || []).reduce((sum, c) => sum + (c?.total_amount || 0), 0) / (categories || []).length
             : 0
         },
 
         // Usage patterns
         patterns: {
-          mostUsed: (categories || []).reduce((max, cat) => 
+          mostUsed: (categories || []).reduce((max, cat) =>
             (cat?.transaction_count || 0) > (max?.transaction_count || 0) ? cat : max, null),
           leastUsed: (categories || []).filter(c => (c?.transaction_count || 0) > 0)
-            .reduce((min, cat) => 
+            .reduce((min, cat) =>
               (cat?.transaction_count || 0) < (min?.transaction_count || Infinity) ? cat : min, null),
           avgTransactionsPerCategory: (categories || []).length > 0
             ? (categories || []).reduce((sum, c) => sum + (c?.transaction_count || 0), 0) / (categories || []).length
@@ -85,15 +95,6 @@ export const useCategoryAnalytics = ({ timeRange = '30d' } = {}) => {
       return null;
     }
   }, [rawAnalytics]);
-
-  // Growth = comparison of current vs previous period amounts if provided by API
-  const calculateGrowth = (category) => {
-    const current = category?.total_amount || 0;
-    const previous = category?.previous_amount || 0;
-    if (current === 0 && previous === 0) return 0;
-    if (previous === 0) return 100;
-    return ((current - previous) / previous) * 100;
-  };
 
   return {
     analytics,

@@ -11,7 +11,9 @@ export default {
     personal: "Personal Info",
     preferences: "Preferences",
     security: "Security",
-    export: "Export Data"
+    export: "Export Data",
+    accountSettings: "Account Settings",
+    accountSettingsDesc: "Manage your profile and preferences"
   },
   messages: {
     loading: "Loading...",
@@ -34,7 +36,13 @@ export default {
     birthday: "Birthday",
     bio: "Bio",
     bioPlaceholder: "Tell us about yourself...",
-    memberSince: "Member since"
+    memberSince: "Member since",
+    changePhoto: "Change Photo",
+    setPhoto: "Set Photo",
+    newPhotoDesc: "This will be your new profile picture",
+    processingImage: "Processing image…",
+    imageTooLargeAfterCompression: "Image too large after compression ({{size}}MB). Please choose a smaller image.",
+    imageProcessingFailed: "Failed to process image. Please try another photo."
   },
   preferences: {
     title: "Preferences",
@@ -54,7 +62,12 @@ export default {
     },
     theme: "Theme",
     currency: "Currency",
-    savePreferences: "Save Preferences"
+    savePreferences: "Save Preferences",
+    themeOptions: {
+      system: "System",
+      light: "Light",
+      dark: "Dark"
+    }
   },
   security: {
     title: "Security & Account",
@@ -86,7 +99,13 @@ export default {
       location: "Location",
       time: "Time",
       current: "Current session"
-    }
+    },
+    setPassword: "Set Password",
+    updatePassword: "Update Password",
+    googleSignInNote: "You signed in with Google. You can add a password to also sign in with email.",
+    currentPasswordPlaceholder: "Current password",
+    newPasswordPlaceholder: "New password (min. 8 chars, letter + number)",
+    confirmPasswordPlaceholder: "Confirm new password"
   },
   export: {
     title: "Data Export",
@@ -103,6 +122,12 @@ export default {
       pdf: "PDF",
       excel: "Excel"
     },
+    csvLabel: "Export as CSV",
+    csvDesc: "Spreadsheet format for Excel / Google Sheets",
+    jsonLabel: "Export as JSON",
+    jsonDesc: "Raw data format for developers",
+    pdfLabel: "Export as PDF",
+    pdfDesc: "Formatted report ready to print or share",
     dateRange: {
       title: "Select Period",
       all: "All Time",

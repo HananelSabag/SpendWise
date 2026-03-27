@@ -31,6 +31,17 @@
     
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
+    <script>
+      (function () {
+        try {
+          var lang = localStorage.getItem('spendwise-language') || 'en';
+          var el = document.querySelector('link[rel="manifest"]');
+          if (el && (lang === 'he' || lang === 'en')) {
+            el.href = '/manifest.' + lang + '.json';
+          }
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- Google Identity Services for OAuth -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>

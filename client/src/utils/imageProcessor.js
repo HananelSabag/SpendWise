@@ -240,7 +240,7 @@ export const processImageForUpload = async (file, options = {}) => {
  */
 export const validateImageFile = (file, options = {}) => {
   const {
-    maxSizeMB = 10, // Max 10MB before processing
+    maxSizeMB = 50, // Allow up to 50MB pre-processing (Live Photos / Motion Photos embed video)
     allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
   } = options;
   

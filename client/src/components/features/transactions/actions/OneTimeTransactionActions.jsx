@@ -13,6 +13,38 @@ import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 import { Button, Modal } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
+// Defined outside parent to prevent remount on every render
+const DeleteModal = ({ showDeleteModal, setShowDeleteModal, transaction, formatCurrency, t, handleActualDelete, isLoading }) => (
+  <Modal
+    isOpen={showDeleteModal}
+    onClose={() => setShowDeleteModal(false)}
+    title={t('transactions.delete.title', 'Delete Transaction')}
+    size="sm"
+  >
+    <div className="p-4">
+      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+        <div className="font-medium text-gray-900 dark:text-white">{transaction.description}</div>
+        <div className={cn('text-lg font-bold', transaction.type === 'income' ? 'text-green-600' : 'text-red-600')}>
+          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+        </div>
+        <div className="text-sm text-gray-500">{new Date(transaction.date).toLocaleDateString()}</div>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        {t('transactions.delete.warning', 'This action cannot be undone.')}
+      </p>
+      <div className="flex gap-3">
+        <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+          {t('common.cancel', 'Cancel')}
+        </Button>
+        <Button variant="destructive" className="flex-1" onClick={handleActualDelete} disabled={isLoading}>
+          <Trash2 className="w-4 h-4 mr-2" />
+          {isLoading ? t('actions.deleting', 'Deleting...') : t('actions.delete', 'Delete')}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);
+
 const OneTimeTransactionActions = ({ 
   transaction, 
   onEdit, 
@@ -78,37 +110,6 @@ const OneTimeTransactionActions = ({
     }
   };
 
-  // Delete confirmation modal
-  const DeleteModal = () => (
-    <Modal
-      isOpen={showDeleteModal}
-      onClose={() => setShowDeleteModal(false)}
-      title={t('transactions.delete.title', 'Delete Transaction')}
-      size="sm"
-    >
-      <div className="p-4">
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
-          <div className="font-medium text-gray-900 dark:text-white">{transaction.description}</div>
-          <div className={cn('text-lg font-bold', transaction.type === 'income' ? 'text-green-600' : 'text-red-600')}>
-            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-          </div>
-          <div className="text-sm text-gray-500">{new Date(transaction.date).toLocaleDateString()}</div>
-        </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {t('transactions.delete.warning', 'This action cannot be undone.')}
-        </p>
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button variant="destructive" className="flex-1" onClick={handleActualDelete} disabled={isLoading}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            {isLoading ? t('actions.deleting', 'Deleting...') : t('actions.delete', 'Delete')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
 
   // ✅ RENDER ACTIONS BASED ON VARIANT
   if (variant === "inline") {
@@ -121,9 +122,9 @@ const OneTimeTransactionActions = ({
           className="text-blue-600 hover:text-blue-700 text-xs"
         >
           <Edit className="w-3 h-3 mr-1" />
-          {showLabels && 'Edit'}
+          {showLabels && t('actions.edit')}
         </Button>
-        
+
         <Button
           variant="ghost"
           size="sm"
@@ -131,9 +132,9 @@ const OneTimeTransactionActions = ({
           className="text-purple-600 hover:text-purple-700 text-xs"
         >
           <Copy className="w-3 h-3 mr-1" />
-          {showLabels && 'Copy'}
+          {showLabels && t('actions.copy')}
         </Button>
-        
+
         <Button
           variant="ghost"
           size="sm"
@@ -142,10 +143,20 @@ const OneTimeTransactionActions = ({
           className="text-red-600 hover:text-red-700 text-xs"
         >
           <Trash2 className="w-3 h-3 mr-1" />
-          {showLabels && 'Delete'}
+          {showLabels && t('actions.delete')}
         </Button>
 
-        {showDeleteModal && <DeleteModal />}
+        {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            formatCurrency={formatCurrency}
+            t={t}
+            handleActualDelete={handleActualDelete}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     );
   }
@@ -181,7 +192,17 @@ const OneTimeTransactionActions = ({
           <Trash2 className="w-4 h-4" />
         </Button>
 
-        {showDeleteModal && <DeleteModal />}
+        {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            formatCurrency={formatCurrency}
+            t={t}
+            handleActualDelete={handleActualDelete}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     );
   }
@@ -205,25 +226,35 @@ const OneTimeTransactionActions = ({
             className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
           >
             <Edit className="w-4 h-4" />
-            Edit
+            {t('actions.edit')}
           </button>
           <button
             onClick={handleDuplicate}
             className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
           >
             <Copy className="w-4 h-4" />
-            Duplicate
+            {t('actions.duplicate')}
           </button>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
-            Delete
+            {t('actions.delete')}
           </button>
         </div>
 
-        {showDeleteModal && <DeleteModal />}
+        {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            formatCurrency={formatCurrency}
+            t={t}
+            handleActualDelete={handleActualDelete}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     );
   }
@@ -237,29 +268,39 @@ const OneTimeTransactionActions = ({
         onClick={handleEdit}
       >
         <Edit className="w-4 h-4 mr-1" />
-        Edit
+        {t('actions.edit')}
       </Button>
-      
+
       <Button
         variant="outline"
         size="sm"
         onClick={handleDuplicate}
       >
         <Copy className="w-4 h-4 mr-1" />
-        Duplicate
+        {t('actions.duplicate')}
       </Button>
-      
-              <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDelete}
-          disabled={isLoading}
-        >
-          <Trash2 className="w-4 h-4 mr-1" />
-          Delete
-        </Button>
 
-      {showDeleteModal && <DeleteModal />}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleDelete}
+        disabled={isLoading}
+      >
+        <Trash2 className="w-4 h-4 mr-1" />
+        {t('actions.delete')}
+      </Button>
+
+      {showDeleteModal && (
+          <DeleteModal
+            showDeleteModal={showDeleteModal}
+            setShowDeleteModal={setShowDeleteModal}
+            transaction={transaction}
+            formatCurrency={formatCurrency}
+            t={t}
+            handleActualDelete={handleActualDelete}
+            isLoading={isLoading}
+          />
+        )}
     </div>
   );
 };

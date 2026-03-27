@@ -104,8 +104,14 @@ const inputSanitization = {
   
   // SQL injection prevention
   sqlInjectionProtection: (req, res, next) => {
-    // Allow-list of keys that may legitimately contain SQL keywords as values, e.g., action: 'delete'
-    const SAFE_KEYS_ALLOWING_SQL_WORDS = new Set(['action', 'sortBy', 'sortOrder']);
+    // Allow-list of keys that may legitimately contain characters caught by the pattern below.
+    // Passwords/descriptions use parameterized queries at the DB layer, so the filter provides
+    // no additional security for these fields but DOES break valid requests.
+    const SAFE_KEYS_ALLOWING_SQL_WORDS = new Set([
+      'action', 'sortBy', 'sortOrder',
+      'password', 'currentPassword', 'newPassword', 'confirmPassword',
+      'description', 'notes', 'name', 'reason', 'message', 'comment'
+    ]);
 
     const checkForSQLInjection = (value, keyPath = []) => {
       if (typeof value !== 'string') return false;
@@ -333,9 +339,11 @@ const requestFingerprinting = (req, res, next) => {
       severity: 'MEDIUM',
       reason: 'Automated tool detected in User-Agent'
     });
-    
-    // Add delay for suspicious requests
-    setTimeout(() => next(), 2000); // 2 second delay
+    // Reject immediately — a setTimeout delay here would hold req/res in memory
+    // under a flood attack (DoS amplification). Rate limiting handles throttling.
+    return res.status(429).json({
+      error: { code: 'AUTOMATED_TOOL_DETECTED', message: 'Automated requests are not allowed' }
+    });
   } else {
     next();
   }

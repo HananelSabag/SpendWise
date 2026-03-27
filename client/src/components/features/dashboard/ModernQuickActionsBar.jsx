@@ -24,7 +24,7 @@ import { cn } from '../../../utils/helpers';
 /**
  * 🚀 Quick Actions Bar Component
  */
-const ModernQuickActionsBar = ({ className = '' }) => {
+const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
   const { t, currentLanguage } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
   const { currency } = useCurrency();
@@ -93,6 +93,12 @@ const ModernQuickActionsBar = ({ className = '' }) => {
       // Reset form
       setAmount('');
       setActiveType('expense');
+
+      // Notify parent if provided (e.g. quick-expense page navigates away)
+      if (onSuccess) {
+        onSuccess();
+        return;
+      }
 
       // Focus amount input
       setTimeout(() => amountInputRef.current?.focus(), 100);

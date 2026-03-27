@@ -7,7 +7,7 @@
 
 const db = require('../config/db');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { hasRole, canManageUser } = require('../middleware/auth');
+const { hasRole, canManageUser, clearUserCache } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 
@@ -211,13 +211,14 @@ class AdminController {
       
       const usersResult = await db.query(usersQuery, queryParams, 'admin_get_users');
       
-      // Get total count
+      // Get total count — use the same whereClause (filter conditions only, no LIMIT/OFFSET)
+      // countParams strips the last two entries (limit, offset) that were appended after the filters
       const countQuery = `
         SELECT COUNT(*) as total_count
         FROM users u
-        ${whereClause.replace(/LIMIT.*$/, '').replace(/\$${limitParam}.*$/, '')}
+        ${whereClause}
       `;
-      const countParams = queryParams.slice(0, -2); // Remove limit and offset
+      const countParams = queryParams.slice(0, -2);
       const countResult = await db.query(countQuery, countParams, 'admin_get_users_count');
       
       // Get summary stats
@@ -547,23 +548,25 @@ class AdminController {
             DO UPDATE SET is_active = true, updated_at = NOW(), reason = EXCLUDED.reason
           `, [userId, reason || 'Blocked by admin', adminId], 'admin_block_user');
           
+          clearUserCache(userId);
           result = { action: 'blocked', userId, reason };
           break;
-          
+
         case 'unblock':
           // Remove user restrictions
           await db.query(`
-            UPDATE user_restrictions 
+            UPDATE user_restrictions
             SET is_active = false, updated_at = NOW()
             WHERE user_id = $1 AND restriction_type = 'blocked'
           `, [userId], 'admin_unblock_user');
-          
+
+          clearUserCache(userId);
           result = { action: 'unblocked', userId };
           break;
           
         case 'delete':
           // Allow: super admin can delete any user; admin can delete only regular users
-          if (!(req.user.role === 'super_admin' || (req.user.role === 'admin' && targetRole === 'user'))) {
+          if (!(req.user.role === 'super_admin' || (req.user.role === 'admin' && targetUser.role === 'user'))) {
             return res.status(403).json({
               success: false,
               error: { code: 'INSUFFICIENT_PERMISSIONS', message: 'Not allowed to delete this user' }
@@ -642,6 +645,7 @@ class AdminController {
             WHERE id = $2
           `, [role, userId], 'admin_change_role');
           
+          clearUserCache(userId);
           result = { action: 'role_changed', userId, newRole: role };
           break;
       }

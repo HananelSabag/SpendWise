@@ -29,6 +29,9 @@ const getDatabaseConfig = () => {
     port: parsed.port,
     database: parsed.database,
     ssl: {
+      // rejectUnauthorized: false is intentional for Supabase's managed TLS.
+      // Supabase uses a self-signed/pooler cert; certificate validation would fail
+      // unless the CA bundle is explicitly configured.
       rejectUnauthorized: false
     },
     connectionType: 'supabase-optimized'
@@ -91,17 +94,8 @@ try {
   pool = new Pool(dbConfig);
   console.log('✅ Database pool created successfully');
 } catch (poolError) {
-  console.error('❌ Failed to create database pool:', poolError.message);
-  console.error('⚠️ Server will continue but database operations will fail');
-  // Create minimal pool to prevent crashes
-  pool = new Pool({
-    host: 'localhost',
-    port: 5432,
-    database: 'fallback',
-    user: 'fallback',
-    password: 'fallback',
-    max: 1
-  });
+  console.error('FATAL: Failed to create database pool:', poolError.message);
+  process.exit(1);
 }
 
 // 📊 Performance tracking for query optimization
@@ -347,6 +341,8 @@ const formatBytes = (bytes) => {
 // Connection will be tested by index.js startServer() with proper retry logic
 
 // 🔗 Get client from pool for transactions
+// IMPORTANT: Callers MUST call client.release() in a finally block.
+// Failing to release the client will exhaust the connection pool (max 15 connections).
 const getClient = async () => {
   try {
     const client = await pool.connect();

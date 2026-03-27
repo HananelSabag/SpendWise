@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -414,8 +415,8 @@ export const useAppStore = create(
           },
 
           setGuestDefaults: () => {
-            // Apply the same defaults as for new users
-            get().actions.setTheme('system');
+            // 'auto' follows system preference — 'system' is not a valid THEMES key (fixes APP-3)
+            get().actions.setTheme('auto');
             get().actions.setCurrency('ILS');
             
             // Save defaults to session storage
@@ -671,35 +672,44 @@ export const appSelectors = {
   notifications: (state) => state.notifications
 };
 
-// ✅ Convenience hooks
-export const useTheme = () => useAppStore((state) => ({
-  theme: state.currentTheme,
-  isDark: state.currentTheme === 'dark',
-  setTheme: state.actions.setTheme
-}));
+// ✅ Convenience hooks — useShallow prevents re-renders when object fields
+// haven't actually changed (fixes PERF-1: object selectors without shallow eq)
+export const useTheme = () => useAppStore(
+  useShallow((state) => ({
+    theme: state.currentTheme,
+    isDark: state.currentTheme === 'dark',
+    setTheme: state.actions.setTheme
+  }))
+);
 
-export const useAccessibility = () => useAppStore((state) => ({
-  accessibility: state.accessibility,
-  updateAccessibility: state.actions.updateAccessibility
-}));
+export const useAccessibility = () => useAppStore(
+  useShallow((state) => ({
+    accessibility: state.accessibility,
+    updateAccessibility: state.actions.updateAccessibility
+  }))
+);
 
-export const useCurrency = () => useAppStore((state) => ({
-  currency: state.currency,
-  formatCurrency: state.actions.formatCurrency,
-  setCurrency: state.actions.setCurrency,
-  availableCurrencies: state.availableCurrencies,
-  getExchangeRate: state.actions.getExchangeRate,
-  updateExchangeRates: state.actions.updateExchangeRates,
-  exchangeRates: state.exchangeRates,
-  exchangeRatesUpdatedAt: state.exchangeRatesUpdatedAt
-}));
+export const useCurrency = () => useAppStore(
+  useShallow((state) => ({
+    currency: state.currency,
+    formatCurrency: state.actions.formatCurrency,
+    setCurrency: state.actions.setCurrency,
+    availableCurrencies: state.availableCurrencies,
+    getExchangeRate: state.actions.getExchangeRate,
+    updateExchangeRates: state.actions.updateExchangeRates,
+    exchangeRates: state.exchangeRates,
+    exchangeRatesUpdatedAt: state.exchangeRatesUpdatedAt
+  }))
+);
 
-export const useNotifications = () => useAppStore((state) => ({
-  notifications: state.notifications,
-  addNotification: state.actions.addNotification,
-  removeNotification: state.actions.removeNotification,
-  clearNotifications: state.actions.clearNotifications
-}));
+export const useNotifications = () => useAppStore(
+  useShallow((state) => ({
+    notifications: state.notifications,
+    addNotification: state.actions.addNotification,
+    removeNotification: state.actions.removeNotification,
+    clearNotifications: state.actions.clearNotifications
+  }))
+);
 
 // ✅ Initialize app store
 if (typeof window !== 'undefined') {

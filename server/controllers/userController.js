@@ -154,6 +154,9 @@ const userController = {
     if (!email) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_EMAIL', message: 'Email is required' } });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_EMAIL', message: 'Invalid email format' } });
+    }
 
     // Find user silently
     const user = await User.findByEmail(email);
@@ -210,6 +213,9 @@ const userController = {
     const { token, password } = req.body;
     if (!token || !password) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Token and password are required' } });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters' } });
     }
 
     // Validate token
@@ -446,7 +452,7 @@ const userController = {
 
     // ✅ Verify Google ID token server-side
     try {
-      const clientIdPrimary = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+      const clientIdPrimary = process.env.GOOGLE_CLIENT_ID;
       if (!clientIdPrimary) {
         throw { ...errorCodes.SERVER_ERROR, details: 'Server GOOGLE_CLIENT_ID is not configured' };
       }
