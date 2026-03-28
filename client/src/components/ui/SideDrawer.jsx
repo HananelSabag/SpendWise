@@ -1,5 +1,5 @@
 /**
- * SideDrawer — slides in from the right on desktop.
+ * SideDrawer — slides in from the inline-end edge (right in LTR, left in RTL).
  * Used by Modal when sheet={true} on non-mobile viewports.
  * Features: ESC to close, click-outside to close, scroll lock, focus trap.
  */
@@ -21,7 +21,7 @@ const SideDrawer = ({
   closeOnOverlayClick = true,
   className = '',
 }) => {
-  const { t } = useTranslation('common');
+  const { t, isRTL } = useTranslation('common');
   const drawerRef = useRef(null);
 
   // ESC key + scroll lock
@@ -50,7 +50,7 @@ const SideDrawer = ({
   const content = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
+        <div className={cn('fixed inset-0 z-50 flex', isRTL ? 'justify-start' : 'justify-end')}>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -64,11 +64,11 @@ const SideDrawer = ({
           {/* Drawer panel */}
           <motion.div
             ref={drawerRef}
-            initial={{ x: '100%' }}
+            initial={{ x: isRTL ? '-100%' : '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: isRTL ? '-100%' : '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            style={{ width: Math.min(width, window.innerWidth - 48) }}
+            style={{ width: Math.min(width, window.innerWidth - 48), direction: isRTL ? 'rtl' : 'ltr' }}
             className={cn(
               'relative flex flex-col h-full',
               'bg-white dark:bg-gray-900',
@@ -88,7 +88,7 @@ const SideDrawer = ({
                 {closeable && (
                   <button
                     onClick={onClose}
-                    className="ml-auto p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                    className="ms-auto p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                     aria-label={t('close')}
                   >
                     <X className="w-5 h-5" />
