@@ -62,7 +62,7 @@ const AdminStats = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.stats.totalUsers')}</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">--</p>
                 <p className="text-sm text-green-600">+12% from last month</p>
               </div>
@@ -77,7 +77,7 @@ const AdminStats = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Transactions</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.stats.totalTransactions')}</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">--</p>
                 <p className="text-sm text-green-600">+8% from last month</p>
               </div>
@@ -92,7 +92,7 @@ const AdminStats = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">API Requests</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.stats.apiRequests')}</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">--</p>
                 <p className="text-sm text-green-600">24h average</p>
               </div>
@@ -107,9 +107,9 @@ const AdminStats = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Health</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.stats.systemHealth')}</p>
                 <p className="text-3xl font-bold text-green-600">98%</p>
-                <p className="text-sm text-gray-500">Uptime</p>
+                <p className="text-sm text-gray-500">{t('admin.stats.uptime')}</p>
               </div>
             </div>
           </div>
@@ -121,7 +121,7 @@ const AdminStats = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                User Growth
+                {t('admin.stats.userGrowth')}
               </h2>
             </div>
             <div className="p-6">
@@ -130,7 +130,7 @@ const AdminStats = () => {
                   <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  <p className="text-gray-500 dark:text-gray-400">Chart will load here</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('admin.stats.chartLoading')}</p>
                 </div>
               </div>
             </div>
@@ -140,7 +140,7 @@ const AdminStats = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Transaction Volume
+                {t('admin.stats.transactionVolume')}
               </h2>
             </div>
             <div className="p-6">
@@ -149,7 +149,7 @@ const AdminStats = () => {
                   <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-gray-500 dark:text-gray-400">Chart will load here</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('admin.stats.chartLoading')}</p>
                 </div>
               </div>
             </div>
@@ -160,22 +160,22 @@ const AdminStats = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Performance Metrics
+              {t('admin.stats.performanceMetrics')}
             </h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-600 mb-2">--ms</div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Average Response Time</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('admin.stats.avgResponseTime')}</p>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-2">--%</div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Cache Hit Rate</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('admin.stats.cacheHitRate')}</p>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-purple-600 mb-2">--</div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Active Connections</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('admin.stats.activeConnections')}</p>
               </div>
             </div>
           </div>
@@ -189,7 +189,7 @@ const AdminStats = () => {
             </svg>
             <div>
               <h4 className="text-lg font-medium text-blue-900 dark:text-blue-100">
-                Real-Time Statistics
+                {t('admin.stats.realtimeStats')}
               </h4>
               <p className="text-blue-700 dark:text-blue-300 mt-1">
                 This dashboard will display live system statistics from the admin statistics API with interactive charts and real-time updates.

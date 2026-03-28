@@ -183,13 +183,14 @@ const ChecksList = ({ checks, suggestions, compact = false }) => {
 /**
  * 🔐 Main Password Strength Component
  */
-const PasswordStrength = ({ 
-  password, 
+const PasswordStrength = ({
+  password,
   onAnalysisChange,
   showChecks = true,
   compact = false,
-  className = '' 
+  className = ''
 }) => {
+  const { t } = useTranslation('auth');
   const analysis = useMemo(() => analyzePassword(password), [password]);
 
   // Avoid invoking parent setState during render phase
@@ -214,7 +215,7 @@ const PasswordStrength = ({
       {/* Suggestions (for non-compact mode) */}
       {!compact && suggestions.length > 0 && (
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          <p className="font-medium mb-1">Suggestions:</p>
+          <p className="font-medium mb-1">{t('password.suggestions', { fallback: 'Suggestions:' })}</p>
           <ul className="list-disc list-inside space-y-0.5">
             {suggestions.slice(0, 3).map((suggestion, index) => (
               <li key={index}>{suggestion}</li>

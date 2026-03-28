@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Wifi, WifiOff, RefreshCw, Server, X } from 'lucide-react';
+import { useTranslation } from '../../stores';
 
 const ConnectionStatusOverlay = () => {
+  const { t } = useTranslation('status');
+  const { t: tc } = useTranslation('common');
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [serverWaking, setServerWaking] = useState(typeof window !== 'undefined' ? !!window.__SERVER_WAKING__ : false);
   const [retryCount, setRetryCount] = useState(0);
@@ -90,8 +93,8 @@ const ConnectionStatusOverlay = () => {
   const handleUseOfflineMode = useCallback(() => {
     setDismissed(true);
     // Show toast about offline mode
-    if (typeof window !== 'undefined' && window.authToasts?.info) {
-      window.authToasts.info('Using cached data. Some features may be limited.');
+    if (typeof window !== 'undefined' && window.authToasts?.toast?.info) {
+      window.authToasts.toast.info(tc('usingCachedData'));
     }
   }, []);
 
@@ -119,10 +122,10 @@ const ConnectionStatusOverlay = () => {
             
             <div className="flex-1">
               <p className="text-sm font-semibold text-orange-900 dark:text-orange-100">
-                You're offline
+                {t('offlineTitle')}
               </p>
               <p className="text-xs text-orange-700 dark:text-orange-300 mt-0.5">
-                Check your internet connection. We'll retry automatically.
+                {t('offlineDesc')}
               </p>
             </div>
 
@@ -130,15 +133,15 @@ const ConnectionStatusOverlay = () => {
               <button
                 onClick={handleRetryNow}
                 className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium transition-colors shadow-sm"
-                aria-label="Retry connection"
+                aria-label={tc('retryConnection')}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
-              
+
               <button
                 onClick={handleDismiss}
                 className="p-1.5 rounded-lg hover:bg-orange-200/50 dark:hover:bg-orange-800/50 text-orange-700 dark:text-orange-300 transition-colors"
-                aria-label="Dismiss"
+                aria-label={tc('dismiss')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -157,10 +160,10 @@ const ConnectionStatusOverlay = () => {
             
             <div className="flex-1">
               <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">
-                Waking server...
+                {t('wakingTitle')}
               </p>
               <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">
-                First request takes ~15-30 seconds. Please wait.
+                {t('wakingDesc')}
               </p>
             </div>
 
@@ -186,10 +189,11 @@ const ConnectionStatusOverlay = () => {
             
             <div className="flex-1">
               <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
-                Connection issues
+                {t('connectionIssuesTitle')}
               </p>
               <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
-                Retry attempt {retryCount}/3. {countdown > 0 ? `Next retry in ${countdown}s` : 'Retrying...'}
+                {t('retryAttempt', { count: retryCount })}{' '}
+                {countdown > 0 ? t('retryCountdown', { countdown }) : t('reconnecting')}
               </p>
             </div>
 
@@ -197,24 +201,24 @@ const ConnectionStatusOverlay = () => {
               <button
                 onClick={handleRetryNow}
                 className="px-3 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium transition-colors shadow-sm flex items-center gap-1.5"
-                aria-label="Retry now"
+                aria-label={tc('retryNow')}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry</span>
+                <span>{tc('retry')}</span>
               </button>
-              
+
               <button
                 onClick={handleUseOfflineMode}
                 className="px-3 py-1.5 rounded-lg bg-yellow-200 hover:bg-yellow-300 dark:bg-yellow-800/50 dark:hover:bg-yellow-700/50 text-yellow-900 dark:text-yellow-100 text-xs font-medium transition-colors"
-                aria-label="Use offline mode"
+                aria-label={tc('useOfflineMode')}
               >
-                Use Offline
+                {tc('useOffline')}
               </button>
-              
+
               <button
                 onClick={handleDismiss}
                 className="p-1.5 rounded-lg hover:bg-yellow-200/50 dark:hover:bg-yellow-800/50 text-yellow-700 dark:text-yellow-300 transition-colors"
-                aria-label="Dismiss"
+                aria-label={tc('dismiss')}
               >
                 <X className="w-4 h-4" />
               </button>

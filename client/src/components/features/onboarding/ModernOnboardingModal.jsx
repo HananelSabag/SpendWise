@@ -1,34 +1,28 @@
 /**
- * 🎯 MODERN ONBOARDING MODAL - Complete 3-Step Redesign
- * Enhanced UI/UX with only 3 essential steps and better navigation
- * Features: Profile+Preferences, Education, Templates
- * @version 4.0.0 - MODERN REDESIGN
+ * MODERN ONBOARDING MODAL - Responsive Layout
+ * Mobile: bottom sheet (88dvh, drag-to-dismiss)
+ * Desktop: side drawer (slides from right, ESC to close)
+ * @version 6.0.0 - POLISHED DRAWER + BOTTOM SHEET
  */
 
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 
-// ✅ Import our modern hooks and components
 import { useModernOnboardingState } from '../../../hooks/useModernOnboardingState';
 import { useOnboardingNavigation } from '../../../hooks/useOnboardingNavigation';
 import { useOnboardingCompletion } from '../../../hooks/useOnboardingCompletion';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 
-// ✅ Import modern components
 import ModernOnboardingHeader from './components/ModernOnboardingHeader';
 import ModernOnboardingFooter from './components/ModernOnboardingFooter';
 
-// ✅ Import stores
 import { useTranslation } from '../../../stores';
-
 import { cn } from '../../../utils/helpers';
 
-/**
- * 🎯 Modern Onboarding Modal - 3-Step Design
- */
-const ModernOnboardingModal = ({ 
-  isOpen = false, 
-  onClose, 
+const ModernOnboardingModal = ({
+  isOpen = false,
+  onClose,
   onComplete,
   onSkip,
   forceShow = false,
@@ -36,8 +30,9 @@ const ModernOnboardingModal = ({
   className = ''
 }) => {
   const { t, isRTL } = useTranslation('onboarding');
+  const isMobile = useIsMobile();
+  const dragControls = useDragControls();
 
-  // ✅ Initialize modern onboarding state (3 steps only)
   const onboardingState = useModernOnboardingState({
     enableValidation: true,
     persistData: true
@@ -58,21 +53,17 @@ const ModernOnboardingModal = ({
     validateStep
   } = onboardingState;
 
-  // ✅ Enhanced navigation logic
   const {
     canGoNext,
     canGoPrevious,
     isLastStep,
-    isFirstStep,
     goNext,
     goBack,
-    goToStep
   } = useOnboardingNavigation(onboardingState, {
     onComplete,
     onSkip
   });
 
-  // ✅ Completion logic
   const { completeOnboarding } = useOnboardingCompletion(stepData, {
     onSuccess: onComplete,
     onError: (error) => {
@@ -80,215 +71,221 @@ const ModernOnboardingModal = ({
     }
   });
 
-  /**
-   * Handle onboarding completion
-   * Saves templates and marks onboarding as complete
-   */
+  // ESC key + body scroll lock
+  React.useEffect(() => {
+    if (!isOpen && !forceShow) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !isCompleting) onClose?.();
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, forceShow, isCompleting, onClose]);
+
   const handleComplete = async () => {
     try {
-      // Preview mode: skip template saving
       if (previewOnly) {
         onComplete?.();
         onClose?.();
         return;
       }
-      
-      // Set loading state and complete onboarding
       setIsCompleting(true);
       const result = await completeOnboarding();
-      
       if (result) {
-        
-        // ✅ Show success state
         setIsCompleted(true);
-        
-        // ✅ ENHANCED: Add a small delay to show success state before closing
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Call success callbacks
         onComplete?.();
         onClose?.();
-      } else {
-        console.log('❌ ModernOnboardingModal - Completion returned false');
-        // Don't close modal on failure, let user retry
       }
     } catch (error) {
-      console.error('❌ ModernOnboardingModal - Completion failed:', error);
-      console.error('❌ ModernOnboardingModal - Error stack:', error.stack);
-      // Don't close modal on error, let user retry
+      console.error('ModernOnboardingModal - Completion failed:', error);
     } finally {
-      // Always clear loading state
       setIsCompleting(false);
     }
   };
 
-  // ✅ Handle "Finish Now" from step 1
   const handleFinishNow = async () => {
-    console.log('🚀 ModernOnboardingModal - Quick finish from step 1');
-    
-    // Validate current step first
     const validation = validateStep(currentStepConfig.id, stepData[currentStepConfig.id]);
-    if (!validation.isValid) {
-      console.warn('Step 1 validation failed:', validation.errors);
-      return;
-    }
-    
-    // Complete with minimal data
+    if (!validation.isValid) return;
     await handleComplete();
   };
 
-  // ✅ Enhanced modal variants
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { duration: 0.3 }
-    },
-    exit: { 
-      opacity: 0,
-      transition: { duration: 0.2 }
-    }
-  };
-
-  const modalVariants = {
-    hidden: { 
-      opacity: 0, 
-      scale: 0.9,
-      y: 20
-    },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: 25,
-        stiffness: 300,
-        duration: 0.4
-      }
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9,
-      y: 20,
-      transition: { duration: 0.2 }
-    }
-  };
-
-  // ✅ Check if current step is valid
   const isCurrentStepValid = React.useMemo(() => {
     const validation = validateStep(currentStepConfig.id, stepData[currentStepConfig.id]);
     return validation.isValid;
   }, [validateStep, currentStepConfig.id, stepData]);
 
-  if (!isOpen && !forceShow) {
-    return null;
-  }
+  if (!isOpen && !forceShow) return null;
 
-  const modalContent = (
-    <AnimatePresence mode="wait">
-      {(isOpen || forceShow) && (
-        <motion.div
-          variants={backdropVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          className={cn(
-            "fixed inset-0 z-50",
-            "bg-black/70 backdrop-blur-sm"
-          )}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              onClose?.();
-            }
-          }}
-        >
+  // Shared inner layout: header → scrollable content → footer
+  const innerContent = (
+    <>
+      {/* Header: step indicator, progress bar, X button (desktop) */}
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <ModernOnboardingHeader
+          currentStep={currentStep}
+          totalSteps={steps.length}
+          progress={progress.percentage}
+          title={currentStepConfig?.title || t('title') || 'Welcome to SpendWise'}
+          canClose={!isCompleting}
+          onClose={onClose}
+          isRTL={isRTL}
+          isMobile={isMobile}
+        />
+      </div>
+
+      {/* Scrollable step content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 min-h-0">
+        <AnimatePresence mode="wait">
           <motion.div
-            variants={modalVariants}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "absolute inset-4 sm:inset-8",
-              "rounded-xl overflow-hidden shadow-2xl",
-              "bg-white dark:bg-gray-900",
-              "flex flex-col",
-              "max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)]",
-              className
-            )}
+            key={currentStep}
+            initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="w-full"
           >
-            {/* ✅ Enhanced header with X button */}
-            <div className="flex-shrink-0 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-              <ModernOnboardingHeader
-                currentStep={currentStep}
-                totalSteps={steps.length}
-                progress={progress.percentage}
-                title={currentStepConfig?.title || t('title') || 'Welcome to SpendWise'}
-                subtitle={currentStepConfig?.subtitle || t('subtitle') || 'Let\'s set up your account'}
-                canClose={!isCompleting}
-                onClose={onClose}
-                isRTL={isRTL}
-              />
-            </div>
-
-            {/* ✅ Content area with optimal spacing */}
-            <div className={cn(
-              "flex-1 overflow-y-auto",
-              "p-4 sm:p-6",
-              "min-h-0" // Important for flex child scrolling
-            )}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentStep}
-                  initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-                  transition={{ 
-                    duration: 0.3,
-                    ease: "easeInOut"
-                  }}
-                  className="w-full h-full"
-                >
-                  {(() => {
-                    const StepComponent = currentStepConfig?.component;
-                    if (!StepComponent) return null;
-                    return (
-                      <StepComponent
-                        data={getStepData(currentStepConfig.id)}
-                        onDataUpdate={(data) => updateStepData(currentStepConfig.id, data)}
-                        onNext={goNext}
-                        onBack={goBack}
-                      />
-                    );
-                  })()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* ✅ Enhanced footer with new navigation */}
-            <div className="flex-shrink-0">
-              <ModernOnboardingFooter
-                currentStep={currentStep}
-                totalSteps={steps.length}
-                canGoPrevious={canGoPrevious}
-                canGoNext={canGoNext && isCurrentStepValid}
-                isCompleting={isCompleting}
-                onPrevious={goBack}
-                onNext={goNext}
-                onComplete={handleComplete}
-                onFinishNow={handleFinishNow}
-                isRTL={isRTL}
-                isValid={isCurrentStepValid}
-                isCompleted={isCompleted}
-              />
-            </div>
+            {(() => {
+              const StepComponent = currentStepConfig?.component;
+              if (!StepComponent) return null;
+              return (
+                <StepComponent
+                  data={getStepData(currentStepConfig.id)}
+                  onDataUpdate={(data) => updateStepData(currentStepConfig.id, data)}
+                  onNext={goNext}
+                  onBack={goBack}
+                />
+              );
+            })()}
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </AnimatePresence>
+      </div>
+
+      {/* Footer: navigation buttons */}
+      <div className="flex-shrink-0">
+        <ModernOnboardingFooter
+          currentStep={currentStep}
+          totalSteps={steps.length}
+          canGoPrevious={canGoPrevious}
+          canGoNext={canGoNext && isCurrentStepValid}
+          isCompleting={isCompleting}
+          onPrevious={goBack}
+          onNext={goNext}
+          onComplete={handleComplete}
+          onFinishNow={handleFinishNow}
+          isRTL={isRTL}
+          isValid={isCurrentStepValid}
+          isCompleted={isCompleted}
+        />
+      </div>
+    </>
   );
 
-  // Render into portal to avoid stacking issues
   const portalTarget = document.getElementById('portal-root') || document.body;
-  return createPortal(modalContent, portalTarget);
+
+  // ─── MOBILE: Bottom Sheet ────────────────────────────────────────────────
+  if (isMobile) {
+    return createPortal(
+      <AnimatePresence>
+        {(isOpen || forceShow) && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="ob-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+              onClick={onClose}
+            />
+
+            {/* Bottom Sheet — 88dvh leaves a visible top gap so it reads as a sheet */}
+            <motion.div
+              key="ob-sheet"
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.12}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 400) onClose?.();
+              }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+              className={cn(
+                'fixed bottom-0 left-0 right-0 z-[201]',
+                'bg-white dark:bg-gray-900',
+                'rounded-t-3xl shadow-2xl',
+                'flex flex-col',
+                'h-[88dvh]',
+                className
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag handle */}
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="flex-shrink-0 flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+                style={{ touchAction: 'none' }}
+              >
+                <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+              </div>
+
+              {innerContent}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>,
+      portalTarget
+    );
+  }
+
+  // ─── DESKTOP: Side Drawer ────────────────────────────────────────────────
+  return createPortal(
+    <AnimatePresence>
+      {(isOpen || forceShow) && (
+        <div className="fixed inset-0 z-[200] flex justify-end">
+          {/* Backdrop */}
+          <motion.div
+            key="ob-backdrop-d"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+
+          {/* Drawer panel */}
+          <motion.div
+            key="ob-drawer"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            style={{ width: Math.min(680, window.innerWidth - 48) }}
+            className={cn(
+              'relative flex flex-col h-full',
+              'bg-white dark:bg-gray-900',
+              'shadow-2xl shadow-black/20',
+              'overflow-hidden',
+              className
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {innerContent}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    portalTarget
+  );
 };
 
 export default ModernOnboardingModal;

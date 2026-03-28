@@ -34,7 +34,9 @@ export default {
     autoLogoutAuthFailure: "נותקתם אוטומטית עקב בעיות אימות",
     autoLogoutStuckState: "נותקתם אוטומטית עקב בעיות חיבור",
     autoLogoutRecoveryFailed: "נותקתם אוטומטית - לא ניתן לשחזר את החיבור",
-    autoLogoutMultipleFailures: "נותקתם אוטומטית עקב מספר כשלונות"
+    autoLogoutMultipleFailures: "נותקתם אוטומטית עקב מספר כשלונות",
+    emailAlreadyExists: "חשבון עם האימייל הזה כבר קיים",
+    sessionExpiring: "הפגישה שלכם תפוג בעוד 5 דקות."
   },
   profile: {
     profileUpdated: "הפרופיל עודכן בהצלחה!",
@@ -181,6 +183,10 @@ export default {
     signingOut: "מתנתק..."
   },
   common: {
+    error: "אירעה שגיאה",
+    loading: "טוען...",
+    success: "הצלחה",
+    closeNotification: "סגור התראה",
     copied: "הועתק ללוח!",
     linkCopied: "הקישור הועתק ללוח!",
     imageDownloaded: "התמונה הורדה בהצלחה!",

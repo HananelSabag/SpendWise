@@ -116,11 +116,15 @@ export default {
     pharmacy: "בית מרקחת",
     freelance: "עבודה עצמאית",
     investment: "החזר השקעה",
+    subscriptions: "מנויים",
     other: "אחר"
   },
   accessibility: {
     title: "הגדרות נגישות",
     subtitle: "התאם את חוויית הצפייה שלך",
+    showFab: "הצג כלי נגישות",
+    openSettings: "הגדרות נגישות",
+    hideFab: "הסתר כפתור נגישות",
     fontSize: {
       title: "גודל גופן",
       extraSmall: "קטן במיוחד",
@@ -225,5 +229,15 @@ export default {
   retry: "נסה שוב",
   search: "חיפוש",
   selectedItems: "פריטים שנבחרו",
-  and: "ו-"
+  and: "ו-",
+  all: "הכל",
+  active: "פעיל",
+  paused: "מושהה",
+  dismiss: "סגור",
+  retryConnection: "חדש חיבור",
+  retryNow: "נסה שוב עכשיו",
+  useOfflineMode: "השתמש במצב לא מקוון",
+  useOffline: "מצב לא מקוון",
+  closeNotification: "סגור התראה",
+  usingCachedData: "משתמש בנתונים שמורים. חלק מהתכונות עשויות להיות מוגבלות."
 };

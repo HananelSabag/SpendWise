@@ -141,7 +141,7 @@ const DashboardError = ({ onRetry, t }) => {
           {t('dashboardErrorMessage')}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-          Retrying in {countdown}s…
+          {t('retryingIn', { countdown }) || `Retrying in ${countdown}s…`}
         </p>
         <Button onClick={onRetry} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
           {t('reloadPage')}
@@ -237,7 +237,7 @@ const DesktopDashboard = ({
       </div>
       <button
         onClick={() => navigate('/profile')}
-        title="Go to profile"
+        title={t('goToProfile') || 'Go to profile'}
         className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <Avatar

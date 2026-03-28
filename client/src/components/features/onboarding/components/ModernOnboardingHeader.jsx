@@ -1,78 +1,69 @@
 /**
- * 🎯 MODERN ONBOARDING HEADER - Enhanced Design
- * Clean, minimal header with X button and progress
- * Features: Step progress, Title display, Close button
- * @version 4.0.0 - MODERN REDESIGN
+ * MODERN ONBOARDING HEADER
+ * Two-row layout: step badge + close button on top, title below, progress bar flush at bottom.
+ * Close button hidden on mobile — drag handle / backdrop handle dismiss there.
+ * @version 5.0.0
  */
 
 import React from 'react';
 import { X } from 'lucide-react';
 
 import { useTranslation } from '../../../../stores';
-import { Button } from '../../../ui';
 import { cn } from '../../../../utils/helpers';
 
-/**
- * 🎯 Modern Onboarding Header
- */
 const ModernOnboardingHeader = ({
   currentStep = 0,
   totalSteps = 3,
   progress = 0,
   title = '',
-  subtitle = '',
   canClose = true,
   onClose,
-  isRTL = false
+  isRTL = false,
+  isMobile = false,
 }) => {
   const { t } = useTranslation('onboarding');
 
-  // ✅ Fallback texts
   const displayTitle = title || t('title') || 'Welcome to SpendWise';
-  const displaySubtitle = subtitle || t('subtitle') || 'Let\'s set up your account';
-  const stepText = t('progress.step', { 
-    params: { current: currentStep + 1, total: totalSteps } 
-  }) || `Step ${currentStep + 1} of ${totalSteps}`;
+  const stepText =
+    t('progress.step', { params: { current: currentStep + 1, total: totalSteps } }) ||
+    `Step ${currentStep + 1} of ${totalSteps}`;
 
   return (
-    <div className="relative w-full p-4">
-      
-      {/* ✅ Single row layout with progress, title, and close button */}
-      <div className="flex items-center justify-between gap-4 mb-2">
-        
-        {/* Left: Step indicator and title */}
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <span className="text-sm font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
+    <div className="w-full">
+      {/* Inner padding area */}
+      <div className="px-5 pt-4 pb-3">
+
+        {/* Row 1: step badge  ·  X button (desktop only) */}
+        <div className={cn(
+          'flex items-center justify-between mb-1.5',
+          isRTL && 'flex-row-reverse'
+        )}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
             {stepText}
           </span>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-            {displayTitle}
-          </h1>
+
+          {/* X visible on desktop only; mobile closes via drag / backdrop */}
+          {!isMobile && canClose && onClose && (
+            <button
+              onClick={onClose}
+              aria-label={t('modal.close') || 'Close'}
+              className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* RIGHT: X button */}
-        {canClose && onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className={cn(
-              "p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
-              "hover:bg-gray-100 dark:hover:bg-gray-800",
-              "rounded-full transition-colors flex-shrink-0",
-              "w-8 h-8 flex items-center justify-center"
-            )}
-            aria-label="Close onboarding"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
+        {/* Row 2: step title */}
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-snug">
+          {displayTitle}
+        </h2>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+      {/* Progress bar flush to the bottom edge — no border-radius so it bleeds edge-to-edge */}
+      <div className="w-full h-1 bg-gray-200 dark:bg-gray-700">
         <div
-          className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-500 ease-out"
+          className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -81,4 +72,3 @@ const ModernOnboardingHeader = ({
 };
 
 export default ModernOnboardingHeader;
-

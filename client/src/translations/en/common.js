@@ -116,11 +116,15 @@ export default {
     pharmacy: "Pharmacy",
     freelance: "Freelance Work",
     investment: "Investment Return",
+    subscriptions: "Subscriptions",
     other: "Other"
   },
   accessibility: {
     title: "Accessibility Settings",
     subtitle: "Customize your viewing experience",
+    showFab: "Show accessibility tools",
+    openSettings: "Accessibility settings",
+    hideFab: "Hide accessibility button",
     fontSize: {
       title: "Font Size",
       extraSmall: "Extra Small",
@@ -225,5 +229,15 @@ export default {
   refreshing: "Refreshing",
   retry: "Retry",
   search: "Search",
-  selectedItems: "Selected Items"
+  selectedItems: "Selected Items",
+  all: "All",
+  active: "Active",
+  paused: "Paused",
+  dismiss: "Dismiss",
+  retryConnection: "Retry connection",
+  retryNow: "Retry now",
+  useOfflineMode: "Use offline mode",
+  useOffline: "Use Offline",
+  closeNotification: "Close notification",
+  usingCachedData: "Using cached data. Some features may be limited."
 };

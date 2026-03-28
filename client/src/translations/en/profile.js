@@ -42,7 +42,26 @@ export default {
     newPhotoDesc: "This will be your new profile picture",
     processingImage: "Processing image…",
     imageTooLargeAfterCompression: "Image too large after compression ({{size}}MB). Please choose a smaller image.",
-    imageProcessingFailed: "Failed to process image. Please try another photo."
+    imageProcessingFailed: "Failed to process image. Please try another photo.",
+    profileUpdated: "Profile updated!",
+    updateFailed: "Update failed",
+    verified: "Verified",
+    unverified: "Unverified",
+    firstNamePlaceholder: "Your first name",
+    lastNamePlaceholder: "Your last name",
+    phonePlaceholder: "+1 234 567 8900",
+    locationPlaceholder: "City, Country",
+    noEmail: "No email",
+    notSet: "Not set",
+    previewAlt: "Preview",
+    optimized: "Optimized ✓"
+  },
+  account: {
+    title: "Account Information",
+    memberSince: "Member Since",
+    admin: "Admin",
+    user: "User",
+    lastLogin: "Last Login"
   },
   preferences: {
     title: "Preferences",

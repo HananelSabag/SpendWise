@@ -18,14 +18,17 @@ const Blocked = () => {
   const cooldownUntilRef = useRef(0);
 
   // Mark blocked session for other subsystems (auth recovery, client handlers)
-  try {
-    if (typeof window !== 'undefined') {
-      window.__SPENDWISE_BLOCKED__ = true;
-    }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('blockedSession', '1');
-    }
-  } catch (_) {}
+  // Run once on mount — side effects must not run in the render body.
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.__SPENDWISE_BLOCKED__ = true;
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('blockedSession', '1');
+      }
+    } catch (_) {}
+  }, []);
 
   // Helper to clear flags and navigate away when unblocked
   const clearBlockedAndNavigate = () => {
@@ -43,7 +46,8 @@ const Blocked = () => {
     checkingRef.current = true;
     setChecking(true);
     try {
-      const result = await getProfile();
+      // silent: true → don't set global isLoading, prevents TopProgressBar flash every 15s
+      const result = await getProfile({ silent: true });
       const user = result?.user;
       const stillBlocked = !!(user?.isBlocked || (Array.isArray(user?.restrictions) && user.restrictions.some(r => r.restriction_type === 'blocked')));
       if (result?.success && !stillBlocked) {

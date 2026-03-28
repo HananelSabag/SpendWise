@@ -1,5 +1,6 @@
 export default {
   active: 'Active',
+  veryActive: 'Very Active',
   blocked: 'Blocked',
   pending: 'Pending',
   inactive: 'Inactive',
@@ -24,7 +25,16 @@ export default {
   connected: 'Connected',
   disconnected: 'Disconnected',
   offline: 'Offline',
-  online: 'Online'
+  online: 'Online',
+
+  // Connection overlay banners (ConnectionStatusOverlay)
+  offlineTitle: "You're offline",
+  offlineDesc: "Check your internet connection. We'll retry automatically.",
+  wakingTitle: 'Waking server...',
+  wakingDesc: 'First request takes ~15-30 seconds. Please wait.',
+  connectionIssuesTitle: 'Connection issues',
+  retryAttempt: 'Retry attempt {{count}}/3.',
+  retryCountdown: 'Next retry in {{countdown}}s'
 };
 
 

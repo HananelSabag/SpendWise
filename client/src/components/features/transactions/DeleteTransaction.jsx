@@ -29,7 +29,7 @@ const DeleteTransaction = ({
       isExpense:   transaction.type === 'expense' || transaction.amount < 0,
       formattedAmount: Math.abs(transaction.amount).toFixed(2),
       displayDate: dateHelpers.format(transaction.date, 'MMM dd, yyyy'),
-      description: transaction.description || t('transactions.noDescription', 'No description'),
+      description: transaction.description || t('noDescription', 'No description'),
       category:    transaction.category?.name || t('categories.uncategorized', 'Uncategorized'),
     };
   }, [transaction, t]);

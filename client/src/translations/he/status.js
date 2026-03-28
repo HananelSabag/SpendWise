@@ -1,5 +1,6 @@
 export default {
   active: 'פעיל',
+  veryActive: 'פעיל מאוד',
   blocked: 'חסום',
   pending: 'ממתין',
   inactive: 'לא פעיל',
@@ -24,7 +25,16 @@ export default {
   connected: 'מחובר',
   disconnected: 'מנותק',
   offline: 'לא מקוון',
-  online: 'מקוון'
+  online: 'מקוון',
+
+  // Connection overlay banners (ConnectionStatusOverlay)
+  offlineTitle: 'אתה לא מקוון',
+  offlineDesc: 'בדוק את חיבור האינטרנט שלך. ננסה שוב אוטומטית.',
+  wakingTitle: 'מעיר את השרת...',
+  wakingDesc: 'הבקשה הראשונה לוקחת כ-15-30 שניות. אנא המתן.',
+  connectionIssuesTitle: 'בעיות חיבור',
+  retryAttempt: 'ניסיון {{count}}/3.',
+  retryCountdown: 'ניסיון הבא בעוד {{countdown}} שניות'
 };
 
 

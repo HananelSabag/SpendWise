@@ -216,12 +216,12 @@ const AvatarSection = ({ user, authToasts }) => {
               <div className="relative">
                 <img
                   src={preview.url}
-                  alt="Preview"
+                  alt={t('personal.previewAlt')}
                   className="w-36 h-36 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-xl"
                 />
                 {preview.wasCompressed && (
                   <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-md">
-                    Optimized ✓
+                    {t('personal.optimized')}
                   </span>
                 )}
               </div>

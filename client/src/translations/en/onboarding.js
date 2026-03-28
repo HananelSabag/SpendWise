@@ -23,6 +23,7 @@ export default {
     finish: "Complete Setup",
     close: "Close",
     completing: "Completing...",
+    success: "Success!",
     unsavedChanges: "You have unsaved changes. Are you sure you want to leave?",
     keyboardHint: "Use keyboard shortcuts",
     nextShortcut: "Next",
@@ -323,13 +324,17 @@ export default {
     }
   },
   completion: {
+    starting: "Starting setup guide...",
     success: "Setup completed successfully! Welcome to SpendWise!",
     failed: "Setup completion failed. Please try again.",
     completing: "Completing your setup...",
     almostDone: "Almost done! Finalizing your account...",
     templates_created: "Successfully created {{count}} out of {{total}} templates",
     templates_partial_failure: "Some templates could not be created. Please try again.",
-    templates_failed: "Templates could not be created, but onboarding will continue."
+    templates_failed: "Templates could not be created, but onboarding will continue.",
+    paused: "Setup paused. You can complete it anytime from your profile.",
+    skipped: "Setup skipped. Complete it later for the full SpendWise experience.",
+    failedWithSupport: "Failed to complete setup. Please try again or contact support."
   },
   templateTypes: {
     income: "Income",
@@ -354,5 +359,124 @@ export default {
     previous: "Previous",
     close: "Close"
   },
-  restart: "Restart"
+  prompt: {
+    title: "Get Started",
+    benefitsTitle: "What you'll get",
+    startFailed: "Failed to start setup. Please try again.",
+    starting: "Starting...",
+    skipForNow: "Skip for now",
+    maybeLater: "Maybe later",
+    skipNotice: "You can always set up later from your profile",
+    benefits: {
+      organization: {
+        title: "Stay Organized",
+        description: "Keep all your finances in one place with smart categorization"
+      },
+      insights: {
+        title: "Smart Insights",
+        description: "Understand your spending patterns with visual analytics"
+      },
+      security: {
+        title: "Bank-Grade Security",
+        description: "Your financial data is protected with enterprise-level encryption"
+      },
+      automation: {
+        title: "Save Time",
+        description: "Automate recurring transactions and never enter them manually again"
+      }
+    },
+    reminder: {
+      title: "Complete Your Setup",
+      subtitle: "You're just a minute away from unlocking the full SpendWise experience",
+      cta: "Finish Setup"
+    },
+    complete: {
+      title: "Setup Complete!",
+      subtitle: "Your account is fully configured and ready to use",
+      cta: "Go to Dashboard"
+    },
+    welcome: {
+      title: "Welcome{{name}}!",
+      subtitle: "Let's get your SpendWise account set up in just a few steps",
+      cta: "Start Setup"
+    },
+    timeEstimate: {
+      quick: "Takes about 1 minute",
+      full: "Takes about 2–3 minutes"
+    }
+  },
+  restart: "Restart",
+  education: {
+    sections: {
+      overview: "Overview",
+      transactions: "Transactions",
+      balance: "Balance Panel",
+      benefits: "Benefits"
+    },
+    demo: {
+      totalBalance: "Total Balance",
+      acrossAllAccounts: "Across all accounts",
+      comparedToLastMonth: "Compared to last month",
+      income: "Income",
+      expenses: "Expenses",
+      savings: "Savings",
+      monthly: "Monthly",
+      selected: "✓ Selected",
+      autoLabel: "Auto",
+      next: "Next:"
+    },
+    overview: {
+      twoTypesTitle: "Two Types of Transactions",
+      twoTypesSubtitle: "Understanding the difference is key",
+      oneTimeTitle: "One-Time",
+      oneTimeDesc: "Individual purchases you enter manually",
+      recurringTitle: "Recurring",
+      recurringDesc: "Automatic transactions that repeat on schedule",
+      balanceDashTitle: "Your Balance Dashboard",
+      balanceDashSubtitle: "See your money at a glance",
+      hideShowPrivacy: "Hide/show balances for privacy",
+      trackChanges: "Track changes over time",
+      incomeVsExpense: "Quick income vs expense overview"
+    },
+    transactions: {
+      interactiveDemoTitle: "Interactive Transaction Demo",
+      interactiveDemoDesc: "Click on transactions to see how they work. Notice the visual differences!",
+      oneTimeTitle: "One-Time Transactions",
+      recurringTitle: "Recurring Transactions",
+      selectedFeedback: "Great! You selected {{count}} examples",
+      selectedFeedbackDesc: "Notice how recurring transactions have purple styling, special badges, and show their next occurrence. This makes it easy to spot automated transactions in your list!"
+    },
+    balanceSection: {
+      title: "Your Balance Dashboard",
+      subtitle: "Try clicking the eye icon to hide/show your balance",
+      privacyTitle: "Privacy Control",
+      privacyDesc: "Hide balances when others might see your screen",
+      trackTitle: "Track Progress",
+      trackDesc: "See if your balance is growing or shrinking",
+      overviewTitle: "Quick Overview",
+      overviewDesc: "Income, expenses, and savings at a glance",
+      understoodTitle: "Balance Panel Understanding ✓",
+      understoodDesc: "Perfect! You now understand how the balance panel works. This will be your financial command center in SpendWise."
+    },
+    benefitsSection: {
+      title: "Why This Knowledge Matters",
+      subtitle: "Understanding these concepts will transform your financial management",
+      financialTitle: "Financial Benefits",
+      practicalTitle: "Practical Benefits",
+      budgetingTitle: "Better Budgeting",
+      budgetingDesc: "Recurring transactions help you predict future cash flow and plan ahead",
+      patternsTitle: "Spot Patterns",
+      patternsDesc: "Easily identify spending patterns and subscription costs",
+      trackTitle: "Track Progress",
+      trackDesc: "Monitor your financial health with clear balance insights",
+      saveTimeTitle: "Save Time",
+      saveTimeDesc: "No need to manually enter salary, rent, or subscriptions every month",
+      neverMissTitle: "Never Miss",
+      neverMissDesc: "Get notified about upcoming recurring transactions before they happen",
+      privacyTitle: "Privacy Control",
+      privacyDesc: "Hide balances when sharing your screen or using in public",
+      readyTitle: "🎉 You're Ready to Take Control!",
+      readyDesc: "With this knowledge, you'll be able to effectively use SpendWise to improve your financial health and save time managing your money."
+    }
+  }
 };

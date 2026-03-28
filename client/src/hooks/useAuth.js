@@ -73,9 +73,10 @@ export const useAuth = () => {
   }, [actions, queryClient, navigate]);
 
   // ✅ Get profile
-  const getProfile = useCallback(async () => {
+  // Pass { silent: true } to skip the global isLoading flag (background refresh)
+  const getProfile = useCallback(async (options) => {
     try {
-      return await actions.getProfile();
+      return await actions.getProfile(options);
     } catch (error) {
       return { success: false, error: { message: error.message } };
     }

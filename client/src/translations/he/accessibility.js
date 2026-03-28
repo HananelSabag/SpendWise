@@ -8,6 +8,12 @@ export default {
     title: "הצהרת נגישות",
     quickSettings: "הגדרות נגישות מהירות",
     openAccessibilityMenu: "פתח תפריט נגישות",
+    status: {
+      full: "נתמך במלואו",
+      partial: "נתמך חלקית",
+      planned: "מתוכנן",
+      unknown: "לא ידוע"
+    },
     overview: {
       introduction: "SpendWise מחויבת לספק גישה שווה לכל המשתמשים",
       scope: "הצהרה זו חלה על כל האפליקציה ותכנים נלווים",
@@ -63,6 +69,7 @@ export default {
       }
     },
     standards: {
+      introduction: "אנו פועלים בהתאם לתקני נגישות בינלאומיים הבאים",
       wcag: {
         description: "תואם לתקני WCAG 2.1 ברמה AA"
       },
@@ -77,6 +84,10 @@ export default {
       }
     },
     limitations: {
+      title: "מגבלות ידועות",
+      description: "אנו עובדים ברציפות לשיפור הנגישות. להלן מגבלות ידועות שאנו מטפלים בהן.",
+      impact: "השפעה",
+      workaround: "פתרון עקיף",
       charts: {
         issue: "תרשימים מורכבים עשויים לדרוש תיאור טקסטואלי",
         impact: "עלול להשפיע על הבנת נתונים גרפיים",
@@ -87,6 +98,19 @@ export default {
         impact: "תוכן PDF עלול להיות קשה לגישה",
         workaround: "מספקים גרסאות HTML חלופיות"
       }
+    },
+    contact: {
+      introduction: "אנו מברכים על משוב בנושא הנגישות של SpendWise. אנא הודיעו לנו אם נתקלתם בכל מחסום.",
+      email: {
+        title: "תמיכה באימייל",
+        description: "שלחו לנו אימייל עם פניות נגישות או משוב"
+      },
+      community: {
+        title: "פורום קהילתי",
+        description: "הצטרפו לפורום הקהילתי שלנו לדיון בשיפורי נגישות",
+        join: "הצטרף לקהילה"
+      },
+      responseTime: "אנו שואפים להגיב לפניות נגישות תוך 2 ימי עסקים"
     },
     footer: {
       lastUpdated: "עודכן לאחרונה",

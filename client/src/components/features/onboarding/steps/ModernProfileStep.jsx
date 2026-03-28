@@ -41,6 +41,8 @@ const ModernProfileStep = ({
   // ✅ Zustand stores
   const { user, updateProfile } = useAuth();
   const { t, isRTL, currentLanguage, setLanguage } = useTranslation('onboarding');
+  const { t: tAuth } = useTranslation('auth');
+  const { t: tProfile } = useTranslation('profile');
   const { isDark, setTheme } = useTheme();
   const { currency, setCurrency } = useCurrency();
 
@@ -209,15 +211,15 @@ const ModernProfileStep = ({
     if (needsPassword) {
       const pwd = profileData.password || '';
       if (!pwd) {
-        newErrors.password = 'Password is required for hybrid authentication';
+        newErrors.password = tAuth('passwordRequiredForSetup') || 'Password is required for setup';
       } else if (pwd.length < 8) {
-        newErrors.password = 'Password must be at least 8 characters';
+        newErrors.password = tAuth('passwordTooShort') || 'Password must be at least 8 characters';
       } else if (!/[A-Za-z]/.test(pwd) || !/[0-9]/.test(pwd)) {
-        newErrors.password = 'Password must include at least one letter and one number';
+        newErrors.password = tAuth('passwordComplexity') || 'Password must include at least one letter and one number';
       }
-      
+
       if (profileData.password !== profileData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
+        newErrors.confirmPassword = tAuth('passwordsDontMatch') || 'Passwords do not match';
       }
     }
     
@@ -241,102 +243,80 @@ const ModernProfileStep = ({
 
   // ✅ Theme options - ENHANCED
   const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun, description: 'Bright interface for day use' },
-    { value: 'dark', label: 'Dark', icon: Moon, description: 'Dark interface for low-light' },
-    { value: 'auto', label: 'Auto', icon: Monitor, description: 'Matches system preference' }
+    { value: 'light', label: t('preferences.theme.light') || 'Light', icon: Sun, description: t('preferences.theme.lightDescription') || 'Bright interface for day use' },
+    { value: 'dark', label: t('preferences.theme.dark') || 'Dark', icon: Moon, description: t('preferences.theme.darkDescription') || 'Dark interface for low-light' },
+    { value: 'auto', label: t('preferences.theme.auto') || 'Auto', icon: Monitor, description: t('preferences.theme.autoDescription') || 'Matches system preference' }
   ];
 
 
 
   return (
-    <div className="min-h-full" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="grid gap-8">
+    <div style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      <div className="space-y-4">
           {/* Profile Section */}
-          <Card className="p-8">
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Profile Picture Section */}
-              <div>
-                <h2 className="text-xl font-semibold mb-6 flex items-center">
-                  <Camera className="w-5 h-5 mr-2 text-blue-500" />
-                  Profile Picture
-                </h2>
+          <Card className="p-4">
+            {/* Profile Picture + Name — horizontal row */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-shrink-0">
+                <Avatar
+                  src={profileData.profilePicture}
+                  alt={tProfile('personal.profilePictureAlt')}
+                  size="xl"
+                  fallback={profileData.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  className="w-16 h-16 border-2 border-white shadow-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white shadow border-2 border-white transition-colors"
+                >
+                  {isUploading ? (
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera className="w-3 h-3" />
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={(e) => handleProfilePictureUpload(e.target.files[0])}
+                  className="hidden"
+                />
+              </div>
 
-                <div className="text-center mb-6">
-                  <div className="relative inline-block">
-                    <Avatar
-                      src={profileData.profilePicture}
-                      alt="Profile"
-                      size="2xl"
-                      fallback={profileData.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                      className="w-32 h-32 border-4 border-white shadow-xl"
-                    />
-                    
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="absolute -bottom-2 -right-2 w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-white transition-colors"
-                    >
-                      {isUploading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Camera className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  <p className="text-sm text-gray-500 mt-4">
-                    Click the camera icon to upload your profile picture
-                  </p>
-                  
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,.heic,.heif"
-                    onChange={(e) => handleProfilePictureUpload(e.target.files[0])}
-                    className="hidden"
+              {/* Name fields inline */}
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {tAuth('firstName') || 'First Name'}
+                  </label>
+                  <Input
+                    value={profileData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder={tAuth('firstNamePlaceholder') || 'First name'}
+                    error={errors.firstName}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {tAuth('lastName') || 'Last Name'}
+                  </label>
+                  <Input
+                    value={profileData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder={tAuth('lastNamePlaceholder') || 'Last name'}
+                    error={errors.lastName}
+                    className="w-full"
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Profile Information */}
-              <div>
-                <h2 className="text-xl font-semibold mb-6 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-green-500" />
-                  Personal Information
-                </h2>
-
-                <div className="space-y-4">
-                  {/* Name Fields */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        First Name
-                      </label>
-                      <Input
-                        value={profileData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        placeholder="Enter your first name"
-                        error={errors.firstName}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Last Name
-                      </label>
-                      <Input
-                        value={profileData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        placeholder="Enter your last name"
-                        error={errors.lastName}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-
+            {/* Auth status + password setup */}
+            <div className="space-y-3">
                   {/* ✅ New Bulletproof Authentication Status Detector */}
                   <AuthStatusDetector
                     context="onboarding"
@@ -394,7 +374,7 @@ const ModernProfileStep = ({
                                 type={showPassword ? 'text' : 'password'}
                                 value={profileData.password}
                                 onChange={(e) => handleInputChange('password', e.target.value)}
-                                placeholder="Create a password"
+                                placeholder={tAuth('createPasswordPlaceholder') || 'Create a password'}
                                 error={errors.password}
                                 className="w-full pr-10"
                                 autoComplete="new-password"
@@ -414,7 +394,7 @@ const ModernProfileStep = ({
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 value={profileData.confirmPassword}
                                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                                placeholder="Confirm password"
+                                placeholder={tAuth('confirmPasswordPlaceholder') || 'Confirm password'}
                                 error={errors.confirmPassword}
                                 className="w-full pr-10"
                                 autoComplete="new-password"
@@ -482,149 +462,90 @@ const ModernProfileStep = ({
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
           </Card>
 
-          {/* Preferences Section */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Language & Currency */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6 flex items-center">
-                <Globe className="w-5 h-5 mr-2 text-blue-500" />
-                Language & Currency
-              </h2>
+          {/* Preferences Section — compact, single column */}
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-500" />
+              Language &amp; Currency
+            </h2>
 
-              {/* Language Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Language
-                </label>
-                <div className="grid grid-cols-1 gap-3">
-                  {languageOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleInputChange('language', option.value)}
-                      className={cn(
-                        "p-4 rounded-xl border-2 transition-all text-left",
-                        profileData.language === option.value
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">{option.flag}</span>
-                          <div>
-                            <div className="font-medium">{option.label}</div>
-                            <div className="text-sm text-gray-500">{option.nativeName}</div>
-                          </div>
-                        </div>
-                        {profileData.language === option.value && (
-                          <Check className="w-5 h-5 text-blue-600" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Language — compact horizontal buttons */}
+            <div className="flex gap-2 mb-4">
+              {languageOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleInputChange('language', option.value)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 text-sm transition-all",
+                    profileData.language === option.value
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 font-medium"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  <span>{option.flag}</span>
+                  <span>{option.label}</span>
+                  {profileData.language === option.value && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                </button>
+              ))}
+            </div>
 
-              {/* Currency Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Currency
-                </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {currencyOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleInputChange('currency', option.value)}
-                      className={cn(
-                        "p-3 rounded-lg border-2 transition-all text-left",
-                        profileData.currency === option.value
-                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-lg">{option.flag}</span>
-                          <div className="font-medium">{option.label}</div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg font-bold text-gray-600 dark:text-gray-400">
-                            {option.symbol}
-                          </span>
-                          {profileData.currency === option.value && (
-                            <Check className="w-4 h-4 text-purple-600" />
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </Card>
+            {/* Currency — compact grid */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {currencyOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleInputChange('currency', option.value)}
+                  className={cn(
+                    "flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm transition-all",
+                    profileData.currency === option.value
+                      ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 font-medium"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  <span>{option.flag}</span>
+                  <span className="font-bold text-gray-600 dark:text-gray-400">{option.symbol}</span>
+                  <span className="flex-1 truncate">{option.label}</span>
+                  {profileData.currency === option.value && <Check className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
 
-            {/* Theme Selection */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6 flex items-center">
-                <Palette className="w-5 h-5 mr-2 text-purple-500" />
-                Theme Preference
-              </h2>
-
-              <div className="space-y-3">
-                {themeOptions.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleInputChange('theme', option.value)}
-                      className={cn(
-                        "w-full p-4 rounded-xl border-2 transition-all text-left",
-                        profileData.theme === option.value
-                          ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                      )}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center",
-                          profileData.theme === option.value
-                            ? "bg-indigo-100 dark:bg-indigo-800"
-                            : "bg-gray-100 dark:bg-gray-800"
-                        )}>
-                          <Icon className={cn(
-                            "w-6 h-6",
-                            profileData.theme === option.value
-                              ? "text-indigo-600 dark:text-indigo-400"
-                              : "text-gray-600 dark:text-gray-400"
-                          )} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {option.label}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {option.description}
-                          </div>
-                        </div>
-                        {profileData.theme === option.value && (
-                          <Check className="w-5 h-5 text-indigo-600" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Card>
-          </div>
+            {/* Theme — compact inline buttons */}
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-purple-500" />
+              Theme
+            </h2>
+            <div className="flex gap-2">
+              {themeOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleInputChange('theme', option.value)}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border-2 text-sm transition-all",
+                      profileData.theme === option.value
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 font-medium"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-4 h-4",
+                      profileData.theme === option.value ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500"
+                    )} />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
         </div>
       </div>
-    </div>
   );
 };
 

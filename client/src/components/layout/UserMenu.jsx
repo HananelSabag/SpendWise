@@ -97,7 +97,7 @@ const UserMenu = ({ className = '' }) => {
     
     addNotification({
       type: 'info',
-      message: 'Starting setup guide...',
+      message: t('onboarding.completion.starting') || 'Starting setup guide...',
       duration: 2000
     });
   }, [addNotification]);
@@ -109,7 +109,7 @@ const UserMenu = ({ className = '' }) => {
     
     addNotification({
       type: 'success',
-      message: 'Setup guide completed!',
+      message: t('onboarding.completion.success') || 'Setup guide completed!',
       duration: 3000
     });
   }, [addNotification]);

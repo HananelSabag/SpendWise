@@ -60,7 +60,7 @@ const countActiveFilters = (filters) =>
 // ─── Advanced Filters ─────────────────────────────────────────────────────────
 
 const AdvancedFilters = ({ filters, onFilterChange, onClear, categories }) => {
-  const { t } = useTranslation('transactions');
+  const { t } = useTranslation();
   const activeCount = countActiveFilters(filters);
 
   const selectClass = (active) => cn(
@@ -76,18 +76,18 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear, categories }) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-            {t('advancedFilters', 'Filters')}
+            {t('filters.title', 'Filters')}
           </h3>
           {activeCount > 0 && (
             <p className="text-xs text-indigo-600 dark:text-indigo-400">
-              {activeCount} active
+              {t('filter.activeCount', { count: activeCount }) || `${activeCount} active`}
             </p>
           )}
         </div>
         {activeCount > 0 && (
           <Button variant="ghost" size="sm" onClick={onClear}
             className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs">
-            <X className="w-3 h-3 mr-1" /> Clear
+            <X className="w-3 h-3 mr-1" /> {t('actions.clearFilters') || 'Clear'}
           </Button>
         )}
       </div>
@@ -302,10 +302,10 @@ const TransactionList = ({
           <Receipt className="w-8 h-8 text-gray-400" />
         </div>
         <p className="text-gray-600 dark:text-gray-400 font-medium">
-          {t('empty.noTransactions', 'No transactions found')}
+          {t('emptyStates.noTransactions', 'No transactions found')}
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-          {t('empty.noFilteredTransactions', 'Try adjusting your filters or add a new transaction')}
+          {t('emptyStates.noResultsDesc', 'Try adjusting your filters or add a new transaction')}
         </p>
       </div>
     );
@@ -345,18 +345,19 @@ const TransactionList = ({
 // ─── Stats row ────────────────────────────────────────────────────────────────
 
 const StatsRow = ({ summary, recurringSummary, activeTab, formatCurrency }) => {
+  const { t } = useTranslation('transactions');
   const items = activeTab === 'all'
     ? [
-      { label: 'Transactions', value: summary.count },
-      { label: 'Income', value: formatCurrency(summary.totalIncome), color: 'green' },
-      { label: 'Expenses', value: formatCurrency(summary.totalExpenses), color: 'red' },
-      { label: 'Recurring', value: `${summary.recurringCount} (${Math.round(summary.recurringPercentage)}%)`, color: 'purple' },
+      { label: t('title') || 'Transactions', value: summary.count },
+      { label: t('types.income') || 'Income', value: formatCurrency(summary.totalIncome), color: 'green' },
+      { label: t('types.expense') || 'Expenses', value: formatCurrency(summary.totalExpenses), color: 'red' },
+      { label: t('labels.recurring') || 'Recurring', value: `${summary.recurringCount} (${Math.round(summary.recurringPercentage)}%)`, color: 'purple' },
     ]
     : [
-      { label: 'Templates', value: recurringSummary.totalCount },
-      { label: 'Active', value: recurringSummary.activeCount, color: 'green' },
-      { label: 'Monthly In', value: formatCurrency(recurringSummary.totalMonthlyIncome), color: 'green' },
-      { label: 'Monthly Out', value: formatCurrency(recurringSummary.totalMonthlyExpenses), color: 'red' },
+      { label: t('recurring.templates') || 'Templates', value: recurringSummary.totalCount },
+      { label: t('recurring.active') || 'Active', value: recurringSummary.activeCount, color: 'green' },
+      { label: t('recurring.monthlyIncome') || 'Monthly In', value: formatCurrency(recurringSummary.totalMonthlyIncome), color: 'green' },
+      { label: t('recurring.monthlyExpenses') || 'Monthly Out', value: formatCurrency(recurringSummary.totalMonthlyExpenses), color: 'red' },
     ];
 
   return (
@@ -378,52 +379,60 @@ const StatsRow = ({ summary, recurringSummary, activeTab, formatCurrency }) => {
 
 // ─── Bulk delete modal ────────────────────────────────────────────────────────
 
-const BulkDeleteModal = ({ isOpen, count, onClose, onConfirm }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title="Delete Transactions" size="sm">
-    <div className="p-4">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{count} selected</p>
-      <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
-        <div className="flex items-center text-red-800 dark:text-red-200 gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <p className="text-sm">This action cannot be undone.</p>
+const BulkDeleteModal = ({ isOpen, count, onClose, onConfirm }) => {
+  const { t } = useTranslation('transactions');
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={t('bulkDelete.title') || 'Delete Transactions'} size="sm">
+      <div className="p-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          {t('selection.count', { count }) || `${count} selected`}
+        </p>
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
+          <div className="flex items-center text-red-800 dark:text-red-200 gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <p className="text-sm">{t('bulkDelete.cannotUndo') || 'This action cannot be undone.'}</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1">{t('actions.cancel') || 'Cancel'}</Button>
+          <Button variant="destructive" onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
+            <Trash2 className="w-4 h-4 mr-2" /> {t('bulkDelete.deleteAll') || 'Delete All'}
+          </Button>
         </div>
       </div>
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-        <Button variant="destructive" onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
-          <Trash2 className="w-4 h-4 mr-2" /> Delete All
-        </Button>
-      </div>
-    </div>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 // ─── Load more section ────────────────────────────────────────────────────────
 
-const LoadMoreSection = ({ loadMoreRef, isFetchingNextPage, hasMore, count, onLoadMore }) => (
-  <div ref={loadMoreRef} className="mt-6">
-    {isFetchingNextPage ? (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-        ))}
-      </div>
-    ) : hasMore ? (
-      <div className="flex justify-center py-4">
-        <Button variant="outline" onClick={onLoadMore}
-          className="px-8 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300">
-          <ChevronDown className="w-4 h-4 mr-2" />
-          Load More
-        </Button>
-      </div>
-    ) : count > 0 ? (
-      <div className="flex items-center justify-center gap-2 py-6 text-gray-500 dark:text-gray-400">
-        <CheckCircle className="w-4 h-4 text-green-500" />
-        <span className="text-sm">All {count} transactions loaded</span>
-      </div>
-    ) : null}
-  </div>
-);
+const LoadMoreSection = ({ loadMoreRef, isFetchingNextPage, hasMore, count, onLoadMore }) => {
+  const { t } = useTranslation('transactions');
+  return (
+    <div ref={loadMoreRef} className="mt-6">
+      {isFetchingNextPage ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : hasMore ? (
+        <div className="flex justify-center py-4">
+          <Button variant="outline" onClick={onLoadMore}
+            className="px-8 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300">
+            <ChevronDown className="w-4 h-4 mr-2" />
+            {t('loadMore') || 'Load More'}
+          </Button>
+        </div>
+      ) : count > 0 ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-gray-500 dark:text-gray-400">
+          <CheckCircle className="w-4 h-4 text-green-500" />
+          <span className="text-sm">{t('allLoaded', { count }) || `All ${count} transactions loaded`}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
@@ -443,6 +452,7 @@ const MobileTransactions = ({
   setShowRecurringManager,
 }) => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const { t } = useTranslation('transactions');
   const activeCount = countActiveFilters(filters);
 
   return (
@@ -453,7 +463,7 @@ const MobileTransactions = ({
           <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
             <span className="text-white font-bold text-sm">S</span>
           </div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Transactions</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('title') || 'Transactions'}</h1>
         </div>
       </div>
 
@@ -469,7 +479,7 @@ const MobileTransactions = ({
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
           >
             <List className="w-4 h-4 inline mr-1.5" />
-            All
+            {t('tabs.all') || 'All'}
           </button>
           <button
             onClick={() => setActiveTab('recurring')}
@@ -479,7 +489,7 @@ const MobileTransactions = ({
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
           >
             <Repeat className="w-4 h-4 inline mr-1.5" />
-            Recurring
+            {t('tabs.recurring') || 'Recurring'}
           </button>
         </div>
 
@@ -490,7 +500,7 @@ const MobileTransactions = ({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t('actions.search') || 'Search...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400"
@@ -527,12 +537,12 @@ const MobileTransactions = ({
             {multiSelectMode && selectedIds.size > 0 && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  {selectedIds.size} selected
+                  {t('selection.count', { count: selectedIds.size }) || `${selectedIds.size} selected`}
                 </span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>{t('clearSelection') || 'Clear'}</Button>
                   <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteModal(true)}>
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> {t('actions.delete') || 'Delete'}
                   </Button>
                 </div>
               </div>
@@ -567,7 +577,7 @@ const MobileTransactions = ({
       </div>
 
       {/* Filter bottom sheet */}
-      <BottomSheet isOpen={showFilterSheet} onClose={() => setShowFilterSheet(false)} title="Filters">
+      <BottomSheet isOpen={showFilterSheet} onClose={() => setShowFilterSheet(false)} title={t('actions.filter') || 'Filters'}>
         <AdvancedFilters
           filters={filters}
           onFilterChange={onFilterChange}
@@ -598,17 +608,18 @@ const DesktopTransactions = ({
   isRegenerating,
   setShowRecurringManager,
 }) => {
+  const { t } = useTranslation('transactions');
   const activeCount = countActiveFilters(filters);
   const hasActiveSearch = searchQuery || Object.values(filters).some((f) => f !== 'all' && f !== '');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title') || 'Transactions'}</h1>
         {isRegenerating && (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            Auto-generating...
+            {t('autoGenerating') || 'Auto-generating...'}
           </div>
         )}
       </div>
@@ -623,7 +634,7 @@ const DesktopTransactions = ({
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')}
           >
-            <List className="w-4 h-4" /> All Transactions
+            <List className="w-4 h-4" /> {t('tabs.all') || 'All Transactions'}
           </button>
           <button
             onClick={() => setActiveTab('recurring')}
@@ -632,7 +643,7 @@ const DesktopTransactions = ({
                 ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')}
           >
-            <Repeat className="w-4 h-4" /> Recurring
+            <Repeat className="w-4 h-4" /> {t('tabs.recurring') || 'Recurring'}
           </button>
         </div>
 
@@ -654,7 +665,7 @@ const DesktopTransactions = ({
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Search transactions..."
+                    placeholder={t('search.placeholder') || 'Search transactions...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 h-10 rounded-xl"
@@ -672,7 +683,7 @@ const DesktopTransactions = ({
                     className="relative h-10 px-4 rounded-xl"
                   >
                     <Filter className="w-4 h-4 mr-2" />
-                    Filters
+                    {t('actions.filter') || 'Filters'}
                     {activeCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                         {activeCount}
@@ -692,7 +703,7 @@ const DesktopTransactions = ({
                     className="h-10 px-4 rounded-xl"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Select
+                    {t('actions.select') || 'Select'}
                   </Button>
                 </div>
               </div>
@@ -701,7 +712,7 @@ const DesktopTransactions = ({
               {hasActiveSearch && (
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <Button variant="ghost" onClick={clearFilters} className="text-gray-500 hover:text-gray-700 text-sm">
-                    <X className="w-4 h-4 mr-2" /> Clear all filters
+                    <X className="w-4 h-4 mr-2" /> {t('actions.clearFilters') || 'Clear all filters'}
                   </Button>
                 </div>
               )}
@@ -727,13 +738,13 @@ const DesktopTransactions = ({
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <p className="font-medium text-blue-900 dark:text-blue-100">
-                      {selectedIds.size} selected
+                      {t('selection.count', { count: selectedIds.size }) || `${selectedIds.size} selected`}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>{t('clearSelection') || 'Clear'}</Button>
                     <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteModal(true)}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      <Trash2 className="w-4 h-4 mr-2" /> {t('actions.delete') || 'Delete'}
                     </Button>
                   </div>
               </div>

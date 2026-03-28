@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button, Card } from '../../ui';
 import { cn } from '../../../utils/helpers';
+import { useTranslation } from '../../../stores';
 import { authStatusAPI } from '../../../api/authStatus';
 import { toast } from 'react-hot-toast';
 import { simpleGoogleAuth } from '../../../services/simpleGoogleAuth.js';
@@ -25,6 +26,7 @@ const AuthStatusDetector = ({
   onGoogleLink,
   showDebug = false
 }) => {
+  const { t } = useTranslation('auth');
   const [authStatus, setAuthStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -228,7 +230,7 @@ const AuthStatusDetector = ({
       <Card className={cn("relative overflow-hidden bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800", className)}>
         <div className="p-4 flex items-center space-x-3">
           <RefreshCw className="w-5 h-5 animate-spin text-gray-500" />
-          <span className="text-gray-700 dark:text-gray-300">Detecting authentication status...</span>
+          <span className="text-gray-700 dark:text-gray-300">{t('detecting')}</span>
         </div>
       </Card>
     );
@@ -293,7 +295,7 @@ const AuthStatusDetector = ({
             {authStatus && (
               <div className="space-y-2 mb-4">
                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <div>🔗 Type: <span className="font-medium">{authStatus.authType}</span></div>
+                  <div>{t('typeLabel')} <span className="font-medium">{authStatus.authType}</span></div>
                   <div>🔑 Password: {authStatus.hasPassword ? '✅' : '❌'}</div>
                   <div>🔍 Google: {authStatus.hasGoogle ? '✅' : '❌'}</div>
                   <div>📧 Email: {authStatus.email}</div>

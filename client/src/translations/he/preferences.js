@@ -26,10 +26,9 @@ export default {
   
   // Font size options
   small: "קטן",
-  normal: "רגיל", 
   large: "גדול",
   extraLarge: "גדול מאוד",
-  
+
   // Contrast options
   normal: "רגיל",
   high: "גבוה",

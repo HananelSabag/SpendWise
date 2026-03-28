@@ -5,6 +5,7 @@
  */
 
 export default {
+  title: "מסננים",
   amountRangeLabel: "טווח סכום",
   statusLabel: "סטטוס",
   dateRange: {

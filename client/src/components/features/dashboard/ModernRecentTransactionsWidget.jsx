@@ -13,15 +13,15 @@ import { cn } from '../../../utils/helpers';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-const formatRelativeDate = (dateStr) => {
+const formatRelativeDate = (dateStr, t) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (isNaN(d)) return '';
   const now = new Date();
   const diffDays = Math.floor((now - d) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays === 0) return t('common.date.today', 'Today');
+  if (diffDays === 1) return t('common.date.yesterday', 'Yesterday');
+  if (diffDays < 7) return t('common.date.daysAgo', { count: diffDays, fallback: `${diffDays}d ago` });
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
@@ -41,7 +41,7 @@ const CategoryBadge = ({ category, type }) => {
 
 // ─── Transaction row ─────────────────────────────────────────────────────────
 
-const TxRow = ({ transaction, formatCurrency }) => {
+const TxRow = ({ transaction, formatCurrency, t }) => {
   const isIncome = transaction.type === 'income';
   const amount = parseFloat(transaction.amount) || 0;
   const dateStr = transaction.transaction_datetime || transaction.created_at || transaction.date;
@@ -62,7 +62,7 @@ const TxRow = ({ transaction, formatCurrency }) => {
           {transaction.category_name && (
             <span className="mr-1">{transaction.category_name} · </span>
           )}
-          {formatRelativeDate(dateStr)}
+          {formatRelativeDate(dateStr, t)}
         </p>
       </div>
 
@@ -186,7 +186,7 @@ const ModernRecentTransactionsWidget = ({
           /* Transaction list */
           <AnimatePresence initial={false}>
             {recent.map(tx => (
-              <TxRow key={tx.id} transaction={tx} formatCurrency={formatCurrency} />
+              <TxRow key={tx.id} transaction={tx} formatCurrency={formatCurrency} t={t} />
             ))}
           </AnimatePresence>
         )}

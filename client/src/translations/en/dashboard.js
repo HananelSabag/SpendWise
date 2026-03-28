@@ -81,6 +81,11 @@ export default {
     noData: "No data",
     hide: "Hide",
     show: "Show",
+    date: {
+      today: "Today",
+      yesterday: "Yesterday",
+      daysAgo: "{{count}}d ago"
+    },
     categoryTypes: {
       food: "Food & Dining",
       income: "Income",
@@ -179,7 +184,9 @@ export default {
       description: "Description (optional)",
       selectCategory: "Select category"
     },
-    typeSelector: "Transaction Type"
+    typeSelector: "Transaction Type",
+    tip: "Enter amount and press Enter or click submit",
+    back: "Back"
   },
   notifications: {
     quickExpenseCreated: "Quick expense added successfully!",
@@ -269,8 +276,12 @@ export default {
     low: "Low",
     explanation: "Confidence: {{value}}%"
   },
+  addExpense: "Add Expense",
+  addIncome: "Add Income",
   dashboardError: "Dashboard Error",
   dashboardErrorMessage: "Unable to load dashboard data",
+  retryingIn: "Retrying in {{countdown}}s…",
+  goToProfile: "Go to profile",
   analytics: "Analytics",
   goals: "Goals",
   refreshed: "Dashboard refreshed successfully",

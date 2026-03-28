@@ -217,7 +217,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               label={t('personal.email', { fallback: 'Email' })}
               value={personalData.email}
               icon={Mail}
-              placeholder="No email"
+              placeholder={t('personal.noEmail')}
               isEditing={isEditing}
               readOnly
               required
@@ -238,7 +238,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               onChange={v => update('birthday', v)}
               type="date"
               icon={Calendar}
-              placeholder="Not set"
+              placeholder={t('personal.notSet')}
               isEditing={isEditing}
             />
             <FieldRow

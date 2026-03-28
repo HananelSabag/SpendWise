@@ -22,7 +22,19 @@ export default {
     title: "Admin Dashboard",
     subtitle: "Complete system administration and user management",
     welcome: "Welcome back",
-    roleStatus: "Administrator Access"
+    roleStatus: "Administrator Access",
+    recentActivity: "Recent Activity",
+    liveEvents: "Live system events"
+  },
+  activity: {
+    empty: "No recent activity",
+    invalidDate: "Invalid Date",
+    noActivity: "No activity yet",
+    noActivities: "No activities found",
+    ofActivities: "{{shown}} of {{total}} activities",
+    todaysActions: "Today's Actions",
+    activeAdmins: "Active Admins",
+    securityEvents: "Security Events"
   },
   stats: {
     totalUsers: "Total Users",
@@ -36,7 +48,17 @@ export default {
     fromAllTransactions: "from all transactions",
     adminUsers: "Admin Users",
     verifiedUsers: "Verified Users",
-    totalCategories: "Total Categories"
+    totalCategories: "Total Categories",
+    uptime: "Uptime",
+    chartLoading: "Chart will load here",
+    avgResponseTime: "Average Response Time",
+    cacheHitRate: "Cache Hit Rate",
+    activeConnections: "Active Connections",
+    apiRequests: "API Requests",
+    userGrowth: "User Growth",
+    transactionVolume: "Transaction Volume",
+    performanceMetrics: "Performance Metrics",
+    realtimeStats: "Real-Time Statistics"
   },
   system: {
     status: "System Status",
@@ -44,7 +66,11 @@ export default {
     online: "Online",
     database: "Database",
     connected: "Connected",
-    security: "Security"
+    security: "Security",
+    realtimeHealth: "Real-time system health",
+    uptimePlaceholder: "99.9% uptime",
+    responsePlaceholder: "Response: 45ms",
+    allChecksPassing: "All checks pass"
   },
   actions: {
     manageUsers: "Manage Users",
@@ -55,7 +81,9 @@ export default {
     activityLogDesc: "Monitor system activity and logs",
     userBlocked: "User blocked successfully",
     userUnblocked: "User unblocked successfully",
-    userDeleted: "User deleted successfully"
+    userDeleted: "User deleted successfully",
+    systemControls: "System controls",
+    liveMonitoring: "Live monitoring"
   },
   users: {
     title: "User Management",
@@ -72,7 +100,11 @@ export default {
     activity: "Activity",
     joinDate: "Join Date",
     actions: "Actions",
-    selectAll: "Select all"
+    selectAll: "Select all",
+    when: "When",
+    admin: "Admin",
+    action: "Action",
+    target: "Target"
   },
   filters: {
     allRoles: "All Roles",
@@ -134,7 +166,9 @@ export default {
     never: "Never",
     users: "users",
     selected: "selected",
-    filters: "Filters"
+    filters: "Filters",
+    retry: "Try Again",
+    backToDashboard: "Back to Dashboard"
   },
   bulk: {
     block: "Block Selected",

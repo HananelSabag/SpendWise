@@ -7,13 +7,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, useNotifications } from '../../stores';
+import { useAuth, useNotifications, useTranslation } from '../../stores';
 import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 import { api } from '../../api';
 
 const ModernOnboardingManager = () => {
   const { user, updateProfile } = useAuth();
   const { addNotification } = useNotifications();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -88,7 +89,7 @@ const ModernOnboardingManager = () => {
         // ✅ Show success notification
         addNotification({
           type: 'success',
-          message: '🎉 Welcome to SpendWise! Your account is now fully set up.',
+          message: t('onboarding.completion.success') || '🎉 Welcome to SpendWise! Your account is now fully set up.',
           duration: 5000
         });
       } else {
@@ -101,10 +102,10 @@ const ModernOnboardingManager = () => {
       // ✅ Enhanced error handling with retry option
       addNotification({
         type: 'error',
-        message: 'Failed to complete setup. Please try again or contact support.',
+        message: t('onboarding.completion.failedWithSupport') || 'Failed to complete setup. Please try again or contact support.',
         duration: 6000,
         action: {
-          label: 'Retry',
+          label: t('actions.retry') || 'Retry',
           onClick: () => handleOnboardingComplete()
         }
       });
@@ -122,7 +123,7 @@ const ModernOnboardingManager = () => {
     
     addNotification({
       type: 'info',
-      message: 'Setup paused. You can complete it anytime from your profile.',
+      message: t('onboarding.completion.paused') || 'Setup paused. You can complete it anytime from your profile.',
       duration: 4000
     });
   }, [addNotification]);
@@ -138,7 +139,7 @@ const ModernOnboardingManager = () => {
     
     addNotification({
       type: 'info',
-      message: 'Setup skipped. Complete it later for the full SpendWise experience.',
+      message: t('onboarding.completion.skipped') || 'Setup skipped. Complete it later for the full SpendWise experience.',
       duration: 5000
     });
   }, [addNotification]);

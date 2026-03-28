@@ -205,7 +205,7 @@ const AccessibilityMenu = ({
                 size="sm"
                 onClick={handleCancel}
                 className="p-2"
-                aria-label={t('actions.close')}
+                aria-label={t('close')}
               >
                 <X className="w-5 h-5" />
               </Button>
@@ -301,7 +301,7 @@ const AccessibilityMenu = ({
                     size="sm"
                     onClick={() => handleSettingChange('reducedMotion', !reducedMotion)}
                   >
-                    {reducedMotion ? t('common.enabled') : t('common.disabled')}
+                    {reducedMotion ? t('enabled') : t('disabled')}
                   </Button>
                 </div>
 
@@ -318,7 +318,7 @@ const AccessibilityMenu = ({
                     size="sm"
                     onClick={() => handleSettingChange('screenReader', !screenReader)}
                   >
-                    {screenReader ? t('common.enabled') : t('common.disabled')}
+                    {screenReader ? t('enabled') : t('disabled')}
                   </Button>
                 </div>
 
@@ -338,7 +338,7 @@ const AccessibilityMenu = ({
                     size="sm"
                     onClick={() => handleSettingChange('announcements', !announcements)}
                   >
-                    {announcements ? t('common.enabled') : t('common.disabled')}
+                    {announcements ? t('enabled') : t('disabled')}
                   </Button>
                 </div>
 
@@ -355,7 +355,7 @@ const AccessibilityMenu = ({
                     size="sm"
                     onClick={() => handleSettingChange('focusVisible', !focusVisible)}
                   >
-                    {focusVisible ? t('common.enabled') : t('common.disabled')}
+                    {focusVisible ? t('enabled') : t('disabled')}
                   </Button>
                 </div>
               </div>
@@ -386,7 +386,7 @@ const AccessibilityMenu = ({
                   onClick={handleCancel}
                   className="flex-1"
                 >
-                  {t('actions.cancel')}
+                  {t('cancel')}
                 </Button>
                 
                 <Button

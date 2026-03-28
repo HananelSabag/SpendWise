@@ -288,9 +288,9 @@ const ModernRecurringManagerPanel = ({ isOpen = false, onClose = () => {} }) => 
           </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             className="px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
+            <option value="all">{t('common.all')}</option>
+            <option value="active">{t('common.active')}</option>
+            <option value="paused">{t('common.paused')}</option>
           </select>
           <Button
             onClick={() => { setEditTemplate(null); setShowCreateModal(true); }}

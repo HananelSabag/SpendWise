@@ -5,6 +5,7 @@
  */
 
 export default {
+  title: "Filters",
   amountRangeLabel: "Amount Range",
   statusLabel: "Status",
   dateRange: {

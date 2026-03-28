@@ -24,7 +24,7 @@ const Badge = ({
   ...props
 }) => {
   // ✅ NEW: Zustand stores (replacing Context API)
-  const { isRTL } = useTranslation();
+  const { t, isRTL } = useTranslation();
 
   // ✅ Size configurations
   const sizes = {
@@ -90,7 +90,7 @@ const Badge = ({
             'flex-shrink-0 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors',
             children && (isRTL ? 'mr-1' : 'ml-1')
           )}
-          aria-label="Remove"
+          aria-label={t('common.remove')}
         >
           <X className={cn(
             size === 'xs' ? 'w-2.5 h-2.5' :

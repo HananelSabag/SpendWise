@@ -247,7 +247,7 @@ const AdminDashboard = () => {
                   <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">₪{stats.totalAmount?.toLocaleString()}</p>
                   <div className="flex items-center gap-1 mt-1">
                     <Globe className="w-3 h-3 text-gray-500" />
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">All time</p>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('allTime')}</p>
                   </div>
                 </div>
               </div>
@@ -294,7 +294,7 @@ const AdminDashboard = () => {
                   <p className="text-emerald-100 text-xs sm:text-sm leading-relaxed">{t('actions.systemSettingsDesc', { fallback: 'Configure system-wide settings' })}</p>
                   <div className="flex items-center gap-2 text-xs text-emerald-200 pt-1 sm:pt-2">
                     <Shield className="w-3 h-3" />
-                    <span>System controls</span>
+                    <span>{t('actions.systemControls')}</span>
                   </div>
                 </div>
               </div>
@@ -316,7 +316,7 @@ const AdminDashboard = () => {
                   <p className="text-purple-100 text-xs sm:text-sm leading-relaxed">{t('actions.activityLogDesc', { fallback: 'Monitor system activity and logs' })}</p>
                   <div className="flex items-center gap-2 text-xs text-purple-200 pt-1 sm:pt-2">
                     <Clock className="w-3 h-3" />
-                    <span>Live monitoring</span>
+                    <span>{t('actions.liveMonitoring')}</span>
                   </div>
                 </div>
               </div>
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('dashboardPage.recentActivity', { fallback: 'Recent Activity' })}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Live system events</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">{t('dashboardPage.liveEvents')}</p>
                 </div>
               </div>
               <Link
@@ -391,7 +391,7 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('system.status', { fallback: 'System Status' })}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Real-time system health</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">{t('system.realtimeHealth')}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
@@ -400,7 +400,7 @@ const AdminDashboard = () => {
                 <Server className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-2 sm:mb-3" />
                 <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.server', { fallback: 'Server' })}</p>
                 <Badge variant="success" size="sm" className="font-medium text-xs">{t('system.online', { fallback: 'Online' })}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">99.9% uptime</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.uptimePlaceholder')}</p>
               </div>
 
               <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-3 sm:p-5 text-center bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:shadow-md transition-all duration-300">
@@ -408,7 +408,7 @@ const AdminDashboard = () => {
                 <Database className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 mx-auto mb-2 sm:mb-3" />
                 <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.database', { fallback: 'Database' })}</p>
                 <Badge variant="success" size="sm" className="font-medium text-xs">{t('system.connected', { fallback: 'Connected' })}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">Response: 45ms</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.responsePlaceholder')}</p>
               </div>
 
               <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-3 sm:p-5 text-center bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:shadow-md transition-all duration-300">
@@ -416,7 +416,7 @@ const AdminDashboard = () => {
                 <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2 sm:mb-3" />
                 <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.security', { fallback: 'Security' })}</p>
                 <Badge variant="success" size="sm" className="font-medium text-xs">{stats.securityScore || '98/100'}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">All checks pass</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.allChecksPassing')}</p>
               </div>
             </div>
           </Card>

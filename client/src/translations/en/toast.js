@@ -34,7 +34,9 @@ export default {
     autoLogoutAuthFailure: "Automatically signed out due to authentication issues",
     autoLogoutStuckState: "Automatically signed out due to connection issues",
     autoLogoutRecoveryFailed: "Automatically signed out - unable to recover connection",
-    autoLogoutMultipleFailures: "Automatically signed out due to multiple failures"
+    autoLogoutMultipleFailures: "Automatically signed out due to multiple failures",
+    emailAlreadyExists: "An account with this email already exists",
+    sessionExpiring: "Your session will expire in 5 minutes."
   },
   profile: {
     profileUpdated: "Profile updated successfully!",
@@ -181,6 +183,10 @@ export default {
     signingOut: "Signing out..."
   },
   common: {
+    error: "An error occurred",
+    loading: "Loading...",
+    success: "Success",
+    closeNotification: "Close notification",
     copied: "Copied to clipboard!",
     linkCopied: "Link copied to clipboard!",
     imageDownloaded: "Image downloaded successfully!",

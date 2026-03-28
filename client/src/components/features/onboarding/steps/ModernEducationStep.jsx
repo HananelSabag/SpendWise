@@ -24,6 +24,7 @@ import { cn } from '../../../../utils/helpers';
 
 const DemoTransactionCard = ({ transaction, isRecurring = false, className = '', isSelected = false, onClick }) => {
   const { formatCurrency } = useCurrency();
+  const { t } = useTranslation('onboarding');
   const isIncome = transaction.type === 'income';
   const IconComponent = transaction.icon;
 
@@ -33,17 +34,17 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
       onClick={onClick}
     >
       <Card className={cn(
-        "p-5 transition-all duration-300 rounded-xl relative overflow-hidden",
+        "p-3 transition-all duration-300 rounded-xl relative overflow-hidden",
         isSelected ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20" : "",
         isRecurring ? [
           "bg-gradient-to-r from-purple-50 via-purple-25 to-indigo-50 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-indigo-900/30",
-          "border-l-4 border-l-purple-500 dark:border-l-purple-400",
+          "border-l-[3px] border-l-purple-500 dark:border-l-purple-400",
           "border-2 border-purple-200 dark:border-purple-600",
-          "shadow-lg shadow-purple-100/50 dark:shadow-purple-900/30"
+          "shadow-md shadow-purple-100/50 dark:shadow-purple-900/30"
         ] : [
           "border-2 border-gray-200 dark:border-gray-700",
           "bg-white dark:bg-gray-800",
-          "hover:shadow-lg"
+          "hover:shadow-md"
         ]
       )}>
         {isRecurring && (
@@ -56,9 +57,9 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
             <Repeat className="w-4 h-4 text-white" />
           </div>
         )}
-        <div className="flex items-start gap-4 w-full relative z-10">
+        <div className="flex items-start gap-3 w-full relative z-10">
           <div className={cn(
-            "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg border-2 flex-shrink-0",
+            "w-10 h-10 rounded-xl flex items-center justify-center shadow border-2 flex-shrink-0",
             isRecurring ? [
               isIncome
                 ? "bg-gradient-to-br from-green-400 via-green-500 to-purple-500 text-white border-purple-300"
@@ -69,21 +70,21 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
                 : "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border-red-200"
             ]
           )}>
-            <IconComponent className="w-7 h-7" />
+            <IconComponent className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h4 className={cn(
-                    "font-semibold text-lg leading-tight",
+                    "font-semibold text-sm leading-tight",
                     isRecurring ? "text-purple-900 dark:text-purple-100" : "text-gray-900 dark:text-white"
                   )}>
                     {transaction.description}
                   </h4>
                   {isRecurring && (
                     <Badge variant="secondary" size="sm" className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300 font-medium shadow-sm">
-                      <Repeat className="w-3 h-3 mr-1" />Auto
+                      <Repeat className="w-3 h-3 mr-1" />{t('education.demo.autoLabel') || 'Auto'}
                     </Badge>
                   )}
                 </div>
@@ -98,7 +99,7 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
                   </div>
                   {isRecurring && (
                     <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                      Next: {transaction.nextDate}
+                      {t('education.demo.next') || 'Next:'} {transaction.nextDate}
                     </div>
                   )}
                   {!isRecurring && transaction.location && (
@@ -106,17 +107,17 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
                   )}
                 </div>
               </div>
-              <div className="text-right ml-4">
+              <div className="text-right ml-2">
                 <div className={cn(
-                  "font-bold text-xl mb-1",
+                  "font-bold text-sm mb-0.5",
                   isIncome
                     ? isRecurring ? "text-green-700" : "text-green-600"
                     : isRecurring ? "text-red-700" : "text-red-600"
                 )}>
                   {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </div>
-                {isRecurring && <div className="text-xs text-purple-600 font-medium">Monthly</div>}
-                {isSelected && <div className="text-xs text-blue-600 font-medium mt-1">✓ Selected</div>}
+                {isRecurring && <div className="text-xs text-purple-600 font-medium">{t('education.demo.monthly') || 'Monthly'}</div>}
+                {isSelected && <div className="text-xs text-blue-600 font-medium mt-1">{t('education.demo.selected') || '✓ Selected'}</div>}
               </div>
             </div>
           </div>
@@ -128,66 +129,57 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
 
 const BalancePanelDemo = ({ balanceVisible, onToggleVisible, currentBalance, balanceChange }) => {
   const { formatCurrency } = useCurrency();
+  const { t } = useTranslation('onboarding');
   const isPositiveChange = balanceChange > 0;
   const changePercentage = (Math.abs(balanceChange) / currentBalance) * 100;
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-2xl p-6">
+    <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-4">
       <div className="absolute inset-0 opacity-10">
         <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500" />
       </div>
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Total Balance</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Across all accounts</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={onToggleVisible} className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50">
-              {balanceVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/50">
-              <RefreshCw className="w-4 h-4" />
-            </Button>
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('education.demo.totalBalance') || 'Total Balance'}</h3>
           </div>
+          <Button variant="ghost" size="sm" onClick={onToggleVisible} className="p-1.5 hover:bg-white/20 dark:hover:bg-gray-700/50">
+            {balanceVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </Button>
         </div>
-        <div className="mb-6">
-          <div className="flex items-baseline space-x-4">
-            <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+        <div className="mb-3">
+          <div className="flex items-baseline gap-3">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {balanceVisible ? formatCurrency(currentBalance) : '••••••'}
             </div>
             {balanceVisible && (
               <div className={cn(
-                "flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium",
+                "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
                 isPositiveChange
                   ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                   : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
               )}>
-                {isPositiveChange ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                {isPositiveChange ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 <span>{isPositiveChange ? '+' : ''}{formatCurrency(balanceChange)}</span>
-                <span className="text-xs opacity-75">({changePercentage.toFixed(1)}%)</span>
               </div>
             )}
           </div>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Compared to last month</p>
         </div>
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20 dark:border-gray-700/50">
+        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/20 dark:border-gray-700/50">
           <div className="text-center">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(3247.92)}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Income</div>
+            <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(3247.92)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('education.demo.income') || 'Income'}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(2905.42)}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Expenses</div>
+            <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(2905.42)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('education.demo.expenses') || 'Expenses'}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(342.50)}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Savings</div>
+            <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(342.50)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('education.demo.savings') || 'Savings'}</div>
           </div>
         </div>
       </div>
@@ -208,6 +200,7 @@ const ModernEducationStep = ({
 }) => {
   // ✅ Zustand stores
   const { t, isRTL } = useTranslation('onboarding');
+  const { t: tc } = useTranslation('common');
   const { formatCurrency } = useCurrency();
 
   // ✅ Local state - ENHANCED
@@ -317,10 +310,10 @@ const ModernEducationStep = ({
 
   // ✅ Education sections
   const sections = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'transactions', label: 'Transactions', icon: Calendar },
-    { id: 'balance', label: 'Balance Panel', icon: DollarSign },
-    { id: 'benefits', label: 'Benefits', icon: Target }
+    { id: 'overview', label: t('education.sections.overview') || 'Overview', icon: BarChart3 },
+    { id: 'transactions', label: t('education.sections.transactions') || 'Transactions', icon: Calendar },
+    { id: 'balance', label: t('education.sections.balance') || 'Balance Panel', icon: DollarSign },
+    { id: 'benefits', label: t('education.sections.benefits') || 'Benefits', icon: Target }
   ];
 
   return (
@@ -369,10 +362,10 @@ const ModernEducationStep = ({
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Two Types of Transactions
+                      {t('education.overview.twoTypesTitle') || 'Two Types of Transactions'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Understanding the difference is key
+                      {t('education.overview.twoTypesSubtitle') || 'Understanding the difference is key'}
                     </p>
                   </div>
                 </div>
@@ -382,15 +375,15 @@ const ModernEducationStep = ({
                   <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center mb-2">
                       <Calendar className="w-5 h-5 text-gray-600 mr-2" />
-                      <h4 className="font-semibold text-gray-900 dark:text-white">One-Time</h4>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">{t('education.overview.oneTimeTitle') || 'One-Time'}</h4>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Individual purchases you enter manually
+                      {t('education.overview.oneTimeDesc') || 'Individual purchases you enter manually'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" size="sm">Coffee</Badge>
-                      <Badge variant="outline" size="sm">Gas</Badge>
-                      <Badge variant="outline" size="sm">Shopping</Badge>
+                      <Badge variant="outline" size="sm">{tc('transactions.coffee')}</Badge>
+                      <Badge variant="outline" size="sm">{tc('transactions.gas')}</Badge>
+                      <Badge variant="outline" size="sm">{tc('transactions.shopping')}</Badge>
                     </div>
                   </div>
 
@@ -398,15 +391,15 @@ const ModernEducationStep = ({
                   <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                     <div className="flex items-center mb-2">
                       <Repeat className="w-5 h-5 text-purple-600 mr-2" />
-                      <h4 className="font-semibold text-purple-900 dark:text-purple-100">Recurring</h4>
+                      <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('education.overview.recurringTitle') || 'Recurring'}</h4>
                     </div>
                     <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
-                      Automatic transactions that repeat on schedule
+                      {t('education.overview.recurringDesc') || 'Automatic transactions that repeat on schedule'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">Salary</Badge>
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">Rent</Badge>
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">Subscriptions</Badge>
+                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.salary')}</Badge>
+                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.rent')}</Badge>
+                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.subscriptions')}</Badge>
                     </div>
                   </div>
                 </div>
@@ -420,10 +413,10 @@ const ModernEducationStep = ({
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Your Balance Dashboard
+                      {t('education.overview.balanceDashTitle') || 'Your Balance Dashboard'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      See your money at a glance
+                      {t('education.overview.balanceDashSubtitle') || 'See your money at a glance'}
                     </p>
                   </div>
                 </div>
@@ -433,15 +426,15 @@ const ModernEducationStep = ({
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    <span>Hide/show balances for privacy</span>
+                    <span>{t('education.overview.hideShowPrivacy') || 'Hide/show balances for privacy'}</span>
                   </div>
                   <div className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    <span>Track changes over time</span>
+                    <span>{t('education.overview.trackChanges') || 'Track changes over time'}</span>
                   </div>
                   <div className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    <span>Quick income vs expense overview</span>
+                    <span>{t('education.overview.incomeVsExpense') || 'Quick income vs expense overview'}</span>
                   </div>
                 </div>
               </Card>
@@ -460,10 +453,10 @@ const ModernEducationStep = ({
             <Card className="p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Interactive Transaction Demo
+                  {t('education.transactions.interactiveDemoTitle') || 'Interactive Transaction Demo'}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Click on transactions to see how they work. Notice the visual differences!
+                  {t('education.transactions.interactiveDemoDesc') || 'Click on transactions to see how they work. Notice the visual differences!'}
                 </p>
               </div>
 
@@ -472,7 +465,7 @@ const ModernEducationStep = ({
                 <div>
                   <div className="flex items-center mb-4">
                     <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-                    <h3 className="text-xl font-semibold">One-Time Transactions</h3>
+                    <h3 className="text-xl font-semibold">{t('education.transactions.oneTimeTitle') || 'One-Time Transactions'}</h3>
                   </div>
                   <div className="space-y-3">
                     {exampleTransactions.oneTime.map((transaction) => (
@@ -491,7 +484,7 @@ const ModernEducationStep = ({
                 <div>
                   <div className="flex items-center mb-4">
                     <Repeat className="w-6 h-6 text-purple-600 mr-2" />
-                    <h3 className="text-xl font-semibold">Recurring Transactions</h3>
+                    <h3 className="text-xl font-semibold">{t('education.transactions.recurringTitle') || 'Recurring Transactions'}</h3>
                   </div>
                   <div className="space-y-3">
                     {exampleTransactions.recurring.map((transaction) => (
@@ -512,12 +505,11 @@ const ModernEducationStep = ({
                   <div className="flex items-center mb-2">
                     <Lightbulb className="w-5 h-5 text-blue-600 mr-2" />
                     <h4 className="font-semibold text-blue-900 dark:text-blue-100">
-                      Great! You selected {selectedExamples.length} example{selectedExamples.length !== 1 ? 's' : ''}
+                      {t('education.transactions.selectedFeedback', { count: selectedExamples.length }) || `Great! You selected ${selectedExamples.length} examples`}
                     </h4>
                   </div>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Notice how recurring transactions have purple styling, special badges, and show their next occurrence. 
-                    This makes it easy to spot automated transactions in your list!
+                    {t('education.transactions.selectedFeedbackDesc') || 'Notice how recurring transactions have purple styling, special badges, and show their next occurrence. This makes it easy to spot automated transactions in your list!'}
                   </p>
                 </div>
               )}
@@ -536,10 +528,10 @@ const ModernEducationStep = ({
             <Card className="p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Your Balance Dashboard
+                  {t('education.balanceSection.title') || 'Your Balance Dashboard'}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Try clicking the eye icon to hide/show your balance
+                  {t('education.balanceSection.subtitle') || 'Try clicking the eye icon to hide/show your balance'}
                 </p>
               </div>
 
@@ -552,29 +544,29 @@ const ModernEducationStep = ({
                   <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <Eye className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h4 className="font-semibold mb-2">Privacy Control</h4>
+                  <h4 className="font-semibold mb-2">{t('education.balanceSection.privacyTitle') || 'Privacy Control'}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Hide balances when others might see your screen
+                    {t('education.balanceSection.privacyDesc') || 'Hide balances when others might see your screen'}
                   </p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <TrendingUp className="w-6 h-6 text-green-600" />
                   </div>
-                  <h4 className="font-semibold mb-2">Track Progress</h4>
+                  <h4 className="font-semibold mb-2">{t('education.balanceSection.trackTitle') || 'Track Progress'}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    See if your balance is growing or shrinking
+                    {t('education.balanceSection.trackDesc') || 'See if your balance is growing or shrinking'}
                   </p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <BarChart3 className="w-6 h-6 text-purple-600" />
                   </div>
-                  <h4 className="font-semibold mb-2">Quick Overview</h4>
+                  <h4 className="font-semibold mb-2">{t('education.balanceSection.overviewTitle') || 'Quick Overview'}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Income, expenses, and savings at a glance
+                    {t('education.balanceSection.overviewDesc') || 'Income, expenses, and savings at a glance'}
                   </p>
                 </div>
               </div>
@@ -584,10 +576,10 @@ const ModernEducationStep = ({
                   <CheckCircle className="w-6 h-6 text-green-600 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
-                      Balance Panel Understanding ✓
+                      {t('education.balanceSection.understoodTitle') || 'Balance Panel Understanding ✓'}
                     </h4>
                     <p className="text-sm text-green-800 dark:text-green-200">
-                      Perfect! You now understand how the balance panel works. This will be your financial command center in SpendWise.
+                      {t('education.balanceSection.understoodDesc') || 'Perfect! You now understand how the balance panel works. This will be your financial command center in SpendWise.'}
                     </p>
                   </div>
                 </div>
@@ -607,10 +599,10 @@ const ModernEducationStep = ({
             <Card className="p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Why This Knowledge Matters
+                  {t('education.benefitsSection.title') || 'Why This Knowledge Matters'}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Understanding these concepts will transform your financial management
+                  {t('education.benefitsSection.subtitle') || 'Understanding these concepts will transform your financial management'}
                 </p>
               </div>
 
@@ -618,7 +610,7 @@ const ModernEducationStep = ({
                 {/* Financial Benefits */}
                 <div className="space-y-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                    Financial Benefits
+                    {t('education.benefitsSection.financialTitle') || 'Financial Benefits'}
                   </h3>
                   
                   <div className="flex items-start space-x-3">
@@ -626,9 +618,9 @@ const ModernEducationStep = ({
                       <BarChart3 className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Better Budgeting</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.budgetingTitle') || 'Better Budgeting'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Recurring transactions help you predict future cash flow and plan ahead
+                        {t('education.benefitsSection.budgetingDesc') || 'Recurring transactions help you predict future cash flow and plan ahead'}
                       </p>
                     </div>
                   </div>
@@ -638,9 +630,9 @@ const ModernEducationStep = ({
                       <Target className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Spot Patterns</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.patternsTitle') || 'Spot Patterns'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Easily identify spending patterns and subscription costs
+                        {t('education.benefitsSection.patternsDesc') || 'Easily identify spending patterns and subscription costs'}
                       </p>
                     </div>
                   </div>
@@ -650,9 +642,9 @@ const ModernEducationStep = ({
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Track Progress</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.trackTitle') || 'Track Progress'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Monitor your financial health with clear balance insights
+                        {t('education.benefitsSection.trackDesc') || 'Monitor your financial health with clear balance insights'}
                       </p>
                     </div>
                   </div>
@@ -661,7 +653,7 @@ const ModernEducationStep = ({
                 {/* Practical Benefits */}
                 <div className="space-y-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                    Practical Benefits
+                    {t('education.benefitsSection.practicalTitle') || 'Practical Benefits'}
                   </h3>
                   
                   <div className="flex items-start space-x-3">
@@ -669,9 +661,9 @@ const ModernEducationStep = ({
                       <Clock className="w-4 h-4 text-orange-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Save Time</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.saveTimeTitle') || 'Save Time'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        No need to manually enter salary, rent, or subscriptions every month
+                        {t('education.benefitsSection.saveTimeDesc') || 'No need to manually enter salary, rent, or subscriptions every month'}
                       </p>
                     </div>
                   </div>
@@ -681,9 +673,9 @@ const ModernEducationStep = ({
                       <AlertCircle className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Never Miss</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.neverMissTitle') || 'Never Miss'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Get notified about upcoming recurring transactions before they happen
+                        {t('education.benefitsSection.neverMissDesc') || 'Get notified about upcoming recurring transactions before they happen'}
                       </p>
                     </div>
                   </div>
@@ -693,9 +685,9 @@ const ModernEducationStep = ({
                       <Eye className="w-4 h-4 text-indigo-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Privacy Control</h4>
+                      <h4 className="font-semibold mb-1">{t('education.benefitsSection.privacyTitle') || 'Privacy Control'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Hide balances when sharing your screen or using in public
+                        {t('education.benefitsSection.privacyDesc') || 'Hide balances when sharing your screen or using in public'}
                       </p>
                     </div>
                   </div>
@@ -705,10 +697,10 @@ const ModernEducationStep = ({
               <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    🎉 You're Ready to Take Control!
+                    {t('education.benefitsSection.readyTitle') || "🎉 You're Ready to Take Control!"}
                   </h4>
                   <p className="text-gray-600 dark:text-gray-400">
-                    With this knowledge, you'll be able to effectively use SpendWise to improve your financial health and save time managing your money.
+                    {t('education.benefitsSection.readyDesc') || "With this knowledge, you'll be able to effectively use SpendWise to improve your financial health and save time managing your money."}
                   </p>
                 </div>
               </div>

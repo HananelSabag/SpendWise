@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useTranslation } from '../../stores';
 
 const SideDrawer = ({
   isOpen,
@@ -20,6 +21,7 @@ const SideDrawer = ({
   closeOnOverlayClick = true,
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const drawerRef = useRef(null);
 
   // ESC key + scroll lock
@@ -87,7 +89,7 @@ const SideDrawer = ({
                   <button
                     onClick={onClose}
                     className="ml-auto p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-                    aria-label="Close"
+                    aria-label={t('close')}
                   >
                     <X className="w-5 h-5" />
                   </button>

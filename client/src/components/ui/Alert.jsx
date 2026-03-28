@@ -242,7 +242,7 @@ const Alert = ({
                 config.iconColor,
                 "hover:bg-black/5 dark:hover:bg-white/5"
               )}
-              aria-label={t('actions.close')}
+              aria-label={t('close')}
             >
               <X className="w-4 h-4" />
             </Button>

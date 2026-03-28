@@ -152,11 +152,12 @@ const getStatusBadge = (status, t) => {
 
 // ✅ Activity indicator component
 const ActivityIndicator = ({ lastLogin, totalTransactions }) => {
+  const { t } = useTranslation();
   const isActive = lastLogin && new Date(lastLogin) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const isVeryActive = totalTransactions > 50;
-  
+
   return (
-    <motion.div 
+    <motion.div
       className="flex items-center gap-1"
       whileHover={{ scale: 1.1 }}
     >
@@ -166,7 +167,12 @@ const ActivityIndicator = ({ lastLogin, totalTransactions }) => {
         isActive ? "bg-yellow-500" : "bg-gray-300"
       )} />
       <span className="text-xs text-gray-500">
-        {isVeryActive ? "Very Active" : isActive ? "Active" : "Inactive"}
+        {isVeryActive
+          ? t('status.veryActive', { fallback: 'Very Active' })
+          : isActive
+            ? t('status.active', { fallback: 'Active' })
+            : t('status.inactive', { fallback: 'Inactive' })
+        }
       </span>
     </motion.div>
   );

@@ -8,6 +8,12 @@ export default {
     title: "Accessibility Statement",
     quickSettings: "Quick Accessibility Settings",
     openAccessibilityMenu: "Open accessibility menu",
+    status: {
+      full: "Fully Supported",
+      partial: "Partially Supported",
+      planned: "Planned",
+      unknown: "Unknown"
+    },
     overview: {
       introduction: "SpendWise is committed to providing equal access to all users",
       scope: "This statement applies to the entire application and related content",
@@ -63,6 +69,7 @@ export default {
       }
     },
     standards: {
+      introduction: "We adhere to the following international accessibility standards",
       wcag: {
         description: "Compliant with WCAG 2.1 Level AA standards"
       },
@@ -77,6 +84,10 @@ export default {
       }
     },
     limitations: {
+      title: "Known Limitations",
+      description: "We are continuously working to improve accessibility. The following are known limitations we are addressing.",
+      impact: "Impact",
+      workaround: "Workaround",
       charts: {
         issue: "Complex charts may require textual description",
         impact: "May affect understanding of graphical data",
@@ -87,6 +98,19 @@ export default {
         impact: "PDF content may be difficult to access",
         workaround: "We provide alternative HTML versions"
       }
+    },
+    contact: {
+      introduction: "We welcome feedback on the accessibility of SpendWise. Please let us know if you encounter any barriers.",
+      email: {
+        title: "Email Support",
+        description: "Send us an email with your accessibility concerns or feedback"
+      },
+      community: {
+        title: "Community Forum",
+        description: "Join our community forum to discuss accessibility improvements",
+        join: "Join Community"
+      },
+      responseTime: "We aim to respond to accessibility feedback within 2 business days"
     },
     footer: {
       lastUpdated: "Last updated",

@@ -17,7 +17,19 @@ export default {
     title: "לוח בקרה מנהל",
     subtitle: "ניהול מערכת מלא וניהול משתמשים",
     welcome: "ברוכים השבים",
-    roleStatus: "גישת מנהל מערכת"
+    roleStatus: "גישת מנהל מערכת",
+    recentActivity: "פעילות אחרונה",
+    liveEvents: "אירועי מערכת חיים"
+  },
+  activity: {
+    empty: "אין פעילות אחרונה",
+    invalidDate: "תאריך לא תקין",
+    noActivity: "אין פעילות עדיין",
+    noActivities: "לא נמצאו פעילויות",
+    ofActivities: "{{shown}} מתוך {{total}} פעילויות",
+    todaysActions: "פעולות היום",
+    activeAdmins: "מנהלים פעילים",
+    securityEvents: "אירועי אבטחה"
   },
   stats: {
     totalUsers: "סך הכל משתמשים",
@@ -31,7 +43,17 @@ export default {
     thisMonth: "החודש",
     today: "היום",
     verified: "מאומתים",
-    fromAllTransactions: "מכל הפעולות"
+    fromAllTransactions: "מכל הפעולות",
+    uptime: "זמינות",
+    chartLoading: "הגרף יטען כאן",
+    avgResponseTime: "זמן תגובה ממוצע",
+    cacheHitRate: "אחוז פגיעות מטמון",
+    activeConnections: "חיבורים פעילים",
+    apiRequests: "בקשות API",
+    userGrowth: "גדילת משתמשים",
+    transactionVolume: "נפח עסקאות",
+    performanceMetrics: "מדדי ביצועים",
+    realtimeStats: "סטטיסטיקות בזמן אמת"
   },
   system: {
     status: "סטטוס המערכת",
@@ -39,7 +61,11 @@ export default {
     online: "מקוון",
     database: "בסיס נתונים",
     connected: "מחובר",
-    security: "אבטחה"
+    security: "אבטחה",
+    realtimeHealth: "בריאות מערכת בזמן אמת",
+    uptimePlaceholder: "99.9% זמינות",
+    responsePlaceholder: "תגובה: 45ms",
+    allChecksPassing: "כל הבדיקות עוברות"
   },
   systemStats: "סטטיסטיקות מערכת",
   statsDescription: "מדדי מערכת מקיפים ואנליטיקה",
@@ -54,7 +80,9 @@ export default {
     activityLogDesc: "צפייה בהיסטוריית פעילות מנהל",
     userBlocked: "המשתמש נחסם בהצלחה",
     userUnblocked: "חסימת המשתמש בוטלה בהצלחה",
-    userDeleted: "המשתמש נמחק בהצלחה"
+    userDeleted: "המשתמש נמחק בהצלחה",
+    systemControls: "בקרות מערכת",
+    liveMonitoring: "ניטור חי"
   },
   users: {
     title: "ניהול משתמשים",
@@ -71,7 +99,11 @@ export default {
     activity: "פעילות",
     joinDate: "תאריך הצטרפות",
     actions: "פעולות",
-    selectAll: "בחר הכל"
+    selectAll: "בחר הכל",
+    when: "מתי",
+    admin: "מנהל",
+    action: "פעולה",
+    target: "יעד"
   },
   filters: {
     allRoles: "כל התפקידים",
@@ -133,7 +165,9 @@ export default {
     never: "אף פעם",
     users: "משתמשים",
     selected: "נבחרו",
-    filters: "מסננים"
+    filters: "מסננים",
+    retry: "נסה שוב",
+    backToDashboard: "חזרה ללוח הבקרה"
   },
   bulk: {
     block: "חסום נבחרים",

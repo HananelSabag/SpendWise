@@ -194,7 +194,7 @@ const AdminActivity = () => {
                     {t('admin.recentActivity', { fallback: 'Recent Activity' })}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {totalCount > 0 ? `${activities.length} of ${totalCount} activities` : 'No activities found'}
+                    {totalCount > 0 ? t('admin.activity.ofActivities', { shown: activities.length, total: totalCount, fallback: `${activities.length} of ${totalCount} activities` }) : t('admin.activity.noActivities', { fallback: 'No activities found' })}
                   </p>
                 </div>
               </div>
@@ -216,7 +216,7 @@ const AdminActivity = () => {
             ) : error ? (
               <div className="text-center text-red-600 dark:text-red-400">{error}</div>
             ) : activities.length === 0 ? (
-              <div className="text-center text-gray-600 dark:text-gray-400 py-8">No activity yet</div>
+              <div className="text-center text-gray-600 dark:text-gray-400 py-8">{t('admin.activity.noActivity', { fallback: 'No activity yet' })}</div>
             ) : (
               <>
                 {/* Mobile cards */}
@@ -229,7 +229,7 @@ const AdminActivity = () => {
                           {a.action_type?.replace(/_/g, ' ') || 'Unknown Action'}
                         </div>
                         <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                          {a.admin_username || a.admin_email || 'Admin'} • {a.created_at ? new Date(a.created_at).toLocaleString() : 'Invalid Date'}
+                          {a.admin_username || a.admin_email || t('admin.table.admin', { fallback: 'Admin' })} • {a.created_at ? new Date(a.created_at).toLocaleString() : t('admin.activity.invalidDate', { fallback: 'Invalid Date' })}
                         </div>
                         <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                           <span className="font-medium">{targetInfo.username}</span>
@@ -245,10 +245,10 @@ const AdminActivity = () => {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-purple-50 dark:bg-gray-900/40">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">When</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Admin</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Action</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Target</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.when', { fallback: 'When' })}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.admin', { fallback: 'Admin' })}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.action', { fallback: 'Action' })}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.target', { fallback: 'Target' })}</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -263,7 +263,7 @@ const AdminActivity = () => {
                                   <div className="text-xs text-gray-500">{new Date(a.created_at).toLocaleTimeString()}</div>
                                 </div>
                               ) : (
-                                <span className="text-red-500 italic">Invalid Date</span>
+                                <span className="text-red-500 italic">{t('admin.activity.invalidDate', { fallback: 'Invalid Date' })}</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
@@ -300,7 +300,7 @@ const AdminActivity = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Actions</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.todaysActions', { fallback: "Today's Actions" })}</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">--</p>
               </div>
             </div>
@@ -314,7 +314,7 @@ const AdminActivity = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Admins</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.activeAdmins', { fallback: 'Active Admins' })}</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">1</p>
               </div>
             </div>
@@ -328,7 +328,7 @@ const AdminActivity = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Security Events</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.securityEvents', { fallback: 'Security Events' })}</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
               </div>
             </div>

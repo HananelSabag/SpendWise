@@ -127,7 +127,7 @@ const ToastIcon = ({ type, size = 20 }) => {
 // ✅ ENHANCED: Toast notification component with close button
 const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }) => {
   // ✅ NEW: Use Zustand translation store
-  const { currentLanguage, isRTL } = useTranslation();
+  const { t, currentLanguage, isRTL } = useTranslation();
 
   const getTypeStyles = (toastType) => {
     const styles = {
@@ -245,7 +245,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
           focus:outline-none focus:ring-2 focus:ring-current focus:ring-opacity-50
           ${typeStyles.text}
         `}
-        aria-label="Close notification"
+        aria-label={t('common.closeNotification')}
       >
         <svg
           width="16"

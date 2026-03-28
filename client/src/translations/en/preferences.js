@@ -26,10 +26,9 @@ export default {
   
   // Font size options
   small: "Small",
-  normal: "Normal", 
   large: "Large",
   extraLarge: "Extra Large",
-  
+
   // Contrast options
   normal: "Normal",
   high: "High",

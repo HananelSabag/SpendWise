@@ -5,7 +5,7 @@ import EditTransactionModal from '../../transactions/modals/EditTransactionModal
 import RecurringSetupModal from '../../transactions/modals/RecurringSetupModal.jsx';
 import DeleteTransaction from '../../transactions/DeleteTransaction.jsx';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
-import { useNotifications } from '../../../../stores';
+import { useNotifications, useTranslation } from '../../../../stores';
 
 /**
  * UnifiedTransactionActions
@@ -31,6 +31,7 @@ const UnifiedTransactionActions = () => {
   // ✅ Add transaction actions and notifications
   const { deleteTransaction } = useTransactionActions();
   const { addNotification } = useNotifications();
+  const { t } = useTranslation();
 
   // Handlers
   const handleAdd = React.useCallback((type = 'expense') => {
@@ -108,7 +109,7 @@ const UnifiedTransactionActions = () => {
       await deleteTransaction(transactionId, options);
       addNotification({
         type: 'success',
-        message: 'Transaction deleted successfully',
+        message: t('toast.transactions.transactionDeleted') || 'Transaction deleted successfully',
         duration: 3000
       });
       handleSuccess(); // Close modal and cleanup
@@ -116,7 +117,7 @@ const UnifiedTransactionActions = () => {
       console.error('Failed to delete transaction:', error);
       addNotification({
         type: 'error',
-        message: error.message || 'Failed to delete transaction',
+        message: error.message || t('errors.deleteFailed') || 'Failed to delete transaction',
         duration: 4000
       });
     }

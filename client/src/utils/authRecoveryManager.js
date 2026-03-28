@@ -370,55 +370,6 @@ class AuthRecoveryManager {
   }
 
   /**
-   * Recover from network errors
-   */
-  async recoverFromNetworkError() {
-    // silent
-    
-    this.showRecoveryNotification('info');
-
-    // Simple ping to check server health
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      // Build a safe health endpoint regardless of whether VITE_API_URL already includes /api/v1
-      const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-      const baseRoot = base.endsWith('/api/v1') ? base.slice(0, -('/api/v1'.length)) : base;
-      const healthUrl = `${baseRoot}/health`;
-
-      const response = await fetch(healthUrl, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        // silent
-        this.healthState.serverResponding = true;
-        this.handleApiSuccess();
-        return;
-      }
-    } catch (error) {
-      // silent
-    }
-
-    // If health check fails, show user-friendly message
-    this.showRecoveryNotification('error');
-    
-    // Set a timer to retry
-    setTimeout(() => {
-      if (this.healthState.isRecovering) {
-        this.recoverFromNetworkError();
-      }
-    }, this.config.recoveryAttemptInterval);
-  }
-
-  /**
    * Generic recovery for unknown issues
    */
   async genericRecovery() {
@@ -481,8 +432,9 @@ class AuthRecoveryManager {
         window.authToasts.autoLogout(reason);
       }
       
-      // Clear everything
+      // Clear everything (all token keys, including legacy authToken)
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
       
       // Reset auth store if available

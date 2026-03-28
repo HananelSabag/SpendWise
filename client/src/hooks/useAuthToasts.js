@@ -72,7 +72,7 @@ export const useAuthToasts = () => {
 
     registrationFailed: (error) => {
       const message = error?.code === 'EMAIL_EXISTS'
-        ? 'An account with this email already exists'
+        ? t('auth.emailAlreadyExists', 'An account with this email already exists')
         : t('auth.registrationFailed', 'Registration failed. Please try again.');
       toast.error(message);
     },
@@ -114,7 +114,7 @@ export const useAuthToasts = () => {
     },
 
     sessionExpiring: () => {
-      toast.warning('Your session will expire in 5 minutes. Click to extend.');
+      toast.warning(t('auth.sessionExpiring', 'Your session will expire in 5 minutes.'));
     },
 
     unauthorizedAccess: () => {

@@ -108,5 +108,9 @@ export default {
   generic: "משהו השתבש",
   statsLoadFailed: "טעינת נתונים נכשלה",
   updatingFailed: "עדכון נכשל",
-  usersLoadFailed: "טעינת משתמשים נכשלה"
+  usersLoadFailed: "טעינת משתמשים נכשלה",
+  pageError: "שגיאת דף",
+  pageErrorDesc: "משהו השתבש בטעינת הדף.",
+  loadingPage: "טוען {{route}}...",
+  roleRequired: "תפקיד נוכחי: {{role}} | נדרש: {{required}}"
 };

@@ -8,7 +8,6 @@ export default {
   title: "עסקאות",
   subtitle: "נהלו את העסקאות הפיננסיות שלכם",
   total: "סה״כ",
-  loading: "טוען עסקאות...",
   types: {
     income: "הכנסה",
     expense: "הוצאה",
@@ -36,7 +35,13 @@ export default {
       placeholder: "בחרו קטגוריה",
       search: "חפשו קטגוריות...",
       createNew: "צרו קטגוריה חדשה",
-      helper: "בחר קטגוריה מהרשימה או צור חדשה"
+      helper: "בחר קטגוריה מהרשימה או צור חדשה",
+      noResults: "לא נמצאו תוצאות",
+      empty: "אין קטגוריות זמינות",
+      newCategory: "קטגוריה חדשה",
+      namePlaceholder: "שם הקטגוריה",
+      color: "צבע",
+      icon: "אייקון"
     },
     date: {
       label: "תאריך",
@@ -50,7 +55,10 @@ export default {
     tags: {
       label: "תגיות",
       placeholder: "הוסיפו תגיות...",
-      helper: "תגיות לארגון ומיון (אופציונלי)"
+      helper: "תגיות לארגון ומיון (אופציונלי)",
+      suggestions: "הצעות",
+      popular: "תגיות פופולריות",
+      addCustom: "הוסף \"{{tag}}\""
     },
     notes: {
       label: "הערות",
@@ -104,6 +112,7 @@ export default {
     next: "הבא",
     previous: "הקודם",
     create: "צור",
+    creating: "יוצר...",
     update: "עדכן",
     filter: "סנן",
     sort: "מיין",
@@ -151,7 +160,8 @@ export default {
     status: "סטטוס",
     tags: "תגיות",
     hasReceipt: "יש קבלה",
-    isRecurring: "חוזר"
+    isRecurring: "חוזר",
+    activeCount: "{{count}} פעיל"
   },
   sort: {
     title: "מיין לפי",
@@ -202,6 +212,12 @@ export default {
   recurring: {
     active: "פעיל",
     paused: "מושהה",
+    templates: "תבניות",
+    success: {
+      updatedTitle: "תבנית עודכנה",
+      title: "תבנית נוצרה",
+      recurringMessage: "לוח הזמנים החוזר שלך פעיל כעת"
+    },
     nextRun: "הרצה הבאה",
     created: "נוצר",
     never: "לעולם לא",
@@ -233,7 +249,8 @@ export default {
     },
     modal: {
       createTitle: "צור עסקה חוזרת",
-      editTitle: "ערוך עסקה חוזרת"
+      editTitle: "ערוך עסקה חוזרת",
+      subtitle: "אוטמט את העסקאות החוזרות שלך"
     },
     frequency: {
       title: "תדירות",
@@ -458,6 +475,20 @@ export default {
       edit: {
         title: "ערוך עסקה",
         subtitle: "עדכן פרטי העסקה"
+      },
+      duplicate: {
+        title: "שכפל עסקה",
+        subtitle: "צור עותק של עסקה זו"
+      },
+      view: {
+        title: "צפה בעסקה",
+        subtitle: "פרטי העסקה"
+      },
+      success: {
+        updateTitle: "העסקה עודכנה",
+        updateMessage: "העסקה שלכם עודכנה בהצלחה.",
+        duplicateTitle: "העסקה שוכפלה",
+        duplicateMessage: "העסקה שוכפלה בהצלחה."
       }
     },
     delete: {
@@ -469,7 +500,18 @@ export default {
   tabs: {
     all: "כל העסקאות",
     upcoming: "קרובות",
-    recurring: "חוזרות"
+    recurring: {
+      label: "חוזרות",
+      title: "עסקה חוזרת",
+      subtitle: "עסקה אוטומטית",
+      description: "צור תבנית שתיצור עסקאות אוטומטית בעתיד"
+    },
+    oneTime: {
+      title: "עסקה חד פעמית",
+      subtitle: "עסקה אחת בלבד",
+      description: "צור עסקה יחידה שתבוצע פעם אחת"
+    },
+    changeWarning: "שינוי הטאב יאפס את הטופס. להמשיך?"
   },
   formTabs: {
     oneTime: {
@@ -507,7 +549,10 @@ export default {
     createSuccess: "העסקה נוצרה בהצלחה",
     recurringCreateSuccess: "תבנית העסקה החוזרת נוצרה בהצלחה!",
     editMode: "במצב עריכה - לא ניתן לשנות את סוג העסקה",
-    unsavedChanges: "יש לך שינויים שלא נשמרו"
+    unsavedChanges: "יש לך שינויים שלא נשמרו",
+    validationFailed: "אנא תקנו את שגיאות הטופס לפני השליחה",
+    updateSuccess: "העסקה עודכנה בהצלחה",
+    submitFailed: "שליחת העסקה נכשלה"
   },
   datePicker: {
     today: "היום",
@@ -631,5 +676,36 @@ export default {
   addIncome: "הוסף הכנסה",
   andMore: "ועוד {{count}}",
   futureTransactions: "עסקאות עתידיות",
-  noFutureTransactions: "אין עסקאות עתידיות"
+  noFutureTransactions: "אין עסקאות עתידיות",
+  loadMore: "טעינת עוד",
+  allLoaded: "כל {{count}} עסקאות נטענו",
+  clearSelection: "נקה",
+  bulkDelete: {
+    title: "מחיקת עסקאות",
+    deleteAll: "מחק הכל",
+    cannotUndo: "פעולה זו לא ניתנת לביטול."
+  },
+  toast: {
+    transactions: {
+      deleteSuccess: "העסקה נמחקה בהצלחה",
+      transactionDeleteFailed: "מחיקת העסקה נכשלה"
+    }
+  },
+  loading: {
+    deleting: "מוחק..."
+  },
+  notifications: {
+    recurringUpdateSuccess: "תבנית חוזרת עודכנה בהצלחה",
+    recurringCreateSuccess: "תבנית חוזרת נוצרה בהצלחה",
+    recurringUpdateFailed: "עדכון התבנית החוזרת נכשל",
+    recurringCreateFailed: "יצירת התבנית החוזרת נכשלה",
+    transactionUpdated: "העסקה עודכנה",
+    transactionDeleted: "העסקה נמחקה"
+  },
+  common: {
+    date: {
+      today: "היום",
+      yesterday: "אתמול"
+    }
+  }
 };

@@ -43,7 +43,26 @@ export default {
     newPhotoDesc: "זו תהיה תמונת הפרופיל החדשה שלך",
     processingImage: "מעבד תמונה…",
     imageTooLargeAfterCompression: "התמונה גדולה מדי לאחר דחיסה ({{size}}MB). בחר תמונה קטנה יותר.",
-    imageProcessingFailed: "עיבוד התמונה נכשל. נסה תמונה אחרת."
+    imageProcessingFailed: "עיבוד התמונה נכשל. נסה תמונה אחרת.",
+    profileUpdated: "הפרופיל עודכן!",
+    updateFailed: "העדכון נכשל",
+    verified: "מאומת",
+    unverified: "לא מאומת",
+    firstNamePlaceholder: "השם הפרטי שלך",
+    lastNamePlaceholder: "שם המשפחה שלך",
+    phonePlaceholder: "+972 50 000 0000",
+    locationPlaceholder: "עיר, מדינה",
+    noEmail: "ללא אימייל",
+    notSet: "לא הוגדר",
+    previewAlt: "תצוגה מקדימה",
+    optimized: "אופטימלי ✓"
+  },
+  account: {
+    title: "פרטי חשבון",
+    memberSince: "חבר מאז",
+    admin: "מנהל",
+    user: "משתמש",
+    lastLogin: "התחברות אחרונה"
   },
   preferences: {
     title: "העדפות יישום",

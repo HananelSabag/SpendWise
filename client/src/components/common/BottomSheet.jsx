@@ -8,6 +8,7 @@ import React, { useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
+import { useTranslation } from '../../stores';
 
 const BottomSheet = ({
   isOpen,
@@ -18,6 +19,7 @@ const BottomSheet = ({
   /** 'auto' (default) | 'full' (100dvh) | 'half' (50dvh) */
   height = 'auto',
 }) => {
+  const { t } = useTranslation('common');
   const dragControls = useDragControls();
 
   const handleBackdropClick = useCallback((e) => {
@@ -91,7 +93,7 @@ const BottomSheet = ({
                 <button
                   onClick={onClose}
                   className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  aria-label="Close"
+                  aria-label={t('close')}
                 >
                   <X className="w-5 h-5" />
                 </button>

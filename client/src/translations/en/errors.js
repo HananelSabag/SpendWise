@@ -108,5 +108,9 @@ export default {
   checkConnectionAndRetry: "Please check your connection and try again",
   connectionIssues: "Connection issues",
   unableToVerifyLogin: "Unable to verify login. Please try again.",
-  noPermission: "You do not have permission to access this page"
+  noPermission: "You do not have permission to access this page",
+  pageError: "Page Error",
+  pageErrorDesc: "Something went wrong loading this page.",
+  loadingPage: "Loading {{route}}...",
+  roleRequired: "Current role: {{role}} | Required: {{required}}"
 };

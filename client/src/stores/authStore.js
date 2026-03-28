@@ -235,20 +235,23 @@ export const useAuthStore = create(
           },
 
           // ✅ ADD: Get fresh profile data from server
-          getProfile: async () => {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
+          // silent: true → skip global isLoading flag (background refreshes, e.g. Blocked page check)
+          getProfile: async ({ silent = false } = {}) => {
+            if (!silent) {
+              set((state) => {
+                state.isLoading = true;
+                state.error = null;
+              });
+            }
 
             try {
               const result = await authAPI.getProfile();
-              
+
               if (result.success) {
                 // Update user data in store with fresh server data
                 set((state) => {
                   state.user = result.user;
-                  state.isLoading = false;
+                  if (!silent) state.isLoading = false;
                   state.error = null;
                 });
 
@@ -257,17 +260,21 @@ export const useAuthStore = create(
 
                 return { success: true, user: result.user };
               } else {
-                set((state) => {
-                  state.error = result.error;
-                  state.isLoading = false;
-                });
+                if (!silent) {
+                  set((state) => {
+                    state.error = result.error;
+                    state.isLoading = false;
+                  });
+                }
                 return { success: false, error: result.error };
               }
             } catch (error) {
-              set((state) => {
-                state.error = { message: error.message || 'Failed to load profile' };
-                state.isLoading = false;
-              });
+              if (!silent) {
+                set((state) => {
+                  state.error = { message: error.message || 'Failed to load profile' };
+                  state.isLoading = false;
+                });
+              }
               throw error;
             }
           },
@@ -363,8 +370,9 @@ export const useAuthStore = create(
             } catch (error) {
               // silent
               
-              // ✅ FIX: Force clear everything even if logout API fails
+              // ✅ FIX: Force clear everything even if logout API fails (all token keys)
               localStorage.removeItem('accessToken');
+              localStorage.removeItem('authToken');
               localStorage.removeItem('refreshToken');
               try {
                 sessionStorage.removeItem('spendwise-session-theme');

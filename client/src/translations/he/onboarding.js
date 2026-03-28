@@ -23,6 +23,7 @@ export default {
     finish: "סיים",
     close: "סגור",
     completing: "משלים...",
+    success: "הצלחה!",
     unsavedChanges: "יש לכם שינויים שלא נשמרו. האם אתם בטוחים שאתם רוצים לעזוב?",
     keyboardHint: "השתמשו בקיצורי מקלדת",
     nextShortcut: "הבא",
@@ -323,13 +324,17 @@ export default {
     }
   },
   completion: {
+    starting: "מתחיל את מדריך ההגדרה...",
     success: "ההגדרה הושלמה בהצלחה! ברוכים הבאים לSpendWise!",
     failed: "השלמת ההגדרה נכשלה. אנא נסו שוב.",
     completing: "משלים את ההגדרה שלכם...",
     almostDone: "כמעט סיימנו! מסיים את הגדרת החשבון...",
     templates_created: "נוצרו בהצלחה {{count}} מתוך {{total}} תבניות",
     templates_partial_failure: "חלק מהתבניות לא ניתן ליצור. אנא נסו שוב.",
-    templates_failed: "לא ניתן ליצור תבניות, אך ההגדרה תמשיך."
+    templates_failed: "לא ניתן ליצור תבניות, אך ההגדרה תמשיך.",
+    paused: "ההגדרה הופסקה. ניתן להשלים אותה בכל עת מהפרופיל.",
+    skipped: "ההגדרה דולגה. ניתן להשלים אותה מאוחר יותר לחוויה המלאה.",
+    failedWithSupport: "ההגדרה נכשלה. אנא נסה שוב או פנה לתמיכה."
   },
   templateTypes: {
     income: "הכנסה",
@@ -354,5 +359,124 @@ export default {
     previous: "קודם",
     close: "סגור"
   },
-  restart: "התחל מחדש"
+  prompt: {
+    title: "בואו נתחיל",
+    benefitsTitle: "מה תקבלו",
+    startFailed: "ההגדרה נכשלה להתחיל. אנא נסו שוב.",
+    starting: "מתחיל...",
+    skipForNow: "דלג לעכשיו",
+    maybeLater: "אולי מאוחר יותר",
+    skipNotice: "תמיד ניתן להגדיר מאוחר יותר מהפרופיל שלכם",
+    benefits: {
+      organization: {
+        title: "הישארו מאורגנים",
+        description: "שמרו את כל הכספים שלכם במקום אחד עם סיווג חכם"
+      },
+      insights: {
+        title: "תובנות חכמות",
+        description: "הבינו את דפוסי ההוצאות שלכם עם אנליטיקה ויזואלית"
+      },
+      security: {
+        title: "אבטחה ברמת בנק",
+        description: "הנתונים הפיננסיים שלכם מוגנים בהצפנה ברמה ארגונית"
+      },
+      automation: {
+        title: "חסכו זמן",
+        description: "הפכו עסקאות חוזרות לאוטומטיות ואל תזינו אותן ידנית יותר"
+      }
+    },
+    reminder: {
+      title: "השלימו את ההגדרה שלכם",
+      subtitle: "אתם רק דקה מרחיקים מחוויית SpendWise המלאה",
+      cta: "סיימו הגדרה"
+    },
+    complete: {
+      title: "ההגדרה הושלמה!",
+      subtitle: "החשבון שלכם מוגדר במלואו ומוכן לשימוש",
+      cta: "עבור ללוח הבקרה"
+    },
+    welcome: {
+      title: "ברוכים הבאים{{name}}!",
+      subtitle: "בואו נגדיר את חשבון SpendWise שלכם בכמה שלבים פשוטים",
+      cta: "התחל הגדרה"
+    },
+    timeEstimate: {
+      quick: "לוקח כדקה אחת",
+      full: "לוקח כ-2–3 דקות"
+    }
+  },
+  restart: "התחל מחדש",
+  education: {
+    sections: {
+      overview: "סקירה",
+      transactions: "עסקאות",
+      balance: "לוח מאזן",
+      benefits: "יתרונות"
+    },
+    demo: {
+      totalBalance: "יתרה כוללת",
+      acrossAllAccounts: "בכל החשבונות",
+      comparedToLastMonth: "בהשוואה לחודש שעבר",
+      income: "הכנסות",
+      expenses: "הוצאות",
+      savings: "חיסכון",
+      monthly: "חודשי",
+      selected: "✓ נבחר",
+      autoLabel: "אוטומטי",
+      next: "הבא:"
+    },
+    overview: {
+      twoTypesTitle: "שני סוגי עסקאות",
+      twoTypesSubtitle: "הבנת ההבדל היא המפתח",
+      oneTimeTitle: "חד פעמי",
+      oneTimeDesc: "רכישות בודדות שאתה מזין ידנית",
+      recurringTitle: "חוזר",
+      recurringDesc: "עסקאות אוטומטיות שחוזרות לפי לוח זמנים",
+      balanceDashTitle: "לוח המאזן שלך",
+      balanceDashSubtitle: "ראה את הכסף שלך במבט אחד",
+      hideShowPrivacy: "הסתר/הצג יתרות לפרטיות",
+      trackChanges: "מעקב שינויים לאורך זמן",
+      incomeVsExpense: "סקירה מהירה של הכנסות מול הוצאות"
+    },
+    transactions: {
+      interactiveDemoTitle: "הדגמה אינטראקטיבית",
+      interactiveDemoDesc: "לחץ על עסקאות כדי לראות איך הן עובדות. שים לב להבדלים החזותיים!",
+      oneTimeTitle: "עסקאות חד פעמיות",
+      recurringTitle: "עסקאות חוזרות",
+      selectedFeedback: "מצוין! בחרת {{count}} דוגמאות",
+      selectedFeedbackDesc: "שים לב כיצד לעסקאות חוזרות יש עיצוב סגול, תגיות מיוחדות ומועד הבא. קל לזהות אותן ברשימה!"
+    },
+    balanceSection: {
+      title: "לוח המאזן שלך",
+      subtitle: "נסה ללחוץ על אייקון העין להסתרה/הצגת המאזן",
+      privacyTitle: "שליטת פרטיות",
+      privacyDesc: "הסתר יתרות כאשר אחרים עשויים לראות את המסך שלך",
+      trackTitle: "מעקב התקדמות",
+      trackDesc: "ראה אם המאזן שלך גדל או קטן",
+      overviewTitle: "סקירה מהירה",
+      overviewDesc: "הכנסות, הוצאות וחיסכון במבט אחד",
+      understoodTitle: "הבנת לוח המאזן ✓",
+      understoodDesc: "מושלם! עכשיו אתה מבין כיצד לוח המאזן עובד. זהו מרכז הפקודה הפיננסי שלך ב-SpendWise."
+    },
+    benefitsSection: {
+      title: "למה הידע הזה חשוב",
+      subtitle: "הבנת המושגים האלה תשנה את הניהול הפיננסי שלך",
+      financialTitle: "יתרונות פיננסיים",
+      practicalTitle: "יתרונות מעשיים",
+      budgetingTitle: "תקצוב טוב יותר",
+      budgetingDesc: "עסקאות חוזרות עוזרות לך לחזות תזרים מזומנים ולתכנן קדימה",
+      patternsTitle: "זיהוי דפוסים",
+      patternsDesc: "זהה בקלות דפוסי הוצאות ועלויות מנויים",
+      trackTitle: "מעקב התקדמות",
+      trackDesc: "עקוב אחר הבריאות הפיננסית שלך עם תובנות מאזן ברורות",
+      saveTimeTitle: "חיסכון בזמן",
+      saveTimeDesc: "אין צורך להזין ידנית משכורת, שכירות או מנויים כל חודש",
+      neverMissTitle: "לא תפספס",
+      neverMissDesc: "קבל התראות על עסקאות חוזרות קרובות לפני שהן מתרחשות",
+      privacyTitle: "שליטת פרטיות",
+      privacyDesc: "הסתר יתרות בעת שיתוף מסך או שימוש במקום ציבורי",
+      readyTitle: "🎉 אתה מוכן להשתלט!",
+      readyDesc: "עם הידע הזה, תוכל להשתמש ב-SpendWise בצורה יעילה לשיפור הבריאות הפיננסית שלך."
+    }
+  }
 };

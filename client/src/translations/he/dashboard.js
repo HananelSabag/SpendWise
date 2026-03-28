@@ -58,6 +58,11 @@ export default {
     noData: "אין נתונים",
     hide: "הסתר",
     show: "הצג",
+    date: {
+      today: "היום",
+      yesterday: "אמש",
+      daysAgo: "לפני {{count}} ימים"
+    },
     categoryTypes: {
       food: "מזון ומסעדות",
       income: "הכנסות",
@@ -166,7 +171,9 @@ export default {
       description: "תיאור (אופציונלי)",
       selectCategory: "בחר קטגוריה"
     },
-    typeSelector: "סוג תנועה"
+    typeSelector: "סוג תנועה",
+    tip: "הכנס סכום ולחץ Enter או לחץ על כפתור ההוספה",
+    back: "חזרה"
   },
   notifications: {
     quickExpenseCreated: "הוצאה מהירה נוספה בהצלחה!",
@@ -258,8 +265,12 @@ export default {
   loading: "טוען...",
   loadingDashboard: "טוען לוח בקרה...",
   reloadPage: "נסה שוב",
+  addExpense: "הוסף הוצאה",
+  addIncome: "הוסף הכנסה",
   dashboardError: "שגיאה בלוח הבקרה",
   dashboardErrorMessage: "לא ניתן לטעון את נתוני לוח הבקרה",
+  retryingIn: "ניסיון חוזר בעוד {{countdown}} שניות…",
+  goToProfile: "עבור לפרופיל",
   refreshed: "לוח הבקרה רוענן בהצלחה",
   refreshError: "רענון לוח הבקרה נכשל",
   greetings: {

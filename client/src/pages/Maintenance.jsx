@@ -33,13 +33,13 @@ const Maintenance = () => {
             onClick={handleGoBack}
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            {t('common.goBack', { fallback: 'Go back' })}
+            {t('goBack', { fallback: 'Go back' })}
           </button>
           <button
             onClick={() => logout(true)}
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
           >
-            {t('common.logout', { fallback: 'Log out' })}
+            {t('logout', { fallback: 'Log out' })}
           </button>
         </div>
       </div>
