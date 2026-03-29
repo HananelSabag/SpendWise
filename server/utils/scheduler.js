@@ -83,7 +83,7 @@ class Scheduler {
   scheduleJob(name, cronPattern, task) {
     if (this.jobs.has(name)) {
       logger.warn(`Job ${name} already exists, replacing it`);
-      this.jobs.get(name).destroy();
+      this.jobs.get(name).stop();
     }
 
     const job = cron.schedule(cronPattern, async () => {
@@ -268,7 +268,7 @@ class Scheduler {
       }
 
       for (const [name, job] of this.jobs) {
-        job.destroy();
+        job.stop();
         logger.info(`⏹️ Stopped job: ${name}`);
       }
 

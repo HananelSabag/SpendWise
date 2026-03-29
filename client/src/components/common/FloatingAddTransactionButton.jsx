@@ -26,7 +26,7 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
           } catch (_) {}
         }
       }}
-      className="hidden md:block fixed bottom-6 left-6 z-[10000] group focus:outline-none"
+      className="hidden lg:block fixed bottom-6 left-6 z-[10000] group focus:outline-none"
     >
       {/* Glow */}
       <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500/30 to-indigo-500/30 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />
@@ -40,7 +40,7 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
       </span>
 
       {/* Label on hover (desktop) */}
-      <span className="pointer-events-none absolute left-20 bottom-2 rounded-lg bg-gray-900 text-white px-3 py-1 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline-block">
+      <span className="pointer-events-none absolute left-20 bottom-2 rounded-lg bg-gray-900 text-white px-3 py-1 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden lg:inline-block">
         {label}
       </span>
     </button>

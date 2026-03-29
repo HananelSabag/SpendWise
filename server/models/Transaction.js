@@ -218,24 +218,24 @@ class Transaction {
     } = options;
 
     // Build WHERE conditions for both tables
-    const conditions = ['user_id = $1'];
+    const conditions = ['t.user_id = $1'];
     const values = [userId];
     let paramCount = 2;
 
     if (categoryId) {
-      conditions.push(`category_id = $${paramCount}`);
+      conditions.push(`t.category_id = $${paramCount}`);
       values.push(categoryId);
       paramCount++;
     }
 
     if (dateFrom) {
-      conditions.push(`date >= $${paramCount}`);
+      conditions.push(`t.date >= $${paramCount}`);
       values.push(dateFrom);
       paramCount++;
     }
 
     if (dateTo) {
-      conditions.push(`date <= $${paramCount}`);
+      conditions.push(`t.date <= $${paramCount}`);
       values.push(dateTo);
       paramCount++;
     }
@@ -243,8 +243,8 @@ class Transaction {
     let searchCondition = '';
     if (search) {
       searchCondition = `AND (
-        LOWER(description) LIKE LOWER($${paramCount}) OR 
-        LOWER(notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(t.description) LIKE LOWER($${paramCount}) OR
+        LOWER(t.notes) LIKE LOWER($${paramCount}) OR
         LOWER(c.name) LIKE LOWER($${paramCount})
       )`;
       values.push(`%${search}%`);
@@ -410,25 +410,25 @@ class Transaction {
       sortOrder = 'DESC'
     } = options;
 
-    // Build WHERE conditions for both tables
-    const conditions = ['user_id = $1'];
+    // Build WHERE conditions using __T__ as table alias placeholder
+    const conditions = ['__T__.user_id = $1'];
     const values = [userId];
     let paramCount = 2;
 
     if (categoryId) {
-      conditions.push(`category_id = $${paramCount}`);
+      conditions.push(`__T__.category_id = $${paramCount}`);
       values.push(categoryId);
       paramCount++;
     }
 
     if (dateFrom) {
-      conditions.push(`date >= $${paramCount}`);
+      conditions.push(`__T__.date >= $${paramCount}`);
       values.push(dateFrom);
       paramCount++;
     }
 
     if (dateTo) {
-      conditions.push(`date <= $${paramCount}`);
+      conditions.push(`__T__.date <= $${paramCount}`);
       values.push(dateTo);
       paramCount++;
     }
@@ -436,8 +436,8 @@ class Transaction {
     let searchCondition = '';
     if (search) {
       searchCondition = `AND (
-        LOWER(description) LIKE LOWER($${paramCount}) OR 
-        LOWER(notes) LIKE LOWER($${paramCount}) OR 
+        LOWER(__T__.description) LIKE LOWER($${paramCount}) OR
+        LOWER(__T__.notes) LIKE LOWER($${paramCount}) OR
         LOWER(c.name) LIKE LOWER($${paramCount})
       )`;
       values.push(`%${search}%`);
@@ -447,11 +447,18 @@ class Transaction {
     // Add LIMIT and OFFSET
     values.push(limit, offset);
 
+    // Helper: substitute __T__ with the actual table alias
+    const withAlias = (alias) => ({
+      where: conditions.map(c => c.replace(/__T__/g, alias)).join(' AND '),
+      search: searchCondition.replace(/__T__/g, alias),
+    });
+
     let query;
 
     if (type === 'income') {
+      const { where, search: sc } = withAlias('i');
       query = `
-        SELECT 
+        SELECT
           i.id,
           i.user_id,
           i.category_id,
@@ -469,13 +476,14 @@ class Transaction {
           c.color as category_color
         FROM income i
         LEFT JOIN categories c ON i.category_id = c.id
-        WHERE ${conditions.join(' AND ')} ${searchCondition}
+        WHERE ${where} ${sc}
         ORDER BY ${sortBy === 'amount' ? 'i.amount' : 'i.created_at'} ${sortOrder}
         LIMIT $${paramCount} OFFSET $${paramCount + 1}
       `;
     } else if (type === 'expense') {
+      const { where, search: sc } = withAlias('e');
       query = `
-        SELECT 
+        SELECT
           e.id,
           e.user_id,
           e.category_id,
@@ -493,15 +501,17 @@ class Transaction {
           c.color as category_color
         FROM expenses e
         LEFT JOIN categories c ON e.category_id = c.id
-        WHERE ${conditions.join(' AND ')} ${searchCondition}
+        WHERE ${where} ${sc}
         ORDER BY ${sortBy === 'amount' ? 'e.amount' : 'e.created_at'} ${sortOrder}
         LIMIT $${paramCount} OFFSET $${paramCount + 1}
       `;
     } else {
       // Get both income and expenses
+      const { where: iWhere, search: iSc } = withAlias('i');
+      const { where: eWhere, search: eSc } = withAlias('e');
       query = `
         (
-          SELECT 
+          SELECT
             i.id,
             i.user_id,
             i.category_id,
@@ -519,11 +529,11 @@ class Transaction {
             c.color as category_color
           FROM income i
           LEFT JOIN categories c ON i.category_id = c.id
-          WHERE ${conditions.join(' AND ')} ${searchCondition}
+          WHERE ${iWhere} ${iSc}
         )
         UNION ALL
         (
-          SELECT 
+          SELECT
             e.id,
             e.user_id,
             e.category_id,
@@ -541,7 +551,7 @@ class Transaction {
             c.color as category_color
           FROM expenses e
           LEFT JOIN categories c ON e.category_id = c.id
-          WHERE ${conditions.join(' AND ')} ${searchCondition}
+          WHERE ${eWhere} ${eSc}
         )
         ORDER BY ${sortBy === 'amount' ? 'amount' : 'created_at'} ${sortOrder}
         LIMIT $${paramCount} OFFSET $${paramCount + 1}

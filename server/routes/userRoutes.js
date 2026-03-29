@@ -32,6 +32,7 @@ const {
   userOperationLogger,
   routeLogger
 } = require('../middleware/routeLogger');
+const logger = require('../utils/logger');
 
 /**
  * 🚀 OPTIMIZED Public Auth Routes

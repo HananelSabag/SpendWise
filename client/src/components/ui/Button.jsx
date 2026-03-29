@@ -13,20 +13,23 @@ import { useTranslation } from '../../stores';
 
 import { cn } from '../../utils/helpers';
 
-const Button = React.forwardRef(({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  disabled = false, 
+const Button = React.forwardRef(({
+  children,
+  variant = 'primary',
+  size = 'md',
+  disabled = false,
   loading = false,
+  isLoading = false,   // consumed here, never forwarded to DOM
   fullWidth = false,
   icon,
   iconPosition = 'left',
   className = '',
   onClick,
   type = 'button',
-  ...props 
+  ...props
 }, ref) => {
+  // Support both `loading` and `isLoading` prop names
+  loading = loading || isLoading;
   // ✅ NEW: Zustand stores (replacing Context API)
   const { isRTL } = useTranslation();
 

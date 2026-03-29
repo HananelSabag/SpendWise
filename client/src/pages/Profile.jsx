@@ -40,8 +40,10 @@ const AvatarSection = ({ user, authToasts }) => {
   const [uploading, setUploading]   = useState(false);
   const [processing, setProcessing] = useState(false);
   const [preview, setPreview]       = useState(null); // { url, file, finalSizeMB, originalSizeMB, wasCompressed }
+  const [viewOpen, setViewOpen]     = useState(false); // click-to-view dialog
   const fileInputRef                = useRef(null);
   const { t } = useTranslation('profile');
+  const isMobile = useIsMobile();
 
   // Cleanup object URL when dialog closes
   useEffect(() => {
@@ -130,7 +132,12 @@ const AvatarSection = ({ user, authToasts }) => {
       <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
         {/* Avatar + camera button */}
         <div className="relative shrink-0">
-          <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-blue-100 dark:ring-blue-900/40">
+          <button
+            onClick={() => !busy && setViewOpen(true)}
+            disabled={busy}
+            className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-blue-100 dark:ring-blue-900/40 focus:outline-none focus:ring-blue-400 cursor-pointer block"
+            aria-label={t('personal.viewPhoto') || 'View profile picture'}
+          >
             <Avatar
               src={user?.avatar}
               alt={user?.name || user?.email}
@@ -138,7 +145,7 @@ const AvatarSection = ({ user, authToasts }) => {
               fallback={(user?.name || user?.email || '?').charAt(0).toUpperCase()}
               className="w-full h-full"
             />
-          </div>
+          </button>
           {/* Loading overlay */}
           {busy && (
             <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
@@ -257,6 +264,79 @@ const AvatarSection = ({ user, authToasts }) => {
                 {t('personal.setPhoto') || 'Set Photo'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View profile picture dialog ──────────────────────────────── */}
+      {viewOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setViewOpen(false)}
+          />
+          {/* Mobile: bottom sheet. Desktop: centered modal */}
+          <div className={cn(
+            'relative z-10 w-full bg-white dark:bg-gray-900 shadow-2xl',
+            isMobile
+              ? 'rounded-t-3xl px-6 pb-8 pt-5'
+              : 'sm:max-w-sm sm:rounded-2xl px-6 pb-8 pt-5'
+          )}>
+            {/* Mobile drag handle */}
+            {isMobile && (
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+            )}
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('personal.profilePhoto') || 'Profile Photo'}
+              </h3>
+              <button
+                onClick={() => setViewOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Full-size avatar */}
+            <div className="flex justify-center mb-6">
+              <div className="w-40 h-40 rounded-full overflow-hidden ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-2xl">
+                <Avatar
+                  src={user?.avatar}
+                  alt={user?.name || user?.email}
+                  size="xl"
+                  fallback={(user?.name || user?.email || '?').charAt(0).toUpperCase()}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Name */}
+            <p className="text-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">
+              {user?.name || user?.email?.split('@')[0]}
+            </p>
+
+            {/* Change photo button — triggers the hidden file input */}
+            <label className={cn(
+              'flex items-center justify-center gap-2 h-12 rounded-2xl cursor-pointer',
+              'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700',
+              'text-white font-semibold text-sm shadow-lg shadow-blue-500/30 transition-all active:scale-95'
+            )}>
+              <Camera className="w-4 h-4" />
+              {t('personal.changePhoto') || 'Change Photo'}
+              <input
+                type="file"
+                accept="image/*,.heic,.heif"
+                className="hidden"
+                disabled={busy}
+                onChange={(e) => {
+                  setViewOpen(false);
+                  handleFileSelect(e);
+                }}
+              />
+            </label>
           </div>
         </div>
       )}

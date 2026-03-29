@@ -9,20 +9,44 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, Plus, BarChart3, User,
-  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, X, HelpCircle
+  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, HelpCircle,
+  Sun, Moon, Globe, LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useAuth } from '../../stores';
+import { useToast } from '../../hooks/useToast';
 import BottomSheet from './BottomSheet';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t, currentLanguage, setLanguage } = useTranslation();
+  const { isDark, setTheme } = useTheme();
+  const { logout } = useAuth();
+  const toast = useToast();
   const isAdmin = useIsAdmin();
 
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleThemeToggle = useCallback(() => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setTheme(newTheme);
+    try { sessionStorage.setItem('spendwise-session-theme', newTheme); } catch (_) {}
+    toast.success(t('toast.settings.themeChangedSession', { theme: t(`common.${newTheme}Theme`) }), { duration: 2000 });
+  }, [isDark, setTheme, toast, t]);
+
+  const handleLanguageToggle = useCallback(() => {
+    const newLang = currentLanguage === 'en' ? 'he' : 'en';
+    setLanguage(newLang);
+    try { sessionStorage.setItem('spendwise-session-language', newLang); } catch (_) {}
+    toast.success(t('toast.settings.languageChangedSession'), { duration: 2000 });
+  }, [currentLanguage, setLanguage, toast, t]);
+
+  const handleLogout = useCallback(async () => {
+    setMenuOpen(false);
+    await logout(true);
+  }, [logout]);
 
   const tabs = [
     {
@@ -220,7 +244,7 @@ const MobileBottomNav = () => {
         onClose={() => setMenuOpen(false)}
         title={t('common.quickActions') || 'Quick Actions'}
       >
-        <div className="grid grid-cols-3 gap-3 pb-4">
+        <div className="grid grid-cols-3 gap-3">
           {menuActions.map((action, i) => {
             const Icon = action.icon;
             return (
@@ -254,6 +278,68 @@ const MobileBottomNav = () => {
               </motion.button>
             );
           })}
+        </div>
+
+        {/* Settings row — theme, language, logout */}
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 pb-4">
+          <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            <button
+              onClick={handleThemeToggle}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                'bg-white dark:bg-gray-800',
+                'border border-gray-100 dark:border-gray-700/60',
+                'shadow-sm active:scale-95 transition-all duration-150'
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 shadow-md">
+                {isDark
+                  ? <Sun className="w-5 h-5 text-white" strokeWidth={1.75} />
+                  : <Moon className="w-5 h-5 text-white" strokeWidth={1.75} />
+                }
+              </div>
+              <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                {isDark ? (t('common.lightMode') || 'Light') : (t('common.darkMode') || 'Dark')}
+              </span>
+            </button>
+
+            {/* Language toggle */}
+            <button
+              onClick={handleLanguageToggle}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                'bg-white dark:bg-gray-800',
+                'border border-gray-100 dark:border-gray-700/60',
+                'shadow-sm active:scale-95 transition-all duration-150'
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-400 to-blue-600 shadow-md">
+                <Globe className="w-5 h-5 text-white" strokeWidth={1.75} />
+              </div>
+              <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                {currentLanguage === 'en' ? 'עברית' : 'English'}
+              </span>
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                'bg-white dark:bg-gray-800',
+                'border border-red-100 dark:border-red-900/40',
+                'shadow-sm active:scale-95 transition-all duration-150'
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-rose-600 shadow-md shadow-red-400/30">
+                <LogOut className="w-5 h-5 text-white" strokeWidth={1.75} />
+              </div>
+              <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                {t('common.logout') || 'Logout'}
+              </span>
+            </button>
+          </div>
         </div>
       </BottomSheet>
     </>

@@ -21,7 +21,7 @@ const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
   const { data, loading, error } = useBalance({ autoRefresh: true });
 
-  const [period, setPeriod] = useState('monthly');
+  const [period, setPeriod] = useState('daily');
 
   const periodData = data?.[period] || { income: 0, expenses: 0, total: 0 };
   const net = periodData.total ?? (periodData.income - Math.abs(periodData.expenses));
