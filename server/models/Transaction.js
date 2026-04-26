@@ -117,27 +117,11 @@ class Transaction {
    * @returns {Promise<number>} Total count
    */
   static async getTotalCount(userId, options = {}) {
+    // SIMPLIFIED: was running an extra COUNT query on every call to decide
+    // whether to use legacy tables. Migration 07 + the live data check show
+    // every user is now in the unified table. Always use unified.
     try {
-      const {
-        categoryId = null,
-        type = null,
-        dateFrom = null,
-        dateTo = null,
-        search = null
-      } = options;
-
-      // ✅ CRITICAL FIX: Check if unified transactions table has data, fallback to legacy tables
-      const unifiedCheckQuery = 'SELECT COUNT(*) as count FROM transactions WHERE user_id = $1';
-      const unifiedCheck = await db.query(unifiedCheckQuery, [userId]);
-      const hasUnifiedData = parseInt(unifiedCheck.rows[0].count) > 0;
-
-      if (hasUnifiedData) {
-        // Use unified transactions table
-        return await this.getTotalCountUnified(userId, options);
-      } else {
-        // Use legacy income/expenses tables
-        return await this.getTotalCountLegacy(userId, options);
-      }
+      return await this.getTotalCountUnified(userId, options);
     } catch (error) {
       logger.error('Transaction count failed', { userId, error: error.message });
       throw error;
@@ -286,24 +270,10 @@ class Transaction {
         sortOrder = 'DESC'
       } = options;
 
-      // ✅ CRITICAL FIX: Check if unified transactions table has data, fallback to legacy tables
-      const unifiedCheckQuery = 'SELECT COUNT(*) as count FROM transactions WHERE user_id = $1';
-      const unifiedCheck = await db.query(unifiedCheckQuery, [userId]);
-      const hasUnifiedData = parseInt(unifiedCheck.rows[0].count) > 0;
-
-      logger.info('Transaction data location check', { 
-        userId, 
-        hasUnifiedData,
-        unifiedCount: unifiedCheck.rows[0].count 
-      });
-
-      if (hasUnifiedData) {
-        // Use unified transactions table
-        return await this.findByUserUnified(userId, options);
-      } else {
-        // Use legacy income/expenses tables
-        return await this.findByUserLegacy(userId, options);
-      }
+      // SIMPLIFIED: was running an extra COUNT query on every list request to
+      // decide whether to use legacy tables. Migration 07 + live data check
+      // confirm every user is in unified. Saves one round-trip per page load.
+      return await this.findByUserUnified(userId, options);
     } catch (error) {
       logger.error('Transaction retrieval failed', { userId, error: error.message });
       throw error;
@@ -683,23 +653,18 @@ class Transaction {
         .map(([key, placeholder]) => `${key} = ${placeholder}`)
         .join(', ');
 
-      // ✅ FIXED: Update appropriate table based on existing transaction type
-      let query;
-      if (existing.type === 'income') {
-        query = `
-          UPDATE income 
-          SET ${setClause}
-          WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
-          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-        `;
-      } else {
-        query = `
-          UPDATE expenses 
-          SET ${setClause}
-          WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
-          RETURNING id, user_id, category_id, amount, description, notes, date, template_id, created_at, updated_at
-        `;
-      }
+      // 🔥 BUG FIX: Was updating LEGACY income/expenses tables based on
+      // existing.type — but findById reads from the UNIFIED `transactions`
+      // table. Result: edits to migrated rows updated stale legacy copies
+      // (so reads still showed old values), and edits to NEW rows (created
+      // after migration 07) silently 404'd because their IDs only exist in
+      // `transactions`. Now updates the unified table consistently.
+      const query = `
+        UPDATE transactions
+        SET ${setClause}
+        WHERE id = $${paramCount} AND user_id = $${paramCount + 1} AND deleted_at IS NULL
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+      `;
 
       values.push(transactionId, userId);
       const result = await db.query(query, values);
@@ -708,9 +673,7 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      // Add type field for consistency
       const updated = result.rows[0];
-      updated.type = existing.type;
 
       logger.info('Transaction updated successfully', { 
         transactionId, 

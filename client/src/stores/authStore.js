@@ -330,12 +330,18 @@ export const useAuthStore = create(
               // ✅ FIX: Clear timers first to prevent automatic refresh during logout
               get().actions.clearTokenRefreshTimer();
 
-              // Call logout API (don't let this fail the logout)
+              // Call logout API with a short timeout. Previously this used the
+              // default 45s axios timeout — which meant when the server was
+              // down (Render asleep / Supabase paused), clicking "logout"
+              // appeared to do nothing for 45s. The local cleanup below is
+              // what actually logs the user out; the server call is a courtesy.
               try {
-                await authAPI.logout();
+                await Promise.race([
+                  authAPI.logout(),
+                  new Promise((_, rej) => setTimeout(() => rej(new Error('logout-timeout')), 3000))
+                ]);
               } catch (error) {
-                // Log error but continue with local logout
-                // silent
+                // Server unreachable / timed out — proceed with local cleanup anyway.
               }
 
               // ✅ FIX: Clear ALL tokens and auth data  
@@ -698,7 +704,30 @@ export const authSelectors = {
   error: (state) => state.error
 };
 
-// ✅ Enhanced exports with performance selectors and all methods
+// 🟢 PERF: granular selectors. Each one subscribes to a single slice, so
+// the component using it ONLY re-renders when that slice changes. The old
+// `useAuth()` (kept below for backward-compat) subscribes to the entire
+// store + spreads it into a fresh object on every render — meaning every
+// `useAuth` consumer re-rendered on any state change (token refresh,
+// loading flag flicker, etc.) AND any useEffect deps including the
+// returned object re-fired every render.
+//
+// Migration path: replace `const { user } = useAuth()` with `useAuthUser()`,
+// `const { isAuthenticated } = useAuth()` with `useIsAuthenticated()`, etc.
+export const useAuthUser        = () => useAuthStore(authSelectors.user);
+export const useIsAuthenticated = () => useAuthStore(authSelectors.isAuthenticated);
+export const useAuthLoading     = () => useAuthStore(authSelectors.isLoading);
+export const useAuthRole        = () => useAuthStore(authSelectors.userRole);
+export const useIsAdmin         = () => useAuthStore(authSelectors.isAdmin);
+export const useIsSuperAdmin    = () => useAuthStore(authSelectors.isSuperAdmin);
+export const useAuthError       = () => useAuthStore(authSelectors.error);
+
+// Stable actions object (selector-based — `actions` is set in the initial
+// store state and never reassigned, so reference identity is stable).
+export const useAuthActions = () => useAuthStore((s) => s.actions);
+
+// ⚠️ LEGACY: subscribes to the entire store. Prefer the granular selectors
+// above for new code. Kept so existing call sites keep working.
 export const useAuth = () => {
   const store = useAuthStore();
   return {
@@ -718,10 +747,5 @@ export const useAuth = () => {
     reset: store.actions.reset
   };
 };
-
-export const useAuthUser = () => useAuthStore(authSelectors.user);
-export const useAuthRole = () => useAuthStore(authSelectors.userRole);
-export const useIsAdmin = () => useAuthStore(authSelectors.isAdmin);
-export const useIsSuperAdmin = () => useAuthStore(authSelectors.isSuperAdmin);
 
 export default useAuthStore; 

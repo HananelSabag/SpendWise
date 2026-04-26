@@ -5,13 +5,18 @@
  */
 
 // ✅ Import all stores
-import useAuthStore, { 
-  useAuth, 
-  useAuthUser, 
-  useAuthRole, 
-  useIsAdmin, 
+import useAuthStore, {
+  useAuth,
+  useAuthUser,
+  useAuthRole,
+  useIsAdmin,
   useIsSuperAdmin,
-  authSelectors 
+  // 🟢 NEW granular selectors — prefer these over useAuth() in new code
+  useIsAuthenticated,
+  useAuthLoading,
+  useAuthError,
+  useAuthActions,
+  authSelectors
 } from './authStore.js';
 
 import useTranslationStore, { 
@@ -151,6 +156,10 @@ export {
   useAuthRole,
   useIsAdmin,
   useIsSuperAdmin,
+  useIsAuthenticated,
+  useAuthLoading,
+  useAuthError,
+  useAuthActions,
   authSelectors,
   
   // Translation store

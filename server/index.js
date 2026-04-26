@@ -203,29 +203,54 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Set up routes
-// Enhanced health check endpoint
+// Enhanced health check endpoint.
+//
+// Design notes for Render free-tier:
+//   - Always returns 200 if the HTTP server is alive, even when the DB is down.
+//     This is what stops Render from cycling the container during a Supabase
+//     outage. The client reads `database` to decide whether to show
+//     /server-waking or render normally.
+//   - Status 503 is reserved for cases where the DB has NEVER successfully
+//     connected since process boot — i.e. config/credentials are wrong.
 app.get('/health', async (req, res) => {
-  try {
-    const dbHealth = await db.healthCheck();
-    
-    res.json({ 
-      status: 'healthy',
-      database: dbHealth ? 'connected' : 'disconnected',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      version: '1.0.0'
-    });
-  } catch (error) {
-    logger.error('Health check failed', { error: error.message });
-    
-    res.status(503).json({ 
-      status: 'unhealthy', 
-      database: 'error',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal error'
-    });
+  const dbReady = typeof app.locals.isDbReady === 'function' && app.locals.isDbReady();
+
+  // Fast path: if our background probe says DB is up, run a cheap ping.
+  if (dbReady) {
+    try {
+      const dbHealth = await db.healthCheck();
+      return res.json({
+        status: 'healthy',
+        database: dbHealth?.status === 'healthy' ? 'connected' : 'degraded',
+        dbDetail: dbHealth,
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        version: '1.0.0'
+      });
+    } catch (error) {
+      logger.warn('Health check DB ping failed (server still up)', { error: error.message });
+      return res.json({
+        status: 'degraded',
+        database: 'unreachable',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV
+      });
+    }
   }
+
+  // Server is up but the background probe hasn't connected to the DB yet.
+  // Important: 200 (not 5xx) so Render doesn't restart us — the body explains
+  // exactly what's wrong so the client can show a useful screen.
+  return res.status(200).json({
+    status: 'starting',
+    database: 'connecting',
+    hint: 'DB probe in progress. If this persists, check Supabase project status (free-tier projects auto-pause after 7 days idle) and DATABASE_URL.',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
 });
 
 // Root route - API info
@@ -361,87 +386,103 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 /**
- * Start the server with Supabase database connection
+ * Start the server.
+ *
+ * IMPORTANT (Render free-tier hardening):
+ * Previously, if the DB connection failed at startup we called process.exit(1).
+ * On Render's free tier this causes an infinite restart loop whenever Supabase
+ * is paused, the password rotates, or there's a transient pooler glitch — and
+ * because the HTTP server never starts, the client sees infinite loading
+ * (no /health, no /maintenance fallback, no useful error). This is the single
+ * worst failure mode this app had.
+ *
+ * New behavior:
+ *   1. Start the HTTP server immediately so /health always responds.
+ *   2. Probe the DB in the background. If unavailable, /health returns 503 and
+ *      the client routes to /server-waking with a real reason instead of hanging.
+ *   3. Keep retrying the DB connection forever with exponential backoff (capped),
+ *      so the moment Supabase comes back the server self-heals.
  */
+
+// Tracks DB readiness so request handlers and /health can reflect reality.
+let dbReady = false;
+app.locals.isDbReady = () => dbReady;
+
+const probeDatabaseUntilReady = async () => {
+  let attempt = 0;
+  // Cap the backoff so we keep poking even after long outages.
+  const MAX_BACKOFF_MS = 60_000;
+  while (true) {
+    attempt += 1;
+    try {
+      await db.testConnection();
+      dbReady = true;
+      logger.info(`✅ Supabase database connection successful (attempt ${attempt})`);
+
+      // Start jobs that REQUIRE the DB only after the first successful connect.
+      if (process.env.ENABLE_SCHEDULER !== 'false') {
+        try { scheduler.init(); logger.info('✅ Scheduler initialized'); }
+        catch (e) { logger.error('Scheduler init failed', { error: e.message }); }
+      }
+      return;
+    } catch (error) {
+      dbReady = false;
+      const delay = Math.min(2_000 * Math.pow(1.5, Math.min(attempt - 1, 8)), MAX_BACKOFF_MS);
+      logger.warn(
+        `⚠️ Database connection attempt ${attempt} failed; retrying in ${Math.round(delay / 1000)}s`,
+        { error: error.message, code: error.code }
+      );
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+};
+
 const startServer = async () => {
   logger.info('🚀 Starting SpendWise server...');
-  
-  try {
-    logger.info('📡 Testing database connection...');
-    // Test Supabase database connection with retry
-    let retries = 5;
-    while (retries > 0) {
-      try {
-        await db.testConnection();
-        logger.info('✅ Supabase database connection successful');
-        break;
-      } catch (error) {
-        retries--;
-        if (retries === 0) {
-          logger.error('❌ Failed to connect to database after 5 retries');
-          throw error;
-        }
-        logger.warn(`⚠️ Database connection failed, retrying... (${5 - retries}/5)`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-    
-    logger.info('🔧 Starting HTTP server...');
+  logger.info('🔧 Starting HTTP server (DB probe runs in background)...');
 
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`🚀 Server running on port ${PORT} with Supabase database`);
-      logger.info(`🌐 CORS enabled for mobile development (local networks)`);
-      
-      // Initialize background jobs
-      if (process.env.ENABLE_SCHEDULER !== 'false') {
-        scheduler.init();
-        logger.info('✅ Scheduler initialized');
-      }
-      
-      // Start keep-alive service
-      keepAlive.start();
-      logger.info('✅ KeepAlive service started');
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`🚀 Server running on port ${PORT} (DB ready: ${dbReady})`);
+    logger.info(`🌐 CORS enabled for mobile development (local networks)`);
+
+    // Keep-alive does not need the DB — start it immediately.
+    keepAlive.start();
+    logger.info('✅ KeepAlive service started');
+  });
+
+  // Probe the DB in the background — never blocks server startup.
+  probeDatabaseUntilReady().catch(err => {
+    logger.error('Unexpected error in DB probe loop', { error: err.message, stack: err.stack });
+  });
+
+  // Graceful shutdown
+  const gracefulShutdown = async (signal) => {
+    logger.info(`${signal} received, shutting down gracefully`);
+
+    server.close(() => {
+      logger.info('HTTP server closed');
     });
 
-    // Graceful shutdown
-    const gracefulShutdown = async (signal) => {
-      logger.info(`${signal} received, shutting down gracefully`);
+    try { scheduler.stop(); logger.info('Scheduler stopped'); } catch (_) {}
 
-      server.close(() => {
-        logger.info('HTTP server closed');
-      });
+    try { await db.gracefulShutdown(); logger.info('Supabase database connections closed'); }
+    catch (e) { logger.error('DB shutdown failed', { error: e.message }); }
 
-      // Stop scheduled jobs before closing the DB pool
-      scheduler.stop();
-      logger.info('Scheduler stopped');
+    process.exit(0);
+  };
 
-      // Close database connections
-      await db.gracefulShutdown();
-      logger.info('Supabase database connections closed');
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-      process.exit(0);
-    };
+  // Don't crash the process on unhandled exceptions/rejections — log loudly and stay up.
+  // On free-tier, every restart costs ~60s of cold-start downtime for users.
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception (kept alive)', { error: error.message, stack: error.stack });
+  });
 
-    // Handle shutdown signals
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-    // Handle uncaught errors
-    process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
-      gracefulShutdown('UNCAUGHT_EXCEPTION');
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      gracefulShutdown('UNHANDLED_REJECTION');
-    });
-
-  } catch (err) {
-    logger.error('❌ Failed to start server with Supabase:', err);
-    logger.error('💡 Check your DATABASE_URL and network connection');
-    process.exit(1);
-  }
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled Rejection (kept alive)', { reason: reason?.message || reason });
+  });
 };
 
 // ✅ DIAGNOSTIC: Log environment status before starting

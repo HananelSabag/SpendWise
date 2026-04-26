@@ -1240,23 +1240,36 @@ const transactionController = {
         errors: []
       };
 
-      // Process each template
-      for (const templateData of templates) {
+      // 🟢 PERF: resolve all category IDs in parallel BEFORE the insert loop.
+      // The previous code did `await findOrCreateCategory(...)` inside the
+      // loop — N templates = N sequential DB round-trips just to find/create
+      // categories. With Render us-east → Supabase eu-north (~150ms RTT each),
+      // 8 onboarding templates spent ~1.2s in this step alone. Promise.all
+      // pipelines them to a single round-trip-equivalent of latency.
+      const resolvedCategoryIds = await Promise.all(
+        templates.map(t =>
+          findOrCreateCategory(userId, t.categoryId, t.category_name)
+            .catch(() => null) // failures handled per-template below
+        )
+      );
+
+      // Process each template — inserts must remain sequential because the
+      // recurring transaction generation downstream depends on template.id.
+      for (let idx = 0; idx < templates.length; idx++) {
+        const templateData = templates[idx];
         try {
           const {
             name,
             description,
             amount,
             type,
-            category_name,
-            categoryId,
             interval_type,
             day_of_month,
             day_of_week,
             is_active
           } = templateData;
 
-          const finalCategoryId = await findOrCreateCategory(userId, categoryId, category_name);
+          const finalCategoryId = resolvedCategoryIds[idx];
 
           // Create template
           const insertQuery = `
@@ -1848,6 +1861,41 @@ transactionController.generateMissingCurrentMonthTransactions = asyncHandler(asy
       stack: error.stack
     });
     
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'GENERATION_FAILED',
+        message: 'Failed to generate missing current month transactions',
+        details: error.message
+      }
+    });
+  }
+});
+
+module.exports = transactionController;ransactions', {
+      userId,
+      totalTemplates: templates.length,
+      totalGenerated,
+      results
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalTemplates: templates.length,
+        totalGenerated,
+        results
+      },
+      message: `Generated ${totalGenerated} missing current month transactions`
+    });
+
+  } catch (error) {
+    logger.error('Failed to generate missing current month transactions', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
+
     res.status(500).json({
       success: false,
       error: {

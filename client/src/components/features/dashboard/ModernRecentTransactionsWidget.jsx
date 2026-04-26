@@ -81,16 +81,32 @@ const TxRow = ({ transaction, formatCurrency, t }) => {
 const ModernRecentTransactionsWidget = ({
   onViewAll,
   maxItems = 5,
+  // PERF: when the parent (dashboard) already has recent transactions in its
+  // own data, pass them in here. This eliminates a redundant API call:
+  // the /transactions/dashboard endpoint already returns recent_transactions
+  // server-side, so spawning a second /transactions GET was pure waste.
+  preloadedTransactions = null,
+  preloadedLoading = false,
 }) => {
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
 
-  const { transactions: allTransactions, loading, refetch } = useTransactions({
-    pageSize: 50,
+  // Only fire our own fetch when the parent didn't preload anything.
+  const shouldFetch = !preloadedTransactions;
+
+  // PERF: pull just enough to render maxItems, not 50.
+  const ownQuery = useTransactions({
+    pageSize: Math.max(maxItems + 4, 12),
     enableAI: false,
     context: 'dashboard',
     autoRefresh: true,
+    // useTransactions itself ignores extra opts; we still want it disabled.
+    enabled: shouldFetch,
   });
+
+  const allTransactions = preloadedTransactions ?? ownQuery.transactions;
+  const loading = preloadedTransactions ? preloadedLoading : ownQuery.loading;
+  const refetch = ownQuery.refetch;
 
   const [refreshing, setRefreshing] = useState(false);
 

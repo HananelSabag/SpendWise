@@ -173,7 +173,8 @@ pnpm-lock.yaml
 .vercel
 
 # Render
-render.yaml
+# (render.yaml IS committed — config-as-code lives in the repo so deploy
+# settings are version-controlled rather than buried in the dashboard UI.)
 
 # Docker (if used)
 .dockerignore
@@ -221,12 +222,18 @@ docker-compose.override.yml
 # ===================================
 # 🧾 DOCUMENTATION & MARKDOWN FILES (RESTRICTED)
 # ===================================
-# Only allow README files. Ignore all other markdown docs and the entire doc/ folder.
+# Only allow README files + a small set of explicitly-tracked top-level docs.
+# Anything else under doc/ or random *.md scratch notes stays ignored.
 doc/
 doc/**
 **/*.md
 !README.md
 !**/README.md
+# Allow the operational/audit docs created during the 2026-04 cleanup pass:
+!RENDER_FREE_TIER_NOTES.md
+!RENDER_REGION_MIGRATION.md
+!CODE_AUDIT_FINDINGS.md
+!DEAD_CODE_TO_DELETE.md
 
 # Explicitly ignore session/workflow logs
 doc/current-fix.md

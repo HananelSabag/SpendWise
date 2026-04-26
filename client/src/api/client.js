@@ -169,7 +169,23 @@ class SpendWiseAPIClient {
           retryCount: config.retryCount || 0
         };
 
-        // silent request log
+        // 🟢 UX: "never more than a few seconds in silent loading."
+        // If a request hasn't returned in 5 seconds AND server isn't already
+        // marked warm, flip __SERVER_WAKING__ so ConnectionStatusOverlay
+        // shows the purple "Server is waking up" banner. The user gets honest
+        // feedback within 5s instead of staring at a spinner for the full
+        // 30–60s cold-start window. We don't redirect to /server-waking yet —
+        // the banner is non-blocking; if the request still succeeds the
+        // banner just disappears.
+        if (!this.serverState.isWarm && typeof window !== 'undefined') {
+          config._wakingBannerTimer = setTimeout(() => {
+            try {
+              if (!window.__SERVER_WAKING__) {
+                window.__SERVER_WAKING__ = true;
+              }
+            } catch (_) {}
+          }, 5000);
+        }
 
         return config;
       },
@@ -179,6 +195,14 @@ class SpendWiseAPIClient {
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => {
+        // Cancel the "server is waking" 5s timer if the request succeeded fast.
+        try {
+          if (response.config?._wakingBannerTimer) {
+            clearTimeout(response.config._wakingBannerTimer);
+            response.config._wakingBannerTimer = null;
+          }
+        } catch (_) {}
+
         // Update server state on success
         this.serverState.updateSuccess();
         // If we were in waking mode, announce recovery and clear flag
@@ -188,7 +212,7 @@ class SpendWiseAPIClient {
             window.dispatchEvent(new CustomEvent('server-woke'));
           }
         } catch (_) {}
-        
+
         // Notify auth recovery manager of success
         this.authRecovery.handleApiSuccess();
 
@@ -205,12 +229,25 @@ class SpendWiseAPIClient {
   // ✅ Enhanced Error Handling with Cold Start Retry + Auth Recovery
   async handleResponseError(error) {
     const { config: requestConfig } = error;
-    
+
+    // Always clear the 5s "waking banner" timer to avoid leaks.
+    try {
+      if (requestConfig?._wakingBannerTimer) {
+        clearTimeout(requestConfig._wakingBannerTimer);
+        requestConfig._wakingBannerTimer = null;
+      }
+    } catch (_) {}
+
     // Update server state
     this.serverState.updateFailure();
-    
+
     // Notify auth recovery manager of the error
     const errorType = this.authRecovery.handleApiError(error, requestConfig);
+
+    // 🛑 BUGFIX: If THIS request is itself a token-refresh attempt, do NOT try
+    // to refresh again — that's the recursion that caused infinite loops when
+    // refresh tokens expired. Reject straight to the auth-error path.
+    const isRefreshRequest = !!requestConfig?._isRefreshRequest;
 
     // Handle specific error types
     if (error.response?.status === 401) {
@@ -218,7 +255,13 @@ class SpendWiseAPIClient {
       if (typeof window !== 'undefined' && window.__AUTH_LOGOUT_IN_PROGRESS__) {
         return Promise.reject(error);
       }
-      
+
+      // If the failing request is the refresh call itself → refresh token is dead, log out.
+      if (isRefreshRequest) {
+        this.handleAuthError();
+        return Promise.reject(error);
+      }
+
       // ✅ FIX: Try to refresh token BEFORE logging out
       // Check if this request was already retried after refresh
       if (requestConfig && !requestConfig._isRetryAfterRefresh) {
@@ -230,7 +273,8 @@ class SpendWiseAPIClient {
             const refreshResponse = await this.client.post('/users/refresh-token', { refreshToken }, {
               // Skip auth header for refresh endpoint
               headers: { Authorization: undefined },
-              _skipAuthInterceptor: true
+              _isRefreshRequest: true,        // ← interceptor uses this to break the recursion
+              _skipAuthInterceptor: true      // ← legacy flag kept for any callers reading it
             });
             
             const newToken = refreshResponse?.data?.data?.accessToken || refreshResponse?.data?.accessToken;
@@ -308,13 +352,31 @@ class SpendWiseAPIClient {
 
     // ✅ FIX: Don't treat authentication errors as cold start
     const isAuthError = error.response?.status === 401 || error.response?.status === 403;
-    
+
     // Detect likely Render cold-start: timeout or 5xx when server not warm (after maintenance routing)
     const isTimeoutError = error?.code === 'ECONNABORTED' || error?.message?.includes('timeout');
     const isServerError = !!error?.response && error.response.status >= 500;
     const isLikelyColdStart = !this.serverState.isWarm && (isTimeoutError || isServerError) && !isAuthError;
 
     if (isLikelyColdStart) {
+      // 🟢 NEW: try to actually wake the server with one or two background retries
+      // BEFORE navigating to /server-waking. Render's free-tier cold start is
+      // ~30–60s; a single transparent retry recovers most of the time without
+      // ever yanking the user off their current screen.
+      const canRetry = !!requestConfig
+        && !requestConfig._isRefreshRequest
+        && !requestConfig._coldStartRetried
+        && (requestConfig.retryCount || 0) < config.RETRY_ATTEMPTS;
+
+      if (canRetry) {
+        try {
+          requestConfig._coldStartRetried = true;
+          return await this.retryColdStartRequest(requestConfig);
+        } catch (retryErr) {
+          // Fall through to the /server-waking redirect below.
+        }
+      }
+
       try {
         if (typeof window !== 'undefined' && !window.__SERVER_WAKING__) {
           window.__SERVER_WAKING__ = true;
@@ -543,4 +605,59 @@ export const api = new SpendWiseAPIClient();
 
 // ✅ Export utilities
 export { config as apiConfig };
-export default api; 
+export default api; ures,
+        lastRequest: new Date(this.serverState.lastRequest).toISOString()
+      },
+      cache: this.cache.getStats(),
+      pendingRequests: this.deduplicator.pendingRequests.size
+    };
+  }
+
+  // ✅ Manual Cache Management
+  clearCache(pattern) {
+    this.cache.clear(pattern);
+    // ✅ FIX: Dismiss all loading-related toasts when clearing cache
+    try {
+      toast.dismiss('cold-start');
+      toast.dismiss('connection-recovering');
+    } catch (_) {}
+  }
+
+  // ✅ HTTP Methods - Delegate to axios client
+  async get(url, config = {}) {
+    return this.client.get(url, config);
+  }
+
+  async post(url, data = {}, config = {}) {
+    return this.client.post(url, data, config);
+  }
+
+  async put(url, data = {}, config = {}) {
+    return this.client.put(url, data, config);
+  }
+
+  async delete(url, config = {}) {
+    return this.client.delete(url, config);
+  }
+
+  async patch(url, data = {}, config = {}) {
+    return this.client.patch(url, data, config);
+  }
+
+  // ✅ Health Check
+  async healthCheck() {
+    try {
+      const response = await this.client.get('/health');
+      return { healthy: true, data: response.data };
+    } catch (error) {
+      return { healthy: false, error: this.normalizeError(error) };
+    }
+  }
+}
+
+// ✅ Create and export singleton instance
+export const api = new SpendWiseAPIClient();
+
+// ✅ Export utilities
+export { config as apiConfig };
+export default api;

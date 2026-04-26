@@ -1,0 +1,44 @@
+# Render service config — committed so deploy settings are version-controlled,
+# not buried in the dashboard UI. To use: in Render → "New" → "Blueprint" →
+# point at this repo. For an existing manually-created service, this file is
+# documentation; settings won't auto-sync until you import as a blueprint.
+#
+# See RENDER_FREE_TIER_NOTES.md and RENDER_REGION_MIGRATION.md for context.
+services:
+  - type: web
+    name: spendwise-api
+    runtime: node
+    # Frankfurt is the closest Render region to Supabase eu-north-1 (Stockholm).
+    # Using us-east while Supabase is in eu-north costs ~150ms per DB query —
+    # see RENDER_REGION_MIGRATION.md.
+    region: frankfurt
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    # Important: we want Render's health checker to poll /health, but our
+    # /health endpoint deliberately returns 200 even when DB isn't ready
+    # (so Render doesn't restart the container during transient Supabase
+    # outages — see server/index.js comments). The body distinguishes
+    # 'healthy' / 'degraded' / 'starting' for the client.
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        # MUST match the actual service URL or in-process keep-alive pings the
+        # wrong host and the service still goes to sleep.
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false

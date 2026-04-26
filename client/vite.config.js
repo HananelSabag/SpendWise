@@ -100,9 +100,15 @@ export default defineConfig(({ command, mode }) => {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: isProd,
+          // SOFTENED: drop_console:true was nuking console.error/warn too —
+          // meaning real production errors had no visibility. Now we only
+          // tree-shake the noisy levels (.log/.debug/.info) and keep
+          // .error/.warn so problems still surface in DevTools / Sentry.
+          drop_console: false,
           drop_debugger: isProd,
-          pure_funcs: isProd ? ['console.log', 'console.debug'] : []
+          pure_funcs: isProd
+            ? ['console.log', 'console.debug', 'console.info', 'console.trace']
+            : []
         }
       },
       rollupOptions: {

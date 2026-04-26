@@ -1,9 +1,12 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 
-// Simple cached settings fetcher
+// Cache the maintenance flag for 60s to keep this middleware off the DB hot path.
+// Toggling maintenance mode now takes up to a minute to propagate — fine, this
+// flag changes maybe once a year and the previous 5s TTL meant every request
+// from every client paid for a DB roundtrip.
 let cache = { value: null, expiresAt: 0 };
-const TTL_MS = 5 * 1000; // shorten to 5s so toggles apply quickly
+const TTL_MS = 60 * 1000;
 
 // Public auth endpoints that must remain accessible during maintenance
 const PUBLIC_AUTH_PREFIXES = [
@@ -29,13 +32,19 @@ async function getMaintenanceFlag() {
     cache = { value, expiresAt: now + TTL_MS };
     return value;
   } catch (error) {
-    logger.warn('Maintenance flag fetch failed', { error: error.message });
+    // If the DB is unreachable we cannot know the flag — fail open and cache
+    // the negative result for the full TTL so we don't hammer a dead pool.
+    logger.warn('Maintenance flag fetch failed (failing open)', { error: error.message });
     cache = { value: false, expiresAt: now + TTL_MS };
     return false;
   }
 }
 
-// Middleware: when maintenance mode is ON, block non-admins
+// Middleware: when maintenance mode is ON, block non-admins.
+// Returns JSON 503 with code 'MAINTENANCE_MODE' for ALL clients. The previous
+// version tried to redirect HTML requests to /maintenance on the API host, but
+// the API server has no such page — that route was a 404. The Vercel client
+// routes itself to /maintenance when it sees this 503 code (see api/client.js).
 async function maintenanceGate(req, res, next) {
   try {
     const isMaintenance = await getMaintenanceFlag();
@@ -56,12 +65,6 @@ async function maintenanceGate(req, res, next) {
     const isAdmin = req.user && ['admin', 'super_admin'].includes(req.user.role);
     if (isAdmin) return next();
 
-    const accept = req.headers['accept'] || '';
-    // If browser accepts HTML, redirect to a client maintenance page
-    if (accept.includes('text/html')) {
-      return res.redirect(302, '/maintenance');
-    }
-    // Fallback JSON for API clients
     return res.status(503).json({
       success: false,
       error: {

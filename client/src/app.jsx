@@ -10,6 +10,15 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ErrorBoundary } from 'react-error-boundary';
 
+// 🟢 NEW: TanStack Query localStorage persistence — real "offline mode".
+// When the user's browser has stale cache from a previous session, the
+// queryClient hydrates from localStorage on mount. So when the API is down
+// (Render asleep, Supabase paused, etc.), the dashboard / transactions still
+// render with last-seen data instead of a spinner. As soon as the API comes
+// back, queries refetch in the background and update the UI.
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
 // Core UI components
 import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
@@ -28,6 +37,7 @@ import { useToastCleanup } from './hooks/useToastCleanup';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 import ConnectionStatusOverlay from './components/common/ConnectionStatusOverlay';
+import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import UnifiedTransactionActions from './components/features/transactions/actions/UnifiedTransactionActions.jsx';
 
 // ✅ Balance Provider  
@@ -41,6 +51,19 @@ import * as LazyComponents from './components/LazyComponents';
 
 // ✅ Use centralized QueryClient configuration
 import queryClient from './config/queryClient';
+
+// 🟢 Persister for offline-survives-reload. localStorage is fine here:
+// - It's already used for auth tokens, so the user has implicit consent.
+// - QueryClient's max-age guard below prevents serving truly ancient data.
+const queryPersister = typeof window !== 'undefined'
+  ? createSyncStoragePersister({
+      storage: window.localStorage,
+      key: 'spendwise-query-cache',
+      // Keep cached data trim — Render-free-tier clients are mobile-heavy.
+      // Anything bigger than 4 MB starts hitting localStorage quotas on Safari.
+      throttleTime: 1000,
+    })
+  : undefined;
 
 // ✅ Route Loading Fallback
 const RouteLoadingFallback = ({ route = 'page' }) => {
@@ -457,6 +480,8 @@ const AppContent = () => {
       <div id="portal-root" />
       {/* Global connection status overlays */}
       <ConnectionStatusOverlay />
+      {/* PWA install prompt — only shown when browser deems eligible + not dismissed */}
+      {isAuthenticated && <PWAInstallPrompt />}
     </div>
   );
 };
@@ -498,39 +523,68 @@ function App() {
     }
   }, []);
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Router 
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
-        <StoreProvider>
-          <BalanceProvider>
-            <ToastProvider>
-              <AuthToastProvider>
-                <AuthRecoveryProvider>
-                  <AppInitializer>
-                    <AppContent />
-                  </AppInitializer>
-                </AuthRecoveryProvider>
-              </AuthToastProvider>
-            </ToastProvider>
-          </BalanceProvider>
-        </StoreProvider>
-      </Router>
+  // Use the persistent provider when persister is available (browser),
+  // and the plain provider otherwise (SSR-safety, defensive).
+  const queryProviderProps = queryPersister
+    ? {
+        client: queryClient,
+        persistOptions: {
+          persister: queryPersister,
+          // Drop persisted cache older than 24h. Past that, prefer to refetch
+          // than serve potentially stale balances. The whole point of cache
+          // here is "survive a reload during a server outage", not eternal data.
+          maxAge: 24 * 60 * 60 * 1000,
+          // Bump this if the cache shape ever changes (forces a clean rehydrate).
+          buster: 'spendwise-cache-v1',
+          dehydrateOptions: {
+            // Don't persist mutations or in-flight queries. Only successful data.
+            shouldDehydrateQuery: (query) =>
+              query.state.status === 'success' && !query.isStale(),
+          },
+        },
+      }
+    : null;
 
-      {/* Development tools */}
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools 
-          initialIsOpen={false} 
-          position="bottom-right"
-          toggleButtonProps={{
-            style: { marginBottom: '60px' }
-          }}
-        />
-      )}
+  const Tree = (
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
+      <StoreProvider>
+        <BalanceProvider>
+          <ToastProvider>
+            <AuthToastProvider>
+              <AuthRecoveryProvider>
+                <AppInitializer>
+                  <AppContent />
+                </AppInitializer>
+              </AuthRecoveryProvider>
+            </AuthToastProvider>
+          </ToastProvider>
+        </BalanceProvider>
+      </StoreProvider>
+    </Router>
+  );
+
+  const DevTools = import.meta.env.DEV ? (
+    <ReactQueryDevtools
+      initialIsOpen={false}
+      position="bottom-right"
+      toggleButtonProps={{ style: { marginBottom: '60px' } }}
+    />
+  ) : null;
+
+  return queryProviderProps ? (
+    <PersistQueryClientProvider {...queryProviderProps}>
+      {Tree}
+      {DevTools}
+    </PersistQueryClientProvider>
+  ) : (
+    <QueryClientProvider client={queryClient}>
+      {Tree}
+      {DevTools}
     </QueryClientProvider>
   );
 }

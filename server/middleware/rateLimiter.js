@@ -49,9 +49,13 @@ const createTransactionLimiter = rateLimit({
 });
 
 // Dashboard/summary limiter
+// LOOSENED from 5/10s to 30/10s. The old cap 429'd the 6th request when a user
+// had two browser tabs open (each tab fires dashboard + balance + recent on
+// mount), turning into spurious "Load dashboard failed" errors. The global
+// apiLimiter (100/min) still blocks actual abuse.
 const getSummaryLimiter = rateLimit({
   windowMs: 10 * 1000, // 10 seconds
-  max: 5,
+  max: 30,
   message: {
     error: {
       code: 'SUMMARY_LIMIT',
@@ -111,3 +115,4 @@ module.exports = {
   generateRecurringLimiter,
   emailVerificationLimiter // NEW: Add email verification limiter
 };
+

@@ -39,10 +39,14 @@ const ConnectionStatusOverlay = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // PERF: poll less aggressively. The previous 2s/1s intervals added up to
+    // ~90 unnecessary state updates per minute on a Render-free-tier client
+    // already constrained to 0.1 vCPU + mobile battery. 5s is plenty for a
+    // banner — humans can't notice the difference.
     const interval = setInterval(() => {
       setServerWaking(!!window.__SERVER_WAKING__);
-    }, 2000);
-    
+    }, 5000);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -61,7 +65,8 @@ const ConnectionStatusOverlay = () => {
       }
     };
 
-    const interval = setInterval(checkRetryState, 1000);
+    // PERF: 1s → 5s. Recovery state changes once every several seconds at most.
+    const interval = setInterval(checkRetryState, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -90,12 +95,13 @@ const ConnectionStatusOverlay = () => {
     setDismissed(true);
   }, []);
 
+  // Note: this used to be labelled "Use offline mode" but it never actually
+  // enabled anything offline — it just hid the banner. Renamed to "Dismiss"
+  // in the JSX below so the user isn't lied to about what the button does.
+  // True offline mode would need TanStack Query persistence to be wired up
+  // for serving stale cache without firing requests; that's a bigger refactor.
   const handleUseOfflineMode = useCallback(() => {
     setDismissed(true);
-    // Show toast about offline mode
-    if (typeof window !== 'undefined' && window.authToasts?.toast?.info) {
-      window.authToasts.toast.info(tc('usingCachedData'));
-    }
   }, []);
 
   // Show offline immediately; server-waking and connection-issues only after startup delay + ≥2 failures
@@ -210,9 +216,10 @@ const ConnectionStatusOverlay = () => {
               <button
                 onClick={handleUseOfflineMode}
                 className="px-3 py-1.5 rounded-lg bg-yellow-200 hover:bg-yellow-300 dark:bg-yellow-800/50 dark:hover:bg-yellow-700/50 text-yellow-900 dark:text-yellow-100 text-xs font-medium transition-colors"
-                aria-label={tc('useOfflineMode')}
+                aria-label={tc('dismiss')}
+                title={tc('continueWithoutReconnect') || 'Continue without reconnecting'}
               >
-                {tc('useOffline')}
+                {tc('continueAnyway') || 'Continue'}
               </button>
 
               <button

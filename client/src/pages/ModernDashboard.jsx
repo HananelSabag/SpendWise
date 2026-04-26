@@ -118,21 +118,42 @@ const MobileQuickAdd = () => {
 };
 
 // ─── Auto-retry error state ───────────────────────────────────────────────────
+// Cap auto-retries at MAX_AUTO_RETRIES. Previously this retried every 8s
+// FOREVER, which on Render free-tier means hammering a sleeping/dead server
+// from every open tab — and burning the user's bandwidth + battery — for as
+// long as the page was open. After the cap we stop and require a manual click,
+// which also stops parallel tabs from DDOSing the server.
+
+const MAX_AUTO_RETRIES = 3;
 
 const DashboardError = ({ onRetry, t }) => {
   const [countdown, setCountdown] = useState(8);
+  const [attempt, setAttempt] = useState(0);
+  const exhausted = attempt >= MAX_AUTO_RETRIES;
 
   useEffect(() => {
-    if (countdown <= 0) { onRetry(); return; }
+    if (exhausted) return;            // stop the timer once we've used our retries
+    if (countdown <= 0) {
+      setAttempt(a => a + 1);
+      setCountdown(8);
+      onRetry();
+      return;
+    }
     const id = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(id);
-  }, [countdown, onRetry]);
+  }, [countdown, onRetry, exhausted]);
+
+  const handleManualRetry = () => {
+    setAttempt(0);
+    setCountdown(8);
+    onRetry();
+  };
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center p-8 max-w-sm">
         <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
-          <RefreshCw className="w-7 h-7 text-red-500 animate-spin" />
+          <RefreshCw className={cn('w-7 h-7 text-red-500', !exhausted && 'animate-spin')} />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
           {t('dashboardError')}
@@ -140,10 +161,18 @@ const DashboardError = ({ onRetry, t }) => {
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           {t('dashboardErrorMessage')}
         </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-          {t('retryingIn', { countdown }) || `Retrying in ${countdown}s…`}
-        </p>
-        <Button onClick={onRetry} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+        {!exhausted ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+            {t('retryingIn', { countdown }) || `Retrying in ${countdown}s…`}
+            {attempt > 0 && ` (attempt ${attempt + 1} / ${MAX_AUTO_RETRIES})`}
+          </p>
+        ) : (
+          <p className="text-xs text-red-500 dark:text-red-400 mb-4">
+            Auto-retries exhausted. The server isn&apos;t responding — try again manually
+            or check status.
+          </p>
+        )}
+        <Button onClick={handleManualRetry} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
           {t('reloadPage')}
         </Button>
       </div>
@@ -212,10 +241,14 @@ const MobileDashboard = ({ greeting, user, dashboardData, formatCurrency, t, nav
       {/* Quick add */}
       <MobileQuickAdd />
 
-      {/* Recent transactions */}
+      {/* Recent transactions — preload from dashboard data so we don't fire
+          a second /transactions API call. The dashboard endpoint already
+          returns recent_transactions server-side. */}
       <ModernRecentTransactionsWidget
         onViewAll={() => navigate('/transactions')}
         maxItems={6}
+        preloadedTransactions={dashboardData?.recentTransactions}
+        preloadedLoading={!dashboardData}
       />
     </div>
   </div>
@@ -259,11 +292,14 @@ const DesktopDashboard = ({
 
       {/* Main 2-column grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent transactions — takes 2/3 */}
+        {/* Recent transactions — takes 2/3.
+            Preload from dashboard data to avoid a redundant API call. */}
         <div className="xl:col-span-2">
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
             maxItems={8}
+            preloadedTransactions={dashboardData?.recentTransactions}
+            preloadedLoading={!dashboardData}
           />
         </div>
 
