@@ -82,14 +82,27 @@ describe('maintenanceGate — maintenance ON, blocked requests', () => {
     );
   });
 
-  it('redirects to /maintenance for browser (text/html) requests', async () => {
+  // BEHAVIOR CHANGE (2026-04-26): the old code redirected text/html requests
+  // to /maintenance on the API host — but that route doesn't exist on the API
+  // host (the SPA on Vercel has it). The redirect was producing 404s. The
+  // middleware now consistently returns 503 JSON for ALL clients; the client
+  // interceptor (api/client.js) routes the SPA to /maintenance on receiving
+  // the MAINTENANCE_MODE error code.
+  it('returns 503 JSON for browser (text/html) requests too', async () => {
     const { req, res, next } = mocks({
       path: '/api/v1/transactions',
       accept: 'text/html,application/xhtml+xml'
     });
     await maintenanceGate(req, res, next);
     expect(next).not.toHaveBeenCalled();
-    expect(res.redirect).toHaveBeenCalledWith(302, '/maintenance');
+    expect(res.redirect).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({ code: 'MAINTENANCE_MODE' })
+      })
+    );
   });
 
   it('blocks a regular authenticated user', async () => {
