@@ -1872,39 +1872,4 @@ transactionController.generateMissingCurrentMonthTransactions = asyncHandler(asy
   }
 });
 
-module.exports = transactionController;ransactions', {
-      userId,
-      totalTemplates: templates.length,
-      totalGenerated,
-      results
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalTemplates: templates.length,
-        totalGenerated,
-        results
-      },
-      message: `Generated ${totalGenerated} missing current month transactions`
-    });
-
-  } catch (error) {
-    logger.error('Failed to generate missing current month transactions', {
-      userId,
-      error: error.message,
-      stack: error.stack
-    });
-
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'GENERATION_FAILED',
-        message: 'Failed to generate missing current month transactions',
-        details: error.message
-      }
-    });
-  }
-});
-
 module.exports = transactionController;
