@@ -1,7 +1,5 @@
 /**
- * ✏️ PERSONAL INFO — Clean list-style display
- * View mode: labeled rows with separators (no blending boxes)
- * Edit mode: clear input fields with blue border focus
+ * ✏️ PERSONAL INFO — Controlled form with proper labels and textarea for bio
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -14,99 +12,117 @@ import { useTranslation, useNotifications } from '../../../stores';
 import { Button, Badge } from '../../ui';
 import { cn } from '../../../utils/helpers';
 
-// ── Field Row ─────────────────────────────────────────────────────────────────
+// ── Field Row — fully controlled, no local state ──────────────────────────────
 
-const FieldRow = ({ label, value, icon: Icon, placeholder, isEditing, onChange, type = 'text', readOnly = false, required = false, maxLength }) => {
-  const [localVal, setLocalVal] = useState(value || '');
+const FieldRow = ({
+  label, value, icon: Icon, placeholder,
+  isEditing, onChange, type = 'text',
+  readOnly = false, required = false,
+  maxLength, multiline = false,
+  id
+}) => {
+  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
-  useEffect(() => { setLocalVal(value || ''); }, [value]);
-
-  const handleChange = (e) => {
-    setLocalVal(e.target.value);
-    onChange?.(e.target.value);
-  };
+  const sharedInputClass = cn(
+    'w-full px-3 py-2 rounded-xl text-sm',
+    'bg-white dark:bg-gray-700/80',
+    'border-2 border-indigo-300 dark:border-indigo-600',
+    'text-gray-900 dark:text-white',
+    'placeholder-gray-400 dark:placeholder-gray-500',
+    'focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400',
+    'focus:ring-2 focus:ring-indigo-500/20',
+    'transition-colors duration-150'
+  );
 
   return (
-    <div className="py-3.5 border-b border-gray-100 dark:border-gray-700/70 last:border-0">
-      {/* Label */}
-      <div className="flex items-center gap-1 mb-1.5">
-        {Icon && <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />}
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+    <div className="py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />}
+        <label
+          htmlFor={isEditing && !readOnly ? inputId : undefined}
+          className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-default"
+        >
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
-        </span>
+        </label>
         {readOnly && (
-          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">
             Read only
           </span>
         )}
       </div>
 
-      {/* Value / Input */}
       {isEditing && !readOnly ? (
-        <input
-          type={type}
-          value={localVal}
-          onChange={handleChange}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          className={cn(
-            'w-full px-3 py-2 rounded-xl text-sm',
-            'bg-white dark:bg-gray-700',
-            'border-2 border-blue-300 dark:border-blue-600',
-            'text-gray-900 dark:text-white',
-            'placeholder-gray-400 dark:placeholder-gray-500',
-            'focus:outline-none focus:border-blue-500 dark:focus:border-blue-400',
-            'ring-0 focus:ring-2 focus:ring-blue-500/20',
-            'transition-colors'
-          )}
-        />
+        multiline ? (
+          <textarea
+            id={inputId}
+            value={value || ''}
+            onChange={e => onChange?.(e.target.value)}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            rows={3}
+            className={cn(sharedInputClass, 'resize-none leading-relaxed')}
+          />
+        ) : (
+          <input
+            id={inputId}
+            type={type}
+            value={value || ''}
+            onChange={e => onChange?.(e.target.value)}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className={sharedInputClass}
+          />
+        )
       ) : (
         <p className={cn(
           'text-sm font-medium pl-0.5',
-          value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'
+          value
+            ? 'text-gray-900 dark:text-white'
+            : 'text-gray-400 dark:text-gray-500 italic'
         )}>
           {value || placeholder}
+        </p>
+      )}
+
+      {isEditing && maxLength && (value?.length ?? 0) > 0 && (
+        <p className="text-right text-xs text-gray-400 mt-1">
+          {value?.length ?? 0}/{maxLength}
         </p>
       )}
     </div>
   );
 };
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' }) => {
   const { t, isRTL } = useTranslation('profile');
   const { addNotification } = useNotifications();
 
-  const [personalData, setPersonalData] = useState({
-    first_name: user.first_name || user.firstName || '',
-    last_name:  user.last_name  || user.lastName  || '',
-    email:      user.email      || '',
-    phone:      user.phone      || '',
-    bio:        user.bio        || '',
-    location:   user.location   || user.address   || '',
-    website:    user.website    || '',
-    birthday:   user.birthday   || user.dateOfBirth || '',
+  const buildData = (u) => ({
+    first_name: u.first_name || u.firstName || '',
+    last_name:  u.last_name  || u.lastName  || '',
+    email:      u.email      || '',
+    phone:      u.phone      || '',
+    bio:        u.bio        || '',
+    location:   u.location   || u.address   || '',
+    website:    u.website    || '',
+    birthday:   u.birthday   || u.dateOfBirth || '',
   });
 
-  const [originalData, setOriginalData] = useState({ ...personalData });
+  const [personalData, setPersonalData] = useState(() => buildData(user));
+  const [originalData, setOriginalData] = useState(() => buildData(user));
   const [isEditing, setIsEditing]       = useState(false);
+  const [isSaving, setIsSaving]         = useState(false);
 
   useEffect(() => {
-    const newData = {
-      first_name: user.first_name || user.firstName || '',
-      last_name:  user.last_name  || user.lastName  || '',
-      email:      user.email      || '',
-      phone:      user.phone      || '',
-      bio:        user.bio        || '',
-      location:   user.location   || user.address   || '',
-      website:    user.website    || '',
-      birthday:   user.birthday   || user.dateOfBirth || '',
-    };
-    setPersonalData(newData);
-    setOriginalData(newData);
-  }, [user]);
+    const d = buildData(user);
+    setPersonalData(d);
+    setOriginalData(d);
+  }, [user.email, user.first_name, user.last_name]);
+
+  const isDirty = Object.keys(personalData).some(k => personalData[k] !== originalData[k]);
 
   const update = useCallback((field, value) => {
     setPersonalData(prev => ({ ...prev, [field]: value }));
@@ -118,6 +134,8 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
       if (personalData[k] !== originalData[k]) changed[k] = personalData[k];
     });
     if (Object.keys(changed).length === 0) { setIsEditing(false); return; }
+
+    setIsSaving(true);
     try {
       await onUpdate?.(changed);
       setOriginalData(personalData);
@@ -126,6 +144,8 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
     } catch {
       setPersonalData(originalData);
       addNotification({ type: 'error', message: t('personal.updateFailed', { fallback: 'Update failed' }), duration: 4000 });
+    } finally {
+      setIsSaving(false);
     }
   }, [personalData, originalData, onUpdate, addNotification, t]);
 
@@ -134,10 +154,10 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
     setIsEditing(false);
   }, [originalData]);
 
-  if (!user || !user.email) {
+  if (!user?.email) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-indigo-500" />
       </div>
     );
   }
@@ -145,14 +165,19 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
   return (
     <div className={cn('space-y-4', className)} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
 
-      {/* Personal info card */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm overflow-hidden">
+      {/* ── Personal info card ─────────────────────────────────── */}
+      <div className={cn(
+        'bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm overflow-hidden transition-colors duration-200',
+        isEditing
+          ? 'border-indigo-200 dark:border-indigo-700/60 shadow-indigo-100 dark:shadow-indigo-900/20'
+          : 'border-gray-100 dark:border-gray-700/50'
+      )}>
 
         {/* Card header */}
         <div className={cn(
-          'flex items-center justify-between px-5 py-4 border-b',
+          'flex items-center justify-between px-5 py-4 border-b transition-colors duration-200',
           isEditing
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/50'
+            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/50'
             : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/50'
         )}>
           <div className="flex items-center gap-2">
@@ -160,42 +185,60 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               {t('personal.title', { fallback: 'Personal Information' })}
             </h3>
             {isEditing && (
-              <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full font-semibold">
                 Editing
               </span>
             )}
           </div>
+
           <div className="flex items-center gap-2">
             <Badge variant={user.email_verified ? 'success' : 'secondary'} size="sm">
               {user.email_verified
                 ? <><CheckCircle className="w-3 h-3 mr-1" />{t('personal.verified', { fallback: 'Verified' })}</>
                 : <><AlertCircle className="w-3 h-3 mr-1" />{t('personal.unverified', { fallback: 'Unverified' })}</>}
             </Badge>
+
             {isEditing ? (
               <div className="flex items-center gap-1.5">
-                <Button variant="outline" size="sm" onClick={handleCancel} disabled={isUpdating}
-                  className="h-7 px-2.5 text-xs">
-                  <X className="w-3.5 h-3.5 mr-1" />Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={isUpdating}
-                  className="h-7 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white">
-                  <Save className="w-3.5 h-3.5 mr-1" />
-                  {isUpdating ? 'Saving...' : 'Save'}
-                </Button>
+                <button
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                  className="h-7 px-2.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving || !isDirty}
+                  className={cn(
+                    'h-7 px-2.5 text-xs font-semibold rounded-lg text-white transition-all duration-150 cursor-pointer flex items-center gap-1',
+                    isDirty && !isSaving
+                      ? 'bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-500/30'
+                      : 'bg-indigo-300 dark:bg-indigo-800 cursor-not-allowed opacity-60'
+                  )}
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {isSaving ? 'Saving…' : 'Save'}
+                </button>
               </div>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}
-                className="h-7 px-2.5 text-xs">
-                <Edit3 className="w-3.5 h-3.5 mr-1" />Edit
-              </Button>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="h-7 px-2.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all duration-150 cursor-pointer flex items-center gap-1"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit
+              </button>
             )}
           </div>
         </div>
 
-        {/* Fields */}
+        {/* Fields grid */}
         <div className="px-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
             <FieldRow
+              id="first-name"
               label={t('personal.firstName', { fallback: 'First Name' })}
               value={personalData.first_name}
               onChange={v => update('first_name', v)}
@@ -205,6 +248,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               isEditing={isEditing}
             />
             <FieldRow
+              id="last-name"
               label={t('personal.lastName', { fallback: 'Last Name' })}
               value={personalData.last_name}
               onChange={v => update('last_name', v)}
@@ -214,6 +258,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               isEditing={isEditing}
             />
             <FieldRow
+              id="email"
               label={t('personal.email', { fallback: 'Email' })}
               value={personalData.email}
               icon={Mail}
@@ -223,6 +268,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               required
             />
             <FieldRow
+              id="phone"
               label={t('personal.phone', { fallback: 'Phone' })}
               value={personalData.phone}
               onChange={v => update('phone', v)}
@@ -233,6 +279,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               isEditing={isEditing}
             />
             <FieldRow
+              id="birthday"
               label={t('personal.birthday', { fallback: 'Birthday' })}
               value={personalData.birthday}
               onChange={v => update('birthday', v)}
@@ -242,6 +289,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               isEditing={isEditing}
             />
             <FieldRow
+              id="location"
               label={t('personal.location', { fallback: 'Location' })}
               value={personalData.location}
               onChange={v => update('location', v)}
@@ -254,6 +302,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
 
           {/* Full-width fields */}
           <FieldRow
+            id="website"
             label={t('personal.website', { fallback: 'Website' })}
             value={personalData.website}
             onChange={v => update('website', v)}
@@ -263,18 +312,20 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
             isEditing={isEditing}
           />
           <FieldRow
+            id="bio"
             label={t('personal.bio', { fallback: 'Bio' })}
             value={personalData.bio}
             onChange={v => update('bio', v)}
             icon={FileText}
-            placeholder={t('personal.bioPlaceholder', { fallback: 'Tell us about yourself...' })}
+            placeholder={t('personal.bioPlaceholder', { fallback: 'Tell us about yourself…' })}
             maxLength={500}
+            multiline
             isEditing={isEditing}
           />
         </div>
       </div>
 
-      {/* Account info card */}
+      {/* ── Account info card ──────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/50">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">
@@ -283,7 +334,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
         </div>
         <div className="px-5">
           <div className="py-3.5 border-b border-gray-100 dark:border-gray-700/70">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {t('account.memberSince', { fallback: 'Member Since' })}
             </span>
             <div className="flex items-center justify-between mt-1.5">
@@ -291,12 +342,14 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
                 {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
               </p>
               <Badge variant="outline">
-                {user.role === 'admin' ? t('account.admin', { fallback: 'Admin' }) : t('account.user', { fallback: 'User' })}
+                {user.role === 'admin'
+                  ? t('account.admin', { fallback: 'Admin' })
+                  : t('account.user',  { fallback: 'User' })}
               </Badge>
             </div>
           </div>
           <div className="py-3.5">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {t('account.lastLogin', { fallback: 'Last Login' })}
             </span>
             <p className="text-sm font-medium text-gray-900 dark:text-white mt-1.5">
