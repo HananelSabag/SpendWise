@@ -32,6 +32,7 @@ export default {
     balancesShown: "יתרות מוצגות",
     hide: "הסתר יתרות",
     show: "הצג יתרות",
+    spent: "הוצא",
     refresh: "רענון יתרה",
     refreshed: "יתרה רוענה בהצלחה",
     noData: "לא קיימים נתוני יתרה",
