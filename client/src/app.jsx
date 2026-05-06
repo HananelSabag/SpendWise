@@ -219,14 +219,28 @@ const SmartRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
+// ✅ PWA update handler — reloads the page when a new service worker takes control
+// so users always get the latest version immediately after deploy
+const usePWAAutoReload = () => {
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const reload = () => window.location.reload();
+    navigator.serviceWorker.addEventListener('controllerchange', reload);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', reload);
+  }, []);
+};
+
 // ✅ App Content - SIMPLIFIED
 const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // ✅ Auto-dismiss loading toasts on navigation
   useToastCleanup();
+
+  // ✅ Auto-reload on PWA service worker update
+  usePWAAutoReload();
 
   const isQuickExpensePage = location.pathname === '/quick-expense';
 
