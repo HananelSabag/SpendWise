@@ -1,5 +1,6 @@
 export default {
   title: "רשימת קניות",
+  manageList: "נהל את הרשימות המשותפות שלך",
   loading: "טוען רשימת קניות...",
   itemsCount: "{{count}} פריטים",
   addItemAria: "הוסף פריט",

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications, useTranslationStore } from '../../stores';
 import { useToast } from '../../hooks/useToast';
 import BottomSheet from './BottomSheet';
 
@@ -28,6 +28,9 @@ const MobileBottomNav = () => {
   const isAdmin = useIsAdmin();
 
   const { unreadCount, markAllRead } = useNotifications();
+  // Subscribe to loadedModules so useMemos re-run when translations finish loading
+  // (t() is a stable reference that doesn't change identity on translation load)
+  const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
 
   const totalBadge = unreadCount;
 
@@ -63,7 +66,7 @@ const MobileBottomNav = () => {
     null, // center FAB slot
     { key: 'analytics',    label: t('nav.analytics')    || 'Analytics',    icon: BarChart3, href: '/analytics' },
     { key: 'profile',      label: t('nav.profile')      || 'Profile',      icon: User,     href: '/profile' },
-  ], [t]);
+  ], [t, loadedModulesCount]);
 
   const isActive = useCallback(
     (tab) => {
@@ -95,7 +98,7 @@ const MobileBottomNav = () => {
       shadow: 'shadow-emerald-500/30',
       action: () => { handleClose(); dispatch('transaction:add', { type: 'income' }); },
     },
-  ], [t, dispatch, handleClose]);
+  ], [t, dispatch, handleClose, loadedModulesCount]);
 
   const toolActions = useMemo(() => [
     {
@@ -138,7 +141,7 @@ const MobileBottomNav = () => {
       shadow: 'shadow-yellow-500/30',
       action: () => { handleClose(); navigate('/admin'); },
     }] : []),
-  ], [t, isAdmin, dispatch, handleClose, navigate]);
+  ], [t, isAdmin, dispatch, handleClose, navigate, loadedModulesCount]);
 
   return (
     <>

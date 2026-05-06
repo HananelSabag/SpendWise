@@ -1,5 +1,6 @@
 export default {
   title: "Shopping List",
+  manageList: "Manage your shared lists",
   loading: "Loading shopping list...",
   itemsCount: "{{count}} items",
   addItemAria: "Add item",
