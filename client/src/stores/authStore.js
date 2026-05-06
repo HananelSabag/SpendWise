@@ -344,9 +344,11 @@ export const useAuthStore = create(
                 // Server unreachable / timed out — proceed with local cleanup anyway.
               }
 
-              // ✅ FIX: Clear ALL tokens and auth data  
+              // ✅ FIX: Clear ALL tokens and auth data
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
+              // Clear TanStack Query persisted cache so next user doesn't see stale data
+              try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
               // Clear session-scoped UI prefs
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
@@ -380,6 +382,7 @@ export const useAuthStore = create(
               localStorage.removeItem('accessToken');
               localStorage.removeItem('authToken');
               localStorage.removeItem('refreshToken');
+              try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');

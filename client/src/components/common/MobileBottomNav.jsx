@@ -68,7 +68,7 @@ const MobileBottomNav = () => {
     { key: 'transactions', label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
     null, // center FAB slot
     { key: 'analytics',   label: t('nav.analytics')    || 'Analytics',    icon: BarChart3,  href: '/analytics' },
-    { key: 'profile',     label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile' },
+    { key: 'profile',     label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile',      isProfile: true },
   ], [t, loadedModulesCount]);
 
   const isActive = useCallback(
@@ -127,14 +127,6 @@ const MobileBottomNav = () => {
       gradient: 'from-amber-500 to-orange-500',
       shadow: 'shadow-amber-500/30',
       action: () => { handleClose(); dispatch('open-exchange'); },
-    },
-    {
-      key: 'profile',
-      label: t('nav.profile') || 'Profile',
-      icon: User,
-      gradient: 'from-blue-400 to-indigo-500',
-      shadow: 'shadow-blue-400/30',
-      action: () => { handleClose(); navigate('/profile'); },
     },
     {
       key: 'help',
@@ -219,18 +211,6 @@ const MobileBottomNav = () => {
           const Icon = tab.icon;
           const active = isActive(tab);
 
-          // Profile tab — embed the full NotificationBell inside so bell+badge is visible on mobile
-          if (tab.key === 'profile') {
-            return (
-              <div key={tab.key} className="flex flex-col items-center justify-end py-2 flex-1 min-w-0">
-                <NotificationBell />
-                <span className="text-[10px] font-medium mt-0.5 text-gray-400 dark:text-gray-500">
-                  {t('nav.alerts') || 'Alerts'}
-                </span>
-              </div>
-            );
-          }
-
           return (
             <button
               key={tab.key}
@@ -274,6 +254,19 @@ const MobileBottomNav = () => {
         title={t('common.quickActions') || 'Quick Actions'}
       >
         <div className="space-y-4 pb-2">
+
+          {/* ── Notifications row ────────────────────────────────────── */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {t('nav.notifications') || 'Notifications'}
+              {unreadCount > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </span>
+            <NotificationBell />
+          </div>
 
           {/* ── Shopping — featured full-width card ─────────────────── */}
           <motion.button

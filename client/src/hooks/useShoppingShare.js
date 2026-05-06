@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-
-const MEMBERS_KEY  = ['shopping-members'];
-const INVITES_KEY  = ['shopping-invitations'];
-const ITEMS_KEY    = ['shopping-items'];
+import useAuthStore from '../stores/authStore';
 
 export function useShoppingShare() {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
+
+  const MEMBERS_KEY = ['shopping-members', userId];
+  const INVITES_KEY = ['shopping-invitations', userId];
+  const ITEMS_KEY   = ['shopping-items', userId];
 
   const membersQuery = useQuery({
     queryKey: MEMBERS_KEY,
+    enabled: !!userId,
     queryFn: async () => {
       const r = await api.shopping.getMembers();
       if (!r.success) throw new Error('Failed to fetch members');
@@ -21,6 +24,7 @@ export function useShoppingShare() {
 
   const invitationsQuery = useQuery({
     queryKey: INVITES_KEY,
+    enabled: !!userId,
     queryFn: async () => {
       const r = await api.shopping.getInvitations();
       if (!r.success) throw new Error('Failed to fetch invitations');

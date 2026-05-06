@@ -31,5 +31,7 @@ export default {
   recent: "אחרונים",
   favorites: "מועדפים",
   exchange: "המרת מטבעות",
-  recurring: "עסקאות חוזרות"
+  recurring: "עסקאות חוזרות",
+  alerts: "התראות",
+  notifications: "התראות"
 };
