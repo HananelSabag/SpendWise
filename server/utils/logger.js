@@ -104,10 +104,10 @@ if (process.env.NODE_ENV !== 'production') {
     handleRejections: true
   }));
 } else {
-  // Production: info+ to stdout so Render shows startup logs and warnings
+  // Production: clean single-line output for Render logs
   logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-    level: 'info'
+    level: 'info',
+    format: winston.format.printf(({ level, message }) => `${level}: ${message}`),
   }));
 }
 
