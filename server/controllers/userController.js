@@ -25,8 +25,8 @@ const userController = {
    */
   register: asyncHandler(async (req, res) => {
     const start = Date.now();
-    const { email, username, password } = req.body;
-    
+    const { email, username, password, firstName, lastName } = req.body;
+
     if (!email || !username || !password) {
       throw { ...errorCodes.MISSING_REQUIRED };
     }
@@ -70,7 +70,7 @@ const userController = {
       }
 
       // Create user with optimized model
-      const user = await User.create(email, username, password);
+      const user = await User.create(email, username, password, { firstName, lastName });
 
       // Generate verification token
       const verificationToken = generateVerificationToken();
@@ -93,7 +93,7 @@ const userController = {
 
       if (requireVerification) {
         // Send verification email (async - don't wait)
-        emailService.sendVerificationEmail(user.email, user.username, verificationToken)
+        emailService.sendVerificationEmail(user.email, user.first_name || user.username, verificationToken)
           .catch(error => {
             logger.error('Failed to send verification email', {
               userId: user.id,
