@@ -10,7 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, Plus, BarChart3, User,
   PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, HelpCircle,
-  Sun, Moon, Globe, LogOut
+  Sun, Moon, Globe, LogOut, ShoppingCart
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -131,6 +131,14 @@ const MobileBottomNav = () => {
       gradient: 'from-amber-400 to-orange-500',
       shadow: 'shadow-amber-400/40',
       action: () => { setMenuOpen(false); dispatch('open-exchange'); },
+    },
+    {
+      key: 'shopping',
+      label: 'רשימת קניות',
+      icon: ShoppingCart,
+      gradient: 'from-emerald-400 to-teal-600',
+      shadow: 'shadow-emerald-400/40',
+      action: () => { setMenuOpen(false); navigate('/shopping'); },
     },
     {
       key: 'help',

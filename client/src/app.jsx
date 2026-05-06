@@ -378,6 +378,17 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          {/* ✅ Shopping Wishlist Route */}
+          <Route path="/shopping" element={
+            <ProtectedRoute>
+              <RouteErrorBoundary routeName="Shopping">
+                <Suspense fallback={<RouteLoadingFallback route="shopping" />}>
+                  <LazyComponents.ShoppingWishlistPage />
+                </Suspense>
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          } />
+
           {/* ✅ Quick Expense Route */}
           <Route path="/quick-expense" element={
             <ProtectedRoute>

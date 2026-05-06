@@ -13,6 +13,7 @@ import categoriesAPI from './categories.js'; // ✅ ADD: Import categories API
 import performanceAPI from './performance.js';
 import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
 import transactionAPI from './transactions.js'; // ✅ ADD: Import transaction API
+import shoppingAPI from './shopping.js';
 
 /**
  * 🎯 Unified API Export
@@ -76,6 +77,9 @@ export const api = {
   
   // ✅ ADD: Onboarding Management
   onboarding: onboardingAPI,
+
+  // Shopping Wishlist
+  shopping: shoppingAPI,
   
   // ✅ ENHANCED: Export functionality with PDF support
   export: {
