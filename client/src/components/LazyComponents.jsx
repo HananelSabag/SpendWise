@@ -61,6 +61,11 @@ export const AdminUsers = createLazyComponent(
   'AdminUsers'
 );
 
+export const ShoppingWishlistPage = createLazyComponent(
+  () => import('../pages/ShoppingWishlistPage.jsx'),
+  'ShoppingWishlistPage'
+);
+
 export const AdminSettings = createLazyComponent(
   () => import('../pages/admin/AdminSettings.jsx'),
   'AdminSettings'

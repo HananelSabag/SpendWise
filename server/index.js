@@ -287,6 +287,10 @@ try {
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');
 
+  logger.debug('Loading shopping routes...');
+  app.use(`${API_VERSION}/shopping`, require('./routes/shoppingRoutes'));
+  logger.debug('✅ Shopping routes loaded');
+
   // ✅ FIXED: Re-enable analytics routes 
   try {
     logger.debug('Loading analytics routes...');
