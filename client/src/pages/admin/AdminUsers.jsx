@@ -4,9 +4,9 @@
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-import React, { useState, useMemo, useCallback, startTransition } from 'react';
+import React, { useState, useMemo, useCallback, startTransition, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   ArrowLeft, Search, Filter, UserCheck,
   Shield, Crown, User, Ban, Trash2,
@@ -57,15 +57,16 @@ const AdminUsers = () => {
   } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () => api.admin.users.getAll({}),
-    keepPreviousData: true,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    onError: (err) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.usersLoadFailed', { fallback: 'Failed to load users' }),
-      });
-    },
+    placeholderData: keepPreviousData,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    if (isError) {
+      addNotification({ type: 'error', message: t('errors.usersLoadFailed', { fallback: 'Failed to load users' }) });
+    }
+  }, [isError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // User action mutations
   const blockUserMutation = useMutation({

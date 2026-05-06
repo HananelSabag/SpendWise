@@ -230,7 +230,7 @@ const ModernUsersTable = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState(new Set());
-  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'asc' });
   const [filterConfig, setFilterConfig] = useState({
     role: 'all',
     status: 'all',

@@ -285,6 +285,7 @@ const AppContent = () => {
       {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
       {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
 
+
       <main className="flex-grow lg:pb-0 pb-20">
         <Routes>
           {/* ✅ Public Routes */}
