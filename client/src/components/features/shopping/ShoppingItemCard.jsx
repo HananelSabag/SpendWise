@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, Trash2, ExternalLink, CheckCircle2, Circle } from 'lucide-react';
 import { cn, currency } from '../../../utils/helpers';
 import { CATEGORIES } from './ShoppingBottomSheet';
+import { useTranslation } from '../../../stores';
 
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
+  const { t } = useTranslation('shopping');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -59,7 +61,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
               onClick={() => onToggleBought(item)}
               disabled={confirmDelete}
               className="mt-0.5 flex-shrink-0 min-h-[24px] min-w-[24px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={bought ? 'סמן כלא נרכש' : 'סמן כנרכש'}
+              aria-label={bought ? t('card.markAsNotBought') : t('card.markAsBought')}
             >
               {bought
                 ? <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2} />
@@ -94,7 +96,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
             cat.color
           )}>
             <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', cat.dot)} />
-            {cat.label}
+            {t(`categories.${cat.key}`)}
           </span>
         </div>
 
@@ -121,7 +123,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
               )}
             >
               <ExternalLink className="w-3.5 h-3.5" strokeWidth={2.5} />
-              קנה עכשיו
+              {t('card.buyNow')}
             </a>
           )}
 
@@ -136,7 +138,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
                 'text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50',
                 'transition-all duration-150'
               )}
-              aria-label="ערוך פריט"
+              aria-label={t('card.editAria')}
             >
               <Pencil className="w-3.5 h-3.5" strokeWidth={2.5} />
             </motion.button>
@@ -160,7 +162,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
                   )}
                 >
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  מחק?
+                  {t('card.confirmDelete')}
                 </motion.button>
               ) : (
                 <motion.button
@@ -176,7 +178,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
                     'text-gray-500 hover:text-red-600 hover:border-red-300 hover:bg-red-50',
                     'transition-all duration-150'
                   )}
-                  aria-label="מחק פריט"
+                  aria-label={t('card.deleteAria')}
                 >
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
                 </motion.button>

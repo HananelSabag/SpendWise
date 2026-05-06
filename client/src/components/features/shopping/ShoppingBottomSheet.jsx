@@ -7,14 +7,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Link2, StickyNote, Tag, DollarSign, Check } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
+import { useTranslation } from '../../../stores';
 
 export const CATEGORIES = [
-  { value: 'ריהוט',       label: 'ריהוט',        color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
-  { value: 'מטבח',        label: 'מטבח',         color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
-  { value: 'חדר שינה',    label: 'חדר שינה',     color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
-  { value: 'אלקטרוניקה', label: 'אלקטרוניקה',   color: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500'   },
-  { value: 'ביגוד',       label: 'ביגוד',        color: 'bg-pink-100 text-pink-700 border-pink-200',       dot: 'bg-pink-500'   },
-  { value: 'אחר',         label: 'אחר',          color: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400'   },
+  { value: 'ריהוט',       key: 'furniture',    color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
+  { value: 'מטבח',        key: 'kitchen',      color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+  { value: 'חדר שינה',    key: 'bedroom',      color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+  { value: 'אלקטרוניקה',  key: 'electronics',  color: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500'   },
+  { value: 'ביגוד',       key: 'clothing',     color: 'bg-pink-100 text-pink-700 border-pink-200',       dot: 'bg-pink-500'   },
+  { value: 'אחר',         key: 'other',        color: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400'   },
 ];
 
 const EMPTY = { name: '', category: 'אחר', price_ils: '', buy_url: '', notes: '' };
@@ -49,6 +50,7 @@ const ErrorMsg = ({ msg }) => (
 );
 
 const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSaving = false }) => {
+  const { t } = useTranslation('shopping');
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const nameRef = useRef(null);
@@ -80,9 +82,9 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = 'שם המוצר הוא שדה חובה';
+    if (!form.name.trim()) e.name = t('validation.nameRequired');
     if (form.buy_url && !/^https?:\/\//i.test(form.buy_url.trim())) {
-      e.buy_url = 'הקישור חייב להתחיל ב־https://';
+      e.buy_url = t('validation.urlInvalid');
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -103,21 +105,21 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title={editItem ? 'עריכת פריט' : 'הוספת פריט לרשימה'}
+      title={editItem ? t('sheet.editTitle') : t('sheet.addTitle')}
       height="auto"
     >
       <div className="flex flex-col gap-5 pb-6" dir="rtl">
 
         {/* Name */}
         <div>
-          <FieldLabel icon={ShoppingCart} label="שם המוצר" required />
+          <FieldLabel icon={ShoppingCart} label={t('fields.name.label')} required />
           <input
             ref={nameRef}
             type="text"
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
-            onBlur={() => !form.name.trim() && setErrors((p) => ({ ...p, name: 'שם המוצר הוא שדה חובה' }))}
-            placeholder="למשל: כסא גיימינג, מיקסר..."
+            onBlur={() => !form.name.trim() && setErrors((p) => ({ ...p, name: t('validation.nameRequired') }))}
+            placeholder={t('fields.name.placeholder')}
             autoComplete="off"
             className={cn(inputBase, errors.name && 'border-red-400 focus:ring-red-400/40')}
           />
@@ -126,7 +128,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
         {/* Category picker */}
         <div>
-          <FieldLabel icon={Tag} label="קטגוריה" />
+          <FieldLabel icon={Tag} label={t('fields.category.label')} />
           <div className="grid grid-cols-3 gap-2">
             {CATEGORIES.map((cat) => {
               const active = form.category === cat.value;
@@ -145,7 +147,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
                   )}
                 >
                   <span className={cn('w-2 h-2 rounded-full flex-shrink-0', active ? cat.dot : 'bg-gray-300 dark:bg-gray-600')} />
-                  {cat.label}
+                  {t(`categories.${cat.key}`)}
                   {active && <Check className="w-3 h-3 mr-auto" strokeWidth={2.5} />}
                 </motion.button>
               );
@@ -155,7 +157,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
         {/* Price */}
         <div>
-          <FieldLabel icon={DollarSign} label="מחיר משוער ₪" />
+          <FieldLabel icon={DollarSign} label={t('fields.price.label')} />
           <div className="relative">
             <input
               type="number"
@@ -176,14 +178,14 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
         {/* URL */}
         <div>
-          <FieldLabel icon={Link2} label="קישור לקנייה (אופציונלי)" />
+          <FieldLabel icon={Link2} label={t('fields.url.label')} />
           <input
             type="url"
             value={form.buy_url}
             onChange={(e) => set('buy_url', e.target.value)}
             onBlur={() => {
               if (form.buy_url && !/^https?:\/\//i.test(form.buy_url.trim())) {
-                setErrors((p) => ({ ...p, buy_url: 'הקישור חייב להתחיל ב־https://' }));
+                setErrors((p) => ({ ...p, buy_url: t('validation.urlInvalid') }));
               }
             }}
             placeholder="https://..."
@@ -196,12 +198,12 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
         {/* Notes */}
         <div>
-          <FieldLabel icon={StickyNote} label="הערות (אופציונלי)" />
+          <FieldLabel icon={StickyNote} label={t('fields.notes.label')} />
           <textarea
             rows={2}
             value={form.notes}
             onChange={(e) => set('notes', e.target.value)}
-            placeholder="צבע, גודל, מפרט..."
+            placeholder={t('fields.notes.placeholder')}
             className={cn(inputBase, 'resize-none')}
           />
         </div>
@@ -226,7 +228,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
           ) : (
             <>
               <Check className="w-5 h-5" strokeWidth={2.5} />
-              {editItem ? 'שמור שינויים' : 'הוסף לרשימה'}
+              {editItem ? t('sheet.saveChanges') : t('sheet.addToList')}
             </>
           )}
         </motion.button>

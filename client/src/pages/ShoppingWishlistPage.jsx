@@ -18,11 +18,12 @@ import { useShoppingItems } from '../hooks/useShoppingItems';
 import ShoppingBottomSheet, { CATEGORIES } from '../components/features/shopping/ShoppingBottomSheet';
 import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import { PageLoader } from '../components/ui/LoadingSpinner';
+import { useTranslation } from '../stores';
 
 // ──────────────────────────────────────────
 // Empty state
 // ──────────────────────────────────────────
-const EmptyState = ({ onAdd, filtered }) => (
+const EmptyState = ({ onAdd, filtered, t }) => (
   <motion.div
     initial={{ opacity: 0, y: 24 }}
     animate={{ opacity: 1, y: 0 }}
@@ -41,12 +42,10 @@ const EmptyState = ({ onAdd, filtered }) => (
       }
     </div>
     <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-      {filtered ? 'אין פריטים בקטגוריה זו' : 'הרשימה ריקה'}
+      {filtered ? t('empty.filteredTitle') : t('empty.title')}
     </h3>
     <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 max-w-xs leading-relaxed">
-      {filtered
-        ? 'נסה לבחור קטגוריה אחרת או הסר את הפילטר'
-        : 'הוסף פריטים שתרצה לקנות, עם מחיר וקישור — הכל במקום אחד'}
+      {filtered ? t('empty.filteredDescription') : t('empty.description')}
     </p>
     {!filtered && (
       <motion.button
@@ -60,7 +59,7 @@ const EmptyState = ({ onAdd, filtered }) => (
         )}
       >
         <Plus className="w-4 h-4" strokeWidth={2.5} />
-        הוסף פריט ראשון
+        {t('empty.addFirst')}
       </motion.button>
     )}
   </motion.div>
@@ -71,24 +70,29 @@ const EmptyState = ({ onAdd, filtered }) => (
 // ──────────────────────────────────────────
 const ShoppingWishlistPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('shopping');
+  const { t: tc } = useTranslation('common');
   const {
     items, isLoading, isError, refetch,
     createItem, updateItem, deleteItem, toggleBought,
     isCreating, isUpdating, isDeleting,
   } = useShoppingItems();
 
-  const [activeCategory, setActiveCategory] = useState('הכל');
+  const [activeCategory, setActiveCategory] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  // 'null' means "all" — derived from translation so it updates with language changes
+  const ALL_KEY = t('allCategories');
 
   // Single pass: category tabs (ordered by CATEGORIES), per-cat counts, filtered+split lists, pending total
   const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal } = useMemo(() => {
     const counts = {};
     items.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
 
-    const tabs = ['הכל', ...CATEGORIES.filter((c) => counts[c.value]).map((c) => c.value)];
+    const tabs = [null, ...CATEGORIES.filter((c) => counts[c.value]).map((c) => c.value)];
 
-    const filtered = activeCategory === 'הכל' ? items : items.filter((i) => i.category === activeCategory);
+    const filtered = activeCategory === null ? items : items.filter((i) => i.category === activeCategory);
     const u = filtered.filter((i) => !i.is_bought);
     const b = filtered.filter((i) => i.is_bought);
     const pending = u.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
@@ -98,8 +102,8 @@ const ShoppingWishlistPage = () => {
 
   // Auto-reset category filter when filtered list becomes empty (e.g. after deletion)
   useEffect(() => {
-    if (activeCategory !== 'הכל' && filteredItems.length === 0 && items.length > 0) {
-      setActiveCategory('הכל');
+    if (activeCategory !== null && filteredItems.length === 0 && items.length > 0) {
+      setActiveCategory(null);
     }
   }, [activeCategory, filteredItems.length, items.length]);
 
@@ -128,14 +132,14 @@ const ShoppingWishlistPage = () => {
     setEditingItem(null);
   }, []);
 
-  if (isLoading) return <PageLoader text="טוען רשימת קניות..." />;
+  if (isLoading) return <PageLoader text={t('loading')} />;
 
   if (isError) return (
     <div className="min-h-screen flex items-center justify-center p-8 text-center" dir="rtl">
       <div>
         <Package className="w-12 h-12 text-red-400 mx-auto mb-3" strokeWidth={1.5} />
-        <p className="text-gray-600 dark:text-gray-400 mb-4">שגיאה בטעינת הרשימה</p>
-        <button onClick={() => refetch()} className="text-blue-600 font-semibold underline">נסה שוב</button>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">{t('error.title')}</p>
+        <button onClick={() => refetch()} className="text-blue-600 font-semibold underline">{tc('retry')}</button>
       </div>
     </div>
   );
@@ -158,17 +162,17 @@ const ShoppingWishlistPage = () => {
               'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
               'text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-colors'
             )}
-            aria-label="חזור"
+            aria-label={tc('back')}
           >
             <ArrowRight className="w-5 h-5" strokeWidth={2} />
           </motion.button>
 
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight">
-              רשימת קניות
+              {t('title')}
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {items.length} פריטים
+              {t('itemsCount', { count: items.length })}
             </p>
           </div>
 
@@ -197,7 +201,7 @@ const ShoppingWishlistPage = () => {
               'bg-gradient-to-br from-blue-600 to-indigo-600',
               'text-white shadow-md shadow-blue-500/30 hover:shadow-lg transition-shadow'
             )}
-            aria-label="הוסף פריט"
+            aria-label={t('addItemAria')}
           >
             <Plus className="w-5 h-5" strokeWidth={2.5} />
           </motion.button>
@@ -208,11 +212,12 @@ const ShoppingWishlistPage = () => {
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
             {categoryTabs.map((cat) => {
               const active = activeCategory === cat;
-              const catObj = CATEGORIES.find((c) => c.value === cat);
-              const count = cat === 'הכל' ? items.length : (categoryCounts[cat] || 0);
+              const catObj = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
+              const count = cat === null ? items.length : (categoryCounts[cat] || 0);
+              const displayLabel = cat === null ? ALL_KEY : t(`categories.${catObj?.key}`);
               return (
                 <motion.button
-                  key={cat}
+                  key={cat ?? '__all__'}
                   whileTap={{ scale: 0.94 }}
                   onClick={() => setActiveCategory(cat)}
                   className={cn(
@@ -226,7 +231,7 @@ const ShoppingWishlistPage = () => {
                   {catObj && !active && (
                     <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', catObj.dot)} />
                   )}
-                  {cat}
+                  {displayLabel}
                   {active && (
                     <span className="bg-white/30 text-white text-[10px] font-extrabold px-1.5 rounded-full">
                       {count}
@@ -242,9 +247,9 @@ const ShoppingWishlistPage = () => {
       {/* ── Content ── */}
       <div className="flex-1 px-4 py-4 pb-28 max-w-lg mx-auto w-full">
         {items.length === 0 ? (
-          <EmptyState onAdd={handleAdd} filtered={false} />
+          <EmptyState onAdd={handleAdd} filtered={false} t={t} />
         ) : filteredItems.length === 0 ? (
-          <EmptyState onAdd={handleAdd} filtered />
+          <EmptyState onAdd={handleAdd} filtered t={t} />
         ) : (
           <AnimatePresence mode="popLayout">
             {unbought.length > 0 && (
@@ -275,7 +280,7 @@ const ShoppingWishlistPage = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2} />
                   <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    נרכש ({bought.length})
+                    {t('boughtSection', { count: bought.length })}
                   </span>
                 </div>
                 <div className="flex flex-col gap-3">
@@ -312,7 +317,7 @@ const ShoppingWishlistPage = () => {
           <div className="max-w-lg mx-auto flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                סה״כ לרכישה
+                {t('totalPending')}
               </span>
               <motion.span
                 key={pendingTotal}
@@ -327,11 +332,11 @@ const ShoppingWishlistPage = () => {
             <div className="flex items-center gap-3">
               {bought.length > 0 && (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  {bought.length} נרכשו
+                  {t('boughtItems', { count: bought.length })}
                 </span>
               )}
               <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                {unbought.length} פריטים ממתינים
+                {t('pendingItems', { count: unbought.length })}
               </span>
             </div>
           </div>
