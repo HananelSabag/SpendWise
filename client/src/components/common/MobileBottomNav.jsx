@@ -16,7 +16,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
 import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications, useTranslationStore } from '../../stores';
 import { useToast } from '../../hooks/useToast';
+import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';
+import NotificationBell from '../layout/NotificationBell';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
@@ -28,11 +30,12 @@ const MobileBottomNav = () => {
   const isAdmin = useIsAdmin();
 
   const { unreadCount, markAllRead } = useNotifications();
+  const { pendingInvitationsCount } = useShoppingShare();
   // Subscribe to loadedModules so useMemos re-run when translations finish loading
   // (t() is a stable reference that doesn't change identity on translation load)
   const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
 
-  const totalBadge = unreadCount;
+  const totalBadge = unreadCount + pendingInvitationsCount;
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -61,11 +64,11 @@ const MobileBottomNav = () => {
   }, [unreadCount, markAllRead]);
 
   const tabs = useMemo(() => [
-    { key: 'dashboard',     label: t('nav.dashboard')    || 'Home',         icon: Home,     href: '/',             exact: true },
-    { key: 'transactions',  label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
+    { key: 'dashboard',    label: t('nav.dashboard')    || 'Home',         icon: Home,       href: '/',             exact: true },
+    { key: 'transactions', label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
     null, // center FAB slot
-    { key: 'analytics',    label: t('nav.analytics')    || 'Analytics',    icon: BarChart3, href: '/analytics' },
-    { key: 'profile',      label: t('nav.profile')      || 'Profile',      icon: User,     href: '/profile' },
+    { key: 'analytics',   label: t('nav.analytics')    || 'Analytics',    icon: BarChart3,  href: '/analytics' },
+    { key: 'profile',     label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile' },
   ], [t, loadedModulesCount]);
 
   const isActive = useCallback(
@@ -124,6 +127,14 @@ const MobileBottomNav = () => {
       gradient: 'from-amber-500 to-orange-500',
       shadow: 'shadow-amber-500/30',
       action: () => { handleClose(); dispatch('open-exchange'); },
+    },
+    {
+      key: 'profile',
+      label: t('nav.profile') || 'Profile',
+      icon: User,
+      gradient: 'from-blue-400 to-indigo-500',
+      shadow: 'shadow-blue-400/30',
+      action: () => { handleClose(); navigate('/profile'); },
     },
     {
       key: 'help',
@@ -207,6 +218,18 @@ const MobileBottomNav = () => {
 
           const Icon = tab.icon;
           const active = isActive(tab);
+
+          // Profile tab — embed the full NotificationBell inside so bell+badge is visible on mobile
+          if (tab.key === 'profile') {
+            return (
+              <div key={tab.key} className="flex flex-col items-center justify-end py-2 flex-1 min-w-0">
+                <NotificationBell />
+                <span className="text-[10px] font-medium mt-0.5 text-gray-400 dark:text-gray-500">
+                  {t('nav.alerts') || 'Alerts'}
+                </span>
+              </div>
+            );
+          }
 
           return (
             <button
