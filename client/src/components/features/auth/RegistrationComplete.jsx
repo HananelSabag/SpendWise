@@ -8,9 +8,9 @@
 import React, { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
+import {
   CheckCircle, Star, Sparkles, ArrowRight, Trophy,
-  Zap, Heart, Target, Gift, Crown
+  Zap, Heart, Target, Gift, Crown, Mail
 } from 'lucide-react';
 
 // ✅ Import Zustand stores and components
@@ -21,38 +21,40 @@ import { cn } from '../../../utils/helpers';
 /**
  * ✅ Registration Complete Component
  */
-const RegistrationComplete = ({ 
+const RegistrationComplete = ({
   userName,
   userEmail,
   securityScore = 50,
   onContinue,
   autoRedirect = true,
   redirectDelay = 3000,
-  className = '' 
+  requiresVerification = false,
+  className = ''
 }) => {
   const { t, isRTL } = useTranslation('auth');
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
-  // ✅ Auto redirect to dashboard
+  const redirectTarget = requiresVerification ? '/login' : '/dashboard';
+
+  // Auto redirect
   useEffect(() => {
     if (autoRedirect) {
       const timer = setTimeout(() => {
-        navigate('/dashboard');
+        navigate(redirectTarget, requiresVerification ? { state: { registrationSuccess: true } } : undefined);
       }, redirectDelay);
 
       return () => clearTimeout(timer);
     }
   }, [autoRedirect, redirectDelay, navigate]);
 
-  // ✅ Handle manual continue
   const handleContinue = useCallback(() => {
     if (onContinue) {
       onContinue();
     } else {
-      navigate('/dashboard');
+      navigate(redirectTarget, requiresVerification ? { state: { registrationSuccess: true } } : undefined);
     }
-  }, [onContinue, navigate]);
+  }, [onContinue, navigate, redirectTarget, requiresVerification]);
 
   // ✅ Get security badge variant
   const getSecurityBadge = (score) => {
@@ -146,7 +148,7 @@ const RegistrationComplete = ({
         </div>
       </motion.div>
 
-      {/* Welcome Message */}
+      {/* Welcome / Verify message */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,98 +156,116 @@ const RegistrationComplete = ({
         className="mb-6"
       >
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('welcomeToSpendWise', { name: userName })}
+          {requiresVerification
+            ? (t('checkYourEmail') || 'Check your email')
+            : t('welcomeToSpendWise', { name: userName })}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-lg">
-          {t('registrationCompleteMessage')}
+        <p className="text-gray-600 dark:text-gray-400 text-base">
+          {requiresVerification
+            ? (t('verificationEmailSent') || 'We sent a verification link to your email address. Click the link to activate your account.')
+            : t('registrationCompleteMessage')}
         </p>
       </motion.div>
 
-      {/* Account Summary */}
+      {/* Email highlight (verification) OR account summary (dashboard) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
         className="mb-8"
       >
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                {userName}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {userEmail}
-              </p>
+        {requiresVerification ? (
+          <Card className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                  {t('verificationSentTo') || 'Verification email sent to'}
+                </p>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                  {userEmail}
+                </p>
+              </div>
             </div>
-            
-            <div className="text-right">
-              <Badge variant={securityBadge.variant} className="mb-1">
-                <Trophy className="w-3 h-3 mr-1" />
-                {securityScore}%
-              </Badge>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                {securityBadge.text}
-              </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">
+              {t('verificationLinkExpiry') || 'The link expires in 24 hours. Check your spam folder if you don\'t see it.'}
+            </p>
+          </Card>
+        ) : (
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-900 dark:text-white">{userName}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{userEmail}</p>
+              </div>
+              <div className="text-right">
+                <Badge variant={securityBadge.variant} className="mb-1">
+                  <Trophy className="w-3 h-3 mr-1" />
+                  {securityScore}%
+                </Badge>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{securityBadge.text}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${securityScore}%` }}
-              transition={{ duration: 1, delay: 0.8 }}
-              className={cn(
-                "h-2 rounded-full",
-                securityScore >= 80 ? "bg-green-500" :
-                securityScore >= 60 ? "bg-blue-500" :
-                securityScore >= 40 ? "bg-yellow-500" : "bg-red-500"
-              )}
-            />
-          </div>
-        </Card>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${securityScore}%` }}
+                transition={{ duration: 1, delay: 0.8 }}
+                className={cn(
+                  "h-2 rounded-full",
+                  securityScore >= 80 ? "bg-green-500" :
+                  securityScore >= 60 ? "bg-blue-500" :
+                  securityScore >= 40 ? "bg-yellow-500" : "bg-red-500"
+                )}
+              />
+            </div>
+          </Card>
+        )}
       </motion.div>
 
-      {/* Features Preview */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="mb-8"
-      >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          {t('whatYouCanDoNext')}
-        </h3>
-        
-        <div className="grid grid-cols-2 gap-3">
-          {features.map((feature, index) => {
-            const IconComponent = feature.icon;
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1 + index * 0.1 }}
-                className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-              >
-                <IconComponent className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                  {feature.title}
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {feature.description}
-                </p>
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
+      {/* Features Preview — only for dashboard (Google/auto-verified) */}
+      {!requiresVerification && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="mb-8"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t('whatYouCanDoNext')}
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {features.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1 + index * 0.1 }}
+                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <IconComponent className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    {feature.title}
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Continue Button */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
+        transition={{ delay: requiresVerification ? 0.8 : 1.2 }}
         className="space-y-4"
       >
         <Button
@@ -253,13 +273,17 @@ const RegistrationComplete = ({
           className="w-full min-h-[48px]"
           size="lg"
         >
-          {t('continueToDashboard')}
+          {requiresVerification
+            ? (t('goToLogin') || 'Go to Login')
+            : t('continueToDashboard')}
           <ArrowRight className={cn("w-5 h-5 ml-2", isRTL && "mr-2 ml-0 rotate-180")} />
         </Button>
-        
+
         {autoRedirect && (
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('autoRedirectMessage', { seconds: Math.round(redirectDelay / 1000) })}
+            {requiresVerification
+              ? (t('autoRedirectToLogin', { seconds: Math.round(redirectDelay / 1000) }) || `Redirecting to login in ${Math.round(redirectDelay / 1000)}s...`)
+              : t('autoRedirectMessage', { seconds: Math.round(redirectDelay / 1000) })}
           </p>
         )}
       </motion.div>

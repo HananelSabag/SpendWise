@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Globe } from 'lucide-react';
+import { Globe, Loader2 } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API
 import { 
@@ -42,7 +42,20 @@ const Login = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // ✅ Redirect if already authenticated
+  // Show success toast when arriving from registration
+  useEffect(() => {
+    if (location.state?.registrationSuccess) {
+      addNotification({
+        type: 'success',
+        message: t('registrationSuccessCheckEmail') || 'Account created! Please verify your email to log in.',
+        duration: 6000,
+      });
+      // Clear the state so it doesn't re-fire on navigation
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       const from = location.state?.from?.pathname || '/';
@@ -241,6 +254,16 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       <GuestSettings />
+
+      {/* Google auth loading overlay */}
+      {isGoogleLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+          <p className="text-gray-700 dark:text-gray-300 font-medium text-sm">
+            {t('signingInWithGoogle') || 'Signing in with Google…'}
+          </p>
+        </div>
+      )}
 
       {/* Static decorative blobs — no infinite animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>

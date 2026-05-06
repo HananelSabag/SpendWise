@@ -234,10 +234,13 @@ const Register = () => {
     });
   }, [addNotification, t]);
 
-  // ✅ Handle registration completion
   const handleRegistrationComplete = useCallback(() => {
-    navigate('/dashboard');
-  }, [navigate]);
+    if (isGoogleUser) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login', { state: { registrationSuccess: true } });
+    }
+  }, [navigate, isGoogleUser]);
 
   // ✅ Handle step navigation
   const handleStepBack = useCallback(() => {
@@ -306,6 +309,8 @@ const Register = () => {
                 userEmail={userData?.email}
                 securityScore={securityData?.securityScore || 50}
                 onContinue={handleRegistrationComplete}
+                requiresVerification={!isGoogleUser}
+                redirectDelay={5000}
               />
             </motion.div>
           )}
