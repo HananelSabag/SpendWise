@@ -4,16 +4,21 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import useAuthStore from '../stores/authStore';
 import { useToast } from './useToast';
-
-const QUERY_KEY = ['shopping-items'];
 
 export function useShoppingItems() {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const userId = useAuthStore((s) => s.user?.id);
+
+  // Must match the ITEMS_KEY used in useShoppingShare so cache
+  // invalidation after accept/decline/remove propagates to this query.
+  const QUERY_KEY = ['shopping-items', userId];
 
   const query = useQuery({
     queryKey: QUERY_KEY,
+    enabled: !!userId,
     queryFn: async () => {
       const result = await api.shopping.getAll();
       if (!result.success) throw new Error(result.error?.message || 'Failed to fetch shopping list');
