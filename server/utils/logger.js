@@ -104,10 +104,10 @@ if (process.env.NODE_ENV !== 'production') {
     handleRejections: true
   }));
 } else {
-  // Minimal console logging in production
+  // Production: info+ to stdout so Render shows startup logs and warnings
   logger.add(new winston.transports.Console({
     format: winston.format.simple(),
-    level: 'error' // Only errors to console in production
+    level: 'info'
   }));
 }
 
