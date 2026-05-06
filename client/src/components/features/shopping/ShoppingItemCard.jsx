@@ -57,7 +57,8 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
             {/* Bought toggle */}
             <button
               onClick={() => onToggleBought(item)}
-              className="mt-0.5 flex-shrink-0 min-h-[24px] min-w-[24px] flex items-center justify-center"
+              disabled={confirmDelete}
+              className="mt-0.5 flex-shrink-0 min-h-[24px] min-w-[24px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={bought ? 'סמן כלא נרכש' : 'סמן כנרכש'}
             >
               {bought

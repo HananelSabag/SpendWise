@@ -2,7 +2,7 @@
  * ShoppingWishlistPage — רשימת קניות
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -96,6 +96,13 @@ const ShoppingWishlistPage = () => {
     return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending };
   }, [items, activeCategory]);
 
+  // Auto-reset category filter when filtered list becomes empty (e.g. after deletion)
+  useEffect(() => {
+    if (activeCategory !== 'הכל' && filteredItems.length === 0 && items.length > 0) {
+      setActiveCategory('הכל');
+    }
+  }, [activeCategory, filteredItems.length, items.length]);
+
   const handleAdd = useCallback(() => {
     setEditingItem(null);
     setSheetOpen(true);
@@ -145,7 +152,7 @@ const ShoppingWishlistPage = () => {
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <motion.button
             whileTap={{ scale: 0.92 }}
-            onClick={() => navigate(-1)}
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
             className={cn(
               'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
               'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
@@ -166,7 +173,7 @@ const ShoppingWishlistPage = () => {
           </div>
 
           {/* Live pending total badge */}
-          {items.length > 0 && (
+          {items.length > 0 && pendingTotal > 0 && (
             <motion.div
               key={pendingTotal}
               initial={{ scale: 0.9 }}
