@@ -6,12 +6,19 @@ const db = require('../config/db');
 
 class ShoppingItem {
   static async getAll(userId) {
-    const { rows } = await db.query(
-      `SELECT * FROM shopping_items
-       WHERE user_id = $1
-       ORDER BY category ASC, name ASC`,
-      [userId]
-    );
+    const { rows } = await db.query(`
+      SELECT si.*,
+             u.first_name AS owner_first_name,
+             u.last_name  AS owner_last_name,
+             u.username   AS owner_username
+      FROM   shopping_items si
+      JOIN   users u ON u.id = si.user_id
+      WHERE  si.user_id = $1
+         OR  si.user_id IN (
+               SELECT owner_id FROM shopping_shares WHERE member_id = $1
+             )
+      ORDER  BY si.category ASC, si.name ASC
+    `, [userId]);
     return rows;
   }
 

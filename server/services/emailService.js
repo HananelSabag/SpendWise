@@ -146,6 +146,50 @@ class EmailService {
     }
   }
 
+  async sendShoppingInvite(inviterName, inviteeEmail, token) {
+    if (!this.transporter) return false;
+    try {
+      const acceptUrl = `${process.env.CLIENT_URL}/shopping?invite=${token}`;
+      await this.transporter.sendMail({
+        from: `"${process.env.FROM_NAME || 'SpendWise'}" <${process.env.FROM_EMAIL}>`,
+        to: inviteeEmail,
+        subject: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise`,
+        html: `<!DOCTYPE html><html><head><meta charset="utf-8">
+          <style>
+            body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:0;background:#f0f4ff}
+            .wrap{max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 10px 25px rgba(79,70,229,.15)}
+            .hdr{background:linear-gradient(135deg,#4F46E5,#3B82F6);padding:36px 24px;text-align:center}
+            .hdr h1{color:#fff;margin:0;font-size:24px;font-weight:700}
+            .hdr p{color:rgba(255,255,255,.85);margin:8px 0 0;font-size:15px}
+            .body{padding:36px 28px}
+            .msg{color:#374151;font-size:16px;line-height:1.7;margin-bottom:16px}
+            .btn{display:inline-block;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff!important;padding:16px 44px;text-decoration:none!important;border-radius:12px;font-weight:600;font-size:16px;box-shadow:0 4px 15px rgba(59,130,246,.3)}
+            .footer{border-top:1px solid #E5E7EB;padding:24px;text-align:center;color:#6B7280;font-size:13px;background:#F9FAFB}
+          </style></head><body>
+          <div class="wrap">
+            <div class="hdr"><h1>הזמנה לרשימת קניות</h1><p>SpendWise — ניהול פיננסי חכם</p></div>
+            <div class="body">
+              <p class="msg">היי!</p>
+              <p class="msg"><strong>${inviterName}</strong> הזמין אותך לרשימת קניות משותפת ב-SpendWise.</p>
+              <p class="msg">לחץ על הכפתור למטה כדי לאשר את ההזמנה ולהצטרף לרשימה:</p>
+              <div style="text-align:center;margin:32px 0">
+                <a href="${acceptUrl}" class="btn">הצטרף לרשימה</a>
+              </div>
+              <p style="color:#6B7280;font-size:14px">אם הכפתור לא עובד, העתק את הקישור: <br><a href="${acceptUrl}" style="color:#3B82F6">${acceptUrl}</a></p>
+              <p style="color:#9CA3AF;font-size:13px;margin-top:24px">ההזמנה תפוג תוך 7 ימים. אם לא ציפית להזמנה זו, פשוט התעלם מהמייל.</p>
+            </div>
+            <div class="footer"><p><strong>© 2024 SpendWise</strong></p></div>
+          </div></body></html>`,
+        text: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise.\n\nלאישור: ${acceptUrl}\n\nההזמנה תפוג תוך 7 ימים.`,
+      });
+      logger.info('Shopping invite email sent');
+      return true;
+    } catch (error) {
+      logger.error('Failed to send shopping invite email:', { error: error.message });
+      return false;
+    }
+  }
+
   getPasswordResetTemplate(resetUrl, email) {
     return `
       <!DOCTYPE html>

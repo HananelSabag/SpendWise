@@ -291,6 +291,8 @@ try {
   app.use(`${API_VERSION}/shopping`, require('./routes/shoppingRoutes'));
   logger.debug('✅ Shopping routes loaded');
 
+  app.use(`${API_VERSION}/notifications`, require('./routes/notificationRoutes'));
+
   // ✅ FIXED: Re-enable analytics routes 
   try {
     logger.debug('Loading analytics routes...');
