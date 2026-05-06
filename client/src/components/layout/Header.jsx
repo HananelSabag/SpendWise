@@ -24,6 +24,7 @@ import MobileNavigation from './MobileNavigation';
 import UserMenu from './UserMenu';
 import QuickPanels from './QuickPanels';
 import HeaderActions from './HeaderActions';
+import NotificationBell from './NotificationBell';
 
 import { cn } from '../../utils/helpers';
 import { LoadingSpinner } from '../ui';
@@ -162,6 +163,9 @@ const Header = () => {
                   <span className="text-xs font-medium">{t('admin.settings.maintenanceMode', { fallback: 'Maintenance Mode' })}</span>
                 </div>
               )}
+              {/* Notification Bell */}
+              <NotificationBell />
+
               {/* Quick Panels - hide on small screens to reduce clutter; accessible via mobile menu */}
               <div className="hidden md:flex">
                 <QuickPanels onOpenModal={openModal} />
