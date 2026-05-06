@@ -447,6 +447,13 @@ const startServer = async () => {
   logger.info('🚀 Starting SpendWise server...');
   logger.info('🔧 Starting HTTP server (DB probe runs in background)...');
 
+  // Force-load emailService here so its startup log always appears in Render logs
+  try {
+    require('./services/emailService');
+  } catch (e) {
+    logger.error('Failed to load emailService', { error: e.message });
+  }
+
   const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 Server running on port ${PORT} (DB ready: ${dbReady})`);
     logger.info(`🌐 CORS enabled for mobile development (local networks)`);

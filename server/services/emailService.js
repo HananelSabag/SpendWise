@@ -88,7 +88,13 @@ class EmailService {
       await this._sender.send(opts);
       return true;
     } catch (err) {
-      logger.error('Email send failed:', { message: err.message, to: opts.to, subject: opts.subject });
+      logger.error('❌ Email send failed', {
+        message: err.message,
+        to: opts.to,
+        subject: opts.subject,
+        senderType: this._sender?.constructor?.name,
+        resendKey: process.env.RESEND_API_KEY ? `set (${process.env.RESEND_API_KEY.slice(0, 6)}...)` : 'NOT SET',
+      });
       return false;
     }
   }
