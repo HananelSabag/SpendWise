@@ -109,8 +109,7 @@ const Register = () => {
       
       if (result.success) {
         setUserData({ email: formData.email, firstName: formData.firstName, lastName: formData.lastName });
-        addNotification({ type: 'success', message: t('registrationSuccess') });
-        navigate('/auth/login', { replace: true });
+        setRegistrationStep('complete');
       } else {
         authToasts.registrationFailed(result.error);
         setErrors({ 

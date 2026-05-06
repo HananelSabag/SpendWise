@@ -92,17 +92,20 @@ export const authAPI = {
           errorCode = 'INVALID_CREDENTIALS';
         }
       } else if (status === 403) {
-        // Account blocked or requires verification
+        const serverCode = error.response?.data?.code || '';
         const serverMessage = error.response?.data?.message || '';
-        if (serverMessage.toLowerCase().includes('email not verified')) {
+        if (serverCode === 'EMAIL_NOT_VERIFIED' || serverMessage.toLowerCase().includes('email not verified')) {
           errorMessage = 'Please verify your email address before logging in.';
           errorCode = 'EMAIL_NOT_VERIFIED';
-        } else if (serverMessage.toLowerCase().includes('blocked')) {
+        } else if (serverCode === 'ACCOUNT_DEACTIVATED' || serverMessage.toLowerCase().includes('deactivated')) {
+          errorMessage = 'Your account has been deactivated. Please contact support.';
+          errorCode = 'ACCOUNT_DEACTIVATED';
+        } else if (serverCode === 'ACCOUNT_BLOCKED' || serverCode === 'ACCOUNT_LOCKED' || serverMessage.toLowerCase().includes('blocked') || serverMessage.toLowerCase().includes('locked')) {
           errorMessage = 'Your account has been temporarily blocked. Please contact support.';
           errorCode = 'ACCOUNT_BLOCKED';
         } else {
-          errorMessage = 'Access denied. Please contact support if this persists.';
-          errorCode = 'ACCESS_DENIED';
+          errorMessage = serverMessage || 'Access denied. Please contact support if this persists.';
+          errorCode = serverCode || 'ACCESS_DENIED';
         }
       } else if (status === 429) {
         // Rate limiting
