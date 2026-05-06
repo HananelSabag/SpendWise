@@ -41,8 +41,8 @@ class ShoppingItem {
        SET name      = COALESCE($3, name),
            category  = COALESCE($4, category),
            price_ils = COALESCE($5, price_ils),
-           buy_url   = $6,
-           notes     = $7,
+           buy_url   = COALESCE($6, buy_url),
+           notes     = COALESCE($7, notes),
            is_bought = COALESCE($8, is_bought)
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
@@ -52,8 +52,8 @@ class ShoppingItem {
         name ? name.trim() : null,
         category || null,
         price_ils != null ? parseFloat(price_ils) : null,
-        buy_url !== undefined ? (buy_url || null) : undefined,
-        notes !== undefined ? (notes || null) : undefined,
+        buy_url !== undefined ? (buy_url || null) : null,
+        notes !== undefined ? (notes || null) : null,
         is_bought != null ? is_bought : null,
       ]
     );

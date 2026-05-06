@@ -56,8 +56,27 @@ export function useShoppingItems() {
     onError: () => toast.error('שגיאה במחיקת פריט'),
   });
 
-  const toggleBought = (item) =>
-    updateMutation.mutate({ id: item.id, data: { is_bought: !item.is_bought } });
+  // Optimistic toggle — flips locally, syncs in background, rolls back on error
+  const toggleBought = (item) => {
+    const optimisticData = { is_bought: !item.is_bought };
+    queryClient.setQueryData(QUERY_KEY, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        items: old.items.map((i) => i.id === item.id ? { ...i, ...optimisticData } : i),
+      };
+    });
+    return updateMutation.mutateAsync({ id: item.id, data: optimisticData }).catch(() => {
+      // Roll back on error
+      queryClient.setQueryData(QUERY_KEY, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((i) => i.id === item.id ? { ...i, is_bought: item.is_bought } : i),
+        };
+      });
+    });
+  };
 
   return {
     items: query.data?.items ?? [],

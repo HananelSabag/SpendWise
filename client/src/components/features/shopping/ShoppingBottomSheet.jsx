@@ -1,17 +1,13 @@
 /**
  * ShoppingBottomSheet — Add / Edit shopping wishlist item
- * Full claymorphism design, RTL Hebrew, inline blur validation
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Link2, StickyNote, Tag, DollarSign, X, Check } from 'lucide-react';
+import { ShoppingCart, Link2, StickyNote, Tag, DollarSign, Check } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
 
-// ──────────────────────────────────────────
-// Category config
-// ──────────────────────────────────────────
 export const CATEGORIES = [
   { value: 'ריהוט',       label: 'ריהוט',        color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
   { value: 'מטבח',        label: 'מטבח',         color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
@@ -23,9 +19,6 @@ export const CATEGORIES = [
 
 const EMPTY = { name: '', category: 'אחר', price_ils: '', buy_url: '', notes: '' };
 
-// ──────────────────────────────────────────
-// Field components
-// ──────────────────────────────────────────
 const FieldLabel = ({ icon: Icon, label, required }) => (
   <div className="flex items-center gap-1.5 mb-1.5">
     <Icon className="w-3.5 h-3.5 text-blue-500" strokeWidth={2} />
@@ -44,37 +37,46 @@ const inputBase = cn(
   'dark:bg-gray-800/80 dark:border-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500'
 );
 
-// ──────────────────────────────────────────
-// Main component
-// ──────────────────────────────────────────
+const ErrorMsg = ({ msg }) => (
+  <AnimatePresence>
+    {msg && (
+      <motion.p
+        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+        className="mt-1 text-xs text-red-500 font-medium"
+      >{msg}</motion.p>
+    )}
+  </AnimatePresence>
+);
+
 const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSaving = false }) => {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const nameRef = useRef(null);
 
-  // Populate form when editing
   useEffect(() => {
     if (isOpen) {
-      if (editItem) {
-        setForm({
-          name:      editItem.name       ?? '',
-          category:  editItem.category   ?? 'אחר',
-          price_ils: editItem.price_ils != null ? String(editItem.price_ils) : '',
-          buy_url:   editItem.buy_url    ?? '',
-          notes:     editItem.notes      ?? '',
-        });
-      } else {
-        setForm(EMPTY);
-      }
+      setForm(editItem ? {
+        name:      editItem.name       ?? '',
+        category:  editItem.category   ?? 'אחר',
+        price_ils: editItem.price_ils != null ? String(editItem.price_ils) : '',
+        buy_url:   editItem.buy_url    ?? '',
+        notes:     editItem.notes      ?? '',
+      } : EMPTY);
       setErrors({});
       setTimeout(() => nameRef.current?.focus(), 300);
     }
   }, [isOpen, editItem]);
 
+  // No errors dependency — uses functional updater to clear without capture
   const set = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
-  }, [errors]);
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -88,17 +90,14 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
   const handleSubmit = async () => {
     if (!validate() || isSaving) return;
-    const payload = {
+    await onSave({
       name:      form.name.trim(),
       category:  form.category,
       price_ils: form.price_ils !== '' ? parseFloat(form.price_ils) : 0,
       buy_url:   form.buy_url.trim() || null,
       notes:     form.notes.trim()   || null,
-    };
-    await onSave(payload);
+    });
   };
-
-  const selectedCat = CATEGORIES.find((c) => c.value === form.category) || CATEGORIES[5];
 
   return (
     <BottomSheet
@@ -109,7 +108,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     >
       <div className="flex flex-col gap-5 pb-6" dir="rtl">
 
-        {/* ── Name ── */}
+        {/* Name */}
         <div>
           <FieldLabel icon={ShoppingCart} label="שם המוצר" required />
           <input
@@ -122,17 +121,10 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
             autoComplete="off"
             className={cn(inputBase, errors.name && 'border-red-400 focus:ring-red-400/40')}
           />
-          <AnimatePresence>
-            {errors.name && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                className="mt-1 text-xs text-red-500 font-medium"
-              >{errors.name}</motion.p>
-            )}
-          </AnimatePresence>
+          <ErrorMsg msg={errors.name} />
         </div>
 
-        {/* ── Category segmented picker ── */}
+        {/* Category picker */}
         <div>
           <FieldLabel icon={Tag} label="קטגוריה" />
           <div className="grid grid-cols-3 gap-2">
@@ -161,7 +153,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
           </div>
         </div>
 
-        {/* ── Price ── */}
+        {/* Price */}
         <div>
           <FieldLabel icon={DollarSign} label="מחיר משוער ₪" />
           <div className="relative">
@@ -182,7 +174,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
           </div>
         </div>
 
-        {/* ── URL ── */}
+        {/* URL */}
         <div>
           <FieldLabel icon={Link2} label="קישור לקנייה (אופציונלי)" />
           <input
@@ -196,20 +188,13 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
             }}
             placeholder="https://..."
             autoComplete="url"
-            className={cn(inputBase, 'direction-ltr text-left', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
+            className={cn(inputBase, 'text-left', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
             dir="ltr"
           />
-          <AnimatePresence>
-            {errors.buy_url && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                className="mt-1 text-xs text-red-500 font-medium"
-              >{errors.buy_url}</motion.p>
-            )}
-          </AnimatePresence>
+          <ErrorMsg msg={errors.buy_url} />
         </div>
 
-        {/* ── Notes ── */}
+        {/* Notes */}
         <div>
           <FieldLabel icon={StickyNote} label="הערות (אופציונלי)" />
           <textarea
@@ -221,7 +206,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
           />
         </div>
 
-        {/* ── Submit ── */}
+        {/* Submit */}
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}

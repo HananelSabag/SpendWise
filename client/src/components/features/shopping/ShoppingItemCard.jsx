@@ -2,19 +2,22 @@
  * ShoppingItemCard — single shopping list item, claymorphic card
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2, ExternalLink, ShoppingBag, CheckCircle2, Circle } from 'lucide-react';
-import { cn } from '../../../utils/helpers';
+import { Pencil, Trash2, ExternalLink, CheckCircle2, Circle } from 'lucide-react';
+import { cn, currency } from '../../../utils/helpers';
 import { CATEGORIES } from './ShoppingBottomSheet';
-
-const formatPrice = (price) => {
-  const n = parseFloat(price) || 0;
-  return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-};
 
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const timeoutRef = useRef(null);
+
+  // Clear confirm-delete timer on unmount or when already confirmed
+  useEffect(() => {
+    if (!confirmDelete) return;
+    timeoutRef.current = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(timeoutRef.current);
+  }, [confirmDelete]);
 
   const cat = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[5];
   const bought = item.is_bought;
@@ -25,7 +28,6 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
       setConfirmDelete(false);
     } else {
       setConfirmDelete(true);
-      setTimeout(() => setConfirmDelete(false), 3000);
     }
   };
 
@@ -45,7 +47,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
       )}
       dir="rtl"
     >
-      {/* Category accent bar at top */}
+      {/* Category accent bar */}
       <div className={cn('h-1 w-full', cat.dot)} />
 
       <div className="p-4">
@@ -64,7 +66,6 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
               }
             </button>
 
-            {/* Name */}
             <h3 className={cn(
               'text-base font-bold text-gray-800 dark:text-white leading-tight truncate',
               bought && 'line-through text-gray-400'
@@ -80,7 +81,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
               'bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800',
               'px-2.5 py-1 rounded-xl tabular-nums'
             )}>
-              {formatPrice(item.price_ils)}
+              {currency.format(parseFloat(item.price_ils) || 0)}
             </span>
           )}
         </div>
@@ -105,7 +106,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
 
         {/* Action row */}
         <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-          {/* Link */}
+          {/* External link */}
           {item.buy_url && (
             <a
               href={item.buy_url}
