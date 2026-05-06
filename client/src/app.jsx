@@ -300,12 +300,7 @@ const AppContent = () => {
       {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
       {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
 
-      {/* Mobile notification bell — fixed top-right, hidden on desktop (desktop uses Header bell) */}
-      {isAuthenticated && !isQuickExpensePage && (
-        <div className="lg:hidden fixed top-3 right-3 z-[90]">
-          <NotificationBell />
-        </div>
-      )}
+
 
       <main className="flex-grow lg:pb-0 pb-20">
         <Routes>

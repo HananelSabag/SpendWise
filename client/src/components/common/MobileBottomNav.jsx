@@ -1,20 +1,20 @@
 /**
- * MobileBottomNav — native-app-style bottom tab bar for mobile.
+ * MobileBottomNav — native-app-style bottom tab bar + quick-action sheet.
  * Visible only on mobile (hidden on lg+).
- * Tabs: Dashboard | Transactions | [⋯ menu] | Analytics | Profile
- * Center button opens a BottomSheet with all quick actions.
+ * Center FAB shows notification badge; sheet has sections:
+ *   pendingInvitations → shopping featured → finance 2-col → tools 3-col → settings
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, Plus, BarChart3, User,
-  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator, Shield, HelpCircle,
-  Sun, Moon, Globe, LogOut, ShoppingCart
+  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
+  Shield, HelpCircle, Sun, Moon, Globe, LogOut, ShoppingCart,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useAuth } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications } from '../../stores';
 import { useToast } from '../../hooks/useToast';
 import BottomSheet from './BottomSheet';
 
@@ -26,6 +26,10 @@ const MobileBottomNav = () => {
   const { logout } = useAuth();
   const toast = useToast();
   const isAdmin = useIsAdmin();
+
+  const { unreadCount, markAllRead } = useNotifications();
+
+  const totalBadge = unreadCount;
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -48,35 +52,18 @@ const MobileBottomNav = () => {
     await logout(true);
   }, [logout]);
 
-  const tabs = [
-    {
-      key: 'dashboard',
-      label: t('nav.dashboard') || 'Home',
-      icon: Home,
-      href: '/',
-      exact: true,
-    },
-    {
-      key: 'transactions',
-      label: t('nav.transactions') || 'Transactions',
-      icon: CreditCard,
-      href: '/transactions',
-    },
-    // Center slot — menu (rendered separately below)
-    null,
-    {
-      key: 'analytics',
-      label: t('nav.analytics') || 'Analytics',
-      icon: BarChart3,
-      href: '/analytics',
-    },
-    {
-      key: 'profile',
-      label: t('nav.profile') || 'Profile',
-      icon: User,
-      href: '/profile',
-    },
-  ];
+  const handleClose = useCallback(() => {
+    setMenuOpen(false);
+    if (unreadCount > 0) markAllRead();
+  }, [unreadCount, markAllRead]);
+
+  const tabs = useMemo(() => [
+    { key: 'dashboard',     label: t('nav.dashboard')    || 'Home',         icon: Home,     href: '/',             exact: true },
+    { key: 'transactions',  label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
+    null, // center FAB slot
+    { key: 'analytics',    label: t('nav.analytics')    || 'Analytics',    icon: BarChart3, href: '/analytics' },
+    { key: 'profile',      label: t('nav.profile')      || 'Profile',      icon: User,     href: '/profile' },
+  ], [t]);
 
   const isActive = useCallback(
     (tab) => {
@@ -91,72 +78,67 @@ const MobileBottomNav = () => {
     try { window.dispatchEvent(new CustomEvent(event, { detail })); } catch (_) {}
   }, []);
 
-  const menuActions = [
+  const financeActions = useMemo(() => [
     {
       key: 'add-expense',
       label: t('transactions.addExpense') || 'Add Expense',
       icon: MinusCircle,
-      gradient: 'from-red-400 to-rose-600',
-      shadow: 'shadow-red-400/40',
-      action: () => { setMenuOpen(false); dispatch('transaction:add', { type: 'expense' }); },
+      gradient: 'from-red-500 to-rose-600',
+      shadow: 'shadow-red-500/30',
+      action: () => { handleClose(); dispatch('transaction:add', { type: 'expense' }); },
     },
     {
       key: 'add-income',
       label: t('transactions.addIncome') || 'Add Income',
       icon: PlusCircle,
-      gradient: 'from-emerald-400 to-green-600',
-      shadow: 'shadow-emerald-400/40',
-      action: () => { setMenuOpen(false); dispatch('transaction:add', { type: 'income' }); },
+      gradient: 'from-emerald-500 to-green-600',
+      shadow: 'shadow-emerald-500/30',
+      action: () => { handleClose(); dispatch('transaction:add', { type: 'income' }); },
     },
+  ], [t, dispatch, handleClose]);
+
+  const toolActions = useMemo(() => [
     {
       key: 'categories',
       label: t('nav.categories') || 'Categories',
       icon: Tag,
-      gradient: 'from-blue-400 to-indigo-600',
-      shadow: 'shadow-blue-400/40',
-      action: () => { setMenuOpen(false); dispatch('open-categories'); },
+      gradient: 'from-blue-500 to-indigo-600',
+      shadow: 'shadow-blue-500/30',
+      action: () => { handleClose(); dispatch('open-categories'); },
     },
     {
       key: 'recurring',
       label: t('nav.recurring') || 'Recurring',
       icon: RepeatIcon,
-      gradient: 'from-violet-400 to-purple-600',
-      shadow: 'shadow-violet-400/40',
-      action: () => { setMenuOpen(false); dispatch('open-recurring'); },
+      gradient: 'from-violet-500 to-purple-600',
+      shadow: 'shadow-violet-500/30',
+      action: () => { handleClose(); dispatch('open-recurring'); },
     },
     {
       key: 'exchange',
       label: t('nav.exchange') || 'Exchange',
       icon: Calculator,
-      gradient: 'from-amber-400 to-orange-500',
-      shadow: 'shadow-amber-400/40',
-      action: () => { setMenuOpen(false); dispatch('open-exchange'); },
-    },
-    {
-      key: 'shopping',
-      label: 'רשימת קניות',
-      icon: ShoppingCart,
-      gradient: 'from-emerald-400 to-teal-600',
-      shadow: 'shadow-emerald-400/40',
-      action: () => { setMenuOpen(false); navigate('/shopping'); },
+      gradient: 'from-amber-500 to-orange-500',
+      shadow: 'shadow-amber-500/30',
+      action: () => { handleClose(); dispatch('open-exchange'); },
     },
     {
       key: 'help',
-      label: t('nav.help') || 'Help & Guide',
+      label: t('nav.help') || 'Help',
       icon: HelpCircle,
-      gradient: 'from-teal-400 to-cyan-600',
-      shadow: 'shadow-teal-400/40',
-      action: () => { setMenuOpen(false); dispatch('open-onboarding'); },
+      gradient: 'from-teal-500 to-cyan-600',
+      shadow: 'shadow-teal-500/30',
+      action: () => { handleClose(); dispatch('open-onboarding'); },
     },
     ...(isAdmin ? [{
       key: 'admin',
-      label: t('nav.admin') || 'Admin Panel',
+      label: t('nav.admin') || 'Admin',
       icon: Shield,
-      gradient: 'from-yellow-400 to-amber-600',
-      shadow: 'shadow-yellow-400/40',
-      action: () => { setMenuOpen(false); navigate('/admin'); },
+      gradient: 'from-yellow-500 to-amber-600',
+      shadow: 'shadow-yellow-500/30',
+      action: () => { handleClose(); navigate('/admin'); },
     }] : []),
-  ];
+  ], [t, isAdmin, dispatch, handleClose, navigate]);
 
   return (
     <>
@@ -164,24 +146,23 @@ const MobileBottomNav = () => {
         className={cn(
           'lg:hidden',
           'fixed bottom-0 left-0 right-0 z-[100]',
-          'bg-white dark:bg-gray-900',
-          'border-t border-gray-200 dark:border-gray-700',
+          'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
+          'border-t border-gray-200/80 dark:border-gray-700/80',
           'flex items-end justify-around',
           'px-2'
         )}
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
       >
-        {tabs.map((tab, index) => {
-          // Center slot — menu button
+        {tabs.map((tab) => {
           if (tab === null) {
             return (
               <div key="menu" className="flex flex-col items-center -mt-6 mb-1">
                 <motion.button
-                  whileTap={{ scale: 0.92 }}
+                  whileTap={{ scale: 0.90 }}
                   onClick={() => setMenuOpen((v) => !v)}
                   aria-label={menuOpen ? (t('common.closeMenu') || 'Close menu') : (t('common.openMenu') || 'Open menu')}
                   className={cn(
-                    'w-16 h-16 rounded-full',
+                    'relative w-16 h-16 rounded-full',
                     'bg-gradient-to-br from-blue-600 to-indigo-600',
                     'shadow-xl shadow-blue-500/50',
                     'flex items-center justify-center',
@@ -189,12 +170,30 @@ const MobileBottomNav = () => {
                     'transition-all'
                   )}
                 >
-                  <motion.div
-                    animate={{ rotate: menuOpen ? 45 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                  <motion.div animate={{ rotate: menuOpen ? 45 : 0 }} transition={{ duration: 0.2 }}>
                     <Plus className="w-8 h-8 text-white" />
                   </motion.div>
+                  {/* Notification badge */}
+                  <AnimatePresence>
+                    {totalBadge > 0 && (
+                      <motion.span
+                        key="badge"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className={cn(
+                          'absolute -top-1 -right-1',
+                          'min-w-[20px] h-5 px-1.5 rounded-full',
+                          'bg-red-500 text-white text-[10px] font-bold',
+                          'flex items-center justify-center',
+                          'border-2 border-white dark:border-gray-900',
+                          'shadow-md'
+                        )}
+                      >
+                        {totalBadge > 99 ? '99+' : totalBadge}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </motion.button>
                 <span className="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                   {t('common.menu') || 'Menu'}
@@ -225,18 +224,14 @@ const MobileBottomNav = () => {
                 <Icon
                   className={cn(
                     'w-5 h-5 transition-colors',
-                    active
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-400 dark:text-gray-500'
+                    active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
                   )}
                 />
               </div>
               <span
                 className={cn(
                   'text-[10px] font-medium mt-0.5 truncate max-w-full px-1',
-                  active
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-400 dark:text-gray-500'
+                  active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
                 )}
               >
                 {tab.label}
@@ -249,105 +244,161 @@ const MobileBottomNav = () => {
       {/* Quick-actions BottomSheet */}
       <BottomSheet
         isOpen={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={handleClose}
         title={t('common.quickActions') || 'Quick Actions'}
       >
-        <div className="grid grid-cols-3 gap-3">
-          {menuActions.map((action, i) => {
-            const Icon = action.icon;
-            return (
-              <motion.button
-                key={action.key}
-                initial={{ opacity: 0, y: 16, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: i * 0.04, type: 'spring', stiffness: 360, damping: 28 }}
-                onClick={action.action}
+        <div className="space-y-4 pb-2">
+
+          {/* ── Shopping — featured full-width card ─────────────────── */}
+          <motion.button
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.03, type: 'spring', stiffness: 400, damping: 30 }}
+            onClick={() => { handleClose(); navigate('/shopping'); }}
+            className={cn(
+              'w-full flex items-center gap-4 px-5 py-4 rounded-2xl',
+              'bg-gradient-to-r from-emerald-500 to-teal-600',
+              'shadow-lg shadow-emerald-500/30',
+              'active:scale-[0.98] transition-all duration-150'
+            )}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <ShoppingCart className="w-7 h-7 text-white" strokeWidth={1.75} />
+            </div>
+            <div className="text-left">
+              <p className="text-base font-bold text-white leading-tight">
+                {t('shopping.title') || 'Shopping List'}
+              </p>
+              <p className="text-xs text-white/75 mt-0.5">
+                {t('shopping.manageList') || 'Manage your shared lists'}
+              </p>
+            </div>
+            <div className="ml-auto">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </motion.button>
+
+          {/* ── Finance actions — 2-col hero cards ──────────────────── */}
+          <div className="grid grid-cols-2 gap-3">
+            {financeActions.map((action, i) => {
+              const Icon = action.icon;
+              return (
+                <motion.button
+                  key={action.key}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.06 + i * 0.02, type: 'spring', stiffness: 400, damping: 30 }}
+                  onClick={action.action}
+                  className={cn(
+                    'flex flex-col items-center gap-3 py-5 px-3 rounded-2xl',
+                    'bg-gradient-to-br', action.gradient,
+                    'shadow-lg', action.shadow,
+                    'active:scale-95 transition-all duration-150'
+                  )}
+                >
+                  <Icon className="w-8 h-8 text-white" strokeWidth={1.75} />
+                  <span className="text-sm font-bold text-white text-center leading-tight">
+                    {action.label}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {/* ── Tools — 3-col grid ───────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-2.5">
+            {toolActions.map((action, i) => {
+              const Icon = action.icon;
+              return (
+                <motion.button
+                  key={action.key}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.10 + i * 0.02, type: 'spring', stiffness: 400, damping: 30 }}
+                  onClick={action.action}
+                  className={cn(
+                    'flex flex-col items-center gap-2 py-4 px-2 rounded-2xl',
+                    'bg-white dark:bg-gray-800',
+                    'border border-gray-100 dark:border-gray-700/60',
+                    'shadow-sm hover:shadow-md',
+                    'active:scale-95 transition-all duration-150'
+                  )}
+                >
+                  <div className={cn(
+                    'w-11 h-11 rounded-xl flex items-center justify-center shadow-md',
+                    'bg-gradient-to-br', action.gradient, action.shadow
+                  )}>
+                    <Icon className="w-6 h-6 text-white" strokeWidth={1.75} />
+                  </div>
+                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">
+                    {action.label}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {/* ── Settings row ─────────────────────────────────────────── */}
+          <div className="pt-3 border-t border-gray-100 dark:border-gray-700/60">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleThemeToggle}
                 className={cn(
-                  'flex flex-col items-center gap-2.5 py-5 px-2 rounded-2xl',
+                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
                   'bg-white dark:bg-gray-800',
                   'border border-gray-100 dark:border-gray-700/60',
-                  'shadow-sm hover:shadow-md',
-                  'active:scale-95 transition-all duration-150'
+                  'shadow-sm active:scale-95 transition-all duration-150'
                 )}
               >
-                {/* Gradient icon circle */}
-                <div className={cn(
-                  'w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg',
-                  'bg-gradient-to-br',
-                  action.gradient,
-                  action.shadow
-                )}>
-                  <Icon className="w-7 h-7 text-white" strokeWidth={1.75} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 shadow-md">
+                  {isDark
+                    ? <Sun className="w-5 h-5 text-white" strokeWidth={1.75} />
+                    : <Moon className="w-5 h-5 text-white" strokeWidth={1.75} />
+                  }
                 </div>
-                {/* Label */}
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight px-1">
-                  {action.label}
+                <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                  {isDark ? (t('common.lightMode') || 'Light') : (t('common.darkMode') || 'Dark')}
                 </span>
-              </motion.button>
-            );
-          })}
-        </div>
+              </button>
 
-        {/* Settings row — theme, language, logout */}
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 pb-4">
-          <div className="flex items-center gap-3">
-            {/* Theme toggle */}
-            <button
-              onClick={handleThemeToggle}
-              className={cn(
-                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
-                'bg-white dark:bg-gray-800',
-                'border border-gray-100 dark:border-gray-700/60',
-                'shadow-sm active:scale-95 transition-all duration-150'
-              )}
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 shadow-md">
-                {isDark
-                  ? <Sun className="w-5 h-5 text-white" strokeWidth={1.75} />
-                  : <Moon className="w-5 h-5 text-white" strokeWidth={1.75} />
-                }
-              </div>
-              <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                {isDark ? (t('common.lightMode') || 'Light') : (t('common.darkMode') || 'Dark')}
-              </span>
-            </button>
+              <button
+                onClick={handleLanguageToggle}
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                  'bg-white dark:bg-gray-800',
+                  'border border-gray-100 dark:border-gray-700/60',
+                  'shadow-sm active:scale-95 transition-all duration-150'
+                )}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-400 to-blue-600 shadow-md">
+                  <Globe className="w-5 h-5 text-white" strokeWidth={1.75} />
+                </div>
+                <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                  {currentLanguage === 'en' ? 'עברית' : 'English'}
+                </span>
+              </button>
 
-            {/* Language toggle */}
-            <button
-              onClick={handleLanguageToggle}
-              className={cn(
-                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
-                'bg-white dark:bg-gray-800',
-                'border border-gray-100 dark:border-gray-700/60',
-                'shadow-sm active:scale-95 transition-all duration-150'
-              )}
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-400 to-blue-600 shadow-md">
-                <Globe className="w-5 h-5 text-white" strokeWidth={1.75} />
-              </div>
-              <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                {currentLanguage === 'en' ? 'עברית' : 'English'}
-              </span>
-            </button>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className={cn(
-                'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
-                'bg-white dark:bg-gray-800',
-                'border border-red-100 dark:border-red-900/40',
-                'shadow-sm active:scale-95 transition-all duration-150'
-              )}
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-rose-600 shadow-md shadow-red-400/30">
-                <LogOut className="w-5 h-5 text-white" strokeWidth={1.75} />
-              </div>
-              <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                {t('common.logout') || 'Logout'}
-              </span>
-            </button>
+              <button
+                onClick={handleLogout}
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                  'bg-white dark:bg-gray-800',
+                  'border border-red-100 dark:border-red-900/40',
+                  'shadow-sm active:scale-95 transition-all duration-150'
+                )}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-rose-600 shadow-md shadow-red-400/30">
+                  <LogOut className="w-5 h-5 text-white" strokeWidth={1.75} />
+                </div>
+                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                  {t('common.logout') || 'Logout'}
+                </span>
+              </button>
+            </div>
           </div>
+
         </div>
       </BottomSheet>
     </>
