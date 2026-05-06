@@ -758,8 +758,8 @@ const userController = {
         };
       }
 
-      // Mark user as verified
-      await User.update(tokenData.user_id, { email_verified: true });
+      // Mark user as verified and active
+      await User.update(tokenData.user_id, { email_verified: true, is_active: true });
 
       // Mark token as used
       await db.query(`

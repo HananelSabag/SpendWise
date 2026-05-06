@@ -72,8 +72,8 @@ class User {
           email, username, password_hash, verification_token,
           first_name, last_name,
           language_preference, currency_preference, theme_preference,
-          created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+          is_active, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
         RETURNING id, email, username, first_name, last_name, created_at, updated_at,
                   email_verified, language_preference, currency_preference, theme_preference
       `;
