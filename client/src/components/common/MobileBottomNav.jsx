@@ -30,8 +30,8 @@ const MobileBottomNav = () => {
   const toast = useToast();
   const isAdmin = useIsAdmin();
 
-  const { notifications, unreadCount, markAllRead } = useNotifications();
-  const { pendingInvitations, respond, isResponding } = useShoppingShare();
+  const { unreadCount, markAllRead } = useNotifications();
+  const { pendingInvitations, respond } = useShoppingShare();
   const [respondingToken, setRespondingToken] = useState(null);
 
   const totalBadge = unreadCount + pendingInvitations.length;
@@ -169,7 +169,7 @@ const MobileBottomNav = () => {
         )}
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
       >
-        {tabs.map((tab, index) => {
+        {tabs.map((tab) => {
           if (tab === null) {
             return (
               <div key="menu" className="flex flex-col items-center -mt-6 mb-1">
