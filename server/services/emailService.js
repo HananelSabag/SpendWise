@@ -17,7 +17,8 @@ class ResendSender {
   }
 
   async send({ to, subject, html, text }) {
-    const { error } = await this.client.emails.send({
+    logger.info('Email sending via Resend', { to, subject });
+    const { data, error } = await this.client.emails.send({
       from: this.from,
       to,
       subject,
@@ -25,6 +26,7 @@ class ResendSender {
       text,
     });
     if (error) throw new Error(error.message || JSON.stringify(error));
+    logger.info('Email sent via Resend', { to, subject, id: data?.id });
   }
 }
 
@@ -74,10 +76,10 @@ class EmailService {
   constructor() {
     if (process.env.RESEND_API_KEY) {
       this._sender = new ResendSender(process.env.RESEND_API_KEY);
-      logger.info('Email service: using Resend');
+      logger.info('✅ Email service: using Resend (HTTP)');
     } else {
       this._sender = new SmtpSender();
-      logger.info('Email service: using SMTP');
+      logger.warn('⚠️  Email service: RESEND_API_KEY not set — falling back to SMTP (may fail on Render)');
     }
   }
 
