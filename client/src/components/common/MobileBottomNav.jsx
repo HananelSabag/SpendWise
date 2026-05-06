@@ -11,14 +11,11 @@ import {
   Home, CreditCard, Plus, BarChart3, User,
   PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, LogOut, ShoppingCart,
-  Check, X, Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useAuth } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications } from '../../stores';
 import { useToast } from '../../hooks/useToast';
-import { useNotifications } from '../../hooks/useNotifications';
-import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';
 
 const MobileBottomNav = () => {
@@ -31,10 +28,8 @@ const MobileBottomNav = () => {
   const isAdmin = useIsAdmin();
 
   const { unreadCount, markAllRead } = useNotifications();
-  const { pendingInvitations, respond } = useShoppingShare();
-  const [respondingToken, setRespondingToken] = useState(null);
 
-  const totalBadge = unreadCount + pendingInvitations.length;
+  const totalBadge = unreadCount;
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -56,12 +51,6 @@ const MobileBottomNav = () => {
     setMenuOpen(false);
     await logout(true);
   }, [logout]);
-
-  const handleRespond = useCallback(async (token, action) => {
-    setRespondingToken(token);
-    await respond(token, action);
-    setRespondingToken(null);
-  }, [respond]);
 
   const handleClose = useCallback(() => {
     setMenuOpen(false);
@@ -150,11 +139,6 @@ const MobileBottomNav = () => {
       action: () => { handleClose(); navigate('/admin'); },
     }] : []),
   ], [t, isAdmin, dispatch, handleClose, navigate]);
-
-  const inviterName = (inv) =>
-    inv.inviter_first_name
-      ? `${inv.inviter_first_name} ${inv.inviter_last_name || ''}`.trim()
-      : inv.inviter_username || inv.inviter_email;
 
   return (
     <>
@@ -264,69 +248,6 @@ const MobileBottomNav = () => {
         title={t('common.quickActions') || 'Quick Actions'}
       >
         <div className="space-y-4 pb-2">
-
-          {/* ── Pending Invitations ─────────────────────────────────── */}
-          <AnimatePresence>
-            {pendingInvitations.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2"
-              >
-                <div className="flex items-center gap-2 px-1">
-                  <Bell className="w-4 h-4 text-blue-500" />
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('notifications.pendingInvites') || 'Pending Invitations'}
-                  </span>
-                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {pendingInvitations.length}
-                  </span>
-                </div>
-                {pendingInvitations.map((inv) => (
-                  <div
-                    key={inv.token}
-                    className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-2xl',
-                      'bg-gradient-to-r from-blue-50 to-indigo-50',
-                      'dark:from-blue-950/40 dark:to-indigo-950/40',
-                      'border border-blue-100 dark:border-blue-800/40'
-                    )}
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {(inviterName(inv) || '?').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                        {inviterName(inv)}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('shopping.inviteMessage') || 'Shared shopping list'}
-                      </p>
-                    </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => handleRespond(inv.token, 'accept')}
-                        disabled={respondingToken === inv.token}
-                        className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors disabled:opacity-50"
-                        aria-label="Accept"
-                      >
-                        <Check className="w-4 h-4" strokeWidth={2.5} />
-                      </button>
-                      <button
-                        onClick={() => handleRespond(inv.token, 'decline')}
-                        disabled={respondingToken === inv.token}
-                        className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors disabled:opacity-50"
-                        aria-label="Decline"
-                      >
-                        <X className="w-4 h-4" strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* ── Shopping — featured full-width card ─────────────────── */}
           <motion.button
