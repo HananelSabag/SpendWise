@@ -5,7 +5,7 @@
  *   import PageSkeleton from '@components/ui/PageSkeleton';
  *   if (isLoading && !data) return <PageSkeleton page="dashboard" />;
  *
- * Supported pages: dashboard | transactions | analytics | profile | shopping
+ * Supported pages: dashboard | transactions | analytics | profile | shopping | admin
  *
  * Design rules:
  *  • Pure Tailwind — no custom CSS class dependencies
@@ -242,6 +242,54 @@ const ShoppingSkeleton = () => (
   </Shell>
 );
 
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+const AdminSkeleton = () => (
+  <Shell>
+    <div className="max-w-6xl mx-auto px-4 pt-4 pb-24 space-y-5 lg:pt-6">
+      {/* Page heading + action button */}
+      <div className="flex items-center justify-between">
+        <T className="h-7 w-48" />
+        <S className="h-9 w-28 rounded-xl" />
+      </div>
+
+      {/* 4-stat summary row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map(i => (
+          <Card key={i} className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <S className="w-8 h-8 rounded-lg" />
+              <T className="h-3 w-12" />
+            </div>
+            <T className="h-6 w-20" />
+            <T className="h-3 w-24" />
+          </Card>
+        ))}
+      </div>
+
+      {/* Main table card */}
+      <Card className="p-5 space-y-3">
+        {/* Table header */}
+        <div className="flex items-center justify-between mb-2">
+          <T className="h-5 w-32" />
+          <S className="h-8 w-40 rounded-lg" />
+        </div>
+        {/* Table rows */}
+        {[0, 1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+            <S className="w-8 h-8 rounded-full shrink-0" />
+            <T className="h-4 w-32" />
+            <T className="h-4 w-24 hidden sm:block" />
+            <T className="h-4 flex-1 hidden lg:block" />
+            <S className="h-6 w-16 rounded-full shrink-0" />
+            <S className="h-7 w-7 rounded-lg shrink-0" />
+          </div>
+        ))}
+      </Card>
+    </div>
+  </Shell>
+);
+
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 const SKELETONS = {
@@ -250,11 +298,12 @@ const SKELETONS = {
   analytics:    AnalyticsSkeleton,
   profile:      ProfileSkeleton,
   shopping:     ShoppingSkeleton,
+  admin:        AdminSkeleton,
 };
 
 /**
  * PageSkeleton
- * @param {'dashboard'|'transactions'|'analytics'|'profile'|'shopping'} page
+ * @param {'dashboard'|'transactions'|'analytics'|'profile'|'shopping'|'admin'} page
  */
 const PageSkeleton = ({ page = 'dashboard' }) => {
   const Comp = SKELETONS[page] ?? DashboardSkeleton;

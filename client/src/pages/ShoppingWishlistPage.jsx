@@ -16,7 +16,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import ShoppingBottomSheet, { CATEGORIES } from '../components/features/shopping/ShoppingBottomSheet';
 import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import ShoppingShareSheet from '../components/features/shopping/ShoppingShareSheet';
-import PageSkeleton from '../components/ui/PageSkeleton';
+import { PageSkeleton } from '../components/ui';
 import { useTranslation } from '../stores';
 
 const AVATAR_COLORS = [

@@ -16,7 +16,7 @@ import {
 // ✅ NEW: Import Zustand stores and API
 import { useAuth, useTranslation, useTheme, useNotifications, useCurrency } from '../../stores';
 import { api } from '../../api';
-import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal } from '../../components/ui';
+import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal, PageSkeleton } from '../../components/ui';
 import ModernUsersTable from '../../components/features/admin/ModernUsersTable.jsx';
 import { cn } from '../../utils/helpers';
 
@@ -207,13 +207,7 @@ const AdminUsers = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton page="admin" />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">

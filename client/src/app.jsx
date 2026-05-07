@@ -21,6 +21,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 
 // Core UI components
 import TopProgressBar from './components/common/TopProgressBar.jsx';
+import PageSkeleton from './components/ui/PageSkeleton';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
@@ -66,17 +67,30 @@ const queryPersister = typeof window !== 'undefined'
     })
   : undefined;
 
-// ✅ Route Loading Fallback
+// Map Suspense route names → PageSkeleton page types.
+// This replaces the old translation-based fallback that showed raw i18n keys
+// ("errors.loadingPage", "Loading transactions...") when the translation store
+// hadn't initialized yet.
+const ROUTE_SKELETON_MAP = {
+  dashboard: 'dashboard',
+  transactions: 'transactions',
+  analytics: 'analytics',
+  profile: 'profile',
+  shopping: 'shopping',
+  'admin dashboard': 'admin',
+  'user management': 'admin',
+  'activity log': 'admin',
+  'system statistics': 'admin',
+  'admin settings': 'admin',
+};
+
 const RouteLoadingFallback = ({ route = 'page' }) => {
-  const { t } = useTranslation();
+  const page = ROUTE_SKELETON_MAP[route];
+  if (page) return <PageSkeleton page={page} />;
+  // Auth / misc routes — just a plain spinner, no text, no translation dependency
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400 font-medium">
-          {t('errors.loadingPage', { route }) || `Loading ${route}...`}
-        </p>
-      </div>
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
     </div>
   );
 };
