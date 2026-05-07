@@ -155,7 +155,7 @@ class User {
       // Parse JSON fields safely
       if (user.preferences) {
         try {
-          user.preferences = JSON.parse(user.preferences);
+          user.preferences = typeof user.preferences === 'string' ? JSON.parse(user.preferences) : user.preferences;
         } catch (e) {
           user.preferences = {};
         }
@@ -231,7 +231,7 @@ class User {
       // Parse JSON fields safely
       if (user.preferences) {
         try {
-          user.preferences = JSON.parse(user.preferences);
+          user.preferences = typeof user.preferences === 'string' ? JSON.parse(user.preferences) : user.preferences;
         } catch (e) {
           user.preferences = {};
         }
@@ -450,7 +450,7 @@ class User {
       // Parse preferences
       if (user.preferences) {
         try {
-          user.preferences = JSON.parse(user.preferences);
+          user.preferences = typeof user.preferences === 'string' ? JSON.parse(user.preferences) : user.preferences;
         } catch (e) {
           user.preferences = {};
         }
@@ -707,7 +707,7 @@ class User {
       // Parse JSON fields safely
       if (user.preferences) {
         try {
-          user.preferences = JSON.parse(user.preferences);
+          user.preferences = typeof user.preferences === 'string' ? JSON.parse(user.preferences) : user.preferences;
         } catch (e) {
           user.preferences = {};
         }

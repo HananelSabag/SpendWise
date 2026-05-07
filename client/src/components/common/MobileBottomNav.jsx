@@ -457,8 +457,12 @@ const FullNav = () => {
 
 const MobileBottomNav = () => {
   const { user } = useAuth();
+  // Also check sessionStorage so the nav switches immediately after
+  // HomePickerScreen or Profile saves (before getProfile overwrites Zustand).
+  const sessionMode = (() => { try { return sessionStorage.getItem('sw_app_mode'); } catch { return null; } })();
   const isShoppingMode = user?.preferences?.default_home === 'shopping' ||
-                         user?.preferences?.shopping_list_as_default_page === true;
+                         user?.preferences?.shopping_list_as_default_page === true ||
+                         sessionMode === 'shopping';
   return isShoppingMode ? <ShoppingModeNav /> : <FullNav />;
 };
 
