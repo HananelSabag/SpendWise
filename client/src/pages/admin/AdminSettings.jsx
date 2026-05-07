@@ -41,7 +41,7 @@ const Toggle = ({ checked, onChange, variant = 'default' }) => (
       variant === 'warning' && 'peer-checked:bg-yellow-500',
       'after:content-[""] after:absolute after:top-0.5 after:start-0.5',
       'after:bg-white after:rounded-full after:h-5 after:w-5',
-      'after:transition-all peer-checked:after:translate-x-5',
+      'after:transition-all ltr:peer-checked:after:translate-x-5 rtl:peer-checked:after:-translate-x-5',
     )} />
   </label>
 );
