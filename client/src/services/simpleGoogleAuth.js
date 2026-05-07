@@ -147,13 +147,15 @@ class SimpleGoogleAuth {
         this._gsiInitialized = true;
       }
 
-      // Render the button
+      // Render the button — match container width so clicks register across the full button.
+      // A fixed 300px iframe was causing missed clicks on RTL/wide screens.
+      const btnWidth = Math.max(container.offsetWidth || 0, 300);
       window.google.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
         text: 'signin_with',
         shape: 'rectangular',
-        width: '300' // Fixed width instead of percentage
+        width: String(btnWidth)
       });
 
       // Explicitly enable the container to accept pointer events
