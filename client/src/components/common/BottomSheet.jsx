@@ -4,7 +4,7 @@
  * Uses Framer Motion for animation. Dismisses on backdrop click or drag down.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
@@ -21,6 +21,36 @@ const BottomSheet = ({
 }) => {
   const { t } = useTranslation('common');
   const dragControls = useDragControls();
+
+  // Keep a stable ref to onClose so the history effect doesn't re-run on every render
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  // Android back-gesture / hardware back button: push a history entry when the
+  // sheet opens so the gesture hits that entry instead of leaving the app.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Track whether close was triggered by the back gesture (popstate) or
+    // programmatically (X button / backdrop). Only in the latter case do we
+    // need to pop the entry we pushed.
+    let closedByPop = false;
+
+    history.pushState({ bottomSheet: true }, '');
+
+    const handlePop = () => {
+      closedByPop = true;
+      onCloseRef.current();
+    };
+
+    window.addEventListener('popstate', handlePop);
+
+    return () => {
+      window.removeEventListener('popstate', handlePop);
+      // Programmatic close — remove the history entry we pushed
+      if (!closedByPop) history.back();
+    };
+  }, [isOpen]); // intentionally omit onClose — we use the ref
 
   const handleBackdropClick = useCallback((e) => {
     if (e.target === e.currentTarget) onClose();
