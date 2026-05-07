@@ -18,6 +18,7 @@ async function scrapeProductUrl(rawUrl) {
     url = new URL(rawUrl);
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('bad protocol');
   } catch {
+    console.log(`[scraper] invalid_url: ${rawUrl}`);
     return { success: false, reason: 'invalid_url' };
   }
 
@@ -30,9 +31,11 @@ async function scrapeProductUrl(rawUrl) {
     hostname.startsWith('192.168.') ||
     hostname.match(/^172\.(1[6-9]|2\d|3[01])\./)
   ) {
+    console.log(`[scraper] blocked_host: ${hostname}`);
     return { success: false, reason: 'blocked_host' };
   }
 
+  console.log(`[scraper] fetching: ${rawUrl}`);
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -47,8 +50,15 @@ async function scrapeProductUrl(rawUrl) {
     });
     clearTimeout(timer);
 
+    // Log all response headers to understand what's blocking us
+    const denyReason = res.headers.get('x-deny-reason');
+    const server     = res.headers.get('server');
+    const cfRay      = res.headers.get('cf-ray');
+    console.log(`[scraper] response ${res.status} from ${hostname} | server=${server} | x-deny-reason=${denyReason} | cf-ray=${cfRay}`);
+
     if (!res.ok) {
       const blocked = res.status === 403 || res.status === 401 || res.status === 429;
+      console.log(`[scraper] BLOCKED status=${res.status} blocked=${blocked} url=${rawUrl}`);
       return { success: false, reason: 'fetch_error', status: res.status, allowClientFallback: blocked };
     }
 
@@ -101,12 +111,20 @@ async function scrapeProductUrl(rawUrl) {
       } catch { /* ignore bad image urls */ }
     }
 
-    if (!imageUrl && !title) return { success: false, reason: 'no_data' };
+    if (!imageUrl && !title) {
+      console.log(`[scraper] no_data for ${hostname} — og:image=${image} og:title=${title}`);
+      return { success: false, reason: 'no_data' };
+    }
 
+    console.log(`[scraper] success ${hostname} | title="${title}" | image=${imageUrl}`);
     return { success: true, image_url: imageUrl, title: title || null };
 
   } catch (err) {
-    if (err.name === 'AbortError') return { success: false, reason: 'timeout' };
+    if (err.name === 'AbortError') {
+      console.log(`[scraper] timeout after ${TIMEOUT_MS}ms for ${rawUrl}`);
+      return { success: false, reason: 'timeout' };
+    }
+    console.log(`[scraper] error for ${rawUrl}: ${err.message}`);
     return { success: false, reason: 'error', message: err.message };
   }
 }

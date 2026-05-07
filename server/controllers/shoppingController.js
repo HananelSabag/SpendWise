@@ -54,7 +54,9 @@ const shoppingController = {
     if (!url?.trim()) {
       return res.status(400).json({ success: false, error: { message: 'URL is required' } });
     }
+    console.log(`[scrapeUrl] user=${req.user?.id} url=${url.trim()}`);
     const result = await scrapeProductUrl(url.trim());
+    console.log(`[scrapeUrl] result=${JSON.stringify(result)}`);
     res.json({ success: true, data: result });
   }),
 
