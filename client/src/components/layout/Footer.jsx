@@ -33,7 +33,7 @@ const Footer = () => {
     <>
       <footer
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 pb-20 md:pb-0"
+        className="bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700/40 pb-20 md:pb-0"
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
           {/* Single row: brand · legal links · contact */}

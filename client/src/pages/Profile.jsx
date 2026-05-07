@@ -680,7 +680,7 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc, isRTL }) => (
     </div>
 
     {/* Section list */}
-    <div className="flex-1 px-4 pt-5 space-y-2.5">
+    <div className="px-4 pt-5 space-y-2.5">
       {TABS.map(tab => {
         const Icon  = tab.icon;
         const meta  = MENU_META[tab.id];
@@ -716,7 +716,7 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc, isRTL }) => (
     </div>
 
     {/* Logout */}
-    <div className="px-4 py-5 pb-28">
+    <div className="mt-auto px-4 py-5 pb-28">
       <button
         onClick={onLogout}
         className={cn(
