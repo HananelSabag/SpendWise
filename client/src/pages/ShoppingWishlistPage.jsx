@@ -20,6 +20,60 @@ import { PageSkeleton } from '../components/ui';
 import { useTranslation } from '../stores';
 import { useAuth } from '../hooks/useAuth';
 
+// ─── Greeting bar (shown only in shopping-home mode) ─────────────────────────
+
+const getGreeting = (isRTL) => {
+  const h = new Date().getHours();
+  if (isRTL) {
+    if (h >= 5  && h < 12) return 'בוקר טוב';
+    if (h >= 12 && h < 17) return 'צהריים טובים';
+    if (h >= 17 && h < 21) return 'ערב טוב';
+    return 'לילה טוב';
+  }
+  if (h >= 5  && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  if (h >= 17 && h < 21) return 'Good evening';
+  return 'Good night';
+};
+
+const getDateStr = (isRTL) => {
+  const locale = isRTL ? 'he-IL' : 'en-US';
+  return new Date().toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'long' });
+};
+
+const ShoppingGreetingBar = ({ user, isRTL }) => {
+  const firstName = user?.firstName || user?.first_name || user?.username || '';
+  const pic = user?.profilePicture || user?.profile_picture_url || user?.avatar;
+  const initials = firstName?.[0]?.toUpperCase() || '?';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="px-4 pt-4 pb-3 flex items-center gap-3"
+    >
+      {/* Avatar */}
+      <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden ring-2 ring-purple-200 dark:ring-purple-800 shadow-sm">
+        {pic
+          ? <img src={pic} alt={firstName} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold">{initials}</div>
+        }
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+          {getGreeting(isRTL)}{firstName ? `, ${firstName}` : ''}!
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{getDateStr(isRTL)}</p>
+      </div>
+
+      {/* Decorative dot */}
+      <div className="shrink-0 w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-pink-500" />
+    </motion.div>
+  );
+};
+
 const AVATAR_COLORS = [
   'bg-blue-500', 'bg-purple-500', 'bg-emerald-500',
   'bg-orange-500', 'bg-pink-500', 'bg-indigo-500',
@@ -255,8 +309,13 @@ const ShoppingWishlistPage = () => {
       {/* ── Header ── */}
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
 
+        {/* Greeting — only in shopping-home mode */}
+        {(user?.preferences?.default_home === 'shopping' || user?.preferences?.shopping_list_as_default_page) && (
+          <ShoppingGreetingBar user={user} isRTL={isRTL} />
+        )}
+
         {/* Title row */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+        <div className="flex items-center gap-3 px-4 pt-2 pb-2">
 
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight">{t('title')}</h1>
