@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, ShoppingCart, CreditCard, Check, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Check, ChevronLeft } from 'lucide-react';
 import { useAuth, useTranslation } from '../../stores';
 import { cn } from '../../utils/helpers';
 
@@ -25,21 +25,6 @@ const OPTIONS = [
     activeBorder: 'border-blue-500 dark:border-blue-400',
     dot: 'bg-blue-500',
     path: '/',
-  },
-  {
-    id: 'transactions',
-    icon: CreditCard,
-    emoji: '💳',
-    titleHe: 'מעקב הוצאות',
-    titleEn: 'Expense Tracker',
-    descHe: 'רק הכנסות והוצאות',
-    descEn: 'Income & expenses only',
-    gradient: 'from-emerald-500 to-teal-600',
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    border: 'border-emerald-200 dark:border-emerald-700',
-    activeBorder: 'border-emerald-500 dark:border-emerald-400',
-    dot: 'bg-emerald-500',
-    path: '/transactions',
   },
   {
     id: 'shopping',
@@ -91,6 +76,9 @@ const HomePickerScreen = () => {
         setIsSaving(false);
       }
     }
+
+    // Clear the session redirect flag so the chosen preference takes effect immediately
+    try { sessionStorage.removeItem('sw_home_redirect'); } catch (_) {}
 
     navigate(opt.path, { replace: true });
   }, [selected, remember, user, updateProfile, navigate]);

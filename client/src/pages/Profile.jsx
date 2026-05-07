@@ -333,9 +333,9 @@ const PreferencesTab = ({ user, authToasts }) => {
       if (prefs.currency_preference !== user?.currency_preference)
         useAppStore.getState().actions?.setCurrency?.(prefs.currency_preference);
 
-      // Invalidate the React Query profile cache (useAuth returns "profile || user",
-      // so without this the stale React Query result would shadow the Zustand update
-      // and the toggle would appear to revert on the next render cycle).
+      // Clear the home-redirect session flag so next visit to "/" respects the new preference
+      try { sessionStorage.removeItem('sw_home_redirect'); } catch (_) {}
+
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
@@ -387,26 +387,25 @@ const PreferencesTab = ({ user, authToasts }) => {
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {t('preferences.defaultHome') || 'פתח באפליקציה'}
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { id: 'dashboard',    emoji: '📊', label: t('preferences.homeOptions.dashboard')    || 'SpendWise' },
-              { id: 'transactions', emoji: '💳', label: t('preferences.homeOptions.transactions') || 'הוצאות' },
-              { id: 'shopping',     emoji: '🛒', label: t('preferences.homeOptions.shopping')     || 'קניות' },
+              { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'SpendWise' },
+              { id: 'shopping',  emoji: '🛒', label: t('preferences.homeOptions.shopping')  || 'קניות'    },
             ].map(opt => {
-              const active = prefs.default_home === opt.id;
+              const active = prefs.default_home === opt.id || (opt.id === 'dashboard' && !['shopping'].includes(prefs.default_home));
               return (
                 <button
                   key={opt.id}
                   type="button"
                   onClick={() => setPrefs(p => ({ ...p, default_home: opt.id }))}
                   className={cn(
-                    'flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 text-xs font-bold transition-all duration-150',
+                    'flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all duration-150',
                     active
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
                       : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                   )}
                 >
-                  <span className="text-lg">{opt.emoji}</span>
+                  <span className="text-xl">{opt.emoji}</span>
                   <span>{opt.label}</span>
                   {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
                 </button>
