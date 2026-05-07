@@ -679,6 +679,8 @@ export const useAuthStore = create(
                     const result = await authAPI.refreshToken();
 
                     if (result.success) {
+                      // Server responded — clear any waking overlay
+                      window.__SERVER_WAKING__ = false;
                       // Restart timer for new token
                       get().actions.startTokenRefreshTimer();
                     } else if (result.requiresLogin) {
@@ -714,6 +716,7 @@ export const useAuthStore = create(
                 // Token is already within the 2-minute refresh window (or expired) — refresh now
                 authAPI.refreshToken().then((result) => {
                   if (result.success) {
+                    window.__SERVER_WAKING__ = false;
                     get().actions.startTokenRefreshTimer();
                   } else if (result.requiresLogin) {
                     get().actions.logout(false);
