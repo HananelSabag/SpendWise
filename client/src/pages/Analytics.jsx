@@ -29,7 +29,7 @@ import { analyticsAPI } from '../api/analytics';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { getIconComponent } from '../config/categoryIcons';
-import { LoadingSpinner } from '../components/ui';
+import { LoadingSpinner, PageSkeleton } from '../components/ui';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton';
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 
@@ -752,16 +752,7 @@ export default function Analytics() {
   const shared = { period, setPeriod, summary, trends, metrics, formatCurrency, t, navigate, refetch, refreshing, setRefreshing };
 
   if (isLoading && !summary) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-            {t('analytics.loading', { fallback: 'Loading analytics...' })}
-          </p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton page="analytics" />;
   }
 
   if (isError && !summary) {

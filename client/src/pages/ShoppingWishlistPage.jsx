@@ -16,7 +16,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import ShoppingBottomSheet, { CATEGORIES } from '../components/features/shopping/ShoppingBottomSheet';
 import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import ShoppingShareSheet from '../components/features/shopping/ShoppingShareSheet';
-import { PageLoader } from '../components/ui/LoadingSpinner';
+import PageSkeleton from '../components/ui/PageSkeleton';
 import { useTranslation } from '../stores';
 
 const AVATAR_COLORS = [
@@ -243,7 +243,7 @@ const ShoppingWishlistPage = () => {
     if (unreadCount > 0) markAllRead();
   }, [unreadCount, markAllRead]);
 
-  if (isLoading) return <PageLoader text={t('loading')} />;
+  if (isLoading) return <PageSkeleton page="shopping" />;
   if (isError) return (
     <div className="min-h-screen flex items-center justify-center p-8 text-center">
       <div>

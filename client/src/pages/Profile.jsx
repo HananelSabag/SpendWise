@@ -18,7 +18,7 @@ import {
 } from '../stores';
 import { useAuthToasts } from '../hooks/useAuthToasts';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Button, Input, Avatar, LoadingSpinner } from '../components/ui';
+import { Button, Input, Avatar, LoadingSpinner, PageSkeleton } from '../components/ui';
 import PersonalInfo from '../components/features/profile/PersonalInfo';
 import AuthStatusDetector from '../components/features/auth/AuthStatusDetector';
 import useExport from '../hooks/useExport';
@@ -626,6 +626,9 @@ const Profile = () => {
         return null;
     }
   }, [activeTab, user, authToasts, updateProfile, t]);
+
+  // Show skeleton when user data hasn't loaded yet (e.g. hard refresh)
+  if (!user) return <PageSkeleton page="profile" />;
 
   if (isMobile) {
     return (

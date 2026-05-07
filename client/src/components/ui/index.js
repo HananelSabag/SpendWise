@@ -15,6 +15,9 @@ export { default as Dropdown } from './Dropdown';
 export { default as Tooltip } from './Tooltip';
 export { default as Checkbox } from './Checkbox'; // ✅ NEW: Checkbox component
 
+// Central page skeleton — one component for every page's loading state
+export { default as PageSkeleton } from './PageSkeleton';
+
 // 🚀 PHASE 16: Advanced Loading & Skeleton Components
 export { 
   default as Skeleton,
