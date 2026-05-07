@@ -17,7 +17,7 @@ class ResendSender {
   }
 
   async send({ to, subject, html, text }) {
-    logger.info('Email sending via Resend', { to, subject });
+    logger.info(`📧 Sending email via Resend → subject="${subject}" to=[REDACTED]`);
     const { data, error } = await this.client.emails.send({
       from: this.from,
       to,
@@ -26,7 +26,7 @@ class ResendSender {
       text,
     });
     if (error) throw new Error(error.message || JSON.stringify(error));
-    logger.info('Email sent via Resend', { to, subject, id: data?.id });
+    logger.info(`✅ Email sent via Resend → id=${data?.id} subject="${subject}"`);
   }
 }
 
@@ -76,10 +76,10 @@ class EmailService {
   constructor() {
     if (process.env.RESEND_API_KEY) {
       this._sender = new ResendSender(process.env.RESEND_API_KEY);
-      logger.info('✅ Email service: using Resend (HTTP)');
+      logger.info(`✅ Email service: Resend (HTTP) key=${process.env.RESEND_API_KEY.slice(0, 8)}... from="${process.env.FROM_EMAIL || 'onboarding@resend.dev'}"`);
     } else {
       this._sender = new SmtpSender();
-      logger.warn('⚠️  Email service: RESEND_API_KEY not set — falling back to SMTP (may fail on Render)');
+      logger.warn('⚠️  Email service: RESEND_API_KEY not set — SMTP fallback (will fail on Render free tier)');
     }
   }
 
@@ -88,13 +88,10 @@ class EmailService {
       await this._sender.send(opts);
       return true;
     } catch (err) {
-      logger.error('❌ Email send failed', {
-        message: err.message,
-        to: opts.to,
-        subject: opts.subject,
-        senderType: this._sender?.constructor?.name,
-        resendKey: process.env.RESEND_API_KEY ? `set (${process.env.RESEND_API_KEY.slice(0, 6)}...)` : 'NOT SET',
-      });
+      const keyStatus = process.env.RESEND_API_KEY
+        ? `key=${process.env.RESEND_API_KEY.slice(0, 8)}...`
+        : 'RESEND_API_KEY=NOT SET';
+      logger.error(`❌ Email send failed [${this._sender?.constructor?.name}] ${keyStatus} — ${err.message}`);
       return false;
     }
   }

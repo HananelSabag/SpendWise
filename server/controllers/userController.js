@@ -92,17 +92,17 @@ const userController = {
       } catch (_) {}
 
       if (requireVerification) {
-        // Send verification email (async - don't wait)
+        logger.info(`📨 Sending verification email to user ${user.id}`);
+        // Send verification email (async - don't wait, errors logged inside emailService._send)
         emailService.sendVerificationEmail(user.email, user.first_name || user.username, verificationToken)
+          .then(sent => {
+            if (!sent) logger.warn(`⚠️  Verification email not sent for user ${user.id} — see email service error above`);
+          })
           .catch(error => {
-            logger.error('Failed to send verification email', {
-              userId: user.id,
-              email: user.email,
-              error: error.message
-            });
+            logger.error(`❌ Unexpected error sending verification email for user ${user.id}: ${error.message}`);
           });
       } else {
-        // Auto-verify account
+        logger.info(`⚡ email_verification_required=false — auto-verifying user ${user.id}`);
         await db.query('UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1', [user.id]);
       }
 
