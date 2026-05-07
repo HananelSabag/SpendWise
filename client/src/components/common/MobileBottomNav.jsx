@@ -395,7 +395,7 @@ const MobileBottomNav = () => {
                   <Globe className="w-5 h-5 text-white" strokeWidth={1.75} />
                 </div>
                 <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                  {currentLanguage === 'en' ? 'עברית' : 'English'}
+                  {currentLanguage === 'en' ? t('common.hebrew') : t('common.english')}
                 </span>
               </button>
 
