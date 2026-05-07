@@ -790,6 +790,7 @@ const Profile = () => {
   const { t: tc }    = useTranslation();
   const authToasts   = useAuthToasts();
   const isMobile     = useIsMobile();
+  const navigate     = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialTab = searchParams.get('tab');
@@ -804,16 +805,28 @@ const Profile = () => {
     TABS.some(tab => tab.id === initialTab) ? initialTab : null
   );
 
+  // Sync activeSection from URL — handles OS back gesture popping history
+  useEffect(() => {
+    if (!isMobile) return;
+    const tab = searchParams.get('tab');
+    setActiveSection(TABS.some(t => t.id === tab) ? tab : null);
+  }, [searchParams, isMobile]);
+
   const handleSelect = useCallback((tabId) => {
     setActiveTab(tabId);
-    setActiveSection(tabId);
-    setSearchParams(tabId !== 'personal' ? { tab: tabId } : {}, { replace: true });
-  }, [setSearchParams]);
+    if (isMobile) {
+      // Push a new history entry so OS back gesture returns to list view
+      setActiveSection(tabId);
+      setSearchParams({ tab: tabId });
+    } else {
+      setSearchParams(tabId !== 'personal' ? { tab: tabId } : {}, { replace: true });
+    }
+  }, [isMobile, setSearchParams]);
 
   const handleBack = useCallback(() => {
-    setActiveSection(null);
-    setSearchParams({}, { replace: true });
-  }, [setSearchParams]);
+    // Pop the history entry — URL reverts → useEffect sets activeSection(null)
+    navigate(-1);
+  }, [navigate]);
 
   const tabContent = useMemo(() => {
     switch (activeTab) {
