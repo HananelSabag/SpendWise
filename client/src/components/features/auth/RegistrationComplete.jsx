@@ -26,6 +26,8 @@ const RegistrationComplete = ({
   userEmail,
   securityScore = 50,
   onContinue,
+  // autoRedirect only applies for the dashboard (Google/auto-verified) path.
+  // For email verification we never auto-redirect — the user presses the button.
   autoRedirect = true,
   redirectDelay = 3000,
   requiresVerification = false,
@@ -37,16 +39,16 @@ const RegistrationComplete = ({
 
   const redirectTarget = requiresVerification ? '/login' : '/dashboard';
 
-  // Auto redirect
+  // Auto-redirect only for the Google/verified path, never for email-verification.
   useEffect(() => {
-    if (autoRedirect) {
+    if (autoRedirect && !requiresVerification) {
       const timer = setTimeout(() => {
-        navigate(redirectTarget, requiresVerification ? { state: { registrationSuccess: true } } : undefined);
+        navigate(redirectTarget);
       }, redirectDelay);
 
       return () => clearTimeout(timer);
     }
-  }, [autoRedirect, redirectDelay, navigate]);
+  }, [autoRedirect, requiresVerification, redirectDelay, navigate, redirectTarget]);
 
   const handleContinue = useCallback(() => {
     if (onContinue) {
@@ -279,11 +281,9 @@ const RegistrationComplete = ({
           <ArrowRight className={cn("w-5 h-5 ml-2", isRTL && "mr-2 ml-0 rotate-180")} />
         </Button>
 
-        {autoRedirect && (
+        {autoRedirect && !requiresVerification && (
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {requiresVerification
-              ? (t('autoRedirectToLogin', { seconds: Math.round(redirectDelay / 1000) }) || `Redirecting to login in ${Math.round(redirectDelay / 1000)}s...`)
-              : t('autoRedirectMessage', { seconds: Math.round(redirectDelay / 1000) })}
+            {t('autoRedirectMessage', { seconds: Math.round(redirectDelay / 1000) })}
           </p>
         )}
       </motion.div>
