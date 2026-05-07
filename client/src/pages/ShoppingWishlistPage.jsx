@@ -6,8 +6,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, ArrowLeft, ShoppingCart, Plus, Package,
-  CheckCircle2, SlidersHorizontal, UserPlus, Users, ChevronLeft, ChevronRight, Crown,
+  ShoppingCart, Plus, Package,
+  CheckCircle2, UserPlus, Users, Crown, SlidersHorizontal,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -37,72 +37,46 @@ const getShortName = (m) => {
 };
 
 // ── Sharing banner ─────────────────────────────────────────
-const SharingBanner = ({ myMembers, sharedWithMe, onOpen, isRTL }) => {
+const SharingBanner = ({ myMembers, sharedWithMe, onOpen }) => {
   const { t } = useTranslation('shopping');
   if (!myMembers.length && !sharedWithMe.length) return null;
 
-  const isLeader = myMembers.length > 0;
-  const ownerName = sharedWithMe[0]
+  const isLeader     = myMembers.length > 0;
+  const ownerName    = sharedWithMe[0]
     ? (sharedWithMe[0].first_name || sharedWithMe[0].username || sharedWithMe[0].email?.split('@')[0])
     : null;
-
   const visibleMembers = (isLeader ? myMembers : sharedWithMe).slice(0, 3);
-  const extra = (isLeader ? myMembers : sharedWithMe).length - 3;
+  const extra          = (isLeader ? myMembers : sharedWithMe).length - 3;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="px-4 pb-2"
-    >
-      <button
-        onClick={onOpen}
-        className={cn(
-          'w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl',
-          'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40',
-          'hover:bg-blue-100/70 dark:hover:bg-blue-900/30 transition-colors duration-150',
-          isRTL ? 'flex-row-reverse' : 'flex-row'
-        )}
-      >
-        {/* Role indicator */}
+    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="px-4 pb-2">
+      <button onClick={onOpen} className={cn(
+        'w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl',
+        'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40',
+        'hover:bg-blue-100/70 dark:hover:bg-blue-900/30 transition-colors duration-150',
+      )}>
         <div className={cn(
-          'flex items-center gap-1 px-2 py-0.5 rounded-full flex-shrink-0 text-[10px] font-bold',
+          'flex items-center gap-1 px-2 py-0.5 rounded-full shrink-0 text-[10px] font-bold',
           isLeader
             ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
             : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
         )}>
           {isLeader
             ? <><Crown className="w-2.5 h-2.5" /> {t('sharingBanner.youLead')}</>
-            : <><Users className="w-2.5 h-2.5" /> {t('sharingBanner.managedBy', { name: ownerName })}</>
-          }
+            : <><Users className="w-2.5 h-2.5" /> {t('sharingBanner.managedBy', { name: ownerName })}</>}
         </div>
-
-        {/* Avatars */}
-        <div className={cn('flex items-center', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+        <div className="flex items-center">
           {visibleMembers.map((m, i) => (
-            <div
-              key={m.id ?? i}
-              title={getShortName(m)}
-              className={cn(
-                'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold border-2 border-white dark:border-gray-900',
-                AVATAR_COLORS[i % AVATAR_COLORS.length],
-                i > 0 && (isRTL ? 'mr-[-6px]' : 'ml-[-6px]')
-              )}
-            >
+            <div key={m.id ?? i} title={getShortName(m)} className={cn(
+              'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold border-2 border-white dark:border-gray-900',
+              AVATAR_COLORS[i % AVATAR_COLORS.length], i > 0 && '-ms-1.5'
+            )}>
               {getInitial(m)}
             </div>
           ))}
-          {extra > 0 && (
-            <span className={cn(
-              'text-[10px] font-bold text-gray-400 dark:text-gray-500',
-              isRTL ? 'mr-1.5' : 'ml-1.5'
-            )}>
-              {t('sharingBanner.andMore', { count: extra })}
-            </span>
-          )}
+          {extra > 0 && <span className="text-[10px] font-bold text-gray-400 ms-1.5">+{extra}</span>}
         </div>
-
-        <span className={cn('flex-1 text-[11px] text-blue-400 dark:text-blue-500 font-medium', isRTL ? 'text-left' : 'text-right')}>
+        <span className="flex-1 text-[11px] text-blue-400 dark:text-blue-500 font-medium text-end">
           {t('sharingBanner.tapToManage')}
         </span>
       </button>
@@ -148,7 +122,7 @@ const EmptyState = ({ onAdd, filtered, t }) => (
 );
 
 // ── Invitation banner ──────────────────────────────────────
-const InviteBanner = ({ invitations, onOpenShare, isRTL }) => {
+const InviteBanner = ({ invitations, onOpenShare }) => {
   const { t } = useTranslation('shopping');
   if (!invitations.length) return null;
   const first = invitations[0];
@@ -164,13 +138,12 @@ const InviteBanner = ({ invitations, onOpenShare, isRTL }) => {
         'bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
         'border border-blue-200 dark:border-blue-800',
         'shadow-[0_2px_12px_rgba(99,102,241,0.1)]',
-        isRTL ? 'flex-row-reverse' : 'flex-row'
       )}
     >
       <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
         <UserPlus className="w-4 h-4 text-blue-500" strokeWidth={2} />
       </div>
-      <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+      <div className="flex-1 min-w-0 text-start">
         <p className="text-sm font-bold text-blue-700 dark:text-blue-300 truncate">
           {t('inviteBanner.invited', { name })}
         </p>
@@ -191,7 +164,6 @@ const ShoppingWishlistPage = () => {
   const { t, isRTL } = useTranslation('shopping');
   const { t: tc } = useTranslation('common');
 
-  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
   const {
     items, isLoading, isError, refetch,
@@ -278,32 +250,15 @@ const ShoppingWishlistPage = () => {
   const hasSharingMembers = myMembers.length > 0 || sharedWithMe.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col">
 
       {/* ── Header ── */}
-      <div className={cn(
-        'sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl',
-        'border-b border-gray-100 dark:border-gray-800'
-      )}>
+      <div className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
 
         {/* Title row */}
-        <div className={cn(
-          'flex items-center gap-3 px-4 pt-4 pb-2',
-          isRTL ? 'flex-row-reverse' : 'flex-row'
-        )}>
-          <motion.button whileTap={{ scale: 0.92 }}
-            onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
-            className={cn(
-              'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
-              'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-              'text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-colors'
-            )}
-            aria-label={tc('back')}
-          >
-            <BackIcon className="w-5 h-5" strokeWidth={2} />
-          </motion.button>
+        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
 
-          <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+          <div className="flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight">{t('title')}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
               {t('itemsCount', { count: items.length })}
@@ -312,57 +267,35 @@ const ShoppingWishlistPage = () => {
 
           {items.length > 0 && pendingTotal > 0 && (
             <motion.div key={pendingTotal} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className={cn(
-                'flex-shrink-0 px-3 py-1.5 rounded-xl',
-                'bg-gradient-to-l from-blue-600 to-indigo-600',
-                'text-white text-sm font-extrabold tabular-nums shadow-md shadow-blue-500/25'
-              )}>
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm font-extrabold tabular-nums shadow-md shadow-blue-500/25">
               {currency.format(pendingTotal)}
             </motion.div>
           )}
 
           <motion.button whileTap={{ scale: 0.92 }} onClick={openShare}
-            className={cn(
-              'relative w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
-              'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-              'text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-colors'
-            )}
+            className="relative w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-colors"
             aria-label={t('share.button')}
           >
             <UserPlus className="w-4 h-4" strokeWidth={2} />
             {totalBadgeCount > 0 && (
-              <span className={cn(
-                'absolute -top-1 min-w-[18px] h-[18px] px-1',
-                'bg-red-500 text-white text-[10px] font-extrabold',
-                'rounded-full flex items-center justify-center',
-                isRTL ? '-left-1' : '-right-1'
-              )}>
+              <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
                 {totalBadgeCount > 9 ? '9+' : totalBadgeCount}
               </span>
             )}
           </motion.button>
 
           <motion.button whileTap={{ scale: 0.92 }} onClick={handleAdd}
-            className={cn(
-              'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
-              'bg-gradient-to-br from-blue-600 to-indigo-600',
-              'text-white shadow-md shadow-blue-500/30 hover:shadow-lg transition-shadow'
-            )}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/30 hover:shadow-lg transition-shadow"
             aria-label={t('addItemAria')}
           >
             <Plus className="w-5 h-5" strokeWidth={2.5} />
           </motion.button>
         </div>
 
-        {/* Sharing banner — full-width, always visible when sharing */}
+        {/* Sharing banner */}
         <AnimatePresence>
           {hasSharingMembers && (
-            <SharingBanner
-              myMembers={myMembers}
-              sharedWithMe={sharedWithMe}
-              onOpen={openShare}
-              isRTL={isRTL}
-            />
+            <SharingBanner myMembers={myMembers} sharedWithMe={sharedWithMe} onOpen={openShare} />
           )}
         </AnimatePresence>
 
@@ -373,10 +306,7 @@ const ShoppingWishlistPage = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className={cn(
-                'flex gap-1.5 px-4 pb-2 overflow-hidden',
-                isRTL ? 'flex-row-reverse' : 'flex-row'
-              )}
+              className="flex gap-1.5 px-4 pb-2 overflow-hidden"
             >
               {[
                 { key: null,     label: t('allCategories') },
@@ -406,10 +336,7 @@ const ShoppingWishlistPage = () => {
 
         {/* Category filter chips */}
         {items.length > 0 && categoryTabs.length > 1 && (
-          <div className={cn(
-            'flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none',
-            isRTL ? 'flex-row-reverse' : 'flex-row'
-          )}>
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
             {categoryTabs.map((cat) => {
               const active  = activeCategory === cat;
               const catObj  = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
@@ -442,7 +369,7 @@ const ShoppingWishlistPage = () => {
       {/* ── Content ── */}
       <div className="flex-1 px-4 py-4 pb-28 max-w-lg mx-auto w-full">
 
-        <InviteBanner invitations={pendingInvitations} onOpenShare={openShare} isRTL={isRTL} />
+        <InviteBanner invitations={pendingInvitations} onOpenShare={openShare} />
 
         {items.length === 0 ? (
           <EmptyState onAdd={handleAdd} filtered={false} t={t} />
@@ -464,7 +391,7 @@ const ShoppingWishlistPage = () => {
 
             {bought.length > 0 && (
               <motion.section key="bought" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-                <div className={cn('flex items-center gap-2 mb-3', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+                <div className="flex items-center gap-2 mb-3">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2} />
                   <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     {t('boughtSection', { count: bought.length })}
@@ -493,8 +420,8 @@ const ShoppingWishlistPage = () => {
           )}
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
         >
-          <div className={cn('max-w-lg mx-auto flex items-center', isRTL ? 'flex-row-reverse' : 'flex-row', 'justify-between')}>
-            <div className={cn('flex flex-col', isRTL ? 'items-end' : 'items-start')}>
+          <div className="max-w-lg mx-auto flex items-center justify-between">
+            <div className="flex flex-col items-start">
               <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{t('totalPending')}</span>
               <motion.span key={pendingTotal} initial={{ scale: 0.92 }} animate={{ scale: 1 }}
                 className="text-xl font-extrabold text-gray-900 dark:text-white tabular-nums">
