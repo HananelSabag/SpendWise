@@ -234,15 +234,22 @@ const SmartRedirect = () => {
 const HomePickerScreen = React.lazy(() => import('./components/common/HomePickerScreen'));
 const HOME_REDIRECT_KEY = 'sw_home_redirect';
 
+// Helpers to read session flags synchronously (never throws)
+const getSessionFlag = (key) => { try { return sessionStorage.getItem(key); } catch { return null; } };
+
 const HomeRoute = () => {
   const { user } = useAuth();
   const prefs = user?.preferences || {};
-  const hasChosen     = prefs.home_preference_set === true;
+  const hasChosen      = prefs.home_preference_set === true;
   const legacyShopping = prefs.shopping_list_as_default_page === true;
-  const defaultHome   = prefs.default_home;
+  const defaultHome    = prefs.default_home;
 
-  // New users who haven't chosen a default home yet
-  if (!hasChosen && !defaultHome && !legacyShopping && !user?.isAdmin) {
+  // pickerDone: set by HomePickerScreen before navigating, prevents loop while
+  // React Query cache is still stale and hasn't received the updateProfile response yet.
+  const pickerDone = !!getSessionFlag('sw_picker_done');
+
+  // Show home picker only to users who haven't chosen yet (and didn't just choose this session)
+  if (!hasChosen && !defaultHome && !legacyShopping && !user?.isAdmin && !pickerDone) {
     return (
       <React.Suspense fallback={null}>
         <HomePickerScreen />
@@ -337,11 +344,18 @@ const AppContent = () => {
     }
   }, [location.pathname, isAuthenticated, isLoading, navigate]);
 
-  // Detect shopping-only mode and home picker state to conditionally hide chrome
-  const prefs           = user?.preferences || {};
-  const isShoppingMode  = prefs.default_home === 'shopping' || prefs.shopping_list_as_default_page === true;
+  // Detect shopping-only mode and home picker state to conditionally hide chrome.
+  // Use sessionStorage flags in addition to prefs so the UI responds immediately
+  // after the user picks (before React Query refreshes the profile cache).
+  const prefs          = user?.preferences || {};
+  const sessionMode    = getSessionFlag('sw_app_mode');    // 'shopping' | 'dashboard' | null
+  const pickerDone     = !!getSessionFlag('sw_picker_done');
+  const isShoppingMode = prefs.default_home === 'shopping' ||
+                         prefs.shopping_list_as_default_page === true ||
+                         sessionMode === 'shopping';
   const isShowingPicker = isAuthenticated && !isLoading && user &&
-    !prefs.home_preference_set && !prefs.default_home && !prefs.shopping_list_as_default_page && !user?.isAdmin;
+    !prefs.home_preference_set && !prefs.default_home && !prefs.shopping_list_as_default_page &&
+    !user?.isAdmin && !pickerDone;
 
   return (
     <div className="flex flex-col min-h-screen">

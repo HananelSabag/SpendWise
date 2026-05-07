@@ -333,8 +333,12 @@ const PreferencesTab = ({ user, authToasts }) => {
       if (prefs.currency_preference !== user?.currency_preference)
         useAppStore.getState().actions?.setCurrency?.(prefs.currency_preference);
 
-      // Clear the home-redirect session flag so next visit to "/" respects the new preference
-      try { sessionStorage.removeItem('sw_home_redirect'); } catch (_) {}
+      // Update session flags so nav/header switch immediately (React Query cache is still stale)
+      try {
+        sessionStorage.removeItem('sw_home_redirect');
+        sessionStorage.setItem('sw_picker_done', '1');
+        sessionStorage.setItem('sw_app_mode', default_home);
+      } catch (_) {}
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setOriginal(prefs);

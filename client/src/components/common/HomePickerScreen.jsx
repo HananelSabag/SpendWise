@@ -58,6 +58,14 @@ const HomePickerScreen = () => {
     const opt = OPTIONS.find(o => o.id === selected);
     if (!opt) return;
 
+    // Set session flags BEFORE any async work so the UI responds instantly
+    // (React Query cache may still be stale when we navigate — these flags prevent loops)
+    try {
+      sessionStorage.setItem('sw_picker_done', '1');
+      sessionStorage.setItem('sw_app_mode', selected);
+      sessionStorage.removeItem('sw_home_redirect');
+    } catch (_) {}
+
     if (remember) {
       setIsSaving(true);
       try {
@@ -66,7 +74,6 @@ const HomePickerScreen = () => {
             ...(user?.preferences || {}),
             default_home: selected,
             home_preference_set: true,
-            // keep backward-compat flag in sync
             shopping_list_as_default_page: selected === 'shopping',
           },
         });
@@ -76,9 +83,6 @@ const HomePickerScreen = () => {
         setIsSaving(false);
       }
     }
-
-    // Clear the session redirect flag so the chosen preference takes effect immediately
-    try { sessionStorage.removeItem('sw_home_redirect'); } catch (_) {}
 
     navigate(opt.path, { replace: true });
   }, [selected, remember, user, updateProfile, navigate]);
