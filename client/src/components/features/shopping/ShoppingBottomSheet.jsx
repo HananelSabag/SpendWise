@@ -98,6 +98,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
 
   const nameRef       = useRef(null);
   const manualImgRef  = useRef(null);
+  const fileInputRef  = useRef(null);
   const scrapeTimer   = useRef(null);
   const catAutoSet    = useRef(false);
   const isPaste       = useRef(false); // distinguishes paste from manual typing
@@ -231,6 +232,32 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     setManualImgUrl('');
   }, [manualImgUrl, set]);
 
+  // ── Device image upload (canvas compression) ──────────────────────────────
+  const handleImageUpload = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // allow re-selecting the same file
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 480;
+        let { width: w, height: h } = img;
+        if (w > h ? w > MAX : h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        set('image_url', canvas.toDataURL('image/jpeg', 0.82));
+        setScrapeState('idle'); // clear any scrape status
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }, [set]);
+
   // ── Validation + submit ────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
@@ -355,9 +382,9 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
                   </div>
                   {/* Action buttons */}
                   <div className="absolute top-2 end-2 flex gap-1.5">
-                    <button type="button" onClick={() => { set('image_url', ''); openManualImg(); }}
+                    <button type="button" onClick={() => fileInputRef.current?.click()}
                       className="h-7 px-2.5 rounded-full bg-black/50 hover:bg-black/70 text-white text-[10px] font-bold flex items-center gap-1 transition-colors">
-                      <Pencil className="w-3 h-3" /> {t('scrape.changeImage') || 'שנה'}
+                      <Camera className="w-3 h-3" /> {t('scrape.changeImage') || 'שנה'}
                     </button>
                     <button type="button" onClick={() => set('image_url', '')}
                       className="w-7 h-7 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
@@ -408,40 +435,49 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
                       </div>
                     </motion.div>
                   ) : (
-                    /* Placeholder pill — compact */
-                    <motion.button key="placeholder-pill" type="button" onClick={openManualImg}
+                    /* No-image card — upload from device OR paste URL */
+                    <motion.div key="placeholder-pill"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      whileTap={{ scale: 0.97 }}
                       className={cn(
-                        'w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-dashed transition-colors',
+                        'rounded-2xl border-2 border-dashed p-3',
                         scrapeState === 'failed'
                           ? 'border-orange-200 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-900/10'
-                          : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 hover:border-gray-300 dark:hover:border-gray-600'
+                          : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
                       )}>
-                      <div className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-                        scrapeState === 'failed'
-                          ? 'bg-orange-100 dark:bg-orange-900/30'
-                          : 'bg-gray-100 dark:bg-gray-700'
-                      )}>
-                        {scrapeState === 'failed'
-                          ? <AlertCircle className="w-4 h-4 text-orange-400" />
-                          : <ImageIcon className="w-4 h-4 text-gray-400" />
-                        }
-                      </div>
-                      <div className="flex-1 text-start">
-                        <p className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                      {/* Status line */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={cn(
+                          'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                          scrapeState === 'failed' ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-gray-100 dark:bg-gray-700'
+                        )}>
+                          {scrapeState === 'failed'
+                            ? <AlertCircle className="w-3.5 h-3.5 text-orange-400" />
+                            : <ImageIcon className="w-3.5 h-3.5 text-gray-400" />}
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                           {scrapeState === 'failed'
                             ? (scrapeReason === 'blocked'  ? t('scrape.failedBlocked')
                               : scrapeReason === 'timeout' ? t('scrape.failedTimeout')
                               :                              t('scrape.failedNoData'))
-                            : 'ללא תמונה'
-                          }
+                            : 'ללא תמונה'}
                         </p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">הקש להוספת קישור תמונה ידנית</p>
                       </div>
-                      <Camera className="w-4 h-4 text-gray-400 shrink-0" />
-                    </motion.button>
+                      {/* Two action buttons */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <motion.button type="button" whileTap={{ scale: 0.96 }}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">
+                          <Camera className="w-3.5 h-3.5 shrink-0" />
+                          העלה מהמכשיר
+                        </motion.button>
+                        <motion.button type="button" whileTap={{ scale: 0.96 }}
+                          onClick={openManualImg}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-bold transition-colors">
+                          <Link2 className="w-3.5 h-3.5 shrink-0" />
+                          קישור לתמונה
+                        </motion.button>
+                      </div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </motion.div>
@@ -561,6 +597,15 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
             : <><Check className="w-5 h-5" strokeWidth={2.5} />{editItem ? t('sheet.saveChanges') : t('sheet.addToList')}</>
           }
         </motion.button>
+
+        {/* Hidden file input for device image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
 
       </div>
     </BottomSheet>
