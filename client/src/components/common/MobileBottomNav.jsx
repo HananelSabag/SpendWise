@@ -10,11 +10,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, Plus, BarChart3, User,
   PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, LogOut, ShoppingCart,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useAuth, useNotifications, useTranslationStore } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useNotifications, useTranslationStore } from '../../stores';
 import { useToast } from '../../hooks/useToast';
 import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';
@@ -25,7 +25,6 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const { t, currentLanguage, setLanguage } = useTranslation();
   const { isDark, setTheme } = useTheme();
-  const { logout } = useAuth();
   const toast = useToast();
   const isAdmin = useIsAdmin();
 
@@ -52,11 +51,6 @@ const MobileBottomNav = () => {
     try { sessionStorage.setItem('spendwise-session-language', newLang); } catch (_) {}
     toast.success(t('toast.settings.languageChangedSession'), { duration: 2000 });
   }, [currentLanguage, setLanguage, toast, t]);
-
-  const handleLogout = useCallback(async () => {
-    setMenuOpen(false);
-    await logout(true);
-  }, [logout]);
 
   const handleClose = useCallback(() => {
     setMenuOpen(false);
@@ -284,7 +278,7 @@ const MobileBottomNav = () => {
             <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
               <ShoppingCart className="w-7 h-7 text-white" strokeWidth={1.75} />
             </div>
-            <div className="text-left">
+            <div className="flex-1 text-start min-w-0">
               <p className="text-base font-bold text-white leading-tight">
                 {t('shopping.title') || 'Shopping List'}
               </p>
@@ -292,7 +286,7 @@ const MobileBottomNav = () => {
                 {t('shopping.manageList') || 'Manage your shared lists'}
               </p>
             </div>
-            <div className="ml-auto">
+            <div className="flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                 <Plus className="w-5 h-5 text-white" />
               </div>
@@ -361,11 +355,11 @@ const MobileBottomNav = () => {
 
           {/* ── Settings row ─────────────────────────────────────────── */}
           <div className="pt-3 border-t border-gray-100 dark:border-gray-700/60">
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleThemeToggle}
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                  'flex flex-col items-center gap-1.5 py-3 rounded-2xl',
                   'bg-white dark:bg-gray-800',
                   'border border-gray-100 dark:border-gray-700/60',
                   'shadow-sm active:scale-95 transition-all duration-150'
@@ -385,7 +379,7 @@ const MobileBottomNav = () => {
               <button
                 onClick={handleLanguageToggle}
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
+                  'flex flex-col items-center gap-1.5 py-3 rounded-2xl',
                   'bg-white dark:bg-gray-800',
                   'border border-gray-100 dark:border-gray-700/60',
                   'shadow-sm active:scale-95 transition-all duration-150'
@@ -395,24 +389,7 @@ const MobileBottomNav = () => {
                   <Globe className="w-5 h-5 text-white" strokeWidth={1.75} />
                 </div>
                 <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                  {currentLanguage === 'en' ? 'עברית' : 'English'}
-                </span>
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className={cn(
-                  'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl',
-                  'bg-white dark:bg-gray-800',
-                  'border border-red-100 dark:border-red-900/40',
-                  'shadow-sm active:scale-95 transition-all duration-150'
-                )}
-              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-red-400 to-rose-600 shadow-md shadow-red-400/30">
-                  <LogOut className="w-5 h-5 text-white" strokeWidth={1.75} />
-                </div>
-                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                  {t('common.logout') || 'Logout'}
+                  {currentLanguage === 'en' ? t('common.hebrew') : t('common.english')}
                 </span>
               </button>
             </div>

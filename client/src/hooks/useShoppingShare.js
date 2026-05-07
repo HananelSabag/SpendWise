@@ -18,8 +18,9 @@ export function useShoppingShare() {
       if (!r.success) throw new Error('Failed to fetch members');
       return r.data; // { myMembers, sharedWithMe, pendingSent }
     },
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const invitationsQuery = useQuery({

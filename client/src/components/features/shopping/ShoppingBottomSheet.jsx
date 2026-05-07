@@ -10,12 +10,12 @@ import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
 
 export const CATEGORIES = [
-  { value: 'ריהוט',       key: 'furniture',    color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
-  { value: 'מטבח',        key: 'kitchen',      color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
-  { value: 'חדר שינה',    key: 'bedroom',      color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
-  { value: 'אלקטרוניקה',  key: 'electronics',  color: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500'   },
-  { value: 'ביגוד',       key: 'clothing',     color: 'bg-pink-100 text-pink-700 border-pink-200',       dot: 'bg-pink-500'   },
-  { value: 'אחר',         key: 'other',        color: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400'   },
+  { value: 'ריהוט',       key: 'furniture',    emoji: '🛋️',  color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
+  { value: 'מטבח',        key: 'kitchen',      emoji: '🍳',  color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+  { value: 'חדר שינה',    key: 'bedroom',      emoji: '🛏️',  color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+  { value: 'אלקטרוניקה',  key: 'electronics',  emoji: '📱',  color: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500'   },
+  { value: 'ביגוד',       key: 'clothing',     emoji: '👕',  color: 'bg-pink-100 text-pink-700 border-pink-200',       dot: 'bg-pink-500'   },
+  { value: 'אחר',         key: 'other',        emoji: '📦',  color: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400'   },
 ];
 
 const EMPTY = { name: '', category: 'אחר', price_ils: '', buy_url: '', notes: '' };
@@ -50,7 +50,7 @@ const ErrorMsg = ({ msg }) => (
 );
 
 const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSaving = false }) => {
-  const { t } = useTranslation('shopping');
+  const { t, isRTL } = useTranslation('shopping');
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const nameRef = useRef(null);
@@ -108,7 +108,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       title={editItem ? t('sheet.editTitle') : t('sheet.addTitle')}
       height="auto"
     >
-      <div className="flex flex-col gap-5 pb-6" dir="rtl">
+      <div className="flex flex-col gap-5 pb-6">
 
         {/* Name */}
         <div>
@@ -136,19 +136,23 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
                 <motion.button
                   key={cat.value}
                   type="button"
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.93 }}
                   onClick={() => set('category', cat.value)}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold',
-                    'transition-all duration-150 min-h-[44px] justify-center',
+                    'relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border',
+                    'transition-all duration-150 min-h-[64px] justify-center',
                     active
-                      ? cn(cat.color, 'shadow-md scale-[1.02]')
-                      : 'bg-white/70 border-gray-200 text-gray-500 hover:border-gray-300 dark:bg-gray-800/70 dark:border-gray-700 dark:text-gray-400'
+                      ? cn(cat.color, 'shadow-lg scale-[1.04] border-current')
+                      : 'bg-white/70 border-gray-200 text-gray-400 hover:border-gray-300 dark:bg-gray-800/70 dark:border-gray-700'
                   )}
                 >
-                  <span className={cn('w-2 h-2 rounded-full flex-shrink-0', active ? cat.dot : 'bg-gray-300 dark:bg-gray-600')} />
-                  {t(`categories.${cat.key}`)}
-                  {active && <Check className="w-3 h-3 mr-auto" strokeWidth={2.5} />}
+                  {active && (
+                    <span className="absolute top-1.5 left-1.5 w-3.5 h-3.5 rounded-full bg-current/20 flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                    </span>
+                  )}
+                  <span className={cn('text-xl leading-none', !active && 'grayscale opacity-60')}>{cat.emoji}</span>
+                  <span className="text-[11px] font-bold leading-tight text-center">{t(`categories.${cat.key}`)}</span>
                 </motion.button>
               );
             })}

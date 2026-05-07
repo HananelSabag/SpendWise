@@ -6,8 +6,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, ShoppingCart, Plus, Package,
-  CheckCircle2, SlidersHorizontal, UserPlus, Bell,
+  ArrowRight, ArrowLeft, ShoppingCart, Plus, Package,
+  CheckCircle2, SlidersHorizontal, UserPlus, Users, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -19,6 +19,88 @@ import ShoppingShareSheet from '../components/features/shopping/ShoppingShareShe
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import { useTranslation } from '../stores';
 
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-purple-500', 'bg-emerald-500',
+  'bg-orange-500', 'bg-pink-500', 'bg-indigo-500',
+];
+
+const getInitial = (m) => {
+  const name = m.first_name || m.username || m.email || '?';
+  return name[0].toUpperCase();
+};
+
+const getShortName = (m) => {
+  if (m.first_name) return m.first_name;
+  const email = m.username || m.email || '';
+  return email.split('@')[0];
+};
+
+// ── Sharing banner — full-width, always visible ────────────
+const SharingBanner = ({ myMembers, sharedWithMe, onOpen, isRTL }) => {
+  const { t } = useTranslation('shopping');
+  const combined = [
+    ...myMembers.map((m) => ({ ...m, _type: 'mine' })),
+    ...sharedWithMe.map((m) => ({ ...m, _type: 'shared' })),
+  ];
+  if (!combined.length) return null;
+
+  const BackChevron = isRTL ? ChevronLeft : ChevronRight;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="px-4 pb-2"
+    >
+      <button
+        onClick={onOpen}
+        className={cn(
+          'w-full flex items-center gap-3 px-4 py-3 rounded-2xl',
+          'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
+          'border border-blue-100 dark:border-blue-800/50',
+          'hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30',
+          'transition-all duration-150',
+          isRTL ? 'flex-row-reverse' : 'flex-row'
+        )}
+      >
+        {/* Icon */}
+        <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+          <Users className="w-4 h-4 text-blue-500" strokeWidth={2} />
+        </div>
+
+        {/* Members list */}
+        <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+          <p className="text-[11px] font-semibold text-blue-500 dark:text-blue-400 mb-1">
+            {combined.length === 1 ? t('sharingBanner.sharedWith') : t('sharingBanner.sharedWithCount', { count: combined.length })}
+          </p>
+          <div className={cn('flex items-center gap-2 flex-wrap', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+            {combined.slice(0, 4).map((m, i) => (
+              <div key={m.id ?? i} className="flex items-center gap-1.5">
+                <div className={cn(
+                  'w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold flex-shrink-0',
+                  AVATAR_COLORS[i % AVATAR_COLORS.length],
+                  m._type === 'shared' && 'ring-1 ring-emerald-400'
+                )}>
+                  {getInitial(m)}
+                </div>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  {getShortName(m)}
+                </span>
+              </div>
+            ))}
+            {combined.length > 4 && (
+              <span className="text-xs text-gray-400 font-medium">+{combined.length - 4}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Manage arrow */}
+        <BackChevron className="w-4 h-4 text-blue-400 flex-shrink-0" strokeWidth={2.5} />
+      </button>
+    </motion.div>
+  );
+};
+
 // ── Empty state ────────────────────────────────────────────
 const EmptyState = ({ onAdd, filtered, t }) => (
   <motion.div
@@ -28,7 +110,7 @@ const EmptyState = ({ onAdd, filtered, t }) => (
     <div className={cn(
       'w-24 h-24 rounded-3xl flex items-center justify-center mb-6',
       'bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30',
-      'shadow-[0_8px_32px_rgba(99,102,241,0.15),inset_0_1px_0_rgba(255,255,255,0.8)]',
+      'shadow-[0_8px_32px_rgba(99,102,241,0.15)]',
       'border border-blue-100 dark:border-blue-800'
     )}>
       {filtered
@@ -57,7 +139,8 @@ const EmptyState = ({ onAdd, filtered, t }) => (
 );
 
 // ── Invitation banner ──────────────────────────────────────
-const InviteBanner = ({ invitations, onOpenShare }) => {
+const InviteBanner = ({ invitations, onOpenShare, isRTL }) => {
+  const { t } = useTranslation('shopping');
   if (!invitations.length) return null;
   const first = invitations[0];
   const name = first.inviter_first_name
@@ -68,21 +151,24 @@ const InviteBanner = ({ invitations, onOpenShare }) => {
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
       onClick={onOpenShare}
       className={cn(
-        'w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-4',
+        'w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-3',
         'bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
         'border border-blue-200 dark:border-blue-800',
-        'shadow-[0_2px_12px_rgba(99,102,241,0.1)]'
+        'shadow-[0_2px_12px_rgba(99,102,241,0.1)]',
+        isRTL ? 'flex-row-reverse' : 'flex-row'
       )}
     >
       <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
         <UserPlus className="w-4 h-4 text-blue-500" strokeWidth={2} />
       </div>
-      <div className="flex-1 text-right min-w-0">
+      <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
         <p className="text-sm font-bold text-blue-700 dark:text-blue-300 truncate">
-          {name} הזמין אותך לרשימה משותפת
+          {t('inviteBanner.invited', { name })}
         </p>
         <p className="text-xs text-blue-500 dark:text-blue-400">
-          {invitations.length > 1 ? `+${invitations.length - 1} הזמנות נוספות` : 'לחץ לצפייה'}
+          {invitations.length > 1
+            ? t('inviteBanner.moreInvitations', { count: invitations.length - 1 })
+            : t('inviteBanner.tapToView')}
         </p>
       </div>
     </motion.button>
@@ -93,8 +179,10 @@ const InviteBanner = ({ invitations, onOpenShare }) => {
 const ShoppingWishlistPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t }  = useTranslation('shopping');
+  const { t, isRTL } = useTranslation('shopping');
   const { t: tc } = useTranslation('common');
+
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
   const {
     items, isLoading, isError, refetch,
@@ -102,15 +190,14 @@ const ShoppingWishlistPage = () => {
     isCreating, isUpdating, isDeleting,
   } = useShoppingItems();
 
-  const { pendingInvitations, respond } = useShoppingShare();
-  const { unreadCount, markAllRead }     = useNotifications();
+  const { myMembers, sharedWithMe, pendingInvitations, respond } = useShoppingShare();
+  const { unreadCount, markAllRead } = useNotifications();
 
   const [activeCategory, setActiveCategory] = useState(null);
-  const [sheetOpen,    setSheetOpen]    = useState(false);
-  const [shareOpen,    setShareOpen]    = useState(false);
-  const [editingItem,  setEditingItem]  = useState(null);
+  const [sheetOpen,   setSheetOpen]   = useState(false);
+  const [shareOpen,   setShareOpen]   = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
-  // Handle ?invite=TOKEN deep-link from email
   useEffect(() => {
     const token = searchParams.get('invite');
     if (token) {
@@ -125,7 +212,7 @@ const ShoppingWishlistPage = () => {
   const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal } = useMemo(() => {
     const counts = {};
     items.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
-    const tabs    = [null, ...CATEGORIES.filter((c) => counts[c.value]).map((c) => c.value)];
+    const tabs     = [null, ...CATEGORIES.filter((c) => counts[c.value]).map((c) => c.value)];
     const filtered = activeCategory === null ? items : items.filter((i) => i.category === activeCategory);
     const u = filtered.filter((i) => !i.is_bought);
     const b = filtered.filter((i) => i.is_bought);
@@ -133,17 +220,16 @@ const ShoppingWishlistPage = () => {
     return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending };
   }, [items, activeCategory]);
 
-  // Auto-reset category filter when filtered list becomes empty after deletion
   useEffect(() => {
     if (activeCategory !== null && filteredItems.length === 0 && items.length > 0) {
       setActiveCategory(null);
     }
   }, [activeCategory, filteredItems.length, items.length]);
 
-  const handleAdd   = useCallback(() => { setEditingItem(null); setSheetOpen(true); }, []);
-  const handleEdit  = useCallback((item) => { setEditingItem(item); setSheetOpen(true); }, []);
+  const handleAdd  = useCallback(() => { setEditingItem(null); setSheetOpen(true); }, []);
+  const handleEdit = useCallback((item) => { setEditingItem(item); setSheetOpen(true); }, []);
 
-  const handleSave  = useCallback(async (payload) => {
+  const handleSave = useCallback(async (payload) => {
     if (editingItem) await updateItem(editingItem.id, payload);
     else             await createItem(payload);
     setSheetOpen(false);
@@ -158,8 +244,8 @@ const ShoppingWishlistPage = () => {
   }, [unreadCount, markAllRead]);
 
   if (isLoading) return <PageLoader text={t('loading')} />;
-  if (isError)   return (
-    <div className="min-h-screen flex items-center justify-center p-8 text-center" dir="rtl">
+  if (isError) return (
+    <div className="min-h-screen flex items-center justify-center p-8 text-center">
       <div>
         <Package className="w-12 h-12 text-red-400 mx-auto mb-3" strokeWidth={1.5} />
         <p className="text-gray-600 dark:text-gray-400 mb-4">{t('error.title')}</p>
@@ -169,18 +255,22 @@ const ShoppingWishlistPage = () => {
   );
 
   const totalBadgeCount = unreadCount + pendingInvitations.length;
+  const hasSharingMembers = myMembers.length > 0 || sharedWithMe.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col">
 
       {/* ── Header ── */}
       <div className={cn(
         'sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl',
         'border-b border-gray-100 dark:border-gray-800'
       )}>
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
 
-          {/* Back */}
+        {/* Title row */}
+        <div className={cn(
+          'flex items-center gap-3 px-4 pt-4 pb-2',
+          isRTL ? 'flex-row-reverse' : 'flex-row'
+        )}>
           <motion.button whileTap={{ scale: 0.92 }}
             onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
             className={cn(
@@ -190,17 +280,16 @@ const ShoppingWishlistPage = () => {
             )}
             aria-label={tc('back')}
           >
-            <ArrowRight className="w-5 h-5" strokeWidth={2} />
+            <BackIcon className="w-5 h-5" strokeWidth={2} />
           </motion.button>
 
-          <div className="flex-1 min-w-0">
+          <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
             <h1 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight">{t('title')}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
               {t('itemsCount', { count: items.length })}
             </p>
           </div>
 
-          {/* Live pending total */}
           {items.length > 0 && pendingTotal > 0 && (
             <motion.div key={pendingTotal} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
               className={cn(
@@ -212,7 +301,6 @@ const ShoppingWishlistPage = () => {
             </motion.div>
           )}
 
-          {/* Share / notifications button */}
           <motion.button whileTap={{ scale: 0.92 }} onClick={openShare}
             className={cn(
               'relative w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
@@ -221,19 +309,19 @@ const ShoppingWishlistPage = () => {
             )}
             aria-label={t('share.button')}
           >
-            <UserPlus className="w-4.5 h-4.5" strokeWidth={2} />
+            <UserPlus className="w-4 h-4" strokeWidth={2} />
             {totalBadgeCount > 0 && (
               <span className={cn(
-                'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1',
+                'absolute -top-1 min-w-[18px] h-[18px] px-1',
                 'bg-red-500 text-white text-[10px] font-extrabold',
-                'rounded-full flex items-center justify-center'
+                'rounded-full flex items-center justify-center',
+                isRTL ? '-left-1' : '-right-1'
               )}>
                 {totalBadgeCount > 9 ? '9+' : totalBadgeCount}
               </span>
             )}
           </motion.button>
 
-          {/* Add item */}
           <motion.button whileTap={{ scale: 0.92 }} onClick={handleAdd}
             className={cn(
               'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0',
@@ -246,9 +334,24 @@ const ShoppingWishlistPage = () => {
           </motion.button>
         </div>
 
+        {/* Sharing banner — full-width, always visible when sharing */}
+        <AnimatePresence>
+          {hasSharingMembers && (
+            <SharingBanner
+              myMembers={myMembers}
+              sharedWithMe={sharedWithMe}
+              onOpen={openShare}
+              isRTL={isRTL}
+            />
+          )}
+        </AnimatePresence>
+
         {/* Category filter chips */}
         {items.length > 0 && categoryTabs.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+          <div className={cn(
+            'flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none',
+            isRTL ? 'flex-row-reverse' : 'flex-row'
+          )}>
             {categoryTabs.map((cat) => {
               const active  = activeCategory === cat;
               const catObj  = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
@@ -266,7 +369,7 @@ const ShoppingWishlistPage = () => {
                       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-300'
                   )}
                 >
-                  {catObj && !active && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', catObj.dot)} />}
+                  {catObj && <span className={cn('text-sm leading-none', !active && 'grayscale opacity-50')}>{catObj.emoji}</span>}
                   {label}
                   {active && (
                     <span className="bg-white/30 text-white text-[10px] font-extrabold px-1.5 rounded-full">{count}</span>
@@ -281,8 +384,7 @@ const ShoppingWishlistPage = () => {
       {/* ── Content ── */}
       <div className="flex-1 px-4 py-4 pb-28 max-w-lg mx-auto w-full">
 
-        {/* Pending invite banner */}
-        <InviteBanner invitations={pendingInvitations} onOpenShare={openShare} />
+        <InviteBanner invitations={pendingInvitations} onOpenShare={openShare} isRTL={isRTL} />
 
         {items.length === 0 ? (
           <EmptyState onAdd={handleAdd} filtered={false} t={t} />
@@ -304,7 +406,7 @@ const ShoppingWishlistPage = () => {
 
             {bought.length > 0 && (
               <motion.section key="bought" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
+                <div className={cn('flex items-center gap-2 mb-3', isRTL ? 'flex-row-reverse' : 'flex-row')}>
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2} />
                   <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     {t('boughtSection', { count: bought.length })}
@@ -333,8 +435,8 @@ const ShoppingWishlistPage = () => {
           )}
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
         >
-          <div className="max-w-lg mx-auto flex items-center justify-between">
-            <div className="flex flex-col">
+          <div className={cn('max-w-lg mx-auto flex items-center', isRTL ? 'flex-row-reverse' : 'flex-row', 'justify-between')}>
+            <div className={cn('flex flex-col', isRTL ? 'items-end' : 'items-start')}>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{t('totalPending')}</span>
               <motion.span key={pendingTotal} initial={{ scale: 0.92 }} animate={{ scale: 1 }}
                 className="text-xl font-extrabold text-gray-900 dark:text-white tabular-nums">
@@ -355,11 +457,9 @@ const ShoppingWishlistPage = () => {
         </motion.div>
       )}
 
-      {/* Add / Edit BottomSheet */}
       <ShoppingBottomSheet isOpen={sheetOpen} onClose={handleClose}
         onSave={handleSave} editItem={editingItem} isSaving={isCreating || isUpdating} />
 
-      {/* Share BottomSheet */}
       <ShoppingShareSheet isOpen={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
