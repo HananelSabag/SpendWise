@@ -656,8 +656,8 @@ const MENU_FALLBACKS = {
   export:      'CSV, JSON, PDF',
 };
 
-const ProfileMenuList = ({ user, onSelect, onLogout, t, tc }) => (
-  <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+const ProfileMenuList = ({ user, onSelect, onLogout, t, tc, isRTL }) => (
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
     {/* Hero card */}
     <div className="bg-white dark:bg-gray-900 px-5 pt-6 pb-5 border-b border-gray-100 dark:border-gray-800">
       <div className="flex items-center gap-4">
@@ -693,7 +693,7 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc }) => (
               'bg-white dark:bg-gray-900',
               'border border-gray-100 dark:border-gray-800',
               'shadow-sm active:scale-[0.98] transition-all duration-150',
-              'text-left cursor-pointer'
+              'text-start cursor-pointer'
             )}
           >
             <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm', meta.color)}>
@@ -707,7 +707,9 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc }) => (
                 {t(meta.subtitleKey) || MENU_FALLBACKS[tab.id]}
               </p>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+            {isRTL
+              ? <ChevronLeft  className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+              : <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />}
           </button>
         );
       })}
@@ -734,7 +736,7 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc }) => (
 
 // ── Mobile: drilled-in section ────────────────────────────────────────────────
 
-const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t, tc }) => {
+const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t, tc, isRTL }) => {
   const tab  = TABS.find(t => t.id === sectionId);
   const Icon = tab?.icon || User;
   const meta = MENU_META[sectionId] || MENU_META.personal;
@@ -756,7 +758,7 @@ const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t,
   }, [sectionId, user, authToasts, updateProfile, t]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Sticky mini-header */}
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -765,7 +767,7 @@ const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t,
             className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform cursor-pointer shrink-0"
             aria-label="Back"
           >
-            <ChevronLeft className="w-4 h-4" />
+            {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
           <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br shrink-0', meta.color)}>
             <Icon className="w-3.5 h-3.5 text-white" />
@@ -784,7 +786,7 @@ const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t,
 
 const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
-  const { t }        = useTranslation('profile');
+  const { t, isRTL } = useTranslation('profile');
   const { t: tc }    = useTranslation();
   const authToasts   = useAuthToasts();
   const isMobile     = useIsMobile();
@@ -843,6 +845,7 @@ const Profile = () => {
           updateProfile={updateProfile}
           t={t}
           tc={tc}
+          isRTL={isRTL}
         />
       );
     }
@@ -853,6 +856,7 @@ const Profile = () => {
         onLogout={() => logout(true)}
         t={t}
         tc={tc}
+        isRTL={isRTL}
       />
     );
   }
