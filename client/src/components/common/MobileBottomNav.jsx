@@ -23,15 +23,65 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useNotifications, useTranslationStore } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useNotifications, useTranslationStore, useAuth } from '../../stores';
 import { useToast } from '../../hooks/useToast';
 import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 
+// ─── Shopping-only 2-tab nav ──────────────────────────────────────────────────
+
+const ShoppingModeNav = () => {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { t }     = useTranslation();
+
+  const tabs = [
+    { key: 'shopping', icon: ShoppingCart, label: t('shopping.title') || 'Shopping', href: '/shopping' },
+    { key: 'profile',  icon: User,         label: t('nav.profile')    || 'Profile',  href: '/profile'  },
+  ];
+
+  return (
+    <nav
+      className={cn(
+        'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
+        'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
+        'border-t border-gray-200/80 dark:border-gray-700/80',
+        'flex items-end justify-around px-8',
+      )}
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
+    >
+      {tabs.map(tab => {
+        const Icon   = tab.icon;
+        const active = location.pathname.startsWith(tab.href);
+        return (
+          <button
+            key={tab.key}
+            onClick={() => navigate(tab.href)}
+            className="flex flex-col items-center justify-end py-2 flex-1 min-w-0 focus:outline-none transition-colors"
+          >
+            <div className="relative flex items-center justify-center w-10 h-8">
+              {active && (
+                <motion.div
+                  layoutId="shopping-tab-indicator"
+                  className="absolute inset-x-1 top-0 h-0.5 rounded-full bg-purple-600"
+                />
+              )}
+              <Icon className={cn('w-5 h-5 transition-colors', active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500')} />
+            </div>
+            <span className={cn('text-[10px] font-medium mt-0.5 truncate max-w-full px-1', active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500')}>
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+};
+
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
-const MobileBottomNav = () => {
+const FullNav = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { t, currentLanguage, setLanguage } = useTranslation();
@@ -403,6 +453,13 @@ const MobileBottomNav = () => {
       </BottomSheet>
     </>
   );
+};
+
+const MobileBottomNav = () => {
+  const { user } = useAuth();
+  const isShoppingMode = user?.preferences?.default_home === 'shopping' ||
+                         user?.preferences?.shopping_list_as_default_page === true;
+  return isShoppingMode ? <ShoppingModeNav /> : <FullNav />;
 };
 
 export default MobileBottomNav;

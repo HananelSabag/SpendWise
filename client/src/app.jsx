@@ -281,7 +281,7 @@ const usePWAAutoReload = () => {
 
 // ✅ App Content - SIMPLIFIED
 const AppContent = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -337,17 +337,22 @@ const AppContent = () => {
     }
   }, [location.pathname, isAuthenticated, isLoading, navigate]);
 
+  // Detect shopping-only mode and home picker state to conditionally hide chrome
+  const prefs           = user?.preferences || {};
+  const isShoppingMode  = prefs.default_home === 'shopping' || prefs.shopping_list_as_default_page === true;
+  const isShowingPicker = isAuthenticated && !isLoading && user &&
+    !prefs.home_preference_set && !prefs.default_home && !prefs.shopping_list_as_default_page && !user?.isAdmin;
+
   return (
     <div className="flex flex-col min-h-screen">
       <TopProgressBar visible={isLoading} />
-      {/* Modern Onboarding Manager */}
       {isAuthenticated && <ModernOnboardingManager />}
-      
-      {/* Header */}
-      {isAuthenticated && !isQuickExpensePage && <Header />}
 
-      {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
-      {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
+      {/* Header — hidden in shopping mode and while home picker is on screen */}
+      {isAuthenticated && !isQuickExpensePage && !isShoppingMode && !isShowingPicker && <Header />}
+
+      {/* Bottom nav — always rendered (ShoppingModeNav / FullNav); hidden only during home picker */}
+      {isAuthenticated && !isQuickExpensePage && !isShowingPicker && <MobileBottomNav />}
 
 
 
