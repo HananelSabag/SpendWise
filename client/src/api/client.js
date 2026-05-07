@@ -603,6 +603,12 @@ class SpendWiseAPIClient {
 // ✅ Create and export singleton instance
 export const api = new SpendWiseAPIClient();
 
+// Expose the singleton on window so authStore's clearAllCaches() can reach
+// the axios-level cache without creating a circular import.
+if (typeof window !== 'undefined') {
+  window.__spendWiseAPI = api;
+}
+
 // ✅ Export utilities
 export { config as apiConfig };
 export default api;

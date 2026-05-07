@@ -16,6 +16,24 @@ import { authAPI } from '../api';
 import { jwtDecode } from 'jwt-decode';
 import { useAppStore } from './appStore';
 import { useTranslationStore } from './translationStore';
+import { queryClient } from '../config/queryClient';
+
+// Wipe every caching layer that could carry one user's data to the next.
+// Called on both logout and login (before new user's queries fire).
+const clearAllCaches = () => {
+  // 1. In-memory TanStack Query cache (the main culprit)
+  try { queryClient.clear(); } catch (_) {}
+  // 2. TanStack persisted cache in localStorage
+  try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
+  // 3. Axios-level response cache (SpendWiseAPIClient.cache)
+  try { window.__spendWiseAPI?.cache?.clear?.(); } catch (_) {}
+  // 4. PWA Service-Worker cache (no-store headers now cover this, belt-and-suspenders)
+  try {
+    if ('caches' in window) {
+      caches.keys().then(names => names.forEach(n => caches.delete(n)));
+    }
+  } catch (_) {}
+};
 
 // ✅ Auth Store
 export const useAuthStore = create(
@@ -75,8 +93,9 @@ export const useAuthStore = create(
               
               if (result.success) {
                 const userData = result.user;
-                
-                // ✅ Login success - user data received
+
+                // Clear any previous user's cached data before setting new user state
+                clearAllCaches();
 
                 set((state) => {
                   state.isAuthenticated = true;
@@ -136,10 +155,13 @@ export const useAuthStore = create(
               
               if (result.success) {
                 const userData = result.user;
-                
+
+                // Clear any previous user's cached data before setting new user state
+                clearAllCaches();
+
                 set((state) => {
                   state.isAuthenticated = true;
-                  state.initialized = true; // Ensure queries aren't blocked after re-login
+                  state.initialized = true;
                   state.user = userData;
                   state.userRole = userData?.role || 'user';
                   state.isAdmin = ['admin', 'super_admin'].includes(userData?.role || 'user');
@@ -344,18 +366,19 @@ export const useAuthStore = create(
                 // Server unreachable / timed out — proceed with local cleanup anyway.
               }
 
+              // ✅ Clear ALL caches before touching auth state
+              clearAllCaches();
+
               // ✅ FIX: Clear ALL tokens and auth data
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
-              // Clear TanStack Query persisted cache so next user doesn't see stale data
-              try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
               // Clear session-scoped UI prefs
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');
                 sessionStorage.removeItem('spendwise-session-language');
               } catch (_) {}
-              
+
               // Reset state
               get().actions.reset();
 
@@ -379,10 +402,10 @@ export const useAuthStore = create(
               // silent
               
               // ✅ FIX: Force clear everything even if logout API fails (all token keys)
+              clearAllCaches();
               localStorage.removeItem('accessToken');
               localStorage.removeItem('authToken');
               localStorage.removeItem('refreshToken');
-              try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');

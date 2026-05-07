@@ -159,11 +159,14 @@ const performanceMonitor = new QueryPerformanceMonitor();
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Default configuration
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
+      // staleTime: 0 — every query is immediately stale so a new user always
+      // fetches fresh data from the server instead of getting a cache hit from
+      // the previous user's session. Individual hooks override this where a
+      // longer staleTime is genuinely safe (e.g. static dropdown lists).
+      staleTime: 0,
+      gcTime: 5 * 60 * 1000, // 5 min — shrunk from 30 min to limit cross-user data residency
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       
       // Retry configuration

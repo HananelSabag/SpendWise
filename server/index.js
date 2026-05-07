@@ -192,6 +192,16 @@ app.use(requestId);
 // API rate limiter
 app.use('/api', apiLimiter);
 
+// Prevent browsers and proxies from caching any API response.
+// Without this, Workbox (PWA service worker) and the browser's own heuristic
+// cache can serve user A's responses to user B after a logout/login cycle.
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Load user context early so admins can bypass maintenance
 app.use(optionalAuth);
 // Global maintenance gate (place before route handlers)

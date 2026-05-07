@@ -22,7 +22,17 @@ export default defineConfig(({ command, mode }) => {
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
-          skipWaiting: true
+          skipWaiting: true,
+          // API responses must NEVER be cached by the service worker.
+          // Without this, Workbox's default strategies cache responses keyed
+          // by URL only (ignoring Authorization header), causing user A's data
+          // to be served to user B after a logout/login cycle.
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.pathname.includes('/api/'),
+              handler: 'NetworkOnly',
+            },
+          ],
         },
         devOptions: {
           enabled: false
