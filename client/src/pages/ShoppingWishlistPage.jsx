@@ -309,10 +309,17 @@ const ShoppingWishlistPage = () => {
       {/* ── Header ── */}
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
 
-        {/* Greeting — only in shopping-home mode */}
-        {(user?.preferences?.default_home === 'shopping' || user?.preferences?.shopping_list_as_default_page) && (
-          <ShoppingGreetingBar user={user} isRTL={isRTL} />
-        )}
+        {/* Greeting — only in shopping-home mode
+            Also check sessionStorage so the bar shows immediately after
+            HomePickerScreen picks "shopping" (before updateProfile resolves). */}
+        {(() => {
+          const sessionMode = (() => { try { return sessionStorage.getItem('sw_app_mode'); } catch { return null; } })();
+          const isShoppingHome =
+            user?.preferences?.default_home === 'shopping' ||
+            user?.preferences?.shopping_list_as_default_page === true ||
+            sessionMode === 'shopping';
+          return isShoppingHome ? <ShoppingGreetingBar user={user} isRTL={isRTL} /> : null;
+        })()}
 
         {/* Title row */}
         <div className="flex items-center gap-3 px-4 pt-2 pb-2">

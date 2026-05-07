@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   User, Settings, Shield, Download, Camera,
   Eye, EyeOff, FileSpreadsheet, Braces, FileText,
@@ -282,6 +283,7 @@ const Row = ({ label, value, onChange, options }) => (
 const PreferencesTab = ({ user, authToasts }) => {
   const { updateProfile } = useAuth();
   const { t }             = useTranslation('profile');
+  const navigate          = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const resolveDefaultHome = (u) => {
@@ -343,6 +345,16 @@ const PreferencesTab = ({ user, authToasts }) => {
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
+
+      // Navigate immediately when the home mode changed so the user sees
+      // the updated experience without having to manually go to "/".
+      if (prefs.default_home !== original.default_home) {
+        if (prefs.default_home === 'shopping') {
+          navigate('/shopping', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }
     } catch {
       authToasts.profileUpdateFailed?.();
     } finally {
@@ -660,7 +672,17 @@ const Profile = () => {
   const { t: tc }    = useTranslation();
   const authToasts   = useAuthToasts();
   const isMobile     = useIsMobile();
-  const [activeTab, setActiveTab] = useState('personal');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    TABS.some(tab => tab.id === initialTab) ? initialTab : 'personal'
+  );
+
+  const handleTabChange = useCallback((tabId) => {
+    setActiveTab(tabId);
+    setSearchParams(tabId !== 'personal' ? { tab: tabId } : {}, { replace: true });
+  }, [setSearchParams]);
 
   const tabContent = useMemo(() => {
     switch (activeTab) {
@@ -698,7 +720,7 @@ const Profile = () => {
               {t('page.title') || 'Profile'}
             </h1>
           </div>
-          <HorizontalTabs active={activeTab} onChange={setActiveTab} t={t} />
+          <HorizontalTabs active={activeTab} onChange={handleTabChange} t={t} />
         </div>
         <div className="px-4 py-4 pb-4">{tabContent}</div>
 
@@ -737,7 +759,7 @@ const Profile = () => {
         </div>
 
         <div className="flex gap-8 items-start">
-          <SidebarTabs active={activeTab} onChange={setActiveTab} t={t} onLogout={() => logout(true)} tc={tc} />
+          <SidebarTabs active={activeTab} onChange={handleTabChange} t={t} onLogout={() => logout(true)} tc={tc} />
           <div className="flex-1 min-w-0">{tabContent}</div>
         </div>
       </div>

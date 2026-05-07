@@ -99,7 +99,12 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     initialized,
-    user: profile || user,
+    // Merge so Zustand (synchronously updated by updateProfile) always
+    // wins for preferences, preventing the stale React Query cache from
+    // shadowing a preference change the user just saved.
+    user: profile
+      ? { ...profile, preferences: { ...(profile.preferences || {}), ...(user?.preferences || {}) } }
+      : user,
     userRole,
     isAdmin,
     isSuperAdmin,
