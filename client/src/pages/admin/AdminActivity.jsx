@@ -1,342 +1,264 @@
-/**
- * 📋 ADMIN ACTIVITY - Activity Log & Monitoring
- * @version 2.0.0
- */
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Filter, Calendar, User, Activity as ActivityIcon, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Activity as ActivityIcon, RefreshCw, Filter, Calendar, User } from 'lucide-react';
 import { useTranslation } from '../../stores';
-import { cn } from '../../utils/helpers';
 import { api } from '../../api';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import Button from '../../components/ui/Button';
+import { LoadingSpinner } from '../../components/ui';
+import { cn } from '../../utils/helpers';
+
+const ACTION_COLORS = {
+  user_delete:      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  user_block:       'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  user_unblock:     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  user_change_role: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  settings:         'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+};
+const actionColor = (type) => ACTION_COLORS[type] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300';
+
+const getTargetUserInfo = (a) => {
+  const details = a.action_details || {};
+  const isDeleted = a.action_type?.includes('deleted') ||
+                    a.target_username?.includes('_deleted_') ||
+                    a.target_username?.includes('.deleted.');
+  return {
+    username: isDeleted && details.target_username_original
+      ? `${details.target_username_original} (deleted)`
+      : (a.target_username || '-'),
+    email: isDeleted && details.target_email_original
+      ? details.target_email_original
+      : (a.target_user?.email || a.target_email || ''),
+  };
+};
 
 const AdminActivity = () => {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState([]);
-  const [error, setError] = useState(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [filters, setFilters] = useState({
-    adminId: '',
-    actionType: '',
-    dateRange: '24h'
-  });
+  const { t, isRTL } = useTranslation('admin');
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [error,      setError]      = useState(null);
+  const [filters,    setFilters]    = useState({ actionType: '', dateRange: '24h' });
 
-  // ✅ Helper to get target user display info (handles deleted users)
-  const getTargetUserInfo = (activity) => {
-    // Check if action_details has original info (for deleted users)
-    const details = activity.action_details || {};
-    const isDeleted = activity.action_type?.includes('deleted') || 
-                      activity.target_username?.includes('_deleted_') ||
-                      activity.target_username?.includes('.deleted.');
-    
-    return {
-      username: isDeleted && details.target_username_original 
-        ? `${details.target_username_original} (deleted)` 
-        : (activity.target_username || '-'),
-      email: isDeleted && details.target_email_original 
-        ? details.target_email_original 
-        : (activity.target_user?.email || activity.target_email || '')
-    };
-  };
-
-  // Load activity log with filters
-  const loadActivities = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setRefreshing(!showLoading);
-    
+  const load = async (showLoading = true) => {
+    if (showLoading) setLoading(true); else setRefreshing(true);
     try {
       const res = await api.admin.activity.getLog({ limit: 100 });
       if (res.success) {
-        // ✅ Handle unified response format from server
-        const activityData = res.data || [];
-        setActivities(Array.isArray(activityData) ? activityData : []);
-        setTotalCount(res.pagination?.total || activityData.length || 0);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setActivities(data);
+        setTotalCount(res.pagination?.total || data.length);
         setError(null);
       } else {
-        setError(res.error?.message || 'Failed to load activity');
+        setError(res.error?.message || 'Failed to load');
         setActivities([]);
-        setTotalCount(0);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load activity log');
       setActivities([]);
-      setTotalCount(0);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    loadActivities();
-  }, []);
+  useEffect(() => { load(); }, []);
+
+  const pills = [
+    { label: t('table.total',     { fallback: 'Total' }),  value: totalCount,                                                              color: 'text-gray-700 dark:text-gray-200',     bg: 'bg-gray-100 dark:bg-gray-800' },
+    { label: t('status.today',    { fallback: 'Today' }),   value: activities.filter(a => new Date(a.created_at) > new Date(Date.now() - 86400000)).length, color: 'text-blue-700 dark:text-blue-400',     bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { label: t('userDelete',      { fallback: 'Deletes' }), value: activities.filter(a => a.action_type === 'user_delete').length,        color: 'text-red-700 dark:text-red-400',       bg: 'bg-red-50 dark:bg-red-900/20' },
+    { label: t('userBlock',       { fallback: 'Blocks' }),  value: activities.filter(a => a.action_type === 'user_block').length,         color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('admin.activityLog', { fallback: 'Activity Log' })}
-        </h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {/* ── Compact Header ─────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin"
+              className="p-1.5 -ms-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0"
+            >
+              {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+            </Link>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shrink-0">
+              <ActivityIcon className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">
+              {t('activity.title', { fallback: 'Activity Log' })}
+            </h1>
+            <button
+              onClick={() => load(false)}
+              disabled={loading || refreshing}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
+            </button>
+          </div>
+
+          <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {pills.map(({ label, value, color, bg }) => (
+              <div key={label} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0', bg)}>
+                <span className={cn('text-sm font-bold tabular-nums', color)}>{value}</span>
+                <span className={cn('text-xs font-medium opacity-90', color)}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Back link */}
-        <div className="mb-6">
-          <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            {t('admin.backToDashboard', { fallback: 'Back to Dashboard' })}
-          </Link>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
 
-        {/* Enhanced Filters with Icons */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
-              <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('admin.filtersTitle', { fallback: 'Filters' })}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('admin.filtersDescription', { fallback: 'Filter and search activity logs' })}
-              </p>
-            </div>
+        {/* ── Filters ─────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {t('filtersTitle', { fallback: 'Filters' })}
+            </span>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <User className="w-4 h-4" />
-                {t('admin.adminUser', { fallback: 'Admin User' })}
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                <ActivityIcon className="w-3.5 h-3.5" />
+                {t('actionType', { fallback: 'Action Type' })}
               </label>
-              <select 
-                value={filters.adminId}
-                onChange={(e) => setFilters({...filters, adminId: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="">{t('admin.allAdmins', { fallback: 'All Admins' })}</option>
-                {/* Dynamic admin options will be loaded from API */}
-              </select>
-            </div>
-            
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <ActivityIcon className="w-4 h-4" />
-                {t('admin.actionType', { fallback: 'Action Type' })}
-              </label>
-              <select 
+              <select
                 value={filters.actionType}
-                onChange={(e) => setFilters({...filters, actionType: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                onChange={(e) => setFilters(f => ({ ...f, actionType: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 outline-none"
               >
-                <option value="">{t('admin.allActions', { fallback: 'All Actions' })}</option>
-                <option value="user_delete">{t('admin.userDelete', { fallback: 'User Delete' })}</option>
-                <option value="user_block">{t('admin.userBlock', { fallback: 'User Block' })}</option>
-                <option value="user_change_role">{t('admin.roleChange', { fallback: 'Role Change' })}</option>
-                <option value="settings">{t('admin.settingsAction', { fallback: 'Settings' })}</option>
+                <option value="">{t('allActions', { fallback: 'All Actions' })}</option>
+                <option value="user_delete">{t('userDelete',    { fallback: 'User Delete' })}</option>
+                <option value="user_block">{t('userBlock',      { fallback: 'User Block' })}</option>
+                <option value="user_change_role">{t('roleChange',{ fallback: 'Role Change' })}</option>
+                <option value="settings">{t('settingsAction',   { fallback: 'Settings' })}</option>
               </select>
             </div>
-            
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Calendar className="w-4 h-4" />
-                {t('admin.dateRange', { fallback: 'Date Range' })}
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                {t('dateRange', { fallback: 'Date Range' })}
               </label>
-              <select 
+              <select
                 value={filters.dateRange}
-                onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                onChange={(e) => setFilters(f => ({ ...f, dateRange: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 outline-none"
               >
-                <option value="24h">{t('admin.last24Hours', { fallback: 'Last 24 Hours' })}</option>
-                <option value="7d">{t('admin.last7Days', { fallback: 'Last 7 Days' })}</option>
-                <option value="30d">{t('admin.last30Days', { fallback: 'Last 30 Days' })}</option>
-                <option value="all">{t('admin.allTime', { fallback: 'All Time' })}</option>
+                <option value="24h">{t('last24Hours', { fallback: 'Last 24 Hours' })}</option>
+                <option value="7d">{t('last7Days',   { fallback: 'Last 7 Days' })}</option>
+                <option value="30d">{t('last30Days', { fallback: 'Last 30 Days' })}</option>
+                <option value="all">{t('allTime',    { fallback: 'All Time' })}</option>
               </select>
             </div>
-            
-            <div className="flex items-end gap-2">
-              <Button 
-                onClick={() => loadActivities()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            <div className="flex items-end">
+              <button
+                onClick={() => load()}
                 disabled={loading || refreshing}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50"
               >
-                <Filter className="w-4 h-4 mr-2" />
-                {t('admin.applyFilters', { fallback: 'Apply Filters' })}
-              </Button>
-              <Button
-                onClick={() => loadActivities(false)}
-                variant="outline"
-                size="sm"
-                disabled={loading || refreshing}
-                className="px-3"
-              >
-                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-              </Button>
+                <Filter className="w-3.5 h-3.5" />
+                {t('applyFilters', { fallback: 'Apply' })}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Activity List (mobile) + Table (desktop) */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
-                  <ActivityIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t('admin.recentActivity', { fallback: 'Recent Activity' })}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {totalCount > 0 ? t('admin.activity.ofActivities', { shown: activities.length, total: totalCount, fallback: `${activities.length} of ${totalCount} activities` }) : t('admin.activity.noActivities', { fallback: 'No activities found' })}
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={() => loadActivities(false)}
-                variant="outline"
-                size="sm"
-                disabled={loading || refreshing}
-              >
-                <RefreshCw className={cn("w-4 h-4 mr-2", refreshing && "animate-spin")} />
-                {refreshing ? t('common.refreshing', { fallback: 'Refreshing...' }) : t('common.refresh', { fallback: 'Refresh' })}
-              </Button>
+        {/* ── Activity Table ───────────────────────────────────────── */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center py-12"><LoadingSpinner size="large" /></div>
+          ) : error ? (
+            <div className="py-12 text-center text-sm text-red-500">{error}</div>
+          ) : activities.length === 0 ? (
+            <div className="py-12 text-center text-sm text-gray-400">
+              {t('activity.noActivity', { fallback: 'No activity yet' })}
             </div>
-          </div>
-          
-          <div className="p-6">
-            {loading ? (
-              <div className="flex justify-center py-8"><LoadingSpinner size="large" /></div>
-            ) : error ? (
-              <div className="text-center text-red-600 dark:text-red-400">{error}</div>
-            ) : activities.length === 0 ? (
-              <div className="text-center text-gray-600 dark:text-gray-400 py-8">{t('admin.activity.noActivity', { fallback: 'No activity yet' })}</div>
-            ) : (
-              <>
-                {/* Mobile cards */}
-                <div className="grid grid-cols-1 gap-3 md:hidden">
-                  {activities.map((a) => {
-                    const targetInfo = getTargetUserInfo(a);
-                    return (
-                      <div key={a.id} className="rounded-lg border border-purple-200 dark:border-purple-800 p-4">
-                        <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                          {a.action_type?.replace(/_/g, ' ') || 'Unknown Action'}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                          {a.admin_username || a.admin_email || t('admin.table.admin', { fallback: 'Admin' })} • {a.created_at ? new Date(a.created_at).toLocaleString() : t('admin.activity.invalidDate', { fallback: 'Invalid Date' })}
-                        </div>
-                        <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">{targetInfo.username}</span>
-                          {targetInfo.email && <span className="text-xs ml-1 text-gray-500">({targetInfo.email})</span>}
-                        </div>
+          ) : (
+            <>
+              {/* Mobile cards */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800 md:hidden">
+                {activities.map((a) => {
+                  const target = getTargetUserInfo(a);
+                  return (
+                    <div key={a.id} className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span className={cn('inline-flex px-2 py-0.5 rounded-full text-xs font-semibold', actionColor(a.action_type))}>
+                          {a.action_type?.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-xs text-gray-400 shrink-0">
+                          {a.created_at ? new Date(a.created_at).toLocaleString() : '-'}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                        <User className="w-3 h-3" />
+                        <span className="font-medium">{a.admin_username || 'Admin'}</span>
+                        {target.username !== '-' && (
+                          <><span>→</span><span className="font-medium text-gray-900 dark:text-white">{target.username}</span></>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                {/* Desktop table */}
-                <div className="hidden md:block overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-purple-50 dark:bg-gray-900/40">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.when', { fallback: 'When' })}</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.admin', { fallback: 'Admin' })}</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.action', { fallback: 'Action' })}</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">{t('admin.table.target', { fallback: 'Target' })}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {activities.map((a) => {
-                        const targetInfo = getTargetUserInfo(a);
-                        return (
-                          <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                              {a.created_at ? (
-                                <div>
-                                  <div className="font-medium">{new Date(a.created_at).toLocaleDateString()}</div>
-                                  <div className="text-xs text-gray-500">{new Date(a.created_at).toLocaleTimeString()}</div>
-                                </div>
-                              ) : (
-                                <span className="text-red-500 italic">{t('admin.activity.invalidDate', { fallback: 'Invalid Date' })}</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                              <div className="font-medium">{a.admin_username || 'Admin'}</div>
-                              <div className="text-xs text-gray-500">{a.admin_email || ''}</div>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                {a.action_type?.replace(/_/g, ' ') || 'Unknown'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                              <div className="font-medium">{targetInfo.username}</div>
-                              <div className="text-xs text-gray-500">{targetInfo.email}</div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Activity Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+                      {[
+                        t('table.when',   { fallback: 'When' }),
+                        t('table.admin',  { fallback: 'Admin' }),
+                        t('table.action', { fallback: 'Action' }),
+                        t('table.target', { fallback: 'Target' }),
+                      ].map((col) => (
+                        <th key={col} className="px-4 py-3 text-start text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {activities.map((a) => {
+                      const target = getTargetUserInfo(a);
+                      return (
+                        <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            {a.created_at ? (
+                              <>
+                                <div className="font-medium">{new Date(a.created_at).toLocaleDateString()}</div>
+                                <div className="text-xs text-gray-400">{new Date(a.created_at).toLocaleTimeString()}</div>
+                              </>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="font-medium text-gray-900 dark:text-white">{a.admin_username || 'Admin'}</div>
+                            <div className="text-xs text-gray-400">{a.admin_email || ''}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={cn('inline-flex px-2.5 py-1 rounded-full text-xs font-semibold', actionColor(a.action_type))}>
+                              {a.action_type?.replace(/_/g, ' ') || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="font-medium text-gray-900 dark:text-white">{target.username}</div>
+                            <div className="text-xs text-gray-400">{target.email}</div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.todaysActions', { fallback: "Today's Actions" })}</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">--</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.activeAdmins', { fallback: 'Active Admins' })}</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">1</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activity.securityEvents', { fallback: 'Security Events' })}</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">0</p>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default AdminActivity; 
+export default AdminActivity;

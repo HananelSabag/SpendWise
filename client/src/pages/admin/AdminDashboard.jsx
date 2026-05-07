@@ -1,418 +1,228 @@
-/**
- * ️ ADMIN DASHBOARD - COMPLETE IMPLEMENTATION
- * Features: Real-time data, Zustand integration, Live admin metrics
- * @version 3.0.0 - REVOLUTIONARY UPDATE
- */
-
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Users, CheckCircle, XCircle, Activity, BarChart3, Settings,
-  Shield, Clock, TrendingUp, AlertCircle, Database, Server, ArrowLeft, ArrowRight,
-  Eye, Calendar, Globe, Zap, UserPlus, FileText, RefreshCw
+  Users, Activity, Settings, LayoutDashboard,
+  RefreshCw, ArrowRight, ArrowLeft, Clock, UserPlus,
 } from 'lucide-react';
 
-// ✅ NEW: Import Zustand stores and API
-import { useAuth, useTranslation, useTheme, useNotifications } from '../../stores';
+import { useAuth, useTranslation, useNotifications } from '../../stores';
 import { api } from '../../api';
-import { Button, Card, LoadingSpinner, Badge, PageSkeleton } from '../../components/ui';
+import { PageSkeleton } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
 const AdminDashboard = () => {
-  // ✅ Zustand stores
-  const { user, isSuperAdmin } = useAuth();
-  const { t } = useTranslation('admin');
-  const { isDark } = useTheme();
+  const { user } = useAuth();
+  const { t, isRTL } = useTranslation('admin');
   const { addNotification } = useNotifications();
-  const navigate = useNavigate();
 
-  // ✅ Real-time admin data with debug logging
-  const {
-    data: adminResponse,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useQuery({
+  const { data: dashRes, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['admin', 'dashboard-stats'],
     queryFn: async () => {
-      const result = await api.admin.getDashboard();
-      return result;
+      const r = await api.admin.getDashboard();
+      if (!r.success) throw new Error(r.error?.message || 'Failed');
+      return r;
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
-    onError: (err) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.statsLoadFailed', { fallback: 'Failed to load admin statistics' }),
-      });
-    },
+    refetchInterval: 30000,
+    onError: () => addNotification({ type: 'error', message: t('errors.statsLoadFailed') }),
   });
 
-  // ✅ Get recent activity from unified activity log
-  const { data: activityResponse } = useQuery({
+  const { data: actRes } = useQuery({
     queryKey: ['admin', 'recent-activity'],
     queryFn: async () => {
-      const result = await api.admin.activity.getLog({ limit: 10 });
-      return result;
+      const r = await api.admin.activity.getLog({ limit: 8 });
+      return r;
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
-
-  // Extract the actual data from the API response (double-nested!)
-  const adminStats = adminResponse?.success && adminResponse.data?.success ? adminResponse.data.data : null;
-
-  // ✅ Error handling for access denied
-  if (isError && error?.response?.status === 403) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
-        <Card className="p-8 max-w-md">
-          <div className="text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {t('errors.accessDenied', { fallback: 'Access Denied' })}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('errors.adminRequired', { fallback: 'Admin privileges required to access this page' })}
-            </p>
-
-            <Button
-              onClick={() => navigate('/')}
-              className="mr-2"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {t('buttons.goToDashboard', { fallback: 'Go to Dashboard' })}
-            </Button>
-
-            <Button
-              onClick={() => window.location.reload()}
-              variant="outline"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {t('buttons.refreshPage', { fallback: 'Refresh Page' })}
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) return <PageSkeleton page="admin" />;
 
-  // Error state
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
-        <Card className="p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('errors.loadFailed', { fallback: 'Failed to Load Data' })}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {error?.message || t('errors.generic', { fallback: 'Something went wrong' })}
-          </p>
-          <Button onClick={() => refetch()}>
-            {t('common.retry', { fallback: 'Try Again' })}
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  // ✅ REAL DATABASE DATA - Fixed to match actual server response!
+  const s = dashRes?.data?.data?.users?.summary || {};
   const stats = {
-    totalUsers: adminStats?.users?.summary?.total_users || 0,
-    activeUsers: adminStats?.users?.summary?.verified_users || 0,
-    adminUsers: adminStats?.users?.summary?.admin_users || 0,
-    newUsersMonth: adminStats?.users?.summary?.new_users_month || 0,
-    totalTransactions: adminStats?.users?.summary?.total_transactions || 0,
-    totalAmount: adminStats?.users?.summary?.total_amount || 0,
-    transactionsMonth: adminStats?.users?.summary?.transactions_month || 0,
-    totalCategories: adminStats?.users?.summary?.total_categories || 0,
-    recentUsers: adminStats?.users?.recent_users || [],
-    // ✅ Use unified activity log instead of dashboard activity
-    recentActivity: activityResponse?.success ? (activityResponse.data || []) : [],
-    currentUser: adminStats?.adminInfo || {},
-    systemStatus: {
-      database: 'Connected',
-      server: 'Online',
-      security: '98/100'
-    }
+    totalUsers:       s.total_users       || 0,
+    verifiedUsers:    s.verified_users    || 0,
+    newUsersMonth:    s.new_users_month   || 0,
+    totalTransactions:s.total_transactions|| 0,
+    transactionsMonth:s.transactions_month|| 0,
+    totalAmount:      s.total_amount      || 0,
+    adminUsers:       s.admin_users       || 0,
+  };
+  const recentActivity = actRes?.success ? (actRes.data || []) : [];
+
+  const formatTimeAgo = (val) => {
+    if (!val) return '';
+    const diff = Math.floor((Date.now() - new Date(val)) / 1000);
+    if (diff < 60)   return t('timeAgo.justNow',    { fallback: 'Just now' });
+    if (diff < 3600) return t('timeAgo.minutesAgo', { fallback: `${Math.floor(diff/60)}m`, minutes: Math.floor(diff/60) });
+    if (diff < 86400)return t('timeAgo.hoursAgo',   { fallback: `${Math.floor(diff/3600)}h`, hours: Math.floor(diff/3600) });
+    return new Date(val).toLocaleDateString();
   };
 
-  // silent
+  const quickActions = [
+    {
+      to: '/admin/users',
+      icon: Users,
+      gradient: 'from-blue-500 to-indigo-600',
+      title: t('actions.manageUsers',    { fallback: 'Manage Users' }),
+      desc:  t('actions.manageUsersDesc',{ fallback: 'View, edit and manage accounts' }),
+      badge: stats.totalUsers,
+      badgeLabel: t('stats.totalUsers', { fallback: 'users' }),
+    },
+    {
+      to: '/admin/activity',
+      icon: Activity,
+      gradient: 'from-purple-500 to-violet-600',
+      title: t('actions.activityLog',    { fallback: 'Activity Log' }),
+      desc:  t('actions.activityLogDesc',{ fallback: 'Monitor admin actions' }),
+      badge: stats.transactionsMonth,
+      badgeLabel: t('timeAgo.thisMonth', { fallback: 'this month' }),
+    },
+    {
+      to: '/admin/settings',
+      icon: Settings,
+      gradient: 'from-emerald-500 to-teal-600',
+      title: t('actions.systemSettings',    { fallback: 'System Settings' }),
+      desc:  t('actions.systemSettingsDesc',{ fallback: 'Configure system preferences' }),
+      badge: null,
+      badgeLabel: null,
+    },
+  ];
 
-  // Small helper to format relative time for activity items
-  const formatTimeAgo = (value) => {
-    if (!value) return '';
-    const now = new Date();
-    const past = new Date(value);
-    const diff = Math.floor((now - past) / 1000);
-    if (diff < 60) return t('timeAgo.justNow', { fallback: 'Just now' });
-    if (diff < 3600) return t('timeAgo.minutesAgo', { fallback: '{{minutes}}m', minutes: Math.floor(diff / 60) });
-    if (diff < 86400) return t('timeAgo.hoursAgo', { fallback: '{{hours}}h', hours: Math.floor(diff / 3600) });
-    return past.toLocaleDateString();
-  };
+  const pills = [
+    { label: t('stats.totalUsers',       { fallback: 'Users' }),       value: stats.totalUsers,        color: 'text-gray-700 dark:text-gray-200',     bg: 'bg-gray-100 dark:bg-gray-800' },
+    { label: t('stats.totalTransactions',{ fallback: 'Transactions' }), value: stats.totalTransactions, color: 'text-purple-700 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+    { label: t('stats.newThisMonth',     { fallback: 'New / Month' }),  value: `+${stats.newUsersMonth}`,color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20' },
+    { label: t('roles.admin',            { fallback: 'Admins' }),       value: stats.adminUsers,        color: 'text-amber-700 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
-        </h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {/* ── Compact Header ─────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+              <LayoutDashboard className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">
+              {t('dashboardPage.title', { fallback: 'Admin Dashboard' })}
+            </h1>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
+            </button>
+          </div>
+
+          {/* Stats pills */}
+          <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {pills.map(({ label, value, color, bg }) => (
+              <div key={label} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0', bg)}>
+                <span className={cn('text-sm font-bold tabular-nums', color)}>{value}</span>
+                <span className={cn('text-xs font-medium opacity-90', color)}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-        {/* Enhanced KPI Cards - Mobile Optimized */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 mb-6 sm:mb-8">
-          <div>
-            <Card className="p-3 sm:p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="rounded-lg sm:rounded-xl bg-blue-600/15 p-2 sm:p-3 ring-1 ring-blue-600/25">
-                    <Users className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+
+        {/* ── Quick Actions ───────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {quickActions.map(({ to, icon: Icon, gradient, title, desc, badge, badgeLabel }) => (
+            <Link key={to} to={to}>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all group">
+                <div className="flex items-start gap-3">
+                  <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0', gradient)}>
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-right">{t('stats.totalUsers', { fallback: 'Total Users' })}</p>
-                </div>
-                <div>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.totalUsers?.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className="w-3 h-3 text-green-600" />
-                    <p className="text-xs font-medium text-green-600 dark:text-green-400">+{stats.newUsersMonth}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{title}</h3>
+                      {isRTL
+                        ? <ArrowLeft className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0 transition-colors" />
+                        : <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0 transition-colors" />}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{desc}</p>
+                    {badge != null && (
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">
+                        {badge.toLocaleString()} <span className="font-normal text-gray-400">{badgeLabel}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
-            </Card>
+            </Link>
+          ))}
+        </div>
+
+        {/* ── Recent Activity ─────────────────────────────────────── */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('dashboardPage.recentActivity', { fallback: 'Recent Activity' })}
+              </span>
+            </div>
+            <Link
+              to="/admin/activity"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              {t('actions.viewAll', { fallback: 'View all' })}
+            </Link>
           </div>
 
-          <div>
-            <Card className="p-3 sm:p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="rounded-lg sm:rounded-xl bg-emerald-600/15 p-2 sm:p-3 ring-1 ring-emerald-600/25">
-                    <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-right">{t('stats.activeUsers', { fallback: 'Verified' })}</p>
-                </div>
-                <div>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.activeUsers?.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Eye className="w-3 h-3 text-blue-600" />
-                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                      {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {recentActivity.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-gray-400">
+                {t('activity.empty', { fallback: 'No recent activity' })}
+              </div>
+            ) : recentActivity.slice(0, 6).map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {item.action_type?.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {item.admin_username || 'Admin'}
                     </p>
                   </div>
                 </div>
+                <span className="text-xs text-gray-400 shrink-0 ms-2">
+                  {formatTimeAgo(item.created_at)}
+                </span>
               </div>
-            </Card>
+            ))}
           </div>
 
-          <div>
-            <Card className="p-3 sm:p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="rounded-lg sm:rounded-xl bg-purple-600/15 p-2 sm:p-3 ring-1 ring-purple-600/25">
-                    <Activity className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-right">{t('stats.totalTransactions', { fallback: 'Transactions' })}</p>
-                </div>
-                <div>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTransactions?.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Zap className="w-3 h-3 text-purple-600" />
-                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400">+{stats.transactionsMonth}</p>
-                  </div>
-                </div>
+          {recentActivity.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800/40 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-1.5">
+                <UserPlus className="w-3.5 h-3.5 text-green-500" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="font-semibold text-gray-900 dark:text-white">+{stats.newUsersMonth}</span>
+                  {' '}{t('stats.newThisMonth', { fallback: 'new users this month' })}
+                </span>
               </div>
-            </Card>
-          </div>
-
-          <div>
-            <Card className="p-3 sm:p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-800/10">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="rounded-lg sm:rounded-xl bg-orange-600/15 p-2 sm:p-3 ring-1 ring-orange-600/25">
-                    <Database className="h-4 w-4 sm:h-6 sm:w-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-right">{t('stats.totalRevenue', { fallback: 'Total Amount' })}</p>
-                </div>
-                <div>
-                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">₪{stats.totalAmount?.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Globe className="w-3 h-3 text-gray-500" />
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('allTime')}</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* Enhanced Quick Actions - Mobile Optimized */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
-          <Link to="/admin/users" role="button" aria-label={t('accessibility.manageUsersLabel', { fallback: 'Manage users' })}>
-            <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 ring-1 ring-white/20">
-                    <Users className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <h3 className="text-base sm:text-lg font-semibold">{t('actions.manageUsers', { fallback: 'Manage Users' })}</h3>
-                  <p className="text-blue-100 text-xs sm:text-sm leading-relaxed">{t('actions.manageUsersDesc', { fallback: 'View, edit, and manage user accounts' })}</p>
-                  <div className="flex items-center gap-2 text-xs text-blue-200 pt-1 sm:pt-2">
-                    <UserPlus className="w-3 h-3" />
-                    <span>{stats.totalUsers?.toLocaleString()} users</span>
-                  </div>
-                </div>
+              <div className="h-3 w-px bg-gray-300 dark:bg-gray-700" />
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-purple-500" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="font-semibold text-gray-900 dark:text-white">+{stats.transactionsMonth}</span>
+                  {' '}{t('stats.transactionsThisMonth', { fallback: 'transactions this month' })}
+                </span>
               </div>
             </div>
-          </Link>
-
-          <Link to="/admin/settings" role="button" aria-label={t('accessibility.systemSettingsLabel', { fallback: 'System settings' })}>
-            <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 ring-1 ring-white/20">
-                    <Settings className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <h3 className="text-base sm:text-lg font-semibold">{t('actions.systemSettings', { fallback: 'System Settings' })}</h3>
-                  <p className="text-emerald-100 text-xs sm:text-sm leading-relaxed">{t('actions.systemSettingsDesc', { fallback: 'Configure system-wide settings' })}</p>
-                  <div className="flex items-center gap-2 text-xs text-emerald-200 pt-1 sm:pt-2">
-                    <Shield className="w-3 h-3" />
-                    <span>{t('actions.systemControls')}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          <Link to="/admin/activity" role="button" aria-label={t('accessibility.activityLogLabel', { fallback: 'Activity log' })}>
-            <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 ring-1 ring-white/20">
-                    <Activity className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
-                </div>
-                <div className="space-y-1 sm:space-y-2">
-                  <h3 className="text-base sm:text-lg font-semibold">{t('actions.activityLog', { fallback: 'Activity Log' })}</h3>
-                  <p className="text-purple-100 text-xs sm:text-sm leading-relaxed">{t('actions.activityLogDesc', { fallback: 'Monitor system activity and logs' })}</p>
-                  <div className="flex items-center gap-2 text-xs text-purple-200 pt-1 sm:pt-2">
-                    <Clock className="w-3 h-3" />
-                    <span>{t('actions.liveMonitoring')}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Enhanced Activity Panel with improved data visualization */}
-        <div className="mb-8">
-          {/* Enhanced Recent Activity Panel */}
-          <Card className="p-4 sm:p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
-                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('dashboardPage.recentActivity', { fallback: 'Recent Activity' })}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">{t('dashboardPage.liveEvents')}</p>
-                </div>
-              </div>
-              <Link
-                to="/admin/activity"
-                className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-              >
-                <FileText className="w-4 h-4" />
-                {t('actions.activityLog', { fallback: 'Activity Log' })}
-              </Link>
-            </div>
-            <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-              {(stats.recentActivity || []).slice(0, 8).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className={cn('min-w-0 flex-1')}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {item.action_type?.replace(/_/g, ' ')}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {(item.admin_username || 'Admin')} • {item.created_at ? new Date(item.created_at).toLocaleString() : 'Invalid Date'}
-                      </p>
-                    </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full ml-4">
-                      {formatTimeAgo(item.created_at)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {(!stats.recentActivity || stats.recentActivity.length === 0) && (
-                <div className="text-center py-8">
-                  <Clock className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('activity.empty', { fallback: 'No recent activity' })}</p>
-                </div>
-              )}
-            </div>
-          </Card>
-
-
-        </div>
-
-        {/* Enhanced System Status with improved visual indicators */}
-        <div>
-          <Card className="p-4 sm:p-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2">
-                <Server className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('system.status', { fallback: 'System Status' })}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">{t('system.realtimeHealth')}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
-              <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-3 sm:p-5 text-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:shadow-md transition-all duration-300">
-                <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <Server className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-2 sm:mb-3" />
-                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.server', { fallback: 'Server' })}</p>
-                <Badge variant="success" size="sm" className="font-medium text-xs">{t('system.online', { fallback: 'Online' })}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.uptimePlaceholder')}</p>
-              </div>
-
-              <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-3 sm:p-5 text-center bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:shadow-md transition-all duration-300">
-                <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <Database className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 mx-auto mb-2 sm:mb-3" />
-                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.database', { fallback: 'Database' })}</p>
-                <Badge variant="success" size="sm" className="font-medium text-xs">{t('system.connected', { fallback: 'Connected' })}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.responsePlaceholder')}</p>
-              </div>
-
-              <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-gray-200/80 dark:border-gray-600/80 p-3 sm:p-5 text-center bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:shadow-md transition-all duration-300">
-                <div className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2 sm:mb-3" />
-                <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1 sm:mb-2">{t('system.security', { fallback: 'Security' })}</p>
-                <Badge variant="success" size="sm" className="font-medium text-xs">{stats.securityScore || '98/100'}</Badge>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">{t('system.allChecksPassing')}</p>
-              </div>
-            </div>
-          </Card>
+          )}
         </div>
       </div>
     </div>

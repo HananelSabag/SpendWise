@@ -1,444 +1,282 @@
-/**
- * ⚙️ ADMIN SETTINGS - System Configuration
- * @version 2.0.0
- */
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Save, AlertCircle, CheckCircle, Settings, Shield, Mail, BarChart, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-// Import components and hooks
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { ArrowLeft, ArrowRight, Settings, Save, Shield, Mail, Zap, BarChart, RefreshCw } from 'lucide-react';
 import { useTranslation, useNotifications } from '../../stores';
-import { cn } from '../../utils/helpers';
 import { api } from '../../api';
+import { LoadingSpinner } from '../../components/ui';
+import { cn } from '../../utils/helpers';
 
-// Normalize jsonb values that may be stored as boolean, string, or number
-const toBoolean = (value) => {
-  if (value === true || value === false) return value;
-  if (typeof value === 'string') {
-    const v = value.trim().toLowerCase();
-    return v === 'true' || v === '1' || v === 't' || v === 'yes' || v === 'on';
-  }
-  if (typeof value === 'number') return value !== 0;
+const toBoolean = (v) => {
+  if (v === true || v === false) return v;
+  if (typeof v === 'string') return ['true','1','t','yes','on'].includes(v.trim().toLowerCase());
+  if (typeof v === 'number')  return v !== 0;
   return false;
 };
 
+const TABS = [
+  { id: 'general',   icon: Settings, labelKey: 'settings.general',   fallback: 'General' },
+  { id: 'security',  icon: Shield,   labelKey: 'settings.security',  fallback: 'Security' },
+  { id: 'email',     icon: Mail,     labelKey: 'settings.email',     fallback: 'Email' },
+  { id: 'features',  icon: Zap,      labelKey: 'settings.features',  fallback: 'Features' },
+  { id: 'analytics', icon: BarChart, labelKey: 'settings.analytics', fallback: 'Analytics' },
+];
+
+const SettingRow = ({ title, desc, children }) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
+    <div>
+      <p className="text-sm font-medium text-gray-900 dark:text-white">{title}</p>
+      {desc && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>}
+    </div>
+    {children}
+  </div>
+);
+
+const Toggle = ({ checked, onChange, variant = 'default' }) => (
+  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+    <input type="checkbox" className="sr-only peer" checked={checked} onChange={onChange} />
+    <div className={cn(
+      'w-11 h-6 rounded-full transition-colors',
+      'bg-gray-200 dark:bg-gray-700',
+      'peer-checked:bg-blue-600',
+      variant === 'warning' && 'peer-checked:bg-yellow-500',
+      'after:content-[""] after:absolute after:top-0.5 after:start-0.5',
+      'after:bg-white after:rounded-full after:h-5 after:w-5',
+      'after:transition-all peer-checked:after:translate-x-5',
+    )} />
+  </label>
+);
+
+const TextInput = ({ value, onChange, type = 'text', placeholder }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    placeholder={placeholder}
+    className={cn(
+      'px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl',
+      'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
+      'focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 outline-none',
+      'w-full sm:w-64'
+    )}
+  />
+);
+
 const AdminSettings = () => {
-  const { t } = useTranslation();
+  const { t, isRTL }        = useTranslation('admin');
   const { addNotification } = useNotifications();
-  
-  // State management
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState({
-    siteName: 'SpendWise',
-    userRegistration: true,
-    emailVerificationRequired: true,
-    googleOAuthEnabled: true,
-    maintenanceMode: false,
-    analyticsEnabled: true,
-    notificationsEnabled: true,
-    supportEmail: '',
-    emailSenderName: 'SpendWise',
-    analyticsProvider: ''
+
+  const [loading,    setLoading]    = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [activeTab,  setActiveTab]  = useState('general');
+  const [settings,   setSettings]   = useState({
+    siteName:                 'SpendWise',
+    userRegistration:         true,
+    emailVerificationRequired:true,
+    googleOAuthEnabled:       true,
+    maintenanceMode:          false,
+    analyticsEnabled:         true,
+    notificationsEnabled:     true,
+    supportEmail:             '',
+    emailSenderName:          'SpendWise',
+    analyticsProvider:        '',
   });
 
-  // Settings categories
-  const categories = [
-    { id: 'general', name: t('admin.settings.general', { fallback: 'General' }), icon: Settings },
-    { id: 'security', name: t('admin.settings.security', { fallback: 'Security' }), icon: Shield },
-    { id: 'email', name: t('admin.settings.email', { fallback: 'Email' }), icon: Mail },
-    { id: 'features', name: t('admin.settings.features', { fallback: 'Features' }), icon: Zap },
-    { id: 'analytics', name: t('admin.settings.analytics', { fallback: 'Analytics' }), icon: BarChart }
-  ];
-
-  // Load settings on component mount
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  useEffect(() => { loadSettings(); }, []); // eslint-disable-line
 
   const loadSettings = async () => {
     setLoading(true);
     try {
-      // Use real API call to get admin settings
       const result = await api.admin.settings.get();
       if (result.success && result.data) {
-        // Transform server data format to local state format
-        const serverSettings = Array.isArray(result.data) ? result.data : [];
-        const transformedSettings = {
-          siteName: serverSettings.find(s => s.key === 'site_name')?.value || 'SpendWise',
-          userRegistration: toBoolean(serverSettings.find(s => s.key === 'user_registration')?.value),
-          emailVerificationRequired: toBoolean(serverSettings.find(s => s.key === 'email_verification_required')?.value),
-          googleOAuthEnabled: toBoolean(serverSettings.find(s => s.key === 'google_oauth_enabled')?.value),
-          maintenanceMode: toBoolean(serverSettings.find(s => s.key === 'maintenance_mode')?.value),
-          analyticsEnabled: toBoolean(serverSettings.find(s => s.key === 'analytics_enabled')?.value),
-          notificationsEnabled: toBoolean(serverSettings.find(s => s.key === 'notifications_enabled')?.value),
-          supportEmail: serverSettings.find(s => s.key === 'support_email')?.value || '',
-          emailSenderName: serverSettings.find(s => s.key === 'email_sender_name')?.value || 'SpendWise',
-          analyticsProvider: serverSettings.find(s => s.key === 'analytics_provider')?.value || ''
-        };
-        setSettings(transformedSettings);
-        
-        addNotification({
-          type: 'success',
-          message: t('admin.settings.loaded', { fallback: 'Settings loaded successfully' })
-        });
-      } else {
-        // If no settings exist yet, use defaults
-        addNotification({
-          type: 'info',
-          message: t('admin.settings.loaded', { fallback: 'Settings loaded successfully' })
+        const src = Array.isArray(result.data) ? result.data : [];
+        const get = (key, fallback) => src.find(s => s.key === key)?.value ?? fallback;
+        setSettings({
+          siteName:                  get('site_name',                    'SpendWise'),
+          userRegistration:          toBoolean(get('user_registration',         true)),
+          emailVerificationRequired: toBoolean(get('email_verification_required',true)),
+          googleOAuthEnabled:        toBoolean(get('google_oauth_enabled',       true)),
+          maintenanceMode:           toBoolean(get('maintenance_mode',          false)),
+          analyticsEnabled:          toBoolean(get('analytics_enabled',          true)),
+          notificationsEnabled:      toBoolean(get('notifications_enabled',      true)),
+          supportEmail:              get('support_email',     ''),
+          emailSenderName:           get('email_sender_name', 'SpendWise'),
+          analyticsProvider:         get('analytics_provider',''),
         });
       }
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        message: t('admin.settings.loadError', { fallback: 'Failed to load settings' })
-      });
+    } catch {
+      addNotification({ type: 'error', message: t('settings.loadError', { fallback: 'Failed to load settings' }) });
     }
     setLoading(false);
   };
 
-  const saveSettings = async () => {
+  const save = async () => {
     setSaving(true);
     try {
-      // Prepare settings data for server
-      const settingsToSave = [
-        { key: 'site_name', value: settings.siteName, category: 'general', description: 'Application name' },
-        { key: 'user_registration', value: settings.userRegistration, category: 'auth', description: 'Allow new user registration' },
-        { key: 'email_verification_required', value: settings.emailVerificationRequired, category: 'auth', description: 'Require email verification' },
-        { key: 'google_oauth_enabled', value: settings.googleOAuthEnabled, category: 'auth', description: 'Enable Google OAuth' },
-        { key: 'maintenance_mode', value: settings.maintenanceMode, category: 'system', description: 'System maintenance mode' },
-        { key: 'notifications_enabled', value: settings.notificationsEnabled, category: 'system', description: 'Enable system notifications' },
-        // Email settings
-        { key: 'support_email', value: settings.supportEmail, category: 'contact', description: 'Support email address' },
-        { key: 'email_sender_name', value: settings.emailSenderName, category: 'email', description: 'Email sender display name' },
-        // Analytics settings
-        { key: 'analytics_enabled', value: settings.analyticsEnabled, category: 'system', description: 'Enable analytics tracking' },
-        { key: 'analytics_provider', value: settings.analyticsProvider, category: 'analytics', description: 'Analytics provider identifier' }
+      const pairs = [
+        { key: 'site_name',                    value: settings.siteName,                 category: 'general',  description: 'Application name' },
+        { key: 'user_registration',            value: settings.userRegistration,         category: 'auth',     description: 'Allow new user registration' },
+        { key: 'email_verification_required',  value: settings.emailVerificationRequired,category: 'auth',     description: 'Require email verification' },
+        { key: 'google_oauth_enabled',         value: settings.googleOAuthEnabled,       category: 'auth',     description: 'Enable Google OAuth' },
+        { key: 'maintenance_mode',             value: settings.maintenanceMode,          category: 'system',   description: 'Maintenance mode' },
+        { key: 'notifications_enabled',        value: settings.notificationsEnabled,     category: 'system',   description: 'System notifications' },
+        { key: 'support_email',                value: settings.supportEmail,             category: 'contact',  description: 'Support email' },
+        { key: 'email_sender_name',            value: settings.emailSenderName,          category: 'email',    description: 'Email sender name' },
+        { key: 'analytics_enabled',            value: settings.analyticsEnabled,         category: 'system',   description: 'Analytics tracking' },
+        { key: 'analytics_provider',           value: settings.analyticsProvider,        category: 'analytics',description: 'Analytics provider' },
       ];
-
-      // Save each setting
-      for (const setting of settingsToSave) {
-        const result = await api.admin.settings.update(setting);
-        if (!result.success) {
-          throw new Error(result.error?.message || `Failed to save ${setting.key}`);
-        }
+      for (const pair of pairs) {
+        const r = await api.admin.settings.update(pair);
+        if (!r.success) throw new Error(r.error?.message || `Failed: ${pair.key}`);
       }
-      
-      addNotification({
-        type: 'success',
-        message: t('admin.settings.saved', { fallback: 'Settings saved successfully' })
-      });
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        message: t('admin.settings.saveError', { fallback: 'Failed to save settings' }) + ': ' + error.message
-      });
+      addNotification({ type: 'success', message: t('settings.saved', { fallback: 'Settings saved' }) });
+    } catch (err) {
+      addNotification({ type: 'error', message: t('settings.saveError', { fallback: 'Save failed' }) + ': ' + err.message });
     }
     setSaving(false);
   };
 
-  const handleToggle = (key) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const handleInputChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
+  const toggle = (key) => setSettings(p => ({ ...p, [key]: !p[key] }));
+  const set    = (key, val) => setSettings(p => ({ ...p, [key]: val }));
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <LoadingSpinner size="large" />
       </div>
     );
   }
 
   return (
-    <div className={cn("min-h-screen bg-gray-50 dark:bg-gray-900") }>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header banner */}
-        <div className="mb-8">
-          <Card className="overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-5 text-white">
-              <div className="flex items-center gap-3">
-                <Link to="/admin" className="text-white/90 hover:text-white">
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <div>
-                  <h1 className="text-xl md:text-2xl font-semibold">{t('admin.settings.title', { fallback: 'System Settings' })}</h1>
-                  <p className="text-white/90 text-sm mt-1">{t('admin.settings.description', { fallback: 'Configure system-wide settings and preferences (Super Admin Only)' })}</p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {/* ── Compact Header ─────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin"
+              className="p-1.5 -ms-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0"
+            >
+              {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+            </Link>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+              <Settings className="w-4 h-4 text-white" />
             </div>
-          </Card>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">
+              {t('settings.title', { fallback: 'System Settings' })}
+            </h1>
+            <button
+              onClick={() => loadSettings()}
+              disabled={loading}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+            </button>
+          </div>
+
+          {/* Tab pills */}
+          <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {TABS.map(({ id, icon: Icon, labelKey, fallback }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 text-xs font-medium transition-colors',
+                  activeTab === id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                {t(labelKey, { fallback })}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* Settings Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Settings Navigation */}
-          <motion.div 
-            className="lg:col-span-1"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('admin.settings.categories', { fallback: 'Categories' })}
-              </h2>
-              <nav className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                {categories.map((category) => {
-                  const Icon = category.icon;
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => setActiveTab(category.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg font-medium transition flex items-center gap-3 ${
-                        activeTab === category.id
-                          ? 'bg-emerald-600 text-white shadow hover:shadow-md'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      <span className={`inline-flex items-center justify-center rounded-md ${activeTab === category.id ? 'bg-white/20' : 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-400'} p-2`}>
-                        <Icon className="w-5 h-5" />
-                      </span>
-                      {category.name}
-                    </button>
-                  );
-                })}
-              </nav>
-            </Card>
-          </motion.div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
 
-          {/* Settings Content */}
-          <motion.div 
-            className="lg:col-span-3"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {categories.find(cat => cat.id === activeTab)?.name} Settings
-                </h2>
-                <Button
-                  onClick={saveSettings}
-                  loading={saving}
-                  className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {saving ? t('common.saving', { fallback: 'Saving...' }) : t('common.save', { fallback: 'Save Changes' })}
-                </Button>
-              </div>
-              
-              <div className="space-y-6">
-                {activeTab === 'general' && (
-                  <>
-                    {/* Site Name */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t('admin.settings.siteName', { fallback: 'Site Name' })}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('admin.settings.siteNameDesc', { fallback: 'The name of your application' })}
-                        </p>
-                      </div>
-                      <input
-                        type="text"
-                        value={settings.siteName}
-                        onChange={(e) => handleInputChange('siteName', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+          {/* Tab content header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+              {TABS.find(t => t.id === activeTab) && (() => {
+                const tab = TABS.find(t => t.id === activeTab);
+                return t(tab.labelKey, { fallback: tab.fallback });
+              })()}
+            </h2>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50"
+            >
+              {saving
+                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                : <Save className="w-3.5 h-3.5" />}
+              {saving
+                ? t('common.saving', { fallback: 'Saving…' })
+                : t('common.save',   { fallback: 'Save Changes' })}
+            </button>
+          </div>
 
-                    {/* User Registration */}
-                    <SettingToggle
-                      title={t('admin.settings.userRegistration', { fallback: 'User Registration' })}
-                      description={t('admin.settings.userRegistrationDesc', { fallback: 'Allow new users to register' })}
-                      checked={settings.userRegistration}
-                      onChange={() => handleToggle('userRegistration')}
-                    />
+          {/* Tab content */}
+          <div className="px-5 py-1">
+            {activeTab === 'general' && (
+              <>
+                <SettingRow title={t('settings.siteName',{ fallback: 'Site Name' })} desc={t('settings.siteNameDesc',{ fallback: 'The name of your application' })}>
+                  <TextInput value={settings.siteName} onChange={v => set('siteName', v)} />
+                </SettingRow>
+                <SettingRow title={t('settings.userRegistration',    { fallback: 'User Registration' })}      desc={t('settings.userRegistrationDesc',    { fallback: 'Allow new users to register' })}>
+                  <Toggle checked={settings.userRegistration}          onChange={() => toggle('userRegistration')} />
+                </SettingRow>
+                <SettingRow title={t('settings.emailVerification',   { fallback: 'Email Verification' })}     desc={t('settings.emailVerificationDesc',   { fallback: 'Require email verification for new accounts' })}>
+                  <Toggle checked={settings.emailVerificationRequired} onChange={() => toggle('emailVerificationRequired')} />
+                </SettingRow>
+                <SettingRow title={t('settings.googleOAuth',         { fallback: 'Google OAuth' })}           desc={t('settings.googleOAuthDesc',         { fallback: 'Enable Google OAuth authentication' })}>
+                  <Toggle checked={settings.googleOAuthEnabled}        onChange={() => toggle('googleOAuthEnabled')} />
+                </SettingRow>
+              </>
+            )}
 
-                    {/* Email Verification */}
-                    <SettingToggle
-                      title={t('admin.settings.emailVerification', { fallback: 'Email Verification Required' })}
-                      description={t('admin.settings.emailVerificationDesc', { fallback: 'Require email verification for new accounts' })}
-                      checked={settings.emailVerificationRequired}
-                      onChange={() => handleToggle('emailVerificationRequired')}
-                    />
+            {activeTab === 'security' && (
+              <SettingRow title={t('settings.maintenanceMode',{ fallback: 'Maintenance Mode' })} desc={t('settings.maintenanceModeDesc',{ fallback: 'Restrict access during maintenance' })}>
+                <Toggle checked={settings.maintenanceMode} onChange={() => toggle('maintenanceMode')} variant="warning" />
+              </SettingRow>
+            )}
 
-                    {/* Google OAuth */}
-                    <SettingToggle
-                      title={t('admin.settings.googleOAuth', { fallback: 'Google OAuth' })}
-                      description={t('admin.settings.googleOAuthDesc', { fallback: 'Enable Google OAuth authentication' })}
-                      checked={settings.googleOAuthEnabled}
-                      onChange={() => handleToggle('googleOAuthEnabled')}
-                    />
-                  </>
-                )}
+            {activeTab === 'features' && (
+              <SettingRow title={t('settings.notifications',{ fallback: 'System Notifications' })} desc={t('settings.notificationsDesc',{ fallback: 'Enable system-wide notifications' })}>
+                <Toggle checked={settings.notificationsEnabled} onChange={() => toggle('notificationsEnabled')} />
+              </SettingRow>
+            )}
 
-                {activeTab === 'security' && (
-                  <>
-                    {/* Maintenance Mode */}
-                    <SettingToggle
-                      title={t('admin.settings.maintenanceMode', { fallback: 'Maintenance Mode' })}
-                      description={t('admin.settings.maintenanceModeDesc', { fallback: 'Enable maintenance mode to restrict access' })}
-                      checked={settings.maintenanceMode}
-                      onChange={() => handleToggle('maintenanceMode')}
-                      variant={settings.maintenanceMode ? 'warning' : 'default'}
-                    />
-                  </>
-                )}
+            {activeTab === 'email' && (
+              <>
+                <SettingRow title={t('settings.supportEmail',   { fallback: 'Support Email' })}      desc={t('settings.supportEmailDesc',    { fallback: 'Primary support contact email' })}>
+                  <TextInput type="email" value={settings.supportEmail}    onChange={v => set('supportEmail', v)}    placeholder="support@example.com" />
+                </SettingRow>
+                <SettingRow title={t('settings.emailSenderName',{ fallback: 'Email Sender Name' })}  desc={t('settings.emailSenderNameDesc', { fallback: 'Display name used in outgoing emails' })}>
+                  <TextInput value={settings.emailSenderName} onChange={v => set('emailSenderName', v)} placeholder="SpendWise" />
+                </SettingRow>
+              </>
+            )}
 
-                {activeTab === 'features' && (
-                  <>
-                    {/* Notifications */}
-                    <SettingToggle
-                      title={t('admin.settings.notifications', { fallback: 'System Notifications' })}
-                      description={t('admin.settings.notificationsDesc', { fallback: 'Enable system-wide notifications' })}
-                      checked={settings.notificationsEnabled}
-                      onChange={() => handleToggle('notificationsEnabled')}
-                    />
-                  </>
-                )}
-
-                {activeTab === 'email' && (
-                  <>
-                    {/* Support Email */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t('admin.settings.supportEmail', { fallback: 'Support Email' })}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('admin.settings.supportEmailDesc', { fallback: 'Primary support contact email address' })}
-                        </p>
-                      </div>
-                      <input
-                        type="email"
-                        value={settings.supportEmail || 'spendwise.verifiction@gmail.com'}
-                        onChange={(e) => handleInputChange('supportEmail', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    {/* Email Sender Name */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 border-b border-gray-200 dark:border-gray-700">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t('admin.settings.emailSenderName', { fallback: 'Email Sender Name' })}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('admin.settings.emailSenderNameDesc', { fallback: 'Display name used in system emails' })}
-                        </p>
-                      </div>
-                      <input
-                        type="text"
-                        value={settings.emailSenderName}
-                        onChange={(e) => handleInputChange('emailSenderName', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {activeTab === 'analytics' && (
-                  <>
-                    {/* Analytics Enabled */}
-                    <SettingToggle
-                      title={t('admin.settings.analytics', { fallback: 'Analytics Tracking' })}
-                      description={t('admin.settings.analyticsDesc', { fallback: 'Enable analytics and usage tracking' })}
-                      checked={settings.analyticsEnabled}
-                      onChange={() => handleToggle('analyticsEnabled')}
-                    />
-
-                    {/* Analytics Provider */}
-                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t('admin.settings.analyticsProvider', { fallback: 'Analytics Provider' })}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('admin.settings.analyticsProviderDesc', { fallback: 'Identifier (e.g., plausible, ga4) for client integration' })}
-                        </p>
-                      </div>
-                      <input
-                        type="text"
-                        value={settings.analyticsProvider}
-                        onChange={(e) => handleInputChange('analyticsProvider', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        placeholder="plausible"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </Card>
-
-            {/* API Integration Notice */}
-            <Card className="mt-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-              <div className="p-4 flex items-center">
-                <CheckCircle className="w-5 h-5 text-emerald-600 mr-3 flex-shrink-0" />
-                <div>
-                  <h4 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
-                    {t('admin.settings.apiReady', { fallback: 'Settings System Ready' })}
-                  </h4>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
-                    {t('admin.settings.apiDesc', { fallback: 'This interface is ready for backend API integration. Settings are currently in demo mode.' })}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
+            {activeTab === 'analytics' && (
+              <>
+                <SettingRow title={t('settings.analytics',        { fallback: 'Analytics Tracking' })} desc={t('settings.analyticsDesc',        { fallback: 'Enable analytics and usage tracking' })}>
+                  <Toggle checked={settings.analyticsEnabled} onChange={() => toggle('analyticsEnabled')} />
+                </SettingRow>
+                <SettingRow title={t('settings.analyticsProvider',{ fallback: 'Analytics Provider' })} desc={t('settings.analyticsProviderDesc',{ fallback: 'Identifier, e.g. plausible or ga4' })}>
+                  <TextInput value={settings.analyticsProvider} onChange={v => set('analyticsProvider', v)} placeholder="plausible" />
+                </SettingRow>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// ✅ Reusable Setting Toggle Component
-const SettingToggle = ({ title, description, checked, onChange, variant = 'default' }) => {
-  const variantClasses = {
-    default: 'peer-checked:bg-emerald-600',
-    warning: 'peer-checked:bg-yellow-500'
-  };
-
-  return (
-    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-      <div className="flex-1">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {description}
-        </p>
-      </div>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input 
-          type="checkbox" 
-          className="sr-only peer" 
-          checked={checked}
-          onChange={onChange}
-        />
-        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 ${variantClasses[variant]}`}></div>
-      </label>
-    </div>
-  );
-};
-
-export default AdminSettings; 
+export default AdminSettings;
