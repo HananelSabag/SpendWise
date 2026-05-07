@@ -239,3 +239,4 @@ doc/**
 doc/current-fix.md
 **/*workflow*.md
 **/workflow_state.md
+__pycache__/

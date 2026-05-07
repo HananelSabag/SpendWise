@@ -159,11 +159,17 @@ const performanceMonitor = new QueryPerformanceMonitor();
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Default configuration
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
+      // staleTime: 30s — prevents loading-state flicker when navigating between pages.
+      // Cross-user leakage is handled at the source (not staleTime):
+      //   • All query keys include user?.id → different users never share cache slots
+      //   • clearAllCaches() is called on both logout AND login (wipes TanStack, SW, axios)
+      //   • Server sends Cache-Control: no-store on every /api/ response
+      // Individual hooks can override with longer staleTime where safe (categories, etc.)
+      // or shorter / 0 for real-time data.
+      staleTime: 30 * 1000, // 30 s
+      gcTime: 5 * 60 * 1000, // 5 min
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       
       // Retry configuration

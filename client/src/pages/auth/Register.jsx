@@ -1,26 +1,23 @@
 /**
- * 📝 REGISTER PAGE - SIMPLIFIED ORCHESTRATOR!
- * 🚀 Mobile-first, Component-based, Clean architecture
- * Features: Step management, Component orchestration, Mobile UX
- * @version 2.0.0 - COMPLETE REFACTOR
+ * 📝 REGISTER PAGE
+ * Mobile-first, Component-based, Clean architecture
+ * @version 2.1.0
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Globe, ChevronLeft } from 'lucide-react';
+import { Globe, ChevronLeft, Loader2 } from 'lucide-react';
 
-// ✅ Import Zustand stores and enhanced API
-import { 
-  useAuth, 
-  useTranslation, 
+import {
+  useAuth,
+  useTranslation,
   useTheme,
   useNotifications,
-  useAuthStore 
+  useAuthStore
 } from '../../stores';
 import { useAuthToasts } from '../../hooks/useAuthToasts';
 
-// ✅ Import extracted components
 import RegistrationForm from '../../components/features/auth/RegistrationForm';
 import RegistrationComplete from '../../components/features/auth/RegistrationComplete';
 import GoogleProfileCompletion from '../../components/features/auth/GoogleProfileCompletion';
@@ -31,16 +28,14 @@ import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
 const Register = () => {
-  // ✅ Zustand stores
   const { register, isAuthenticated, googleLogin } = useAuth();
   const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
   const { addNotification } = useNotifications();
-  const authToasts = useAuthToasts(); // ✅ Enhanced auth toasts
+  const authToasts = useAuthToasts();
 
   const navigate = useNavigate();
-  
-  // ✅ Registration flow state
-  const [registrationStep, setRegistrationStep] = useState('form'); // form only
+
+  const [registrationStep, setRegistrationStep] = useState('form');
   const [userData, setUserData] = useState(null);
   const [securityData, setSecurityData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,18 +43,19 @@ const Register = () => {
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // ✅ Redirect if already authenticated
+  // Only redirect away if we're still on the form step — i.e. the user landed here
+  // while already authenticated. Once Google registration completes, isAuthenticated
+  // becomes true but we want to keep showing the "Welcome aboard!" complete step.
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && registrationStep === 'form') {
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, registrationStep]);
 
-  // ✅ Form validation
+  // ── Form validation ──────────────────────────────────────────────────────────
   const validateForm = useCallback((formData) => {
     const newErrors = {};
 
-    // Names required for DB; username not used
     if (!formData.firstName?.trim()) newErrors.firstName = t('firstNameRequired');
     if (!formData.lastName?.trim()) newErrors.lastName = t('lastNameRequired');
 
@@ -89,7 +85,7 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   }, [t]);
 
-  // ✅ Handle registration form submission
+  // ── Email/password registration ───────────────────────────────────────────────
   const handleRegistrationSubmit = useCallback(async (formData) => {
     if (!validateForm(formData)) return;
 
@@ -106,49 +102,58 @@ const Register = () => {
       };
 
       const result = await register(registrationData);
-      
+
       if (result.success) {
         setUserData({ email: formData.email, firstName: formData.firstName, lastName: formData.lastName });
-        addNotification({ type: 'success', message: t('registrationSuccess') });
-        navigate('/auth/login', { replace: true });
+        setRegistrationStep('complete');
       } else {
+        const code = result.error?.code || '';
+        let errorMessage = result.error?.message || t('registrationFailed');
+
+        switch (code) {
+          case 'EMAIL_ALREADY_EXISTS':
+          case 'USER_EXISTS':
+            errorMessage = t('emailAlreadyExists') || 'This email is already registered. Try signing in instead.'; break;
+          case 'VALIDATION_ERROR':
+            errorMessage = result.error?.details || t('registrationValidationFailed') || 'Please check all fields and try again.'; break;
+          case 'RATE_LIMITED':
+            errorMessage = t('rateLimited') || 'Too many attempts. Please wait and try again.'; break;
+          case 'SERVER_ERROR':
+          case 'SERVICE_UNAVAILABLE':
+            errorMessage = t('serverError') || 'Server error. Please try again in a moment.'; break;
+          default:
+            break;
+        }
+
         authToasts.registrationFailed(result.error);
-        setErrors({ 
-          general: result.error?.message || t('registrationFailed')
-        });
+        setErrors({ general: errorMessage, code });
       }
     } catch (error) {
       authToasts.registrationFailed(error);
-      setErrors({ 
-        general: t('registrationError')
-      });
+      setErrors({ general: t('registrationError') });
     } finally {
       setIsSubmitting(false);
     }
   }, [validateForm, register, authToasts, t]);
 
-  // ✅ Handle Google registration with credential
+  // ── Google registration ───────────────────────────────────────────────────────
   const handleGoogleRegister = useCallback(async (credential) => {
     setIsGoogleLoading(true);
-    
+    let succeeded = false;
+
     try {
-      let result;
-      
-      if (credential) {
-        // Direct credential from SimpleGoogleButton
-        if (import.meta.env.DEV) console.log('🔍 Processing Google credential for registration...');
-        result = await authAPI.processGoogleCredential(credential);
-      } else {
-        // This shouldn't happen anymore with SimpleGoogleButton
-        throw new Error('No Google credential provided');
-      }
-      
+      if (!credential) throw new Error('No Google credential provided');
+
+      const result = await authAPI.processGoogleCredential(credential);
+
       if (result.success) {
-        // ✅ FIXED: Check if user needs profile completion (must have username)
-        const needsProfileCompletion = !result.user.username || 
-                                       result.user.username === result.user.email?.split('@')[0] || // Generated username from email
-                                       !result.user.onboarding_completed;
-        
+        succeeded = true;
+
+        const needsProfileCompletion =
+          !result.user.username ||
+          result.user.username === result.user.email?.split('@')[0] ||
+          !result.user.onboarding_completed;
+
         setUserData({
           id: result.user.id,
           firstName: result.user.firstName || result.user.name?.split(' ')[0] || 'User',
@@ -160,92 +165,91 @@ const Register = () => {
           fullName: result.user.name || `${result.user.firstName} ${result.user.lastName}`,
           onboarding_completed: result.user.onboarding_completed
         });
-        
-        // Update auth store with the user data
-        if (credential) {
-          const store = useAuthStore.getState();
-          store.actions.setUser(result.user);
-          try { store.actions.startTokenRefreshTimer(); } catch (_) {}
-        }
-        
+
+        // Update auth store — isAuthenticated becomes true, but the useEffect above
+        // is guarded by registrationStep so it won't navigate away prematurely.
+        const store = useAuthStore.getState();
+        store.actions.setUser(result.user);
+        try { store.actions.startTokenRefreshTimer(); } catch (_) {}
+
         setIsGoogleUser(true);
-        setSecurityData({ securityScore: 85 }); // Google OAuth gives good security score
-        
+        setSecurityData({ securityScore: 85 });
+
         if (needsProfileCompletion) {
-          // Go to Google profile completion step
           setRegistrationStep('googleProfile');
-          // Info message for profile completion (keep as notification for now)
-          addNotification({
-            type: 'info',
-            message: t('completeProfileToGetStarted')
-          });
+          addNotification({ type: 'info', message: t('completeProfileToGetStarted') });
         } else {
-          // User already has complete profile, go to final step
           setRegistrationStep('complete');
           authToasts.googleRegistrationSuccess(result.user);
         }
       } else {
+        const code   = result.error?.code   || '';
+        const status = result.error?.status || 0;
+        let errorMessage = result.error?.message || t('googleSignInFailed') || 'Google sign-in failed';
+        let showSupportContact = false;
+
+        switch (code) {
+          case 'USER_BLOCKED':
+          case 'ACCOUNT_BLOCKED':
+            if (window.spendWiseNavigate) window.spendWiseNavigate('/blocked', { replace: true });
+            else window.location.replace('/blocked');
+            return;
+          case 'ACCOUNT_DEACTIVATED':
+            errorMessage = t('accountDeactivated') || 'Your account has been deactivated. Contact support.';
+            showSupportContact = true; break;
+          case 'RATE_LIMITED':
+            errorMessage = t('rateLimited') || 'Too many attempts. Please wait and try again.'; break;
+          case 'EMAIL_ALREADY_EXISTS':
+          case 'USER_EXISTS':
+            errorMessage = t('emailAlreadyExists') || 'This email is already registered. Try signing in instead.'; break;
+          default:
+            if (status >= 500 || status === 0) {
+              errorMessage = t('serverError') || 'Server error. Please try again in a moment.';
+            }
+        }
+
         authToasts.googleLoginFailed();
-        setErrors({ 
-          general: result.error?.message || 'Google registration failed'
-        });
+        setErrors({ general: errorMessage, showSupportContact });
       }
     } catch (error) {
+      const message = error.message?.includes('network') || error.message?.includes('fetch')
+        ? (t('networkError') || 'Connection error. Please check your internet connection.')
+        : (t('googleSignInFailed') || 'Google sign-in failed. Please try again.');
       authToasts.googleLoginFailed();
-      setErrors({ 
-        general: 'Google registration error'
-      });
+      setErrors({ general: message });
     } finally {
-      setIsGoogleLoading(false);
+      // Only clear loading on failure — on success we stay in loading state until
+      // setRegistrationStep triggers re-render (which is fast and clean)
+      if (!succeeded) setIsGoogleLoading(false);
+      else setIsGoogleLoading(false); // Clear immediately; we're showing a new step
     }
-  }, [googleLogin, authToasts, t]);
+  }, [authToasts, t, addNotification]);
 
-  // ✅ Handle security setup completion
-  const handleSecurityComplete = useCallback((securitySetup) => {
-    setSecurityData(securitySetup);
-    setRegistrationStep('complete');
-    
-    addNotification({ type: 'success', message: t('registrationSuccess') });
-  }, [addNotification, t]);
-
-  // ✅ Handle security setup skip
-  const handleSecuritySkip = useCallback(() => {
-    setSecurityData({ securityScore: 50 });
-    setRegistrationStep('complete');
-  }, []);
-
-  // ✅ Handle Google profile completion
+  // ── Step handlers ─────────────────────────────────────────────────────────────
   const handleGoogleProfileComplete = useCallback((completedUser) => {
     setUserData(prev => ({ ...prev, ...completedUser }));
     setRegistrationStep('complete');
-    
-    addNotification({
-      type: 'success',
-      message: t('profileSetupComplete')
-    });
+    addNotification({ type: 'success', message: t('profileSetupComplete') });
   }, [addNotification, t]);
 
-  // ✅ Handle Google profile completion skip
   const handleGoogleProfileSkip = useCallback(() => {
     setRegistrationStep('complete');
-    
-    addNotification({
-      type: 'info',
-      message: t('profileCanBeCompletedLater')
-    });
+    addNotification({ type: 'info', message: t('profileCanBeCompletedLater') });
   }, [addNotification, t]);
 
-  // ✅ Handle registration completion
+  // Called when the user explicitly presses the CTA on the complete screen.
   const handleRegistrationComplete = useCallback(() => {
-    navigate('/dashboard');
-  }, [navigate]);
+    if (isGoogleUser) {
+      // User is already authenticated; navigate to dashboard.
+      navigate('/', { replace: true });
+    } else {
+      // Email registration: user decides to go to login after seeing the success page.
+      navigate('/login', { state: { registrationSuccess: true }, replace: true });
+    }
+  }, [navigate, isGoogleUser]);
 
-  // ✅ Handle step navigation
   const handleStepBack = useCallback(() => {
-    if (registrationStep === 'security') {
-      setRegistrationStep('form');
-    } else if (registrationStep === 'googleProfile') {
-      // For Google users, we can't go back to form, so skip profile completion
+    if (registrationStep === 'googleProfile') {
       handleGoogleProfileSkip();
     }
   }, [registrationStep, handleGoogleProfileSkip]);
@@ -254,7 +258,31 @@ const Register = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       <GuestSettings />
 
-      {/* Static decorative blobs — no infinite animation */}
+      {/* Google auth loading overlay */}
+      {isGoogleLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-2xl">S</span>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow">
+                <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-900 dark:text-white font-semibold text-base">
+                {t('signingUpWithGoogle') || t('signingInWithGoogle') || 'Signing up with Google…'}
+              </p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                {t('pleaseWait') || 'Please wait a moment'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Static decorative blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <div className="w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full absolute -top-48 -right-48 opacity-10" />
         <div className="w-80 h-80 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full absolute -bottom-40 -left-40 opacity-10" />
@@ -267,12 +295,12 @@ const Register = () => {
             <span className="text-white font-bold text-2xl">S</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            {registrationStep === 'form'         ? t('createAccount', 'Create account') :
+            {registrationStep === 'form'          ? t('createAccount', 'Create account') :
              registrationStep === 'googleProfile' ? t('completeYourProfile', 'Complete your profile') :
              t('welcomeAboard', 'Welcome aboard!')}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {registrationStep === 'form'         ? t('joinSpendWise', 'Join SpendWise today') :
+            {registrationStep === 'form'          ? t('joinSpendWise', 'Join SpendWise today') :
              registrationStep === 'googleProfile' ? t('addDetailsToPersonalizeExperience', 'A few details to personalise your experience') :
              t('readyToStart', "You're all set!")}
           </p>
@@ -291,6 +319,7 @@ const Register = () => {
               />
             </motion.div>
           )}
+
           {registrationStep === 'googleProfile' && (
             <motion.div key="googleProfile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               <GoogleProfileCompletion
@@ -300,6 +329,7 @@ const Register = () => {
               />
             </motion.div>
           )}
+
           {registrationStep === 'complete' && (
             <motion.div key="complete" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
               <RegistrationComplete
@@ -307,12 +337,14 @@ const Register = () => {
                 userEmail={userData?.email}
                 securityScore={securityData?.securityScore || 50}
                 onContinue={handleRegistrationComplete}
+                requiresVerification={!isGoogleUser}
+                autoRedirect={false}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Back / skip for googleProfile */}
+        {/* Skip for googleProfile step */}
         {registrationStep === 'googleProfile' && (
           <div className="mt-5">
             <Button variant="ghost" onClick={handleStepBack} className="w-full text-sm">
@@ -327,7 +359,7 @@ const Register = () => {
           <div className="text-center mt-5">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('alreadyHaveAccount', 'Already have an account?')}{' '}
-              <Link to="/auth/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
                 {t('signIn', 'Sign in')}
               </Link>
             </p>

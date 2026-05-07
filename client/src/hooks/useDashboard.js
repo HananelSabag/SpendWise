@@ -31,7 +31,7 @@ export const useDashboard = (date = null, forceRefresh = null) => {
   
   const formattedDate = getDateForServer(targetDate);
   
-  const queryKey = useMemo(() => ['dashboard', formattedDate], [formattedDate]);
+  const queryKey = useMemo(() => ['dashboard', user?.id, formattedDate], [user?.id, formattedDate]);
   
   // ✅ FIX: Simplified event listeners without excessive debouncing
   useEffect(() => {

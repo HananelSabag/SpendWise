@@ -4,9 +4,9 @@
  * @version 3.0.0 - REVOLUTIONARY UPDATE
  */
 
-import React, { useState, useMemo, useCallback, startTransition } from 'react';
+import React, { useState, useMemo, useCallback, startTransition, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   ArrowLeft, Search, Filter, UserCheck,
   Shield, Crown, User, Ban, Trash2,
@@ -16,7 +16,7 @@ import {
 // ✅ NEW: Import Zustand stores and API
 import { useAuth, useTranslation, useTheme, useNotifications, useCurrency } from '../../stores';
 import { api } from '../../api';
-import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal } from '../../components/ui';
+import { Button, Card, LoadingSpinner, Badge, Input, Dropdown, Modal, PageSkeleton } from '../../components/ui';
 import ModernUsersTable from '../../components/features/admin/ModernUsersTable.jsx';
 import { cn } from '../../utils/helpers';
 
@@ -56,89 +56,79 @@ const AdminUsers = () => {
     refetch 
   } = useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: () => api.admin.users.getAll({}),
-    keepPreviousData: true,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    onError: (err) => {
-      addNotification({
-        type: 'error',
-        message: t('errors.usersLoadFailed', { fallback: 'Failed to load users' }),
-      });
+    queryFn: async () => {
+      const result = await api.admin.users.getAll({});
+      if (!result.success) throw new Error(result.error?.message || 'Failed to load users');
+      return result;
     },
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    if (isError) {
+      addNotification({ type: 'error', message: t('errors.usersLoadFailed', { fallback: 'Failed to load users' }) });
+    }
+  }, [isError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // User action mutations
   const blockUserMutation = useMutation({
-    mutationFn: (userId) => api.admin.blockUser(userId),
-    onSuccess: (data, userId) => {
+    mutationFn: async (userId) => {
+      const result = await api.admin.blockUser(userId);
+      if (!result.success) throw new Error(result.error?.message || 'Action failed');
+      return result.data;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({
-        type: 'success',
-        message: t('actions.userBlocked', { fallback: 'User blocked successfully' }),
-        duration: 3000
-      });
+      addNotification({ type: 'success', message: t('actions.userBlocked', { fallback: 'User blocked successfully' }), duration: 3000 });
       setActionLoading(null);
     },
-    onError: (error, userId) => {
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
-        duration: 4000
-      });
+    onError: (error) => {
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Action failed' }), duration: 4000 });
       setActionLoading(null);
     }
   });
 
   const unblockUserMutation = useMutation({
-    mutationFn: (userId) => api.admin.unblockUser(userId),
-    onSuccess: (data, userId) => {
+    mutationFn: async (userId) => {
+      const result = await api.admin.unblockUser(userId);
+      if (!result.success) throw new Error(result.error?.message || 'Action failed');
+      return result.data;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({
-        type: 'success',
-        message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }),
-        duration: 3000
-      });
+      addNotification({ type: 'success', message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }), duration: 3000 });
       setActionLoading(null);
     },
-    onError: (error, userId) => {
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
-        duration: 4000
-      });
+    onError: (error) => {
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Action failed' }), duration: 4000 });
       setActionLoading(null);
     }
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: ({ userId, reason }) => api.admin.deleteUser({ userId, reason }),
-    onSuccess: (data, variables) => {
-              // Use startTransition to prevent multiple renders
-        startTransition(() => {
-          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-          setActionLoading(null);
-          setShowUserModal(false);
-          setShowDeleteDialog(false);
-          setDeleteReason('');
-          setPendingDeleteUserId(null);
-        });
-      
-      addNotification({
-        type: 'success',
-        message: t('actions.userDeleted', { fallback: 'User deleted successfully' }),
-        duration: 3000
-      });
+    mutationFn: async ({ userId, reason }) => {
+      const result = await api.admin.deleteUser({ userId, reason });
+      if (!result.success) throw new Error(result.error?.message || 'Failed to delete user');
+      return result.data;
     },
-    onError: (error, variables) => {
+    onSuccess: () => {
       startTransition(() => {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
         setActionLoading(null);
+        setShowUserModal(false);
+        setShowDeleteDialog(false);
+        setDeleteReason('');
+        setPendingDeleteUserId(null);
       });
-      
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Failed to delete user' }),
-        duration: 4000
-      });
+      addNotification({ type: 'success', message: t('actions.userDeleted', { fallback: 'User deleted successfully' }), duration: 3000 });
+    },
+    onError: (error) => {
+      startTransition(() => { setActionLoading(null); });
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Failed to delete user' }), duration: 4000 });
     }
   });
 
@@ -217,13 +207,7 @@ const AdminUsers = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton page="admin" />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">

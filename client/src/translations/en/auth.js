@@ -307,5 +307,10 @@ export default {
   backToEmailRequest: "Back to Email Request",
   rememberPassword: "Remember your password?",
   verificationError: "An error occurred during email verification",
-  emailVerificationComplete: "Your email has been verified successfully"
+  emailVerificationComplete: "Your email has been verified successfully",
+  verificationSentTo: "Verification email sent to",
+  verificationLinkExpiry: "The link expires in 24 hours. Check your spam folder if you don't see it.",
+  signingInWithGoogle: "Signing in with Google…",
+  registrationSuccessCheckEmail: "Account created! Please verify your email to log in.",
+  autoRedirectToLogin: "Redirecting to login in {{seconds}}s…"
 };

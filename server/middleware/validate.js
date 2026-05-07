@@ -68,7 +68,16 @@ const validate = {
    * Validate user registration
    */
   userRegistration: (req, res, next) => {
-    const { email, password, username } = req.body;
+    const { email, password, firstName, lastName } = req.body;
+    // Auto-generate username from firstName+lastName when not explicitly provided
+    if (!req.body.username && (firstName || lastName)) {
+      const base = `${(firstName || '').trim()}${(lastName || '').trim()}`
+        .replace(/\s+/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') || 'user';
+      req.body.username = base + Math.floor(1000 + Math.random() * 9000);
+    }
+    const { username } = req.body;
     
     // Email validation
     if (!email) {

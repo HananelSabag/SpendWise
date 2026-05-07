@@ -86,6 +86,7 @@ import terms from './terms.js';
 import timeAgo from './timeAgo.js';
 import validation from './validation.js';
 import viewModes from './viewModes.js';
+import shopping from './shopping.js';
 
 export default {
   common,
@@ -170,4 +171,5 @@ export default {
   timeAgo,
   validation,
   viewModes,
-}; 
+  shopping,
+};

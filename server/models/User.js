@@ -54,7 +54,7 @@ class UserCache {
 // ✅ Simplified User Model - Core Functionality Only
 class User {
   // Create user with basic validation
-  static async create(email, username, password) {
+  static async create(email, username, password, { firstName = null, lastName = null } = {}) {
     try {
       // Basic password validation
       if (password.length < 8) {
@@ -63,18 +63,19 @@ class User {
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 12);
-      
+
       // Generate verification token
       const verificationToken = generateVerificationToken();
 
       const query = `
         INSERT INTO users (
           email, username, password_hash, verification_token,
+          first_name, last_name,
           language_preference, currency_preference, theme_preference,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING id, email, username, created_at, updated_at, email_verified, 
-                  language_preference, currency_preference, theme_preference
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        RETURNING id, email, username, first_name, last_name, created_at, updated_at,
+                  email_verified, language_preference, currency_preference, theme_preference
       `;
 
       const values = [
@@ -82,9 +83,11 @@ class User {
         username?.toLowerCase(),
         hashedPassword,
         verificationToken,
-        'en',      // ✅ Default language: English
-        'ILS',     // ✅ Default currency: Israeli Shekel (ILS code)
-        'system'   // ✅ Default theme: System (follows OS/browser preference)
+        firstName || null,
+        lastName  || null,
+        'en',
+        'ILS',
+        'system'
       ];
 
       const result = await db.query(query, values);

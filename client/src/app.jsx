@@ -21,12 +21,14 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 
 // Core UI components
 import TopProgressBar from './components/common/TopProgressBar.jsx';
+import PageSkeleton from './components/ui/PageSkeleton';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import AccessibilityMenu from './components/common/AccessibilityMenu';
 import AccessibilityFab from './components/common/AccessibilityFab.jsx';
 import ModernOnboardingManager from './components/common/ModernOnboardingManager';
 import MobileBottomNav from './components/common/MobileBottomNav';
+import NotificationBell from './components/layout/NotificationBell';
 
 // ✅ Zustand stores
 import { StoreProvider, useAuth, useTranslation } from './stores';
@@ -65,17 +67,30 @@ const queryPersister = typeof window !== 'undefined'
     })
   : undefined;
 
-// ✅ Route Loading Fallback
+// Map Suspense route names → PageSkeleton page types.
+// This replaces the old translation-based fallback that showed raw i18n keys
+// ("errors.loadingPage", "Loading transactions...") when the translation store
+// hadn't initialized yet.
+const ROUTE_SKELETON_MAP = {
+  dashboard: 'dashboard',
+  transactions: 'transactions',
+  analytics: 'analytics',
+  profile: 'profile',
+  shopping: 'shopping',
+  'admin dashboard': 'admin',
+  'user management': 'admin',
+  'activity log': 'admin',
+  'system statistics': 'admin',
+  'admin settings': 'admin',
+};
+
 const RouteLoadingFallback = ({ route = 'page' }) => {
-  const { t } = useTranslation();
+  const page = ROUTE_SKELETON_MAP[route];
+  if (page) return <PageSkeleton page={page} />;
+  // Auth / misc routes — just a plain spinner, no text, no translation dependency
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400 font-medium">
-          {t('errors.loadingPage', { route }) || `Loading ${route}...`}
-        </p>
-      </div>
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
     </div>
   );
 };
@@ -218,14 +233,28 @@ const SmartRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
+// ✅ PWA update handler — reloads the page when a new service worker takes control
+// so users always get the latest version immediately after deploy
+const usePWAAutoReload = () => {
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const reload = () => window.location.reload();
+    navigator.serviceWorker.addEventListener('controllerchange', reload);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', reload);
+  }, []);
+};
+
 // ✅ App Content - SIMPLIFIED
 const AppContent = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // ✅ Auto-dismiss loading toasts on navigation
   useToastCleanup();
+
+  // ✅ Auto-reload on PWA service worker update
+  usePWAAutoReload();
 
   const isQuickExpensePage = location.pathname === '/quick-expense';
 
@@ -284,6 +313,8 @@ const AppContent = () => {
 
       {/* Mobile bottom nav — replaces hamburger drawer on small screens */}
       {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
+
+
 
       <main className="flex-grow lg:pb-0 pb-20">
         <Routes>
@@ -378,6 +409,17 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          {/* ✅ Shopping Wishlist Route */}
+          <Route path="/shopping" element={
+            <ProtectedRoute>
+              <RouteErrorBoundary routeName="Shopping">
+                <Suspense fallback={<RouteLoadingFallback route="shopping" />}>
+                  <LazyComponents.ShoppingWishlistPage />
+                </Suspense>
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          } />
+
           {/* ✅ Quick Expense Route */}
           <Route path="/quick-expense" element={
             <ProtectedRoute>

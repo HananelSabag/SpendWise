@@ -25,8 +25,8 @@ const userController = {
    */
   register: asyncHandler(async (req, res) => {
     const start = Date.now();
-    const { email, username, password } = req.body;
-    
+    const { email, username, password, firstName, lastName } = req.body;
+
     if (!email || !username || !password) {
       throw { ...errorCodes.MISSING_REQUIRED };
     }
@@ -70,7 +70,7 @@ const userController = {
       }
 
       // Create user with optimized model
-      const user = await User.create(email, username, password);
+      const user = await User.create(email, username, password, { firstName, lastName });
 
       // Generate verification token
       const verificationToken = generateVerificationToken();
@@ -93,7 +93,7 @@ const userController = {
 
       if (requireVerification) {
         // Send verification email (async - don't wait)
-        emailService.sendVerificationEmail(user.email, user.username, verificationToken)
+        emailService.sendVerificationEmail(user.email, user.first_name || user.username, verificationToken)
           .catch(error => {
             logger.error('Failed to send verification email', {
               userId: user.id,
@@ -383,6 +383,31 @@ const userController = {
           message: 'Account is deactivated',
           status: 403
         };
+      }
+
+      // Check if user is blocked — must happen before issuing new tokens
+      try {
+        const restrictionsResult = await db.query(
+          `SELECT restriction_type, reason FROM user_restrictions
+           WHERE user_id = $1 AND is_active = true
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+          [userId]
+        );
+        const activeRestrictions = restrictionsResult.rows || [];
+        const isBlocked = activeRestrictions.some(r => r.restriction_type === 'blocked');
+        if (isBlocked) {
+          const blockInfo = activeRestrictions.find(r => r.restriction_type === 'blocked');
+          throw {
+            code: 'USER_BLOCKED',
+            message: 'Your account has been temporarily blocked.',
+            reason: blockInfo?.reason,
+            status: 403
+          };
+        }
+      } catch (restrictionErr) {
+        if (restrictionErr.code === 'USER_BLOCKED') throw restrictionErr;
+        // DB error on restrictions check — fail closed, deny token
+        throw { code: 'SERVICE_UNAVAILABLE', message: 'Service temporarily unavailable', status: 503 };
       }
 
       // Generate new tokens

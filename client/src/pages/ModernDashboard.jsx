@@ -15,7 +15,7 @@ import { useTranslation, useAuth, useCurrency, useNotifications } from '../store
 import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
-import { Card, Button, Avatar } from '../components/ui';
+import { Card, Button, Avatar, PageSkeleton } from '../components/ui';
 
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernQuickActionsBar from '../components/features/dashboard/ModernQuickActionsBar';
@@ -363,18 +363,7 @@ const ModernDashboard = () => {
 
   // ── Loading ──
   if (isLoading && !dashboardData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-        <div className="text-center">
-          <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-2xl">S</span>
-          </div>
-          <p className="text-base font-medium text-gray-500 dark:text-gray-400">
-            {t('loadingDashboard')}
-          </p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton page="dashboard" />;
   }
 
   // ── Error with auto-retry ──

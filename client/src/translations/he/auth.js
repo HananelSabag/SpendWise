@@ -307,5 +307,10 @@ export default {
   backToEmailRequest: "חזרה לבקשת האימייל",
   rememberPassword: "זוכרים את הסיסמה?",
   verificationError: "אירעה שגיאה במהלך אימות האימייל",
-  emailVerificationComplete: "כתובת האימייל שלכם אומתה בהצלחה"
+  emailVerificationComplete: "כתובת האימייל שלכם אומתה בהצלחה",
+  verificationSentTo: "אימייל אימות נשלח לכתובת",
+  verificationLinkExpiry: "הקישור תקף ל-24 שעות. בדקו בתיקיית הספאם אם אינכם רואים את האימייל.",
+  signingInWithGoogle: "מתחבר עם Google…",
+  registrationSuccessCheckEmail: "החשבון נוצר! אנא אמתו את כתובת האימייל שלכם כדי להתחבר.",
+  autoRedirectToLogin: "מפנה להתחברות בעוד {{seconds}} שניות…"
 };

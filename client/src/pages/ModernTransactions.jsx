@@ -19,7 +19,7 @@ import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useCategory } from '../hooks/useCategory';
 import { useRecurringTransactions } from '../hooks/useRecurringTransactions';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Button, Input, Card, LoadingSpinner, Badge, Modal } from '../components/ui';
+import { Button, Input, Card, LoadingSpinner, Badge, Modal, PageSkeleton } from '../components/ui';
 import { cn } from '../utils/helpers';
 
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
@@ -1002,6 +1002,11 @@ const ModernTransactions = () => {
     isRegenerating,
     setShowRecurringManager,
   };
+
+  // Show skeleton on first load before any data has arrived
+  if (transactionsLoading && (!transactionsData || transactionsData.length === 0)) {
+    return <PageSkeleton page="transactions" />;
+  }
 
   return (
     <>

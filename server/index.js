@@ -96,7 +96,7 @@ const { advancedSecurityHeaders } = require('./middleware/security');
 try {
   app.use(advancedSecurityHeaders);
 } catch (error) {
-  logger.error('❌ Helmet setup failed:', error.message);
+  logger.error(`❌ Helmet setup failed: ${error.message}`);
   // Don't exit - helmet failure is not critical for startup
   logger.warn('⚠️ Continuing without full helmet protection');
 }
@@ -164,7 +164,7 @@ try {
     exposedHeaders: ['Content-Disposition']
   }));
 } catch (error) {
-  logger.error('❌ CORS setup failed:', error.message);
+  logger.error(`❌ CORS setup failed: ${error.message}`);
   // Don't exit - CORS failure is not critical for startup
   logger.warn('⚠️ Continuing with default CORS settings');
 }
@@ -191,6 +191,16 @@ app.use(requestId);
 // Set up API rate limiter
 // API rate limiter
 app.use('/api', apiLimiter);
+
+// Prevent browsers and proxies from caching any API response.
+// Without this, Workbox (PWA service worker) and the browser's own heuristic
+// cache can serve user A's responses to user B after a logout/login cycle.
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 
 // Load user context early so admins can bypass maintenance
 app.use(optionalAuth);
@@ -287,13 +297,19 @@ try {
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');
 
+  logger.debug('Loading shopping routes...');
+  app.use(`${API_VERSION}/shopping`, require('./routes/shoppingRoutes'));
+  logger.debug('✅ Shopping routes loaded');
+
+  app.use(`${API_VERSION}/notifications`, require('./routes/notificationRoutes'));
+
   // ✅ FIXED: Re-enable analytics routes 
   try {
     logger.debug('Loading analytics routes...');
     app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
     logger.debug('✅ Analytics routes loaded');
   } catch (error) {
-    logger.error('❌ Analytics routes failed:', error.message);
+    logger.error(`❌ Analytics routes failed: ${error.message}`);
   }
 
   // ✅ ADMIN ROUTES - Add missing admin routes
@@ -302,7 +318,7 @@ try {
     app.use(`${API_VERSION}/admin`, require('./routes/adminRoutes'));
     logger.debug('✅ Admin routes loaded');
   } catch (error) {
-    logger.error('❌ Admin routes failed:', error.message);
+    logger.error(`❌ Admin routes failed: ${error.message}`);
   }
 
   // 🔐 NEW: Bulletproof authentication status detection
@@ -311,7 +327,7 @@ try {
     app.use(`${API_VERSION}/auth-status`, require('./routes/authStatusRoutes'));
     logger.debug('✅ Auth status routes loaded');
   } catch (error) {
-    logger.error('❌ Auth status routes failed:', error.message);
+    logger.error(`❌ Auth status routes failed: ${error.message}`);
   }
 
   // Health and performance monitoring routes
@@ -319,17 +335,17 @@ try {
     app.use(`${API_VERSION}/health`, require('./routes/healthRoutes'));
     logger.debug('✅ Health routes loaded');
   } catch (error) {
-    logger.error('❌ Health routes failed:', error.message);
+    logger.error(`❌ Health routes failed: ${error.message}`);
   }
 
   try {
     app.use(`${API_VERSION}/performance`, require('./routes/performance'));
     logger.debug('✅ Performance routes loaded');
   } catch (error) {
-    logger.error('❌ Performance routes failed:', error.message);
+    logger.error(`❌ Performance routes failed: ${error.message}`);
   }
 } catch (error) {
-  logger.error('❌ API routes loading failed:', error.message, { stack: error.stack });
+  logger.error(`❌ API routes loading failed: ${error.message}`, { stack: error.stack });
   // Don't exit - server can still respond to health checks
   logger.warn('⚠️ Server starting with limited API functionality');
 }
@@ -339,7 +355,7 @@ try {
   app.use(`${API_VERSION}/onboarding`, require('./routes/onboarding'));
   logger.debug('✅ Onboarding routes loaded');
 } catch (error) {
-  logger.error('❌ CRITICAL: Onboarding routes failed to load:', error.message, { stack: error.stack });
+  logger.error(`❌ CRITICAL: Onboarding routes failed to load: ${error.message}`, { stack: error.stack });
   
   // ❌ NO FAKE FALLBACKS! Fail properly so we can fix the real issue
   app.post(`${API_VERSION}/onboarding/complete`, (req, res) => {
@@ -373,7 +389,7 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     // Fallback if 404 handler fails
-    logger.error('404 handler error:', error.message);
+    logger.error(`404 handler error: ${error.message}`);
     res.status(404).end('Not Found');
   }
 });
@@ -441,6 +457,13 @@ const startServer = async () => {
   logger.info('🚀 Starting SpendWise server...');
   logger.info('🔧 Starting HTTP server (DB probe runs in background)...');
 
+  // Force-load emailService here so its startup log always appears in Render logs
+  try {
+    require('./services/emailService');
+  } catch (e) {
+    logger.error('Failed to load emailService', { error: e.message });
+  }
+
   const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 Server running on port ${PORT} (DB ready: ${dbReady})`);
     logger.info(`🌐 CORS enabled for mobile development (local networks)`);
@@ -485,27 +508,13 @@ const startServer = async () => {
   });
 };
 
-// ✅ DIAGNOSTIC: Log environment status before starting
-logger.info('========================================');
-logger.info('🚀 SPENDWISE SERVER STARTUP DIAGNOSTIC');
-logger.info('========================================');
-logger.info('Node Version:', process.version);
-logger.info('Environment:', process.env.NODE_ENV || 'not set');
-logger.info('Port:', process.env.PORT || '5000 (default)');
-logger.info('DATABASE_URL:', process.env.DATABASE_URL ? '✅ SET' : '❌ MISSING');
-logger.info('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ MISSING');
-logger.info('ALLOWED_ORIGINS:', process.env.ALLOWED_ORIGINS || 'not set (using defaults)');
-logger.info('========================================');
-
 // Abort startup if critical secrets are missing
 const missingSecrets = ['JWT_SECRET', 'JWT_REFRESH_SECRET'].filter(k => !process.env[k]);
 if (missingSecrets.length > 0) {
-  logger.error(`FATAL: Missing required environment variables: ${missingSecrets.join(', ')}`);
-  logger.error('Server cannot start without these secrets. Add them to your .env file.');
+  logger.error(`FATAL: Missing required env vars: ${missingSecrets.join(', ')} — server cannot start`);
   process.exit(1);
 }
 
-logger.info('STARTING SERVER...');
 startServer();
 
 module.exports = app;

@@ -16,7 +16,7 @@ import {
 // ✅ NEW: Import Zustand stores and API
 import { useAuth, useTranslation, useTheme, useNotifications } from '../../stores';
 import { api } from '../../api';
-import { Button, Card, LoadingSpinner, Badge } from '../../components/ui';
+import { Button, Card, LoadingSpinner, Badge, PageSkeleton } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
 const AdminDashboard = () => {
@@ -97,14 +97,7 @@ const AdminDashboard = () => {
     );
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton page="admin" />;
 
   // Error state
   if (isError) {

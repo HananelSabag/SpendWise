@@ -41,7 +41,8 @@ export default {
     tryAgain: "Please try again",
     periodSelector: "Select Period",
     hideBalances: "Hide balances",
-    showBalances: "Show balances"
+    showBalances: "Show balances",
+    spent: "spent"
   },
   income: "Income",
   expenses: "Expenses",
