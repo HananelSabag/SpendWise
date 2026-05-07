@@ -7,7 +7,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Globe, ChevronLeft, Loader2 } from 'lucide-react';
+import { Globe, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
+
+// Set to true to re-enable email/password registration
+const REGULAR_REGISTRATION_ENABLED = false;
 
 import {
   useAuth,
@@ -26,6 +29,31 @@ import GuestSettings from '../../components/common/GuestSettings';
 import { api, authAPI } from '../../api';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
+import SimpleGoogleButton from '../../components/features/auth/SimpleGoogleButton';
+
+const GoogleOnlyRegistration = ({ onGoogleRegister, isGoogleLoading }) => {
+  const { t, isRTL } = useTranslation('auth');
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 space-y-5">
+      <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            {isRTL ? 'הרשמה רגילה לא זמינה כרגע' : 'Email registration unavailable'}
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+            {isRTL ? 'ניתן להירשם רק באמצעות Google' : 'Sign up is available via Google only'}
+          </p>
+        </div>
+      </div>
+      <SimpleGoogleButton
+        onSuccess={onGoogleRegister}
+        onError={() => {}}
+        disabled={isGoogleLoading}
+      />
+    </div>
+  );
+};
 
 const Register = () => {
   const { register, isAuthenticated, googleLogin } = useAuth();
@@ -316,13 +344,17 @@ const Register = () => {
         <AnimatePresence mode="wait">
           {registrationStep === 'form' && (
             <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
-              <RegistrationForm
-                onSubmit={handleRegistrationSubmit}
-                onGoogleRegister={handleGoogleRegister}
-                isSubmitting={isSubmitting}
-                isGoogleLoading={isGoogleLoading}
-                errors={errors}
-              />
+              {REGULAR_REGISTRATION_ENABLED ? (
+                <RegistrationForm
+                  onSubmit={handleRegistrationSubmit}
+                  onGoogleRegister={handleGoogleRegister}
+                  isSubmitting={isSubmitting}
+                  isGoogleLoading={isGoogleLoading}
+                  errors={errors}
+                />
+              ) : (
+                <GoogleOnlyRegistration onGoogleRegister={handleGoogleRegister} isGoogleLoading={isGoogleLoading} />
+              )}
             </motion.div>
           )}
 
