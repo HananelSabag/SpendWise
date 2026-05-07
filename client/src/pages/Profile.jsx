@@ -8,7 +8,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   User, Settings, Shield, Download, Camera,
   Eye, EyeOff, FileSpreadsheet, Braces, FileText,
-  X, Check, Loader2, AlertTriangle, ChevronDown
+  X, Check, Loader2, AlertTriangle, ChevronDown, LogOut
 } from 'lucide-react';
 
 import {
@@ -561,7 +561,7 @@ const HorizontalTabs = ({ active, onChange, t }) => (
   </div>
 );
 
-const SidebarTabs = ({ active, onChange, t }) => (
+const SidebarTabs = ({ active, onChange, t, onLogout, tc }) => (
   <div className="w-48 shrink-0 space-y-0.5">
     {TABS.map(tab => {
       const Icon     = tab.icon;
@@ -582,14 +582,27 @@ const SidebarTabs = ({ active, onChange, t }) => (
         </button>
       );
     })}
+    <div className="pt-3 mt-1 border-t border-gray-200 dark:border-gray-700">
+      <button
+        onClick={onLogout}
+        className={cn(
+          'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left cursor-pointer',
+          'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+        )}
+      >
+        <LogOut className="w-4 h-4 shrink-0" />
+        <span>{tc?.('common.logout') || 'Logout'}</span>
+      </button>
+    </div>
   </div>
 );
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const { t }        = useTranslation('profile');
+  const { t: tc }    = useTranslation();
   const authToasts   = useAuthToasts();
   const isMobile     = useIsMobile();
   const [activeTab, setActiveTab] = useState('personal');
@@ -629,7 +642,24 @@ const Profile = () => {
           </div>
           <HorizontalTabs active={activeTab} onChange={setActiveTab} t={t} />
         </div>
-        <div className="px-4 py-4 pb-24">{tabContent}</div>
+        <div className="px-4 py-4 pb-4">{tabContent}</div>
+
+        {/* Logout — bottom of profile page */}
+        <div className="px-4 pb-28 pt-2">
+          <button
+            onClick={() => logout(true)}
+            className={cn(
+              'w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl',
+              'bg-white dark:bg-gray-800',
+              'border border-red-100 dark:border-red-900/40',
+              'text-red-600 dark:text-red-400 font-semibold text-sm',
+              'shadow-sm active:scale-[0.98] transition-all duration-150'
+            )}
+          >
+            <LogOut className="w-4 h-4" strokeWidth={2} />
+            {tc('common.logout') || 'Logout'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -649,7 +679,7 @@ const Profile = () => {
         </div>
 
         <div className="flex gap-8 items-start">
-          <SidebarTabs active={activeTab} onChange={setActiveTab} t={t} />
+          <SidebarTabs active={activeTab} onChange={setActiveTab} t={t} onLogout={() => logout(true)} tc={tc} />
           <div className="flex-1 min-w-0">{tabContent}</div>
         </div>
       </div>
