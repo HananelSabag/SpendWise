@@ -229,6 +229,11 @@ const SmartRedirect = () => {
     return <Navigate to="/admin" replace />;
   }
   
+  // Shopping list as default page preference
+  if (user?.preferences?.shopping_list_as_default_page === true) {
+    return <Navigate to="/shopping" replace />;
+  }
+
   // For regular users, go to dashboard
   return <Navigate to="/" replace />;
 };

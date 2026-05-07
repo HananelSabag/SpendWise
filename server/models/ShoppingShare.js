@@ -131,6 +131,15 @@ class ShoppingShare {
     return rowCount > 0;
   }
 
+  // Owner disbands the entire shared list — removes all members at once
+  static async disbandShare(ownerId) {
+    const { rows } = await db.query(
+      `DELETE FROM shopping_shares WHERE owner_id = $1 RETURNING member_id`,
+      [ownerId]
+    );
+    return rows.map((r) => r.member_id);
+  }
+
   static async cancelInvitation(inviterId, inviteeEmail) {
     const { rowCount } = await db.query(
       `DELETE FROM shopping_invitations WHERE inviter_id = $1 AND invitee_email = $2 AND status = 'pending'`,

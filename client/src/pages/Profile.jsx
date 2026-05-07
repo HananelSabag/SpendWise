@@ -284,9 +284,10 @@ const PreferencesTab = ({ user, authToasts }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const buildPrefs = (u) => ({
-    language_preference: u?.language_preference || 'en',
-    theme_preference:    u?.theme_preference    || 'system',
-    currency_preference: u?.currency_preference || 'ILS',
+    language_preference:          u?.language_preference                             || 'en',
+    theme_preference:             u?.theme_preference                                || 'system',
+    currency_preference:          u?.currency_preference                             || 'ILS',
+    shopping_list_as_default_page: u?.preferences?.shopping_list_as_default_page    ?? false,
   });
 
   const [prefs, setPrefs]       = useState(() => buildPrefs(user));
@@ -296,7 +297,7 @@ const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.currency_preference]);
+  }, [user?.language_preference, user?.theme_preference, user?.currency_preference, user?.preferences?.shopping_list_as_default_page]);
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -304,7 +305,11 @@ const PreferencesTab = ({ user, authToasts }) => {
     if (!isDirty) return;
     setIsLoading(true);
     try {
-      const result = await updateProfile(prefs);
+      const { shopping_list_as_default_page, ...flatPrefs } = prefs;
+      const result = await updateProfile({
+        ...flatPrefs,
+        preferences: { ...(user?.preferences || {}), shopping_list_as_default_page },
+      });
       if (!result.success) throw new Error(result.error?.message);
 
       if (prefs.theme_preference === 'dark')      document.documentElement.classList.add('dark');
@@ -362,6 +367,25 @@ const PreferencesTab = ({ user, authToasts }) => {
             { value: 'AUD', label: 'A$ Australian Dollar'},
           ]}
         />
+        {/* Shopping list as default page toggle */}
+        <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('preferences.shoppingDefaultPage') || 'Open Shopping List on Login'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPrefs(p => ({ ...p, shopping_list_as_default_page: !p.shopping_list_as_default_page }))}
+            className={cn(
+              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none',
+              prefs.shopping_list_as_default_page ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
+            )}
+          >
+            <span className={cn(
+              'inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200',
+              prefs.shopping_list_as_default_page ? 'translate-x-[18px]' : 'translate-x-[3px]'
+            )} />
+          </button>
+        </div>
       </div>
 
       <button

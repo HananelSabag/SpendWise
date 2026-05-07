@@ -6,7 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus, Users, Mail, Check, X, Clock,
-  Trash2, LogOut, Send, UserCheck, Crown,
+  Trash2, LogOut, Send, UserCheck, Crown, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
 import { useShoppingShare } from '../../../hooks/useShoppingShare';
@@ -50,18 +50,54 @@ const SectionHeader = ({ icon: Icon, label, count, color = 'text-gray-500' }) =>
   </div>
 );
 
+// Inline confirm dialog
+const ConfirmBanner = ({ message, confirmLabel, onConfirm, onCancel, isLoading, danger = true }) => (
+  <motion.div
+    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+    className={cn(
+      'rounded-xl p-4 border mb-3',
+      danger
+        ? 'bg-red-50 dark:bg-red-900/15 border-red-200 dark:border-red-800/40'
+        : 'bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800/40'
+    )}
+  >
+    <div className="flex items-start gap-3 mb-3">
+      <AlertTriangle className={cn('w-4 h-4 flex-shrink-0 mt-0.5', danger ? 'text-red-500' : 'text-amber-500')} strokeWidth={2} />
+      <p className={cn('text-sm font-medium leading-relaxed', danger ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300')}>
+        {message}
+      </p>
+    </div>
+    <div className="flex gap-2 justify-end">
+      <button onClick={onCancel}
+        className="h-8 px-4 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-colors">
+        Cancel
+      </button>
+      <button onClick={onConfirm} disabled={isLoading}
+        className={cn(
+          'h-8 px-4 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 disabled:opacity-50',
+          danger ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'
+        )}>
+        {isLoading && <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+        {confirmLabel}
+      </button>
+    </div>
+  </motion.div>
+);
+
 const ShoppingShareSheet = ({ isOpen, onClose }) => {
   const { t, isRTL } = useTranslation('shopping');
   const {
     myMembers, sharedWithMe, pendingSent, pendingInvitations,
-    invite, respond, removeMember, cancelInvite,
-    isInviting, isResponding,
+    invite, respond, removeMember, cancelInvite, disbandShare,
+    isInviting, isResponding, isDisbanding,
   } = useShoppingShare();
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [sentMsg, setSentMsg] = useState('');
   const [respondingToken, setRespondingToken] = useState(null);
+  const [confirmDisband, setConfirmDisband] = useState(false);
+  const [confirmLeaveId, setConfirmLeaveId] = useState(null);
 
   const handleInvite = useCallback(async () => {
     if (!email.trim()) { setEmailError(t('share.emailRequired')); return; }
@@ -75,13 +111,23 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
     setSentMsg(t('share.successMessage'));
     setEmail('');
     setTimeout(() => setSentMsg(''), 4000);
-  }, [email, invite, t, isRTL]);
+  }, [email, invite, t]);
 
   const handleRespond = useCallback(async (token, action) => {
     setRespondingToken(token);
     await respond(token, action);
     setRespondingToken(null);
   }, [respond]);
+
+  const handleDisband = useCallback(async () => {
+    await disbandShare();
+    setConfirmDisband(false);
+  }, [disbandShare]);
+
+  const handleLeave = useCallback(async (ownerId) => {
+    await removeMember(ownerId);
+    setConfirmLeaveId(null);
+  }, [removeMember]);
 
   const displayName = (m) =>
     m.first_name ? `${m.first_name} ${m.last_name || ''}`.trim() : m.username || m.email;
@@ -103,7 +149,6 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
             {t('share.description')}
           </p>
 
-          {/* Email input */}
           <div className="relative mb-2">
             <Mail className={cn(
               'absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none',
@@ -136,7 +181,6 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
             )}
           </AnimatePresence>
 
-          {/* Send button */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleInvite}
@@ -218,10 +262,23 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
           </>
         )}
 
-        {/* ── People I share my list with ── */}
+        {/* ── People I share my list with (I am the LEADER) ── */}
         {myMembers.length > 0 && (
           <>
-            <SectionHeader icon={Users} label={t('share.membersLabel')} count={myMembers.length} color="text-purple-500" />
+            <SectionHeader icon={Crown} label={t('share.membersLabel')} count={myMembers.length} color="text-amber-500" />
+
+            <AnimatePresence>
+              {confirmDisband && (
+                <ConfirmBanner
+                  message={t('share.disbandConfirm')}
+                  confirmLabel={t('share.disbandButton')}
+                  onConfirm={handleDisband}
+                  onCancel={() => setConfirmDisband(false)}
+                  isLoading={isDisbanding}
+                />
+              )}
+            </AnimatePresence>
+
             <div className="flex flex-col gap-3">
               {myMembers.map((m, idx) => (
                 <motion.div key={m.member_id ?? m.id}
@@ -256,46 +313,92 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                 </motion.div>
               ))}
             </div>
+
+            {/* Disband button */}
+            {!confirmDisband && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setConfirmDisband(true)}
+                className={cn(
+                  'w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl',
+                  'border border-red-200 dark:border-red-800/50 text-red-500 dark:text-red-400',
+                  'text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors'
+                )}
+              >
+                <X className="w-4 h-4" strokeWidth={2.5} />
+                {t('share.disbandTitle')}
+              </motion.button>
+            )}
           </>
         )}
 
-        {/* ── Lists shared with me ── */}
+        {/* ── Lists shared with me (I am a MEMBER) ── */}
         {sharedWithMe.length > 0 && (
           <>
             <SectionHeader icon={UserCheck} label={t('share.sharedWithMeLabel')} count={sharedWithMe.length} color="text-emerald-500" />
             <div className="flex flex-col gap-3">
-              {sharedWithMe.map((m, idx) => (
-                <motion.div key={m.owner_id ?? m.id}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    'flex items-center gap-4 px-4 py-4 rounded-2xl',
-                    'bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60',
-                    'shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
-                  )}
-                >
-                  <Avatar name={displayName(m)} size="md" colorIdx={idx + 2} />
-                  <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
-                    <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{displayName(m)}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{m.email}</p>
-                  </div>
-                  <div className={cn('flex items-center gap-1.5 flex-shrink-0 px-2.5 py-1 rounded-full border',
-                    'text-blue-600 bg-blue-50 border-blue-200',
-                    'dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-800')}>
-                    <Crown className="w-3 h-3" strokeWidth={2} />
-                    <span className="text-[11px] font-bold">{t('share.ownerBadge')}</span>
-                  </div>
-                  <motion.button whileTap={{ scale: 0.9 }}
-                    onClick={() => removeMember(m.owner_id ?? m.id)}
-                    title={t('share.leave')}
+              {sharedWithMe.map((m, idx) => {
+                const ownerId = m.owner_id ?? m.id;
+                const isConfirming = confirmLeaveId === ownerId;
+                return (
+                  <motion.div key={ownerId}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     className={cn(
-                      'w-9 h-9 rounded-xl flex items-center justify-center',
-                      'bg-gray-50 dark:bg-gray-700 text-gray-400',
-                      'hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
-                    )}>
-                    <LogOut className="w-4 h-4" strokeWidth={2} />
-                  </motion.button>
-                </motion.div>
-              ))}
+                      'rounded-2xl overflow-hidden border',
+                      'border-gray-100 dark:border-gray-700/60',
+                      'bg-white dark:bg-gray-800/60 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
+                    )}
+                  >
+                    <div className="flex items-center gap-4 px-4 py-4">
+                      <Avatar name={displayName(m)} size="md" colorIdx={idx + 2} />
+                      <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+                        <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{displayName(m)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{m.email}</p>
+                      </div>
+                      <div className={cn('flex items-center gap-1.5 flex-shrink-0 px-2.5 py-1 rounded-full border',
+                        'text-amber-600 bg-amber-50 border-amber-200',
+                        'dark:text-amber-400 dark:bg-amber-900/20 dark:border-amber-800')}>
+                        <Crown className="w-3 h-3" strokeWidth={2} />
+                        <span className="text-[11px] font-bold">{t('share.leaderBadge')}</span>
+                      </div>
+                      <motion.button whileTap={{ scale: 0.9 }}
+                        onClick={() => setConfirmLeaveId(isConfirming ? null : ownerId)}
+                        title={t('share.leave')}
+                        className={cn(
+                          'w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
+                          isConfirming
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
+                            : 'bg-gray-50 dark:bg-gray-700 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        )}>
+                        <LogOut className="w-4 h-4" strokeWidth={2} />
+                      </motion.button>
+                    </div>
+
+                    <AnimatePresence>
+                      {isConfirming && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                          className="px-4 pb-4 overflow-hidden"
+                        >
+                          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/40">
+                            <p className="flex-1 text-xs text-red-700 dark:text-red-300 font-medium">
+                              {t('share.leaveConfirm')}
+                            </p>
+                            <button onClick={() => setConfirmLeaveId(null)}
+                              className="h-7 px-3 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                              {t('share.cancel')}
+                            </button>
+                            <button onClick={() => handleLeave(ownerId)}
+                              className="h-7 px-3 rounded-lg text-xs font-semibold bg-red-500 text-white">
+                              {t('share.leaveButton')}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
             </div>
           </>
         )}

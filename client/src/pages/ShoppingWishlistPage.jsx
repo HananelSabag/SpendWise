@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ArrowLeft, ShoppingCart, Plus, Package,
-  CheckCircle2, SlidersHorizontal, UserPlus, Users, ChevronLeft, ChevronRight,
+  CheckCircle2, SlidersHorizontal, UserPlus, Users, ChevronLeft, ChevronRight, Crown,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -35,67 +35,75 @@ const getShortName = (m) => {
   return email.split('@')[0];
 };
 
-// ── Sharing banner — full-width, always visible ────────────
+// ── Sharing banner ─────────────────────────────────────────
 const SharingBanner = ({ myMembers, sharedWithMe, onOpen, isRTL }) => {
   const { t } = useTranslation('shopping');
-  const combined = [
-    ...myMembers.map((m) => ({ ...m, _type: 'mine' })),
-    ...sharedWithMe.map((m) => ({ ...m, _type: 'shared' })),
-  ];
-  if (!combined.length) return null;
+  if (!myMembers.length && !sharedWithMe.length) return null;
 
-  const BackChevron = isRTL ? ChevronLeft : ChevronRight;
+  const isLeader = myMembers.length > 0;
+  const ownerName = sharedWithMe[0]
+    ? (sharedWithMe[0].first_name || sharedWithMe[0].username || sharedWithMe[0].email?.split('@')[0])
+    : null;
+
+  const visibleMembers = (isLeader ? myMembers : sharedWithMe).slice(0, 3);
+  const extra = (isLeader ? myMembers : sharedWithMe).length - 3;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       className="px-4 pb-2"
     >
       <button
         onClick={onOpen}
         className={cn(
-          'w-full flex items-center gap-3 px-4 py-3 rounded-2xl',
-          'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
-          'border border-blue-100 dark:border-blue-800/50',
-          'hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30',
-          'transition-all duration-150',
+          'w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl',
+          'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40',
+          'hover:bg-blue-100/70 dark:hover:bg-blue-900/30 transition-colors duration-150',
           isRTL ? 'flex-row-reverse' : 'flex-row'
         )}
       >
-        {/* Icon */}
-        <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
-          <Users className="w-4 h-4 text-blue-500" strokeWidth={2} />
+        {/* Role indicator */}
+        <div className={cn(
+          'flex items-center gap-1 px-2 py-0.5 rounded-full flex-shrink-0 text-[10px] font-bold',
+          isLeader
+            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+            : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+        )}>
+          {isLeader
+            ? <><Crown className="w-2.5 h-2.5" /> {t('sharingBanner.youLead')}</>
+            : <><Users className="w-2.5 h-2.5" /> {t('sharingBanner.managedBy', { name: ownerName })}</>
+          }
         </div>
 
-        {/* Members list */}
-        <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
-          <p className="text-[11px] font-semibold text-blue-500 dark:text-blue-400 mb-1">
-            {combined.length === 1 ? t('sharingBanner.sharedWith') : t('sharingBanner.sharedWithCount', { count: combined.length })}
-          </p>
-          <div className={cn('flex items-center gap-2 flex-wrap', isRTL ? 'flex-row-reverse' : 'flex-row')}>
-            {combined.slice(0, 4).map((m, i) => (
-              <div key={m.id ?? i} className="flex items-center gap-1.5">
-                <div className={cn(
-                  'w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold flex-shrink-0',
-                  AVATAR_COLORS[i % AVATAR_COLORS.length],
-                  m._type === 'shared' && 'ring-1 ring-emerald-400'
-                )}>
-                  {getInitial(m)}
-                </div>
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  {getShortName(m)}
-                </span>
-              </div>
-            ))}
-            {combined.length > 4 && (
-              <span className="text-xs text-gray-400 font-medium">+{combined.length - 4}</span>
-            )}
-          </div>
+        {/* Avatars */}
+        <div className={cn('flex items-center', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+          {visibleMembers.map((m, i) => (
+            <div
+              key={m.id ?? i}
+              title={getShortName(m)}
+              className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold border-2 border-white dark:border-gray-900',
+                AVATAR_COLORS[i % AVATAR_COLORS.length],
+                i > 0 && (isRTL ? 'mr-[-6px]' : 'ml-[-6px]')
+              )}
+            >
+              {getInitial(m)}
+            </div>
+          ))}
+          {extra > 0 && (
+            <span className={cn(
+              'text-[10px] font-bold text-gray-400 dark:text-gray-500',
+              isRTL ? 'mr-1.5' : 'ml-1.5'
+            )}>
+              {t('sharingBanner.andMore', { count: extra })}
+            </span>
+          )}
         </div>
 
-        {/* Manage arrow */}
-        <BackChevron className="w-4 h-4 text-blue-400 flex-shrink-0" strokeWidth={2.5} />
+        <span className={cn('flex-1 text-[11px] text-blue-400 dark:text-blue-500 font-medium', isRTL ? 'text-left' : 'text-right')}>
+          {t('sharingBanner.tapToManage')}
+        </span>
       </button>
     </motion.div>
   );

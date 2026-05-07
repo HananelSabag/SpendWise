@@ -84,8 +84,10 @@ export default {
   },
 
   sharingBanner: {
-    sharedWith: "Shared with",
-    sharedWithCount: "Shared with {{count}} people",
+    youLead: "You manage",
+    managedBy: "Managed by {{name}}",
+    andMore: "+{{count}} more",
+    tapToManage: "Tap to manage",
   },
 
   inviteBanner: {
@@ -120,5 +122,12 @@ export default {
     awaitingResponse: "Awaiting response",
     emptyTitle: "You haven't shared the list yet",
     emptyDescription: "Invite friends to join and share your list",
+    leaderBadge: "Leader",
+    disbandTitle: "Disband Sharing",
+    disbandConfirm: "This will remove all members. They will lose access to your shared items.",
+    disbandButton: "Yes, disband",
+    leaveConfirm: "Are you sure you want to leave this shared list?",
+    leaveButton: "Yes, leave",
+    cancel: "Cancel",
   },
 };

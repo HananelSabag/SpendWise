@@ -87,6 +87,14 @@ const shoppingAPI = {
       return { success: false, error: e?.response?.data?.error || e };
     }
   },
+  async disband() {
+    try {
+      await apiClient.client.delete('/shopping/disband');
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e?.response?.data?.error || e };
+    }
+  },
 };
 
 export default shoppingAPI;

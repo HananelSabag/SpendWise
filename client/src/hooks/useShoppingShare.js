@@ -62,6 +62,11 @@ export function useShoppingShare() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MEMBERS_KEY }),
   });
 
+  const disbandMutation = useMutation({
+    mutationFn: () => api.shopping.disband(),
+    onSuccess: invalidateAll,
+  });
+
   return {
     // Members data
     myMembers:    membersQuery.data?.myMembers    ?? [],
@@ -78,8 +83,10 @@ export function useShoppingShare() {
     respond:        (token, action) => respondMutation.mutateAsync({ token, action }),
     removeMember:   (userId)        => removeMemberMutation.mutateAsync(userId),
     cancelInvite:   (email)         => cancelInviteMutation.mutateAsync(email),
+    disbandShare:   ()              => disbandMutation.mutateAsync(),
 
-    isInviting:  inviteMutation.isPending,
-    isResponding: respondMutation.isPending,
+    isInviting:    inviteMutation.isPending,
+    isResponding:  respondMutation.isPending,
+    isDisbanding:  disbandMutation.isPending,
   };
 }

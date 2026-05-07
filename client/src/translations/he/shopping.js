@@ -84,8 +84,10 @@ export default {
   },
 
   sharingBanner: {
-    sharedWith: "שיתוף עם",
-    sharedWithCount: "שיתוף עם {{count}} אנשים",
+    youLead: "אתה מנהל",
+    managedBy: "מנוהל על ידי {{name}}",
+    andMore: "+{{count}} נוספים",
+    tapToManage: "לחץ לניהול",
   },
 
   inviteBanner: {
@@ -120,5 +122,12 @@ export default {
     awaitingResponse: "ממתין לאישור",
     emptyTitle: "עדיין לא שיתפת את הרשימה",
     emptyDescription: "הזמן חברים להצטרף ולשתף ברשימה שלך",
+    leaderBadge: "מנהל",
+    disbandTitle: "סיום שיתוף",
+    disbandConfirm: "פעולה זו תסיר את כל החברים. הם יאבדו גישה לפריטים המשותפים.",
+    disbandButton: "כן, סיים שיתוף",
+    leaveConfirm: "האם אתה בטוח שברצונך לעזוב את הרשימה המשותפת?",
+    leaveButton: "כן, עזוב",
+    cancel: "ביטול",
   },
 };

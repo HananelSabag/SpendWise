@@ -117,6 +117,24 @@ const shoppingShareController = {
     res.json({ success: true });
   }),
 
+  // DELETE /shopping/disband  — owner removes ALL members at once
+  disband: asyncHandler(async (req, res) => {
+    const removedIds = await ShoppingShare.disbandShare(req.user.id);
+    const ownerName = req.user.first_name || req.user.username;
+
+    for (const memberId of removedIds) {
+      Notification.create(
+        memberId,
+        'shopping_removed',
+        'רשימת הקניות המשותפת הסתיימה',
+        `${ownerName} סגר את רשימת הקניות המשותפת`,
+        { removedBy: req.user.id, removerName: ownerName, disbanded: true }
+      ).catch(() => {});
+    }
+
+    res.json({ success: true, removed: removedIds.length });
+  }),
+
   // DELETE /shopping/invitations/:email
   cancelInvitation: asyncHandler(async (req, res) => {
     const email = decodeURIComponent(req.params.email).toLowerCase();

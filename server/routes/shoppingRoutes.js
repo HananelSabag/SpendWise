@@ -22,6 +22,7 @@ router.get('/invitations',                      shareController.getInvitations);
 router.post('/invitations/:token/respond',      shareController.respondToInvitation);
 router.get('/members',                          shareController.getMembers);
 router.delete('/members/:userId',               shareController.removeMember);
+router.delete('/disband',                       shareController.disband);
 router.delete('/invitations/:email',            shareController.cancelInvitation);
 
 module.exports = router;
