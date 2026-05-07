@@ -284,11 +284,17 @@ const PreferencesTab = ({ user, authToasts }) => {
   const { t }             = useTranslation('profile');
   const [isLoading, setIsLoading] = useState(false);
 
+  const resolveDefaultHome = (u) => {
+    if (u?.preferences?.default_home) return u.preferences.default_home;
+    if (u?.preferences?.shopping_list_as_default_page) return 'shopping';
+    return 'dashboard';
+  };
+
   const buildPrefs = (u) => ({
-    language_preference:          u?.language_preference                             || 'en',
-    theme_preference:             u?.theme_preference                                || 'system',
-    currency_preference:          u?.currency_preference                             || 'ILS',
-    shopping_list_as_default_page: u?.preferences?.shopping_list_as_default_page    ?? false,
+    language_preference: u?.language_preference  || 'en',
+    theme_preference:    u?.theme_preference      || 'system',
+    currency_preference: u?.currency_preference  || 'ILS',
+    default_home:        resolveDefaultHome(u),
   });
 
   const [prefs, setPrefs]       = useState(() => buildPrefs(user));
@@ -298,7 +304,7 @@ const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.currency_preference, user?.preferences?.shopping_list_as_default_page]);
+  }, [user?.language_preference, user?.theme_preference, user?.currency_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page]);
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -306,10 +312,15 @@ const PreferencesTab = ({ user, authToasts }) => {
     if (!isDirty) return;
     setIsLoading(true);
     try {
-      const { shopping_list_as_default_page, ...flatPrefs } = prefs;
+      const { default_home, ...flatPrefs } = prefs;
       const result = await updateProfile({
         ...flatPrefs,
-        preferences: { ...(user?.preferences || {}), shopping_list_as_default_page },
+        preferences: {
+          ...(user?.preferences || {}),
+          default_home,
+          home_preference_set: true,
+          shopping_list_as_default_page: default_home === 'shopping',
+        },
       });
       if (!result.success) throw new Error(result.error?.message);
 
@@ -371,24 +382,37 @@ const PreferencesTab = ({ user, authToasts }) => {
             { value: 'AUD', label: 'A$ Australian Dollar'},
           ]}
         />
-        {/* Shopping list as default page toggle */}
-        <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('preferences.shoppingDefaultPage') || 'Open Shopping List on Login'}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPrefs(p => ({ ...p, shopping_list_as_default_page: !p.shopping_list_as_default_page }))}
-            className={cn(
-              'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none',
-              prefs.shopping_list_as_default_page ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'
-            )}
-          >
-            <span className={cn(
-              'inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200',
-              prefs.shopping_list_as_default_page ? 'translate-x-[18px]' : 'translate-x-[3px]'
-            )} />
-          </button>
+        {/* Default home picker */}
+        <div className="py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('preferences.defaultHome') || 'פתח באפליקציה'}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'dashboard',    emoji: '📊', label: t('preferences.homeOptions.dashboard')    || 'SpendWise' },
+              { id: 'transactions', emoji: '💳', label: t('preferences.homeOptions.transactions') || 'הוצאות' },
+              { id: 'shopping',     emoji: '🛒', label: t('preferences.homeOptions.shopping')     || 'קניות' },
+            ].map(opt => {
+              const active = prefs.default_home === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPrefs(p => ({ ...p, default_home: opt.id }))}
+                  className={cn(
+                    'flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 text-xs font-bold transition-all duration-150',
+                    active
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                  )}
+                >
+                  <span className="text-lg">{opt.emoji}</span>
+                  <span>{opt.label}</span>
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

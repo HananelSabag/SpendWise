@@ -17,9 +17,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, CreditCard, Plus, BarChart3, User,
+  Home, CreditCard, BarChart3, User,
   PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, Menu, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -192,9 +192,16 @@ const MobileBottomNav = () => {
                     'focus:outline-none transition-all',
                   )}
                 >
-                  <motion.div animate={{ rotate: menuOpen ? 45 : 0 }} transition={{ duration: 0.2 }}>
-                    <Plus className="w-8 h-8 text-white" />
-                  </motion.div>
+                  <AnimatePresence mode="wait" initial={false}>
+                    {menuOpen
+                      ? <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.18 }}>
+                          <X className="w-7 h-7 text-white" strokeWidth={2.5} />
+                        </motion.div>
+                      : <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.18 }}>
+                          <Menu className="w-7 h-7 text-white" strokeWidth={2.5} />
+                        </motion.div>
+                    }
+                  </AnimatePresence>
                   <AnimatePresence>
                     {totalBadge > 0 && (
                       <motion.span

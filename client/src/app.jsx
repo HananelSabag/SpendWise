@@ -215,21 +215,38 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
 };
 
 // ✅ Smart Redirect for authenticated users
+const HomePickerScreen = React.lazy(() => import('./components/common/HomePickerScreen'));
+
 const SmartRedirect = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  // Admin trying to reach a specific admin sub-page (e.g. after session expiry) — honour it
+  // Admin deep-link — honour it
   if (user?.isAdmin && location.state?.from?.startsWith('/admin')) {
     return <Navigate to={location.state.from} replace />;
   }
 
-  // Shopping list toggle overrides default destination for ALL roles
-  if (user?.preferences?.shopping_list_as_default_page === true) {
-    return <Navigate to="/shopping" replace />;
+  const prefs = user?.preferences || {};
+  const defaultHome = prefs.default_home;
+  const hasChosen   = prefs.home_preference_set === true;
+
+  // Legacy boolean flag (shopping_list_as_default_page) counts as a choice
+  const legacyShopping = prefs.shopping_list_as_default_page === true;
+
+  // If no preference has been set yet, show the one-time home picker
+  if (!hasChosen && !defaultHome && !legacyShopping && !user?.isAdmin) {
+    return (
+      <React.Suspense fallback={null}>
+        <HomePickerScreen />
+      </React.Suspense>
+    );
   }
 
-  // Admins default to admin panel, regular users to dashboard
+  // Route based on stored preference
+  if (defaultHome === 'shopping' || legacyShopping) return <Navigate to="/shopping"      replace />;
+  if (defaultHome === 'transactions')               return <Navigate to="/transactions"  replace />;
+
+  // Admins → admin panel, everyone else → dashboard
   return <Navigate to={user?.isAdmin ? '/admin' : '/'} replace />;
 };
 
