@@ -20,7 +20,7 @@ const CAT_BG = {
 };
 
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
-  const { t } = useTranslation('shopping');
+  const { t, isRTL } = useTranslation('shopping');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -54,10 +54,9 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
         'transition-shadow hover:shadow-[0_4px_20px_rgba(0,0,0,0.09)]',
         cardBg
       )}
-      dir="rtl"
     >
-      {/* Right-side category accent (RTL = start side) */}
-      <div className={cn('absolute top-0 right-0 w-[3px] h-full', cat.dot)} />
+      {/* Start-side category accent (right in RTL, left in LTR) */}
+      <div className={cn('absolute top-0 w-[3px] h-full', cat.dot, isRTL ? 'right-0' : 'left-0')} />
 
       <div className="px-4 pt-4 pb-3 pr-5">
 

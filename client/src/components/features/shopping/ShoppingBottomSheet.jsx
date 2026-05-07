@@ -50,7 +50,7 @@ const ErrorMsg = ({ msg }) => (
 );
 
 const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSaving = false }) => {
-  const { t } = useTranslation('shopping');
+  const { t, isRTL } = useTranslation('shopping');
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const nameRef = useRef(null);
@@ -108,7 +108,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       title={editItem ? t('sheet.editTitle') : t('sheet.addTitle')}
       height="auto"
     >
-      <div className="flex flex-col gap-5 pb-6" dir="rtl">
+      <div className="flex flex-col gap-5 pb-6">
 
         {/* Name */}
         <div>

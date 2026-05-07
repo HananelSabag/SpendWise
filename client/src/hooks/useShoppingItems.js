@@ -62,25 +62,31 @@ export function useShoppingItems() {
     onError: (err) => toast.error(err.message || 'שגיאה במחיקת פריט'),
   });
 
+  // Quiet mutation for optimistic toggle — no toasts, one retry for cold-start servers
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const result = await api.shopping.update(id, data);
+      if (!result.success) throw new Error(result.error?.message || 'שגיאה בעדכון פריט');
+      return result.data;
+    },
+    retry: 1,
+    onSuccess: () => invalidate(),
+  });
+
   // Optimistic toggle — flips locally, syncs in background, rolls back on error
   const toggleBought = (item) => {
-    const optimisticData = { is_bought: !item.is_bought };
+    const next = !item.is_bought;
     queryClient.setQueryData(QUERY_KEY, (old) => {
       if (!old) return old;
-      return {
-        ...old,
-        items: old.items.map((i) => i.id === item.id ? { ...i, ...optimisticData } : i),
-      };
+      return { ...old, items: old.items.map((i) => i.id === item.id ? { ...i, is_bought: next } : i) };
     });
-    return updateMutation.mutateAsync({ id: item.id, data: optimisticData }).catch(() => {
+    return toggleMutation.mutateAsync({ id: item.id, data: { is_bought: next } }).catch(() => {
       // Roll back on error
       queryClient.setQueryData(QUERY_KEY, (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((i) => i.id === item.id ? { ...i, is_bought: item.is_bought } : i),
-        };
+        return { ...old, items: old.items.map((i) => i.id === item.id ? { ...i, is_bought: item.is_bought } : i) };
       });
+      toast.error('שגיאה בעדכון פריט');
     });
   };
 
