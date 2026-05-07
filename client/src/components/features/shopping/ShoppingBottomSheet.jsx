@@ -12,7 +12,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Link2, StickyNote, Tag, DollarSign, Check,
-  ImageIcon, X, Loader2, Camera, AlertCircle, Pencil,
+  ImageIcon, X, Loader2, Camera, AlertCircle, Pencil, Wand2, RotateCcw,
 } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
@@ -99,7 +99,8 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
   const nameRef       = useRef(null);
   const manualImgRef  = useRef(null);
   const scrapeTimer   = useRef(null);
-  const catAutoSet    = useRef(false); // ref avoids stale-closure issues
+  const catAutoSet    = useRef(false);
+  const isPaste       = useRef(false); // distinguishes paste from manual typing
 
   // ── Reset on open ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -182,25 +183,37 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     }
   }, [applyScrapedData]);
 
+  // Core scrape logic — called by paste auto-trigger OR manual button
+  const doScrape = useCallback(async (url) => {
+    const target = url?.trim();
+    if (!target || !/^https?:\/\/.{4}/i.test(target)) return;
+    clearTimeout(scrapeTimer.current);
+    setScrapeState('loading'); setScrapeReason(null);
+    try {
+      const result = await api.shopping.scrapeUrl(target);
+      const data   = result?.data;
+      if (data?.success && (data.image_url || data.title)) { applyScrapedData(data); return; }
+      if (data?.allowClientFallback) { await tryClientRelay(target); return; }
+      const r = data?.reason;
+      setScrapeReason(r === 'timeout' ? 'timeout' : r === 'no_data' ? 'no_data' : 'generic');
+      setScrapeState('failed');
+    } catch { setScrapeReason('generic'); setScrapeState('failed'); }
+  }, [applyScrapedData, tryClientRelay]);
+
+  // onChange — just syncs field value; only fires scrape when triggered by paste
   const handleUrlChange = useCallback((value) => {
     set('buy_url', value);
-    clearTimeout(scrapeTimer.current);
-    if (!value.trim() || !/^https?:\/\/.{4}/i.test(value.trim())) {
-      setScrapeState('idle'); return;
+    if (!value.trim()) { setScrapeState('idle'); isPaste.current = false; return; }
+    if (isPaste.current) {
+      isPaste.current = false;
+      // short debounce so the field value settles before the request
+      clearTimeout(scrapeTimer.current);
+      scrapeTimer.current = setTimeout(() => doScrape(value), 400);
     }
-    setScrapeState('loading'); setScrapeReason(null);
-    scrapeTimer.current = setTimeout(async () => {
-      try {
-        const result = await api.shopping.scrapeUrl(value.trim());
-        const data   = result?.data;
-        if (data?.success && (data.image_url || data.title)) { applyScrapedData(data); return; }
-        if (data?.allowClientFallback) { await tryClientRelay(value.trim()); return; }
-        const r = data?.reason;
-        setScrapeReason(r === 'timeout' ? 'timeout' : r === 'no_data' ? 'no_data' : 'generic');
-        setScrapeState('failed');
-      } catch { setScrapeReason('generic'); setScrapeState('failed'); }
-    }, 900);
-  }, [set, applyScrapedData, tryClientRelay]);
+  }, [set, doScrape]);
+
+  // onPaste — marks the next onChange as paste-triggered
+  const handleUrlPaste = useCallback(() => { isPaste.current = true; }, []);
 
   useEffect(() => () => clearTimeout(scrapeTimer.current), []);
 
@@ -263,17 +276,47 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
               type="url"
               value={form.buy_url}
               onChange={e => handleUrlChange(e.target.value)}
+              onPaste={handleUrlPaste}
               placeholder="https://..."
               autoComplete="url"
-              className={cn(inputBase, 'text-left pr-10', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
+              className={cn(inputBase, 'text-left pr-12', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
               dir="ltr"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              {isLoading  && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" strokeWidth={2.5} />}
-              {scrapeState === 'success' && <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />}
+            {/* Fetch / status button — right inside the input */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              {isLoading ? (
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 text-blue-400 animate-spin" strokeWidth={2.5} />
+                </div>
+              ) : scrapeState === 'success' ? (
+                <button type="button" onClick={() => doScrape(form.buy_url)}
+                  title="משוך שוב"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                  <Check className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              ) : scrapeState === 'failed' ? (
+                <button type="button" onClick={() => doScrape(form.buy_url)}
+                  title="נסה שוב"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors">
+                  <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              ) : form.buy_url && /^https?:\/\/.{4}/i.test(form.buy_url) ? (
+                <button type="button" onClick={() => doScrape(form.buy_url)}
+                  title="משוך פרטי מוצר"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                  <Wand2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+                </button>
+              ) : null}
             </div>
           </div>
           <ErrorMsg msg={errors.buy_url} />
+          {/* Paste hint — only when field is empty */}
+          {!form.buy_url && (
+            <p className="mt-1.5 text-[11px] text-gray-400 flex items-center gap-1">
+              <Wand2 className="w-3 h-3" />
+              {t('scrape.pasteHint') || 'הדבק קישור — הפרטים יימשכו אוטומטית'}
+            </p>
+          )}
 
           {/* Image area */}
           <AnimatePresence mode="wait">
