@@ -1,6 +1,10 @@
 /**
  * Product URL scraper — extracts og:image + og:title from product pages.
  * Uses only the <head> which is always server-rendered, even on React/Next sites.
+ *
+ * When the server IP is blocked (e.g. Israeli sites whitelist residential IPs only),
+ * scrapeProductUrl returns allowClientFallback:true so the client can relay its own
+ * fetch() response via the /parse-html endpoint.
  */
 
 const cheerio = require('cheerio');
@@ -43,7 +47,10 @@ async function scrapeProductUrl(rawUrl) {
     });
     clearTimeout(timer);
 
-    if (!res.ok) return { success: false, reason: 'fetch_error', status: res.status };
+    if (!res.ok) {
+      const blocked = res.status === 403 || res.status === 401 || res.status === 429;
+      return { success: false, reason: 'fetch_error', status: res.status, allowClientFallback: blocked };
+    }
 
     // Stream only what we need — og tags are always in the first ~50 KB
     const reader = res.body.getReader();
@@ -104,4 +111,44 @@ async function scrapeProductUrl(rawUrl) {
   }
 }
 
-module.exports = { scrapeProductUrl };
+/**
+ * Parse raw HTML string and extract og:image + og:title.
+ * Used by the /parse-html endpoint when the client relays the fetch.
+ */
+function parseHtmlForOg(html, baseUrl) {
+  const $ = cheerio.load(html, { xmlMode: false });
+
+  const pick = (...selectors) => {
+    for (const sel of selectors) {
+      const val = $(sel).attr('content') || $(sel).text();
+      if (val && val.trim()) return val.trim();
+    }
+    return null;
+  };
+
+  const image = pick(
+    'meta[property="og:image"]',
+    'meta[property="og:image:url"]',
+    'meta[name="twitter:image"]',
+    'meta[name="twitter:image:src"]',
+  );
+
+  const title = pick(
+    'meta[property="og:title"]',
+    'meta[name="twitter:title"]',
+    'title',
+  );
+
+  let imageUrl = null;
+  if (image) {
+    try {
+      const imgUrl = new URL(image, baseUrl);
+      if (['http:', 'https:'].includes(imgUrl.protocol)) imageUrl = imgUrl.href;
+    } catch { /* ignore */ }
+  }
+
+  if (!imageUrl && !title) return { success: false, reason: 'no_data' };
+  return { success: true, image_url: imageUrl, title: title || null };
+}
+
+module.exports = { scrapeProductUrl, parseHtmlForOg };

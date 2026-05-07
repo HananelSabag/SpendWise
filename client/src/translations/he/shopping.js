@@ -54,6 +54,9 @@ export default {
     fetching: "שואב פרטי מוצר...",
     success: "פרטי מוצר נטענו",
     failed: "לא הצלחתי לטעון — מלא ידנית",
+    failedBlocked: "האתר חוסם גישה אוטומטית — מלא ידנית",
+    failedTimeout: "פג זמן הטעינה — מלא ידנית",
+    failedNoData: "לא נמצאו פרטי מוצר — מלא ידנית",
     imageFound: "תמונת מוצר נמצאה",
   },
 

@@ -54,6 +54,9 @@ export default {
     fetching: "Fetching product info...",
     success: "Product info loaded",
     failed: "Couldn't load info — fill in manually",
+    failedBlocked: "Site blocks auto-loading — fill in manually",
+    failedTimeout: "Request timed out — fill in manually",
+    failedNoData: "No product info found — fill in manually",
     imageFound: "Product image found",
   },
 

@@ -4,7 +4,7 @@
 
 const { ShoppingItem } = require('../models/ShoppingItem');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { scrapeProductUrl } = require('../utils/urlScraper');
+const { scrapeProductUrl, parseHtmlForOg } = require('../utils/urlScraper');
 
 const VALID_CATEGORIES = ['ריהוט', 'מטבח', 'חדר שינה', 'אלקטרוניקה', 'ביגוד', 'אחר'];
 
@@ -55,6 +55,24 @@ const shoppingController = {
       return res.status(400).json({ success: false, error: { message: 'URL is required' } });
     }
     const result = await scrapeProductUrl(url.trim());
+    res.json({ success: true, data: result });
+  }),
+
+  // POST /shopping/parse-html — client-relay fallback when server IP is blocked
+  // Client fetches the product URL with its own residential IP and sends the raw HTML here
+  parseHtml: asyncHandler(async (req, res) => {
+    const { html, url } = req.body;
+    if (!html || typeof html !== 'string') {
+      return res.status(400).json({ success: false, error: { message: 'html is required' } });
+    }
+    if (html.length > 512 * 1024) {
+      return res.status(413).json({ success: false, error: { message: 'html too large' } });
+    }
+    let baseUrl = '';
+    if (url) {
+      try { baseUrl = new URL(url).origin; } catch { /* ignore */ }
+    }
+    const result = parseHtmlForOg(html, baseUrl);
     res.json({ success: true, data: result });
   }),
 

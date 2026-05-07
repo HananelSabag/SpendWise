@@ -56,6 +56,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [scrapeState, setScrapeState] = useState('idle'); // idle | loading | success | failed
+  const [scrapeReason, setScrapeReason] = useState(null);
   const nameRef = useRef(null);
   const scrapeTimerRef = useRef(null);
 
@@ -71,6 +72,7 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       } : EMPTY);
       setErrors({});
       setScrapeState('idle');
+      setScrapeReason(null);
       setTimeout(() => nameRef.current?.focus(), 300);
     }
   }, [isOpen, editItem]);
@@ -85,6 +87,64 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     });
   }, []);
 
+  const applyScrapedData = useCallback((data) => {
+    setForm((prev) => ({
+      ...prev,
+      image_url: data.image_url || prev.image_url || '',
+      name: prev.name.trim() ? prev.name : (data.title || prev.name),
+    }));
+    setScrapeState('success');
+  }, []);
+
+  // Browser fetches the URL with its own (residential) IP and relays the HTML to our server
+  const tryClientRelay = useCallback(async (url) => {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'text/html' },
+        // no credentials — we just need the public HTML
+        credentials: 'omit',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+
+      // Read first 256KB only (og tags are near the top)
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      const MAX = 256 * 1024;
+      while (received < MAX) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) { chunks.push(value); received += value.length; }
+        const partial = new TextDecoder().decode(
+          new Uint8Array(chunks.reduce((a, c) => [...a, ...c], []))
+        );
+        if (partial.includes('</head>')) break;
+      }
+      reader.cancel().catch(() => {});
+      const html = new TextDecoder().decode(
+        new Uint8Array(chunks.reduce((a, c) => [...a, ...c], []))
+      );
+
+      const parsed = await api.shopping.parseHtml(html, url);
+      const data = parsed?.data;
+      if (data?.success && (data.image_url || data.title)) {
+        applyScrapedData(data);
+      } else {
+        setScrapeReason('no_data');
+        setScrapeState('failed');
+      }
+    } catch (err) {
+      // CORS error or network failure
+      const isCors = err?.message?.toLowerCase().includes('cors') ||
+                     err?.message?.toLowerCase().includes('failed to fetch') ||
+                     err?.name === 'TypeError';
+      setScrapeReason(isCors ? 'blocked' : 'generic');
+      setScrapeState('failed');
+    }
+  }, [applyScrapedData]);
+
   // Trigger scrape when URL looks valid
   const handleUrlChange = useCallback((value) => {
     set('buy_url', value);
@@ -96,23 +156,29 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
     }
 
     setScrapeState('loading');
+    setScrapeReason(null);
     scrapeTimerRef.current = setTimeout(async () => {
       try {
         const result = await api.shopping.scrapeUrl(value.trim());
         const data = result?.data;
 
         if (data?.success && (data.image_url || data.title)) {
-          setForm((prev) => ({
-            ...prev,
-            image_url: data.image_url || prev.image_url || '',
-            // Only fill name if it's still empty
-            name: prev.name.trim() ? prev.name : (data.title || prev.name),
-          }));
-          setScrapeState('success');
-        } else {
-          setScrapeState('failed');
+          applyScrapedData(data);
+          return;
         }
+
+        // Server was blocked (IP not allowed) — try fetching from the browser instead
+        if (data?.allowClientFallback) {
+          await tryClientRelay(value.trim());
+          return;
+        }
+
+        // Server reached but got no useful data
+        const reason = data?.reason;
+        setScrapeReason(reason === 'timeout' ? 'timeout' : reason === 'no_data' ? 'no_data' : 'generic');
+        setScrapeState('failed');
       } catch {
+        setScrapeReason('generic');
         setScrapeState('failed');
       }
     }, 900); // debounce 900ms
@@ -194,7 +260,10 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
             {scrapeState === 'failed' && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="mt-1.5 text-xs text-gray-400 font-medium">
-                {t('scrape.failed')}
+                {scrapeReason === 'blocked'  ? t('scrape.failedBlocked')
+                : scrapeReason === 'timeout' ? t('scrape.failedTimeout')
+                : scrapeReason === 'no_data' ? t('scrape.failedNoData')
+                :                               t('scrape.failed')}
               </motion.p>
             )}
           </AnimatePresence>
