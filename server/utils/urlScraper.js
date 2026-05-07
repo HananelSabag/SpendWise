@@ -12,7 +12,39 @@ const cheerio = require('cheerio');
 const TIMEOUT_MS = 8000;
 const MAX_BYTES  = 256 * 1024; // read first 256 KB — head is always near the top
 
+function normalizeProductUrl(rawUrl) {
+  let url;
+  try { url = new URL(rawUrl); } catch { return rawUrl; }
+  const host = url.hostname.toLowerCase();
+
+  // AliExpress: SSR/bundle pages carry productIds= → convert to canonical item URL
+  if (host.includes('aliexpress.com')) {
+    const id = url.searchParams.get('productIds') || url.searchParams.get('productId');
+    if (id) {
+      const normalized = `https://www.aliexpress.com/item/${id}.html`;
+      console.log(`[scraper] normalize aliexpress bundle → ${normalized}`);
+      return normalized;
+    }
+  }
+
+  // Amazon: strip to /dp/<ASIN> to avoid redirect chains and region noise
+  if (host.includes('amazon.')) {
+    const asin = url.pathname.match(/\/dp\/([A-Z0-9]{10})/)?.[1]
+              || url.pathname.match(/\/gp\/product\/([A-Z0-9]{10})/)?.[1];
+    if (asin) {
+      const normalized = `https://${url.hostname}/dp/${asin}`;
+      if (normalized !== rawUrl) console.log(`[scraper] normalize amazon → ${normalized}`);
+      return normalized;
+    }
+  }
+
+  return rawUrl;
+}
+
 async function scrapeProductUrl(rawUrl) {
+  // Normalize known bundle/redirect patterns before anything else
+  rawUrl = normalizeProductUrl(rawUrl);
+
   let url;
   try {
     url = new URL(rawUrl);
