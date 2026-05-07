@@ -6,8 +6,11 @@ const db = require('../config/db');
 
 class ShoppingItem {
   static async getAll(userId) {
+    // DISTINCT prevents duplicate rows when the same user appears via
+    // multiple share paths (e.g. mutual shares between two users).
     const { rows } = await db.query(`
-      SELECT si.*,
+      SELECT DISTINCT ON (si.id)
+             si.*,
              u.first_name AS owner_first_name,
              u.last_name  AS owner_last_name,
              u.username   AS owner_username
@@ -20,7 +23,7 @@ class ShoppingItem {
          OR  si.user_id IN (
                SELECT member_id FROM shopping_shares WHERE owner_id = $1
              )
-      ORDER  BY si.category ASC, si.name ASC
+      ORDER  BY si.id, si.category ASC, si.name ASC
     `, [userId]);
     return rows;
   }
@@ -55,7 +58,11 @@ class ShoppingItem {
            notes     = COALESCE($7, notes),
            is_bought = COALESCE($8, is_bought),
            image_url = COALESCE($9, image_url)
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1
+        AND (
+          user_id = $2
+          OR user_id IN (SELECT member_id FROM shopping_shares WHERE owner_id = $2)
+        )
        RETURNING *`,
       [
         id,
@@ -73,10 +80,19 @@ class ShoppingItem {
   }
 
   static async delete(id, userId) {
-    const { rowCount } = await db.query(
-      `DELETE FROM shopping_items WHERE id = $1 AND user_id = $2`,
-      [id, userId]
-    );
+    // Allow deletion if:
+    //   1. The item belongs to the requesting user, OR
+    //   2. The requesting user is the share owner and the item belongs to one of their members
+    const { rowCount } = await db.query(`
+      DELETE FROM shopping_items
+      WHERE id = $1
+        AND (
+          user_id = $2
+          OR user_id IN (
+            SELECT member_id FROM shopping_shares WHERE owner_id = $2
+          )
+        )
+    `, [id, userId]);
     return rowCount > 0;
   }
 
