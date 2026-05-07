@@ -164,7 +164,7 @@ const RegistrationComplete = ({
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-base">
           {requiresVerification
-            ? (t('verificationEmailSent') || 'We sent a verification link to your email address. Click the link to activate your account.')
+            ? t('verificationEmailSent', { email: userEmail })
             : t('registrationCompleteMessage')}
         </p>
       </motion.div>

@@ -104,7 +104,15 @@ const Register = () => {
       const result = await register(registrationData);
 
       if (result.success) {
-        setUserData({ email: formData.email, firstName: formData.firstName, lastName: formData.lastName });
+        // Use server's email_verified field to determine if verification is needed.
+        // This respects the email_verification_required system setting.
+        const serverEmailVerified = result.data?.user?.email_verified ?? false;
+        setUserData({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          serverEmailVerified,
+        });
         setRegistrationStep('complete');
       } else {
         const code = result.error?.code || '';
@@ -239,14 +247,12 @@ const Register = () => {
 
   // Called when the user explicitly presses the CTA on the complete screen.
   const handleRegistrationComplete = useCallback(() => {
-    if (isGoogleUser) {
-      // User is already authenticated; navigate to dashboard.
+    if (isGoogleUser || userData?.serverEmailVerified) {
       navigate('/', { replace: true });
     } else {
-      // Email registration: user decides to go to login after seeing the success page.
       navigate('/login', { state: { registrationSuccess: true }, replace: true });
     }
-  }, [navigate, isGoogleUser]);
+  }, [navigate, isGoogleUser, userData]);
 
   const handleStepBack = useCallback(() => {
     if (registrationStep === 'googleProfile') {
@@ -337,7 +343,7 @@ const Register = () => {
                 userEmail={userData?.email}
                 securityScore={securityData?.securityScore || 50}
                 onContinue={handleRegistrationComplete}
-                requiresVerification={!isGoogleUser}
+                requiresVerification={!isGoogleUser && !userData?.serverEmailVerified}
                 autoRedirect={false}
               />
             </motion.div>
