@@ -50,6 +50,18 @@ export default {
     urlInvalid: "הקישור חייב להתחיל ב־https://",
   },
 
+  scrape: {
+    fetching: "שואב פרטי מוצר...",
+    success: "פרטי מוצר נטענו",
+    failed: "לא הצלחתי לטעון — מלא ידנית",
+    imageFound: "תמונת מוצר נמצאה",
+  },
+
+  tabs: {
+    personal: "רשימה שלי",
+    shared: "משותף",
+  },
+
   categories: {
     furniture: "ריהוט",
     kitchen: "מטבח",

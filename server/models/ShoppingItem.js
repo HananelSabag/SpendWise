@@ -17,6 +17,9 @@ class ShoppingItem {
          OR  si.user_id IN (
                SELECT owner_id FROM shopping_shares WHERE member_id = $1
              )
+         OR  si.user_id IN (
+               SELECT member_id FROM shopping_shares WHERE owner_id = $1
+             )
       ORDER  BY si.category ASC, si.name ASC
     `, [userId]);
     return rows;
@@ -31,18 +34,18 @@ class ShoppingItem {
   }
 
   static async create(userId, data) {
-    const { name, category = 'אחר', price_ils = 0, buy_url = null, notes = null } = data;
+    const { name, category = 'אחר', price_ils = 0, buy_url = null, notes = null, image_url = null } = data;
     const { rows } = await db.query(
-      `INSERT INTO shopping_items (user_id, name, category, price_ils, buy_url, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO shopping_items (user_id, name, category, price_ils, buy_url, notes, image_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [userId, name.trim(), category, parseFloat(price_ils) || 0, buy_url || null, notes || null]
+      [userId, name.trim(), category, parseFloat(price_ils) || 0, buy_url || null, notes || null, image_url || null]
     );
     return rows[0];
   }
 
   static async update(id, userId, data) {
-    const { name, category, price_ils, buy_url, notes, is_bought } = data;
+    const { name, category, price_ils, buy_url, notes, is_bought, image_url } = data;
     const { rows } = await db.query(
       `UPDATE shopping_items
        SET name      = COALESCE($3, name),
@@ -50,7 +53,8 @@ class ShoppingItem {
            price_ils = COALESCE($5, price_ils),
            buy_url   = COALESCE($6, buy_url),
            notes     = COALESCE($7, notes),
-           is_bought = COALESCE($8, is_bought)
+           is_bought = COALESCE($8, is_bought),
+           image_url = COALESCE($9, image_url)
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
       [
@@ -62,6 +66,7 @@ class ShoppingItem {
         buy_url !== undefined ? (buy_url || null) : null,
         notes !== undefined ? (notes || null) : null,
         is_bought != null ? is_bought : null,
+        image_url !== undefined ? (image_url || null) : null,
       ]
     );
     return rows[0] || null;

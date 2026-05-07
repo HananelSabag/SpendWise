@@ -87,6 +87,14 @@ const shoppingAPI = {
       return { success: false, error: e?.response?.data?.error || e };
     }
   },
+  async scrapeUrl(url) {
+    try {
+      const r = await apiClient.client.post('/shopping/scrape-url', { url });
+      return { success: true, data: r.data.data };
+    } catch (e) {
+      return { success: false, error: e?.response?.data?.error || e };
+    }
+  },
   async disband() {
     try {
       await apiClient.client.delete('/shopping/disband');

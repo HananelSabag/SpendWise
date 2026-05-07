@@ -4,6 +4,7 @@
 
 const { ShoppingItem } = require('../models/ShoppingItem');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { scrapeProductUrl } = require('../utils/urlScraper');
 
 const VALID_CATEGORIES = ['ריהוט', 'מטבח', 'חדר שינה', 'אלקטרוניקה', 'ביגוד', 'אחר'];
 
@@ -40,11 +41,21 @@ const shoppingController = {
   }),
 
   create: asyncHandler(async (req, res) => {
-    const { name, category, price_ils, buy_url, notes } = req.body;
+    const { name, category, price_ils, buy_url, notes, image_url } = req.body;
     const err = validateFields(req.body, true);
     if (err) return res.status(400).json({ success: false, error: { message: err } });
-    const item = await ShoppingItem.create(req.user.id, { name, category, price_ils, buy_url, notes });
+    const item = await ShoppingItem.create(req.user.id, { name, category, price_ils, buy_url, notes, image_url });
     res.status(201).json({ success: true, data: item });
+  }),
+
+  // POST /shopping/scrape-url
+  scrapeUrl: asyncHandler(async (req, res) => {
+    const { url } = req.body;
+    if (!url?.trim()) {
+      return res.status(400).json({ success: false, error: { message: 'URL is required' } });
+    }
+    const result = await scrapeProductUrl(url.trim());
+    res.json({ success: true, data: result });
   }),
 
   update: asyncHandler(async (req, res) => {

@@ -1,13 +1,15 @@
 /**
  * ShoppingBottomSheet — Add / Edit shopping wishlist item
+ * Supports URL auto-scraping: paste a product link → image + title filled automatically
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Link2, StickyNote, Tag, DollarSign, Check } from 'lucide-react';
+import { ShoppingCart, Link2, StickyNote, Tag, DollarSign, Check, Image, X, Loader2 } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
+import { api } from '../../../api';
 
 export const CATEGORIES = [
   { value: 'ריהוט',       key: 'furniture',    emoji: '🛋️',  color: 'bg-amber-100 text-amber-700 border-amber-200',   dot: 'bg-amber-500'  },
@@ -18,7 +20,7 @@ export const CATEGORIES = [
   { value: 'אחר',         key: 'other',        emoji: '📦',  color: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400'   },
 ];
 
-const EMPTY = { name: '', category: 'אחר', price_ils: '', buy_url: '', notes: '' };
+const EMPTY = { name: '', category: 'אחר', price_ils: '', buy_url: '', notes: '', image_url: '' };
 
 const FieldLabel = ({ icon: Icon, label, required }) => (
   <div className="flex items-center gap-1.5 mb-1.5">
@@ -53,7 +55,9 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
   const { t, isRTL } = useTranslation('shopping');
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
+  const [scrapeState, setScrapeState] = useState('idle'); // idle | loading | success | failed
   const nameRef = useRef(null);
+  const scrapeTimerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,13 +67,14 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
         price_ils: editItem.price_ils != null ? String(editItem.price_ils) : '',
         buy_url:   editItem.buy_url    ?? '',
         notes:     editItem.notes      ?? '',
+        image_url: editItem.image_url  ?? '',
       } : EMPTY);
       setErrors({});
+      setScrapeState('idle');
       setTimeout(() => nameRef.current?.focus(), 300);
     }
   }, [isOpen, editItem]);
 
-  // No errors dependency — uses functional updater to clear without capture
   const set = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
@@ -79,6 +84,42 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       return next;
     });
   }, []);
+
+  // Trigger scrape when URL looks valid
+  const handleUrlChange = useCallback((value) => {
+    set('buy_url', value);
+    clearTimeout(scrapeTimerRef.current);
+
+    if (!value.trim() || !/^https?:\/\/.{4}/i.test(value.trim())) {
+      setScrapeState('idle');
+      return;
+    }
+
+    setScrapeState('loading');
+    scrapeTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await api.shopping.scrapeUrl(value.trim());
+        const data = result?.data;
+
+        if (data?.success && (data.image_url || data.title)) {
+          setForm((prev) => ({
+            ...prev,
+            image_url: data.image_url || prev.image_url || '',
+            // Only fill name if it's still empty
+            name: prev.name.trim() ? prev.name : (data.title || prev.name),
+          }));
+          setScrapeState('success');
+        } else {
+          setScrapeState('failed');
+        }
+      } catch {
+        setScrapeState('failed');
+      }
+    }, 900); // debounce 900ms
+  }, [set]);
+
+  // Cleanup timer on unmount
+  useEffect(() => () => clearTimeout(scrapeTimerRef.current), []);
 
   const validate = () => {
     const e = {};
@@ -96,8 +137,9 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       name:      form.name.trim(),
       category:  form.category,
       price_ils: form.price_ils !== '' ? parseFloat(form.price_ils) : 0,
-      buy_url:   form.buy_url.trim() || null,
-      notes:     form.notes.trim()   || null,
+      buy_url:   form.buy_url.trim()   || null,
+      notes:     form.notes.trim()     || null,
+      image_url: form.image_url.trim() || null,
     });
   };
 
@@ -109,6 +151,87 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
       height="auto"
     >
       <div className="flex flex-col gap-5 pb-6">
+
+        {/* URL field — FIRST so scrape happens before user types name */}
+        <div>
+          <FieldLabel icon={Link2} label={t('fields.url.label')} />
+          <div className="relative">
+            <input
+              type="url"
+              value={form.buy_url}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              onBlur={() => {
+                if (form.buy_url && !/^https?:\/\//i.test(form.buy_url.trim())) {
+                  setErrors((p) => ({ ...p, buy_url: t('validation.urlInvalid') }));
+                }
+              }}
+              placeholder="https://..."
+              autoComplete="url"
+              className={cn(inputBase, 'text-left pr-10', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
+              dir="ltr"
+            />
+            {/* Scrape status icon */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {scrapeState === 'loading' && (
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" strokeWidth={2.5} />
+              )}
+              {scrapeState === 'success' && (
+                <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />
+              )}
+            </div>
+          </div>
+          <ErrorMsg msg={errors.buy_url} />
+
+          {/* Scrape status message */}
+          <AnimatePresence>
+            {scrapeState === 'loading' && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="mt-1.5 text-xs text-blue-500 font-medium flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {t('scrape.fetching')}
+              </motion.p>
+            )}
+            {scrapeState === 'failed' && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="mt-1.5 text-xs text-gray-400 font-medium">
+                {t('scrape.failed')}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Image preview — shown when scraped or when editing existing item with image */}
+        <AnimatePresence>
+          {form.image_url && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="relative rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <img
+                  src={form.image_url}
+                  alt="product preview"
+                  className="w-full h-44 object-cover"
+                  onError={() => set('image_url', '')}
+                />
+                {scrapeState === 'success' && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                    <Check className="w-3 h-3" strokeWidth={3} />
+                    {t('scrape.imageFound')}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => set('image_url', '')}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Name */}
         <div>
@@ -178,26 +301,6 @@ const ShoppingBottomSheet = ({ isOpen, onClose, onSave, editItem = null, isSavin
               ₪
             </span>
           </div>
-        </div>
-
-        {/* URL */}
-        <div>
-          <FieldLabel icon={Link2} label={t('fields.url.label')} />
-          <input
-            type="url"
-            value={form.buy_url}
-            onChange={(e) => set('buy_url', e.target.value)}
-            onBlur={() => {
-              if (form.buy_url && !/^https?:\/\//i.test(form.buy_url.trim())) {
-                setErrors((p) => ({ ...p, buy_url: t('validation.urlInvalid') }));
-              }
-            }}
-            placeholder="https://..."
-            autoComplete="url"
-            className={cn(inputBase, 'text-left', errors.buy_url && 'border-red-400 focus:ring-red-400/40')}
-            dir="ltr"
-          />
-          <ErrorMsg msg={errors.buy_url} />
         </div>
 
         {/* Notes */}

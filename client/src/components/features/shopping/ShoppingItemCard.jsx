@@ -22,6 +22,7 @@ const CAT_BG = {
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
   const { t, isRTL } = useTranslation('shopping');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const timeoutRef = useRef(null);
 
   useEffect(() => {
@@ -29,6 +30,8 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
     timeoutRef.current = setTimeout(() => setConfirmDelete(false), 3000);
     return () => clearTimeout(timeoutRef.current);
   }, [confirmDelete]);
+
+  useEffect(() => { setImgFailed(false); }, [item.image_url]);
 
   const cat    = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[5];
   const bought = item.is_bought;
@@ -128,7 +131,7 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
             </div>
           </div>
 
-          {/* Price — leftmost on screen (last in RTL flex) */}
+          {/* Price */}
           {price > 0 && (
             <div className="flex-shrink-0 text-right">
               <span className={cn(
@@ -139,6 +142,18 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
               )}>
                 {currency.format(price)}
               </span>
+            </div>
+          )}
+
+          {/* Product image thumbnail — trailing end of card */}
+          {item.image_url && !imgFailed && (
+            <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-sm">
+              <img
+                src={item.image_url}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={() => setImgFailed(true)}
+              />
             </div>
           )}
         </div>

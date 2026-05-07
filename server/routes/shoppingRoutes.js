@@ -16,6 +16,9 @@ router.post('/',       shoppingController.create);
 router.patch('/:id',   shoppingController.update);
 router.delete('/:id',  shoppingController.remove);
 
+// URL scraping
+router.post('/scrape-url', shoppingController.scrapeUrl);
+
 // Sharing
 router.post('/invite',                          shareController.invite);
 router.get('/invitations',                      shareController.getInvitations);

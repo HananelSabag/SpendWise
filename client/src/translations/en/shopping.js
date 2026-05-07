@@ -50,6 +50,18 @@ export default {
     urlInvalid: "Link must start with https://",
   },
 
+  scrape: {
+    fetching: "Fetching product info...",
+    success: "Product info loaded",
+    failed: "Couldn't load info — fill in manually",
+    imageFound: "Product image found",
+  },
+
+  tabs: {
+    personal: "My List",
+    shared: "Shared",
+  },
+
   categories: {
     furniture: "Furniture",
     kitchen: "Kitchen",

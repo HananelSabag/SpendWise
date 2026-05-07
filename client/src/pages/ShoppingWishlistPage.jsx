@@ -18,6 +18,7 @@ import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import ShoppingShareSheet from '../components/features/shopping/ShoppingShareSheet';
 import { PageSkeleton } from '../components/ui';
 import { useTranslation } from '../stores';
+import { useAuth } from '../hooks/useAuth';
 
 const AVATAR_COLORS = [
   'bg-blue-500', 'bg-purple-500', 'bg-emerald-500',
@@ -201,7 +202,11 @@ const ShoppingWishlistPage = () => {
   const { myMembers, sharedWithMe, pendingInvitations, respond } = useShoppingShare();
   const { unreadCount, markAllRead } = useNotifications();
 
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+
   const [activeCategory, setActiveCategory] = useState(null);
+  const [activeTab,     setActiveTab]     = useState(null); // null = all | 'mine' | 'shared'
   const [sheetOpen,   setSheetOpen]   = useState(false);
   const [shareOpen,   setShareOpen]   = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -218,15 +223,20 @@ const ShoppingWishlistPage = () => {
   const ALL_KEY = t('allCategories');
 
   const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal } = useMemo(() => {
+    // Apply tab filter first
+    const tabItems = activeTab === null ? items
+      : activeTab === 'mine'   ? items.filter((i) => i.user_id === currentUserId)
+      :                          items.filter((i) => i.user_id !== currentUserId);
+
     const counts = {};
-    items.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
+    tabItems.forEach((i) => { counts[i.category] = (counts[i.category] || 0) + 1; });
     const tabs     = [null, ...CATEGORIES.filter((c) => counts[c.value]).map((c) => c.value)];
-    const filtered = activeCategory === null ? items : items.filter((i) => i.category === activeCategory);
+    const filtered = activeCategory === null ? tabItems : tabItems.filter((i) => i.category === activeCategory);
     const u = filtered.filter((i) => !i.is_bought);
     const b = filtered.filter((i) => i.is_bought);
     const pending = u.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
     return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending };
-  }, [items, activeCategory]);
+  }, [items, activeCategory, activeTab, currentUserId]);
 
   useEffect(() => {
     if (activeCategory !== null && filteredItems.length === 0 && items.length > 0) {
@@ -351,6 +361,44 @@ const ShoppingWishlistPage = () => {
               onOpen={openShare}
               isRTL={isRTL}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Personal / Shared tab switcher */}
+        <AnimatePresence>
+          {hasSharingMembers && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className={cn(
+                'flex gap-1.5 px-4 pb-2 overflow-hidden',
+                isRTL ? 'flex-row-reverse' : 'flex-row'
+              )}
+            >
+              {[
+                { key: null,     label: t('allCategories') },
+                { key: 'mine',   label: t('tabs.personal') },
+                { key: 'shared', label: t('tabs.shared') },
+              ].map(({ key, label }) => {
+                const active = activeTab === key;
+                return (
+                  <motion.button
+                    key={String(key)}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => { setActiveTab(key); setActiveCategory(null); }}
+                    className={cn(
+                      'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-150',
+                      active
+                        ? 'bg-blue-600 text-white border-transparent shadow-sm shadow-blue-500/30'
+                        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                    )}
+                  >
+                    {label}
+                  </motion.button>
+                );
+              })}
+            </motion.div>
           )}
         </AnimatePresence>
 
