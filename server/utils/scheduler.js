@@ -39,6 +39,9 @@ class Scheduler {
       
       // Daily token cleanup (runs at 2 AM)
       this.scheduleJob('token-cleanup', '0 2 * * *', this.runTokenCleanup.bind(this));
+
+      // Daily unverified user cleanup (runs at 3 AM) — delete accounts unverified after 24h
+      this.scheduleJob('unverified-users-cleanup', '0 3 * * *', this.runUnverifiedUsersCleanup.bind(this));
       
       // Weekly database maintenance (runs Saturday at 3 AM)
       this.scheduleJob('db-maintenance', '0 3 * * 6', this.runDatabaseMaintenance.bind(this));
@@ -213,6 +216,30 @@ class Scheduler {
   }
 
   /**
+   * 🧹 Delete unverified accounts older than 24 hours
+   */
+  async runUnverifiedUsersCleanup() {
+    try {
+      logger.info('🧹 Starting unverified users cleanup');
+
+      const result = await db.query(`
+        DELETE FROM users
+        WHERE email_verified = false
+          AND created_at < NOW() - INTERVAL '24 hours'
+        RETURNING id
+      `, [], 'cleanup_unverified_users');
+
+      const deleted = result.rowCount || 0;
+      logger.info(`✅ Unverified users cleanup completed — deleted ${deleted} account(s)`);
+      return { deleted };
+
+    } catch (error) {
+      logger.error(`❌ Unverified users cleanup failed — ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * 🔧 Run database maintenance
    */
   async runDatabaseMaintenance() {
@@ -308,6 +335,8 @@ class Scheduler {
           return await this.runRecurringGeneration('manual');
         case 'cleanup':
           return await this.runTokenCleanup();
+        case 'unverified-cleanup':
+          return await this.runUnverifiedUsersCleanup();
         case 'maintenance':
           return await this.runDatabaseMaintenance();
         default:
