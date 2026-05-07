@@ -191,6 +191,13 @@ class Notification {
     );
     return rowCount > 0;
   }
+
+  static async markReadByType(userId, type) {
+    await db.query(
+      `UPDATE notifications SET is_read = true WHERE user_id = $1 AND type = $2 AND is_read = false`,
+      [userId, type]
+    );
+  }
 }
 
 module.exports = { ShoppingShare, Notification };

@@ -69,19 +69,25 @@ const shoppingShareController = {
       if (!inv) return res.status(404).json({ success: false, error: { message: 'הזמנה לא נמצאה' } });
 
       const memberName = req.user.first_name || req.user.username;
-      Notification.create(
-        inv.inviter_id,
-        'shopping_invite_accepted',
-        'הזמנה התקבלה',
-        `${memberName} הצטרף לרשימת הקניות שלך`,
-        { memberId: req.user.id, memberName }
-      ).catch(() => {});
+      await Promise.all([
+        Notification.create(
+          inv.inviter_id,
+          'shopping_invite_accepted',
+          'הזמנה התקבלה',
+          `${memberName} הצטרף לרשימת הקניות שלך`,
+          { memberId: req.user.id, memberName }
+        ).catch(() => {}),
+        // Clear the invite notification now that it's been acted on
+        Notification.markReadByType(req.user.id, 'shopping_invite').catch(() => {}),
+      ]);
 
       return res.json({ success: true, message: 'הצטרפת לרשימה בהצלחה' });
     }
 
     const declined = await ShoppingShare.declineInvitation(token, req.user.id);
     if (!declined) return res.status(404).json({ success: false, error: { message: 'הזמנה לא נמצאה' } });
+    // Clear the invite notification now that it's been acted on
+    Notification.markReadByType(req.user.id, 'shopping_invite').catch(() => {});
     res.json({ success: true, message: 'ההזמנה נדחתה' });
   }),
 

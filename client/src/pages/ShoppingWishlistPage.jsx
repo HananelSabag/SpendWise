@@ -200,7 +200,7 @@ const ShoppingWishlistPage = () => {
   } = useShoppingItems();
 
   const { myMembers, sharedWithMe, pendingInvitations, respond } = useShoppingShare();
-  const { unreadCount, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markAllRead } = useNotifications();
 
   const { user } = useAuth();
   const currentUserId = user?.id;
@@ -256,10 +256,12 @@ const ShoppingWishlistPage = () => {
 
   const handleClose = useCallback(() => { setSheetOpen(false); setEditingItem(null); }, []);
 
+  const nonInviteUnread = notifications.filter(n => n.type !== 'shopping_invite' && !n.is_read).length;
+
   const openShare = useCallback(() => {
     setShareOpen(true);
-    if (unreadCount > 0) markAllRead();
-  }, [unreadCount, markAllRead]);
+    if (nonInviteUnread > 0) markAllRead();
+  }, [nonInviteUnread, markAllRead]);
 
   if (isLoading) return <PageSkeleton page="shopping" />;
   if (isError) return (
@@ -272,7 +274,7 @@ const ShoppingWishlistPage = () => {
     </div>
   );
 
-  const totalBadgeCount = unreadCount + pendingInvitations.length;
+  const totalBadgeCount = nonInviteUnread + pendingInvitations.length;
   const hasSharingMembers = myMembers.length > 0 || sharedWithMe.length > 0;
 
   return (

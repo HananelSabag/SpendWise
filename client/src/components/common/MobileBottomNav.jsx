@@ -39,13 +39,14 @@ const MobileBottomNav = () => {
   const toast    = useToast();
   const isAdmin  = useIsAdmin();
 
-  const { unreadCount, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markAllRead } = useNotifications();
   const { pendingInvitationsCount }  = useShoppingShare();
 
   // Re-run memos when translations finish loading
   const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
 
-  const totalBadge = unreadCount + pendingInvitationsCount;
+  const nonInviteUnread = notifications.filter(n => n.type !== 'shopping_invite' && !n.is_read).length;
+  const totalBadge = nonInviteUnread + pendingInvitationsCount;
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ── Settings helpers ──────────────────────────────────────────────────────
@@ -71,8 +72,8 @@ const MobileBottomNav = () => {
   // history.back() cleanup has had time to complete).
   const handleClose = useCallback((afterMs) => {
     setMenuOpen(false);
-    if (unreadCount > 0) markAllRead();
-  }, [unreadCount, markAllRead]);
+    if (nonInviteUnread > 0) markAllRead();
+  }, [nonInviteUnread, markAllRead]);
 
   // Navigation that waits for history.back() to finish
   const closeAndGo = useCallback((href) => {

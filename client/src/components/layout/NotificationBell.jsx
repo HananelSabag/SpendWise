@@ -30,7 +30,10 @@ const NotificationBell = () => {
     isResponding,
   } = useShoppingShare();
 
-  const totalBadge = unreadCount + pendingInvitations.length;
+  // shopping_invite notifications are already counted via pendingInvitations.length —
+  // counting them again via unreadCount would double-count them.
+  const nonInviteUnread = notifications.filter(n => n.type !== 'shopping_invite' && !n.is_read).length;
+  const totalBadge = nonInviteUnread + pendingInvitations.length;
 
   const handleOpen = useCallback(() => {
     setOpen(true);
@@ -38,8 +41,8 @@ const NotificationBell = () => {
 
   const handleClose = useCallback(() => {
     setOpen(false);
-    if (unreadCount > 0) markAllRead();
-  }, [unreadCount, markAllRead]);
+    if (nonInviteUnread > 0) markAllRead();
+  }, [nonInviteUnread, markAllRead]);
 
   const handleRespond = useCallback(async (token, action) => {
     setRespondingToken(token);
