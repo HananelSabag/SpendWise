@@ -35,12 +35,23 @@ async function scrapeProductUrl(rawUrl) {
     return { success: false, reason: 'blocked_host' };
   }
 
-  console.log(`[scraper] fetching: ${rawUrl}`);
+  // Route through Cloudflare Worker proxy if configured (bypasses IP allowlists on Israeli sites)
+  const proxyBase = process.env.SCRAPER_PROXY_URL;
+  const fetchUrl  = proxyBase
+    ? `${proxyBase.replace(/\/$/, '')}?url=${encodeURIComponent(rawUrl)}`
+    : rawUrl;
+
+  if (proxyBase) {
+    console.log(`[scraper] using proxy: ${proxyBase} → ${rawUrl}`);
+  } else {
+    console.log(`[scraper] fetching direct (no proxy): ${rawUrl}`);
+  }
+
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    const res = await fetch(rawUrl, {
+    const res = await fetch(fetchUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
