@@ -33,5 +33,7 @@ export default {
   exchange: "Exchange",
   recurring: "Recurring",
   alerts: "Alerts",
-  notifications: "Notifications"
+  notifications: "Notifications",
+  tools: "Tools",
+  unread: "unread"
 };

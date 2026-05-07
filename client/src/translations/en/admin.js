@@ -91,7 +91,9 @@ export default {
     searchPlaceholder: "Search users by name, email, username...",
     noUsers: "No users found",
     noUsersDescription: "Try adjusting your search or filter criteria.",
-    userDetails: "User Details"
+    userDetails: "User Details",
+    totalCount: "{{count}} users total",
+    foundCount: "{{count}} users found"
   },
   table: {
     user: "User",
@@ -207,6 +209,9 @@ export default {
     roleChange: "Role Change",
     block: "Block",
     unblock: "Unblock",
+    blockUser: "Block User",
+    unblockUser: "Unblock User",
+    viewDetails: "View Details",
     goToDashboard: "Go to Dashboard",
     refreshPage: "Refresh Page",
     exportCsv: "Export CSV",
@@ -229,7 +234,9 @@ export default {
     justNow: "Just now",
     minutesAgo: "{{minutes}}m",
     hoursAgo: "{{hours}}h",
-    daysAgo: "{{days}}d"
+    daysAgo: "{{days}}d",
+    today: "Today",
+    yesterday: "Yesterday"
   },
   accessibility: {
     manageUsersLabel: "Manage users",

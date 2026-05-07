@@ -90,7 +90,9 @@ export default {
     searchPlaceholder: "חפש משתמשים לפי שם, דוא\"ל, שם משתמש...",
     noUsers: "לא נמצאו משתמשים",
     noUsersDescription: "נסה לשנות את קריטריוני החיפוש או הסינון.",
-    userDetails: "פרטי משתמש"
+    userDetails: "פרטי משתמש",
+    totalCount: "{{count}} משתמשים בסך הכל",
+    foundCount: "נמצאו {{count}} משתמשים"
   },
   table: {
     user: "משתמש",
@@ -206,6 +208,9 @@ export default {
     roleChange: "שינוי תפקיד",
     block: "חסום",
     unblock: "בטל חסימה",
+    blockUser: "חסום משתמש",
+    unblockUser: "בטל חסימת משתמש",
+    viewDetails: "צפה בפרטים",
     goToDashboard: "עבור לדף הבית",
     refreshPage: "רענן דף",
     exportCsv: "ייצא CSV",
@@ -228,7 +233,9 @@ export default {
     justNow: "כעת",
     minutesAgo: "{{minutes}} דק",
     hoursAgo: "{{hours}} שע",
-    daysAgo: "{{days}} ימים"
+    daysAgo: "{{days}} ימים",
+    today: "היום",
+    yesterday: "אתמול"
   },
   accessibility: {
     manageUsersLabel: "ניהול משתמשים",

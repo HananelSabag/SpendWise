@@ -11,26 +11,26 @@ import { cn } from '../../../utils/helpers';
 
 // ─── Role pill ──────────────────────────────────────────────────────────────
 
-const ROLE_CONFIG = {
-  super_admin: {
-    label: 'Super Admin',
-    Icon: Crown,
-    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  },
-  admin: {
-    label: 'Admin',
-    Icon: Shield,
-    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-  },
-  user: {
-    label: 'User',
-    Icon: User,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  },
-};
-
 const RolePill = ({ role }) => {
-  const { label, Icon, className } = ROLE_CONFIG[role] || ROLE_CONFIG.user;
+  const { t } = useTranslation('admin');
+  const config = {
+    super_admin: {
+      label: t('roles.superAdmin'),
+      Icon: Crown,
+      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    },
+    admin: {
+      label: t('roles.admin'),
+      Icon: Shield,
+      className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    },
+    user: {
+      label: t('roles.user'),
+      Icon: User,
+      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+  };
+  const { label, Icon, className } = config[role] || config.user;
   return (
     <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap', className)}>
       <Icon className="w-3 h-3" />
@@ -41,15 +41,15 @@ const RolePill = ({ role }) => {
 
 // ─── Status indicator ───────────────────────────────────────────────────────
 
-const STATUS_CONFIG = {
-  active:   { label: 'Active',   dot: 'bg-green-500',  text: 'text-green-700 dark:text-green-400' },
-  blocked:  { label: 'Blocked',  dot: 'bg-red-500',    text: 'text-red-700 dark:text-red-400' },
-  pending:  { label: 'Pending',  dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-400' },
-  inactive: { label: 'Inactive', dot: 'bg-gray-400',   text: 'text-gray-500 dark:text-gray-400' },
-};
-
 const StatusDot = ({ status }) => {
-  const { label, dot, text } = STATUS_CONFIG[status] || STATUS_CONFIG.inactive;
+  const { t } = useTranslation('admin');
+  const config = {
+    active:   { label: t('status.active'),               dot: 'bg-green-500',  text: 'text-green-700 dark:text-green-400' },
+    blocked:  { label: t('status.blocked'),              dot: 'bg-red-500',    text: 'text-red-700 dark:text-red-400' },
+    pending:  { label: t('status.pending'),              dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-400' },
+    inactive: { label: t('status.inactive') || 'Inactive', dot: 'bg-gray-400',  text: 'text-gray-500 dark:text-gray-400' },
+  };
+  const { label, dot, text } = config[status] || config.inactive;
   return (
     <span className={cn('inline-flex items-center gap-1.5 text-sm font-medium', text)}>
       <span className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
@@ -64,6 +64,7 @@ const RowActions = ({
   user, currentUser, isSuperAdmin, isAdmin, actionLoadingUserId,
   onOverview, onRoleChange, onBlock, onUnblock, onDelete,
 }) => {
+  const { t, isRTL } = useTranslation('admin');
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
   const isLoading = actionLoadingUserId === user.id;
@@ -94,17 +95,21 @@ const RowActions = ({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 py-1.5 overflow-hidden">
+        <div className={cn(
+          'absolute top-full mt-1 w-44 bg-white dark:bg-gray-800',
+          'border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 py-1.5 overflow-hidden',
+          isRTL ? 'left-0' : 'right-0',
+        )}>
           <MenuItem
             icon={Eye}
-            label="View Details"
+            label={t('buttons.viewDetails')}
             onClick={() => { onOverview?.(user); setOpen(false); }}
           />
 
           {!isSelf && isSuperAdmin && (
             <MenuItem
               icon={Shield}
-              label="Change Role"
+              label={t('buttons.roleChange')}
               onClick={() => { onRoleChange?.(user); setOpen(false); }}
             />
           )}
@@ -115,21 +120,21 @@ const RowActions = ({
               {user.status === 'active' ? (
                 <MenuItem
                   icon={Ban}
-                  label="Block User"
+                  label={t('buttons.blockUser')}
                   className="text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                   onClick={() => { onBlock?.(user.id); setOpen(false); }}
                 />
               ) : (
                 <MenuItem
                   icon={UserCheck}
-                  label="Unblock User"
+                  label={t('buttons.unblockUser')}
                   className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
                   onClick={() => { onUnblock?.(user.id); setOpen(false); }}
                 />
               )}
               <MenuItem
                 icon={Trash2}
-                label="Delete User"
+                label={t('dialogs.deleteUser.title')}
                 className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                 onClick={() => { onDelete?.(user.id); setOpen(false); }}
               />
@@ -160,7 +165,7 @@ const MenuItem = ({ icon: Icon, label, onClick, className }) => (
 const Th = ({ column, sortConfig, onSort, children, className }) => (
   <th
     className={cn(
-      'px-4 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap',
+      'px-4 py-3.5 text-start text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap',
       className,
     )}
   >
@@ -182,12 +187,12 @@ const Th = ({ column, sortConfig, onSort, children, className }) => (
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const relativeDate = (dateStr) => {
+const relativeDate = (dateStr, t) => {
   if (!dateStr) return '—';
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days}d ago`;
+  if (days === 0) return t ? t('timeAgo.today') : 'Today';
+  if (days === 1) return t ? t('timeAgo.yesterday') : 'Yesterday';
+  if (days < 30) return t ? t('timeAgo.daysAgo', { days }) : `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
 };
 
@@ -206,6 +211,7 @@ const ModernUsersTable = ({
   onBulkAction,
   actionLoadingUserId,
 }) => {
+  const { t, isRTL } = useTranslation('admin');
   const { formatCurrency } = useCurrency();
   const formatAmount = useCallback(
     (amount, currency) => formatCurrency(amount || 0, { currency: currency || 'ILS' }),
@@ -275,24 +281,32 @@ const ModernUsersTable = ({
 
   const allChecked  = filtered.length > 0 && selectedUsers.size === filtered.length;
   const someChecked = selectedUsers.size > 0 && !allChecked;
+  const isFiltered  = searchTerm || roleFilter !== 'all' || statusFilter !== 'all';
 
-  // Shared action props
   const actionProps = { currentUser, isSuperAdmin, isAdmin, actionLoadingUserId, onOverview, onRoleChange, onBlock, onUnblock, onDelete };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* ── Search + Filters ──────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Search className={cn(
+            'absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none',
+            isRTL ? 'right-3.5' : 'left-3.5',
+          )} />
           <input
             ref={searchRef}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by name, email, username…"
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder={t('users.searchPlaceholder')}
+            className={cn(
+              'w-full py-2.5 rounded-xl border border-gray-200 dark:border-gray-700',
+              'bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400',
+              'text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+              isRTL ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4',
+            )}
           />
         </div>
 
@@ -303,10 +317,10 @@ const ModernUsersTable = ({
             onChange={e => setRoleFilter(e.target.value)}
             className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="all">All Roles</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-            <option value="super_admin">Super Admin</option>
+            <option value="all">{t('filters.allRoles')}</option>
+            <option value="user">{t('roles.user')}</option>
+            <option value="admin">{t('roles.admin')}</option>
+            <option value="super_admin">{t('roles.superAdmin')}</option>
           </select>
 
           <select
@@ -314,16 +328,16 @@ const ModernUsersTable = ({
             onChange={e => setStatusFilter(e.target.value)}
             className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="blocked">Blocked</option>
-            <option value="pending">Pending</option>
+            <option value="all">{t('filters.allStatuses')}</option>
+            <option value="active">{t('status.active')}</option>
+            <option value="blocked">{t('status.blocked')}</option>
+            <option value="pending">{t('status.pending')}</option>
           </select>
 
           {/* Multi-select toggle */}
           <button
             onClick={toggleMultiSelect}
-            title="Multi-select"
+            title={t('buttons.multiSelect')}
             className={cn(
               'px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors',
               multiSelect
@@ -340,19 +354,19 @@ const ModernUsersTable = ({
       {multiSelect && selectedUsers.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
           <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-            {selectedUsers.size} selected
+            {selectedUsers.size} {t('common.selected')}
           </span>
-          <div className="flex gap-2 ml-auto flex-wrap">
-            <BulkBtn icon={Ban}       label="Block"   color="orange" onClick={() => handleBulkAction('block')} />
-            <BulkBtn icon={UserCheck} label="Unblock" color="green"  onClick={() => handleBulkAction('unblock')} />
+          <div className="flex gap-2 ms-auto flex-wrap">
+            <BulkBtn icon={Ban}       label={t('buttons.block')}   color="orange" onClick={() => handleBulkAction('block')} />
+            <BulkBtn icon={UserCheck} label={t('buttons.unblock')} color="green"  onClick={() => handleBulkAction('unblock')} />
             {isSuperAdmin && (
-              <BulkBtn icon={Trash2}  label="Delete"  color="red"    onClick={() => handleBulkAction('delete')} />
+              <BulkBtn icon={Trash2}  label={t('dialogs.deleteUser.confirm')} color="red" onClick={() => handleBulkAction('delete')} />
             )}
             <button
               onClick={() => setSelectedUsers(new Set())}
               className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
             >
-              Clear
+              {t('bulk.clearSelection')}
             </button>
           </div>
         </div>
@@ -361,12 +375,13 @@ const ModernUsersTable = ({
       {/* ── Result count ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-1 text-sm text-gray-500 dark:text-gray-400">
         <span>
-          {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
-          {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' ? ' found' : ' total'}
+          {isFiltered
+            ? t('users.foundCount', { count: filtered.length })
+            : t('users.totalCount', { count: filtered.length })}
         </span>
         {multiSelect && (
           <span className="text-xs text-blue-600 dark:text-blue-400">
-            Multi-select active — click rows to select
+            {t('multiSelect.hint')}
           </span>
         )}
       </div>
@@ -377,7 +392,7 @@ const ModernUsersTable = ({
           <thead className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
             <tr>
               {multiSelect && (
-                <th className="pl-5 pr-3 py-3.5 w-10">
+                <th className="ps-5 pe-3 py-3.5 w-10">
                   <input
                     type="checkbox"
                     checked={allChecked}
@@ -387,16 +402,16 @@ const ModernUsersTable = ({
                   />
                 </th>
               )}
-              <Th column="first_name" sortConfig={sortConfig} onSort={handleSort} className={multiSelect ? 'pl-2' : 'pl-5'}>
-                User
+              <Th column="first_name" sortConfig={sortConfig} onSort={handleSort} className={multiSelect ? 'ps-2' : 'ps-5'}>
+                {t('table.user')}
               </Th>
-              <Th column="role" sortConfig={sortConfig} onSort={handleSort}>Role</Th>
-              <Th column="status" sortConfig={sortConfig} onSort={handleSort}>Status</Th>
-              <Th column="total_transactions" sortConfig={sortConfig} onSort={handleSort}>Transactions</Th>
-              <Th column="created_at" sortConfig={sortConfig} onSort={handleSort}>Joined</Th>
-              <Th column="last_login" sortConfig={sortConfig} onSort={handleSort}>Last Login</Th>
-              <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Actions
+              <Th column="role"               sortConfig={sortConfig} onSort={handleSort}>{t('table.role')}</Th>
+              <Th column="status"             sortConfig={sortConfig} onSort={handleSort}>{t('table.status')}</Th>
+              <Th column="total_transactions" sortConfig={sortConfig} onSort={handleSort}>{t('fields.transactionCount')}</Th>
+              <Th column="created_at"         sortConfig={sortConfig} onSort={handleSort}>{t('table.joinDate')}</Th>
+              <Th column="last_login"         sortConfig={sortConfig} onSort={handleSort}>{t('fields.lastLogin')}</Th>
+              <th className="px-4 py-3.5 text-end text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('table.actions')}
               </th>
             </tr>
           </thead>
@@ -417,7 +432,7 @@ const ModernUsersTable = ({
                   )}
                 >
                   {multiSelect && (
-                    <td className="pl-5 pr-3">
+                    <td className="ps-5 pe-3">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -427,7 +442,7 @@ const ModernUsersTable = ({
                     </td>
                   )}
 
-                  <td className={cn('py-3.5', multiSelect ? 'pl-2 pr-4' : 'px-5')}>
+                  <td className={cn('py-3.5', multiSelect ? 'ps-2 pe-4' : 'px-5')}>
                     <div className="flex items-center gap-3">
                       <Avatar src={user.avatar} name={`${user.first_name} ${user.last_name}`} size="md" />
                       <div className="min-w-0">
@@ -454,10 +469,10 @@ const ModernUsersTable = ({
                   </td>
 
                   <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">
-                    {relativeDate(user.last_login)}
+                    {relativeDate(user.last_login, t)}
                   </td>
 
-                  <td className="px-4 py-3.5 text-right">
+                  <td className="px-4 py-3.5 text-end">
                     <RowActions user={user} {...actionProps} />
                   </td>
                 </tr>
@@ -542,12 +557,15 @@ const BulkBtn = ({ icon: Icon, label, color, onClick }) => {
   );
 };
 
-const EmptyState = () => (
-  <div className="py-16 text-center">
-    <Users className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-    <p className="text-gray-600 dark:text-gray-400 font-medium">No users found</p>
-    <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Try adjusting your search or filters</p>
-  </div>
-);
+const EmptyState = () => {
+  const { t } = useTranslation('admin');
+  return (
+    <div className="py-16 text-center">
+      <Users className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+      <p className="text-gray-600 dark:text-gray-400 font-medium">{t('users.noUsers')}</p>
+      <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">{t('users.noUsersDescription')}</p>
+    </div>
+  );
+};
 
 export default ModernUsersTable;

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, startTransition, useEffect } fro
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
-  ArrowLeft, Users, Shield, Crown, User, Ban, Trash2,
+  ArrowLeft, ArrowRight, Users, Shield, Crown, User, Ban, Trash2,
   CheckCircle, XCircle, RefreshCw, MailCheck
 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ import { cn } from '../../utils/helpers';
 
 const AdminUsers = () => {
   const { user: currentUser, isSuperAdmin, isAdmin } = useAuth();
-  const { t } = useTranslation('admin');
+  const { t, isRTL } = useTranslation('admin');
   const { addNotification } = useNotifications();
   const { formatCurrency } = useCurrency();
 
@@ -49,7 +49,7 @@ const AdminUsers = () => {
   });
 
   useEffect(() => {
-    if (isError) addNotification({ type: 'error', message: t('errors.usersLoadFailed', { fallback: 'Failed to load users' }) });
+    if (isError) addNotification({ type: 'error', message: t('errors.usersLoadFailed') });
   }, [isError]); // eslint-disable-line
 
   const blockUserMutation = useMutation({
@@ -60,7 +60,7 @@ const AdminUsers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({ type: 'success', message: 'User blocked successfully' });
+      addNotification({ type: 'success', message: t('actions.userBlocked') });
       setActionLoading(null);
     },
     onError: (err) => {
@@ -77,7 +77,7 @@ const AdminUsers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({ type: 'success', message: 'User unblocked successfully' });
+      addNotification({ type: 'success', message: t('actions.userUnblocked') });
       setActionLoading(null);
     },
     onError: (err) => {
@@ -101,7 +101,7 @@ const AdminUsers = () => {
         setDeleteReason('');
         setPendingDeleteUserId(null);
       });
-      addNotification({ type: 'success', message: 'User deleted successfully' });
+      addNotification({ type: 'success', message: t('actions.userDeleted') });
     },
     onError: (err) => {
       startTransition(() => setActionLoading(null));
@@ -147,82 +147,55 @@ const AdminUsers = () => {
   if (isLoading) return <PageSkeleton page="admin" />;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950" dir={isRTL ? 'rtl' : 'ltr'}>
 
-      {/* ─── Hero Header ─────────────────────────────────────────────── */}
+      {/* ─── Compact Header ──────────────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
 
-          {/* Breadcrumb */}
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-8 transition-colors group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            Back to Admin Dashboard
-          </Link>
+          {/* Single row: back | icon + title | refresh */}
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin"
+              className="p-1.5 -ms-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0"
+            >
+              {isRTL
+                ? <ArrowRight className="w-5 h-5" />
+                : <ArrowLeft  className="w-5 h-5" />}
+            </Link>
 
-          {/* Title row */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shrink-0">
-                <Users className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                  User Management
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                  Manage and monitor all platform users
-                </p>
-              </div>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4 text-white" />
             </div>
+
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">
+              {t('users.title')}
+            </h1>
 
             <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50 shrink-0"
+              title={t('common.refresh')}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
             >
               <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-              Refresh
             </button>
           </div>
 
-          {/* Stats pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+          {/* Compact stats pills */}
+          <div
+            className="flex gap-2 mt-3 overflow-x-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {[
-              {
-                label: 'Total Users',
-                value: stats.total,
-                bg: 'bg-gray-50 dark:bg-gray-800',
-                text: 'text-gray-900 dark:text-white',
-                sub: 'text-gray-500 dark:text-gray-400',
-              },
-              {
-                label: 'Active',
-                value: stats.active,
-                bg: 'bg-green-50 dark:bg-green-900/20',
-                text: 'text-green-700 dark:text-green-400',
-                sub: 'text-green-600/80 dark:text-green-500/80',
-              },
-              {
-                label: 'Blocked',
-                value: stats.blocked,
-                bg: 'bg-red-50 dark:bg-red-900/20',
-                text: 'text-red-700 dark:text-red-400',
-                sub: 'text-red-600/80 dark:text-red-500/80',
-              },
-              {
-                label: 'Admins',
-                value: stats.admins,
-                bg: 'bg-purple-50 dark:bg-purple-900/20',
-                text: 'text-purple-700 dark:text-purple-400',
-                sub: 'text-purple-600/80 dark:text-purple-500/80',
-              },
-            ].map(({ label, value, bg, text, sub }) => (
-              <div key={label} className={cn('rounded-2xl p-4', bg)}>
-                <div className={cn('text-3xl font-bold tabular-nums', text)}>{value}</div>
-                <div className={cn('text-xs font-medium mt-1', sub)}>{label}</div>
+              { key: 'total',   label: t('stats.totalUsers'), value: stats.total,   color: 'text-gray-700 dark:text-gray-200',    bg: 'bg-gray-100 dark:bg-gray-800' },
+              { key: 'active',  label: t('status.active'),    value: stats.active,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20' },
+              { key: 'blocked', label: t('status.blocked'),   value: stats.blocked, color: 'text-red-700 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-900/20' },
+              { key: 'admins',  label: t('roles.admin'),      value: stats.admins,  color: 'text-purple-700 dark:text-purple-400',bg: 'bg-purple-50 dark:bg-purple-900/20' },
+            ].map(({ key, label, value, color, bg }) => (
+              <div key={key} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0', bg)}>
+                <span className={cn('text-sm font-bold tabular-nums', color)}>{value}</span>
+                <span className={cn('text-xs font-medium opacity-90', color)}>{label}</span>
               </div>
             ))}
           </div>
@@ -230,7 +203,7 @@ const AdminUsers = () => {
       </div>
 
       {/* ─── Table ───────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <ModernUsersTable
           users={safeUsers}
           currentUser={currentUser}
@@ -243,20 +216,20 @@ const AdminUsers = () => {
           onUnblock={handleUnblockUser}
           onDelete={handleDeleteUser}
           onBulkAction={async (action, userIds) => {
-            if (!userIds?.length) { addNotification({ type: 'warning', message: 'No users selected' }); return; }
+            if (!userIds?.length) { addNotification({ type: 'warning', message: t('bulk.noSelection') }); return; }
             try {
-              addNotification({ type: 'info', message: `Processing ${userIds.length} users…`, duration: 2000 });
+              addNotification({ type: 'info', message: t('bulk.processing', { count: userIds.length }), duration: 2000 });
               const result = await api.admin.users.bulkManage(action, userIds);
               if (result.success) {
                 const { successful, failed } = result.data;
-                if (successful > 0) addNotification({ type: 'success', message: `${action}ed ${successful} users`, duration: 4000 });
-                if (failed > 0) addNotification({ type: 'warning', message: `Failed on ${failed} users`, duration: 4000 });
+                if (successful > 0) addNotification({ type: 'success', message: t('bulk.actionSuccess', { action, count: successful }), duration: 4000 });
+                if (failed > 0) addNotification({ type: 'warning', message: t('bulk.actionError'), duration: 4000 });
                 refetch();
               } else {
                 throw new Error(result.error?.message || 'Bulk operation failed');
               }
             } catch {
-              addNotification({ type: 'error', message: 'Bulk action failed' });
+              addNotification({ type: 'error', message: t('bulk.actionError') });
             }
           }}
         />
@@ -267,11 +240,11 @@ const AdminUsers = () => {
         <Modal
           isOpen={showUserModal}
           onClose={() => { setShowUserModal(false); setSelectedUser(null); }}
-          title="User Details"
+          title={t('users.userDetails')}
           sheet
           drawerWidth={520}
         >
-          <div className="space-y-6">
+          <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="flex items-center gap-4">
               <Avatar
                 src={selectedUser.avatar}
@@ -293,11 +266,11 @@ const AdminUsers = () => {
                     className="gap-1"
                   >
                     {selectedUser.role === 'super_admin' ? <Crown className="w-3 h-3" /> : selectedUser.role === 'admin' ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                    {selectedUser.role === 'super_admin' ? 'Super Admin' : selectedUser.role === 'admin' ? 'Admin' : 'User'}
+                    {selectedUser.role === 'super_admin' ? t('roles.superAdmin') : selectedUser.role === 'admin' ? t('roles.admin') : t('roles.user')}
                   </Badge>
                   <Badge variant={selectedUser.status === 'active' ? 'success' : selectedUser.status === 'blocked' ? 'error' : 'warning'} className="gap-1">
                     {selectedUser.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                    {selectedUser.status}
+                    {t(`status.${selectedUser.status}`) || selectedUser.status}
                   </Badge>
                 </div>
               </div>
@@ -305,10 +278,10 @@ const AdminUsers = () => {
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Joined', value: new Date(selectedUser.created_at).toLocaleDateString() },
-                { label: 'Last Login', value: selectedUser.last_login ? new Date(selectedUser.last_login).toLocaleDateString() : 'Never' },
-                { label: 'Transactions', value: selectedUser.total_transactions || 0 },
-                { label: 'Total Spent', value: formatUserAmount(selectedUser.total_amount, selectedUser.currency_preference) },
+                { label: t('table.joinDate'),      value: new Date(selectedUser.created_at).toLocaleDateString() },
+                { label: t('fields.lastLogin'),    value: selectedUser.last_login ? new Date(selectedUser.last_login).toLocaleDateString() : t('common.never') },
+                { label: t('fields.transactionCount'), value: selectedUser.total_transactions || 0 },
+                { label: t('fields.totalSpent'),   value: formatUserAmount(selectedUser.total_amount, selectedUser.currency_preference) },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4">
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
@@ -324,34 +297,34 @@ const AdminUsers = () => {
       <Modal
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
-        title="Delete User"
+        title={t('dialogs.deleteUser.title')}
         size="sm"
       >
-        <div className="space-y-5">
+        <div className="space-y-5" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
             <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
           </div>
           <p className="text-center text-gray-600 dark:text-gray-300 text-sm">
-            This is permanent and cannot be undone. All user data will be removed.
+            {t('dialogs.deleteUser.message')}
           </p>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Reason (optional)
+              {t('dialogs.deleteUser.reasonLabel')}
             </label>
             <input
               type="text"
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
-              placeholder="Enter a reason for deletion…"
+              placeholder={t('dialogs.deleteUser.reasonPlaceholder')}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
             />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
+              {t('dialogs.deleteUser.cancel')}
             </Button>
             <Button variant="danger" className="flex-1" onClick={confirmDeleteUser} loading={actionLoading === pendingDeleteUserId}>
-              Delete User
+              {t('dialogs.deleteUser.confirm')}
             </Button>
           </div>
         </div>
@@ -361,30 +334,26 @@ const AdminUsers = () => {
       <Modal
         isOpen={showRoleDialog}
         onClose={() => setShowRoleDialog(false)}
-        title="Change User Role"
+        title={t('dialogs.roleChange.title')}
         size="sm"
       >
-        <div className="space-y-4">
+        <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
           <p className="text-gray-600 dark:text-gray-300 text-sm">
-            Select a new role for{' '}
-            <strong className="text-gray-900 dark:text-white">
-              {pendingRoleUser?.first_name} {pendingRoleUser?.last_name}
-            </strong>.
-            Changes take effect immediately.
+            {t('dialogs.roleChange.message')}
           </p>
           <Dropdown
-            label="Select Role"
+            label={t('dialogs.roleChange.selectLabel')}
             value={selectedRole}
             onChange={setSelectedRole}
             options={[
-              { value: 'user', label: 'User' },
-              { value: 'admin', label: 'Admin' },
+              { value: 'user',  label: t('roles.user') },
+              { value: 'admin', label: t('roles.admin') },
             ]}
             fullWidth
           />
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowRoleDialog(false)}>
-              Cancel
+              {t('dialogs.roleChange.cancel')}
             </Button>
             <Button
               className="flex-1"
@@ -398,17 +367,17 @@ const AdminUsers = () => {
                     role: selectedRole,
                   });
                   queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-                  addNotification({ type: 'success', message: 'User role updated successfully' });
+                  addNotification({ type: 'success', message: t('dialogs.roleChange.success') });
                   setShowRoleDialog(false);
                 } catch {
-                  addNotification({ type: 'error', message: 'Action failed' });
+                  addNotification({ type: 'error', message: t('errors.actionFailed') });
                 } finally {
                   setActionLoading(null);
                   setPendingRoleUser(null);
                 }
               }}
             >
-              Update Role
+              {t('dialogs.roleChange.confirm')}
             </Button>
           </div>
         </div>

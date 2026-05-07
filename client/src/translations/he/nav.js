@@ -33,5 +33,7 @@ export default {
   exchange: "המרת מטבעות",
   recurring: "עסקאות חוזרות",
   alerts: "התראות",
-  notifications: "התראות"
+  notifications: "התראות",
+  tools: "כלים",
+  unread: "לא נקראו"
 };
