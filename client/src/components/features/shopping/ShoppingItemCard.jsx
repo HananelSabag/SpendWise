@@ -1,190 +1,224 @@
 /**
- * ShoppingItemCard — single shopping list item, claymorphic card
+ * ShoppingItemCard — premium redesign
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2, ExternalLink, CheckCircle2, Circle } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Check } from 'lucide-react';
 import { cn, currency } from '../../../utils/helpers';
 import { CATEGORIES } from './ShoppingBottomSheet';
 import { useTranslation } from '../../../stores';
+
+// Subtle category-tinted card backgrounds
+const CAT_BG = {
+  'bg-amber-500':  'bg-gradient-to-bl from-amber-50/70 to-white dark:from-amber-900/10 dark:to-gray-800',
+  'bg-orange-500': 'bg-gradient-to-bl from-orange-50/70 to-white dark:from-orange-900/10 dark:to-gray-800',
+  'bg-purple-500': 'bg-gradient-to-bl from-purple-50/70 to-white dark:from-purple-900/10 dark:to-gray-800',
+  'bg-blue-500':   'bg-gradient-to-bl from-blue-50/70 to-white dark:from-blue-900/10 dark:to-gray-800',
+  'bg-pink-500':   'bg-gradient-to-bl from-pink-50/70 to-white dark:from-pink-900/10 dark:to-gray-800',
+  'bg-gray-400':   'bg-gradient-to-bl from-gray-50/80 to-white dark:from-gray-700/20 dark:to-gray-800',
+};
 
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
   const { t } = useTranslation('shopping');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const timeoutRef = useRef(null);
 
-  // Clear confirm-delete timer on unmount or when already confirmed
   useEffect(() => {
     if (!confirmDelete) return;
     timeoutRef.current = setTimeout(() => setConfirmDelete(false), 3000);
     return () => clearTimeout(timeoutRef.current);
   }, [confirmDelete]);
 
-  const cat = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[5];
+  const cat    = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[5];
   const bought = item.is_bought;
+  const price  = parseFloat(item.price_ils) || 0;
+  const cardBg = CAT_BG[cat.dot] || CAT_BG['bg-gray-400'];
 
   const handleDeleteClick = () => {
-    if (confirmDelete) {
-      onDelete(item.id);
-      setConfirmDelete(false);
-    } else {
-      setConfirmDelete(true);
-    }
+    if (confirmDelete) { onDelete(item.id); setConfirmDelete(false); }
+    else setConfirmDelete(true);
   };
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      animate={{ opacity: bought ? 0.65 : 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, y: -8 }}
       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
       className={cn(
-        'relative rounded-2xl border bg-white',
-        'shadow-[0_4px_20px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.95)]',
-        'dark:bg-gray-800/90 dark:border-gray-700/60',
-        'overflow-hidden transition-all duration-200',
-        bought && 'opacity-60 grayscale-[30%]'
+        'relative rounded-2xl overflow-hidden',
+        'border border-gray-100 dark:border-gray-700/60',
+        'shadow-[0_2px_12px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]',
+        'transition-shadow hover:shadow-[0_4px_20px_rgba(0,0,0,0.09)]',
+        cardBg
       )}
       dir="rtl"
     >
-      {/* Category accent bar */}
-      <div className={cn('h-1 w-full', cat.dot)} />
+      {/* Right-side category accent (RTL = start side) */}
+      <div className={cn('absolute top-0 right-0 w-[3px] h-full', cat.dot)} />
 
-      <div className="p-4">
-        {/* Top row: name + price */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-start gap-2.5 flex-1 min-w-0">
-            {/* Bought toggle */}
-            <button
-              onClick={() => onToggleBought(item)}
-              disabled={confirmDelete}
-              className="mt-0.5 flex-shrink-0 min-h-[24px] min-w-[24px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={bought ? t('card.markAsNotBought') : t('card.markAsBought')}
-            >
-              {bought
-                ? <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2} />
-                : <Circle className="w-5 h-5 text-gray-300 hover:text-blue-400 transition-colors" strokeWidth={2} />
-              }
-            </button>
+      <div className="px-4 pt-4 pb-3 pr-5">
 
+        {/* ── Top row: toggle | name | price ── */}
+        <div className="flex items-center gap-3">
+
+          {/* Toggle — rightmost on screen (first in RTL flex) */}
+          <motion.button
+            onClick={() => onToggleBought(item)}
+            disabled={confirmDelete}
+            whileTap={{ scale: 0.85 }}
+            className={cn(
+              'flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center',
+              'transition-all duration-250 disabled:opacity-40',
+              bought
+                ? 'bg-emerald-500 shadow-md shadow-emerald-400/40'
+                : 'bg-white dark:bg-gray-700/80 border-2 border-gray-200 dark:border-gray-600 shadow-sm'
+            )}
+            aria-label={bought ? t('card.markAsNotBought') : t('card.markAsBought')}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {bought ? (
+                <motion.div key="check"
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                >
+                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                </motion.div>
+              ) : (
+                <motion.span
+                  key="dot"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className={cn('w-3 h-3 rounded-full', cat.dot, 'opacity-40')}
+                />
+              )}
+            </AnimatePresence>
+          </motion.button>
+
+          {/* Name + meta — middle */}
+          <div className="flex-1 min-w-0">
             <h3 className={cn(
-              'text-base font-bold text-gray-800 dark:text-white leading-tight truncate',
-              bought && 'line-through text-gray-400'
+              'text-[15px] font-bold leading-snug',
+              bought
+                ? 'line-through text-gray-400 dark:text-gray-500'
+                : 'text-gray-900 dark:text-white'
             )}>
               {item.name}
             </h3>
+
+            {/* Category + notes inline */}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className={cn(
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full',
+                'text-[11px] font-semibold border',
+                cat.color
+              )}>
+                <span className="text-sm leading-none">{cat.emoji}</span>
+                {t(`categories.${cat.key}`)}
+              </span>
+              {item.notes && (
+                <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[150px] italic">
+                  {item.notes}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Price badge */}
-          {parseFloat(item.price_ils) > 0 && (
-            <span className={cn(
-              'flex-shrink-0 text-sm font-extrabold text-blue-700 dark:text-blue-300',
-              'bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800',
-              'px-2.5 py-1 rounded-xl tabular-nums'
-            )}>
-              {currency.format(parseFloat(item.price_ils) || 0)}
-            </span>
+          {/* Price — leftmost on screen (last in RTL flex) */}
+          {price > 0 && (
+            <div className="flex-shrink-0 text-right">
+              <span className={cn(
+                'text-base font-extrabold tabular-nums leading-none',
+                bought
+                  ? 'text-gray-400 dark:text-gray-500 line-through'
+                  : 'text-gray-900 dark:text-white'
+              )}>
+                {currency.format(price)}
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Category chip */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border',
-            cat.color
-          )}>
-            <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', cat.dot)} />
-            {t(`categories.${cat.key}`)}
-          </span>
-        </div>
+        {/* ── Action row ── */}
+        <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100/70 dark:border-gray-700/50">
 
-        {/* Notes */}
-        {item.notes && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed line-clamp-2">
-            {item.notes}
-          </p>
-        )}
-
-        {/* Action row */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-          {/* External link */}
+          {/* Buy Now link */}
           {item.buy_url && (
             <a
               href={item.buy_url}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-xl',
-                'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl',
+                'bg-indigo-50 dark:bg-indigo-900/25 border border-indigo-100 dark:border-indigo-800/60',
                 'text-indigo-600 dark:text-indigo-400 text-xs font-semibold',
-                'hover:bg-indigo-100 transition-colors min-h-[36px]'
+                'hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors'
               )}
             >
-              <ExternalLink className="w-3.5 h-3.5" strokeWidth={2.5} />
+              <ExternalLink className="w-3 h-3" strokeWidth={2.5} />
               {t('card.buyNow')}
             </a>
           )}
 
-          <div className="flex items-center gap-2 mr-auto">
-            {/* Edit */}
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => onEdit(item)}
-              className={cn(
-                'w-9 h-9 rounded-xl flex items-center justify-center',
-                'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
-                'text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50',
-                'transition-all duration-150'
-              )}
-              aria-label={t('card.editAria')}
-            >
-              <Pencil className="w-3.5 h-3.5" strokeWidth={2.5} />
-            </motion.button>
+          {/* Spacer */}
+          <div className="flex-1" />
 
-            {/* Delete / Confirm */}
-            <AnimatePresence mode="wait">
-              {confirmDelete ? (
-                <motion.button
-                  key="confirm"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  whileTap={{ scale: 0.92 }}
-                  onClick={handleDeleteClick}
-                  disabled={isDeleting}
-                  className={cn(
-                    'px-3 h-9 rounded-xl flex items-center gap-1.5',
-                    'bg-red-500 border border-red-400',
-                    'text-white text-xs font-bold',
-                    'min-h-[36px] transition-all'
-                  )}
-                >
-                  <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  {t('card.confirmDelete')}
-                </motion.button>
-              ) : (
-                <motion.button
-                  key="trash"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  whileTap={{ scale: 0.92 }}
-                  onClick={handleDeleteClick}
-                  className={cn(
-                    'w-9 h-9 rounded-xl flex items-center justify-center',
-                    'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
-                    'text-gray-500 hover:text-red-600 hover:border-red-300 hover:bg-red-50',
-                    'transition-all duration-150'
-                  )}
-                  aria-label={t('card.deleteAria')}
-                >
-                  <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Edit */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onEdit(item)}
+            className={cn(
+              'w-8 h-8 rounded-xl flex items-center justify-center',
+              'bg-white/90 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600',
+              'text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20',
+              'transition-all duration-150'
+            )}
+            aria-label={t('card.editAria')}
+          >
+            <Pencil className="w-3.5 h-3.5" strokeWidth={2.5} />
+          </motion.button>
+
+          {/* Delete / Confirm */}
+          <AnimatePresence mode="wait">
+            {confirmDelete ? (
+              <motion.button
+                key="confirm"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="px-3 h-8 rounded-xl flex items-center gap-1.5 bg-red-500 text-white text-xs font-bold shadow-sm shadow-red-400/30 disabled:opacity-60"
+              >
+                <Trash2 className="w-3 h-3" strokeWidth={2.5} />
+                {t('card.confirmDelete')}
+              </motion.button>
+            ) : (
+              <motion.button
+                key="trash"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleDeleteClick}
+                className={cn(
+                  'w-8 h-8 rounded-xl flex items-center justify-center',
+                  'bg-white/90 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600',
+                  'text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20',
+                  'transition-all duration-150'
+                )}
+                aria-label={t('card.deleteAria')}
+              >
+                <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

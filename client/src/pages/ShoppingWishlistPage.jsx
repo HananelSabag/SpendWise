@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ShoppingCart, Plus, Package,
-  CheckCircle2, SlidersHorizontal, UserPlus, Bell,
+  CheckCircle2, SlidersHorizontal, UserPlus, Users,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -18,6 +18,90 @@ import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import ShoppingShareSheet from '../components/features/shopping/ShoppingShareSheet';
 import { PageLoader } from '../components/ui/LoadingSpinner';
 import { useTranslation } from '../stores';
+
+// ── Avatar helpers ─────────────────────────────────────────
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-purple-500', 'bg-emerald-500',
+  'bg-orange-500', 'bg-pink-500', 'bg-indigo-500',
+];
+
+const getInitial = (member) => {
+  const name = member.first_name || member.username || member.email || '?';
+  return name[0].toUpperCase();
+};
+
+const getDisplayName = (member) => {
+  if (member.first_name) {
+    return `${member.first_name}${member.last_name ? ' ' + member.last_name : ''}`.trim();
+  }
+  return member.username || member.email || '';
+};
+
+// ── Sharing strip ──────────────────────────────────────────
+const SharingStrip = ({ myMembers, sharedWithMe, onOpen }) => {
+  const combined = [
+    ...myMembers.map((m) => ({ ...m, _type: 'mine' })),
+    ...sharedWithMe.map((m) => ({ ...m, _type: 'shared' })),
+  ];
+  if (!combined.length) return null;
+
+  const visible = combined.slice(0, 5);
+  const overflow = combined.length - visible.length;
+
+  const label = combined.length === 1
+    ? getDisplayName(combined[0]).split(' ')[0]
+    : `${combined.length} אנשים`;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      onClick={onOpen}
+      className="w-full flex items-center gap-2.5 px-4 pb-2.5 group"
+    >
+      {/* Avatar stack */}
+      <div className="flex items-center">
+        {visible.map((m, i) => (
+          <div
+            key={m.id ?? i}
+            title={getDisplayName(m)}
+            style={{ zIndex: visible.length - i }}
+            className={cn(
+              'w-6 h-6 rounded-full flex items-center justify-center',
+              'text-white text-[10px] font-extrabold select-none',
+              'border-[1.5px] border-white dark:border-gray-900',
+              '-ml-1.5 first:ml-0',
+              AVATAR_COLORS[i % AVATAR_COLORS.length],
+              m._type === 'shared' && 'ring-1 ring-offset-0 ring-emerald-400/60'
+            )}
+          >
+            {getInitial(m)}
+          </div>
+        ))}
+        {overflow > 0 && (
+          <div className={cn(
+            'w-6 h-6 rounded-full flex items-center justify-center -ml-1.5',
+            'bg-gray-200 dark:bg-gray-700 border-[1.5px] border-white dark:border-gray-900',
+            'text-gray-500 dark:text-gray-400 text-[10px] font-extrabold'
+          )}>
+            +{overflow}
+          </div>
+        )}
+      </div>
+
+      {/* Label */}
+      <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 group-hover:text-blue-500 transition-colors">
+        {sharedWithMe.length > 0 && myMembers.length === 0
+          ? `רשימה משותפת מ-${label}`
+          : `שיתוף עם ${label}`}
+      </span>
+
+      {/* Chevron hint */}
+      <Users className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 transition-colors mr-auto" strokeWidth={2} />
+    </motion.button>
+  );
+};
 
 // ── Empty state ────────────────────────────────────────────
 const EmptyState = ({ onAdd, filtered, t }) => (
@@ -102,8 +186,8 @@ const ShoppingWishlistPage = () => {
     isCreating, isUpdating, isDeleting,
   } = useShoppingItems();
 
-  const { pendingInvitations, respond } = useShoppingShare();
-  const { unreadCount, markAllRead }     = useNotifications();
+  const { myMembers, sharedWithMe, pendingInvitations, respond } = useShoppingShare();
+  const { unreadCount, markAllRead } = useNotifications();
 
   const [activeCategory, setActiveCategory] = useState(null);
   const [sheetOpen,    setSheetOpen]    = useState(false);
@@ -169,6 +253,7 @@ const ShoppingWishlistPage = () => {
   );
 
   const totalBadgeCount = unreadCount + pendingInvitations.length;
+  const hasSharingMembers = myMembers.length > 0 || sharedWithMe.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col" dir="rtl">
@@ -178,7 +263,8 @@ const ShoppingWishlistPage = () => {
         'sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl',
         'border-b border-gray-100 dark:border-gray-800'
       )}>
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+        {/* ── Title row ── */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
 
           {/* Back */}
           <motion.button whileTap={{ scale: 0.92 }}
@@ -246,7 +332,18 @@ const ShoppingWishlistPage = () => {
           </motion.button>
         </div>
 
-        {/* Category filter chips */}
+        {/* ── Sharing strip ── */}
+        <AnimatePresence>
+          {hasSharingMembers && (
+            <SharingStrip
+              myMembers={myMembers}
+              sharedWithMe={sharedWithMe}
+              onOpen={openShare}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Category filter chips ── */}
         {items.length > 0 && categoryTabs.length > 1 && (
           <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
             {categoryTabs.map((cat) => {
@@ -266,7 +363,7 @@ const ShoppingWishlistPage = () => {
                       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-300'
                   )}
                 >
-                  {catObj && !active && <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', catObj.dot)} />}
+                  {catObj && <span className={cn('text-sm leading-none', !active && 'grayscale opacity-50')}>{catObj.emoji}</span>}
                   {label}
                   {active && (
                     <span className="bg-white/30 text-white text-[10px] font-extrabold px-1.5 rounded-full">{count}</span>
