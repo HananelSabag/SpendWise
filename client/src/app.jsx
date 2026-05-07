@@ -214,26 +214,34 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
   return children;
 };
 
-// ✅ Smart Redirect for authenticated users
-const HomePickerScreen = React.lazy(() => import('./components/common/HomePickerScreen'));
-
+// ✅ Smart Redirect — used only at /login and /register for admin deep-links
 const SmartRedirect = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  // Admin deep-link — honour it
+  // Admin deep-link: if admin was redirected to /login from an admin route, send back there
   if (user?.isAdmin && location.state?.from?.startsWith('/admin')) {
     return <Navigate to={location.state.from} replace />;
   }
 
+  // Everything else goes to "/" which handles home preference logic
+  return <Navigate to="/" replace />;
+};
+
+// ✅ HomeRoute — handles "/" for authenticated users:
+//   1. New users (no preference set) → HomePickerScreen
+//   2. Returning users → redirect to saved preference ONCE per session, then Dashboard
+const HomePickerScreen = React.lazy(() => import('./components/common/HomePickerScreen'));
+const HOME_REDIRECT_KEY = 'sw_home_redirect';
+
+const HomeRoute = () => {
+  const { user } = useAuth();
   const prefs = user?.preferences || {};
-  const defaultHome = prefs.default_home;
-  const hasChosen   = prefs.home_preference_set === true;
-
-  // Legacy boolean flag (shopping_list_as_default_page) counts as a choice
+  const hasChosen     = prefs.home_preference_set === true;
   const legacyShopping = prefs.shopping_list_as_default_page === true;
+  const defaultHome   = prefs.default_home;
 
-  // If no preference has been set yet, show the one-time home picker
+  // New users who haven't chosen a default home yet
   if (!hasChosen && !defaultHome && !legacyShopping && !user?.isAdmin) {
     return (
       <React.Suspense fallback={null}>
@@ -242,12 +250,22 @@ const SmartRedirect = () => {
     );
   }
 
-  // Route based on stored preference
-  if (defaultHome === 'shopping' || legacyShopping) return <Navigate to="/shopping"      replace />;
-  if (defaultHome === 'transactions')               return <Navigate to="/transactions"  replace />;
+  // Once per browser session: redirect to saved preference
+  // After that, "/" always shows the Dashboard so nav links work normally
+  if (!sessionStorage.getItem(HOME_REDIRECT_KEY)) {
+    sessionStorage.setItem(HOME_REDIRECT_KEY, '1');
+    if (defaultHome === 'shopping' || legacyShopping) return <Navigate to="/shopping"     replace />;
+    if (defaultHome === 'transactions')               return <Navigate to="/transactions" replace />;
+    if (user?.isAdmin)                                return <Navigate to="/admin"         replace />;
+  }
 
-  // Admins → admin panel, everyone else → dashboard
-  return <Navigate to={user?.isAdmin ? '/admin' : '/'} replace />;
+  return (
+    <RouteErrorBoundary routeName="Dashboard">
+      <Suspense fallback={<RouteLoadingFallback route="dashboard" />}>
+        <LazyComponents.Dashboard />
+      </Suspense>
+    </RouteErrorBoundary>
+  );
 };
 
 // ✅ PWA update handler — reloads the page when a new service worker takes control
@@ -379,11 +397,7 @@ const AppContent = () => {
           {/* ✅ Protected User Routes */}
           <Route path="/" element={
             <ProtectedRoute>
-              <RouteErrorBoundary routeName="Dashboard">
-                <Suspense fallback={<RouteLoadingFallback route="dashboard" />}>
-                  <LazyComponents.Dashboard />
-                </Suspense>
-              </RouteErrorBoundary>
+              <HomeRoute />
             </ProtectedRoute>
           } />
 
