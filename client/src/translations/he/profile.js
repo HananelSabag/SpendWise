@@ -77,6 +77,7 @@ export default {
     theme: "ערכת נושא",
     currency: "מטבע",
     savePreferences: "שמור העדפות",
+    shoppingDefaultPage: "פתח רשימת קניות בכניסה",
     themeOptions: {
       system: "אוטומטי",
       light: "בהיר",

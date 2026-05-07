@@ -218,24 +218,19 @@ const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = false })
 const SmartRedirect = () => {
   const { user } = useAuth();
   const location = useLocation();
-  
-  // For admin users, check if they were trying to access admin pages
+
+  // Admin trying to reach a specific admin sub-page (e.g. after session expiry) — honour it
   if (user?.isAdmin && location.state?.from?.startsWith('/admin')) {
     return <Navigate to={location.state.from} replace />;
   }
-  
-  // For admin users, default to admin dashboard
-  if (user?.isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
-  
-  // Shopping list as default page preference
+
+  // Shopping list toggle overrides default destination for ALL roles
   if (user?.preferences?.shopping_list_as_default_page === true) {
     return <Navigate to="/shopping" replace />;
   }
 
-  // For regular users, go to dashboard
-  return <Navigate to="/" replace />;
+  // Admins default to admin panel, regular users to dashboard
+  return <Navigate to={user?.isAdmin ? '/admin' : '/'} replace />;
 };
 
 // ✅ PWA update handler — reloads the page when a new service worker takes control

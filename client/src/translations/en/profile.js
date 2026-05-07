@@ -82,6 +82,7 @@ export default {
     theme: "Theme",
     currency: "Currency",
     savePreferences: "Save Preferences",
+    shoppingDefaultPage: "Open Shopping List on Login",
     themeOptions: {
       system: "System",
       light: "Light",

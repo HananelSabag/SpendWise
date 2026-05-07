@@ -24,6 +24,7 @@ import AuthStatusDetector from '../components/features/auth/AuthStatusDetector';
 import useExport from '../hooks/useExport';
 import { api } from '../api';
 import { cn } from '../utils/helpers';
+import queryClient from '../config/queryClient';
 
 // ── Tabs config ───────────────────────────────────────────────────────────────
 
@@ -321,7 +322,10 @@ const PreferencesTab = ({ user, authToasts }) => {
       if (prefs.currency_preference !== user?.currency_preference)
         useAppStore.getState().actions?.setCurrency?.(prefs.currency_preference);
 
-      await useAuthStore.getState().actions?.getProfile?.();
+      // Invalidate the React Query profile cache (useAuth returns "profile || user",
+      // so without this the stale React Query result would shadow the Zustand update
+      // and the toggle would appear to revert on the next render cycle).
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
     } catch {
