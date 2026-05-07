@@ -64,13 +64,14 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
   const [respondingToken, setRespondingToken] = useState(null);
 
   const handleInvite = useCallback(async () => {
-    if (!email.trim()) { setEmailError(isRTL ? 'נדרש אימייל' : 'Email required'); return; }
+    if (!email.trim()) { setEmailError(t('share.emailRequired')); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError(isRTL ? 'אימייל לא תקין' : 'Invalid email');
+      setEmailError(t('share.emailInvalid'));
       return;
     }
     setEmailError('');
-    await invite(email.trim());
+    const result = await invite(email.trim());
+    if (result?.success === false) return;
     setSentMsg(t('share.successMessage'));
     setEmail('');
     setTimeout(() => setSentMsg(''), 4000);
@@ -174,7 +175,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
         {/* ── Pending received invitations ── */}
         {pendingInvitations.length > 0 && (
           <>
-            <SectionHeader icon={Mail} label={isRTL ? 'הזמנות שקיבלת' : 'Invitations Received'} count={pendingInvitations.length} color="text-blue-500" />
+            <SectionHeader icon={Mail} label={t('share.receivedLabel')} count={pendingInvitations.length} color="text-blue-500" />
             <div className="flex flex-col gap-3">
               {pendingInvitations.map((inv, idx) => {
                 const name = inv.inviter_first_name
@@ -193,7 +194,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                     <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
                       <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {isRTL ? 'הזמין אותך לרשימת קניות' : 'Invited you to a shopping list'}
+                        {t('share.invitedYou')}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -201,13 +202,13 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                         onClick={() => handleRespond(inv.token, 'accept')}
                         className="h-9 px-3 rounded-xl flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-bold shadow-sm disabled:opacity-50">
                         {busy ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
-                        {isRTL ? 'אישור' : 'Accept'}
+                        {t('share.accept')}
                       </motion.button>
                       <motion.button whileTap={{ scale: 0.9 }} disabled={busy}
                         onClick={() => handleRespond(inv.token, 'decline')}
                         className="h-9 px-3 rounded-xl flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold">
                         <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                        {isRTL ? 'דחייה' : 'Decline'}
+                        {t('share.decline')}
                       </motion.button>
                     </div>
                   </motion.div>
@@ -241,7 +242,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                     'text-emerald-600 bg-emerald-50 border-emerald-200',
                     'dark:text-emerald-400 dark:bg-emerald-900/20 dark:border-emerald-800'
                   )}>
-                    {isRTL ? 'חבר' : 'Member'}
+                    {t('share.memberBadge')}
                   </span>
                   <motion.button whileTap={{ scale: 0.9 }}
                     onClick={() => removeMember(m.member_id ?? m.id)}
@@ -261,7 +262,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
         {/* ── Lists shared with me ── */}
         {sharedWithMe.length > 0 && (
           <>
-            <SectionHeader icon={UserCheck} label={isRTL ? 'רשימות שמשותפות איתי' : 'Shared With Me'} count={sharedWithMe.length} color="text-emerald-500" />
+            <SectionHeader icon={UserCheck} label={t('share.sharedWithMeLabel')} count={sharedWithMe.length} color="text-emerald-500" />
             <div className="flex flex-col gap-3">
               {sharedWithMe.map((m, idx) => (
                 <motion.div key={m.owner_id ?? m.id}
@@ -318,7 +319,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                   <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate" dir="ltr">{inv.invitee_email}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {isRTL ? 'ממתין לאישור' : 'Awaiting response'}
+                      {t('share.awaitingResponse')}
                     </p>
                   </div>
                   <motion.button whileTap={{ scale: 0.9 }}
@@ -347,10 +348,10 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
               <Users className="w-10 h-10 text-blue-400" strokeWidth={1.5} />
             </div>
             <p className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">
-              {isRTL ? 'עדיין לא שיתפת את הרשימה' : "You haven't shared the list yet"}
+              {t('share.emptyTitle')}
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs">
-              {isRTL ? 'הזמן חברים להצטרף ולשתף ברשימה שלך' : 'Invite friends to join and share your list'}
+              {t('share.emptyDescription')}
             </p>
           </div>
         )}

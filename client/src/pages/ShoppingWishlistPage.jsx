@@ -37,6 +37,7 @@ const getShortName = (m) => {
 
 // ── Sharing banner — full-width, always visible ────────────
 const SharingBanner = ({ myMembers, sharedWithMe, onOpen, isRTL }) => {
+  const { t } = useTranslation('shopping');
   const combined = [
     ...myMembers.map((m) => ({ ...m, _type: 'mine' })),
     ...sharedWithMe.map((m) => ({ ...m, _type: 'shared' })),
@@ -70,7 +71,7 @@ const SharingBanner = ({ myMembers, sharedWithMe, onOpen, isRTL }) => {
         {/* Members list */}
         <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
           <p className="text-[11px] font-semibold text-blue-500 dark:text-blue-400 mb-1">
-            {combined.length === 1 ? (isRTL ? 'שיתוף עם' : 'Shared with') : (isRTL ? `שיתוף עם ${combined.length} אנשים` : `Shared with ${combined.length} people`)}
+            {combined.length === 1 ? t('sharingBanner.sharedWith') : t('sharingBanner.sharedWithCount', { count: combined.length })}
           </p>
           <div className={cn('flex items-center gap-2 flex-wrap', isRTL ? 'flex-row-reverse' : 'flex-row')}>
             {combined.slice(0, 4).map((m, i) => (
@@ -139,6 +140,7 @@ const EmptyState = ({ onAdd, filtered, t }) => (
 
 // ── Invitation banner ──────────────────────────────────────
 const InviteBanner = ({ invitations, onOpenShare, isRTL }) => {
+  const { t } = useTranslation('shopping');
   if (!invitations.length) return null;
   const first = invitations[0];
   const name = first.inviter_first_name
@@ -161,12 +163,12 @@ const InviteBanner = ({ invitations, onOpenShare, isRTL }) => {
       </div>
       <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
         <p className="text-sm font-bold text-blue-700 dark:text-blue-300 truncate">
-          {isRTL ? `${name} הזמין אותך לרשימה משותפת` : `${name} invited you to a shared list`}
+          {t('inviteBanner.invited', { name })}
         </p>
         <p className="text-xs text-blue-500 dark:text-blue-400">
           {invitations.length > 1
-            ? (isRTL ? `+${invitations.length - 1} הזמנות נוספות` : `+${invitations.length - 1} more invitations`)
-            : (isRTL ? 'לחץ לצפייה' : 'Tap to view')}
+            ? t('inviteBanner.moreInvitations', { count: invitations.length - 1 })
+            : t('inviteBanner.tapToView')}
         </p>
       </div>
     </motion.button>

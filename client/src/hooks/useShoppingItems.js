@@ -6,11 +6,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import useAuthStore from '../stores/authStore';
 import { useToast } from './useToast';
+import { useTranslation } from '../stores';
 
 export function useShoppingItems() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const userId = useAuthStore((s) => s.user?.id);
+  const { t } = useTranslation('shopping');
 
   // Must match the ITEMS_KEY used in useShoppingShare so cache
   // invalidation after accept/decline/remove propagates to this query.
@@ -21,7 +23,7 @@ export function useShoppingItems() {
     enabled: !!userId,
     queryFn: async () => {
       const result = await api.shopping.getAll();
-      if (!result.success) throw new Error(result.error?.message || 'Failed to fetch shopping list');
+      if (!result.success) throw new Error(result.error?.message || t('toasts.fetchError'));
       return result.data; // { items, total }
     },
     staleTime: 0,              // always stale — fetch fresh from DB every mount
@@ -35,38 +37,38 @@ export function useShoppingItems() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const result = await api.shopping.create(data);
-      if (!result.success) throw new Error(result.error?.message || 'שגיאה בהוספת פריט');
+      if (!result.success) throw new Error(result.error?.message || t('toasts.createError'));
       return result.data;
     },
-    onSuccess: () => { invalidate(); toast.success('הפריט נוסף לרשימה'); },
-    onError: (err) => toast.error(err.message || 'שגיאה בהוספת פריט'),
+    onSuccess: () => { invalidate(); toast.success(t('toasts.createSuccess')); },
+    onError: (err) => toast.error(err.message || t('toasts.createError')),
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const result = await api.shopping.update(id, data);
-      if (!result.success) throw new Error(result.error?.message || 'שגיאה בעדכון פריט');
+      if (!result.success) throw new Error(result.error?.message || t('toasts.updateError'));
       return result.data;
     },
-    onSuccess: () => { invalidate(); toast.success('הפריט עודכן'); },
-    onError: (err) => toast.error(err.message || 'שגיאה בעדכון פריט'),
+    onSuccess: () => { invalidate(); toast.success(t('toasts.updateSuccess')); },
+    onError: (err) => toast.error(err.message || t('toasts.updateError')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const result = await api.shopping.remove(id);
-      if (!result.success) throw new Error(result.error?.message || 'שגיאה במחיקת פריט');
+      if (!result.success) throw new Error(result.error?.message || t('toasts.deleteError'));
       return result;
     },
-    onSuccess: () => { invalidate(); toast.success('הפריט נמחק'); },
-    onError: (err) => toast.error(err.message || 'שגיאה במחיקת פריט'),
+    onSuccess: () => { invalidate(); toast.success(t('toasts.deleteSuccess')); },
+    onError: (err) => toast.error(err.message || t('toasts.deleteError')),
   });
 
   // Quiet mutation for optimistic toggle — no toasts, one retry for cold-start servers
   const toggleMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const result = await api.shopping.update(id, data);
-      if (!result.success) throw new Error(result.error?.message || 'שגיאה בעדכון פריט');
+      if (!result.success) throw new Error(result.error?.message || t('toasts.updateError'));
       return result.data;
     },
     retry: 1,
@@ -86,7 +88,7 @@ export function useShoppingItems() {
         if (!old) return old;
         return { ...old, items: old.items.map((i) => i.id === item.id ? { ...i, is_bought: item.is_bought } : i) };
       });
-      toast.error('שגיאה בעדכון פריט');
+      toast.error(t('toasts.updateError'));
     });
   };
 
