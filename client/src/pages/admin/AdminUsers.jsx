@@ -56,8 +56,14 @@ const AdminUsers = () => {
     refetch 
   } = useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: () => api.admin.users.getAll({}),
+    queryFn: async () => {
+      const result = await api.admin.users.getAll({});
+      if (!result.success) throw new Error(result.error?.message || 'Failed to load users');
+      return result;
+    },
     placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
@@ -70,76 +76,59 @@ const AdminUsers = () => {
 
   // User action mutations
   const blockUserMutation = useMutation({
-    mutationFn: (userId) => api.admin.blockUser(userId),
-    onSuccess: (data, userId) => {
+    mutationFn: async (userId) => {
+      const result = await api.admin.blockUser(userId);
+      if (!result.success) throw new Error(result.error?.message || 'Action failed');
+      return result.data;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({
-        type: 'success',
-        message: t('actions.userBlocked', { fallback: 'User blocked successfully' }),
-        duration: 3000
-      });
+      addNotification({ type: 'success', message: t('actions.userBlocked', { fallback: 'User blocked successfully' }), duration: 3000 });
       setActionLoading(null);
     },
-    onError: (error, userId) => {
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
-        duration: 4000
-      });
+    onError: (error) => {
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Action failed' }), duration: 4000 });
       setActionLoading(null);
     }
   });
 
   const unblockUserMutation = useMutation({
-    mutationFn: (userId) => api.admin.unblockUser(userId),
-    onSuccess: (data, userId) => {
+    mutationFn: async (userId) => {
+      const result = await api.admin.unblockUser(userId);
+      if (!result.success) throw new Error(result.error?.message || 'Action failed');
+      return result.data;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      addNotification({
-        type: 'success',
-        message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }),
-        duration: 3000
-      });
+      addNotification({ type: 'success', message: t('actions.userUnblocked', { fallback: 'User unblocked successfully' }), duration: 3000 });
       setActionLoading(null);
     },
-    onError: (error, userId) => {
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Action failed' }),
-        duration: 4000
-      });
+    onError: (error) => {
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Action failed' }), duration: 4000 });
       setActionLoading(null);
     }
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: ({ userId, reason }) => api.admin.deleteUser({ userId, reason }),
-    onSuccess: (data, variables) => {
-              // Use startTransition to prevent multiple renders
-        startTransition(() => {
-          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-          setActionLoading(null);
-          setShowUserModal(false);
-          setShowDeleteDialog(false);
-          setDeleteReason('');
-          setPendingDeleteUserId(null);
-        });
-      
-      addNotification({
-        type: 'success',
-        message: t('actions.userDeleted', { fallback: 'User deleted successfully' }),
-        duration: 3000
-      });
+    mutationFn: async ({ userId, reason }) => {
+      const result = await api.admin.deleteUser({ userId, reason });
+      if (!result.success) throw new Error(result.error?.message || 'Failed to delete user');
+      return result.data;
     },
-    onError: (error, variables) => {
+    onSuccess: () => {
       startTransition(() => {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
         setActionLoading(null);
+        setShowUserModal(false);
+        setShowDeleteDialog(false);
+        setDeleteReason('');
+        setPendingDeleteUserId(null);
       });
-      
-      addNotification({
-        type: 'error',
-        message: error?.response?.data?.message || t('errors.actionFailed', { fallback: 'Failed to delete user' }),
-        duration: 4000
-      });
+      addNotification({ type: 'success', message: t('actions.userDeleted', { fallback: 'User deleted successfully' }), duration: 3000 });
+    },
+    onError: (error) => {
+      startTransition(() => { setActionLoading(null); });
+      addNotification({ type: 'error', message: error.message || t('errors.actionFailed', { fallback: 'Failed to delete user' }), duration: 4000 });
     }
   });
 

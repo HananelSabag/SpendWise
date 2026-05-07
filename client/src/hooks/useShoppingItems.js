@@ -24,41 +24,42 @@ export function useShoppingItems() {
       if (!result.success) throw new Error(result.error?.message || 'Failed to fetch shopping list');
       return result.data; // { items, total }
     },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,              // always stale — fetch fresh from DB every mount
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });
 
   const createMutation = useMutation({
-    mutationFn: (data) => api.shopping.create(data),
-    onSuccess: (result) => {
-      if (!result.success) { toast.error(result.error?.message || 'שגיאה בהוספת פריט'); return; }
-      invalidate();
-      toast.success('הפריט נוסף לרשימה');
+    mutationFn: async (data) => {
+      const result = await api.shopping.create(data);
+      if (!result.success) throw new Error(result.error?.message || 'שגיאה בהוספת פריט');
+      return result.data;
     },
-    onError: () => toast.error('שגיאה בהוספת פריט'),
+    onSuccess: () => { invalidate(); toast.success('הפריט נוסף לרשימה'); },
+    onError: (err) => toast.error(err.message || 'שגיאה בהוספת פריט'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => api.shopping.update(id, data),
-    onSuccess: (result) => {
-      if (!result.success) { toast.error(result.error?.message || 'שגיאה בעדכון פריט'); return; }
-      invalidate();
-      toast.success('הפריט עודכן');
+    mutationFn: async ({ id, data }) => {
+      const result = await api.shopping.update(id, data);
+      if (!result.success) throw new Error(result.error?.message || 'שגיאה בעדכון פריט');
+      return result.data;
     },
-    onError: () => toast.error('שגיאה בעדכון פריט'),
+    onSuccess: () => { invalidate(); toast.success('הפריט עודכן'); },
+    onError: (err) => toast.error(err.message || 'שגיאה בעדכון פריט'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => api.shopping.remove(id),
-    onSuccess: (result) => {
-      if (!result.success) { toast.error(result.error?.message || 'שגיאה במחיקת פריט'); return; }
-      invalidate();
-      toast.success('הפריט נמחק');
+    mutationFn: async (id) => {
+      const result = await api.shopping.remove(id);
+      if (!result.success) throw new Error(result.error?.message || 'שגיאה במחיקת פריט');
+      return result;
     },
-    onError: () => toast.error('שגיאה במחיקת פריט'),
+    onSuccess: () => { invalidate(); toast.success('הפריט נמחק'); },
+    onError: (err) => toast.error(err.message || 'שגיאה במחיקת פריט'),
   });
 
   // Optimistic toggle — flips locally, syncs in background, rolls back on error
