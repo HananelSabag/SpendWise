@@ -1,6 +1,6 @@
 /**
  * 👤 PROFILE PAGE
- * Mobile: sticky top tabs + scrollable content.
+ * Mobile: settings-list → drill-in section (iOS Settings pattern).
  * Desktop: sidebar + content panel with gradient background.
  */
 
@@ -9,7 +9,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   User, Settings, Shield, Download, Camera,
   Eye, EyeOff, FileSpreadsheet, Braces, FileText,
-  X, Check, Loader2, AlertTriangle, ChevronDown, LogOut
+  X, Check, Loader2, AlertTriangle, ChevronDown, LogOut,
+  ChevronRight, ChevronLeft
 } from 'lucide-react';
 
 import {
@@ -602,31 +603,7 @@ const ExportTab = ({ t }) => {
   );
 };
 
-// ── Tab navigation ────────────────────────────────────────────────────────────
-
-const HorizontalTabs = ({ active, onChange, t }) => (
-  <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-    {TABS.map(tab => {
-      const Icon     = tab.icon;
-      const isActive = active === tab.id;
-      return (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            'flex-1 flex flex-col items-center gap-1 py-2 px-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer',
-            isActive
-              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-700/50'
-          )}
-        >
-          <Icon className="w-4 h-4" />
-          <span className="whitespace-nowrap leading-tight">{t(tab.labelKey, tab.id)}</span>
-        </button>
-      );
-    })}
-  </div>
-);
+// ── Desktop sidebar tabs ──────────────────────────────────────────────────────
 
 const SidebarTabs = ({ active, onChange, t, onLogout, tc }) => (
   <div className="w-48 shrink-0 space-y-0.5">
@@ -664,6 +641,145 @@ const SidebarTabs = ({ active, onChange, t, onLogout, tc }) => (
   </div>
 );
 
+// ── Mobile: settings-list menu ────────────────────────────────────────────────
+
+const MENU_META = {
+  personal:    { color: 'from-indigo-500 to-indigo-600',  subtitleKey: 'tabs.personalDesc'    },
+  preferences: { color: 'from-purple-500 to-purple-600',  subtitleKey: 'tabs.preferencesDesc' },
+  security:    { color: 'from-emerald-500 to-emerald-600', subtitleKey: 'tabs.securityDesc'    },
+  export:      { color: 'from-amber-500 to-amber-600',    subtitleKey: 'tabs.exportDesc'      },
+};
+const MENU_FALLBACKS = {
+  personal:    'Name, avatar, contact info',
+  preferences: 'Language, theme, home screen',
+  security:    'Password & account safety',
+  export:      'CSV, JSON, PDF',
+};
+
+const ProfileMenuList = ({ user, onSelect, onLogout, t, tc }) => (
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+    {/* Hero card */}
+    <div className="bg-white dark:bg-gray-900 px-5 pt-6 pb-5 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-indigo-100 dark:ring-indigo-900/40 shrink-0 shadow-sm">
+          <Avatar
+            src={user?.avatar}
+            alt={user?.name || user?.email}
+            size="xl"
+            fallback={(user?.name || user?.email || '?').charAt(0).toUpperCase()}
+            className="w-full h-full"
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-bold text-gray-900 dark:text-white truncate">
+            {user?.name || user?.email?.split('@')[0]}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Section list */}
+    <div className="flex-1 px-4 pt-5 space-y-2.5">
+      {TABS.map(tab => {
+        const Icon  = tab.icon;
+        const meta  = MENU_META[tab.id];
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onSelect(tab.id)}
+            className={cn(
+              'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl',
+              'bg-white dark:bg-gray-900',
+              'border border-gray-100 dark:border-gray-800',
+              'shadow-sm active:scale-[0.98] transition-all duration-150',
+              'text-left cursor-pointer'
+            )}
+          >
+            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm', meta.color)}>
+              <Icon className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t(tab.labelKey) || tab.id}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                {t(meta.subtitleKey) || MENU_FALLBACKS[tab.id]}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+          </button>
+        );
+      })}
+    </div>
+
+    {/* Logout */}
+    <div className="px-4 py-5 pb-28">
+      <button
+        onClick={onLogout}
+        className={cn(
+          'w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl',
+          'bg-white dark:bg-gray-900',
+          'border border-red-100 dark:border-red-900/40',
+          'text-red-600 dark:text-red-400 font-semibold text-sm',
+          'shadow-sm active:scale-[0.98] transition-all duration-150'
+        )}
+      >
+        <LogOut className="w-4 h-4" strokeWidth={2} />
+        {tc?.('common.logout') || 'Logout'}
+      </button>
+    </div>
+  </div>
+);
+
+// ── Mobile: drilled-in section ────────────────────────────────────────────────
+
+const ProfileSection = ({ sectionId, onBack, user, authToasts, updateProfile, t, tc }) => {
+  const tab  = TABS.find(t => t.id === sectionId);
+  const Icon = tab?.icon || User;
+  const meta = MENU_META[sectionId] || MENU_META.personal;
+
+  const content = useMemo(() => {
+    switch (sectionId) {
+      case 'personal':
+        return (
+          <div>
+            <AvatarSection user={user} authToasts={authToasts} />
+            <PersonalInfo user={user} onUpdate={updateProfile} />
+          </div>
+        );
+      case 'preferences': return <PreferencesTab user={user} authToasts={authToasts} />;
+      case 'security':    return <SecurityTab authToasts={authToasts} />;
+      case 'export':      return <ExportTab t={t} />;
+      default:            return null;
+    }
+  }, [sectionId, user, authToasts, updateProfile, t]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Sticky mini-header */}
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={onBack}
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 active:scale-95 transition-transform cursor-pointer shrink-0"
+            aria-label="Back"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br shrink-0', meta.color)}>
+            <Icon className="w-3.5 h-3.5 text-white" />
+          </div>
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            {t(tab?.labelKey) || sectionId}
+          </h2>
+        </div>
+      </div>
+      <div className="px-4 py-4 pb-28">{content}</div>
+    </div>
+  );
+};
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Profile = () => {
@@ -675,13 +791,26 @@ const Profile = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialTab = searchParams.get('tab');
+
+  // Desktop: always shows a tab (default 'personal')
   const [activeTab, setActiveTab] = useState(
     TABS.some(tab => tab.id === initialTab) ? initialTab : 'personal'
   );
 
-  const handleTabChange = useCallback((tabId) => {
+  // Mobile: null = list view, string = drilled-in section
+  const [activeSection, setActiveSection] = useState(
+    TABS.some(tab => tab.id === initialTab) ? initialTab : null
+  );
+
+  const handleSelect = useCallback((tabId) => {
     setActiveTab(tabId);
+    setActiveSection(tabId);
     setSearchParams(tabId !== 'personal' ? { tab: tabId } : {}, { replace: true });
+  }, [setSearchParams]);
+
+  const handleBack = useCallback(() => {
+    setActiveSection(null);
+    setSearchParams({}, { replace: true });
   }, [setSearchParams]);
 
   const tabContent = useMemo(() => {
@@ -693,57 +822,42 @@ const Profile = () => {
             <PersonalInfo user={user} onUpdate={updateProfile} />
           </div>
         );
-      case 'preferences':
-        return <PreferencesTab user={user} authToasts={authToasts} />;
-      case 'security':
-        return <SecurityTab authToasts={authToasts} />;
-      case 'export':
-        return <ExportTab t={t} />;
-      default:
-        return null;
+      case 'preferences': return <PreferencesTab user={user} authToasts={authToasts} />;
+      case 'security':    return <SecurityTab authToasts={authToasts} />;
+      case 'export':      return <ExportTab t={t} />;
+      default:            return null;
     }
   }, [activeTab, user, authToasts, updateProfile, t]);
 
-  // Show skeleton when user data hasn't loaded yet (e.g. hard refresh)
   if (!user) return <PageSkeleton page="profile" />;
 
+  // ── Mobile ──
   if (isMobile) {
+    if (activeSection) {
+      return (
+        <ProfileSection
+          sectionId={activeSection}
+          onBack={handleBack}
+          user={user}
+          authToasts={authToasts}
+          updateProfile={updateProfile}
+          t={t}
+          tc={tc}
+        />
+      );
+    }
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        {/* Mobile sticky header */}
-        <div className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 px-4 py-3">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-              <User className="w-4 h-4 text-white" />
-            </div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('page.title') || 'Profile'}
-            </h1>
-          </div>
-          <HorizontalTabs active={activeTab} onChange={handleTabChange} t={t} />
-        </div>
-        <div className="px-4 py-4 pb-4">{tabContent}</div>
-
-        {/* Logout — bottom of profile page */}
-        <div className="px-4 pb-28 pt-2">
-          <button
-            onClick={() => logout(true)}
-            className={cn(
-              'w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl',
-              'bg-white dark:bg-gray-800',
-              'border border-red-100 dark:border-red-900/40',
-              'text-red-600 dark:text-red-400 font-semibold text-sm',
-              'shadow-sm active:scale-[0.98] transition-all duration-150'
-            )}
-          >
-            <LogOut className="w-4 h-4" strokeWidth={2} />
-            {tc('common.logout') || 'Logout'}
-          </button>
-        </div>
-      </div>
+      <ProfileMenuList
+        user={user}
+        onSelect={handleSelect}
+        onLogout={() => logout(true)}
+        t={t}
+        tc={tc}
+      />
     );
   }
 
+  // ── Desktop ──
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <div className="max-w-5xl mx-auto px-6 pt-8 pb-10">
@@ -759,7 +873,7 @@ const Profile = () => {
         </div>
 
         <div className="flex gap-8 items-start">
-          <SidebarTabs active={activeTab} onChange={handleTabChange} t={t} onLogout={() => logout(true)} tc={tc} />
+          <SidebarTabs active={activeTab} onChange={handleSelect} t={t} onLogout={() => logout(true)} tc={tc} />
           <div className="flex-1 min-w-0">{tabContent}</div>
         </div>
       </div>
