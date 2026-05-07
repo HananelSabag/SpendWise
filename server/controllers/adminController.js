@@ -10,6 +10,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { hasRole, canManageUser, clearUserCache } = require('../middleware/auth');
 const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
+const { Notification } = require('../models/ShoppingShare');
 
 class AdminController {
   /**
@@ -573,6 +574,14 @@ class AdminController {
             });
           }
 
+          // Gather members whose shared shopping list will disappear (must be done before the delete)
+          const { rows: sharedMembers } = await db.query(
+            'SELECT member_id FROM shopping_shares WHERE owner_id = $1',
+            [userId],
+            'admin_delete_get_shared_members'
+          );
+          const sharedMemberIds = sharedMembers.map(r => r.member_id);
+
           // Hard delete user and all related data in a single transaction
           const client = await db.pool.connect();
           try {
@@ -600,7 +609,11 @@ class AdminController {
             // Null out references in settings to avoid FK violations
             await client.query('UPDATE system_settings SET updated_by = NULL WHERE updated_by = $1', [userId]);
 
-            // Finally, remove the user row
+            // Explicit shopping cleanup: invitations where this user is invitee use
+            // ON DELETE CASCADE (after migration 10), but delete explicitly as belt-and-suspenders
+            await client.query('DELETE FROM shopping_invitations WHERE invitee_id = $1', [userId]);
+
+            // Finally, remove the user row (CASCADEs clean up shopping_items, shopping_shares, etc.)
             await client.query('DELETE FROM users WHERE id = $1', [userId]);
 
             await client.query('COMMIT');
@@ -609,6 +622,17 @@ class AdminController {
             throw txError;
           } finally {
             client.release();
+          }
+
+          // Notify members whose shared list was deleted along with the owner
+          for (const memberId of sharedMemberIds) {
+            Notification.create(
+              memberId,
+              'shopping_owner_deleted',
+              'רשימת קניות משותפת הוסרה',
+              'הבעלים של הרשימה המשותפת הסיר את חשבונו. הרשימה אינה זמינה יותר.',
+              {}
+            ).catch(() => {});
           }
 
           result = { action: 'deleted', userId };

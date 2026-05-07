@@ -96,10 +96,24 @@ const shoppingShareController = {
     const targetId = parseInt(req.params.userId, 10);
     if (isNaN(targetId)) return res.status(400).json({ success: false, error: { message: 'מזהה לא תקין' } });
 
-    const removed = await ShoppingShare.removeMember(req.user.id, targetId)
-      || await ShoppingShare.leaveShare(targetId, req.user.id);
+    // Try owner-removes-member first, then member-leaves-voluntarily
+    const ownerRemoved = await ShoppingShare.removeMember(req.user.id, targetId);
+    const memberLeft = ownerRemoved ? false : await ShoppingShare.leaveShare(targetId, req.user.id);
 
-    if (!removed) return res.status(404).json({ success: false, error: { message: 'שיתוף לא נמצא' } });
+    if (!ownerRemoved && !memberLeft) return res.status(404).json({ success: false, error: { message: 'שיתוף לא נמצא' } });
+
+    // Notify the removed member (not when they leave voluntarily)
+    if (ownerRemoved) {
+      const removerName = req.user.first_name || req.user.username;
+      Notification.create(
+        targetId,
+        'shopping_removed',
+        'הוסרת מרשימת קניות',
+        `${removerName} הסיר אותך מרשימת הקניות המשותפת`,
+        { removedBy: req.user.id, removerName }
+      ).catch(() => {});
+    }
+
     res.json({ success: true });
   }),
 
