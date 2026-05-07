@@ -78,6 +78,13 @@ export const useAuthStore = create(
               }
             });
 
+            // Start refresh timer when returning to the app with an existing token.
+            // Previously this only ran after login(), so a page reload silently left
+            // the token unmonitored until it expired.
+            if (token) {
+              setTimeout(() => get().actions.startTokenRefreshTimer(), 0);
+            }
+
             return true;
           },
 
@@ -662,30 +669,60 @@ export const useAuthStore = create(
             try {
               const decoded = jwtDecode(token);
               const now = Date.now() / 1000;
-              
+
               // Refresh 2 minutes before expiry
               const refreshTime = (decoded.exp - now - 120) * 1000;
-              
+
               if (refreshTime > 0) {
                 const timer = setTimeout(async () => {
-                  // silent
-                  const result = await authAPI.refreshToken();
-                  
-                  if (result.success) {
-                    // silent
-                    // Restart timer for new token
-                    get().actions.startTokenRefreshTimer();
-                  } else if (result.requiresLogin) {
-                    // silent
-                    get().actions.logout(false); // Silent logout
+                  try {
+                    const result = await authAPI.refreshToken();
+
+                    if (result.success) {
+                      // Restart timer for new token
+                      get().actions.startTokenRefreshTimer();
+                    } else if (result.requiresLogin) {
+                      get().actions.logout(false);
+                    } else {
+                      // Transient failure (server waking, network blip) — retry in 30s
+                      const retryTimer = setTimeout(() => get().actions.startTokenRefreshTimer(), 30_000);
+                      set((state) => { state.tokenRefreshTimer = retryTimer; });
+                    }
+                  } catch (err) {
+                    const status = err?.response?.status || 0;
+                    if (status === 401 || status === 403) {
+                      // Token is genuinely invalid or user is blocked — force logout
+                      if (status === 403 && err?.response?.data?.error?.code === 'USER_BLOCKED') {
+                        get().actions.logout(false);
+                        if (window.spendWiseNavigate) window.spendWiseNavigate('/blocked', { replace: true });
+                        else window.location.replace('/blocked');
+                      } else {
+                        get().actions.logout(false);
+                      }
+                    } else {
+                      // Network error or 5xx — retry in 30s, don't logout
+                      const retryTimer = setTimeout(() => get().actions.startTokenRefreshTimer(), 30_000);
+                      set((state) => { state.tokenRefreshTimer = retryTimer; });
+                    }
                   }
                 }, refreshTime);
 
                 set((state) => {
                   state.tokenRefreshTimer = timer;
                 });
-
-                // silent
+              } else if (refreshTime <= 0) {
+                // Token is already within the 2-minute refresh window (or expired) — refresh now
+                authAPI.refreshToken().then((result) => {
+                  if (result.success) {
+                    get().actions.startTokenRefreshTimer();
+                  } else if (result.requiresLogin) {
+                    get().actions.logout(false);
+                  }
+                }).catch(() => {
+                  // Retry in 30s on failure
+                  const retryTimer = setTimeout(() => get().actions.startTokenRefreshTimer(), 30_000);
+                  set((state) => { state.tokenRefreshTimer = retryTimer; });
+                });
               }
             } catch (error) {
               // silent
