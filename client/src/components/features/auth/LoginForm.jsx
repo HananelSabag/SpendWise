@@ -1,219 +1,149 @@
 /**
- * 🔐 LOGIN FORM - Mobile-First Login Component
- * Extracted from Login.jsx for better maintainability and performance
- * Features: Form validation, Google auth, Mobile UX, Remember me
- * @version 2.0.0
+ * Login Form — email/password + Google
  */
 
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Mail, Lock, Eye, EyeOff, ArrowRight, Globe, AlertCircle
-} from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-// ✅ Import Zustand stores and components
 import { useTranslation, useNotifications } from '../../../stores';
-import { Button, Input, LoadingSpinner } from '../../ui';
+import { Button, LoadingSpinner } from '../../ui';
 import { api } from '../../../api';
 import { cn } from '../../../utils/helpers';
 import SimpleGoogleButton from './SimpleGoogleButton';
 
-/**
- * 🔐 Login Form Component
- */
-const LoginForm = ({ 
+const LoginForm = ({
   onSubmit,
   onGoogleLogin,
   isSubmitting = false,
   isGoogleLoading = false,
   errors = {},
-  className = '' 
+  className = '',
 }) => {
-  const { t, isRTL } = useTranslation('auth');
+  const { t } = useTranslation('auth');
   const { addNotification } = useNotifications();
 
-  // ✅ Form state
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-
+  const [formData, setFormData]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe]   = useState(false);
 
-  // ✅ Handle input changes
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
-  // ✅ Form validation
   const validateForm = useCallback(() => {
-    const newErrors = {};
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) return false;
+    if (!formData.password || formData.password.length < 6) return false;
+    return true;
+  }, [formData]);
 
-    if (!formData.email) {
-      newErrors.email = t('emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('emailInvalid');
-    }
-
-    if (!formData.password) {
-      newErrors.password = t('passwordRequired');
-    } else if (formData.password.length < 6) {
-      newErrors.password = t('passwordTooShort');
-    }
-
-    return Object.keys(newErrors).length === 0;
-  }, [formData, t]);
-
-  // ✅ Handle form submission
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    
     if (!validateForm()) {
-      addNotification({
-        type: 'error',
-        message: t('formValidationFailed')
-      });
+      addNotification({ type: 'error', message: t('formValidationFailed') });
       return;
     }
-
-    onSubmit?.({
-      ...formData,
-      rememberMe
-    });
+    onSubmit?.({ ...formData, rememberMe });
   }, [formData, rememberMe, validateForm, onSubmit, addNotification, t]);
 
+  // ── shared field styles ────────────────────────────────────────────────────
+  const fieldBase = cn(
+    'block w-full h-12 rounded-xl border bg-white dark:bg-gray-700/60',
+    'text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500',
+    'transition-all duration-200 text-sm',
+  );
+
   return (
-    <div className={cn("bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8", className)}>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* General Error */}
+    <div className={cn('bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6', className)}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+
+        {/* General error */}
         {errors.general && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3.5"
           >
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.general}
-              </p>
-            </div>
-            {errors.code === 'EMAIL_NOT_VERIFIED' && (
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('emailNotVerified')}
-                </span>
-                <Button
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.general}</p>
+              {errors.code === 'EMAIL_NOT_VERIFIED' && (
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={errors.onResendVerification}
                   disabled={errors.isResending}
+                  className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-400 underline disabled:opacity-50"
                 >
                   {errors.isResending ? t('sending') : t('resendVerification')}
-                </Button>
-              </div>
-            )}
-            {errors.showSupportContact && (
-              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
-                  {t('contactSupport')}
-                </p>
-                <a
-                  href={`mailto:${t('supportEmail')}`}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                >
-                  {t('supportEmail')}
-                </a>
-              </div>
-            )}
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
             {t('email')}
           </label>
           <div className="relative">
-            <Input
+            <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
               placeholder={t('emailPlaceholder')}
-              className={cn(
-                "pl-12",
-                errors.email && "border-red-300 focus:border-red-500"
-              )}
               disabled={isSubmitting}
               autoComplete="email"
+              className={cn(fieldBase, 'ps-11 pe-4', errors.email && 'border-red-400 focus:ring-red-400/30 focus:border-red-400', 'border-gray-300 dark:border-gray-600')}
             />
-            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
           </div>
-          {errors.email && (
-            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-              {errors.email}
-            </p>
-          )}
+          {errors.email && <p className="mt-1.5 text-xs text-red-500">{errors.email}</p>}
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
             {t('password')}
           </label>
           <div className="relative">
-            <Input
+            <input
               type={showPassword ? 'text' : 'password'}
               name="password"
               value={formData.password}
               onChange={handleInputChange}
               placeholder={t('passwordPlaceholder')}
-              className={cn(
-                "pl-12 pr-12",
-                errors.password && "border-red-300 focus:border-red-500"
-              )}
               disabled={isSubmitting}
               autoComplete="current-password"
+              className={cn(fieldBase, 'ps-11 pe-11', errors.password && 'border-red-400 focus:ring-red-400/30 focus:border-red-400', 'border-gray-300 dark:border-gray-600')}
             />
-            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute end-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {errors.password && (
-            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-              {errors.password}
-            </p>
-          )}
+          {errors.password && <p className="mt-1.5 text-xs text-red-500">{errors.password}</p>}
         </div>
 
-        {/* Remember Me & Forgot Password */}
+        {/* Remember me + Forgot password */}
         <div className="flex items-center justify-between">
-          <label className="flex items-center">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              onChange={e => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-blue-600 cursor-pointer"
             />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-              {t('rememberMe')}
-            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{t('rememberMe')}</span>
           </label>
-          
           <Link
             to="/forgot-password"
             className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 underline"
@@ -222,68 +152,54 @@ const LoginForm = ({
           </Link>
         </div>
 
-        {/* Login Button */}
-        <Button
+        {/* Submit */}
+        <button
           type="submit"
-          className="w-full min-h-[48px]"
           disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <LoadingSpinner size="sm" className={cn("mr-2", isRTL && "ml-2 mr-0")} />
-          ) : (
-            <ArrowRight className={cn("w-5 h-5 mr-2", isRTL && "ml-2 mr-0 rotate-180")} />
+          className={cn(
+            'w-full h-12 rounded-xl font-bold text-white text-sm',
+            'bg-gradient-to-l from-blue-600 to-indigo-600',
+            'shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30',
+            'flex items-center justify-center gap-2 transition-all duration-200',
+            isSubmitting && 'opacity-70 cursor-not-allowed',
           )}
-          {isSubmitting ? t('signingIn') : t('signIn')}
-        </Button>
+        >
+          {isSubmitting
+            ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />{t('signingIn')}</>
+            : t('signIn')
+          }
+        </button>
 
         {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            <div className="w-full border-t border-gray-200 dark:border-gray-700" />
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
+          <div className="relative flex justify-center">
+            <span className="px-3 bg-white dark:bg-gray-800 text-xs text-gray-400 font-medium">
               {t('orContinueWith')}
             </span>
           </div>
         </div>
 
-        {/* Google Login - Highlighted when user should use Google */}
+        {/* Google */}
         {window.__SW_GOOGLE_OAUTH_ENABLED__ !== false && (
           <motion.div
-            animate={errors.highlightGoogleButton ? {
-              scale: [1, 1.02, 1],
-              boxShadow: [
-                '0 0 0 0px rgba(59, 130, 246, 0)',
-                '0 0 0 4px rgba(59, 130, 246, 0.3)',
-                '0 0 0 0px rgba(59, 130, 246, 0)'
-              ]
-            } : {}}
-            transition={{
-              duration: 2,
-              repeat: errors.highlightGoogleButton ? Infinity : 0,
-              ease: "easeInOut"
-            }}
-            className={cn(
-              "rounded-lg transition-all",
-              errors.highlightGoogleButton && "ring-2 ring-blue-500 ring-opacity-50"
-            )}
+            animate={errors.highlightGoogleButton ? { scale: [1, 1.02, 1] } : {}}
+            transition={{ duration: 1.5, repeat: errors.highlightGoogleButton ? Infinity : 0 }}
+            className={cn('rounded-xl', errors.highlightGoogleButton && 'ring-2 ring-blue-500/50')}
           >
             <SimpleGoogleButton
               onSuccess={onGoogleLogin}
-              onError={(error) => {
-                addNotification({
-                  type: 'error',
-                  message: error.message || t('googleSignInFailed')
-                });
-              }}
+              onError={(err) => addNotification({ type: 'error', message: err.message || t('googleSignInFailed') })}
               disabled={isSubmitting}
             />
           </motion.div>
         )}
+
       </form>
     </div>
   );
 };
 
-export default LoginForm; 
+export default LoginForm;
