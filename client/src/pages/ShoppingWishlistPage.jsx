@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Plus, Package,
-  CheckCircle2, UserPlus, Users, Crown, SlidersHorizontal,
+  CheckCircle2, UserPlus, Users, Crown, SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -233,6 +233,7 @@ const ShoppingWishlistPage = () => {
 
   const [activeCategory, setActiveCategory] = useState(null);
   const [activeTab,     setActiveTab]     = useState(null); // null = all | 'mine' | 'shared'
+  const [filtersOpen,  setFiltersOpen]  = useState(false);
   const [sheetOpen,   setSheetOpen]   = useState(false);
   const [shareOpen,   setShareOpen]   = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -358,76 +359,108 @@ const ShoppingWishlistPage = () => {
           </motion.button>
         </div>
 
-        {/* Sharing banner */}
-        <AnimatePresence>
-          {hasSharingMembers && (
-            <SharingBanner myMembers={myMembers} sharedWithMe={sharedWithMe} onOpen={openShare} />
-          )}
-        </AnimatePresence>
-
-        {/* Personal / Shared tab switcher */}
-        <AnimatePresence>
-          {hasSharingMembers && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex gap-1.5 px-4 pb-2 overflow-hidden"
+        {/* Collapsible filters: sharing banner + tab switcher + categories */}
+        {(hasSharingMembers || (items.length > 0 && categoryTabs.length > 1)) && (
+          <div className="border-t border-gray-100 dark:border-gray-800">
+            {/* Toggle bar */}
+            <button
+              onClick={() => setFiltersOpen(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
-              {[
-                { key: null,     label: t('allCategories') },
-                { key: 'mine',   label: t('tabs.personal') },
-                { key: 'shared', label: t('tabs.shared') },
-              ].map(({ key, label }) => {
-                const active = activeTab === key;
-                return (
-                  <motion.button
-                    key={String(key)}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => { setActiveTab(key); setActiveCategory(null); }}
-                    className={cn(
-                      'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-150',
-                      active
-                        ? 'bg-blue-600 text-white border-transparent shadow-sm shadow-blue-500/30'
-                        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300'
-                    )}
-                  >
-                    {label}
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <span>
+                {(() => {
+                  const parts = [];
+                  if (activeTab === 'mine')   parts.push(t('tabs.personal'));
+                  if (activeTab === 'shared') parts.push(t('tabs.shared'));
+                  if (activeCategory !== null) {
+                    const catObj = CATEGORIES.find(c => c.value === activeCategory);
+                    if (catObj) parts.push(`${catObj.emoji} ${t(`categories.${catObj.key}`)}`);
+                  }
+                  return parts.length ? parts.join(' · ') : t('allCategories');
+                })()}
+              </span>
+              <motion.span animate={{ rotate: filtersOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-4 h-4" />
+              </motion.span>
+            </button>
 
-        {/* Category filter chips */}
-        {items.length > 0 && categoryTabs.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
-            {categoryTabs.map((cat) => {
-              const active  = activeCategory === cat;
-              const catObj  = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
-              const count   = cat === null ? items.length : (categoryCounts[cat] || 0);
-              const label   = cat === null ? ALL_KEY : t(`categories.${catObj?.key}`);
-              return (
-                <motion.button
-                  key={cat ?? '__all__'} whileTap={{ scale: 0.94 }}
-                  onClick={() => setActiveCategory(cat)}
-                  className={cn(
-                    'flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full',
-                    'text-xs font-bold border transition-all duration-150 min-h-[36px]',
-                    active
-                      ? 'bg-gradient-to-l from-blue-600 to-indigo-600 text-white border-transparent shadow-md shadow-blue-500/25'
-                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-300'
-                  )}
+            {/* Expandable content */}
+            <AnimatePresence initial={false}>
+              {filtersOpen && (
+                <motion.div
+                  key="filters"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
                 >
-                  {catObj && <span className={cn('text-sm leading-none', !active && 'grayscale opacity-50')}>{catObj.emoji}</span>}
-                  {label}
-                  {active && (
-                    <span className="bg-white/30 text-white text-[10px] font-extrabold px-1.5 rounded-full">{count}</span>
+                  {/* Sharing banner */}
+                  {hasSharingMembers && (
+                    <SharingBanner myMembers={myMembers} sharedWithMe={sharedWithMe} onOpen={openShare} />
                   )}
-                </motion.button>
-              );
-            })}
+
+                  {/* Personal / Shared tab switcher */}
+                  {hasSharingMembers && (
+                    <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto scrollbar-none">
+                      {[
+                        { key: null,     label: t('allCategories') },
+                        { key: 'mine',   label: t('tabs.personal') },
+                        { key: 'shared', label: t('tabs.shared') },
+                      ].map(({ key, label }) => {
+                        const active = activeTab === key;
+                        return (
+                          <motion.button
+                            key={String(key)}
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => { setActiveTab(key); setActiveCategory(null); }}
+                            className={cn(
+                              'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-150',
+                              active
+                                ? 'bg-blue-600 text-white border-transparent shadow-sm shadow-blue-500/30'
+                                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                            )}
+                          >
+                            {label}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Category chips */}
+                  {items.length > 0 && categoryTabs.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+                      {categoryTabs.map((cat) => {
+                        const active  = activeCategory === cat;
+                        const catObj  = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
+                        const count   = cat === null ? items.length : (categoryCounts[cat] || 0);
+                        const label   = cat === null ? ALL_KEY : t(`categories.${catObj?.key}`);
+                        return (
+                          <motion.button
+                            key={cat ?? '__all__'} whileTap={{ scale: 0.94 }}
+                            onClick={() => setActiveCategory(cat)}
+                            className={cn(
+                              'flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full',
+                              'text-xs font-bold border transition-all duration-150 min-h-[36px]',
+                              active
+                                ? 'bg-gradient-to-l from-blue-600 to-indigo-600 text-white border-transparent shadow-md shadow-blue-500/25'
+                                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-300'
+                            )}
+                          >
+                            {catObj && <span className={cn('text-sm leading-none', !active && 'grayscale opacity-50')}>{catObj.emoji}</span>}
+                            {label}
+                            {active && (
+                              <span className="bg-white/30 text-white text-[10px] font-extrabold px-1.5 rounded-full">{count}</span>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>

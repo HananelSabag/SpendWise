@@ -9,9 +9,13 @@ export default {
   },
   tabs: {
     personal: "Personal Info",
+    personalDesc: "Name, avatar, contact info",
     preferences: "Preferences",
+    preferencesDesc: "Language, theme, home screen",
     security: "Security",
+    securityDesc: "Password & account safety",
     export: "Export Data",
+    exportDesc: "CSV, JSON, PDF",
     accountSettings: "Account Settings",
     accountSettingsDesc: "Manage your profile and preferences"
   },

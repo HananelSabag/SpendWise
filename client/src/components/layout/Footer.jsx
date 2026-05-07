@@ -1,280 +1,91 @@
 /**
- * 🦶 FOOTER COMPONENT - Mobile-First Responsive Footer
- * Features: Zustand stores, Mobile-responsive, Modern design
- * @version 2.0.0
+ * 🦶 FOOTER — compact single-band design
+ * Navigation removed (redundant with top/bottom nav).
+ * Keeps legal links, contact, and branding.
  */
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ExternalLink, Mail, Heart, Info, Github, Shield } from 'lucide-react';
-
-// ✅ NEW: Import Zustand stores (replaces Context API!)
-import { useTranslation, useAuth } from '../../stores';
-
-// Dynamic imports to prevent chunk conflicts with LazyComponents
+import { Heart, Github, ExternalLink } from 'lucide-react';
 import { lazy, Suspense } from 'react';
+import { useTranslation } from '../../stores';
 
 const AccessibilityStatement = lazy(() => import('../common/AccessibilityStatement'));
-const PrivacyPolicyModal = lazy(() => import('../common/PrivacyPolicyModal'));
-const TermsOfServiceModal = lazy(() => import('../common/TermsOfServiceModal'));
+const PrivacyPolicyModal      = lazy(() => import('../common/PrivacyPolicyModal'));
+const TermsOfServiceModal     = lazy(() => import('../common/TermsOfServiceModal'));
 
 const Footer = () => {
-  // ✅ NEW: Zustand stores (replacing Context API)
-  const { t, isRTL } = useTranslation();
-  const { user } = useAuth();
-  
-  const currentYear = new Date().getFullYear();
-  const [showAccessibilityStatement, setShowAccessibilityStatement] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTermsOfService, setShowTermsOfService] = useState(false);
+  const { t, isRTL }  = useTranslation();
+  const currentYear   = new Date().getFullYear();
 
-  // ✅ Mobile-first navigation configuration
-  const navigation = {
-    main: [
-      { name: t('nav.dashboard', { fallback: 'Dashboard' }), href: '/' },
-      { name: t('nav.transactions', { fallback: 'Transactions' }), href: '/transactions' },
-      { name: t('nav.analytics', { fallback: 'Analytics' }), href: '/analytics' },
-      { name: t('nav.profile', { fallback: 'Profile' }), href: '/profile' },
-    ],
-    admin: user?.isAdmin ? [
-      { name: t('nav.admin', { fallback: 'Admin' }), href: '/admin' },
-      { name: t('nav.userManagement', { fallback: 'Users' }), href: '/admin/users' },
-      { name: t('nav.systemStats', { fallback: 'Statistics' }), href: '/admin/stats' },
-      ...(user?.isSuperAdmin ? [
-        { name: t('nav.systemSettings', { fallback: 'Settings' }), href: '/admin/settings' }
-      ] : [])
-    ] : [],
-    legal: [
-      { 
-        name: t('footer.privacyPolicy', { fallback: 'Privacy Policy' }), 
-        href: '#', 
-        onClick: () => setShowPrivacyPolicy(true)
-      },
-      { 
-        name: t('footer.termsOfService', { fallback: 'Terms of Service' }), 
-        href: '#', 
-        onClick: () => setShowTermsOfService(true)
-      },
-      { 
-        name: t('footer.accessibilityStatement', { fallback: 'Accessibility Statement' }), 
-        href: '#', 
-        onClick: () => setShowAccessibilityStatement(true) 
-      },
-      { 
-        name: t('footer.privacyProtectionLaw', { fallback: 'Privacy Protection Law' }), 
-        href: 'https://www.gov.il/he/departments/legalInfo/cpifp_law',
-        external: true
-      },
-    ],
-    support: [
-      {
-        name: t('footer.contact', { fallback: 'Contact Us' }),
-        href: `mailto:${window.__SW_SUPPORT_EMAIL__ || 'spendwise.verifiction@gmail.com'}`,
-        external: true
-      }
-    ]
-  };
+  const [showAccess,  setShowAccess]  = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms,   setShowTerms]   = useState(false);
 
-  // ✅ Social media links
-  const socialLinks = [
-    {
-      name: 'GitHub',
-      href: 'https://github.com/HananelSabag/SpendWise',
-      icon: Github
-    }
+  const legalItems = [
+    { label: t('footer.privacyPolicy',        { fallback: 'Privacy Policy' }),        onClick: () => setShowPrivacy(true) },
+    { label: t('footer.termsOfService',       { fallback: 'Terms of Service' }),       onClick: () => setShowTerms(true)   },
+    { label: t('footer.accessibilityStatement',{ fallback: 'Accessibility' }),         onClick: () => setShowAccess(true)  },
   ];
+
+  const supportEmail = window.__SW_SUPPORT_EMAIL__ || 'spendwise.verifiction@gmail.com';
 
   return (
     <>
-      <footer className={`bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 ${isRTL ? 'rtl' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* ✅ Main footer content */}
-          <div className="py-8 lg:py-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {/* ✅ Company info */}
-              <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                <div className="flex items-center mb-4">
-                  <h3 className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                    SpendWise
-                  </h3>
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
-                  {t('footer.description', { 
-                    fallback: 'Take control of your finances with intelligent expense tracking and analytics.' 
-                  })}
-                </p>
-                
-                {/* Social links - Mobile optimized */}
-                <div className="flex space-x-4">
-                  {socialLinks.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
-                        aria-label={item.name}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
+      <footer
+        dir={isRTL ? 'rtl' : 'ltr'}
+        className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800"
+      >
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
+          {/* Single row: brand · legal links · contact */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
-              {/* ✅ Main navigation */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                  {t('footer.navigation', { fallback: 'Navigation' })}
-                </h4>
-                <ul className="space-y-3">
-                  {navigation.main.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        to={item.href}
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* ✅ Admin navigation (if user is admin) */}
-              {user?.isAdmin && navigation.admin.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                    <div className="flex items-center">
-                      <Shield className="w-4 h-4 mr-2" />
-                      {t('footer.adminPanel', { fallback: 'Admin Panel' })}
-                    </div>
-                  </h4>
-                  <ul className="space-y-3">
-                    {navigation.admin.map((item) => (
-                      <li key={item.name}>
-                        <Link
-                          to={item.href}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                        >
-                          {item.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* ✅ Support links */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                  {t('footer.support', { fallback: 'Support' })}
-                </h4>
-                <ul className="space-y-3">
-                  {navigation.support.map((item) => (
-                    <li key={item.name}>
-                      {item.external ? (
-                        <a
-                          href={item.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors inline-flex items-center"
-                        >
-                          {item.name}
-                          <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      ) : (
-                        <Link
-                          to={item.href}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                        >
-                          {item.name}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* ✅ Legal links - Responsive positioning */}
-              <div className={user?.isAdmin ? '' : 'lg:col-start-4'}>
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                  {t('footer.legal', { fallback: 'Legal' })}
-                </h4>
-                <ul className="space-y-3">
-                  {navigation.legal.map((item) => (
-                    <li key={item.name}>
-                      {item.external ? (
-                        <a
-                          href={item.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors inline-flex items-center"
-                        >
-                          {item.name}
-                          <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      ) : (
-                        <button
-                          onClick={item.onClick}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left"
-                        >
-                          {item.name}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* Brand */}
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
+              <span className="font-bold text-indigo-600 dark:text-indigo-400">SpendWise</span>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <span className="flex items-center gap-1">
+                {t('footer.madeWith', { fallback: 'Made with' })}
+                <Heart className="w-3.5 h-3.5 text-red-500 inline" />
+              </span>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <span>© {currentYear}</span>
             </div>
-          </div>
 
-          {/* ✅ Bottom section - Mobile optimized */}
-          <div className="border-t border-gray-200 dark:border-gray-700 py-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              {/* Copyright */}
-              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                <span className="flex items-center">
-                  © {currentYear} SpendWise. 
-                  <span className="mx-1 flex items-center">
-                    {t('footer.madeWith', { fallback: 'Made with' })}
-                    <Heart className="w-4 h-4 mx-1 text-red-500" />
-                    {t('footer.byTeam', { fallback: 'by the SpendWise team' })}
-                  </span>
-                </span>
-              </div>
-
-              {/* Version info */}
-              <div className="flex items-center space-x-4 text-xs text-gray-400 dark:text-gray-500">
-                <span>v2.0.0</span>
-                <span className="hidden sm:inline">•</span>
-                <span className="hidden sm:inline">
-                  {t('footer.poweredBy', { fallback: 'Powered by Zustand & React' })}
-                </span>
-              </div>
+            {/* Legal + contact */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500">
+              {legalItems.map(({ label, onClick }) => (
+                <button
+                  key={label}
+                  onClick={onClick}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-start"
+                >
+                  {label}
+                </button>
+              ))}
+              <a
+                href={`mailto:${supportEmail}`}
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                {t('footer.contact', { fallback: 'Contact' })}
+              </a>
+              <a
+                href="https://github.com/HananelSabag/SpendWise"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                <Github className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* ✅ Modals with Suspense for lazy loading */}
       <Suspense fallback={null}>
-        <AccessibilityStatement
-          isOpen={showAccessibilityStatement}
-          onClose={() => setShowAccessibilityStatement(false)}
-        />
-        
-        <PrivacyPolicyModal
-          isOpen={showPrivacyPolicy}
-          onClose={() => setShowPrivacyPolicy(false)}
-        />
-        
-        <TermsOfServiceModal
-          isOpen={showTermsOfService}
-          onClose={() => setShowTermsOfService(false)}
-        />
+        <AccessibilityStatement isOpen={showAccess}  onClose={() => setShowAccess(false)}  />
+        <PrivacyPolicyModal     isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+        <TermsOfServiceModal    isOpen={showTerms}   onClose={() => setShowTerms(false)}   />
       </Suspense>
     </>
   );

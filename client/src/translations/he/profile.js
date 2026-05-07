@@ -10,9 +10,13 @@ export default {
   },
   tabs: {
     personal: "מידע אישי",
+    personalDesc: "שם, תמונה, פרטי קשר",
     preferences: "העדפות",
+    preferencesDesc: "שפה, ערכת נושא, מסך בית",
     security: "אבטחה",
+    securityDesc: "סיסמה ואבטחת חשבון",
     export: "ייצוא נתונים",
+    exportDesc: "CSV, JSON, PDF",
     accountSettings: "הגדרות חשבון",
     accountSettingsDesc: "נהל את הפרופיל וההעדפות שלך"
   },
