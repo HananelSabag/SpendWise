@@ -78,6 +78,12 @@ export default {
     currency: "מטבע",
     savePreferences: "שמור העדפות",
     shoppingDefaultPage: "פתח רשימת קניות בכניסה",
+    defaultHome: "אפליקציית ברירת מחדל",
+    homeOptions: {
+      dashboard: "SpendWise",
+      transactions: "הוצאות",
+      shopping: "קניות"
+    },
     themeOptions: {
       system: "אוטומטי",
       light: "בהיר",

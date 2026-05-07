@@ -83,6 +83,12 @@ export default {
     currency: "Currency",
     savePreferences: "Save Preferences",
     shoppingDefaultPage: "Open Shopping List on Login",
+    defaultHome: "Default App",
+    homeOptions: {
+      dashboard: "SpendWise",
+      transactions: "Expenses",
+      shopping: "Shopping"
+    },
     themeOptions: {
       system: "System",
       light: "Light",
