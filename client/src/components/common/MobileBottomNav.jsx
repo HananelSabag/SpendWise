@@ -35,10 +35,12 @@ const ShoppingModeNav = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { t }     = useTranslation();
+  const isAdmin   = useIsAdmin();
 
   const tabs = [
     { key: 'shopping', icon: ShoppingCart, label: t('shopping.title') || 'Shopping', href: '/shopping' },
     { key: 'profile',  icon: User,         label: t('nav.profile')    || 'Profile',  href: '/profile'  },
+    ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t('nav.admin') || 'Admin', href: '/admin' }] : []),
   ];
 
   return (
