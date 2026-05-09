@@ -1,28 +1,42 @@
 /**
- * ShoppingItemCard — premium redesign
+ * ShoppingItemCard — visual-first redesign
+ * Full-width image (or category placeholder), name prominent,
+ * notes readable, bought state with overlay + strikethrough.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2, ExternalLink, Check } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Check, ShoppingBag } from 'lucide-react';
 import { cn, currency } from '../../../utils/helpers';
 import { CATEGORIES } from './ShoppingBottomSheet';
 import { useTranslation } from '../../../stores';
 
-// Subtle category-tinted card backgrounds
-const CAT_BG = {
-  'bg-amber-500':  'bg-gradient-to-bl from-amber-50/70 to-white dark:from-amber-900/10 dark:to-gray-800',
-  'bg-orange-500': 'bg-gradient-to-bl from-orange-50/70 to-white dark:from-orange-900/10 dark:to-gray-800',
-  'bg-purple-500': 'bg-gradient-to-bl from-purple-50/70 to-white dark:from-purple-900/10 dark:to-gray-800',
-  'bg-blue-500':   'bg-gradient-to-bl from-blue-50/70 to-white dark:from-blue-900/10 dark:to-gray-800',
-  'bg-pink-500':   'bg-gradient-to-bl from-pink-50/70 to-white dark:from-pink-900/10 dark:to-gray-800',
-  'bg-gray-400':   'bg-gradient-to-bl from-gray-50/80 to-white dark:from-gray-700/20 dark:to-gray-800',
+// Per-category placeholder gradient (behind emoji when no image)
+const PLACEHOLDER_BG = {
+  'bg-amber-500':  'from-amber-100 to-amber-50 dark:from-amber-900/50 dark:to-amber-900/20',
+  'bg-orange-500': 'from-orange-100 to-orange-50 dark:from-orange-900/50 dark:to-orange-900/20',
+  'bg-purple-500': 'from-purple-100 to-purple-50 dark:from-purple-900/50 dark:to-purple-900/20',
+  'bg-blue-500':   'from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-900/20',
+  'bg-pink-500':   'from-pink-100 to-pink-50 dark:from-pink-900/50 dark:to-pink-900/20',
+  'bg-green-500':  'from-green-100 to-green-50 dark:from-green-900/50 dark:to-green-900/20',
+  'bg-gray-400':   'from-gray-100 to-gray-50 dark:from-gray-700/50 dark:to-gray-700/20',
+};
+
+// Subtle card tint (just the content area below image)
+const CARD_TINT = {
+  'bg-amber-500':  'dark:bg-gray-800',
+  'bg-orange-500': 'dark:bg-gray-800',
+  'bg-purple-500': 'dark:bg-gray-800',
+  'bg-blue-500':   'dark:bg-gray-800',
+  'bg-pink-500':   'dark:bg-gray-800',
+  'bg-green-500':  'dark:bg-gray-800',
+  'bg-gray-400':   'dark:bg-gray-800',
 };
 
 const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }) => {
   const { t, isRTL } = useTranslation('shopping');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [imgFailed, setImgFailed] = useState(false);
+  const [imgFailed,     setImgFailed]     = useState(false);
   const timeoutRef = useRef(null);
 
   useEffect(() => {
@@ -33,10 +47,12 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
 
   useEffect(() => { setImgFailed(false); }, [item.image_url]);
 
-  const cat    = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[5];
-  const bought = item.is_bought;
-  const price  = parseFloat(item.price_ils) || 0;
-  const cardBg = CAT_BG[cat.dot] || CAT_BG['bg-gray-400'];
+  const cat         = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[CATEGORIES.length - 1];
+  const bought      = item.is_bought;
+  const price       = parseFloat(item.price_ils) || 0;
+  const showImage   = !!(item.image_url && !imgFailed);
+  const placeholderBg = PLACEHOLDER_BG[cat.dot] || PLACEHOLDER_BG['bg-gray-400'];
+  const cardTint    = CARD_TINT[cat.dot] || CARD_TINT['bg-gray-400'];
 
   const handleDeleteClick = () => {
     if (confirmDelete) { onDelete(item.id); setConfirmDelete(false); }
@@ -47,121 +63,155 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
     <motion.div
       layout
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
-      animate={{ opacity: bought ? 0.65 : 1, y: 0, scale: 1 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, y: -8 }}
       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
       className={cn(
         'relative rounded-2xl overflow-hidden',
         'border border-gray-100 dark:border-gray-700/60',
-        'shadow-[0_2px_12px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)]',
-        'transition-shadow hover:shadow-[0_4px_20px_rgba(0,0,0,0.09)]',
-        cardBg
+        'shadow-[0_2px_16px_rgba(0,0,0,0.07),0_1px_4px_rgba(0,0,0,0.05)]',
+        'hover:shadow-[0_6px_24px_rgba(0,0,0,0.11)] transition-shadow duration-200',
+        'bg-white', cardTint
       )}
     >
-      {/* Start-side category accent (right in RTL, left in LTR) */}
-      <div className={cn('absolute top-0 w-[3px] h-full', cat.dot, isRTL ? 'right-0' : 'left-0')} />
+      {/* Category accent stripe (side) */}
+      <div className={cn(
+        'absolute top-0 bottom-0 w-[3.5px] z-10',
+        cat.dot,
+        isRTL ? 'right-0' : 'left-0'
+      )} />
 
-      <div className="px-4 pt-4 pb-3 pr-5">
+      {/* ── Image / Placeholder area ── */}
+      <div className="relative h-48 overflow-hidden">
 
-        {/* ── Top row: toggle | name | price ── */}
-        <div className="flex items-center gap-3">
-
-          {/* Toggle — rightmost on screen (first in RTL flex) */}
-          <motion.button
-            onClick={() => onToggleBought(item)}
-            disabled={confirmDelete}
-            whileTap={{ scale: 0.85 }}
+        {showImage ? (
+          <img
+            src={item.image_url}
+            alt={item.name}
             className={cn(
-              'flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center',
-              'transition-all duration-250 disabled:opacity-40',
-              bought
-                ? 'bg-emerald-500 shadow-md shadow-emerald-400/40'
-                : 'bg-white dark:bg-gray-700/80 border-2 border-gray-200 dark:border-gray-600 shadow-sm'
+              'w-full h-full object-cover object-center transition-all duration-300',
+              bought && 'opacity-50 saturate-50'
             )}
-            aria-label={bought ? t('card.markAsNotBought') : t('card.markAsBought')}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              {bought ? (
-                <motion.div key="check"
-                  initial={{ scale: 0, rotate: -30 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                >
-                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
-                </motion.div>
-              ) : (
-                <motion.span
-                  key="dot"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className={cn('w-3 h-3 rounded-full', cat.dot, 'opacity-40')}
-                />
-              )}
-            </AnimatePresence>
-          </motion.button>
-
-          {/* Name + meta — middle */}
-          <div className="flex-1 min-w-0">
-            <h3 className={cn(
-              'text-[15px] font-bold leading-snug',
-              bought
-                ? 'line-through text-gray-400 dark:text-gray-500'
-                : 'text-gray-900 dark:text-white'
-            )}>
-              {item.name}
-            </h3>
-
-            {/* Category + notes inline */}
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <span className={cn(
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full',
-                'text-[11px] font-semibold border',
-                cat.color
-              )}>
-                <span className="text-sm leading-none">{cat.emoji}</span>
-                {t(`categories.${cat.key}`)}
-              </span>
-              {item.notes && (
-                <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[150px] italic">
-                  {item.notes}
-                </span>
-              )}
-            </div>
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div className={cn(
+            'w-full h-full bg-gradient-to-b flex items-center justify-center',
+            placeholderBg,
+            bought && 'opacity-60'
+          )}>
+            <span className="text-7xl select-none">{cat.emoji}</span>
           </div>
+        )}
 
-          {/* Price */}
-          {price > 0 && (
-            <div className="flex-shrink-0 text-right">
-              <span className={cn(
-                'text-base font-extrabold tabular-nums leading-none',
-                bought
-                  ? 'text-gray-400 dark:text-gray-500 line-through'
-                  : 'text-gray-900 dark:text-white'
-              )}>
-                {currency.format(price)}
-              </span>
-            </div>
+        {/* Bought overlay */}
+        <AnimatePresence>
+          {bought && (
+            <motion.div
+              key="bought-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-emerald-500/15 flex items-center justify-center"
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 22 }}
+                className="bg-emerald-500 rounded-full p-3 shadow-xl shadow-emerald-500/40"
+              >
+                <Check className="w-9 h-9 text-white" strokeWidth={3} />
+              </motion.div>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* Product image thumbnail — trailing end of card */}
-          {item.image_url && !imgFailed && (
-            <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-sm">
-              <img
-                src={item.image_url}
-                alt=""
-                className="w-full h-full object-cover"
-                onError={() => setImgFailed(true)}
+        {/* Toggle button — top corner */}
+        <motion.button
+          onClick={() => onToggleBought(item)}
+          disabled={confirmDelete}
+          whileTap={{ scale: 0.82 }}
+          className={cn(
+            'absolute top-2.5 z-20 w-10 h-10 rounded-2xl flex items-center justify-center',
+            'shadow-lg transition-all duration-250 disabled:opacity-40',
+            isRTL ? 'left-3' : 'right-3',
+            bought
+              ? 'bg-emerald-500 shadow-emerald-400/50'
+              : 'bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-600'
+          )}
+          aria-label={bought ? t('card.markAsNotBought') : t('card.markAsBought')}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {bought ? (
+              <motion.div key="check"
+                initial={{ scale: 0, rotate: -30 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              >
+                <Check className="w-5 h-5 text-white" strokeWidth={3} />
+              </motion.div>
+            ) : (
+              <motion.span
+                key="dot"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className={cn('w-3.5 h-3.5 rounded-full', cat.dot, 'opacity-50')}
               />
-            </div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Price badge — bottom corner, overlaid on image */}
+        {price > 0 && (
+          <div className={cn(
+            'absolute bottom-2.5 z-20 px-3 py-1 rounded-xl',
+            'bg-black/55 backdrop-blur-sm',
+            'text-white text-sm font-extrabold tabular-nums',
+            isRTL ? 'left-3' : 'right-3',
+            bought && 'opacity-50 line-through'
+          )}>
+            {currency.format(price)}
+          </div>
+        )}
+      </div>
+
+      {/* ── Content area ── */}
+      <div className="px-4 pt-3 pb-3">
+
+        {/* Name */}
+        <h3 className={cn(
+          'text-[17px] font-extrabold leading-snug mb-2',
+          bought
+            ? 'line-through text-gray-400 dark:text-gray-500'
+            : 'text-gray-900 dark:text-white'
+        )}>
+          {item.name}
+        </h3>
+
+        {/* Category badge + notes */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <span className={cn(
+            'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full',
+            'text-[11px] font-bold border',
+            cat.color
+          )}>
+            <span className="text-sm leading-none">{cat.emoji}</span>
+            {t(`categories.${cat.key}`)}
+          </span>
+
+          {item.notes && (
+            <span className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug flex-1 min-w-0">
+              {item.notes}
+            </span>
           )}
         </div>
 
         {/* ── Action row ── */}
-        <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100/70 dark:border-gray-700/50">
+        <div className="flex items-center gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-700/50">
 
-          {/* Buy Now link */}
           {item.buy_url && (
             <a
               href={item.buy_url}
@@ -179,7 +229,6 @@ const ShoppingItemCard = ({ item, onEdit, onDelete, onToggleBought, isDeleting }
             </a>
           )}
 
-          {/* Spacer */}
           <div className="flex-1" />
 
           {/* Edit */}

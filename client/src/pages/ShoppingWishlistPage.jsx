@@ -249,7 +249,7 @@ const ShoppingWishlistPage = () => {
 
   const ALL_KEY = t('allCategories');
 
-  const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal } = useMemo(() => {
+  const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal, spentTotal } = useMemo(() => {
     // Apply tab filter first
     const tabItems = activeTab === null ? items
       : activeTab === 'mine'   ? items.filter((i) => i.user_id === currentUserId)
@@ -262,7 +262,8 @@ const ShoppingWishlistPage = () => {
     const u = filtered.filter((i) => !i.is_bought);
     const b = filtered.filter((i) => i.is_bought);
     const pending = u.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
-    return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending };
+    const spent = b.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
+    return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending, spentTotal: spent };
   }, [items, activeCategory, activeTab, currentUserId]);
 
   useEffect(() => {
@@ -332,10 +333,19 @@ const ShoppingWishlistPage = () => {
             </p>
           </div>
 
-          {items.length > 0 && pendingTotal > 0 && (
+          {items.length > 0 && (pendingTotal > 0 || spentTotal > 0) && (
             <motion.div key={pendingTotal} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm font-extrabold tabular-nums shadow-md shadow-blue-500/25">
-              {currency.format(pendingTotal)}
+              className="shrink-0 flex flex-col items-end gap-0.5">
+              {pendingTotal > 0 && (
+                <span className="px-3 py-1 rounded-xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm font-extrabold tabular-nums shadow-md shadow-blue-500/25">
+                  {currency.format(pendingTotal)}
+                </span>
+              )}
+              {spentTotal > 0 && (
+                <span className="text-[11px] font-bold tabular-nums text-emerald-500 dark:text-emerald-400 px-1">
+                  ✓ {currency.format(spentTotal)}
+                </span>
+              )}
             </motion.div>
           )}
 
@@ -526,6 +536,11 @@ const ShoppingWishlistPage = () => {
                 className="text-xl font-extrabold text-gray-900 dark:text-white tabular-nums">
                 {currency.format(pendingTotal)}
               </motion.span>
+              {spentTotal > 0 && (
+                <span className="text-xs text-emerald-500 dark:text-emerald-400 font-bold tabular-nums mt-0.5">
+                  ✓ {currency.format(spentTotal)} {t('spent')}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3">
               {bought.length > 0 && (

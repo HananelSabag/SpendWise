@@ -1,64 +1,12 @@
+/**
+ * 🛒 SHOPPING TRANSLATIONS - ENGLISH
+ */
+
 export default {
   title: "Shopping List",
-  manageList: "Manage your shared lists",
-  loading: "Loading shopping list...",
   itemsCount: "{{count}} items",
-  addItemAria: "Add item",
   allCategories: "All",
-
-  error: {
-    title: "Error loading list",
-  },
-
-  empty: {
-    title: "List is Empty",
-    description: "Add items you want to buy, with price and link — all in one place",
-    addFirst: "Add First Item",
-    filteredTitle: "No items in this category",
-    filteredDescription: "Try selecting a different category or remove the filter",
-  },
-
-  sheet: {
-    addTitle: "Add Item to List",
-    editTitle: "Edit Item",
-    saveChanges: "Save Changes",
-    addToList: "Add to List",
-  },
-
-  fields: {
-    name: {
-      label: "Product Name",
-      placeholder: "E.g.: Gaming chair, Blender...",
-    },
-    category: {
-      label: "Category",
-    },
-    price: {
-      label: "Estimated Price ₪",
-    },
-    url: {
-      label: "Purchase Link (optional)",
-    },
-    notes: {
-      label: "Notes (optional)",
-      placeholder: "Color, size, specs...",
-    },
-  },
-
-  validation: {
-    nameRequired: "Product name is required",
-    urlInvalid: "Link must start with https://",
-  },
-
-  scrape: {
-    fetching: "Fetching product info...",
-    success: "Product info loaded",
-    failed: "Couldn't load info — fill in manually",
-    failedBlocked: "Site blocks auto-loading — fill in manually",
-    failedTimeout: "Request timed out — fill in manually",
-    failedNoData: "No product info found — fill in manually",
-    imageFound: "Product image found",
-  },
+  addItemAria: "Add item",
 
   tabs: {
     personal: "My List",
@@ -66,25 +14,38 @@ export default {
   },
 
   categories: {
+    electronics: "Electronics",
     furniture: "Furniture",
     kitchen: "Kitchen",
-    bedroom: "Bedroom",
-    electronics: "Electronics",
-    clothing: "Clothing",
+    fashion: "Fashion",
+    sports: "Sports",
     other: "Other",
   },
 
+  empty: {
+    title: "List is empty",
+    description: "Start adding items to your shopping list",
+    addFirst: "Add first item",
+    filteredTitle: "No items match this filter",
+    filteredDescription: "Try changing the filter",
+  },
+
+  error: {
+    title: "Failed to load shopping list",
+  },
+
   card: {
-    markAsBought: "Mark as purchased",
-    markAsNotBought: "Mark as not purchased",
+    markAsBought: "Mark as bought",
+    markAsNotBought: "Mark as not bought",
+    buyNow: "Buy Now",
     editAria: "Edit item",
     deleteAria: "Delete item",
-    confirmDelete: "Delete?",
-    buyNow: "Buy Now",
+    confirmDelete: "Delete!",
   },
 
   boughtSection: "Purchased ({{count}})",
   totalPending: "Total to Buy",
+  spent: "spent",
   pendingItems: "{{count}} items pending",
   boughtItems: "{{count}} purchased",
 
@@ -99,50 +60,19 @@ export default {
   },
 
   sharingBanner: {
-    youLead: "You manage",
+    youLead: "You lead",
     managedBy: "Managed by {{name}}",
-    andMore: "+{{count}} more",
     tapToManage: "Tap to manage",
   },
 
   inviteBanner: {
     invited: "{{name}} invited you to a shared list",
-    moreInvitations: "+{{count}} more invitations",
+    moreInvitations: "and {{count}} more invitations",
     tapToView: "Tap to view",
   },
 
   share: {
     button: "Share List",
-    title: "Share Shopping List",
-    description: "Enter the email of the person you'd like to share with",
-    emailLabel: "Email Address",
-    emailPlaceholder: "friend@example.com",
-    emailRequired: "Email required",
-    emailInvalid: "Invalid email",
-    send: "Send Invitation",
-    sending: "Sending...",
-    successMessage: "If this email is registered, an invitation has been sent",
-    pendingLabel: "Pending Invitations",
-    receivedLabel: "Invitations Received",
-    invitedYou: "Invited you to a shopping list",
-    accept: "Accept",
-    decline: "Decline",
-    membersLabel: "Shared With",
-    memberBadge: "Member",
-    sharedWithMeLabel: "Shared With Me",
-    remove: "Remove",
-    leave: "Leave Shared List",
-    ownerBadge: "Owner",
-    sharedBadge: "Shared",
-    awaitingResponse: "Awaiting response",
-    emptyTitle: "You haven't shared the list yet",
-    emptyDescription: "Invite friends to join and share your list",
-    leaderBadge: "Leader",
-    disbandTitle: "Disband Sharing",
-    disbandConfirm: "This will remove all members. They will lose access to your shared items.",
-    disbandButton: "Yes, disband",
-    leaveConfirm: "Are you sure you want to leave this shared list?",
-    leaveButton: "Yes, leave",
-    cancel: "Cancel",
+    title: "Share List",
   },
 };
