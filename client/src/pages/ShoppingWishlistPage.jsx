@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Plus, Package,
-  CheckCircle2, UserPlus, Users, Crown, SlidersHorizontal, ChevronDown,
+  CheckCircle2, UserPlus, SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 import { cn, currency } from '../utils/helpers';
 import { useShoppingItems } from '../hooks/useShoppingItems';
@@ -19,124 +19,6 @@ import ShoppingShareSheet from '../components/features/shopping/ShoppingShareShe
 import { PageSkeleton } from '../components/ui';
 import { useTranslation } from '../stores';
 import { useAuth } from '../hooks/useAuth';
-
-// ─── Greeting bar (shown only in shopping-home mode) ─────────────────────────
-
-const getGreeting = (isRTL) => {
-  const h = new Date().getHours();
-  if (isRTL) {
-    if (h >= 5  && h < 12) return 'בוקר טוב';
-    if (h >= 12 && h < 17) return 'צהריים טובים';
-    if (h >= 17 && h < 21) return 'ערב טוב';
-    return 'לילה טוב';
-  }
-  if (h >= 5  && h < 12) return 'Good morning';
-  if (h >= 12 && h < 17) return 'Good afternoon';
-  if (h >= 17 && h < 21) return 'Good evening';
-  return 'Good night';
-};
-
-const getDateStr = (isRTL) => {
-  const locale = isRTL ? 'he-IL' : 'en-US';
-  return new Date().toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'long' });
-};
-
-const ShoppingGreetingBar = ({ user, isRTL }) => {
-  const firstName = user?.firstName || user?.first_name || user?.username || '';
-  const pic = user?.profilePicture || user?.profile_picture_url || user?.avatar;
-  const initials = firstName?.[0]?.toUpperCase() || '?';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="px-4 pt-4 pb-3 flex items-center gap-3"
-    >
-      {/* Avatar */}
-      <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden ring-2 ring-purple-200 dark:ring-purple-800 shadow-sm">
-        {pic
-          ? <img src={pic} alt={firstName} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold">{initials}</div>
-        }
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-          {getGreeting(isRTL)}{firstName ? `, ${firstName}` : ''}!
-        </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{getDateStr(isRTL)}</p>
-      </div>
-
-      {/* Decorative dot */}
-      <div className="shrink-0 w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-pink-500" />
-    </motion.div>
-  );
-};
-
-const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-purple-500', 'bg-emerald-500',
-  'bg-orange-500', 'bg-pink-500', 'bg-indigo-500',
-];
-
-const getInitial = (m) => {
-  const name = m.first_name || m.username || m.email || '?';
-  return name[0].toUpperCase();
-};
-
-const getShortName = (m) => {
-  if (m.first_name) return m.first_name;
-  const email = m.username || m.email || '';
-  return email.split('@')[0];
-};
-
-// ── Sharing banner ─────────────────────────────────────────
-const SharingBanner = ({ myMembers, sharedWithMe, onOpen }) => {
-  const { t } = useTranslation('shopping');
-  if (!myMembers.length && !sharedWithMe.length) return null;
-
-  const isLeader     = myMembers.length > 0;
-  const ownerName    = sharedWithMe[0]
-    ? (sharedWithMe[0].first_name || sharedWithMe[0].username || sharedWithMe[0].email?.split('@')[0])
-    : null;
-  const visibleMembers = (isLeader ? myMembers : sharedWithMe).slice(0, 3);
-  const extra          = (isLeader ? myMembers : sharedWithMe).length - 3;
-
-  return (
-    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="px-4 pb-2">
-      <button onClick={onOpen} className={cn(
-        'w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl',
-        'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40',
-        'hover:bg-blue-100/70 dark:hover:bg-blue-900/30 transition-colors duration-150',
-      )}>
-        <div className={cn(
-          'flex items-center gap-1 px-2 py-0.5 rounded-full shrink-0 text-[10px] font-bold',
-          isLeader
-            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-            : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
-        )}>
-          {isLeader
-            ? <><Crown className="w-2.5 h-2.5" /> {t('sharingBanner.youLead')}</>
-            : <><Users className="w-2.5 h-2.5" /> {t('sharingBanner.managedBy', { name: ownerName })}</>}
-        </div>
-        <div className="flex items-center">
-          {visibleMembers.map((m, i) => (
-            <div key={m.id ?? i} title={getShortName(m)} className={cn(
-              'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold border-2 border-white dark:border-gray-900',
-              AVATAR_COLORS[i % AVATAR_COLORS.length], i > 0 && '-ms-1.5'
-            )}>
-              {getInitial(m)}
-            </div>
-          ))}
-          {extra > 0 && <span className="text-[10px] font-bold text-gray-400 ms-1.5">+{extra}</span>}
-        </div>
-        <span className="flex-1 text-[11px] text-blue-400 dark:text-blue-500 font-medium text-end">
-          {t('sharingBanner.tapToManage')}
-        </span>
-      </button>
-    </motion.div>
-  );
-};
 
 // ── Empty state ────────────────────────────────────────────
 const EmptyState = ({ onAdd, filtered, t }) => (
@@ -218,7 +100,6 @@ const ShoppingWishlistPage = () => {
   const { t, isRTL } = useTranslation('shopping');
   const { t: tc } = useTranslation('common');
 
-
   const {
     items, isLoading, isError, refetch,
     createItem, updateItem, deleteItem, toggleBought,
@@ -226,17 +107,17 @@ const ShoppingWishlistPage = () => {
   } = useShoppingItems();
 
   const { myMembers, sharedWithMe, pendingInvitations, respond } = useShoppingShare();
-  const { notifications, unreadCount, markAllRead } = useNotifications();
+  const { notifications, markAllRead } = useNotifications();
 
   const { user } = useAuth();
   const currentUserId = user?.id;
 
   const [activeCategory, setActiveCategory] = useState(null);
-  const [activeTab,     setActiveTab]     = useState(null); // null = all | 'mine' | 'shared'
-  const [filtersOpen,  setFiltersOpen]  = useState(false);
-  const [sheetOpen,   setSheetOpen]   = useState(false);
-  const [shareOpen,   setShareOpen]   = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  const [activeTab,      setActiveTab]      = useState(null); // null = all | 'mine' | 'shared'
+  const [filtersOpen,    setFiltersOpen]    = useState(false);
+  const [sheetOpen,      setSheetOpen]      = useState(false);
+  const [shareOpen,      setShareOpen]      = useState(false);
+  const [editingItem,    setEditingItem]    = useState(null);
 
   useEffect(() => {
     const token = searchParams.get('invite');
@@ -250,7 +131,6 @@ const ShoppingWishlistPage = () => {
   const ALL_KEY = t('allCategories');
 
   const { categoryTabs, categoryCounts, filteredItems, unbought, bought, pendingTotal, spentTotal } = useMemo(() => {
-    // Apply tab filter first
     const tabItems = activeTab === null ? items
       : activeTab === 'mine'   ? items.filter((i) => i.user_id === currentUserId)
       :                          items.filter((i) => i.user_id !== currentUserId);
@@ -262,7 +142,7 @@ const ShoppingWishlistPage = () => {
     const u = filtered.filter((i) => !i.is_bought);
     const b = filtered.filter((i) => i.is_bought);
     const pending = u.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
-    const spent = b.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
+    const spent   = b.reduce((s, i) => s + parseFloat(i.price_ils || 0), 0);
     return { categoryTabs: tabs, categoryCounts: counts, filteredItems: filtered, unbought: u, bought: b, pendingTotal: pending, spentTotal: spent };
   }, [items, activeCategory, activeTab, currentUserId]);
 
@@ -308,46 +188,26 @@ const ShoppingWishlistPage = () => {
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex flex-col">
 
-      {/* ── Header ── */}
-      <div className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
-
-        {/* Greeting — only in shopping-home mode
-            Also check sessionStorage so the bar shows immediately after
-            HomePickerScreen picks "shopping" (before updateProfile resolves). */}
-        {(() => {
-          const sessionMode = (() => { try { return sessionStorage.getItem('sw_app_mode'); } catch { return null; } })();
-          const isShoppingHome =
-            user?.preferences?.default_home === 'shopping' ||
-            user?.preferences?.shopping_list_as_default_page === true ||
-            sessionMode === 'shopping';
-          return isShoppingHome ? <ShoppingGreetingBar user={user} isRTL={isRTL} /> : null;
-        })()}
+      {/* ── Header (non-sticky) ── */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
 
         {/* Title row */}
-        <div className="flex items-center gap-3 px-4 pt-2 pb-2">
-
+        <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight">{t('title')}</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {t('itemsCount', { count: items.length })}
+            <h1 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">{t('title')}</h1>
+            <p className="text-xs font-medium mt-0.5 flex items-center gap-2 flex-wrap">
+              {pendingTotal > 0 && (
+                <span className="text-blue-600 dark:text-blue-400 tabular-nums">{currency.format(pendingTotal)}</span>
+              )}
+              {pendingTotal > 0 && spentTotal > 0 && <span className="text-gray-300 dark:text-gray-600">·</span>}
+              {spentTotal > 0 && (
+                <span className="text-emerald-500 dark:text-emerald-400 tabular-nums">✓ {currency.format(spentTotal)}</span>
+              )}
+              {pendingTotal === 0 && spentTotal === 0 && (
+                <span className="text-gray-400 dark:text-gray-500">{t('itemsCount', { count: items.length })}</span>
+              )}
             </p>
           </div>
-
-          {items.length > 0 && (pendingTotal > 0 || spentTotal > 0) && (
-            <motion.div key={pendingTotal} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="shrink-0 flex flex-col items-end gap-0.5">
-              {pendingTotal > 0 && (
-                <span className="px-3 py-1 rounded-xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm font-extrabold tabular-nums shadow-md shadow-blue-500/25">
-                  {currency.format(pendingTotal)}
-                </span>
-              )}
-              {spentTotal > 0 && (
-                <span className="text-[11px] font-bold tabular-nums text-emerald-500 dark:text-emerald-400 px-1">
-                  ✓ {currency.format(spentTotal)}
-                </span>
-              )}
-            </motion.div>
-          )}
 
           <motion.button whileTap={{ scale: 0.92 }} onClick={openShare}
             className="relative w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-colors"
@@ -360,16 +220,9 @@ const ShoppingWishlistPage = () => {
               </span>
             )}
           </motion.button>
-
-          <motion.button whileTap={{ scale: 0.92 }} onClick={handleAdd}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/30 hover:shadow-lg transition-shadow"
-            aria-label={t('addItemAria')}
-          >
-            <Plus className="w-5 h-5" strokeWidth={2.5} />
-          </motion.button>
         </div>
 
-        {/* Collapsible filters: sharing banner + tab switcher + categories */}
+        {/* Collapsible filters: tab switcher + categories */}
         {(hasSharingMembers || (items.length > 0 && categoryTabs.length > 1)) && (
           <div className="border-t border-gray-100 dark:border-gray-800">
             {/* Toggle bar */}
@@ -377,17 +230,20 @@ const ShoppingWishlistPage = () => {
               onClick={() => setFiltersOpen(v => !v)}
               className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
-              <span>
-                {(() => {
-                  const parts = [];
-                  if (activeTab === 'mine')   parts.push(t('tabs.personal'));
-                  if (activeTab === 'shared') parts.push(t('tabs.shared'));
-                  if (activeCategory !== null) {
-                    const catObj = CATEGORIES.find(c => c.value === activeCategory);
-                    if (catObj) parts.push(`${catObj.emoji} ${t(`categories.${catObj.key}`)}`);
-                  }
-                  return parts.length ? parts.join(' · ') : t('allCategories');
-                })()}
+              <span className="flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>
+                  {(() => {
+                    const parts = [];
+                    if (activeTab === 'mine')   parts.push(t('tabs.personal'));
+                    if (activeTab === 'shared') parts.push(t('tabs.shared'));
+                    if (activeCategory !== null) {
+                      const catObj = CATEGORIES.find(c => c.value === activeCategory);
+                      if (catObj) parts.push(`${catObj.emoji} ${t(`categories.${catObj.key}`)}`);
+                    }
+                    return parts.length ? parts.join(' · ') : t('allCategories');
+                  })()}
+                </span>
               </span>
               <motion.span animate={{ rotate: filtersOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown className="w-4 h-4" />
@@ -405,42 +261,44 @@ const ShoppingWishlistPage = () => {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  {/* Sharing banner */}
-                  {hasSharingMembers && (
-                    <SharingBanner myMembers={myMembers} sharedWithMe={sharedWithMe} onOpen={openShare} />
-                  )}
-
                   {/* Personal / Shared tab switcher */}
                   {hasSharingMembers && (
-                    <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto scrollbar-none">
-                      {[
-                        { key: null,     label: t('allCategories') },
-                        { key: 'mine',   label: t('tabs.personal') },
-                        { key: 'shared', label: t('tabs.shared') },
-                      ].map(({ key, label }) => {
-                        const active = activeTab === key;
-                        return (
-                          <motion.button
-                            key={String(key)}
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => { setActiveTab(key); setActiveCategory(null); }}
-                            className={cn(
-                              'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-150',
-                              active
-                                ? 'bg-blue-600 text-white border-transparent shadow-sm shadow-blue-500/30'
-                                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300'
-                            )}
-                          >
-                            {label}
-                          </motion.button>
-                        );
-                      })}
+                    <div className="px-4 pt-1 pb-2">
+                      <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+                        {[
+                          { key: null,     label: t('allCategories') },
+                          { key: 'mine',   label: t('tabs.personal') },
+                          { key: 'shared', label: t('tabs.shared') },
+                        ].map(({ key, label }) => {
+                          const active = activeTab === key;
+                          return (
+                            <motion.button
+                              key={String(key)}
+                              whileTap={{ scale: 0.94 }}
+                              onClick={() => { setActiveTab(key); setActiveCategory(null); }}
+                              className={cn(
+                                'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-150',
+                                active
+                                  ? 'bg-blue-600 text-white border-transparent shadow-sm shadow-blue-500/30'
+                                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                              )}
+                            >
+                              {label}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
                     </div>
+                  )}
+
+                  {/* Separator between tab switcher and category chips */}
+                  {hasSharingMembers && items.length > 0 && categoryTabs.length > 1 && (
+                    <div className="mx-4 border-t border-gray-100 dark:border-gray-700/50" />
                   )}
 
                   {/* Category chips */}
                   {items.length > 0 && categoryTabs.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+                    <div className="flex gap-2 overflow-x-auto px-4 py-2.5 scrollbar-none">
                       {categoryTabs.map((cat) => {
                         const active  = activeCategory === cat;
                         const catObj  = cat !== null ? CATEGORIES.find((c) => c.value === cat) : null;
@@ -555,6 +413,25 @@ const ShoppingWishlistPage = () => {
           </div>
         </motion.div>
       )}
+
+      {/* ── FAB — Add item ── */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25, delay: 0.15 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={handleAdd}
+        className={cn(
+          'fixed bottom-32 z-40',
+          isRTL ? 'left-4' : 'right-4',
+          'w-14 h-14 rounded-2xl flex items-center justify-center',
+          'bg-gradient-to-br from-blue-600 to-indigo-600 text-white',
+          'shadow-xl shadow-blue-500/40 hover:shadow-2xl hover:shadow-blue-500/50 transition-shadow'
+        )}
+        aria-label={t('addItemAria')}
+      >
+        <Plus className="w-6 h-6" strokeWidth={2.5} />
+      </motion.button>
 
       <ShoppingBottomSheet isOpen={sheetOpen} onClose={handleClose}
         onSave={handleSave} editItem={editingItem} isSaving={isCreating || isUpdating} />

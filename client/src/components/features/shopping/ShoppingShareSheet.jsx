@@ -43,7 +43,7 @@ const SectionHeader = ({ icon: Icon, label, count, color = 'text-gray-500' }) =>
     </div>
     <span className={cn('text-xs font-bold uppercase tracking-wider', color)}>{label}</span>
     {count > 0 && (
-      <span className="ml-1 text-xs font-extrabold bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+      <span className="ms-1 text-xs font-extrabold bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
         {count}
       </span>
     )}
@@ -51,7 +51,7 @@ const SectionHeader = ({ icon: Icon, label, count, color = 'text-gray-500' }) =>
 );
 
 // Inline confirm dialog
-const ConfirmBanner = ({ message, confirmLabel, onConfirm, onCancel, isLoading, danger = true }) => (
+const ConfirmBanner = ({ message, confirmLabel, cancelLabel, onConfirm, onCancel, isLoading, danger = true }) => (
   <motion.div
     initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
     className={cn(
@@ -70,7 +70,7 @@ const ConfirmBanner = ({ message, confirmLabel, onConfirm, onCancel, isLoading, 
     <div className="flex gap-2 justify-end">
       <button onClick={onCancel}
         className="h-8 px-4 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-colors">
-        Cancel
+        {cancelLabel}
       </button>
       <button onClick={onConfirm} disabled={isLoading}
         className={cn(
@@ -272,6 +272,7 @@ const ShoppingShareSheet = ({ isOpen, onClose }) => {
                 <ConfirmBanner
                   message={t('share.disbandConfirm')}
                   confirmLabel={t('share.disbandButton')}
+                  cancelLabel={t('share.cancel')}
                   onConfirm={handleDisband}
                   onCancel={() => setConfirmDisband(false)}
                   isLoading={isDisbanding}
