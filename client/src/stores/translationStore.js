@@ -281,7 +281,7 @@ export const useTranslationStore = create(
               // Admin screens
               'status', 'roles', 'users', 'table',
               // New modules
-              'analytics', 'balance', 'bulk', 'buttons', 'account', 'activity',
+              'analytics', 'balance', 'bankSync', 'bulk', 'buttons', 'account', 'activity',
               'completion', 'confirmations', 'dashboardPage', 'datePicker', 'delete',
               'dialogs', 'export', 'features', 'fields', 'form', 'frequencies',
               'grid', 'groups', 'health', 'iconSelector', 'labels', 'list',

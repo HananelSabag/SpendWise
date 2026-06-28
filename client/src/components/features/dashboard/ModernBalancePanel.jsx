@@ -1,39 +1,42 @@
 /**
  * ModernBalancePanel — Bank Sync Edition
  *
- * Shows data ONLY from the bank scraper (bank_accounts + transactions with bank_source).
- * No period tabs, no manual-entry logic, no useBalance hook.
+ * Shows ONLY data from /bank-sync/stats (bank_accounts + synced transactions).
+ * No period tabs, no useBalance hook, no manual-entry logic.
  *
- * Hero number:
- *   - If the bank exposes balance (bank_accounts.balance != null) → show real balance
- *   - If not (e.g. Yahav doesn't expose it via library) → show net of synced transactions
+ * Hero:
+ *   - Real account balance (bank_accounts.balance) when the bank exposes it
+ *   - "Not available" when the bank doesn't (e.g. Yahav via israeli-bank-scrapers)
  *
- * Income / expense totals come from the /bank-sync/stats endpoint (all synced txns, not period-filtered).
+ * Income / expense totals come from ALL synced transactions in the DB,
+ * NOT a period-filtered calculation. Net activity is shown separately,
+ * clearly labeled — it is NOT the account balance.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Building2, TrendingUp, TrendingDown, RefreshCw, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { useCurrency } from '../../../stores';
+import { useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import apiClient from '../../../api/client';
 
-const SOURCE_LABEL = { yahav: 'יהב', isracard: 'ישראכרט', max: 'מקס', discount: 'דיסקונט' };
+const SOURCE_LABEL = { yahav: 'Yahav', isracard: 'Isracard', max: 'Max', discount: 'Discount' };
 
-function relativeTime(dateStr) {
+// ── Relative time (uses translation keys) ────────────────────────────────────
+function relativeTime(dateStr, t) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60_000);
   const h = Math.floor(diff / 3_600_000);
   const d = Math.floor(diff / 86_400_000);
-  if (m < 2)  return 'כרגע';
-  if (m < 60) return `לפני ${m} דק'`;
-  if (h < 24) return `לפני ${h} שע'`;
-  return `לפני ${d} ימ'`;
+  if (m < 2)  return t('justNow');
+  if (m < 60) return t('minutesAgo', { n: m });
+  if (h < 24) return t('hoursAgo',   { n: h });
+  return t('daysAgo', { n: d });
 }
 
-// ── Animated count-up number ──────────────────────────────────────────────────
+// ── Animated count-up ────────────────────────────────────────────────────────
 const AnimatedNumber = ({ value, format }) => {
   const [display, setDisplay] = useState(value);
   const prev = useRef(value);
@@ -66,6 +69,7 @@ const SkeletonBox = ({ className }) => (
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
+  const { t } = useTranslation('bankSync');
 
   const { data: sources, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['bankSyncStats'],
@@ -74,40 +78,42 @@ const ModernBalancePanel = ({ className = '' }) => {
     retry: false,
   });
 
-  // ── Aggregates ──────────────────────────────────────────────────────────────
+  // ── Aggregates across all synced sources ────────────────────────────────────
   const hasSynced    = sources && sources.length > 0;
   const totalIncome  = (sources || []).reduce((s, src) => s + Number(src.total_income  || 0), 0);
   const totalExpense = (sources || []).reduce((s, src) => s + Number(src.total_expense || 0), 0);
-  const netTxns      = totalIncome - totalExpense;
+  const netActivity  = totalIncome - totalExpense;       // can be negative — labeled correctly
   const totalTxns    = (sources || []).reduce((s, src) => s + (src.total || 0), 0);
 
-  // Latest sync timestamp across all sources
+  // Latest sync timestamp
   const lastSync = (sources || []).reduce((latest, src) => {
     const d = src.last_sync ? new Date(src.last_sync) : null;
     return !latest || (d && d > latest) ? d : latest;
   }, null);
 
-  // Accounts that expose a real balance (not null)
+  // Accounts that expose a REAL balance (not null)
   const accountsWithBalance = (sources || []).flatMap(src =>
     (src.accounts || [])
       .filter(a => a.balance !== null && a.balance !== undefined)
       .map(a => ({ ...a, source: src.source }))
   );
-  const hasRealBalance  = accountsWithBalance.length > 0;
+  const hasRealBalance   = accountsWithBalance.length > 0;
   const totalRealBalance = accountsWithBalance.reduce((s, a) => s + Number(a.balance || 0), 0);
 
-  // Hero value and label
-  const heroValue    = hasRealBalance ? totalRealBalance : Math.abs(netTxns);
-  const isPositive   = hasRealBalance ? totalRealBalance >= 0 : netTxns >= 0;
-  const heroLabel    = hasRealBalance ? 'יתרת חשבון בפועל' : 'נטו תנועות מסונכרנות';
+  // Header gradient: green if net positive, red if net negative, gray if no sync
+  const gradientClass = !hasSynced
+    ? 'bg-gradient-to-br from-gray-600 to-gray-700'
+    : netActivity >= 0
+      ? 'bg-gradient-to-br from-emerald-600 to-teal-700'
+      : 'bg-gradient-to-br from-rose-600 to-red-700';
 
-  // ── Loading skeleton ────────────────────────────────────────────────────────
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-5">
           <SkeletonBox className="h-3 w-24 mb-4" />
-          <SkeletonBox className="h-10 w-40 mb-2" />
+          <SkeletonBox className="h-5 w-40 mb-2" />
           <SkeletonBox className="h-3 w-48 mb-5" />
           <div className="flex gap-2">
             <SkeletonBox className="h-6 w-16 rounded-full" />
@@ -121,89 +127,93 @@ const ModernBalancePanel = ({ className = '' }) => {
     );
   }
 
-  // ── Not synced yet ──────────────────────────────────────────────────────────
+  // ── Not synced ───────────────────────────────────────────────────────────────
   if (!hasSynced) {
     return (
       <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
         <div className="bg-gradient-to-br from-gray-600 to-gray-700 p-5 text-white">
           <div className="flex items-center gap-2 mb-4 opacity-80">
             <Building2 className="w-4 h-4" />
-            <span className="text-sm font-semibold">סנכרון בנק</span>
+            <span className="text-sm font-semibold">{t('title')}</span>
           </div>
-          <p className="text-3xl font-bold tracking-tight opacity-40">—</p>
-          <p className="text-xs opacity-60 mt-2">לא מסונכרן עדיין</p>
+          <p className="text-2xl font-bold tracking-tight opacity-40">—</p>
+          <p className="text-xs opacity-60 mt-1">{t('notSynced')}</p>
         </div>
         <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800">
-          הרץ את <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">bank-scraper</code> כדי למשוך נתונים
+          {t('runScraper')}
         </div>
       </div>
     );
   }
 
-  // ── Synced — main view ──────────────────────────────────────────────────────
+  const timeLabel = relativeTime(lastSync, t);
+
   return (
     <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
 
-      {/* ── Gradient header ──────────────────────────────────────────── */}
-      <div className={cn(
-        'p-5 text-white transition-colors duration-500',
-        isPositive
-          ? 'bg-gradient-to-br from-emerald-600 to-teal-700'
-          : 'bg-gradient-to-br from-rose-600 to-red-700',
-      )}>
+      {/* ── Gradient header ─────────────────────────────────────────── */}
+      <div className={cn('p-5 text-white transition-colors duration-500', gradientClass)}>
 
-        {/* Top row: title + last sync + refresh */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Top row */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 opacity-90">
             <Building2 className="w-4 h-4" />
-            <span className="text-sm font-semibold">סנכרון בנק</span>
+            <span className="text-sm font-semibold">{t('title')}</span>
           </div>
           <div className="flex items-center gap-2">
-            {lastSync && (
-              <span className="text-[11px] opacity-60">{relativeTime(lastSync)}</span>
+            {timeLabel && (
+              <span className="text-[11px] opacity-60">
+                {t('updatedAt', { time: timeLabel })}
+              </span>
             )}
             <button
               onClick={() => refetch()}
               disabled={isFetching}
               className="opacity-60 hover:opacity-100 transition-opacity"
-              title="רענן נתוני בנק"
+              title={t('refresh')}
             >
               <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
             </button>
           </div>
         </div>
 
-        {/* Hero label */}
-        <p className="text-[11px] opacity-70 mb-1 font-medium tracking-wide uppercase">
-          {heroLabel}
+        {/* Account balance row */}
+        <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
+          {t('accountBalance')}
         </p>
 
-        {/* Hero number */}
-        <motion.div
-          key={heroValue}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="text-4xl font-bold tracking-tight"
-        >
-          <AnimatedNumber value={heroValue} format={v => formatCurrency(v)} />
-        </motion.div>
-
-        {/* Sub-label: account info or note */}
         {hasRealBalance ? (
-          <div className="mt-1 space-y-0.5">
+          /* Bank exposes real balance — show it */
+          <motion.div
+            key={totalRealBalance}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="text-4xl font-bold tracking-tight"
+          >
+            <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
+          </motion.div>
+        ) : (
+          /* Bank doesn't expose balance (e.g. Yahav) */
+          <div>
+            <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
+            <p className="text-[11px] opacity-50 mt-0.5">
+              {t('unavailableNote', { bank: SOURCE_LABEL[sources[0]?.source] || sources[0]?.source })}
+            </p>
+          </div>
+        )}
+
+        {/* Per-account rows for multiple accounts with balance */}
+        {hasRealBalance && accountsWithBalance.length > 1 && (
+          <div className="mt-2 space-y-0.5">
             {accountsWithBalance.map((a, i) => (
               <p key={i} className="text-[11px] opacity-60">
                 {SOURCE_LABEL[a.source] || a.source}
                 {a.account_number ? ` · ${a.account_number}` : ''}
+                {' · '}{formatCurrency(Number(a.balance))}
               </p>
             ))}
           </div>
-        ) : (
-          <p className="text-[11px] opacity-60 mt-1">
-            {totalTxns} תנועות מסונכרנות ·
-            {' '}יתרת חשבון לא זמינה ב{SOURCE_LABEL[sources[0]?.source] || 'בנק'}
-          </p>
         )}
 
         {/* Source chips */}
@@ -215,22 +225,25 @@ const ModernBalancePanel = ({ className = '' }) => {
             >
               <Wifi className="w-2.5 h-2.5" />
               {SOURCE_LABEL[src.source] || src.source}
-              <span className="opacity-60">· {src.total}</span>
+              <span className="opacity-60">
+                · {t('transactions', { count: src.total })}
+              </span>
             </span>
           ))}
         </div>
       </div>
 
-      {/* ── Income / Expense totals from bank transactions ────────────── */}
+      {/* ── Income / Expense from synced transactions ────────────────── */}
       <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 rtl:divide-x-reverse">
 
-        {/* Income */}
         <div className="p-4 space-y-1.5">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">הכנסות</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {t('income')}
+            </span>
           </div>
           <p className="text-lg font-bold text-gray-900 dark:text-white">
             <AnimatedNumber value={totalIncome} format={v => formatCurrency(v)} />
@@ -240,13 +253,14 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         </div>
 
-        {/* Expenses */}
         <div className="p-4 space-y-1.5">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
               <TrendingDown className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">הוצאות</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {t('expenses')}
+            </span>
           </div>
           <p className="text-lg font-bold text-gray-900 dark:text-white">
             <AnimatedNumber value={totalExpense} format={v => formatCurrency(v)} />
@@ -255,38 +269,36 @@ const ModernBalancePanel = ({ className = '' }) => {
             <motion.div
               className="h-full bg-red-500 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: totalIncome > 0 ? `${Math.min((totalExpense / totalIncome) * 100, 100)}%` : '0%' }}
+              animate={{
+                width: totalIncome > 0
+                  ? `${Math.min((totalExpense / totalIncome) * 100, 100)}%`
+                  : '0%',
+              }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Per-account real balances (if exposed) ────────────────────── */}
-      {hasRealBalance && accountsWithBalance.length > 1 && (
-        <div className="bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-1.5">
-          {accountsWithBalance.map((a, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium">
-                  {SOURCE_LABEL[a.source] || a.source}
-                </span>
-                {a.account_number && (
-                  <span className="text-[10px] text-gray-400">{a.account_number}</span>
-                )}
-              </div>
-              <span className="text-sm font-bold text-gray-900 dark:text-white">
-                {formatCurrency(Number(a.balance))}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ── Net activity row ─────────────────────────────────────────── */}
+      <div className="bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-700 px-4 py-2.5 flex items-center justify-between">
+        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          {t('netActivity')}
+        </span>
+        <span className={cn(
+          'text-sm font-bold',
+          netActivity >= 0
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : 'text-red-600 dark:text-red-400',
+        )}>
+          {netActivity >= 0 ? '+' : '−'}{formatCurrency(Math.abs(netActivity))}
+        </span>
+      </div>
 
-      {/* ── Footer: sync cadence ──────────────────────────────────────── */}
+      {/* ── Footer ───────────────────────────────────────────────────── */}
       <div className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-100 dark:border-gray-700 px-4 py-2 text-center">
         <span className="text-[10px] text-gray-400 dark:text-gray-500">
-          מסונכרן מ-bank-scraper · מתעדכן 3× ביום
+          {t('syncedDaily')}
         </span>
       </div>
     </div>

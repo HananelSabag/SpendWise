@@ -207,7 +207,7 @@ const FullNav = () => {
     },
     {
       key: 'bank-sync',
-      label: 'סנכרון בנק',
+      label: t('bankSync.title') || 'Bank Sync',
       icon: Building2,
       gradient: 'from-emerald-500 to-teal-600',
       action: () => closeAndGo('/bank-sync'),
