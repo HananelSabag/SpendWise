@@ -181,7 +181,7 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
     // SpendWise calculated balance). Used by the balance panel to show
     // "יתרת חשבון בנק בפועל" separately from the SpendWise budget tracking.
     for (const account of accounts) {
-      if (typeof account.balance === 'number') {
+      if (account.balance !== null && account.balance !== undefined && typeof account.balance === 'number') {
         await client.query(
           `INSERT INTO bank_accounts
              (user_id, bank_source, account_number, account_type, balance, last_synced_at)

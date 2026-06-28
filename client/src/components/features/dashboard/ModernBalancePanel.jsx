@@ -25,14 +25,28 @@ const BankBalanceStrip = ({ formatCurrency }) => {
     retry: false,
   });
 
-  // Flatten all accounts from all sources that have a real balance stored
+  // Flatten accounts that have a REAL balance from the bank (null = bank doesn't expose it)
   const accounts = (data || []).flatMap(src =>
     (src.accounts || [])
-      .filter(a => a.balance != null)
-      .map(a => ({ ...a, source: src.source, last_sync: src.last_sync }))
+      .filter(a => a.balance !== null && a.balance !== undefined)
+      .map(a => ({ ...a, source: src.source }))
   );
 
-  if (isLoading || accounts.length === 0) return null;
+  // Show sources even if no balance data, to indicate sync is active
+  const hasSynced = (data || []).length > 0;
+  if (isLoading || !hasSynced) return null;
+
+  // If no accounts have balance (e.g. Yahav doesn't expose it), show a minimal indicator
+  if (accounts.length === 0) {
+    return (
+      <div className="bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-700 px-4 py-2.5 flex items-center gap-2">
+        <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+          בנק מסונכרן · יתרת חשבון לא זמינה דרך הספרייה
+        </span>
+      </div>
+    );
+  }
 
   const totalBalance = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
 

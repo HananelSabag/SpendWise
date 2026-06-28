@@ -135,18 +135,24 @@ function BankCard({ stat, enabled, onToggle }) {
         </div>
       </div>
 
-      {/* Real bank account balances */}
-      {stat.accounts && stat.accounts.length > 0 && stat.accounts.some(a => a.balance != null) && (
-        <div className="mt-3 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 px-3 py-2.5">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">יתרת חשבון בפועל</p>
-          {stat.accounts.filter(a => a.balance != null).map((a, i) => (
-            <div key={i} className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 dark:text-gray-400 text-xs">{a.account_number || 'חשבון ראשי'}</span>
-              <span className="font-bold text-gray-900 dark:text-white">{formatAmount(a.balance)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Real bank account balances (only if bank exposes them) */}
+      <div className="mt-3 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 px-3 py-2.5">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">יתרת חשבון בפועל</p>
+        {stat.accounts && stat.accounts.some(a => a.balance !== null && a.balance !== undefined) ? (
+          stat.accounts
+            .filter(a => a.balance !== null && a.balance !== undefined)
+            .map((a, i) => (
+              <div key={i} className="flex justify-between items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400 text-xs">{a.account_number || 'חשבון ראשי'}</span>
+                <span className="font-bold text-gray-900 dark:text-white">{formatAmount(a.balance)}</span>
+              </div>
+            ))
+        ) : (
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">
+            הבנק לא חושף יתרה דרך הספרייה — זמין רק בתוך אתר הבנק
+          </p>
+        )}
+      </div>
 
       {!enabled && (
         <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
