@@ -2,12 +2,14 @@
 
 A modern, full-stack expense tracking application built with React and Node.js, featuring real-time data synchronization, multi-language support, and intelligent financial insights.
 
-## 👨‍💻 Author & Portfolio Project
+## Authors & Collaborators
 
-**Hananel Sabag** - Software Engineer
-💼 GitHub: [@HananelSabag](https://github.com/HananelSabag)
+| Name | GitHub | Role |
+|------|--------|------|
+| **Hananel Sabag** | [@HananelSabag](https://github.com/HananelSabag) | Lead developer |
+| **Yuda Sabag** | yudasabag@gmail.com | Collaborator — bank-scraper integration |
 
-> **Portfolio Showcase Project** - This project demonstrates full-stack development skills including React, Node.js, PostgreSQL, authentication, real-time features, and production deployment. Created as part of my software engineering portfolio.
+> **Portfolio Project** — full-stack personal finance PWA with Israeli bank sync, built with React, Node.js, and PostgreSQL.
 
 ## ⚠️ **Important Notice - Portfolio Project**
 
@@ -31,6 +33,25 @@ For security reasons, sensitive configuration files and production secrets are n
 ## 🌟 Overview
 
 SpendWise is a comprehensive personal finance management tool that helps users track expenses, manage budgets, and gain insights into their spending patterns. The application features a clean, responsive interface with support for both English and Hebrew languages, dark/light themes, and offline capabilities through Progressive Web App (PWA) technology.
+
+## Bank Sync Integration
+
+SpendWise connects to [bank-scraper](https://github.com/HananelSabag/bank-scraper) — a companion scraper that pulls real transactions from Israeli banks (Yahav, Isracard, Max, Discount) and pushes them into SpendWise automatically.
+
+```
+bank-scraper (Windows/Linux)  ──HTTPS──►  POST /api/v1/bank-sync  ──►  PostgreSQL
+                                            • timing-safe API key auth
+                                            • ALLOWED_HOUSEHOLD_IDS whitelist
+                                            • hard dedup (UNIQUE INDEX on bank_sync_id)
+                                            • soft dedup fallback
+```
+
+New in SpendWise:
+- **`POST /api/v1/bank-sync`** — receives scraped transactions (machine-to-machine, no JWT)
+- **`GET  /api/v1/bank-sync/stats`** — returns per-bank stats for the dashboard (JWT)
+- **`/bank-sync` page** — control panel: per-bank stats, toggles, remote trigger button
+- **Balance panel** — dual view: SpendWise net balance (budget) vs real bank balance (actual money)
+- **`bank_accounts` table** — stores real account balance separately from calculated net
 
 ### Key Features
 
@@ -248,13 +269,11 @@ This is a portfolio project, but feedback and suggestions are welcome:
 4. Push to the branch (`git push origin feature/suggestion`)
 5. Open a Pull Request
 
-## 📞 Contact
+## Contact
 
-For questions about this project or collaboration opportunities:
-
-**Hananel Sabag**
-💼 GitHub: [@HananelSabag](https://github.com/HananelSabag)
+**Hananel Sabag** — [@HananelSabag](https://github.com/HananelSabag) — hananel12345@gmail.com  
+**Yuda Sabag** — yudasabag@gmail.com
 
 ---
 
-**SpendWise** - A full-stack portfolio project demonstrating modern web development practices and technologies.
+**SpendWise** — full-stack personal finance PWA with Israeli bank sync.
