@@ -6,58 +6,103 @@
  *
  * POST /api/v1/bank-sync
  *
- * Payload shape (from sync.js buildPayload):
- *   {
- *     household_id: number,   // maps to user_id
- *     source:       string,   // "yahav", "isracard", "max", etc.
- *     accounts: [{
- *       account_number: string,
- *       type:           string,
- *       balance:        number,
- *       txns: [{
- *         date:           string (ISO),
- *         description:    string,
- *         charged_amount: number,  // negative = expense, positive = income
- *         identifier?:    string   // optional dedup key from the bank
- *       }]
- *     }]
- *   }
+ * Security layers:
+ *   1. Dedicated strict rate limiter (20 req / hour / IP)
+ *   2. Timing-safe API key comparison (prevents timing attacks)
+ *   3. ALLOWED_HOUSEHOLD_IDS whitelist (env var) — restricts which user IDs
+ *      can be synced even if the key is somehow compromised
+ *   4. User existence check before any DB writes
+ *   5. Amount sanity cap — rejects unrealistic amounts
+ *   6. Payload size cap — rejects oversized transaction lists
+ *   7. All rejections logged with IP; no internal details in error responses
  */
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 
-// ── API-key auth ─────────────────────────────────────────────────────────────
-// Separate from JWT: the scraper is a background service with no user session.
-// The key must match BANK_SYNC_API_KEY in the server's .env.
-function bankSyncAuth(req, res, next) {
-  const incoming = req.headers['x-api-key'];
-  const expected = process.env.BANK_SYNC_API_KEY;
+// ── Strict rate limiter ───────────────────────────────────────────────────────
+// Tighter than the main API limiter: this endpoint should only be called by
+// one trusted machine, so 20 requests per hour per IP is generous.
+const bankSyncLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests' },
+});
 
+// ── Timing-safe API key auth ──────────────────────────────────────────────────
+// Uses crypto.timingSafeEqual so the response time reveals nothing about how
+// many characters of the key matched, preventing brute-force timing attacks.
+function bankSyncAuth(req, res, next) {
+  const expected = process.env.BANK_SYNC_API_KEY;
   if (!expected) {
     logger.error('bank-sync: BANK_SYNC_API_KEY is not set — endpoint disabled');
-    return res.status(503).json({ error: 'Bank sync not configured on server' });
+    return res.status(503).json({ error: 'Bank sync not configured' });
   }
-  if (!incoming || incoming !== expected) {
-    logger.warn('bank-sync: rejected request with invalid API key', { ip: req.ip });
+
+  const incoming = req.headers['x-api-key'];
+  if (!incoming) {
+    logger.warn('bank-sync: missing X-API-Key header', { ip: req.ip });
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Compare via constant-time function — lengths must match too.
+  let valid = false;
+  try {
+    const a = Buffer.from(incoming, 'utf8');
+    const b = Buffer.from(expected, 'utf8');
+    valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    valid = false;
+  }
+
+  if (!valid) {
+    logger.warn('bank-sync: rejected invalid API key', { ip: req.ip });
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   next();
 }
 
 // ── POST /bank-sync ───────────────────────────────────────────────────────────
-router.post('/', bankSyncAuth, async (req, res) => {
+router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
   const { household_id, source, accounts } = req.body;
 
+  // ── Input validation ────────────────────────────────────────────────────────
   if (!household_id || !source || !Array.isArray(accounts)) {
     return res.status(400).json({ error: 'Invalid payload: household_id, source, accounts required' });
   }
 
   const userId = Number(household_id);
-  if (!Number.isFinite(userId) || userId <= 0) {
+  if (!Number.isFinite(userId) || userId <= 0 || !Number.isInteger(userId)) {
     return res.status(400).json({ error: 'Invalid household_id' });
+  }
+
+  if (typeof source !== 'string' || source.length > 50 || !/^[a-z0-9_-]+$/.test(source)) {
+    return res.status(400).json({ error: 'Invalid source' });
+  }
+
+  // ── Household ID whitelist ──────────────────────────────────────────────────
+  // Even with a valid key, only allow syncing to pre-approved user IDs.
+  // Set ALLOWED_HOUSEHOLD_IDS=1,34 in your server .env / Render env vars.
+  const allowedIds = process.env.ALLOWED_HOUSEHOLD_IDS
+    ? process.env.ALLOWED_HOUSEHOLD_IDS.split(',').map(s => parseInt(s.trim(), 10)).filter(Number.isFinite)
+    : null;
+  if (allowedIds && !allowedIds.includes(userId)) {
+    logger.warn('bank-sync: rejected — household_id not in whitelist', { userId, ip: req.ip });
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  // ── Payload size cap ────────────────────────────────────────────────────────
+  const MAX_TXNS = 2000;
+  const totalTxns = accounts.reduce((sum, a) => sum + (Array.isArray(a.txns) ? a.txns.length : 0), 0);
+  if (totalTxns > MAX_TXNS) {
+    return res.status(400).json({ error: `Payload exceeds ${MAX_TXNS} transaction limit` });
   }
 
   const client = await db.getClient();
@@ -67,15 +112,21 @@ router.post('/', bankSyncAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // ── User existence check ────────────────────────────────────────────────
+    const userCheck = await client.query('SELECT id FROM users WHERE id=$1 LIMIT 1', [userId]);
+    if (userCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      logger.warn('bank-sync: rejected — user not found', { userId, ip: req.ip });
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     for (const account of accounts) {
       for (const txn of (account.txns || [])) {
         const chargedAmount = parseFloat(txn.charged_amount);
 
-        // Skip zero or NaN amounts — not meaningful transactions.
-        if (!Number.isFinite(chargedAmount) || chargedAmount === 0) {
-          skipped++;
-          continue;
-        }
+        // Skip zero, NaN, or unrealistically large amounts.
+        if (!Number.isFinite(chargedAmount) || chargedAmount === 0) { skipped++; continue; }
+        if (Math.abs(chargedAmount) > 10_000_000) { skipped++; continue; }
 
         const type = chargedAmount < 0 ? 'expense' : 'income';
         const amount = Math.abs(chargedAmount);
@@ -83,14 +134,10 @@ router.post('/', bankSyncAuth, async (req, res) => {
         const date = txnDate.toISOString().split('T')[0];
         const transactionDatetime = txnDate.toISOString();
         const description = (txn.description || '').trim().slice(0, 500);
-
-        // bank_sync_id: "source:identifier" when the bank provides a reference
-        // number; NULL otherwise (falls through to soft-dedup below).
         const bankSyncId = txn.identifier ? `${source}:${txn.identifier}` : null;
 
         if (bankSyncId) {
-          // Hard dedup: the partial unique index on (user_id, bank_sync_id)
-          // guarantees no duplicates. ON CONFLICT silently skips the row.
+          // Hard dedup via partial unique index on (user_id, bank_sync_id).
           const result = await client.query(
             `INSERT INTO transactions
                (user_id, amount, type, description, notes, date, transaction_datetime,
@@ -105,8 +152,6 @@ router.post('/', bankSyncAuth, async (req, res) => {
           result.rows.length > 0 ? inserted++ : skipped++;
         } else {
           // Soft dedup: match on (user_id, source, date, amount, description).
-          // Not 100% reliable for banks that don't provide reference numbers,
-          // but avoids the most common duplicates on re-runs.
           const existing = await client.query(
             `SELECT id FROM transactions
              WHERE user_id=$1 AND bank_source=$2 AND date=$3
@@ -114,7 +159,6 @@ router.post('/', bankSyncAuth, async (req, res) => {
              LIMIT 1`,
             [userId, source, date, amount, description],
           );
-
           if (existing.rows.length > 0) {
             skipped++;
           } else {
@@ -132,7 +176,6 @@ router.post('/', bankSyncAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
-
     logger.info('bank-sync: completed', { userId, source, inserted, skipped });
     res.json({ ok: true, inserted, skipped });
   } catch (err) {

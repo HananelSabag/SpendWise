@@ -44,3 +44,5 @@ services:
         sync: false
       - key: BANK_SYNC_API_KEY
         sync: false
+      - key: ALLOWED_HOUSEHOLD_IDS
+        sync: false
