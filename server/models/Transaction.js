@@ -350,6 +350,8 @@ class Transaction {
         t.template_id,
         t.created_at,
         t.updated_at,
+        t.bank_source,
+        t.bank_sync_id,
         c.name as category_name,
         c.icon as category_icon,
         c.color as category_color

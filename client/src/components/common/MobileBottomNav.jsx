@@ -19,7 +19,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, BarChart3, User,
   PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, Menu, X,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, Menu, X, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -204,6 +204,13 @@ const FullNav = () => {
       icon: HelpCircle,
       gradient: 'from-teal-500 to-cyan-600',
       action: () => { handleClose(); dispatch('open-onboarding'); },
+    },
+    {
+      key: 'bank-sync',
+      label: 'סנכרון בנק',
+      icon: Building2,
+      gradient: 'from-emerald-500 to-teal-600',
+      action: () => closeAndGo('/bank-sync'),
     },
     ...(isAdmin ? [{
       key: 'admin',

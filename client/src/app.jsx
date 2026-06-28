@@ -77,6 +77,7 @@ const ROUTE_SKELETON_MAP = {
   analytics: 'analytics',
   profile: 'profile',
   shopping: 'shopping',
+  'bank sync': 'profile',
   'admin dashboard': 'admin',
   'user management': 'admin',
   'activity log': 'admin',
@@ -465,6 +466,17 @@ const AppContent = () => {
               <RouteErrorBoundary routeName="Shopping">
                 <Suspense fallback={<RouteLoadingFallback route="shopping" />}>
                   <LazyComponents.ShoppingWishlistPage />
+                </Suspense>
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          } />
+
+          {/* ✅ Bank Sync Route */}
+          <Route path="/bank-sync" element={
+            <ProtectedRoute>
+              <RouteErrorBoundary routeName="BankSync">
+                <Suspense fallback={<RouteLoadingFallback route="bank sync" />}>
+                  <LazyComponents.BankSyncPage />
                 </Suspense>
               </RouteErrorBoundary>
             </ProtectedRoute>

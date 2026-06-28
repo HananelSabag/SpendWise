@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { auth } = require('../middleware/auth');
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -184,6 +185,36 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
     res.status(500).json({ error: 'Bank sync failed' });
   } finally {
     client.release();
+  }
+});
+
+// ── GET /bank-sync/stats ─────────────────────────────────────────────────────
+// Returns per-source statistics for the logged-in user's bank transactions.
+// Used by the SpendWise client to display the Bank Sync dashboard.
+router.get('/stats', auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await db.query(
+      `SELECT
+         bank_source                                   AS source,
+         COUNT(*)::int                                 AS total,
+         MAX(created_at)                               AS last_sync,
+         SUM(CASE WHEN type='income'  THEN 1 ELSE 0 END)::int AS income_count,
+         SUM(CASE WHEN type='expense' THEN 1 ELSE 0 END)::int AS expense_count,
+         SUM(CASE WHEN type='income'  THEN amount ELSE 0 END)  AS total_income,
+         SUM(CASE WHEN type='expense' THEN amount ELSE 0 END)  AS total_expense
+       FROM transactions
+       WHERE user_id = $1
+         AND bank_source IS NOT NULL
+         AND deleted_at IS NULL
+       GROUP BY bank_source
+       ORDER BY last_sync DESC`,
+      [userId],
+    );
+    res.json({ ok: true, sources: result.rows });
+  } catch (err) {
+    logger.error('bank-sync stats failed', { error: err.message, userId });
+    res.status(500).json({ error: 'Failed to fetch bank sync stats' });
   }
 });
 

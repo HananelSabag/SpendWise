@@ -81,6 +81,12 @@ export const AdminStats = createLazyComponent(
   'AdminStats'
 );
 
+// ✅ Bank Sync Page
+export const BankSyncPage = createLazyComponent(
+  () => import('../pages/BankSyncPage.jsx'),
+  'BankSyncPage'
+);
+
 // ✅ Analytics Pages - Data-Heavy Components
 export const Analytics = createLazyComponent(
   () => import('../pages/Analytics.jsx'),
