@@ -176,6 +176,26 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
       }
     }
 
+    // ── Upsert real bank account balances ────────────────────────────────────
+    // Stores the actual account balance from the bank (different from the
+    // SpendWise calculated balance). Used by the balance panel to show
+    // "יתרת חשבון בנק בפועל" separately from the SpendWise budget tracking.
+    for (const account of accounts) {
+      if (typeof account.balance === 'number') {
+        await client.query(
+          `INSERT INTO bank_accounts
+             (user_id, bank_source, account_number, account_type, balance, last_synced_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())
+           ON CONFLICT (user_id, bank_source, account_number)
+           DO UPDATE SET
+             balance        = EXCLUDED.balance,
+             account_type   = EXCLUDED.account_type,
+             last_synced_at = NOW()`,
+          [userId, source, account.account_number || '', account.type || null, account.balance],
+        );
+      }
+    }
+
     await client.query('COMMIT');
     logger.info('bank-sync: completed', { userId, source, inserted, skipped });
     res.json({ ok: true, inserted, skipped });
@@ -196,18 +216,29 @@ router.get('/stats', auth, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT
-         bank_source                                   AS source,
-         COUNT(*)::int                                 AS total,
-         MAX(created_at)                               AS last_sync,
-         SUM(CASE WHEN type='income'  THEN 1 ELSE 0 END)::int AS income_count,
-         SUM(CASE WHEN type='expense' THEN 1 ELSE 0 END)::int AS expense_count,
-         SUM(CASE WHEN type='income'  THEN amount ELSE 0 END)  AS total_income,
-         SUM(CASE WHEN type='expense' THEN amount ELSE 0 END)  AS total_expense
-       FROM transactions
-       WHERE user_id = $1
-         AND bank_source IS NOT NULL
-         AND deleted_at IS NULL
-       GROUP BY bank_source
+         t.bank_source                                                        AS source,
+         COUNT(t.id)::int                                                     AS total,
+         MAX(t.created_at)                                                    AS last_sync,
+         SUM(CASE WHEN t.type='income'  THEN 1 ELSE 0 END)::int              AS income_count,
+         SUM(CASE WHEN t.type='expense' THEN 1 ELSE 0 END)::int              AS expense_count,
+         SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END)            AS total_income,
+         SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END)            AS total_expense,
+         COALESCE(
+           (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
+              'account_number', ba.account_number,
+              'account_type',   ba.account_type,
+              'balance',        ba.balance,
+              'last_synced_at', ba.last_synced_at
+           ))
+            FROM bank_accounts ba
+            WHERE ba.user_id = $1 AND ba.bank_source = t.bank_source),
+           '[]'::jsonb
+         )                                                                    AS accounts
+       FROM transactions t
+       WHERE t.user_id = $1
+         AND t.bank_source IS NOT NULL
+         AND t.deleted_at IS NULL
+       GROUP BY t.bank_source
        ORDER BY last_sync DESC`,
       [userId],
     );

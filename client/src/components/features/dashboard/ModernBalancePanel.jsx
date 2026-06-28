@@ -4,11 +4,90 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Wallet, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ArrowUp, ArrowDown, Building2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useBalance } from '../../../hooks';
 import { cn } from '../../../utils/helpers';
+import apiClient from '../../../api/client';
+
+// ── Bank account balance strip ────────────────────────────────────────────────
+// Shows REAL bank balance (from bank_accounts table, populated by bank-scraper).
+// This is fundamentally different from the SpendWise net balance above:
+//   SpendWise net  = SUM(income) - SUM(expenses) for a period  → budget tracking
+//   Bank balance   = actual money in the account right now      → bank reality
+const BankBalanceStrip = ({ formatCurrency }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['bankSyncStats'],
+    queryFn: () => apiClient.get('/bank-sync/stats').then(r => r.data.sources || []),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
+  // Flatten all accounts from all sources that have a real balance stored
+  const accounts = (data || []).flatMap(src =>
+    (src.accounts || [])
+      .filter(a => a.balance != null)
+      .map(a => ({ ...a, source: src.source, last_sync: src.last_sync }))
+  );
+
+  if (isLoading || accounts.length === 0) return null;
+
+  const totalBalance = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+
+  const sourceLabel = { yahav: 'יהב', isracard: 'ישראכרט', max: 'מקס', discount: 'דיסקונט' };
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-700 px-4 py-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Building2 className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            יתרת חשבון בנק בפועל
+          </span>
+        </div>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+          ≠ יתרת SpendWise
+        </span>
+      </div>
+
+      {/* Per-account rows */}
+      <div className="space-y-1.5">
+        {accounts.map((a, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium flex-shrink-0">
+                {sourceLabel[a.source] || a.source}
+              </span>
+              {a.account_number && (
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                  {a.account_number}
+                </span>
+              )}
+            </div>
+            <span className="text-sm font-bold text-gray-900 dark:text-white flex-shrink-0">
+              {formatCurrency(Number(a.balance || 0))}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Total if multiple accounts */}
+      {accounts.length > 1 && (
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">סה"כ</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(totalBalance)}</span>
+        </div>
+      )}
+
+      <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 text-center">
+        מסונכרן מ-bank-scraper · מתעדכן 3× ביום
+      </p>
+    </div>
+  );
+};
 
 const PERIODS = ['daily', 'weekly', 'monthly', 'yearly'];
 
@@ -220,6 +299,11 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         </div>
       </div>
+
+      {/* ── Real bank account balance (from bank-scraper) ─────────── */}
+      {/* Only renders if the scraper has run at least once. Shows the ACTUAL
+          bank balance — NOT a calculated sum. Clearly separated from above. */}
+      <BankBalanceStrip formatCurrency={formatCurrency} />
     </div>
   );
 };
