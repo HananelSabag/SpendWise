@@ -339,6 +339,13 @@ try {
   }
 
   try {
+    app.use(`${API_VERSION}/bank-sync`, require('./routes/bankSyncRoutes'));
+    logger.debug('✅ Bank sync routes loaded');
+  } catch (error) {
+    logger.error('❌ Bank sync routes failed:', error.message);
+  }
+
+  try {
     app.use(`${API_VERSION}/performance`, require('./routes/performance'));
     logger.debug('✅ Performance routes loaded');
   } catch (error) {

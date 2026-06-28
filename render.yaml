@@ -42,3 +42,5 @@ services:
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+      - key: BANK_SYNC_API_KEY
+        sync: false
