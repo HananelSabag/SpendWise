@@ -1,7 +1,7 @@
 /**
  * sealedBox.js — browser-side credential encryption for Bank Connect
  *
- * Mirror of bank-scraper/lib/sealed.js — keep wire formats in sync:
+ * Mirror of spendwise-agent/src/crypto/sealed.js — keep wire formats in sync:
  *   base64( ephemeralPublicKey(32) || nonce(24) || nacl.box ciphertext )
  *
  * The credentials object is encrypted here, IN THE BROWSER, with the

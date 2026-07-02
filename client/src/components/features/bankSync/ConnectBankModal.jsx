@@ -21,7 +21,7 @@ import { sealCredentials } from '../../../utils/sealedBox';
 import bankConnectionsApi from '../../../api/bankConnections';
 
 // Per-bank credential field definitions. `key` must match what
-// israeli-bank-scrapers expects (see bank-scraper lib/scrape-core.js BANK_META).
+// israeli-bank-scrapers expects (see spendwise-agent src/core/banks.js BANKS).
 export const BANK_FORMS = {
   yahav: {
     color: 'from-blue-600 to-blue-800',

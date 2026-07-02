@@ -28,7 +28,6 @@ export {
 } from './useTransactions';
 
 // Balance Panel - DEDICATED BALANCE HOOK  
-export { default as useBalance } from './useBalance';
 
 // Categories - Only actual exports
 export { 

@@ -1,19 +1,18 @@
 /**
- * BANK SYNC TRANSLATIONS - Hebrew
+ * BANK SYNC / BANK CONNECT TRANSLATIONS - Hebrew
  */
 
 export default {
-  // Panel / page title
+  // Page / panel title
   title: 'סנכרון בנק',
-  subtitle: 'אינטגרציה עם bank-scraper',
   refresh: 'רענן נתונים',
 
   // Account balance
   accountBalance: 'יתרת חשבון',
   unavailable: 'לא זמין',
-  unavailableNote: '{{bank}} אינו חושף יתרת חשבון דרך ספריית הסקרייפר',
+  unavailableNote: '{{bank}} עדיין לא חושף יתרת חשבון',
   mainAccount: 'חשבון ראשי',
-  balanceUnavailableNote: 'הבנק לא חושף יתרה דרך הספרייה — זמין רק בתוך אתר הבנק',
+  balanceUnavailableNote: 'הבנק עדיין לא חושף יתרה — בדוק ישירות באתר הבנק',
 
   // Transaction summary
   income: 'הכנסות',
@@ -28,47 +27,10 @@ export default {
   hoursAgo: 'לפני {{n}} שע\'',
   daysAgo: 'לפני {{n}} ימ\'',
   updatedAt: 'עודכן {{time}}',
-  lastSync: 'סנכרון אחרון',
-  syncedDaily: 'מסונכרן דרך bank-scraper · 3× ביום',
+  syncedDaily: 'מסונכרן אוטומטית · פעמיים ביום',
 
-  // Empty / not synced
-  notSynced: 'לא סונכרן אף בנק עדיין',
-  notSyncedYet: 'לא מסונכרן עדיין',
-  runScraper: 'הרץ את bank-scraper כדי לשלוף עסקאות',
-
-  // Bank card
-  enableBank: 'הפעל בנק',
-  disableBank: 'כבה בנק',
-  bankDisabledNote: 'עסקאות מבנק זה מוסתרות מהחישובים',
-
-  // Load error
+  // Errors
   loadError: 'לא ניתן לטעון נתוני סנכרון',
-
-  // Remote trigger section
-  remoteTrigger: 'טריגר מרחוק (serve.js)',
-  serverUrl: 'כתובת שרת',
-  enterServerAndKey: 'הכנס כתובת שרת ו-API Key',
-  syncNow: 'סנכרן עכשיו',
-  syncing: 'מסנכרן...',
-  syncStarted: 'הסנכרון התחיל! הנתונים יופיעו כאן תוך כמה דקות',
-  errorStatus: 'שגיאה: {{status}}',
-  cannotConnect: 'לא ניתן להתחבר לשרת — ודא שהוא פעיל',
-  serverSessionNote: 'הכתובת נשמרת רק ב-session זה (לא נשלח לשרת SpendWise)',
-
-  // How it works
-  howItWorks: 'איך זה עובד?',
-  howItWorksStep1: 'bank-scraper רץ במחשב שלך (או שרת) ומתחבר לבנק',
-  howItWorksStep2: 'הוא שולף עסקאות אחורה ל-30 יום ושולח לכאן אוטומטית',
-  howItWorksStep3: 'עסקאות הבנק מופיעות ב-SpendWise כמו כל עסקה רגילה',
-  howItWorksStep4: 'כל עסקה נוספת פעם אחת בלבד — מנגנון dedup מונע כפילויות',
-  manualSyncTitle: 'סנכרון ידני',
-  manualSyncOr: 'או',
-  doubleClickBat: 'לחץ פעמיים על run.bat',
-  mobileTrigger: 'טריגר מהמובייל',
-  mobileTriggerNote: 'הפעל node serve.js במחשב, ולחץ "סנכרן עכשיו" מהאפליקציה',
-
-  // Footer note
-  toggleNote: 'הטוגלים שומרים מה מוצג — הנתונים תמיד בבסיס הנתונים',
 
   // ── חיבור בנק (שירות עצמי) ──
   connectBank: 'חבר בנק',
@@ -122,6 +84,7 @@ export default {
   cancel: 'ביטול',
 
   // סנכרון ידני / מגבלות
+  syncNow: 'סנכרן עכשיו',
   syncQueued: 'הסנכרון בתור! ירוץ תוך כ-30 דקות',
   syncQuotaReached: 'הגעת למגבלת הסנכרונים היומית (2 ביום) — מגן על חשבון הבנק שלך מחסימה',
   syncTooSoon: 'יש להמתין לפחות 3 שעות בין סנכרונים',
@@ -140,6 +103,13 @@ export default {
 
   // עדכון פרטים
   updateCredentials: 'עדכן פרטי התחברות',
+
+  // איך זה עובד
+  howItWorks: 'איך זה עובד?',
+  howItWorksStep1: 'אתה מחבר את הבנק — הפרטים מוצפנים בדפדפן שלך עוד לפני שהם נשלחים',
+  howItWorksStep2: 'סוכן סנכרון מאובטח נכנס לבנק פעמיים ביום וקורא את העסקאות',
+  howItWorksStep3: 'העסקאות מופיעות ב-SpendWise אוטומטית, בדיוק כמו אלו שאתה מוסיף ידנית',
+  howItWorksStep4: 'כל עסקה נוספת פעם אחת בדיוק — כפילויות בלתי אפשריות',
 
   // Bank names
   bankNames: {

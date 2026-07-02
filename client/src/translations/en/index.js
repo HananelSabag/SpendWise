@@ -38,7 +38,6 @@ import modals from './modals.js';
 import account from './account.js';
 import activity from './activity.js';
 import analytics from './analytics.js';
-import balance from './balance.js';
 import bulk from './bulk.js';
 import buttons from './buttons.js';
 import completion from './completion.js';
@@ -123,7 +122,6 @@ export default {
   account,
   activity,
   analytics,
-  balance,
   bulk,
   buttons,
   completion,

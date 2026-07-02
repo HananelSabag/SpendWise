@@ -1,8 +1,13 @@
 /**
- * Bank Sync Route
- * Receives scraped transactions from bank-scraper and inserts them into
- * the transactions table. Authenticated via X-API-Key (not JWT — this is a
- * machine-to-machine call from the scraper, not a browser session).
+ * Bank Sync Route (LEGACY path + stats)
+ *
+ * POST /bank-sync — receives scraped transactions from spendwise-agent's
+ * standalone mode (X-API-Key auth). The production path is the Bank Connect
+ * job queue (routes/bankAgentRoutes.js); this POST endpoint is kept as a
+ * dev/fallback entry point. Both share services/bankSyncService.js.
+ *
+ * GET /bank-sync/stats — per-source dashboard stats (JWT auth), used by
+ * the client's BankSyncPage and balance panel.
  *
  * POST /api/v1/bank-sync
  *
