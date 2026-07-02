@@ -110,6 +110,12 @@ export default {
   // עדכון פרטים
   updateCredentials: 'עדכן פרטי התחברות',
 
+  // toggle סנכרון לכל חשבון
+  accounts: 'חשבונות',
+  accountSyncOn: 'מסתנכרן',
+  accountSyncOff: 'לא מסתנכרן',
+  accountDisabledHint: 'עסקאות מחשבון זה לא מיובאות',
+
   // איך זה עובד
   howItWorks: 'איך זה עובד?',
   howItWorksStep1: 'אתה מחבר את הבנק — הפרטים מוצפנים בדפדפן שלך עוד לפני שהם נשלחים',

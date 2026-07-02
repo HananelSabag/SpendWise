@@ -33,12 +33,29 @@ async function ingestAccounts(client, userId, source, accounts) {
     throw new Error(`Payload exceeds ${MAX_TXNS} transaction limit`);
   }
 
+  // Which accounts has the user disabled? Their balance is still refreshed
+  // (so they stay visible + toggleable in the UI), but their transactions
+  // are skipped — this is how a user excludes e.g. a building-committee
+  // side account without losing sight of it.
+  const disabled = new Set();
+  {
+    const existing = await client.query(
+      `SELECT account_number FROM bank_accounts
+       WHERE user_id = $1 AND bank_source = $2 AND enabled = false`,
+      [userId, source],
+    );
+    for (const r of existing.rows) disabled.add((r.account_number || '').trim());
+  }
+
   for (const account of accounts) {
     // Scope the dedup id to the account too — a bank with multiple accounts
     // (e.g. Yahav main + side account) can reuse the same transaction
     // reference number across accounts; without the account in the key the
     // second account's transaction would be wrongly skipped as a duplicate.
     const acctKey = (account.account_number || 'default').toString().trim();
+
+    // Skip transactions from user-disabled accounts (balance still upserted below).
+    if (disabled.has(acctKey)) continue;
 
     for (const txn of (account.txns || [])) {
       const chargedAmount = parseFloat(txn.charged_amount);
@@ -55,28 +72,31 @@ async function ingestAccounts(client, userId, source, accounts) {
       const description = (txn.description || '').trim().slice(0, 500);
       const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
 
+      const acctNum = acctKey === 'default' ? null : acctKey;
+
       if (bankSyncId) {
         // Hard dedup via partial unique index on (user_id, bank_sync_id).
         const result = await client.query(
           `INSERT INTO transactions
              (user_id, amount, type, description, notes, date, transaction_datetime,
-              bank_sync_id, bank_source, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,NOW(),NOW())
+              bank_sync_id, bank_source, bank_account_number, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
            DO NOTHING
            RETURNING id`,
-          [userId, amount, type, description, date, transactionDatetime, bankSyncId, source],
+          [userId, amount, type, description, date, transactionDatetime, bankSyncId, source, acctNum],
         );
         result.rows.length > 0 ? inserted++ : skipped++;
       } else {
-        // Soft dedup: match on (user_id, source, date, amount, description).
+        // Soft dedup: match on (user_id, source, account, date, amount, description).
         const existing = await client.query(
           `SELECT id FROM transactions
            WHERE user_id=$1 AND bank_source=$2 AND date=$3
              AND amount=$4 AND description=$5 AND deleted_at IS NULL
+             AND bank_account_number IS NOT DISTINCT FROM $6
            LIMIT 1`,
-          [userId, source, date, amount, description],
+          [userId, source, date, amount, description, acctNum],
         );
         if (existing.rows.length > 0) {
           skipped++;
@@ -84,9 +104,9 @@ async function ingestAccounts(client, userId, source, accounts) {
           await client.query(
             `INSERT INTO transactions
                (user_id, amount, type, description, notes, date, transaction_datetime,
-                bank_source, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,'',$5,$6,$7,NOW(),NOW())`,
-            [userId, amount, type, description, date, transactionDatetime, source],
+                bank_source, bank_account_number, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,NOW(),NOW())`,
+            [userId, amount, type, description, date, transactionDatetime, source, acctNum],
           );
           inserted++;
         }
@@ -94,22 +114,25 @@ async function ingestAccounts(client, userId, source, accounts) {
     }
   }
 
-  // Upsert real bank account balances (actual money in the account —
-  // distinct from SpendWise's calculated net of transactions).
+  // Upsert every discovered account (even with a null balance) so it stays
+  // visible and toggleable in the UI. balance = real money in the account
+  // (distinct from SpendWise's calculated net). The `enabled` flag is never
+  // overwritten here — only the user changes it.
   for (const account of accounts) {
-    if (account.balance !== null && account.balance !== undefined && typeof account.balance === 'number') {
-      await client.query(
-        `INSERT INTO bank_accounts
-           (user_id, bank_source, account_number, account_type, balance, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
-         ON CONFLICT (user_id, bank_source, account_number)
-         DO UPDATE SET
-           balance        = EXCLUDED.balance,
-           account_type   = EXCLUDED.account_type,
-           last_synced_at = NOW()`,
-        [userId, source, account.account_number || '', account.type || null, account.balance],
-      );
-    }
+    const balance = typeof account.balance === 'number' && Number.isFinite(account.balance)
+      ? account.balance
+      : null;
+    await client.query(
+      `INSERT INTO bank_accounts
+         (user_id, bank_source, account_number, account_type, balance, last_synced_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (user_id, bank_source, account_number)
+       DO UPDATE SET
+         balance        = COALESCE(EXCLUDED.balance, bank_accounts.balance),
+         account_type   = COALESCE(EXCLUDED.account_type, bank_accounts.account_type),
+         last_synced_at = NOW()`,
+      [userId, source, account.account_number || '', account.type || null, balance],
+    );
   }
 
   logger.info('bank-sync: ingested', { userId, source, inserted, skipped });

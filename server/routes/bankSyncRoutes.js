@@ -160,8 +160,9 @@ router.get('/stats', auth, async (req, res) => {
               'account_number', ba.account_number,
               'account_type',   ba.account_type,
               'balance',        ba.balance,
+              'enabled',        ba.enabled,
               'last_synced_at', ba.last_synced_at
-           ))
+           ) ORDER BY ba.account_number)
             FROM bank_accounts ba
             WHERE ba.user_id = $1 AND ba.bank_source = t.bank_source),
            '[]'::jsonb

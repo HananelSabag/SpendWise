@@ -168,6 +168,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ── PATCH /:id/accounts/:accountNumber ────────────────────────────────────────
+// Enable/disable syncing a specific account under a connection (e.g. exclude
+// a building-committee side account). Body: { enabled: boolean }.
+router.patch('/:id/accounts/:accountNumber', async (req, res) => {
+  const id = Number(req.params.id);
+  const accountNumber = String(req.params.accountNumber);
+  const { enabled } = req.body;
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled (boolean) required' });
+
+  try {
+    // Confirm the connection belongs to the user, and get its bank_source.
+    const conn = await db.query(
+      `SELECT bank_source FROM bank_connections WHERE id = $1 AND user_id = $2`,
+      [id, req.user.id],
+    );
+    if (conn.rows.length === 0) return res.status(404).json({ error: 'Connection not found' });
+
+    const result = await db.query(
+      `UPDATE bank_accounts SET enabled = $4
+       WHERE user_id = $1 AND bank_source = $2 AND account_number = $3
+       RETURNING account_number, enabled`,
+      [req.user.id, conn.rows[0].bank_source, accountNumber, enabled],
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    res.json({ ok: true, account: result.rows[0] });
+  } catch (err) {
+    logger.error('bank-connections: account toggle failed', { error: err.message, userId: req.user.id });
+    res.status(500).json({ error: 'Failed to update account' });
+  }
+});
+
 // ── POST /:id/sync ────────────────────────────────────────────────────────────
 // Enqueue a manual sync job. Rate limited to protect the bank account:
 // max 2 manual syncs per day, min 3h between any two syncs.

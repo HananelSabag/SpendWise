@@ -110,6 +110,12 @@ export default {
   // Update credentials
   updateCredentials: 'Update credentials',
 
+  // Per-account sync toggle
+  accounts: 'Accounts',
+  accountSyncOn: 'Syncing',
+  accountSyncOff: 'Not syncing',
+  accountDisabledHint: 'Transactions from this account are not imported',
+
   // How it works
   howItWorks: 'How does it work?',
   howItWorksStep1: 'You connect your bank — credentials are encrypted in your browser before they are sent',

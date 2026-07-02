@@ -255,8 +255,61 @@ function ConnectionCard({ conn, t, lang }) {
   );
 }
 
+// ── Per-account row with sync toggle ──────────────────────────────────────────
+function AccountRow({ account, connectionId, t, lang }) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotifications();
+  const enabled = account.enabled !== false;
+
+  const toggle = useMutation({
+    mutationFn: (next) =>
+      bankConnectionsApi.setAccountEnabled(connectionId, account.account_number || '', next),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
+      queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
+    },
+    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+  });
+
+  return (
+    <div className="flex items-center justify-between gap-2 py-1.5">
+      <div className="min-w-0">
+        <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
+          {account.account_number || t('mainAccount')}
+        </p>
+        {!enabled && (
+          <p className="text-[10px] text-amber-600 dark:text-amber-400">{t('accountDisabledHint')}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={cn('font-bold text-sm', enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through')}>
+          {account.balance !== null && account.balance !== undefined ? formatAmount(account.balance, lang) : '—'}
+        </span>
+        {connectionId && (
+          <button
+            onClick={() => toggle.mutate(!enabled)}
+            disabled={toggle.isPending}
+            role="switch"
+            aria-checked={enabled}
+            aria-label={enabled ? t('accountSyncOn') : t('accountSyncOff')}
+            className={cn(
+              'relative w-9 h-5 rounded-full transition-colors flex-shrink-0',
+              enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600',
+            )}
+          >
+            <span className={cn(
+              'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform',
+              enabled ? 'left-0.5 translate-x-4' : 'left-0.5',
+            )} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Synced data card (per-source stats) ───────────────────────────────────────
-function BankStatsCard({ stat, t, lang }) {
+function BankStatsCard({ stat, connectionId, t, lang }) {
   const meta = getMeta(stat.source);
   const bankName = t(`bankNames.${stat.source}`);
 
@@ -309,26 +362,19 @@ function BankStatsCard({ stat, t, lang }) {
         </div>
       </div>
 
-      {/* Real account balance */}
-      <div className="mt-3 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 px-3 py-2.5">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-          {t('accountBalance')}
+      {/* Accounts — balance + per-account sync toggle */}
+      <div className="mt-3 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 px-3 py-2">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+          {(stat.accounts && stat.accounts.length > 1) ? t('accounts') : t('accountBalance')}
         </p>
-        {stat.accounts && stat.accounts.some(a => a.balance !== null && a.balance !== undefined) ? (
-          stat.accounts
-            .filter(a => a.balance !== null && a.balance !== undefined)
-            .map((a, i) => (
-              <div key={i} className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                  {a.account_number || t('mainAccount')}
-                </span>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {formatAmount(a.balance, lang)}
-                </span>
-              </div>
-            ))
+        {stat.accounts && stat.accounts.length > 0 ? (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {stat.accounts.map((a, i) => (
+              <AccountRow key={i} account={a} connectionId={connectionId} t={t} lang={lang} />
+            ))}
+          </div>
         ) : (
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 italic py-1">
             {t('balanceUnavailableNote')}
           </p>
         )}
@@ -511,7 +557,13 @@ export default function BankSyncPage() {
               {t('recentSyncs')}
             </h2>
             {sources.map(stat => (
-              <BankStatsCard key={stat.source} stat={stat} t={t} lang={currentLanguage} />
+              <BankStatsCard
+                key={stat.source}
+                stat={stat}
+                connectionId={connections.find(c => c.bank_source === stat.source)?.id}
+                t={t}
+                lang={currentLanguage}
+              />
             ))}
           </section>
         )}

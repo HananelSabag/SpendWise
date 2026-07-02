@@ -22,7 +22,11 @@ const AUTO_PAUSE_AFTER_FAILURES = 3;
 
 const agentLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 120, // agent polls every ~30min + result posts; generous but bounded
+  // The agent polls on the user's Task Scheduler interval (as low as ~20min =
+  // 3/hour) plus one result post per job. 600/hour leaves generous headroom
+  // for short intervals and multiple connections without ever throttling the
+  // one trusted machine.
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests' },

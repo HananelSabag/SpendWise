@@ -38,6 +38,11 @@ export const bankConnectionsApi = {
   remove: (id) =>
     api.delete(`/bank-connections/${id}`).then((r) => r.data),
 
+  /** Enable/disable syncing a specific account under a connection. */
+  setAccountEnabled: (id, accountNumber, enabled) =>
+    api.patch(`/bank-connections/${id}/accounts/${encodeURIComponent(accountNumber)}`, { enabled })
+      .then((r) => r.data.account),
+
   /** Queue a manual sync (server enforces 2/day + 3h gap). */
   syncNow: (id) =>
     api.post(`/bank-connections/${id}/sync`).then((r) => r.data.job),
