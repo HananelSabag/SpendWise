@@ -24,6 +24,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
+const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -100,15 +101,12 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
   }
 
   // ── Payload size cap ────────────────────────────────────────────────────────
-  const MAX_TXNS = 2000;
   const totalTxns = accounts.reduce((sum, a) => sum + (Array.isArray(a.txns) ? a.txns.length : 0), 0);
   if (totalTxns > MAX_TXNS) {
     return res.status(400).json({ error: `Payload exceeds ${MAX_TXNS} transaction limit` });
   }
 
   const client = await db.getClient();
-  let inserted = 0;
-  let skipped = 0;
 
   try {
     await client.query('BEGIN');
@@ -121,80 +119,9 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    for (const account of accounts) {
-      for (const txn of (account.txns || [])) {
-        const chargedAmount = parseFloat(txn.charged_amount);
-
-        // Skip zero, NaN, or unrealistically large amounts.
-        if (!Number.isFinite(chargedAmount) || chargedAmount === 0) { skipped++; continue; }
-        if (Math.abs(chargedAmount) > 10_000_000) { skipped++; continue; }
-
-        const type = chargedAmount < 0 ? 'expense' : 'income';
-        const amount = Math.abs(chargedAmount);
-        const txnDate = txn.date ? new Date(txn.date) : new Date();
-        const date = txnDate.toISOString().split('T')[0];
-        const transactionDatetime = txnDate.toISOString();
-        const description = (txn.description || '').trim().slice(0, 500);
-        const bankSyncId = txn.identifier ? `${source}:${txn.identifier}` : null;
-
-        if (bankSyncId) {
-          // Hard dedup via partial unique index on (user_id, bank_sync_id).
-          const result = await client.query(
-            `INSERT INTO transactions
-               (user_id, amount, type, description, notes, date, transaction_datetime,
-                bank_sync_id, bank_source, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,NOW(),NOW())
-             ON CONFLICT (user_id, bank_sync_id)
-               WHERE bank_sync_id IS NOT NULL
-             DO NOTHING
-             RETURNING id`,
-            [userId, amount, type, description, date, transactionDatetime, bankSyncId, source],
-          );
-          result.rows.length > 0 ? inserted++ : skipped++;
-        } else {
-          // Soft dedup: match on (user_id, source, date, amount, description).
-          const existing = await client.query(
-            `SELECT id FROM transactions
-             WHERE user_id=$1 AND bank_source=$2 AND date=$3
-               AND amount=$4 AND description=$5 AND deleted_at IS NULL
-             LIMIT 1`,
-            [userId, source, date, amount, description],
-          );
-          if (existing.rows.length > 0) {
-            skipped++;
-          } else {
-            await client.query(
-              `INSERT INTO transactions
-                 (user_id, amount, type, description, notes, date, transaction_datetime,
-                  bank_source, created_at, updated_at)
-               VALUES ($1,$2,$3,$4,'',$5,$6,$7,NOW(),NOW())`,
-              [userId, amount, type, description, date, transactionDatetime, source],
-            );
-            inserted++;
-          }
-        }
-      }
-    }
-
-    // ── Upsert real bank account balances ────────────────────────────────────
-    // Stores the actual account balance from the bank (different from the
-    // SpendWise calculated balance). Used by the balance panel to show
-    // "יתרת חשבון בנק בפועל" separately from the SpendWise budget tracking.
-    for (const account of accounts) {
-      if (account.balance !== null && account.balance !== undefined && typeof account.balance === 'number') {
-        await client.query(
-          `INSERT INTO bank_accounts
-             (user_id, bank_source, account_number, account_type, balance, last_synced_at)
-           VALUES ($1, $2, $3, $4, $5, NOW())
-           ON CONFLICT (user_id, bank_source, account_number)
-           DO UPDATE SET
-             balance        = EXCLUDED.balance,
-             account_type   = EXCLUDED.account_type,
-             last_synced_at = NOW()`,
-          [userId, source, account.account_number || '', account.type || null, account.balance],
-        );
-      }
-    }
+    // Shared ingestion (dedup + bank_accounts upsert) — same code path as
+    // the agent route, so both entry points behave identically.
+    const { inserted, skipped } = await ingestAccounts(client, userId, source, accounts);
 
     await client.query('COMMIT');
     logger.info('bank-sync: completed', { userId, source, inserted, skipped });

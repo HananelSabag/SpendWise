@@ -346,6 +346,20 @@ try {
   }
 
   try {
+    app.use(`${API_VERSION}/bank-connections`, require('./routes/bankConnectionsRoutes'));
+    logger.debug('✅ Bank connections routes loaded');
+  } catch (error) {
+    logger.error('❌ Bank connections routes failed:', error.message);
+  }
+
+  try {
+    app.use(`${API_VERSION}/bank-agent`, require('./routes/bankAgentRoutes'));
+    logger.debug('✅ Bank agent routes loaded');
+  } catch (error) {
+    logger.error('❌ Bank agent routes failed:', error.message);
+  }
+
+  try {
     app.use(`${API_VERSION}/performance`, require('./routes/performance'));
     logger.debug('✅ Performance routes loaded');
   } catch (error) {

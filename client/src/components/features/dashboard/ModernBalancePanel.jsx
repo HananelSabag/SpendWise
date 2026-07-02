@@ -14,7 +14,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, TrendingUp, TrendingDown, RefreshCw, Wifi } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Building2, TrendingUp, TrendingDown, RefreshCw, Wifi, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency, useTranslation } from '../../../stores';
@@ -127,22 +128,26 @@ const ModernBalancePanel = ({ className = '' }) => {
     );
   }
 
-  // ── Not synced ───────────────────────────────────────────────────────────────
+  // ── Not synced — compact CTA to connect a bank (manual mode stays primary) ──
   if (!hasSynced) {
     return (
-      <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
-        <div className="bg-gradient-to-br from-gray-600 to-gray-700 p-5 text-white">
-          <div className="flex items-center gap-2 mb-4 opacity-80">
-            <Building2 className="w-4 h-4" />
-            <span className="text-sm font-semibold">{t('title')}</span>
-          </div>
-          <p className="text-2xl font-bold tracking-tight opacity-40">—</p>
-          <p className="text-xs opacity-60 mt-1">{t('notSynced')}</p>
+      <Link
+        to="/bank-sync"
+        className={cn(
+          'block rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700',
+          'hover:border-primary-400 dark:hover:border-primary-600 transition-colors group',
+          'p-4 flex items-center gap-3',
+          className,
+        )}
+      >
+        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 flex items-center justify-center transition-colors shrink-0">
+          <Plus className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
         </div>
-        <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800">
-          {t('runScraper')}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('connectBank')}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{t('noConnectionsHint')}</p>
         </div>
-      </div>
+      </Link>
     );
   }
 

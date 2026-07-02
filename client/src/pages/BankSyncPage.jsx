@@ -1,21 +1,31 @@
 /**
- * Bank Sync Page — control panel for bank-scraper integration.
+ * Bank Sync Page — Bank Connect management hub
+ *
+ * Sections:
+ *   1. My Bank Connections — connect / sync now / pause / resume / delete
+ *   2. Synced data cards — per-source stats (transactions, balances)
+ *   3. How it works
+ *
+ * Credentials are encrypted in the browser (ConnectBankModal) — this page
+ * never sees or handles plaintext credentials.
  * Full i18n via bankSync translation module. No hardcoded strings.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Building2, RefreshCw, CheckCircle2, Clock, TrendingDown,
+  Building2, RefreshCw, Clock, TrendingDown,
   TrendingUp, AlertCircle, ChevronDown, ChevronUp, Landmark,
-  Zap, Info,
+  Info, Plus, Pause, Play, Trash2, ShieldCheck, Loader2,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from '../stores';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation, useNotifications } from '../stores';
 import { cn } from '../utils/helpers';
 import apiClient from '../api/client';
+import bankConnectionsApi from '../api/bankConnections';
+import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
 
-// ── API call ─────────────────────────────────────────────────────────────────
+// ── API ───────────────────────────────────────────────────────────────────────
 async function fetchBankStats() {
   const res = await apiClient.get('/bank-sync/stats');
   return res.data.sources || [];
@@ -23,18 +33,16 @@ async function fetchBankStats() {
 
 // ── Source display metadata (colors only — labels come from i18n) ─────────────
 const SOURCE_META = {
-  yahav:    { color: '#1a6b3a', bg: 'bg-green-50 dark:bg-green-950/30',   border: 'border-green-200 dark:border-green-800',   badge: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' },
-  isracard: { color: '#c0392b', bg: 'bg-red-50 dark:bg-red-950/30',       border: 'border-red-200 dark:border-red-800',       badge: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' },
-  max:      { color: '#1565c0', bg: 'bg-blue-50 dark:bg-blue-950/30',     border: 'border-blue-200 dark:border-blue-800',     badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' },
-  discount: { color: '#e65100', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800', badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300' },
+  yahav:    { bg: 'bg-green-50 dark:bg-green-950/30',   border: 'border-green-200 dark:border-green-800' },
+  isracard: { bg: 'bg-red-50 dark:bg-red-950/30',       border: 'border-red-200 dark:border-red-800' },
+  max:      { bg: 'bg-blue-50 dark:bg-blue-950/30',     border: 'border-blue-200 dark:border-blue-800' },
+  discount: { bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' },
 };
 
 function getMeta(source) {
   return SOURCE_META[source] || {
-    color: '#6b7280',
     bg: 'bg-gray-50 dark:bg-gray-800/30',
     border: 'border-gray-200 dark:border-gray-700',
-    badge: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   };
 }
 
@@ -52,58 +60,190 @@ function formatAmount(n, lang) {
   });
 }
 
-// ── Toggle persistence ────────────────────────────────────────────────────────
-function loadToggles() {
-  try { return JSON.parse(localStorage.getItem('bankSyncToggles') || '{}'); } catch { return {}; }
-}
-function saveToggles(v) {
-  try { localStorage.setItem('bankSyncToggles', JSON.stringify(v)); } catch {}
+// ── Status chip ───────────────────────────────────────────────────────────────
+function StatusChip({ status, t }) {
+  const map = {
+    active: { label: t('statusActive'), cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' },
+    paused: { label: t('statusPaused'), cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
+    error:  { label: t('statusError'),  cls: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' },
+  };
+  const { label, cls } = map[status] || map.paused;
+  return <span className={cn('px-2 py-0.5 rounded-full text-[11px] font-semibold', cls)}>{label}</span>;
 }
 
-// ── Bank card ─────────────────────────────────────────────────────────────────
-function BankCard({ stat, enabled, onToggle, t, lang }) {
-  const meta = getMeta(stat.source);
-  const bankName = t(`bankNames.${stat.source}`, { fallback: stat.source });
+// ── Connection card ───────────────────────────────────────────────────────────
+function ConnectionCard({ conn, t, lang }) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useNotifications();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
+
+  const syncMutation = useMutation({
+    mutationFn: () => bankConnectionsApi.syncNow(conn.id),
+    onSuccess: () => {
+      addNotification({ type: 'success', message: t('syncQueued') });
+      invalidate();
+    },
+    onError: (err) => {
+      const code = err?.details?.code || err?.code;
+      const msg =
+        code === 'SYNC_QUOTA' ? t('syncQuotaReached')
+        : code === 'SYNC_TOO_SOON' ? t('syncTooSoon')
+        : code === 'SYNC_IN_FLIGHT' ? t('syncInFlight')
+        : code === 'CONNECTION_PAUSED' ? t('connectionPaused')
+        : (err?.message || t('loadError'));
+      addNotification({ type: 'error', message: msg });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status) => bankConnectionsApi.setStatus(conn.id, status),
+    onSuccess: invalidate,
+    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => bankConnectionsApi.remove(conn.id),
+    onSuccess: () => { setConfirmDelete(false); invalidate(); },
+    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+  });
+
+  const meta = getMeta(conn.bank_source);
+  const isPausedByFailures = conn.status === 'error';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        'rounded-2xl border p-5 transition-all duration-200',
-        meta.bg, meta.border,
-        !enabled && 'opacity-60 grayscale',
-      )}
+      className={cn('rounded-2xl border p-4', meta.bg, meta.border)}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
             <Landmark className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 dark:text-white truncate">{bankName}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{stat.source}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-gray-900 dark:text-white truncate">
+                {t(`bankNames.${conn.bank_source}`)}
+              </p>
+              <StatusChip status={conn.status} t={t} />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {conn.display_name || conn.bank_source}
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Toggle */}
+      {isPausedByFailures && (
+        <div className="mt-3 flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span>{t('pausedAfterFailures')}</span>
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {t('lastSyncLabel')}: {conn.last_sync_at ? formatDate(conn.last_sync_at, lang) : t('neverSynced')}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-3 flex gap-2">
         <button
-          onClick={onToggle}
-          className={cn(
-            'relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-transparent',
-            enabled ? 'bg-emerald-500 focus:ring-emerald-400' : 'bg-gray-300 dark:bg-gray-600 focus:ring-gray-400',
-          )}
-          aria-label={enabled ? t('disableBank') : t('enableBank')}
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending || conn.status !== 'active'}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors"
         >
-          <span className={cn(
-            'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200',
-            enabled && 'translate-x-6',
-          )} />
+          {syncMutation.isPending
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : <RefreshCw className="w-3.5 h-3.5" />}
+          {t('syncNow')}
+        </button>
+
+        {conn.status === 'active' ? (
+          <button
+            onClick={() => statusMutation.mutate('paused')}
+            disabled={statusMutation.isPending}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-white/60 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Pause className="w-3.5 h-3.5" />
+            {t('pause')}
+          </button>
+        ) : (
+          <button
+            onClick={() => statusMutation.mutate('active')}
+            disabled={statusMutation.isPending}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+          >
+            <Play className="w-3.5 h-3.5" />
+            {t('resume')}
+          </button>
+        )}
+
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="flex items-center justify-center px-3 py-2 rounded-xl border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          aria-label={t('delete')}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Stats row */}
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
+        >
+          <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">{t('deleteConfirmTitle')}</p>
+          <p className="text-[11px] text-red-600 dark:text-red-400 mb-3">{t('deleteConfirmBody')}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+            >
+              {deleteMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t('delete')}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="flex-1 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Synced data card (per-source stats) ───────────────────────────────────────
+function BankStatsCard({ stat, t, lang }) {
+  const meta = getMeta(stat.source);
+  const bankName = t(`bankNames.${stat.source}`);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn('rounded-2xl border p-5', meta.bg, meta.border)}
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700">
+          <Landmark className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-semibold text-gray-900 dark:text-white truncate">{bankName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{stat.source}</p>
+        </div>
+      </div>
+
       <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="text-center">
           <p className="text-lg font-bold text-gray-900 dark:text-white">{stat.total}</p>
@@ -125,7 +265,6 @@ function BankCard({ stat, enabled, onToggle, t, lang }) {
         </div>
       </div>
 
-      {/* Amounts + last sync */}
       <div className="mt-3 flex items-center justify-between gap-2 pt-3 border-t border-gray-200/60 dark:border-gray-700/60">
         <span className="text-xs text-gray-500 dark:text-gray-400">
           <span className="text-emerald-600 dark:text-emerald-400 font-medium">{formatAmount(stat.total_income, lang)}</span>
@@ -162,13 +301,6 @@ function BankCard({ stat, enabled, onToggle, t, lang }) {
           </p>
         )}
       </div>
-
-      {!enabled && (
-        <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>{t('bankDisabledNote')}</span>
-        </div>
-      )}
     </motion.div>
   );
 }
@@ -214,17 +346,13 @@ function HowItWorks({ t }) {
             ))}
           </div>
 
-          <div className="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
-            <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">{t('manualSyncTitle')}</p>
-            <code className="text-xs text-blue-600 dark:text-blue-400">node sync.js</code>
-            <span className="text-xs text-blue-500 dark:text-blue-500 mx-2">{t('manualSyncOr')}</span>
-            <code className="text-xs text-blue-600 dark:text-blue-400">{t('doubleClickBat')}</code>
-          </div>
-
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50">
-            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">{t('mobileTrigger')}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{t('securityTitle')}</p>
+            </div>
             <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              {t('mobileTriggerNote')}
+              {t('securityPoint2')}
             </p>
           </div>
         </motion.div>
@@ -233,131 +361,24 @@ function HowItWorks({ t }) {
   );
 }
 
-// ── Remote trigger ────────────────────────────────────────────────────────────
-function TriggerSection({ t }) {
-  const [url, setUrl] = useState('');
-  const [key, setKey] = useState('');
-  const [status, setStatus] = useState(null);
-  const [msg, setMsg] = useState('');
-
-  async function handleTrigger() {
-    if (!url.trim() || !key.trim()) {
-      setMsg(t('enterServerAndKey'));
-      setStatus('error');
-      return;
-    }
-    setStatus('loading');
-    setMsg('');
-    try {
-      const endpoint = url.replace(/\/+$/, '') + '/trigger';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'X-API-Key': key.trim() },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStatus('ok');
-        setMsg(t('syncStarted'));
-      } else {
-        setStatus('error');
-        setMsg(data.error || t('errorStatus', { status: res.status }));
-      }
-    } catch {
-      setStatus('error');
-      setMsg(t('cannotConnect'));
-    }
-  }
-
-  return (
-    <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Zap className="w-4 h-4 text-purple-500" />
-        <p className="font-semibold text-gray-900 dark:text-white text-sm">{t('remoteTrigger')}</p>
-      </div>
-      <div className="space-y-2">
-        <input
-          type="url"
-          placeholder="http://192.168.1.x:3001"
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          dir="ltr"
-        />
-        <input
-          type="password"
-          placeholder="TRIGGER_API_KEY"
-          value={key}
-          onChange={e => setKey(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          dir="ltr"
-        />
-      </div>
-      <button
-        onClick={handleTrigger}
-        disabled={status === 'loading'}
-        className={cn(
-          'mt-3 w-full py-2.5 rounded-xl text-sm font-medium transition-colors',
-          status === 'loading'
-            ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-            : 'bg-purple-600 hover:bg-purple-700 text-white',
-        )}
-      >
-        {status === 'loading'
-          ? <span className="flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" />{t('syncing')}</span>
-          : t('syncNow')}
-      </button>
-      {msg && (
-        <div className={cn(
-          'mt-2 flex items-start gap-2 text-xs rounded-lg px-3 py-2',
-          status === 'ok'
-            ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-            : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300',
-        )}>
-          {status === 'ok'
-            ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-            : <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />}
-          <span>{msg}</span>
-        </div>
-      )}
-      <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500 text-center">
-        {t('serverSessionNote')}
-      </p>
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function BankSyncPage() {
   const { t, currentLanguage } = useTranslation('bankSync');
-  const [toggles, setToggles] = useState(loadToggles);
+  const [showConnect, setShowConnect] = useState(false);
 
-  const { data: sources = [], isLoading, error, refetch } = useQuery({
+  const { data: sources = [], isLoading: statsLoading, error: statsError, refetch } = useQuery({
     queryKey: ['bankSyncStats'],
     queryFn: fetchBankStats,
     staleTime: 60_000,
   });
 
-  // Default new sources to enabled
-  useEffect(() => {
-    if (!sources.length) return;
-    setToggles(prev => {
-      const next = { ...prev };
-      let changed = false;
-      for (const s of sources) {
-        if (next[s.source] === undefined) { next[s.source] = true; changed = true; }
-      }
-      if (changed) { saveToggles(next); return next; }
-      return prev;
-    });
-  }, [sources]);
+  const { data: connections = [], isLoading: connsLoading } = useQuery({
+    queryKey: ['bankConnections'],
+    queryFn: bankConnectionsApi.list,
+    staleTime: 30_000,
+  });
 
-  const handleToggle = useCallback((source) => {
-    setToggles(prev => {
-      const next = { ...prev, [source]: !prev[source] };
-      saveToggles(next);
-      return next;
-    });
-  }, []);
+  const isLoading = statsLoading || connsLoading;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24 lg:pb-8">
@@ -370,11 +391,11 @@ export default function BankSyncPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('subtitle')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('connectBankSubtitle')}</p>
             </div>
             <button
               onClick={() => refetch()}
-              className="mr-auto p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="ms-auto p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               title={t('refresh')}
             >
               <RefreshCw className={cn('w-4 h-4 text-gray-400', isLoading && 'animate-spin')} />
@@ -383,63 +404,75 @@ export default function BankSyncPage() {
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 py-6 space-y-4 lg:px-8">
+      <div className="max-w-xl mx-auto px-4 py-6 space-y-6 lg:px-8">
 
-        {/* Loading skeletons */}
-        {isLoading && (
-          <div className="space-y-3">
-            {[1, 2].map(i => (
-              <div key={i} className="h-40 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
-            ))}
+        {/* ── My connections ─────────────────────────────────────────── */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              {t('myConnections')}
+            </h2>
+            <button
+              onClick={() => setShowConnect(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t('connectBank')}
+            </button>
           </div>
-        )}
 
-        {/* Error */}
-        {error && (
+          {connsLoading && (
+            <div className="h-28 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
+          )}
+
+          {!connsLoading && connections.length === 0 && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setShowConnect(true)}
+              className="w-full text-center py-10 px-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group"
+            >
+              <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 mx-auto mb-3 flex items-center justify-center transition-colors">
+                <Plus className="w-7 h-7 text-gray-400 group-hover:text-primary-500 transition-colors" />
+              </div>
+              <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">{t('noConnections')}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">{t('noConnectionsHint')}</p>
+            </motion.button>
+          )}
+
+          {connections.map((conn) => (
+            <ConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
+          ))}
+        </section>
+
+        {/* ── Synced data ────────────────────────────────────────────── */}
+        {statsError && (
           <div className="flex items-center gap-2 p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{t('loadError')}</span>
           </div>
         )}
 
-        {/* Empty state */}
-        {!isLoading && !error && sources.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12 px-6"
-          >
-            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mx-auto mb-4 flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">{t('notSynced')}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">{t('runScraper')}</p>
-          </motion.div>
+        {sources.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              {t('recentSyncs')}
+            </h2>
+            {sources.map(stat => (
+              <BankStatsCard key={stat.source} stat={stat} t={t} lang={currentLanguage} />
+            ))}
+          </section>
         )}
-
-        {/* Bank cards */}
-        {sources.map(stat => (
-          <BankCard
-            key={stat.source}
-            stat={stat}
-            enabled={toggles[stat.source] !== false}
-            onToggle={() => handleToggle(stat.source)}
-            t={t}
-            lang={currentLanguage}
-          />
-        ))}
-
-        {/* Remote trigger */}
-        <TriggerSection t={t} />
 
         {/* How it works */}
         <HowItWorks t={t} />
-
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-400 dark:text-gray-600 pb-2">
-          {t('toggleNote')}
-        </p>
       </div>
+
+      {/* Connect wizard */}
+      <ConnectBankModal
+        isOpen={showConnect}
+        onClose={() => setShowConnect(false)}
+      />
     </div>
   );
 }

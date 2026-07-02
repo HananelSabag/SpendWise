@@ -46,3 +46,14 @@ services:
         sync: false
       - key: ALLOWED_HOUSEHOLD_IDS
         sync: false
+      # ── Bank Connect (self-service bank linking) ──
+      # BANK_AGENT_KEY: shared secret for the local scraper agent's job-queue
+      # access (X-Agent-Key header). Generate: openssl rand -hex 32
+      - key: BANK_AGENT_KEY
+        sync: false
+      # BANK_AGENT_PUBLIC_KEY: the agent's X25519 public key (base64). Browsers
+      # use it to seal bank credentials so ONLY the agent machine can decrypt
+      # them — this server never sees plaintext. From: node generate-keys.js
+      # in the bank-scraper repo.
+      - key: BANK_AGENT_PUBLIC_KEY
+        sync: false
