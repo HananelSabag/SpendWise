@@ -3,7 +3,7 @@
  * last sync, and actions (sync now / pause / resume / delete).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, ChevronDown,
@@ -22,12 +22,33 @@ const SYNC_ERROR_KEYS = {
   CONNECTION_PAUSED: 'connectionPaused',
 };
 
+// Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
+// Used only to show the user WHEN they'll be able to sync again — the
+// server is the actual source of truth/enforcement.
+const MANUAL_SYNC_GAP_HOURS = 3;
+
 export default function BankConnectionCard({ conn, t, lang }) {
   const queryClient = useQueryClient();
   const { addNotification } = useNotifications();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Force a re-render every 30s so the cooldown countdown/enable-state below
+  // updates on its own, without the user needing to refresh anything.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
+
+  // Proactive cooldown: rather than let the user click "Sync Now" and
+  // silently 429, show exactly when the next manual sync will be allowed.
+  const nextSyncAt = useMemo(() => {
+    if (!conn.last_sync_at) return null;
+    return new Date(new Date(conn.last_sync_at).getTime() + MANUAL_SYNC_GAP_HOURS * 3600_000);
+  }, [conn.last_sync_at]);
+  const inCooldown = Boolean(nextSyncAt && nextSyncAt.getTime() > Date.now());
 
   const syncMutation = useMutation({
     mutationFn: () => bankConnectionsApi.syncNow(conn.id),
@@ -125,6 +146,18 @@ export default function BankConnectionCard({ conn, t, lang }) {
               <span className="truncate">{t('lastAttemptFailed', { error: conn.last_error })}</span>
             </motion.div>
           )}
+          {/* Proactive cooldown — visible even on mobile (no hover tooltips there),
+              so clicking "Sync Now" repeatedly with no feedback can't happen. */}
+          {!isError && !isPending && !isRunning && !conn.last_error && inCooldown && (
+            <motion.div
+              key="cooldown"
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2"
+            >
+              <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>{t('nextSyncAt', { time: formatDateTime(nextSyncAt, lang) })}</span>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Last sync */}
@@ -137,7 +170,8 @@ export default function BankConnectionCard({ conn, t, lang }) {
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending || conn.status !== 'active'}
+            disabled={syncMutation.isPending || conn.status !== 'active' || inCooldown}
+            title={inCooldown ? t('nextSyncAt', { time: formatDateTime(nextSyncAt, lang) }) : undefined}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors"
           >
             {syncMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}

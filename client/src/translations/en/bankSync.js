@@ -94,6 +94,7 @@ export default {
   syncQueued: 'Sync queued! It will run within ~30 minutes',
   syncQuotaReached: 'Daily sync limit reached (2/day) — protects your bank account from lockouts',
   syncTooSoon: 'Please wait at least 3 hours between syncs',
+  nextSyncAt: 'Next manual sync available at {{time}}',
   syncInFlight: 'A sync is already in progress',
   connectionPaused: 'This connection is paused',
 

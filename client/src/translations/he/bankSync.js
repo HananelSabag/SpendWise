@@ -94,6 +94,7 @@ export default {
   syncQueued: 'הסנכרון בתור! ירוץ תוך כ-30 דקות',
   syncQuotaReached: 'הגעת למגבלת הסנכרונים היומית (2 ביום) — מגן על חשבון הבנק שלך מחסימה',
   syncTooSoon: 'יש להמתין לפחות 3 שעות בין סנכרונים',
+  nextSyncAt: 'הסנכרון הידני הבא זמין ב-{{time}}',
   syncInFlight: 'סנכרון כבר רץ כרגע',
   connectionPaused: 'החיבור מושהה',
 

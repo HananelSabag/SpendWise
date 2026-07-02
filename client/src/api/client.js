@@ -383,12 +383,23 @@ class SpendWiseAPIClient {
   // ✅ Normalize API Errors
   normalizeError(error) {
     if (error.response) {
-      // Server responded with error status
+      // Server error responses use two shapes across the codebase:
+      //   nested: { error: { code, message, details } }   (most routes)
+      //   flat:   { error: "human message", code: "X" }   (some newer routes)
+      // Handle both so `code` (used for toast/UI branching, e.g. SYNC_QUOTA,
+      // SYNC_TOO_SOON) is never silently lost to the flat shape — previously
+      // any flat-shape error fell through to a generic SERVER_ERROR/"Server
+      // error occurred", which is why sync rate-limit rejections showed no
+      // meaningful feedback.
+      const data = error.response.data || {};
+      const nested = (data.error && typeof data.error === 'object') ? data.error : null;
+      const flatMessage = typeof data.error === 'string' ? data.error : null;
+
       return {
         status: error.response.status,
-        message: error.response.data?.error?.message || error.response.data?.message || 'Server error occurred',
-        code: error.response.data?.error?.code || 'SERVER_ERROR',
-        details: error.response.data?.error?.details
+        message: nested?.message || flatMessage || data.message || 'Server error occurred',
+        code: nested?.code || data.code || 'SERVER_ERROR',
+        details: nested?.details || data.details
       };
     }
     
