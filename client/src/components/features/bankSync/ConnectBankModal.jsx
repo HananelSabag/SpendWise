@@ -19,6 +19,7 @@ import { useTranslation, useNotifications } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import { sealCredentials } from '../../../utils/sealedBox';
 import bankConnectionsApi from '../../../api/bankConnections';
+import { bankBrand } from './bankSyncMeta';
 
 // Per-bank credential field definitions. `key` must match what
 // israeli-bank-scrapers expects (see spendwise-agent src/core/banks.js BANKS).
@@ -159,14 +160,14 @@ const ConnectBankModal = ({ isOpen, onClose, onSuccess }) => {
           {/* ── Step 1: pick bank ───────────────────────────────────── */}
           {!succeeded && step === 0 && (
             <motion.div key="pick" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="grid grid-cols-2 gap-3">
-              {Object.entries(BANK_FORMS).map(([source, meta]) => (
+              {Object.keys(BANK_FORMS).map((source) => (
                 <button
                   key={source}
                   onClick={() => { setBank(source); setCreds({}); setStep(1); }}
                   className={cn(
-                    'rounded-2xl p-4 text-white text-start bg-gradient-to-br shadow transition-transform hover:scale-[1.02] active:scale-[0.98]',
-                    meta.color,
-                    bank === source && 'ring-2 ring-offset-2 ring-primary-500',
+                    'rounded-xl p-4 text-white text-start bg-gradient-to-br shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]',
+                    bankBrand(source).gradient,
+                    bank === source && 'ring-2 ring-offset-2 ring-indigo-500',
                   )}
                 >
                   <Building2 className="w-6 h-6 mb-2 opacity-90" />
