@@ -275,28 +275,31 @@ const MobileTransactions = ({
 
       {/* Sticky controls */}
       <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shadow-sm">
-        {/* Tab bar */}
-        <div className="grid grid-cols-2 p-2 gap-1">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={cn('py-2 rounded-xl text-sm font-medium transition-colors',
-              activeTab === 'all'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
-          >
-            <List className="w-4 h-4 inline mr-1.5" />
-            {t('tabs.all') || 'All'}
-          </button>
-          <button
-            onClick={() => setActiveTab('recurring')}
-            className={cn('py-2 rounded-xl text-sm font-medium transition-colors',
-              activeTab === 'recurring'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
-          >
-            <Repeat className="w-4 h-4 inline mr-1.5" />
-            {t('tabs.recurring') || 'Recurring'}
-          </button>
+        {/* Tab bar — quiet segmented control (active = raised card, not a
+            solid colored block that screams in dark mode) */}
+        <div className="p-2">
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={cn('py-1.5 rounded-lg text-sm font-medium transition-all',
+                activeTab === 'all'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400')}
+            >
+              <List className="w-4 h-4 inline me-1.5" />
+              {t('tabs.all') || 'All'}
+            </button>
+            <button
+              onClick={() => setActiveTab('recurring')}
+              className={cn('py-1.5 rounded-lg text-sm font-medium transition-all',
+                activeTab === 'recurring'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400')}
+            >
+              <Repeat className="w-4 h-4 inline me-1.5" />
+              {t('tabs.recurring') || 'Recurring'}
+            </button>
+          </div>
         </div>
 
         {/* Search + filter row (all tab only) */}

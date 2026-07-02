@@ -181,42 +181,42 @@ const FullNav = () => {
       key: 'categories',
       label: t('nav.categories') || 'Categories',
       icon: Tag,
-      gradient: 'from-blue-500 to-indigo-600',
+      iconTint: 'text-indigo-500 dark:text-indigo-400',
       action: () => { handleClose(); dispatch('open-categories'); },
     },
     {
       key: 'recurring',
       label: t('nav.recurring') || 'Recurring',
       icon: RepeatIcon,
-      gradient: 'from-violet-500 to-purple-600',
+      iconTint: 'text-purple-500 dark:text-purple-400',
       action: () => { handleClose(); dispatch('open-recurring'); },
     },
     {
       key: 'exchange',
       label: t('nav.exchange') || 'Exchange',
       icon: Calculator,
-      gradient: 'from-amber-500 to-orange-500',
+      iconTint: 'text-amber-500 dark:text-amber-400',
       action: () => { handleClose(); dispatch('open-exchange'); },
     },
     {
       key: 'help',
       label: t('nav.help') || 'Help',
       icon: HelpCircle,
-      gradient: 'from-teal-500 to-cyan-600',
+      iconTint: 'text-teal-500 dark:text-teal-400',
       action: () => { handleClose(); dispatch('open-onboarding'); },
     },
     {
       key: 'bank-sync',
       label: t('bankSync.title') || 'Bank Sync',
       icon: Building2,
-      gradient: 'from-emerald-500 to-teal-600',
+      iconTint: 'text-emerald-500 dark:text-emerald-400',
       action: () => closeAndGo('/bank-sync'),
     },
     ...(isAdmin ? [{
       key: 'admin',
       label: t('nav.admin') || 'Admin',
       icon: Shield,
-      gradient: 'from-yellow-500 to-amber-600',
+      iconTint: 'text-yellow-600 dark:text-yellow-400',
       action: () => closeAndGo('/admin'),
     }] : []),
   ], [t, isAdmin, dispatch, handleClose, closeAndGo, loadedModulesCount]); // eslint-disable-line
@@ -365,38 +365,37 @@ const FullNav = () => {
             </div>
           </div>
 
-          {/* ── Shopping — featured card ─────────────────────────────── */}
+          {/* ── Shopping — featured card (quiet surface, one accent chip) ── */}
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.03, type: 'spring', stiffness: 400, damping: 30 }}
             onClick={() => closeAndGo('/shopping')}
             className={cn(
-              'w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-start',
-              'bg-gradient-to-r from-emerald-500 to-teal-600',
-              'shadow-lg shadow-emerald-500/25',
+              'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-start',
+              'bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700',
               'active:scale-[0.98] transition-all duration-150',
             )}
           >
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
-              <ShoppingCart className="w-7 h-7 text-white" strokeWidth={1.75} />
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 shadow-sm">
+              <ShoppingCart className="w-6 h-6 text-white" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-white leading-tight">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                 {t('shopping.title') || 'Shopping List'}
               </p>
-              <p className="text-xs text-white/75 mt-0.5">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                 {t('shopping.manageList') || 'Manage your shared lists'}
               </p>
             </div>
             {pendingInvitationsCount > 0 && (
-              <span className="shrink-0 min-w-[22px] h-6 px-1.5 rounded-full bg-white/30 text-white text-xs font-bold flex items-center justify-center">
+              <span className="shrink-0 min-w-[22px] h-6 px-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
                 {pendingInvitationsCount}
               </span>
             )}
           </motion.button>
 
-          {/* ── Finance — 2 col ──────────────────────────────────────── */}
+          {/* ── Finance — 2 col (neutral cards, colored icon chips) ──── */}
           <div className="grid grid-cols-2 gap-3">
             {financeActions.map((action, i) => {
               const Icon = action.icon;
@@ -408,16 +407,18 @@ const FullNav = () => {
                   transition={{ delay: 0.07 + i * 0.03, type: 'spring', stiffness: 400, damping: 30 }}
                   onClick={action.action}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-4 rounded-2xl text-start',
-                    'bg-gradient-to-br', action.gradient,
-                    'shadow-lg', action.shadow,
+                    'flex items-center gap-3 px-4 py-3.5 rounded-2xl text-start',
+                    'bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700',
                     'active:scale-95 transition-all duration-150',
                   )}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                    <Icon className="w-6 h-6 text-white" strokeWidth={1.75} />
+                  <div className={cn(
+                    'w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-sm',
+                    action.gradient,
+                  )}>
+                    <Icon className="w-5 h-5 text-white" strokeWidth={1.75} />
                   </div>
-                  <span className="text-sm font-bold text-white leading-tight">
+                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 leading-tight">
                     {action.label}
                   </span>
                 </motion.button>
@@ -425,7 +426,7 @@ const FullNav = () => {
             })}
           </div>
 
-          {/* ── Tools — icon row (no grid cards) ─────────────────────── */}
+          {/* ── Tools — icon row (quiet squares, tinted icons) ───────── */}
           <div>
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">
               {t('nav.tools') || 'Tools'}
@@ -442,14 +443,10 @@ const FullNav = () => {
                     onClick={action.action}
                     className="flex flex-col items-center gap-1.5 flex-1 active:scale-90 transition-transform"
                   >
-                    <div className={cn(
-                      'w-13 h-13 w-[52px] h-[52px] rounded-2xl flex items-center justify-center',
-                      'bg-gradient-to-br shadow-md',
-                      action.gradient,
-                    )}>
-                      <Icon className="w-6 h-6 text-white" strokeWidth={1.75} />
+                    <div className="w-[48px] h-[48px] rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                      <Icon className={cn('w-5 h-5', action.iconTint || 'text-gray-500 dark:text-gray-400')} strokeWidth={1.75} />
                     </div>
-                    <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400 text-center leading-tight max-w-[56px]">
+                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 text-center leading-tight max-w-[56px]">
                       {action.label}
                     </span>
                   </motion.button>

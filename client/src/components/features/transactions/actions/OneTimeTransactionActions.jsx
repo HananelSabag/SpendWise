@@ -45,15 +45,18 @@ const DeleteModal = ({ showDeleteModal, setShowDeleteModal, transaction, formatC
   </Modal>
 );
 
-const OneTimeTransactionActions = ({ 
-  transaction, 
-  onEdit, 
-  onDelete, 
+const OneTimeTransactionActions = ({
+  transaction,
+  onEdit,
+  onDelete,
   onDuplicate,
   onSuccess,
   className = "",
   variant = "inline", // "inline" | "compact" | "dropdown"
-  showLabels = false
+  showLabels = false,
+  // Bank-synced rows are read-only facts from the bank: hide edit/duplicate,
+  // keep only delete (soft-delete; dedup prevents re-import on next sync).
+  readOnly = false
 }) => {
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
@@ -162,35 +165,38 @@ const OneTimeTransactionActions = ({
   }
 
   if (variant === "compact") {
+    // Quiet by default: neutral gray icons that only take on meaning-color
+    // on hover. Read-only (bank) rows expose delete only.
     return (
-      <div className={cn("flex items-center gap-1", className)}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleEdit}
-          className="text-blue-600 hover:text-blue-700"
-        >
-          <Edit className="w-4 h-4" />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleDuplicate}
-          className="text-purple-600 hover:text-purple-700"
-        >
-          <Copy className="w-4 h-4" />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
+      <div className={cn("flex items-center", className)}>
+        {!readOnly && onEdit && (
+          <button
+            onClick={handleEdit}
+            className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            aria-label={t('actions.edit', 'Edit')}
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {!readOnly && (onDuplicate || onEdit) && (
+          <button
+            onClick={handleDuplicate}
+            className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-purple-500 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            aria-label={t('actions.copy', 'Duplicate')}
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        <button
           onClick={handleDelete}
           disabled={isLoading}
-          className="text-red-600 hover:text-red-700"
+          className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          aria-label={t('actions.delete', 'Delete')}
         >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
 
         {showDeleteModal && (
           <DeleteModal

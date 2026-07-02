@@ -28,12 +28,9 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
       }}
       className="hidden lg:block fixed bottom-6 left-6 z-[10000] group focus:outline-none"
     >
-      {/* Glow */}
-      <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500/30 to-indigo-500/30 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />
-
-      {/* Main Circle */}
+      {/* Main circle — clean, no glow halo */}
       <span
-        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xl shadow-blue-600/30 hover:from-blue-700 hover:to-indigo-700 transition-transform transform group-active:scale-95"
+        className="relative flex h-13 w-13 h-[52px] w-[52px] items-center justify-center rounded-full bg-indigo-600 shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 transition-all transform group-active:scale-95"
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
         <Plus className="h-6 w-6 text-white" />
