@@ -1,4 +1,4 @@
--- Stores the real bank account balance from bank-scraper payloads.
+-- Stores the real bank account balance from spendwise-agent sync payloads.
 -- This is separate from the transactions table (which stores individual txns).
 -- Purpose: show actual bank balance in the SpendWise balance panel,
 --          distinct from the SpendWise calculated net (income - expenses).
