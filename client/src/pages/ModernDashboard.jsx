@@ -1,21 +1,24 @@
 /**
  * ModernDashboard — main dashboard page.
- * Uses useIsMobile() to render separate mobile and desktop layouts.
- * All data hooks are shared; only layout differs.
+ *
+ * Aggressively pruned: greeting, balance, quick add, recent transactions.
+ * The old half-empty stat cards (avg '—', top category '—', duplicate
+ * income/expense counters) are gone — the balance panel already tells
+ * that story with real data.
+ *
+ * Mobile-first: pull-to-refresh, liquid-glass surfaces, thumb-sized
+ * add-income/add-expense actions.
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  RefreshCw, TrendingUp, Activity, Target, Crown,
-  Plus, ArrowUpRight, ArrowDownRight,
-} from 'lucide-react';
+import { RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
-import { Card, Button, Avatar, PageSkeleton } from '../components/ui';
+import { Button, Avatar, PageSkeleton } from '../components/ui';
 
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernQuickActionsBar from '../components/features/dashboard/ModernQuickActionsBar';
@@ -41,58 +44,61 @@ const useGreeting = (user, t) => useMemo(() => {
   return text.includes('{{name}}') ? text.replace('{{name}}', name) : `${text}${name ? `, ${name}` : ''}`;
 }, [user, t]);
 
-// ─── Stats row ────────────────────────────────────────────────────────────────
+// ─── Pull-to-refresh (mobile) ─────────────────────────────────────────────────
+// Native-feeling: drag down from the top of the page → spinner → refresh.
+// Threshold 70px, resistance 0.5 so the pull feels weighted.
 
-const StatsRow = ({ dashboardData, formatCurrency, t }) => {
-  const items = useMemo(() => {
-    const txCount = dashboardData?.monthlyStats?.transactionCount || 0;
-    const income  = dashboardData?.monthlyStats?.income || 0;
-    const expenses = dashboardData?.monthlyStats?.expenses || 0;
-    const net     = dashboardData?.monthlyStats?.net || (income - Math.abs(expenses));
-    const avg     = txCount > 0 ? (Math.abs(expenses) + income) / txCount : 0;
-    const topCat  = dashboardData?.topCategory?.name || '—';
+const usePullToRefresh = (onRefresh, enabled) => {
+  const [pull, setPull] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef(0);
+  const pulling = useRef(false);
 
-    return [
-      { label: t('stats.totalTransactions'), value: txCount || '—', icon: Activity, color: 'blue' },
-      { label: t('stats.avgTransaction'),    value: avg > 0 ? formatCurrency(avg) : '—', icon: Target,   color: 'green' },
-      { label: t('stats.topCategory'),       value: topCat,                              icon: Crown,    color: 'purple' },
-      {
-        label: t('stats.monthlyBalance'),
-        value: net !== 0 ? formatCurrency(Math.abs(net)) : '—',
-        icon: TrendingUp,
-        color: net >= 0 ? 'green' : 'red',
-      },
-    ];
-  }, [dashboardData, formatCurrency, t]);
+  useEffect(() => {
+    if (!enabled) return;
 
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {items.map(({ label, value, icon: Icon, color }) => (
-        <div
-          key={label}
-          className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm"
-        >
-          <div className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center mb-2',
-            color === 'blue'   && 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-            color === 'green'  && 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
-            color === 'purple' && 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
-            color === 'red'    && 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
-          )}>
-            <Icon className="w-4 h-4" />
-          </div>
-          <p className="text-base font-bold text-gray-900 dark:text-white truncate">{value}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-        </div>
-      ))}
-    </div>
-  );
+    const onTouchStart = (e) => {
+      if (window.scrollY > 0 || refreshing) return;
+      startY.current = e.touches[0].clientY;
+      pulling.current = true;
+    };
+
+    const onTouchMove = (e) => {
+      if (!pulling.current || refreshing) return;
+      const delta = (e.touches[0].clientY - startY.current) * 0.5;
+      if (delta > 0 && window.scrollY === 0) {
+        setPull(Math.min(delta, 110));
+      }
+    };
+
+    const onTouchEnd = async () => {
+      if (!pulling.current) return;
+      pulling.current = false;
+      if (pull >= 70 && !refreshing) {
+        setRefreshing(true);
+        setPull(54);
+        try { await onRefresh(); } catch (_) {}
+        setRefreshing(false);
+      }
+      setPull(0);
+    };
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [enabled, pull, refreshing, onRefresh]);
+
+  return { pull, refreshing };
 };
 
-// ─── Quick add row (mobile) ───────────────────────────────────────────────────
+// ─── Quick add (income / expense) ─────────────────────────────────────────────
 
-const MobileQuickAdd = () => {
-  const { t } = useTranslation('transactions');
+const QuickAdd = ({ t }) => {
   const handleAdd = useCallback((type) => {
     try { window.dispatchEvent(new CustomEvent('transaction:add', { detail: { type } })); } catch (_) {}
   }, []);
@@ -101,16 +107,20 @@ const MobileQuickAdd = () => {
     <div className="grid grid-cols-2 gap-3">
       <button
         onClick={() => handleAdd('expense')}
-        className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold text-sm active:scale-95 transition-transform"
+        className="glass-card flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-semibold text-sm text-red-600 dark:text-red-400 active:scale-95 transition-transform"
       >
-        <ArrowDownRight className="w-4 h-4" />
+        <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+          <ArrowDownRight className="w-4 h-4 text-white" />
+        </span>
         {t('addExpense', 'Add Expense')}
       </button>
       <button
         onClick={() => handleAdd('income')}
-        className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 text-green-600 dark:text-green-400 font-semibold text-sm active:scale-95 transition-transform"
+        className="glass-card flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-semibold text-sm text-emerald-600 dark:text-emerald-400 active:scale-95 transition-transform"
       >
-        <ArrowUpRight className="w-4 h-4" />
+        <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <ArrowUpRight className="w-4 h-4 text-white" />
+        </span>
         {t('addIncome', 'Add Income')}
       </button>
     </div>
@@ -118,11 +128,6 @@ const MobileQuickAdd = () => {
 };
 
 // ─── Auto-retry error state ───────────────────────────────────────────────────
-// Cap auto-retries at MAX_AUTO_RETRIES. Previously this retried every 8s
-// FOREVER, which on Render free-tier means hammering a sleeping/dead server
-// from every open tab — and burning the user's bandwidth + battery — for as
-// long as the page was open. After the cap we stop and require a manual click,
-// which also stops parallel tabs from DDOSing the server.
 
 const MAX_AUTO_RETRIES = 3;
 
@@ -132,7 +137,7 @@ const DashboardError = ({ onRetry, t }) => {
   const exhausted = attempt >= MAX_AUTO_RETRIES;
 
   useEffect(() => {
-    if (exhausted) return;            // stop the timer once we've used our retries
+    if (exhausted) return;
     if (countdown <= 0) {
       setAttempt(a => a + 1);
       setCountdown(8);
@@ -151,7 +156,7 @@ const DashboardError = ({ onRetry, t }) => {
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center p-8 max-w-sm">
+      <div className="glass-card rounded-2xl text-center p-8 max-w-sm">
         <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
           <RefreshCw className={cn('w-7 h-7 text-red-500', !exhausted && 'animate-spin')} />
         </div>
@@ -168,8 +173,7 @@ const DashboardError = ({ onRetry, t }) => {
           </p>
         ) : (
           <p className="text-xs text-red-500 dark:text-red-400 mb-4">
-            Auto-retries exhausted. The server isn&apos;t responding — try again manually
-            or check status.
+            {t('autoRetriesExhausted', 'Auto-retries exhausted — try again manually.')}
           </p>
         )}
         <Button onClick={handleManualRetry} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
@@ -180,120 +184,87 @@ const DashboardError = ({ onRetry, t }) => {
   );
 };
 
-// ─── Mobile mini-stats ────────────────────────────────────────────────────────
+// ─── Greeting header (shared) ─────────────────────────────────────────────────
 
-const MobileMiniStats = ({ dashboardData, formatCurrency, t }) => {
-  const txCount = dashboardData?.monthlyStats?.transactionCount || 0;
-  const net     = dashboardData?.monthlyStats?.net ||
-    ((dashboardData?.monthlyStats?.income || 0) - Math.abs(dashboardData?.monthlyStats?.expenses || 0));
+const GreetingHeader = ({ greeting, user, navigate, compact = false }) => (
+  <div className={cn('flex items-center justify-between', !compact && 'mb-1')}>
+    <div className="min-w-0">
+      <h1 className={cn(
+        'font-bold text-gray-900 dark:text-white leading-tight truncate',
+        compact ? 'text-lg' : 'text-2xl',
+      )}>
+        {greeting}
+      </h1>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+      </p>
+    </div>
+    <button
+      onClick={() => navigate('/profile')}
+      className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    >
+      <Avatar
+        src={user?.avatar || user?.profile_picture_url || user?.picture}
+        fallback={user?.firstName?.charAt(0) || user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+        className={cn(
+          'rounded-full ring-2 ring-white/60 dark:ring-gray-700 shadow-sm hover:opacity-80 transition-opacity',
+          compact ? 'w-9 h-9' : 'w-11 h-11',
+        )}
+      />
+    </button>
+  </div>
+);
 
-  if (!dashboardData) return null;
+// ─── Mobile layout ────────────────────────────────────────────────────────────
+
+const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh }) => {
+  const { pull, refreshing } = usePullToRefresh(onRefresh, true);
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700 shadow-sm">
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">{t('stats.totalTransactions', 'Transactions')}</p>
-        <p className="text-base font-bold text-gray-900 dark:text-white tabular-nums">{txCount || '—'}</p>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50/60 via-gray-50 to-gray-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950">
+      {/* Pull-to-refresh indicator */}
+      <div
+        className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
+        style={{ height: `${pull}px` }}
+      >
+        <RefreshCw className={cn(
+          'w-5 h-5 text-indigo-500 transition-transform',
+          refreshing && 'animate-spin',
+          !refreshing && pull >= 70 && 'rotate-180',
+        )} />
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-gray-700 shadow-sm">
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">{t('stats.monthlyBalance', 'Net this month')}</p>
-        <p className={cn(
-          'text-base font-bold tabular-nums',
-          net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-        )}>
-          {net !== 0 ? `${net >= 0 ? '+' : ''}${formatCurrency(net)}` : '—'}
-        </p>
+
+      {/* Glass greeting header */}
+      <div className="glass-card sticky top-0 z-20 px-4 py-3 border-x-0 border-t-0 rounded-none">
+        <GreetingHeader greeting={greeting} user={user} navigate={navigate} compact />
+      </div>
+
+      <div className="px-4 py-4 space-y-4 pb-28">
+        <ModernBalancePanel />
+        <QuickAdd t={t} />
+        <ModernRecentTransactionsWidget
+          onViewAll={() => navigate('/transactions')}
+          maxItems={6}
+          preloadedTransactions={dashboardData?.recentTransactions}
+          preloadedLoading={!dashboardData}
+        />
       </div>
     </div>
   );
 };
 
-// ─── Mobile layout ────────────────────────────────────────────────────────────
-
-const MobileDashboard = ({ greeting, user, dashboardData, formatCurrency, t, navigate }) => (
-  <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-    {/* Greeting bar */}
-    <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-            {greeting}
-          </h1>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-        <Avatar
-          src={user?.avatar || user?.profile_picture_url || user?.picture}
-          fallback={user?.firstName?.charAt(0) || user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-          className="w-9 h-9 rounded-full border-2 border-gray-100 dark:border-gray-700 shrink-0"
-        />
-      </div>
-    </div>
-
-    <div className="px-4 py-4 space-y-4">
-      {/* Balance */}
-      <ModernBalancePanel />
-
-      {/* Mini stats */}
-      <MobileMiniStats dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
-
-      {/* Quick add */}
-      <MobileQuickAdd />
-
-      {/* Recent transactions — preload from dashboard data so we don't fire
-          a second /transactions API call. The dashboard endpoint already
-          returns recent_transactions server-side. */}
-      <ModernRecentTransactionsWidget
-        onViewAll={() => navigate('/transactions')}
-        maxItems={6}
-        preloadedTransactions={dashboardData?.recentTransactions}
-        preloadedLoading={!dashboardData}
-      />
-    </div>
-  </div>
-);
-
 // ─── Desktop layout ───────────────────────────────────────────────────────────
 
-const DesktopDashboard = ({
-  greeting, user, dashboardData,
-  formatCurrency, t, navigate,
-}) => (
+const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0 flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{greeting}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
-      <button
-        onClick={() => navigate('/profile')}
-        title={t('goToProfile') || 'Go to profile'}
-        className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        <Avatar
-          src={user?.avatar || user?.profile_picture_url || user?.picture}
-          fallback={user?.firstName?.charAt(0) || user?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-          className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-gray-800 shadow-md hover:opacity-80 transition-opacity"
-        />
-      </button>
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6">
+      <GreetingHeader greeting={greeting} user={user} navigate={navigate} />
     </div>
 
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
-      {/* Balance panel */}
       <ModernBalancePanel />
 
-      {/* Stats row */}
-      {dashboardData && (
-        <StatsRow dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
-      )}
-
-      {/* Main 2-column grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent transactions — takes 2/3.
-            Preload from dashboard data to avoid a redundant API call. */}
         <div className="xl:col-span-2">
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
@@ -303,10 +274,9 @@ const DesktopDashboard = ({
           />
         </div>
 
-        {/* Quick actions — takes 1/3 */}
         <div className="xl:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100/60 dark:border-gray-700/60">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                 {t('quickActions.title')}
               </h3>
@@ -334,9 +304,7 @@ const ModernDashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [addTransactionType, setAddTransactionType] = useState('expense');
 
   const {
     data: dashboardData,
@@ -348,48 +316,32 @@ const ModernDashboard = () => {
   const greeting = useGreeting(user, t);
 
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
     try {
       await refreshDashboard();
     } catch (_) {
       addNotification({ type: 'error', message: t('refreshError'), duration: 4000 });
-    } finally {
-      setIsRefreshing(false);
     }
   }, [refreshDashboard, addNotification, t]);
 
-  // NOTE: 'transaction:add' on mobile is handled globally by UnifiedTransactionActions.
-  // Desktop FAB below uses a direct onClick so onSuccess → dashboard-refresh-requested fires.
-
-  // ── Loading ──
   if (isLoading && !dashboardData) {
     return <PageSkeleton page="dashboard" />;
   }
 
-  // ── Error with auto-retry ──
   if (isError && !dashboardData) {
     return <DashboardError onRetry={handleRefresh} t={t} />;
   }
 
-  const sharedProps = {
-    greeting,
-    user,
-    dashboardData,
-    formatCurrency,
-    t,
-    navigate,
-  };
+  const sharedProps = { greeting, user, dashboardData, formatCurrency, t, navigate };
 
   return (
     <>
       {isMobile
-        ? <MobileDashboard {...sharedProps} />
+        ? <MobileDashboard {...sharedProps} onRefresh={handleRefresh} />
         : <DesktopDashboard {...sharedProps} />
       }
 
       <AddTransactionModal
         isOpen={showAddTransaction}
-        defaultType={addTransactionType}
         onClose={() => setShowAddTransaction(false)}
         onSuccess={() => {
           setShowAddTransaction(false);
