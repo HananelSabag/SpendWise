@@ -217,6 +217,17 @@ router.post('/:id/sync', async (req, res) => {
       return res.status(409).json({ error: 'Connection is paused', code: 'CONNECTION_PAUSED' });
     }
 
+    // Expire stale pending jobs (agent machine was off and never claimed
+    // them). Without this, one stuck job blocked "Sync Now" forever.
+    await db.query(
+      `UPDATE bank_sync_jobs
+       SET status='failed', finished_at=NOW(),
+           result='{"error":"expired — sync agent did not pick this up in time"}'::jsonb
+       WHERE connection_id = $1 AND status = 'pending'
+         AND requested_at < NOW() - INTERVAL '2 hours'`,
+      [id],
+    );
+
     // Guard: existing pending/running job for this connection
     const inFlight = await db.query(
       `SELECT id FROM bank_sync_jobs
@@ -227,20 +238,26 @@ router.post('/:id/sync', async (req, res) => {
       return res.status(409).json({ error: 'A sync is already queued', code: 'SYNC_IN_FLIGHT' });
     }
 
-    // Guard: manual quota (2/day) and gap (3h since any job)
+    // Guards that protect the BANK account (frequent logins = lockout):
+    //  - quota: 2 manual attempts/day that actually reached the bank
+    //    (started_at set). Expired never-claimed jobs don't count.
+    //  - gap: 3h since the last COMPLETED sync. A failed/expired attempt
+    //    doesn't block an immediate retry — that was the "worked once,
+    //    never again" complaint.
     const quota = await db.query(
       `SELECT
          COUNT(*) FILTER (WHERE trigger = 'manual'
-                            AND requested_at > NOW() - INTERVAL '24 hours')::int AS manual_today,
-         MAX(requested_at) AS last_any
+                            AND requested_at > NOW() - INTERVAL '24 hours'
+                            AND started_at IS NOT NULL)::int AS manual_today,
+         MAX(finished_at) FILTER (WHERE status = 'done') AS last_done
        FROM bank_sync_jobs WHERE connection_id = $1`,
       [id],
     );
-    const { manual_today, last_any } = quota.rows[0];
+    const { manual_today, last_done } = quota.rows[0];
     if (manual_today >= MANUAL_SYNCS_PER_DAY) {
       return res.status(429).json({ error: 'Daily manual sync limit reached', code: 'SYNC_QUOTA' });
     }
-    if (last_any && Date.now() - new Date(last_any).getTime() < MANUAL_SYNC_GAP_HOURS * 3600_000) {
+    if (last_done && Date.now() - new Date(last_done).getTime() < MANUAL_SYNC_GAP_HOURS * 3600_000) {
       return res.status(429).json({ error: `Minimum ${MANUAL_SYNC_GAP_HOURS}h between syncs`, code: 'SYNC_TOO_SOON' });
     }
 

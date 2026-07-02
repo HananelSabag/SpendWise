@@ -254,6 +254,15 @@ class Scheduler {
     try {
       logger.info('🏦 Enqueuing bank sync jobs');
 
+      // Expire pending jobs the agent never claimed (machine off) so they
+      // don't block new scheduled syncs forever.
+      await db.query(`
+        UPDATE bank_sync_jobs
+        SET status='failed', finished_at=NOW(),
+            result='{"error":"expired — sync agent did not pick this up in time"}'::jsonb
+        WHERE status='pending' AND requested_at < NOW() - INTERVAL '6 hours'
+      `, [], 'bank_sync_expire_stale');
+
       const result = await db.query(`
         INSERT INTO bank_sync_jobs (connection_id, user_id, trigger)
         SELECT c.id, c.user_id, 'schedule'
