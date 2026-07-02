@@ -34,24 +34,25 @@ For security reasons, sensitive configuration files and production secrets are n
 
 SpendWise is a comprehensive personal finance management tool that helps users track expenses, manage budgets, and gain insights into their spending patterns. The application features a clean, responsive interface with support for both English and Hebrew languages, dark/light themes, and offline capabilities through Progressive Web App (PWA) technology.
 
-## Bank Sync Integration
+## Bank Sync Integration ("Bank Connect")
 
-SpendWise connects to [bank-scraper](https://github.com/HananelSabag/bank-scraper) — a companion scraper that pulls real transactions from Israeli banks (Yahav, Isracard, Max, Discount) and pushes them into SpendWise automatically.
+SpendWise connects to [spendwise-agent](https://github.com/HananelSabag/spendwise-agent) — a security-first companion that pulls real transactions from Israeli banks (Yahav, Leumi, Isracard, Max, Discount) into SpendWise automatically.
+
+Users connect a bank from the app; credentials are **encrypted in the browser** (X25519) with the agent's public key, so the server stores only ciphertext it can never read. The local agent — the only holder of the private key — claims sync jobs, decrypts them in memory, scrapes, and reports back.
 
 ```
-bank-scraper (Windows/Linux)  ──HTTPS──►  POST /api/v1/bank-sync  ──►  PostgreSQL
-                                            • timing-safe API key auth
-                                            • ALLOWED_HOUSEHOLD_IDS whitelist
-                                            • hard dedup (UNIQUE INDEX on bank_sync_id)
-                                            • soft dedup fallback
+Browser (seal X25519)  ──►  bank_connections (ciphertext only)  ──►  local agent decrypts in RAM
+                            bank_sync_jobs queue (cron 2×/day)        scrapes → POST results
+                                                                      • hard dedup (UNIQUE bank_sync_id)
+                                                                      • per-account tracking + sync toggle
 ```
 
 New in SpendWise:
-- **`POST /api/v1/bank-sync`** — receives scraped transactions (machine-to-machine, no JWT)
-- **`GET  /api/v1/bank-sync/stats`** — returns per-bank stats for the dashboard (JWT)
-- **`/bank-sync` page** — control panel: per-bank stats, toggles, remote trigger button
-- **Balance panel** — dual view: SpendWise net balance (budget) vs real bank balance (actual money)
-- **`bank_accounts` table** — stores real account balance separately from calculated net
+- **`/bank-connections`** — self-service connect/manage (JWT); credentials arrive as browser-sealed ciphertext
+- **`/bank-agent`** — machine-to-machine job queue for the agent (X-Agent-Key)
+- **`GET /api/v1/bank-sync/stats`** — per-bank stats for the dashboard (JWT)
+- **`/bank-sync` page** — connection hub: connect banks, per-account balances + toggles, live job status
+- **`bank_accounts` table** — real per-account balance; **`bank_connections` / `bank_sync_jobs`** — encrypted creds + queue
 
 ### Key Features
 
