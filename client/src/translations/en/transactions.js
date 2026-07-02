@@ -497,6 +497,14 @@ export default {
       warning: "This action cannot be undone."
     }
   },
+  source: {
+    all: "All",
+    bank: "Bank",
+    manual: "Manual"
+  },
+
+  fromBank: "Imported from your bank",
+
   tabs: {
     all: "All Transactions",
     upcoming: "Upcoming",

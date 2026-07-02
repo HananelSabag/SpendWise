@@ -1,681 +1,223 @@
 /**
- * useTransactions Hook — data fetching + mutations for transactions.
- * AI analysis classes are in services/transactionAI.js (opt-in, enableAI: false by default).
+ * useTransactions — transactions data + mutations.
+ *
+ * Rebuilt lean. The previous 681-line version carried an entire dead "AI
+ * analysis" layer (opt-in, never consumed), a second cache on top of React
+ * Query, selection state nobody read, analytics queries that never ran —
+ * and it IGNORED the filters/search options callers passed in, so pages
+ * silently fell back to client-side filtering.
+ *
+ * Now: options are honored (server-side filtering), React Query is the only
+ * cache, and the public surface is exactly what the app consumes.
  */
 
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApiQuery, useApiMutation } from './useApi';
+import { useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuth } from './useAuth';
 import { useToast } from './useToast';
-import { createLogger } from '../utils/logger';
-import {
-  TransactionAIEngine,
-  TransactionAnalytics,
-  TransactionCacheManager,
-  TransactionPerformanceMonitor,
-} from '../services/transactionAI';
 
-/**
- * 💰 Enhanced useTransactions Hook - REVOLUTIONIZED!
- */
+const DEFAULT_PAGE_SIZE = 50;
+
+// Build the server-side filter object from options + active tab.
+function buildApiFilters({ filters = {}, search = '', activeTab = 'all' }) {
+  const apiFilters = {};
+
+  if (filters.type && filters.type !== 'all') apiFilters.type = filters.type;
+  if (filters.category && filters.category !== 'all') apiFilters.category = filters.category;
+  if (search || filters.search) apiFilters.search = search || filters.search;
+
+  if (activeTab === 'upcoming') {
+    // Future transactions only, from tomorrow onward.
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    apiFilters.dateFrom = tomorrow.toISOString().split('T')[0];
+    return apiFilters;
+  }
+
+  // 'all' tab: cap at end of the current month (future months live in
+  // the upcoming view), unless a specific month was picked.
+  if (filters.month && filters.month !== 'all') {
+    const [year, month] = filters.month.split('-');
+    apiFilters.dateFrom = new Date(+year, +month - 1, 1).toISOString().split('T')[0];
+    apiFilters.dateTo   = new Date(+year, +month, 0).toISOString().split('T')[0];
+  } else {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    apiFilters.dateTo = endOfMonth.toISOString().split('T')[0];
+  }
+  return apiFilters;
+}
+
+// Normalize one server transaction: flat category columns → nested object.
+function normalizeTransaction(tx) {
+  return {
+    ...tx,
+    category: tx.category_name
+      ? { name: tx.category_name, icon: tx.category_icon, color: tx.category_color }
+      : tx.category,
+  };
+}
+
 export const useTransactions = (options = {}) => {
   const { isAuthenticated, user } = useAuth();
   const toastService = useToast();
   const queryClient = useQueryClient();
-  const logger = useRef(createLogger('Transactions')).current;
 
-  // ✅ CRITICAL FIX: Increase page size for better user experience
   const {
-    pageSize = 50,
-    enableAI = false, // AI analysis is opt-in — output not consumed by any component currently
-    enableRealTimeAnalysis = true,
+    pageSize = DEFAULT_PAGE_SIZE,
+    filters = {},
+    search = '',
+    activeTab = 'all',
     autoRefresh = false,
-    cacheStrategy = 'smart',
-    activeTab = 'all' // ✅ NEW: Active tab for smart filtering
+    enabled = true,
   } = options;
 
-  // Enhanced state
-  const [filters, setFilters] = useState({
-    search: '',
-    category: null,
-    type: null,
-    dateRange: null,
-    amountRange: null,
-    status: null
-  });
+  const apiFilters = useMemo(
+    () => buildApiFilters({ filters, search, activeTab }),
+    // Stringify: callers pass fresh object literals every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(filters), search, activeTab],
+  );
 
-  const [aiInsights, setAIInsights] = useState(null);
-  const [selectedTransactions, setSelectedTransactions] = useState(new Set());
-  const performanceRef = useRef(TransactionPerformanceMonitor);
-
-  // ✅ Enhanced infinite query with AI analysis - FIXED SERVER-SIDE FILTERING
+  // ── Data ──────────────────────────────────────────────────────────────────
   const transactionsQuery = useInfiniteQuery({
-    queryKey: ['transactions', user?.id, filters, activeTab],
-    enabled: !!user?.id, // Only run if user is authenticated
+    queryKey: ['transactions', user?.id, apiFilters, pageSize],
+    enabled: enabled && isAuthenticated && !!user?.id,
     queryFn: async ({ pageParam = 0 }) => {
-      const start = performance.now();
-      
-      try {
-        const cacheKey = TransactionCacheManager.generateKey('transactions', {
-          ...filters,
-          page: pageParam,
-          userId: user?.id
-        });
-
-        // Check cache first
-        let cachedData = null;
-        if (cacheStrategy === 'smart') {
-          cachedData = TransactionCacheManager.get(cacheKey);
-          if (cachedData) {
-            performanceRef.current.recordCacheHit();
-            return cachedData;
-          }
-          performanceRef.current.recordCacheMiss();
-        }
-
-        // ✅ FIXED: Build server-side filters properly
-        const apiFilters = {};
-        
-        // Pass type filter to server
-        if (filters.type && filters.type !== 'all') {
-          apiFilters.type = filters.type;
-        }
-        
-        // Pass category filter to server
-        if (filters.category && filters.category !== 'all') {
-          apiFilters.category = filters.category;
-        }
-        
-        // Pass search to server
-        if (filters.search) {
-          apiFilters.search = filters.search;
-        }
-        
-        // ✅ SMART DATE FILTERING: Add date filters based on active tab
-        if (activeTab === 'all') {
-          // All tab: Only current month + past (no future transactions beyond current month end)
-          const now = new Date();
-          const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          endOfCurrentMonth.setHours(23, 59, 59, 999);
-          
-          apiFilters.dateTo = endOfCurrentMonth.toISOString().split('T')[0];
-          
-          // If month filter is set, use it for date range
-          if (filters.month && filters.month !== 'all') {
-            const [year, month] = filters.month.split('-');
-            const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
-            const endOfMonth = new Date(parseInt(year), parseInt(month), 0);
-            apiFilters.dateFrom = startOfMonth.toISOString().split('T')[0];
-            apiFilters.dateTo = endOfMonth.toISOString().split('T')[0];
-          }
-          
-          logger.debug('📅 All tab - date filter:', { 
-            dateFrom: apiFilters.dateFrom,
-            dateTo: apiFilters.dateTo 
-          });
-          
-        } else if (activeTab === 'upcoming') {
-          // ✅ UPCOMING TAB: Get ALL future transactions from tomorrow onwards
-          const now = new Date();
-          const tomorrow = new Date(now);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          tomorrow.setHours(0, 0, 0, 0);
-          
-          apiFilters.dateFrom = tomorrow.toISOString().split('T')[0];
-          
-          logger.debug('📅 Upcoming tab - date filter:', { 
-            dateFrom: apiFilters.dateFrom 
-          });
-        }
-        
-        logger.debug('API Request:', {
-          filters: apiFilters,
-          page: pageParam + 1,
-          limit: pageSize
-        });
-
-        const response = await api.transactions.getAll({
-          page: pageParam + 1, // Server expects 1-based pagination
-          limit: pageSize,
-          ...apiFilters
-        });
-
-        logger.debug('API Response:', {
-          success: response.success,
-          count: response.data?.transactions?.length,
-          hasMore: response.data?.pagination?.hasMore
-        });
-
-        // Handle API response structure - unwrap nested { success, data: { success, data: { transactions } } }
-        let rawData = response?.data?.data || response?.data || response;
-        
-        if (!rawData) {
-          logger.warn('No data received from transactions API');
-          return { transactions: [], hasMore: false, total: 0 };
-        }
-        
-        let transactionsArray = [];
-        let total = 0;
-        let hasMore = false;
-        
-        if (Array.isArray(rawData)) {
-          // If rawData is directly an array (fallback)
-          transactionsArray = rawData;
-          total = rawData.length;
-        } else if (rawData.transactions && Array.isArray(rawData.transactions)) {
-          // If rawData has transactions property (expected server format)
-          transactionsArray = rawData.transactions;
-          total = rawData.pagination?.total || rawData.summary?.total || rawData.transactions.length;
-          hasMore = rawData.pagination?.hasMore || false;
-        } else {
-          logger.warn('Unexpected data structure from transactions API');
-          transactionsArray = [];
-        }
-
-        // Transform flat category data to nested structure for all transactions
-        const transformedTransactions = transactionsArray.map(transaction => ({
-          ...transaction,
-          // Transform flat category data to nested structure for frontend compatibility
-          category: transaction.category_name ? {
-            name: transaction.category_name,
-            icon: transaction.category_icon,
-            color: transaction.category_color
-          } : transaction.category
-        }));
-
-        // Structure the data properly for infinite query
-        const data = {
-          transactions: transformedTransactions,
-          hasMore: Boolean(hasMore),
-          total: total,
-          page: pageParam,
-          limit: pageSize
-        };
-
-        // Add AI analysis if enabled
-        if (enableAI && data.transactions) {
-          performanceRef.current.recordAIAnalysis();
-          
-          const userContext = await getUserContext();
-          const analysisPromises = data.transactions.map(transaction =>
-            TransactionAIEngine.analyzeTransaction(transaction, userContext)
-          );
-          
-          const analyses = await Promise.all(analysisPromises);
-          
-          data.transactions = data.transactions.map((transaction, index) => ({
-            ...transaction,
-            aiAnalysis: analyses[index],
-            // Transform flat category data to nested structure for frontend compatibility
-            category: transaction.category_name ? {
-              name: transaction.category_name,
-              icon: transaction.category_icon,
-              color: transaction.category_color
-            } : transaction.category
-          }));
-
-          // Generate batch insights
-          if (enableRealTimeAnalysis) {
-            const batchInsights = await TransactionAIEngine.getBatchInsights(
-              data.transactions, 
-              userContext
-            );
-            data.batchInsights = batchInsights;
-          }
-        }
-
-        // Cache the result
-        if (cacheStrategy === 'smart') {
-          TransactionCacheManager.set(cacheKey, data);
-        }
-
-        const duration = performance.now() - start;
-        performanceRef.current.recordQuery(duration);
-
-        return data;
-      } catch (error) {
-        performanceRef.current.recordError();
-        throw error;
-      }
-    },
-    enabled: isAuthenticated && !!user?.id && !!localStorage.getItem('accessToken'),
-    getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? lastPage.page + 1 : undefined;
-    },
-    staleTime: cacheStrategy === 'aggressive' ? 10 * 60 * 1000 : 2 * 60 * 1000,
-    refetchInterval: autoRefresh ? 30 * 1000 : false
-  });
-
-  // ✅ Transaction analytics query — opt-in only (enableAI=false by default)
-  // This prevents an extra API call on every useTransactions mount (e.g. via useTransactionActions)
-  const analyticsQuery = useQuery({
-    queryKey: ['transaction-analytics', user?.id, filters.dateRange],
-    queryFn: async () => {
-      const response = await api.analytics.getUserAnalytics({
-        dateRange: filters.dateRange
+      const response = await api.transactions.getAll({
+        page: pageParam + 1, // server is 1-based
+        limit: pageSize,
+        ...apiFilters,
       });
-      return response.data;
+
+      const raw = response?.data?.data || response?.data || response || {};
+      const list = Array.isArray(raw) ? raw : (raw.transactions || []);
+      const hasMore = Array.isArray(raw)
+        ? false
+        : Boolean(raw.pagination?.hasMore);
+      const total = Array.isArray(raw)
+        ? raw.length
+        : (raw.pagination?.total ?? list.length);
+
+      return {
+        transactions: list.map(normalizeTransaction),
+        hasMore,
+        total,
+        page: pageParam,
+      };
     },
-    enabled: isAuthenticated && !!user?.id && enableAI,
-    staleTime: 5 * 60 * 1000
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: autoRefresh ? 30 * 1000 : false,
   });
 
-  // ✅ Real-time insights query
-  const insightsQuery = useQuery({
-    queryKey: ['transaction-insights', user?.id],
-    queryFn: async () => {
-      if (!enableAI) return null;
-      
-      // ✅ FIXED: Safe access to transactions in insights query
-      const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
-        return page?.transactions || [];
-      }) || [];
-      if (allTransactions.length === 0) return null;
+  const allTransactions = useMemo(
+    () => transactionsQuery.data?.pages?.flatMap((p) => p?.transactions || []) || [],
+    [transactionsQuery.data],
+  );
 
-      const insights = TransactionAnalytics.generateSpendingInsights(allTransactions);
-      setAIInsights(insights);
-      return insights;
-    },
-    enabled: isAuthenticated && enableAI && !!transactionsQuery.data,
-    staleTime: 10 * 60 * 1000
-  });
+  // ── Shared invalidation after any mutation ────────────────────────────────
+  const invalidateAfterMutation = useCallback(() => {
+    ['transactions', 'dashboard', 'balance'].forEach((key) =>
+      queryClient.invalidateQueries({ queryKey: [key] }),
+    );
+  }, [queryClient]);
 
-  // ✅ Enhanced transaction creation mutation - SUPPORTS RECURRING TEMPLATES
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const createTransactionMutation = useMutation({
     mutationFn: async (transactionData) => {
-      performanceRef.current.recordMutation();
-
-      // ✅ CRITICAL FIX: Route to correct API based on transaction type
+      // Recurring templates go to their own endpoint.
       if (transactionData._isRecurring) {
-        logger.debug('Creating recurring template');
-        // Remove internal marker before sending to API
-        const cleanData = { ...transactionData };
-        delete cleanData._isRecurring;
-        const response = await api.transactions.createRecurringTemplate(cleanData);
-        return response.data;
-      } else {
-        logger.debug('Creating regular transaction');
-        const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
+        const clean = { ...transactionData };
+        delete clean._isRecurring;
+        const response = await api.transactions.createRecurringTemplate(clean);
         return response.data;
       }
+      const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
+      return response.data;
     },
-    onSuccess: (newTransaction) => {
-      // ✅ FIXED: Safety check to ensure we have valid transaction data
-      if (!newTransaction) {
-        logger.warn('Transaction creation succeeded but returned no data');
+    onSuccess: (created) => {
+      if (!created) {
         toastService.error('transactions.createFailed');
         return;
       }
-
-      logger.success('Transaction created successfully');
-
-      // Invalidate relevant queries — invalidateQueries already triggers refetch for active observers,
-      // no need to call refetchQueries separately (that would send duplicate API calls).
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['balance'] });
-
-      // Clear custom in-memory cache
-      TransactionCacheManager.invalidatePattern('transactions');
-      
+      invalidateAfterMutation();
       toastService.success('transactions.createSuccess');
-
-      // Show AI insights if available (optional feature)
-      if (newTransaction?.aiAnalysis?.fraudProbability > 0.5) {
-        toastService.warning('transactions.securityAlert', {
-          details: 'Transaction flagged for review'
-        });
-      }
     },
-    onError: (error) => {
-      performanceRef.current.recordError();
-      toastService.error(error.message || 'transactions.createFailed');
-    }
+    onError: (error) => toastService.error(error.message || 'transactions.createFailed'),
   });
 
-  // ✅ Enhanced batch creation mutation
-  const createBatchMutation = useMutation({
-    mutationFn: async (transactionsData) => {
-      performanceRef.current.recordMutation();
-
-      // Process batch transactions in parallel
-      const responses = await Promise.allSettled(
-        transactionsData.map(transactionData =>
-          api.transactions.create(transactionData.type || 'expense', transactionData)
-        )
-      );
-      const results = responses
-        .filter(r => r.status === 'fulfilled' && r.value?.success)
-        .map(r => r.value.data);
-      return { transactions: results };
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
-      TransactionCacheManager.clear();
-      
-      toastService.success('transactions.batchCreateSuccess', { 
-        count: result.transactions.length 
-      });
-
-      // Show batch insights
-      if (result.analytics && result.analytics.batch.highRiskTransactions > 0) {
-        toastService.warning('transactions.batchSecurityAlert', {
-          count: result.analytics.batch.highRiskTransactions
-        });
-      }
-    },
-    onError: (error) => {
-      performanceRef.current.recordError();
-      toastService.error(error.message || 'transactions.batchCreateFailed');
-    }
-  });
-
-  // ✅ Enhanced update mutation
   const updateTransactionMutation = useMutation({
     mutationFn: async ({ transactionId, updates }) => {
-      performanceRef.current.recordMutation();
-      
       const response = await api.transactions.update(updates.type || 'expense', transactionId, updates);
       return response.data;
     },
-    onSuccess: (updatedTransaction) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['balance'] });
-      TransactionCacheManager.invalidatePattern('transactions');
-      
+    onSuccess: () => {
+      invalidateAfterMutation();
       toastService.success('transactions.updateSuccess');
     },
-    onError: (error) => {
-      performanceRef.current.recordError();
-      toastService.error(error.message || 'transactions.updateFailed');
-    }
+    onError: (error) => toastService.error(error.message || 'transactions.updateFailed'),
   });
 
-  // ✅ Enhanced delete mutation
+  // The server routes deletes by type; resolve it from the loaded rows.
+  const resolveTypeForDelete = useCallback((transactionId) => {
+    const tx = allTransactions.find((t) => t.id === transactionId);
+    if (tx?.type === 'income' || tx?.type === 'expense') return tx.type;
+    if (typeof tx?.amount === 'number') return tx.amount > 0 ? 'income' : 'expense';
+    return 'expense';
+  }, [allTransactions]);
+
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId) => {
-      performanceRef.current.recordMutation();
-
-      // Determine correct type for server route ('income' | 'expense')
-      let typeForDelete = 'expense';
-      try {
-        const allTx = transactionsQuery.data?.pages?.flatMap(p => p?.transactions || []) || [];
-        const tx = allTx.find(t => t.id === transactionId);
-        if (tx?.type === 'income' || tx?.type === 'expense') {
-          typeForDelete = tx.type;
-        } else if (typeof tx?.amount === 'number') {
-          typeForDelete = tx.amount > 0 ? 'income' : 'expense';
-        }
-      } catch {}
-
-      const response = await api.transactions.delete(typeForDelete, transactionId);
+      const response = await api.transactions.delete(resolveTypeForDelete(transactionId), transactionId);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['balance'] });
-      TransactionCacheManager.invalidatePattern('transactions');
-
+      invalidateAfterMutation();
       toastService.success('transactions.deleteSuccess');
     },
-    onError: (error) => {
-      performanceRef.current.recordError();
-      toastService.error(error.message || 'transactions.deleteFailed');
-    }
+    onError: (error) => toastService.error(error.message || 'transactions.deleteFailed'),
   });
 
-  // ✅ Bulk operations mutation
-  const bulkOperationMutation = useMutation({
-    mutationFn: async ({ operation, transactionIds, data = {} }) => {
-      performanceRef.current.recordMutation();
-
-      const allTx = transactionsQuery.data?.pages?.flatMap(p => p?.transactions || []) || [];
-
-      if (operation === 'delete') {
-        const results = await Promise.allSettled(
-          transactionIds.map(id => {
-            let typeForDelete = 'expense';
-            const tx = allTx.find(t => t.id === id);
-            if (tx?.type === 'income' || tx?.type === 'expense') {
-              typeForDelete = tx.type;
-            } else if (typeof tx?.amount === 'number') {
-              typeForDelete = tx.amount > 0 ? 'income' : 'expense';
-            }
-            return api.transactions.delete(typeForDelete, id);
-          })
-        );
-        return { data: results };
-      }
-      return { data: [] };
-    },
-    onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-analytics'] });
-      TransactionCacheManager.clear();
-      
-      toastService.success(`transactions.bulk.${variables.operation}Success`, {
-        count: variables.transactionIds.length
-      });
-      
-      setSelectedTransactions(new Set());
-    },
-    onError: (error, variables) => {
-      performanceRef.current.recordError();
-      toastService.error(error.message || `transactions.bulk.${variables.operation}Failed`);
-    }
-  });
-
-  // ✅ Enhanced helper methods
-  const getUserContext = useCallback(async () => {
-    try {
-      const response = await api.users.getProfile();
-      return response.data;
-    } catch (error) {
-      logger.warn('Failed to get user context');
-      return {};
-    }
-  }, []);
-
-  const invalidateAllTransactionData = useCallback(() => {
-    const queriesToInvalidate = [
-      'transactions',
-      'transaction-analytics',
-      'transaction-insights',
-      'dashboard',
-      'categories'
-    ];
-
-    queriesToInvalidate.forEach(queryKey => {
-      queryClient.invalidateQueries({ queryKey: [queryKey] });
-    });
-
-    TransactionCacheManager.clear();
-  }, [queryClient]);
-
-  // ✅ Enhanced operations
-  const createTransaction = useCallback(async (transactionData) => {
-    return createTransactionMutation.mutateAsync(transactionData);
-  }, [createTransactionMutation]);
-
-  const createBatch = useCallback(async (transactionsData) => {
-    return createBatchMutation.mutateAsync(transactionsData);
-  }, [createBatchMutation]);
-
-  const updateTransaction = useCallback(async (transactionId, updates) => {
-    return updateTransactionMutation.mutateAsync({ transactionId, updates });
-  }, [updateTransactionMutation]);
-
-  const deleteTransaction = useCallback(async (transactionId) => {
-    return deleteTransactionMutation.mutateAsync(transactionId);
-  }, [deleteTransactionMutation]);
-
-  const bulkOperation = useCallback(async (operation, transactionIds, data = {}) => {
-    return bulkOperationMutation.mutateAsync({ operation, transactionIds, data });
-  }, [bulkOperationMutation]);
-
-  // ✅ Advanced filtering
-  const applyFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-    TransactionCacheManager.invalidatePattern('transactions');
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setFilters({
-      search: '',
-      category: null,
-      type: null,
-      dateRange: null,
-      amountRange: null,
-      status: null
-    });
-  }, []);
-
-  // ✅ Selection management
-  const selectTransaction = useCallback((transactionId) => {
-    setSelectedTransactions(prev => new Set([...prev, transactionId]));
-  }, []);
-
-  const deselectTransaction = useCallback((transactionId) => {
-    setSelectedTransactions(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(transactionId);
-      return newSet;
-    });
-  }, []);
-
-  const selectAll = useCallback(() => {
-    // ✅ FIXED: Safe access to transactions in selectAll
-    const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
-      return page?.transactions || [];
-    }) || [];
-    setSelectedTransactions(new Set(allTransactions.map(t => t.id)));
-  }, [transactionsQuery.data]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedTransactions(new Set());
-  }, []);
-
-  // ✅ AI-powered insights
-  const getTransactionInsights = useCallback(async (transactionId) => {
-    if (!enableAI) return null;
-
-    // ✅ FIXED: Safe access to transactions in getTransactionInsights  
-    const allTransactions = transactionsQuery.data?.pages?.flatMap(page => {
-      return page?.transactions || [];
-    }) || [];
-    const transaction = allTransactions.find(t => t.id === transactionId);
-    
-    if (!transaction) return null;
-
-    const userContext = await getUserContext();
-    return TransactionAIEngine.analyzeTransaction(transaction, userContext);
-  }, [enableAI, transactionsQuery.data, getUserContext]);
-
-  const getSpendingPredictions = useCallback(() => {
-    if (!enableAI || !insightsQuery.data) return null;
-    return insightsQuery.data.predictions;
-  }, [enableAI, insightsQuery.data]);
-
-  // ✅ Performance monitoring
-  const getPerformanceMetrics = useCallback(() => {
-    return performanceRef.current.getMetrics();
-  }, []);
-
-  // ✅ Processed data
-  const allTransactions = useMemo(() => {
-    if (!transactionsQuery.data?.pages) {
-      return [];
-    }
-    
-    const flattened = transactionsQuery.data.pages.flatMap(page => {
-      // ✅ FIXED: Safe access to page.transactions with fallback
-      if (!page || !page.transactions || !Array.isArray(page.transactions)) {
-        logger.warn('Invalid page structure in query result');
-        return [];
-      }
-      return page.transactions;
-    }) || [];
-    
-    logger.debug(`Loaded ${flattened.length} transactions from ${transactionsQuery.data.pages.length} pages`);
-    
-    return flattened;
-  }, [transactionsQuery.data]);
-
-  const batchInsights = useMemo(() => {
-    // ✅ FIXED: Safe access to batchInsights
-    const firstPage = transactionsQuery.data?.pages?.[0];
-    return firstPage?.batchInsights || null;
-  }, [transactionsQuery.data]);
+  // ── Stable async wrappers ─────────────────────────────────────────────────
+  const createTransaction = useCallback(
+    (data) => createTransactionMutation.mutateAsync(data),
+    [createTransactionMutation],
+  );
+  const updateTransaction = useCallback(
+    (transactionId, updates) => updateTransactionMutation.mutateAsync({ transactionId, updates }),
+    [updateTransactionMutation],
+  );
+  const deleteTransaction = useCallback(
+    (transactionId) => deleteTransactionMutation.mutateAsync(transactionId),
+    [deleteTransactionMutation],
+  );
 
   return {
     // Data
     transactions: allTransactions,
-    analytics: analyticsQuery.data,
-    insights: insightsQuery.data,
-    aiInsights,
-    batchInsights,
-    
+
     // Pagination
     hasNextPage: transactionsQuery.hasNextPage,
     fetchNextPage: transactionsQuery.fetchNextPage,
     isFetchingNextPage: transactionsQuery.isFetchingNextPage,
-    
-    // Loading states
+
+    // States
     loading: transactionsQuery.isLoading,
-    analyticsLoading: analyticsQuery.isLoading,
-    insightsLoading: insightsQuery.isLoading,
-    
-    // Mutation states
+    error: transactionsQuery.error,
     creating: createTransactionMutation.isPending,
-    batchCreating: createBatchMutation.isPending,
     updating: updateTransactionMutation.isPending,
     deleting: deleteTransactionMutation.isPending,
-    bulkProcessing: bulkOperationMutation.isPending,
-    
-    // Error states
-    error: transactionsQuery.error,
-    analyticsError: analyticsQuery.error,
-    
-    // Enhanced operations
+
+    // Operations
     createTransaction,
-    createBatch,
     updateTransaction,
     deleteTransaction,
-    bulkOperation,
-    
-    // Filtering
-    filters,
-    applyFilters,
-    clearFilters,
-    
-    // Selection
-    selectedTransactions,
-    selectTransaction,
-    deselectTransaction,
-    selectAll,
-    clearSelection,
-    
-    // AI features
-    getTransactionInsights,
-    getSpendingPredictions,
-    
-    // Utilities
-    invalidateAllTransactionData,
-    getPerformanceMetrics,
-    getUserContext,
-    
-    // Refetch functions
+
+    // Refetch
     refetch: transactionsQuery.refetch,
-    refetchAnalytics: analyticsQuery.refetch,
-    refetchInsights: insightsQuery.refetch
   };
 };
 

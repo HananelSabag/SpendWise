@@ -38,28 +38,10 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
-// Get balance panel data - DEDICATED BALANCE ENDPOINT
-router.get('/balance',
-  getSummaryLimiter,
-  transactionController.getBalanceData
-);
-
 // Get recent transactions
 router.get('/recent',
   getTransactionsLimiter,
   transactionController.getRecentTransactions
-);
-
-// Get user statistics
-router.get('/stats',
-  getSummaryLimiter,
-  transactionController.getAnalyticsSummary
-);
-
-// Get category breakdown for date range
-router.get('/categories/breakdown',
-  getTransactionsLimiter,
-  transactionController.getUserAnalytics
 );
 
 // Get summary data
@@ -68,46 +50,20 @@ router.get('/summary',
   transactionController.getMonthlySummary
 );
 
-/**
- * Balance & History Routes
- * Financial balance and historical data
- */
-
-// Get balance details for specific date
-router.get('/balance/details',
-  getSummaryLimiter,
-  transactionController.getBalanceData
-);
-
-// Get balance history by period
-router.get('/balance/history/:period',
-  getSummaryLimiter,
-  transactionController.getBalanceData
-);
-
-// Debug endpoint removed for production security
+// NOTE: removed dead routes (0 client callers, verified 2026-07-03):
+//   /balance, /balance/details, /balance/history/:period  (old balance panel —
+//     replaced by /bank-sync/stats), /stats and /categories/breakdown
+//     (duplicates of /analytics/dashboard/summary and /analytics/user),
+//   /search (duplicate of GET /), /period/:period.
 
 /**
  * Transaction Query Routes
- * Data retrieval with filtering and search
  */
 
 // Get transactions with comprehensive filters
 router.get('/',
   getTransactionsLimiter,
   transactionController.getTransactions
-);
-
-// Search transactions by text
-router.get('/search',
-  getTransactionsLimiter,
-  transactionController.getTransactions
-);
-
-// Get transactions by time period
-router.get('/period/:period',
-  getTransactionsLimiter,
-  transactionController.getRecentTransactions
 );
 
 /**
@@ -165,13 +121,6 @@ router.post('/templates/:id/skip',
 router.post('/generate-recurring',
   generateRecurringLimiter,
   transactionController.generateRecurring
-);
-
-// 🔧 ONBOARDING FIX: Generate missing current month transactions
-router.post('/fix-onboarding-current-month',
-  createTransactionLimiter,
-  routeLogger('FIX_ONBOARDING_CURRENT_MONTH'),
-  transactionController.generateMissingCurrentMonthTransactions
 );
 
 // 🧪 TEST: Onboarding template creation — development only

@@ -497,6 +497,14 @@ export default {
       warning: "פעולה זו לא ניתנת לביטול."
     }
   },
+  source: {
+    all: "הכל",
+    bank: "בנק",
+    manual: "ידני"
+  },
+
+  fromBank: "יובא מחשבון הבנק שלך",
+
   tabs: {
     all: "כל העסקאות",
     upcoming: "קרובות",

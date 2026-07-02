@@ -43,24 +43,6 @@ const transactionAPI = {
   },
 
   /**
-   * Get balance panel data - DEDICATED BALANCE ENDPOINT
-   * @returns {Promise<Object>} Balance data for all periods
-   */
-  async getBalanceData() {
-    try {
-      console.log('📊 Fetching balance panel data...');
-      
-      const response = await apiClient.client.get('/transactions/balance');
-      console.log('✅ Balance data fetched successfully:', response.data);
-      
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('❌ Balance data fetch failed:', error);
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
    * Get transactions with filtering and pagination
    * @param {Object} params - Query parameters (filters, pagination)
    * @returns {Promise<Object>} Transactions list
@@ -202,48 +184,6 @@ const transactionAPI = {
   // ⚡ QUICK ACTIONS (Dashboard Integration)
   // ==========================================
 
-  /**
-   * Quick expense creation (for dashboard quick actions)
-   * @param {Object} data - Expense data { amount, description, categoryId }
-   * @returns {Promise<Object>} Created expense
-   */
-  async createQuickExpense(data) {
-    const now = new Date();
-    const expenseData = {
-      type: 'expense',
-      amount: Math.abs(data.amount), // Ensure positive for expense
-      description: data.description || 'Quick Expense',
-      categoryId: data.categoryId || null, // Use default expense category if none provided
-      date: data.date || now.toISOString().split('T')[0],
-      time: data.time || now.toTimeString().slice(0, 5),
-      timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      transaction_datetime: data.transaction_datetime || now.toISOString()
-    };
-    
-    return this.create('transaction', expenseData);
-  },
-
-  /**
-   * Quick income creation (for dashboard quick actions)
-   * @param {Object} data - Income data { amount, description, categoryId }
-   * @returns {Promise<Object>} Created income
-   */
-  async createQuickIncome(data) {
-    const now = new Date();
-    const incomeData = {
-      type: 'income',
-      amount: Math.abs(data.amount), // Ensure positive for income
-      description: data.description || 'Quick Income',
-      categoryId: data.categoryId || null, // Use default income category if none provided
-      date: data.date || now.toISOString().split('T')[0],
-      time: data.time || now.toTimeString().slice(0, 5),
-      timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      transaction_datetime: data.transaction_datetime || now.toISOString()
-    };
-    
-    return this.create('transaction', incomeData);
-  },
-
   // ==========================================
   // 🔄 RECURRING TRANSACTIONS
   // ==========================================
@@ -365,39 +305,6 @@ const transactionAPI = {
   },
 
   /**
-   * Advanced delete for recurring transactions
-   * @param {string} transactionId - Transaction ID
-   * @param {Object} options - Delete options (deleteType, templateId)
-   * @returns {Promise<Object>} Deletion result
-   */
-  async deleteRecurringAdvanced(transactionId, options = {}) {
-    try {
-      const { deleteType = 'current', templateId } = options;
-      const response = await apiClient.client.delete(`/transactions/recurring/${transactionId}`, {
-        data: { deleteType, templateId }
-      });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
-   * Skip dates for a recurring template
-   * @param {string} id - Template ID
-   * @param {Array} dates - Array of dates to skip
-   * @returns {Promise<Object>} Updated template
-   */
-  async skipRecurringDates(id, dates) {
-    try {
-      const response = await apiClient.client.post(`/transactions/templates/${id}/skip`, { dates });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
    * Generate recurring transactions manually
    * @returns {Promise<Object>} Generated transactions
    */
@@ -489,115 +396,10 @@ const transactionAPI = {
     }
   },
 
-  /**
-   * Get transaction summary
-   * @param {Object} params - Date range, period
-   * @returns {Promise<Object>} Summary data
-   */
-  async getSummary(params = {}) {
-    try {
-      const response = await apiClient.client.get('/transactions/summary', { params });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
-   * Get category breakdown
-   * @param {Object} params - Date range, filters
-   * @returns {Promise<Object>} Category breakdown
-   */
-  async getCategoryBreakdown(params = {}) {
-    try {
-      const response = await apiClient.client.get('/transactions/categories/breakdown', { params });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
-   * Search transactions
-   * @param {string} query - Search query
-   * @param {Object} filters - Additional filters
-   * @returns {Promise<Object>} Search results
-   */
-  async search(query, filters = {}) {
-    try {
-      const response = await apiClient.client.get('/transactions/search', { 
-        params: { q: query, ...filters } 
-      });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  // ==========================================
-  // 🎯 CONVENIENCE METHODS
-  // ==========================================
-
-  /**
-   * Get balance details
-   * @param {string} date - Specific date (optional)
-   * @returns {Promise<Object>} Balance details
-   */
-  async getBalanceDetails(date) {
-    try {
-      const params = date ? { date } : {};
-      const response = await apiClient.client.get('/transactions/balance/details', { params });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
-   * Get balance history
-   * @param {string} period - 'daily', 'weekly', 'monthly'
-   * @returns {Promise<Object>} Balance history
-   */
-  async getBalanceHistory(period = 'monthly') {
-    try {
-      const response = await apiClient.client.get(`/transactions/balance/history/${period}`);
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  // ==========================================
-  // 🔧 CONVENIENCE ALIASES FOR HOOKS
-  // ==========================================
-
-  /**
-   * Create expense (alias for consistency with hooks)
-   * @param {Object} data - Expense data
-   * @returns {Promise<Object>} Created expense
-   */
-  async createExpense(data) {
-    const expenseData = {
-      ...data,
-      type: 'expense',
-      amount: Math.abs(data.amount) // Ensure positive for expense
-    };
-    return this.create('expense', expenseData);
-  },
-
-  /**
-   * Create income (alias for consistency with hooks)
-   * @param {Object} data - Income data
-   * @returns {Promise<Object>} Created income
-   */
-  async createIncome(data) {
-    const incomeData = {
-      ...data,
-      type: 'income',
-      amount: Math.abs(data.amount) // Ensure positive for income
-    };
-    return this.create('income', incomeData);
-  }
+  // NOTE: removed dead methods (0 callers, verified 2026-07-03):
+  //   getSummary, getCategoryBreakdown, search, getBalanceDetails,
+  //   getBalanceHistory, createExpense, createIncome — their server routes
+  //   were removed in the same cleanup.
 };
 
 export default transactionAPI; 
