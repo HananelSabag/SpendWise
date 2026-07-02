@@ -34,6 +34,12 @@ async function ingestAccounts(client, userId, source, accounts) {
   }
 
   for (const account of accounts) {
+    // Scope the dedup id to the account too — a bank with multiple accounts
+    // (e.g. Yahav main + side account) can reuse the same transaction
+    // reference number across accounts; without the account in the key the
+    // second account's transaction would be wrongly skipped as a duplicate.
+    const acctKey = (account.account_number || 'default').toString().trim();
+
     for (const txn of (account.txns || [])) {
       const chargedAmount = parseFloat(txn.charged_amount);
 
@@ -47,7 +53,7 @@ async function ingestAccounts(client, userId, source, accounts) {
       const date = txnDate.toISOString().split('T')[0];
       const transactionDatetime = txnDate.toISOString();
       const description = (txn.description || '').trim().slice(0, 500);
-      const bankSyncId = txn.identifier ? `${source}:${txn.identifier}` : null;
+      const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
 
       if (bankSyncId) {
         // Hard dedup via partial unique index on (user_id, bank_sync_id).
