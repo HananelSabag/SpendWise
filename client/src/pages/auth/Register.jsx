@@ -206,7 +206,7 @@ const Register = () => {
         // is guarded by registrationStep so it won't navigate away prematurely.
         const store = useAuthStore.getState();
         store.actions.setUser(result.user);
-        try { store.actions.startTokenRefreshTimer(); } catch (_) {}
+        // setUser() above already armed the proactive refresh (sessionStarted)
 
         setIsGoogleUser(true);
         setSecurityData({ securityScore: 85 });

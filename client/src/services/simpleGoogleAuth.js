@@ -48,6 +48,34 @@ const GOOGLE_CONFIG = {
 
 // silent config dump
 
+// THE Google silent-bounce fix: GSI's initialize({callback}) can only be
+// called once per page load, and the old code baked the FIRST component
+// mount's onSuccess into that callback. Any remount (Login↔Register nav,
+// language switch) left GSI firing a stale closure of an unmounted
+// component — the user completed Google sign-in and nothing happened.
+//
+// Now the GSI callback is a stable trampoline that delegates to
+// `currentHandler`, which every renderButton() call updates. If a
+// credential arrives when no handler is mounted (mid-navigation), it's
+// stashed so the login page can resume it on mount.
+let currentHandler = null;
+const PENDING_KEY = 'pendingGoogleCredential';
+
+function stashPendingCredential(credential) {
+  try { sessionStorage.setItem(PENDING_KEY, credential); } catch (_) {}
+}
+
+/** Login/Register call this on mount to resume a credential that arrived mid-navigation. */
+export function takePendingGoogleCredential() {
+  try {
+    const c = sessionStorage.getItem(PENDING_KEY);
+    if (c) sessionStorage.removeItem(PENDING_KEY);
+    return c || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 class SimpleGoogleAuth {
   constructor() {
     this.isScriptLoaded = false;
@@ -121,26 +149,31 @@ class SimpleGoogleAuth {
       // Clear container first
       container.innerHTML = '';
 
-      // Handle credential response
-      const handleCredentialResponse = (response) => {
-        try {
-          if (!response.credential) {
-            throw new Error('No credential received from Google');
-          }
+      // Point the trampoline at THIS mount's callbacks. Every renderButton
+      // call refreshes it, so GSI always reaches the live component.
+      currentHandler = { onSuccess, onError };
 
-          // silent
-          onSuccess?.(response.credential);
-        } catch (error) {
-          // silent
-          onError?.(error);
-        }
-      };
-
-      // Initialize Google Sign-In once per page load
+      // Initialize Google Sign-In once per page load — with a STABLE
+      // trampoline callback that reads the current handler at call time.
       if (!this._gsiInitialized) {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CONFIG.CLIENT_ID,
-          callback: handleCredentialResponse,
+          callback: (response) => {
+            try {
+              if (!response?.credential) {
+                throw new Error('No credential received from Google');
+              }
+              if (currentHandler?.onSuccess) {
+                currentHandler.onSuccess(response.credential);
+              } else {
+                // No component mounted right now (user navigated mid-flow) —
+                // stash the credential; the login page resumes it on mount.
+                stashPendingCredential(response.credential);
+              }
+            } catch (error) {
+              currentHandler?.onError?.(error);
+            }
+          },
           auto_select: false,
           cancel_on_tap_outside: false
         });
@@ -171,6 +204,62 @@ class SimpleGoogleAuth {
       onError?.(error);
       return false;
     }
+  }
+
+  /**
+   * One-shot sign-in via the One Tap prompt. Resolves with the credential
+   * or rejects when the prompt is skipped/suppressed. Used by the
+   * "link Google account" flow in Profile (the old code called nonexistent
+   * initializeGoogle()/signIn() methods and always threw).
+   */
+  async signInOnce(timeoutMs = 60_000) {
+    await this.initialize();
+
+    return new Promise((resolve, reject) => {
+      const prevHandler = currentHandler;
+      const timer = setTimeout(() => {
+        currentHandler = prevHandler;
+        reject(new Error('Google sign-in timed out'));
+      }, timeoutMs);
+
+      // Ensure the trampoline exists even if no button was ever rendered.
+      if (!this._gsiInitialized) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CONFIG.CLIENT_ID,
+          callback: (response) => {
+            if (response?.credential && currentHandler?.onSuccess) {
+              currentHandler.onSuccess(response.credential);
+            } else if (response?.credential) {
+              stashPendingCredential(response.credential);
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false
+        });
+        this._gsiInitialized = true;
+      }
+
+      currentHandler = {
+        onSuccess: (credential) => {
+          clearTimeout(timer);
+          currentHandler = prevHandler;
+          resolve(credential);
+        },
+        onError: (err) => {
+          clearTimeout(timer);
+          currentHandler = prevHandler;
+          reject(err);
+        },
+      };
+
+      window.google.accounts.id.prompt((notification) => {
+        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+          clearTimeout(timer);
+          currentHandler = prevHandler;
+          reject(new Error('Google prompt was not displayed — check popup/cookie settings'));
+        }
+      });
+    });
   }
 
   /**

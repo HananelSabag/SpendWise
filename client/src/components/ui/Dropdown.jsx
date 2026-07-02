@@ -336,7 +336,7 @@ const Dropdown = ({
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute z-50 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden',
+              'absolute z-50 mt-2 w-full glass-menu rounded-lg overflow-hidden',
               'max-h-64 overflow-y-auto',
               // Mobile optimization
               'touch-manipulation'

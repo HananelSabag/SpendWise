@@ -10,6 +10,7 @@ import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
 import { normalizeUserData } from '../utils/userNormalizer';
 import { simpleGoogleAuth } from '../services/simpleGoogleAuth.js';
+import { setTokens, clearTokens, getRefreshToken } from '../auth/tokenStorage.js';
 
 // Quiet noisy debug logs in production; keep minimal in dev
 if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_MODE === 'true') {
@@ -52,12 +53,9 @@ export const authAPI = {
 
       // ✅ Normalize user data
       const normalizedUser = normalizeUserData(user);
-      
-      // Store tokens in both keys for compatibility
-      localStorage.setItem('accessToken', token);
-      localStorage.setItem('authToken', token);
+
       const rt = dd?.tokens?.refreshToken || dd?.refreshToken || d?.refreshToken || '';
-      if (rt) localStorage.setItem('refreshToken', rt);
+      setTokens({ access: token, refresh: rt || undefined });
 
       return {
         success: true,
@@ -272,11 +270,9 @@ export const authAPI = {
 
     // ✅ Normalize and store
     const normalizedUser = normalizeUserData(user);
-    
-    localStorage.setItem('accessToken', token);
-    localStorage.setItem('authToken', token);
+
     const rt = response.data.data?.tokens?.refreshToken || response.data.refreshToken || '';
-    if (rt) localStorage.setItem('refreshToken', rt);
+    setTokens({ access: token, refresh: rt || undefined });
 
     return {
       success: true,
@@ -338,68 +334,35 @@ export const authAPI = {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.disableAutoSelect();
       }
-      
-      // Clear local storage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      
+
+      clearTokens();
+
       // Optional: Call backend logout endpoint
       try {
         await api.client.post('/users/logout');
       } catch (e) {
         // Ignore logout errors
-        console.warn('Backend logout failed (ignored):', e.message);
       }
 
       return { success: true };
-
     } catch (error) {
-      console.error('Logout error:', error);
-      
-      // Still clear local storage even if API call fails
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      
+      clearTokens();
       return { success: true }; // Always succeed for logout
     }
   },
 
-  // ✅ Token Refresh
+  // ✅ Token Refresh — thin wrapper kept for legacy callers.
+  // All real refresh logic (single-flight, transient-vs-fatal) lives in
+  // src/auth/refreshManager.js.
   async refreshToken() {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        return { success: false, requiresLogin: true, error: { code: 'NO_REFRESH_TOKEN', message: 'No refresh token available' } };
-      }
-
-      const response = await api.client.post('/users/refresh-token', { refreshToken });
-
-      // Accept server format: { success, data: { accessToken, refreshToken } }
-      const d = response?.data || {};
-      const newToken = d?.data?.accessToken || d?.accessToken || d?.token;
-      const newRefreshToken = d?.data?.refreshToken || d?.refreshToken;
-
-      if (newToken) {
-        localStorage.setItem('accessToken', newToken);
-        localStorage.setItem('authToken', newToken);
-      }
-      if (newRefreshToken) {
-        localStorage.setItem('refreshToken', newRefreshToken);
-      }
-
-      return { success: true, token: newToken, refreshToken: newRefreshToken };
-
-    } catch (error) {
-      // Clear invalid tokens on 401
-      if (error?.response?.status === 401) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        return { success: false, requiresLogin: true, error: { code: 'TOKEN_REFRESH_ERROR', message: 'Token refresh failed' } };
-      }
-      return { success: false, error: { code: 'TOKEN_REFRESH_ERROR', message: error.response?.data?.message || 'Token refresh failed' } };
-    }
+    const { ensureFreshToken } = await import('../auth/refreshManager.js');
+    const result = await ensureFreshToken();
+    if (result.ok) return { success: true, token: result.token };
+    return {
+      success: false,
+      requiresLogin: !!result.fatal,
+      error: { code: 'TOKEN_REFRESH_ERROR', message: 'Token refresh failed' },
+    };
   },
 
   // ✅ Verify Email

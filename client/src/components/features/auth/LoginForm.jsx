@@ -57,7 +57,7 @@ const LoginForm = ({
   );
 
   return (
-    <div className={cn('bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6', className)}>
+    <div className={cn('glass-card rounded-2xl p-6', className)}>
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {/* General error */}

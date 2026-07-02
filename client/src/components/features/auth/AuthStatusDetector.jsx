@@ -81,9 +81,8 @@ const AuthStatusDetector = ({
   const handleGoogleLink = async () => {
     try {
       if (context === 'profile') {
-        await simpleGoogleAuth.initializeGoogle();
-        const credential = await simpleGoogleAuth.signIn();
-        
+        const credential = await simpleGoogleAuth.signInOnce();
+
         if (credential) {
           const result = await authAPI.googleLogin(credential);
           

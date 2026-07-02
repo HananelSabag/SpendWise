@@ -154,7 +154,7 @@ const Modal = ({
               stiffness: 300
             }}
             className={cn(
-              'relative w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl',
+              'relative w-full glass-menu rounded-xl',
               'max-h-[95vh] overflow-hidden flex flex-col',
               // Enhanced mobile-first responsive design
               mobileFullScreen 

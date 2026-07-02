@@ -21,6 +21,7 @@ import LoginForm from '../../components/features/auth/LoginForm';
 import GuestSettings from '../../components/common/GuestSettings';
 
 import { api, authAPI } from '../../api';
+import { takePendingGoogleCredential } from '../../services/simpleGoogleAuth';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 
@@ -60,6 +61,14 @@ const Login = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
+
+  // Resume a Google credential that arrived while no login page was mounted
+  // (e.g. the user completed the Google flow mid-navigation). Without this,
+  // that credential used to be silently dropped — Google sign-in "did nothing".
+  useEffect(() => {
+    const pending = takePendingGoogleCredential();
+    if (pending) handleGoogleLogin(pending);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form validation ──────────────────────────────────────────────────────────
   const validateForm = useCallback((formData) => {
@@ -198,7 +207,7 @@ const Login = () => {
         // up until the component unmounts (avoids a flash of the login form).
         const store = useAuthStore.getState();
         store.actions.setUser(result.user);
-        try { store.actions.startTokenRefreshTimer(); } catch (_) {}
+        // setUser() above already armed the proactive refresh (sessionStarted)
 
         // Belt-and-suspenders: also navigate here in case the effect fired
         // before setUser updated the store.

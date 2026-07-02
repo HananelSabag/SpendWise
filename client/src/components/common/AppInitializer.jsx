@@ -53,7 +53,7 @@ const AppInitializer = ({ children }) => {
         const authActions = useAuthStore.getState().actions;
 
         // 1. Synchronous state alignment (token → isAuthenticated)
-        //    Also schedules startTokenRefreshTimer() via setTimeout(0)
+        //    Refresh scheduling is handled by src/auth/refreshManager.js
         authActions.initialize();
 
         // 2. If we have a token, validate it against the server

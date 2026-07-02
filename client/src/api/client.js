@@ -7,7 +7,9 @@
 
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import getAuthRecoveryManager from '../utils/authRecoveryManager';
+import { getAccessToken } from '../auth/tokenStorage.js';
+import { ensureFreshToken } from '../auth/refreshManager.js';
+import { markWarm, isRecentlyWarm } from '../auth/serverHealth.js';
 
 // ✅ API Configuration
 const rawApiUrl = import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1';
@@ -32,14 +34,15 @@ const config = {
 // silent config dump
 
 // ✅ Server State Management
+// isWarm survives soft reloads via sessionStorage (serverHealth.js) — a page
+// refresh 30 seconds after a successful request no longer re-arms all the
+// "is the server awake?" machinery.
 class ServerStateManager {
   constructor() {
-    this.isWarm = false;
+    this.isWarm = isRecentlyWarm();
     this.lastRequest = Date.now();
     this.consecutiveFailures = 0;
     this.wakingUp = false;
-    // Retry gating to avoid immediate re-hits; 2s is enough to classify cold starts
-    this.COLD_START_THRESHOLD = 2000;
   }
 
   updateSuccess() {
@@ -47,22 +50,12 @@ class ServerStateManager {
     this.lastRequest = Date.now();
     this.consecutiveFailures = 0;
     this.wakingUp = false;
+    markWarm();
   }
 
   updateFailure() {
     this.consecutiveFailures++;
     this.lastRequest = Date.now();
-  }
-
-  shouldRetryForColdStart(error) {
-    const isTimeoutError = error.code === 'ECONNABORTED' || error.message.includes('timeout');
-    const isServerError = error.response?.status >= 500;
-    const timeSinceLastRequest = Date.now() - this.lastRequest;
-    
-    return !this.isWarm &&
-           (isTimeoutError || isServerError) &&
-           timeSinceLastRequest > this.COLD_START_THRESHOLD &&
-           this.consecutiveFailures < 3;
   }
 }
 
@@ -136,8 +129,7 @@ class SpendWiseAPIClient {
     this.serverState = new ServerStateManager();
     this.cache = new CacheManager();
     this.deduplicator = new RequestDeduplicator();
-    this.authRecovery = getAuthRecoveryManager();
-    
+
     // Create axios instance
     this.client = axios.create({
       baseURL: config.API_URL, // VITE_API_URL already includes /api/v1
@@ -157,8 +149,8 @@ class SpendWiseAPIClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        // Add auth token (support both legacy and new key)
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+        // Add auth token — tokenStorage is the single source of truth
+        const token = getAccessToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -213,10 +205,12 @@ class SpendWiseAPIClient {
           }
         } catch (_) {}
 
-        // Notify auth recovery manager of success
-        this.authRecovery.handleApiSuccess();
-
-        // silent perf log
+        // Any success dismisses lingering connection toasts (this replaced
+        // the deleted authRecoveryManager's only useful job).
+        try {
+          toast.dismiss('cold-start');
+          toast.dismiss('connection-recovering');
+        } catch (_) {}
 
         return response;
       },
@@ -241,68 +235,25 @@ class SpendWiseAPIClient {
     // Update server state
     this.serverState.updateFailure();
 
-    // Notify auth recovery manager of the error
-    const errorType = this.authRecovery.handleApiError(error, requestConfig);
-
-    // 🛑 BUGFIX: If THIS request is itself a token-refresh attempt, do NOT try
-    // to refresh again — that's the recursion that caused infinite loops when
-    // refresh tokens expired. Reject straight to the auth-error path.
-    const isRefreshRequest = !!requestConfig?._isRefreshRequest;
-
     // Handle specific error types
     if (error.response?.status === 401) {
-      // Prevent duplicate logout flows from parallel requests
-      if (typeof window !== 'undefined' && window.__AUTH_LOGOUT_IN_PROGRESS__) {
-        return Promise.reject(error);
-      }
-
-      // If the failing request is the refresh call itself → refresh token is dead, log out.
-      if (isRefreshRequest) {
-        this.handleAuthError();
-        return Promise.reject(error);
-      }
-
-      // ✅ FIX: Try to refresh token BEFORE logging out
-      // Check if this request was already retried after refresh
+      // Single-flight refresh via refreshManager. THE core fix: a refresh
+      // that fails because the server is asleep (timeout / 5xx / network)
+      // returns { transient:true } and KEEPS the tokens — the old code
+      // wiped them and kicked the user to /login for no reason.
       if (requestConfig && !requestConfig._isRetryAfterRefresh) {
-        try {
-          // Attempt token refresh
-          const refreshToken = localStorage.getItem('refreshToken');
-          if (refreshToken) {
-            // Call refresh endpoint directly (avoid circular dependency)
-            const refreshResponse = await this.client.post('/users/refresh-token', { refreshToken }, {
-              // Skip auth header for refresh endpoint
-              headers: { Authorization: undefined },
-              _isRefreshRequest: true,        // ← interceptor uses this to break the recursion
-              _skipAuthInterceptor: true      // ← legacy flag kept for any callers reading it
-            });
-            
-            const newToken = refreshResponse?.data?.data?.accessToken || refreshResponse?.data?.accessToken;
-            const newRefreshToken = refreshResponse?.data?.data?.refreshToken || refreshResponse?.data?.refreshToken;
-            
-            if (newToken) {
-              // Update tokens
-              localStorage.setItem('accessToken', newToken);
-              localStorage.setItem('authToken', newToken);
-              if (newRefreshToken) {
-                localStorage.setItem('refreshToken', newRefreshToken);
-              }
-              
-              // Retry the original request with new token
-              requestConfig.headers.Authorization = `Bearer ${newToken}`;
-              requestConfig._isRetryAfterRefresh = true; // Prevent infinite refresh loop
-              
-              return this.client.request(requestConfig);
-            }
-          }
-        } catch (refreshError) {
-          // Refresh failed, proceed to logout
+        const result = await ensureFreshToken();
+
+        if (result.ok) {
+          requestConfig.headers.Authorization = `Bearer ${result.token}`;
+          requestConfig._isRetryAfterRefresh = true; // exactly one retry
+          return this.client.request(requestConfig);
         }
+        // fatal → refreshManager already cleared tokens and emitted
+        // 'auth:logout' (the store listens and resets + navigates once).
+        // transient → tokens kept, retry scheduled; fail this request softly.
       }
-      
-      // If refresh failed or not available, log out
-      this.handleAuthError();
-      return Promise.reject(error);
+      return Promise.reject(this.normalizeError(error));
     }
 
     // Blocked user handling (403 USER_BLOCKED)
@@ -364,7 +315,6 @@ class SpendWiseAPIClient {
       // ~30–60s; a single transparent retry recovers most of the time without
       // ever yanking the user off their current screen.
       const canRetry = !!requestConfig
-        && !requestConfig._isRefreshRequest
         && !requestConfig._coldStartRetried
         && (requestConfig.retryCount || 0) < config.RETRY_ATTEMPTS;
 
@@ -401,10 +351,7 @@ class SpendWiseAPIClient {
 
     // Log error in debug mode
     if (config.DEBUG) {
-      console.error('❌ API Error:', error.response?.status, error.message, {
-        errorType,
-        recoveryState: this.authRecovery.getHealthStatus()
-      });
+      console.error('❌ API Error:', error.response?.status, error.message);
     }
 
     return Promise.reject(this.normalizeError(error));
@@ -415,20 +362,14 @@ class SpendWiseAPIClient {
     const retryCount = (requestConfig.retryCount || 0) + 1;
     
     if (retryCount > config.RETRY_ATTEMPTS) {
-      // ✅ FIX: Dismiss cold start toast on failure
       try { toast.dismiss('cold-start'); } catch (_) {}
       throw new Error('Server is taking too long to respond. Please try again in a moment.');
     }
 
-    // Show cold start toast on first retry (with auto-timeout)
-    if (retryCount === 1 && !this.serverState.wakingUp) {
-      this.serverState.wakingUp = true;
-      toast.loading('Waking up server...', { 
-        id: 'cold-start',
-        duration: 15000,
-        maxDuration: 30000 // Auto-dismiss after 30s
-      });
-    }
+    // No toast here — the non-blocking purple banner (ConnectionStatusOverlay
+    // via __SERVER_WAKING__) is the single cold-start indicator. Stacking a
+    // toast on top of it was one of the "too many messages" complaints.
+    this.serverState.wakingUp = true;
 
     // Calculate retry delay (exponential backoff)
     const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 10000);
@@ -437,60 +378,6 @@ class SpendWiseAPIClient {
     // Retry the request
     requestConfig.retryCount = retryCount;
     return this.client.request(requestConfig);
-  }
-
-  // ✅ Handle Authentication Errors
-  handleAuthError() {
-    // ✅ FIX: Check if token exists BEFORE removing it
-    const hadToken = !!localStorage.getItem('accessToken');
-    
-    // Clear auth data
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-    this.cache.clear();
-    
-    // User feedback on expiry
-    try {
-      // Only show session expired if there was a token
-      if (hadToken && window.authToasts?.sessionExpired) {
-        window.authToasts.sessionExpired();
-      }
-    } catch (_) {}
-
-    // Debounce redirect + toast to avoid multiple toasts from parallel 401s
-    if (typeof window !== 'undefined') {
-      if (window.__AUTH_LOGOUT_IN_PROGRESS__) {
-        return;
-      }
-      window.__AUTH_LOGOUT_IN_PROGRESS__ = true;
-      // reset the flag after a short while
-      setTimeout(() => { try { delete window.__AUTH_LOGOUT_IN_PROGRESS__; } catch (_) {} }, 2000);
-    }
-
-    // Only redirect if not already on auth pages
-    const isOnAuthPage = ['/login', '/register', '/auth/login', '/auth/register', '/auth/verify-email', '/auth/password-reset'].includes(window.location.pathname);
-    const isBlockedSession = (typeof window !== 'undefined' && window.location?.pathname === '/blocked') ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('blockedSession') === '1');
-    
-    // If user is blocked, do NOT navigate away from blocked page
-    if (isBlockedSession) {
-      return;
-    }
-
-    if (!isOnAuthPage) {
-      // Try to use React Router if available
-      if (window.spendWiseNavigate) {
-        window.spendWiseNavigate('/login', { replace: true });
-      } else {
-        window.location.replace('/login');
-      }
-    } else {
-      // Already on auth page, just clear the auth state
-      try {
-        window.spendWiseStores?.auth?.getState?.()?.actions?.reset?.();
-      } catch (_) {}
-    }
   }
 
   // ✅ Normalize API Errors
