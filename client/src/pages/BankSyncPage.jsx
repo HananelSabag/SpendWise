@@ -111,6 +111,11 @@ function ConnectionCard({ conn, t, lang }) {
 
   const meta = getMeta(conn.bank_source);
   const isPausedByFailures = conn.status === 'error';
+  const jobStatus = conn.latest_job_status;
+  const isPending = jobStatus === 'pending';
+  const isRunning = jobStatus === 'running';
+  // Show the last failure reason even before auto-pause kicks in (3 strikes).
+  const lastError = conn.last_error;
 
   return (
     <motion.div
@@ -137,10 +142,36 @@ function ConnectionCard({ conn, t, lang }) {
         </div>
       </div>
 
+      {/* Live job state — reassures the user a queued sync is waiting for
+          their (possibly offline) agent machine, not silently broken. */}
+      {isRunning && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
+          <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" />
+          <span>{t('jobSyncing')}</span>
+        </div>
+      )}
+      {isPending && !isRunning && (
+        <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2">
+          <Clock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p>{t('jobWaiting')}</p>
+            <p className="opacity-70 mt-0.5">{t('jobWaitingHint')}</p>
+          </div>
+        </div>
+      )}
+
       {isPausedByFailures && (
         <div className="mt-3 flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <span>{t('pausedAfterFailures')}</span>
+        </div>
+      )}
+
+      {/* Non-fatal last error (before the 3-strike auto-pause) */}
+      {!isPausedByFailures && !isPending && !isRunning && lastError && (
+        <div className="mt-3 flex items-start gap-2 text-xs text-red-500 dark:text-red-400 bg-red-50/60 dark:bg-red-900/10 rounded-xl px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span className="truncate">{t('lastAttemptFailed', { error: lastError })}</span>
         </div>
       )}
 
@@ -364,6 +395,7 @@ function HowItWorks({ t }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function BankSyncPage() {
   const { t, currentLanguage } = useTranslation('bankSync');
+  const queryClient = useQueryClient();
   const [showConnect, setShowConnect] = useState(false);
 
   const { data: sources = [], isLoading: statsLoading, error: statsError, refetch } = useQuery({
@@ -376,7 +408,26 @@ export default function BankSyncPage() {
     queryKey: ['bankConnections'],
     queryFn: bankConnectionsApi.list,
     staleTime: 30_000,
+    // While any job is pending/running, poll so the card advances live
+    // (waiting → syncing → done) without the user refreshing.
+    refetchInterval: (query) => {
+      const conns = query.state.data || [];
+      const active = conns.some(c => ['pending', 'running'].includes(c.latest_job_status));
+      return active ? 8_000 : false;
+    },
   });
+
+  // When the newest sync timestamp advances (a job just finished), refresh
+  // the synced-transaction stats so new rows appear without a manual reload.
+  const latestSyncStamp = connections
+    .map(c => c.last_sync_at || '')
+    .sort()
+    .slice(-1)[0] || '';
+  useEffect(() => {
+    if (latestSyncStamp) {
+      queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
+    }
+  }, [latestSyncStamp, queryClient]);
 
   const isLoading = statsLoading || connsLoading;
 

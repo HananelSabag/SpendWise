@@ -83,6 +83,12 @@ export default {
   deleteConfirmBody: 'The encrypted credentials will be erased permanently. Synced transactions stay in SpendWise.',
   cancel: 'Cancel',
 
+  // Live job states (shown on the connection card)
+  jobWaiting: 'Sync queued — waiting for the sync agent',
+  jobWaitingHint: 'Runs when your sync computer is on (within ~30 min)',
+  jobSyncing: 'Syncing now…',
+  lastAttemptFailed: 'Last sync failed: {{error}}',
+
   // Sync now / rate limits
   syncNow: 'Sync Now',
   syncQueued: 'Sync queued! It will run within ~30 minutes',

@@ -50,12 +50,26 @@ router.get('/public-key', (req, res) => {
 // List the user's connections. NEVER returns encrypted_credentials.
 router.get('/', async (req, res) => {
   try {
+    // Include the latest job's status/time so the UI can show live states
+    // ("waiting for sync agent", "syncing now") — critical when the user's
+    // agent machine is offline and jobs sit pending.
     const result = await db.query(
-      `SELECT id, bank_source, display_name, status, consecutive_failures,
-              last_sync_at, last_error, created_at
-       FROM bank_connections
-       WHERE user_id = $1
-       ORDER BY created_at ASC`,
+      `SELECT c.id, c.bank_source, c.display_name, c.status, c.consecutive_failures,
+              c.last_sync_at, c.last_error, c.created_at,
+              j.status       AS latest_job_status,
+              j.trigger      AS latest_job_trigger,
+              j.requested_at AS latest_job_requested_at,
+              j.result       AS latest_job_result
+       FROM bank_connections c
+       LEFT JOIN LATERAL (
+         SELECT status, trigger, requested_at, result
+         FROM bank_sync_jobs
+         WHERE connection_id = c.id
+         ORDER BY requested_at DESC
+         LIMIT 1
+       ) j ON true
+       WHERE c.user_id = $1
+       ORDER BY c.created_at ASC`,
       [req.user.id],
     );
     res.json({ ok: true, connections: result.rows });
