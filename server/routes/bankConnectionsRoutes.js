@@ -21,7 +21,7 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 
-const VALID_SOURCES = ['yahav', 'isracard', 'max', 'discount'];
+const VALID_SOURCES = ['yahav', 'leumi', 'isracard', 'max', 'discount'];
 const MAX_CIPHERTEXT_LEN = 4096;      // sealed box of a creds JSON is well under this
 const MANUAL_SYNCS_PER_DAY = 2;
 const MANUAL_SYNC_GAP_HOURS = 3;

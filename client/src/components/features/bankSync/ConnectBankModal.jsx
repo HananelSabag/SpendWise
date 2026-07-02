@@ -31,6 +31,13 @@ export const BANK_FORMS = {
       { key: 'nationalID', labelKey: 'fieldNationalID', type: 'text', inputMode: 'numeric' },
     ],
   },
+  leumi: {
+    color: 'from-indigo-600 to-indigo-900',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
   isracard: {
     color: 'from-purple-600 to-purple-800',
     fields: [

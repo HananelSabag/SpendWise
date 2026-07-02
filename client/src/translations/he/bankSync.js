@@ -120,6 +120,7 @@ export default {
   // Bank names
   bankNames: {
     yahav: 'בנק יהב',
+    leumi: 'בנק לאומי',
     isracard: 'ישראכרט',
     max: 'מקס',
     discount: 'דיסקונט',
