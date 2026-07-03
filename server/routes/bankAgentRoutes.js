@@ -17,6 +17,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { ingestAccounts } = require('../services/bankSyncService');
+const { enqueueDueJobs } = require('../services/syncSchedulingService');
 
 const AUTO_PAUSE_AFTER_FAILURES = 3;
 
@@ -63,10 +64,17 @@ router.use(agentLimiter, agentAuth);
 // ── POST /jobs/claim ──────────────────────────────────────────────────────────
 // Atomically claim up to `limit` pending jobs (oldest first). Returns each
 // job with its connection's encrypted credentials (sealed box ciphertext).
+//
+// This is also the scheduler tick: the agent's poll is the only moment jobs
+// are ever consumed, so due scheduled jobs (07:00/18:00 Israel targets) are
+// enqueued right here, immediately before claiming. See
+// services/syncSchedulingService.js for why in-process cron was removed.
 router.post('/jobs/claim', async (req, res) => {
   const limit = Math.min(Number(req.body?.limit) || 5, 10);
 
   try {
+    await enqueueDueJobs();
+
     const result = await db.query(
       `UPDATE bank_sync_jobs j SET
          status = 'running',
@@ -97,12 +105,16 @@ router.post('/jobs/claim', async (req, res) => {
 // ── POST /jobs/:id/result ─────────────────────────────────────────────────────
 // Agent reports the outcome of a claimed job.
 // Body (success): { success: true,  accounts: [{ account_number, type, balance, txns }] }
-// Body (failure): { success: false, error: "message" }
+// Body (failure): { success: false, error: "message", transient?: boolean }
+//   transient=true marks expected, self-resolving declines (e.g. the agent's
+//   local scrape cooldown) — the job is recorded as failed with its message,
+//   but the connection's consecutive_failures counter is NOT incremented, so
+//   a healthy connection can never be auto-paused by cooldown declines.
 router.post('/jobs/:id/result', async (req, res) => {
   const jobId = Number(req.params.id);
   if (!Number.isInteger(jobId)) return res.status(400).json({ error: 'Invalid job id' });
 
-  const { success, accounts, error: agentError } = req.body || {};
+  const { success, accounts, error: agentError, transient } = req.body || {};
   if (typeof success !== 'boolean') {
     return res.status(400).json({ error: 'success (boolean) is required' });
   }
@@ -159,10 +171,20 @@ router.post('/jobs/:id/result', async (req, res) => {
 
     // ── Failure path ──
     const errMsg = String(agentError || 'Unknown agent error').slice(0, 500);
+    const isTransient = transient === true;
     await client.query(
       `UPDATE bank_sync_jobs SET status='failed', finished_at=NOW(), result=$2 WHERE id=$1`,
-      [jobId, JSON.stringify({ error: errMsg })],
+      [jobId, JSON.stringify({ error: errMsg, transient: isTransient })],
     );
+
+    if (isTransient) {
+      // Expected decline (cooldown etc.) — record the job outcome but leave
+      // the connection's health counters and status untouched.
+      await client.query('COMMIT');
+      logger.info('bank-agent: job declined (transient)', { jobId, error: errMsg });
+      return res.json({ ok: true, transient: true });
+    }
+
     const failUpdate = await client.query(
       `UPDATE bank_connections SET
          consecutive_failures = consecutive_failures + 1,

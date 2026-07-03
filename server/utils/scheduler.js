@@ -41,11 +41,11 @@ class Scheduler {
       // Weekly database maintenance (runs Saturday at 3 AM)
       this.scheduleJob('db-maintenance', '0 3 * * 6', this.runDatabaseMaintenance.bind(this));
 
-      // Bank sync job enqueue — 2× daily (9 AM / 7 PM). The local agent picks
-      // these up and does the scraping. Max 2/day per connection protects
-      // against bank anti-fraud lockouts (frequent logins = account block).
-      this.scheduleJob('bank-sync-enqueue-am', '0 9 * * *', this.runBankSyncEnqueue.bind(this));
-      this.scheduleJob('bank-sync-enqueue-pm', '0 19 * * *', this.runBankSyncEnqueue.bind(this));
+      // NOTE: bank-sync job enqueue intentionally does NOT live here anymore.
+      // In-process cron on a sleeping free-tier dyno never fired (live-DB
+      // evidence: zero trigger='schedule' jobs were ever created). Scheduled
+      // syncs are now enqueued on demand inside POST /bank-agent/jobs/claim —
+      // see services/syncSchedulingService.js.
 
       this.isInitialized = true;
       logger.info('✅ Scheduler initialized with optimized jobs', {
@@ -180,46 +180,6 @@ class Scheduler {
 
     } catch (error) {
       logger.error(`❌ Unverified users cleanup failed — ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 🏦 Enqueue bank sync jobs for all active connections
-   * Skips connections that synced in the last 6 hours or already have a
-   * pending/running job — guarantees ≤2 scheduled scrapes per day per bank.
-   */
-  async runBankSyncEnqueue() {
-    try {
-      logger.info('🏦 Enqueuing bank sync jobs');
-
-      // Expire pending jobs the agent never claimed (machine off) so they
-      // don't block new scheduled syncs forever.
-      await db.query(`
-        UPDATE bank_sync_jobs
-        SET status='failed', finished_at=NOW(),
-            result='{"error":"expired — sync agent did not pick this up in time"}'::jsonb
-        WHERE status='pending' AND requested_at < NOW() - INTERVAL '6 hours'
-      `, [], 'bank_sync_expire_stale');
-
-      const result = await db.query(`
-        INSERT INTO bank_sync_jobs (connection_id, user_id, trigger)
-        SELECT c.id, c.user_id, 'schedule'
-        FROM bank_connections c
-        WHERE c.status = 'active'
-          AND (c.last_sync_at IS NULL OR c.last_sync_at < NOW() - INTERVAL '6 hours')
-          AND NOT EXISTS (
-            SELECT 1 FROM bank_sync_jobs j
-            WHERE j.connection_id = c.id AND j.status IN ('pending','running')
-          )
-        RETURNING id
-      `, [], 'bank_sync_enqueue');
-
-      const enqueued = result.rowCount || 0;
-      logger.info(`✅ Bank sync enqueue completed — ${enqueued} job(s) queued`);
-      return { enqueued };
-    } catch (error) {
-      logger.error(`❌ Bank sync enqueue failed — ${error.message}`);
       throw error;
     }
   }
