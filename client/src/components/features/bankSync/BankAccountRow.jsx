@@ -6,14 +6,14 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Switch } from '../../ui';
-import { useNotifications } from '../../../stores';
+import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
 import { formatILS } from './bankSyncMeta';
 
 export default function BankAccountRow({ account, connectionId, t, lang }) {
   const queryClient = useQueryClient();
-  const { addNotification } = useNotifications();
+  const toast = useToast();
   const enabled = account.enabled !== false;
   const hasBalance = account.balance !== null && account.balance !== undefined;
 
@@ -24,7 +24,7 @@ export default function BankAccountRow({ account, connectionId, t, lang }) {
       queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
       queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
     },
-    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+    onError: (err) => toast.error(err?.message || t('loadError')),
   });
 
   return (

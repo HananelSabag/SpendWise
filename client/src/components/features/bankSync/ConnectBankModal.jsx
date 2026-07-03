@@ -15,7 +15,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Modal } from '../../ui';
-import { useTranslation, useNotifications } from '../../../stores';
+import { useTranslation } from '../../../stores';
+import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
 import { sealCredentials } from '../../../utils/sealedBox';
 import bankConnectionsApi from '../../../api/bankConnections';
@@ -68,7 +69,7 @@ const STEPS = ['pick', 'credentials', 'confirm'];
 
 const ConnectBankModal = ({ isOpen, onClose, onSuccess }) => {
   const { t } = useTranslation('bankSync');
-  const { addNotification } = useNotifications();
+  const toast = useToast();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState(0);
@@ -105,14 +106,11 @@ const ConnectBankModal = ({ isOpen, onClose, onSuccess }) => {
       queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
       onSuccess?.();
     } catch (err) {
-      addNotification({
-        type: 'error',
-        message: err?.message || t('loadError'),
-      });
+      toast.error(err?.message || t('loadError'));
     } finally {
       setSubmitting(false);
     }
-  }, [bank, creds, credsComplete, consent, submitting, displayName, queryClient, onSuccess, addNotification, t]);
+  }, [bank, creds, credsComplete, consent, submitting, displayName, queryClient, onSuccess, toast, t]);
 
   const stepTitle = succeeded
     ? t('connected')

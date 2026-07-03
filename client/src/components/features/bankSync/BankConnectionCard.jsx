@@ -9,7 +9,7 @@ import {
   RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, ChevronDown,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNotifications } from '../../../stores';
+import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
 import { bankBrand, formatDateTime } from './bankSyncMeta';
@@ -29,7 +29,7 @@ const MANUAL_SYNC_GAP_HOURS = 3;
 
 export default function BankConnectionCard({ conn, t, lang }) {
   const queryClient = useQueryClient();
-  const { addNotification } = useNotifications();
+  const toast = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Force a re-render every 30s so the cooldown countdown/enable-state below
@@ -52,22 +52,37 @@ export default function BankConnectionCard({ conn, t, lang }) {
 
   const syncMutation = useMutation({
     mutationFn: () => bankConnectionsApi.syncNow(conn.id),
-    onSuccess: () => { addNotification({ type: 'success', message: t('syncQueued') }); invalidate(); },
+    onSuccess: () => { toast.success(t('syncQueued')); invalidate(); },
     onError: (err) => {
+      // Rate-limit / guard rejections (quota, too-soon, in-flight, paused) are
+      // expected states, not failures — show them as warnings, not red errors.
       const code = err?.details?.code || err?.code;
-      addNotification({ type: 'error', message: t(SYNC_ERROR_KEYS[code] || 'loadError') });
+      const key = SYNC_ERROR_KEYS[code];
+      if (key) toast.warning(t(key));
+      else toast.error(err?.message || t('loadError'));
     },
   });
   const statusMutation = useMutation({
     mutationFn: (status) => bankConnectionsApi.setStatus(conn.id, status),
     onSuccess: invalidate,
-    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+    onError: (err) => toast.error(err?.message || t('loadError')),
   });
   const deleteMutation = useMutation({
     mutationFn: () => bankConnectionsApi.remove(conn.id),
     onSuccess: () => { setConfirmDelete(false); invalidate(); },
-    onError: (err) => addNotification({ type: 'error', message: err?.message || t('loadError') }),
+    onError: (err) => toast.error(err?.message || t('loadError')),
   });
+
+  // Every click must produce visible feedback. During the client-side cooldown
+  // window we short-circuit and explain WHEN the next sync is allowed instead
+  // of silently doing nothing (the old disabled button gave no signal on tap).
+  const handleSync = () => {
+    if (inCooldown) {
+      toast.info(t('nextSyncAt', { time: formatDateTime(nextSyncAt, lang) }));
+      return;
+    }
+    syncMutation.mutate();
+  };
 
   const { tint } = bankBrand(conn.bank_source);
   const isError = conn.status === 'error';
@@ -169,10 +184,14 @@ export default function BankConnectionCard({ conn, t, lang }) {
         {/* Actions */}
         <div className="mt-3 flex gap-2">
           <button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending || conn.status !== 'active' || inCooldown}
+            onClick={handleSync}
+            disabled={syncMutation.isPending || conn.status !== 'active'}
             title={inCooldown ? t('nextSyncAt', { time: formatDateTime(nextSyncAt, lang) }) : undefined}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors"
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-xs font-semibold transition-colors',
+              'disabled:opacity-40 disabled:cursor-not-allowed',
+              inCooldown ? 'bg-primary-400 hover:bg-primary-500' : 'bg-primary-600 hover:bg-primary-700',
+            )}
           >
             {syncMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             {t('syncNow')}
