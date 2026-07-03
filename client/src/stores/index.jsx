@@ -28,16 +28,19 @@ import useTranslationStore, {
   SUPPORTED_LANGUAGES 
 } from './translationStore.js';
 
-import useAppStore, { 
-  useTheme, 
-  useAccessibility, 
-  useCurrency, 
-  useNotifications,
+import useAppStore, {
+  useTheme,
+  useAccessibility,
+  useCurrency,
   THEMES,
   CURRENCIES,
   DATE_FORMATS,
-  appSelectors 
+  appSelectors
 } from './appStore.js';
+
+// Toast notifications funnel through the single react-hot-toast system.
+// useNotifications is a thin compatibility layer over useToast (see the hook).
+import { useNotifications } from '../hooks/useAppNotifications.js';
 
 // ✅ Store Initialization Manager - SIMPLIFIED
 class StoreManager {

@@ -120,7 +120,6 @@ export const useAppStore = create(
         pageTitle: 'SpendWise',
          // Maintenance status for admin indicator
          maintenanceMode: false,
-        notifications: [],
         modals: [],
         loading: {
           global: false,
@@ -557,44 +556,6 @@ export const useAppStore = create(
             return operation ? loading.operations.has(operation) : loading.global;
           },
 
-          // Notification management
-          addNotification: (notification) => {
-            const id = Date.now().toString();
-            const newNotification = {
-              id,
-              type: 'info',
-              autoHide: true,
-              duration: 5000,
-              ...notification,
-              timestamp: Date.now()
-            };
-            
-            set((state) => {
-              state.notifications.push(newNotification);
-            });
-            
-            // Auto-remove if enabled
-            if (newNotification.autoHide) {
-              setTimeout(() => {
-                get().actions.removeNotification(id);
-              }, newNotification.duration);
-            }
-            
-            return id;
-          },
-
-          removeNotification: (id) => {
-            set((state) => {
-              state.notifications = state.notifications.filter(n => n.id !== id);
-            });
-          },
-
-          clearNotifications: () => {
-            set((state) => {
-              state.notifications = [];
-            });
-          },
-
           // Performance management
           setPerformanceMode: (mode) => {
             set((state) => {
@@ -668,8 +629,7 @@ export const appSelectors = {
   accessibility: (state) => state.accessibility,
   currency: (state) => state.currency,
   dateFormat: (state) => state.dateFormat,
-  isLoading: (state) => state.loading.global,
-  notifications: (state) => state.notifications
+  isLoading: (state) => state.loading.global
 };
 
 // ✅ Convenience hooks — useShallow prevents re-renders when object fields
@@ -702,14 +662,6 @@ export const useCurrency = () => useAppStore(
   }))
 );
 
-export const useNotifications = () => useAppStore(
-  useShallow((state) => ({
-    notifications: state.notifications,
-    addNotification: state.actions.addNotification,
-    removeNotification: state.actions.removeNotification,
-    clearNotifications: state.actions.clearNotifications
-  }))
-);
 
 // ✅ Initialize app store
 if (typeof window !== 'undefined') {

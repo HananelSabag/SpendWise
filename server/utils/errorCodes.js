@@ -163,28 +163,10 @@ module.exports = {
     status: 500
   },
 
-  // --- Recurring ---
-  INVALID_INTERVAL: {
-    code: 'INVALID_INTERVAL',
-    message: 'Invalid recurring interval. Must be daily, weekly, or monthly',
-    status: 400
-  },
-  INVALID_DAY: {
-    code: 'INVALID_DAY',
-    message: 'Day of month must be between 1 and 31',
-    status: 400
-  },
-
   // --- Default fallback ---
   UNKNOWN_ERROR: {
     code: 'UNKNOWN_ERROR',
     message: 'An unexpected error occurred',
     status: 500
-  },
-
-  CATEGORY_IN_USE: {
-    code: 'CATEGORY_IN_USE',
-    message: 'Category is currently in use by transactions or templates',
-    status: 400
   }
 };

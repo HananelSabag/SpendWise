@@ -232,54 +232,6 @@ const validate = {
   },
 
   /**
-   * Validate recurring transaction parameters
-   */
-  recurring: (req, res, next) => {
-    const { is_recurring, recurring_interval, day_of_month, day_of_week } = req.body;
-
-    if (is_recurring) {
-      // Interval validation
-      if (!recurring_interval) {
-        return res.status(400).json(createValidationError(
-          'MISSING_INTERVAL',
-          'Recurring interval is required for recurring transactions'
-        ));
-      }
-      
-      if (!['daily', 'weekly', 'monthly'].includes(recurring_interval)) {
-        return res.status(400).json(createValidationError(
-          'INVALID_INTERVAL',
-          'Interval must be daily, weekly, or monthly'
-        ));
-      }
-
-      // Day of month validation for monthly
-      if (recurring_interval === 'monthly' && day_of_month !== undefined) {
-        const day = parseInt(day_of_month);
-        if (isNaN(day) || day < 1 || day > 31) {
-          return res.status(400).json(createValidationError(
-            'INVALID_DAY_OF_MONTH',
-            'Day of month must be between 1 and 31'
-          ));
-        }
-      }
-
-      // Day of week validation for weekly
-      if (recurring_interval === 'weekly' && day_of_week !== undefined) {
-        const day = parseInt(day_of_week);
-        if (isNaN(day) || day < 0 || day > 6) {
-          return res.status(400).json(createValidationError(
-            'INVALID_DAY_OF_WEEK',
-            'Day of week must be between 0 (Sunday) and 6 (Saturday)'
-          ));
-        }
-      }
-    }
-
-    next();
-  },
-
-  /**
    * Validate transaction type parameter
    */
   transactionType: (req, res, next) => {
@@ -305,22 +257,6 @@ const validate = {
       return res.status(400).json(createValidationError(
         'INVALID_TRANSACTION_ID',
         'Invalid transaction ID'
-      ));
-    }
-
-    next();
-  },
-
-  /**
-   * Validate template ID parameter
-   */
-  templateId: (req, res, next) => {
-    const { id } = req.params;
-    
-    if (!validators.categoryId(id)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_TEMPLATE_ID',
-        'Invalid template ID'
       ));
     }
 

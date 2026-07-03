@@ -4,7 +4,6 @@ import AddTransactionModal from '../../transactions/modals/AddTransactionModal.j
 import EditTransactionModal from '../../transactions/modals/EditTransactionModal.jsx';
 import DeleteTransaction from '../../transactions/DeleteTransaction.jsx';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
-import { useNotifications, useTranslation } from '../../../../stores';
 
 /**
  * UnifiedTransactionActions
@@ -25,10 +24,7 @@ const UnifiedTransactionActions = () => {
   const [editMode, setEditMode] = React.useState('edit'); // 'edit' | 'duplicate'
   const [selectedTx, setSelectedTx] = React.useState(null);
 
-  // ✅ Add transaction actions and notifications
   const { deleteTransaction } = useTransactionActions();
-  const { addNotification } = useNotifications();
-  const { t } = useTranslation();
 
   // Handlers
   const handleAdd = React.useCallback((type = 'expense') => {
@@ -90,25 +86,15 @@ const UnifiedTransactionActions = () => {
     } catch (_) {}
   }, []);
 
-  // ✅ Handle delete success with actual API call
+  // ✅ Handle delete success with actual API call (deleteTransaction toasts)
   const handleDeleteSuccess = React.useCallback(async (transactionId, options) => {
     try {
       await deleteTransaction(transactionId, options);
-      addNotification({
-        type: 'success',
-        message: t('toast.transactions.transactionDeleted') || 'Transaction deleted successfully',
-        duration: 3000
-      });
       handleSuccess(); // Close modal and cleanup
     } catch (error) {
       console.error('Failed to delete transaction:', error);
-      addNotification({
-        type: 'error',
-        message: error.message || t('errors.deleteFailed') || 'Failed to delete transaction',
-        duration: 4000
-      });
     }
-  }, [deleteTransaction, addNotification, handleSuccess]);
+  }, [deleteTransaction, handleSuccess]);
 
   return (
     <>

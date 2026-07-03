@@ -9,12 +9,12 @@ import { motion } from 'framer-motion';
 import { Plus, Minus, Send, Loader2, Zap } from 'lucide-react';
 
 // ✅ Import stores and hooks
-import { 
-  useTranslation, 
-  useNotifications, 
+import {
+  useTranslation,
   useCurrency,
   CURRENCIES
 } from '../../../stores';
+import { useToast } from '../../../hooks/useToast';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 
 // ✅ Import components
@@ -26,7 +26,7 @@ import { cn } from '../../../utils/helpers';
  */
 const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
   const { t } = useTranslation('dashboard');
-  const { addNotification } = useNotifications();
+  const toast = useToast();
   const { currency } = useCurrency();
   
   // ✅ Hooks for transaction creation
@@ -45,11 +45,8 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
 
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      addNotification({
-        type: 'error',
-        message: t('quickActions.invalidAmount', 'Please enter a valid amount'),
-        duration: 3000
-      });
+      // Client-side validation — no mutation runs, so nothing else toasts.
+      toast.error(t('quickActions.invalidAmount', 'Please enter a valid amount'));
       return;
     }
 
@@ -71,14 +68,8 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
         notes: '',
       };
 
-      const result = await createTransaction(transactionData);
-
-      // Success
-      addNotification({
-        type: 'success',
-        message: t('quickActions.success', `${activeType === 'expense' ? 'Expense' : 'Income'} added successfully!`),
-        duration: 3000
-      });
+      // createTransaction (useTransactions) shows the success/error toast.
+      await createTransaction(transactionData);
 
       // Reset form
       setAmount('');
@@ -94,15 +85,11 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
       setTimeout(() => amountInputRef.current?.focus(), 100);
 
     } catch (error) {
-      addNotification({
-        type: 'error',
-        message: t('quickActions.failed', 'Failed to add transaction. Please try again.'),
-        duration: 5000
-      });
+      // mutation error toast is handled by createTransaction
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, activeType, createTransaction, addNotification, t]);
+  }, [amount, activeType, createTransaction, onSuccess, toast, t]);
 
   // ✅ Handle keyboard shortcuts
   const handleKeyPress = useCallback((e) => {

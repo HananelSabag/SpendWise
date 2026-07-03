@@ -19,8 +19,10 @@
 import React, { useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 
-// ✅ NEW: Import from Zustand stores instead of Context
-import { useTranslation } from '../stores';
+// Import the translation hook directly from its leaf store (not the ../stores
+// barrel) so the barrel can safely re-export a toast-backed useNotifications
+// without creating a circular import (barrel → useNotifications → useToast → barrel).
+import { useTranslation } from '../stores/translationStore';
 
 // Modern SVG Icons Component with dynamic colors
 const ToastIcon = ({ type, size = 20 }) => {

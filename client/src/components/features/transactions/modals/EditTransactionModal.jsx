@@ -10,10 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Copy, Trash2, MoreVertical, Calendar, AlertTriangle, Pencil } from 'lucide-react';
 
 // ✅ Import Zustand stores
-import {
-  useTranslation,
-  useNotifications
-} from '../../../../stores';
+import { useTranslation } from '../../../../stores';
 
 // ✅ Import our new foundation
 import TransactionForm from '../forms/TransactionForm';
@@ -35,7 +32,6 @@ const EditTransactionModal = ({
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
-  const { addNotification } = useNotifications();
   const { updateTransaction, deleteTransaction, isOperating: isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,70 +87,37 @@ const EditTransactionModal = ({
         result = await updateTransaction(transaction.id, formData);
       }
       
-      // Show success state briefly
+      // Show success state briefly (updateTransaction already toasts).
       setShowSuccess(true);
-      
-      // Notify success
-      addNotification({
-        type: 'success',
-        message: mode === 'duplicate' 
-          ? t('success.transactionAdded')
-          : t('success.transactionUpdated'),
-        duration: 3000
-      });
-      
-      // Call success callback
       onSuccess?.(result);
-      
+
       // Close modal after brief success display
       setTimeout(() => {
         setShowSuccess(false);
         onClose?.();
       }, 1500);
-      
+
     } catch (error) {
       console.error('Failed to save transaction:', error);
-      
-      addNotification({
-        type: 'error',
-        message: error.message || (mode === 'duplicate' 
-          ? t('errors.addingFailed')
-          : t('errors.updatingFailed')),
-        duration: 4000
-      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [transaction, mode, updateTransaction, onDuplicate, addNotification, t, onSuccess, onClose]);
+  }, [transaction, mode, updateTransaction, onDuplicate, onSuccess, onClose]);
 
   // ✅ Handle delete
   const handleDelete = useCallback(async () => {
     if (!transaction) return;
     
     try {
-      await deleteTransaction(transaction.id);
-      
-      addNotification({
-        type: 'success',
-        message: t('success.transactionDeleted'),
-        duration: 3000
-      });
-      
+      await deleteTransaction(transaction.id); // already toasts
       onDelete?.(transaction);
       onClose?.();
-      
     } catch (error) {
       console.error('Failed to delete transaction:', error);
-      
-      addNotification({
-        type: 'error',
-        message: error.message || t('errors.deletingFailed'),
-        duration: 4000
-      });
     }
-    
+
     setShowDeleteConfirm(false);
-  }, [transaction, deleteTransaction, addNotification, t, onDelete, onClose]);
+  }, [transaction, deleteTransaction, onDelete, onClose]);
 
   // ✅ Handle modal close
   const handleClose = useCallback(() => {

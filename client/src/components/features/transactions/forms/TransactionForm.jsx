@@ -5,11 +5,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Save, X, CreditCard } from 'lucide-react';
 
-import {
-  useAuth,
-  useTranslation,
-  useNotifications
-} from '../../../../stores';
+import { useTranslation } from '../../../../stores';
+import { useToast } from '../../../../hooks/useToast';
 
 import { Button, LoadingSpinner } from '../../../ui';
 import TransactionFormFields from './TransactionFormFields';
@@ -26,8 +23,8 @@ const TransactionForm = ({
   showAdvanced  = true,
   className    = '',
 }) => {
-  const { t, isRTL }       = useTranslation('transactions');
-  const { addNotification } = useNotifications();
+  const { t, isRTL } = useTranslation('transactions');
+  const toast = useToast();
 
   const [formData, setFormData]               = useState(() => getDefaultFormData(initialData, mode));
   const [validationErrors, setValidationErrors] = useState({});
@@ -55,23 +52,20 @@ const TransactionForm = ({
     const validation = validateTransaction(formData);
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
-      addNotification({ type: 'error', message: t('form.validationFailed'), duration: 3000 });
+      // Client-side validation nudge — no mutation runs, so nothing else toasts.
+      toast.error(t('form.validationFailed'));
       return;
     }
     setIsSubmitting(true);
     try {
+      // onSubmit runs the create/update mutation, which shows its own toast.
       await onSubmit?.(formatTransactionForAPI(formData, mode));
-      addNotification({
-        type: 'success',
-        message: mode === 'create' ? t('form.createSuccess', 'Transaction created') : t('form.updateSuccess'),
-        duration: 3000,
-      });
     } catch {
-      addNotification({ type: 'error', message: t('form.submitFailed'), duration: 4000 });
+      // mutation error toast is handled by the mutation itself
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, mode, onSubmit, addNotification, t]);
+  }, [formData, mode, onSubmit, toast, t]);
 
   const handleCancel = useCallback(() => {
     if (isDirty && !window.confirm(t('form.unsavedChanges'))) return;

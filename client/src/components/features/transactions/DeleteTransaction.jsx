@@ -5,7 +5,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { Trash2, AlertTriangle, Landmark } from 'lucide-react';
 
-import { useTranslation, useNotifications, useCurrency } from '../../../stores';
+import { useTranslation, useCurrency } from '../../../stores';
 import { Button, Modal, Badge } from '../../ui';
 import { dateHelpers } from '../../../utils/helpers';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
@@ -18,7 +18,6 @@ const DeleteTransaction = ({
   isDeleting = false,
 }) => {
   const { t, isRTL }        = useTranslation('transactions');
-  const { addNotification }  = useNotifications();
   const { formatCurrency }   = useCurrency();
 
   const transactionData = useMemo(() => {
@@ -37,13 +36,13 @@ const DeleteTransaction = ({
   const handleDelete = useCallback(async () => {
     if (!transaction) return;
     try {
+      // onSuccess runs the delete mutation, which shows its own toast.
       await onSuccess(transaction.id, { transaction });
-      addNotification({ type: 'success', message: t('toast.transactions.deleteSuccess', 'Transaction deleted'), duration: 3000 });
       onClose();
     } catch (error) {
-      addNotification({ type: 'error', message: error.message || t('toast.transactions.transactionDeleteFailed', 'Failed to delete'), duration: 5000 });
+      // mutation error toast is handled by the mutation itself
     }
-  }, [transaction, onSuccess, addNotification, t, onClose]);
+  }, [transaction, onSuccess, onClose]);
 
   if (!transaction || !transactionData) return null;
 

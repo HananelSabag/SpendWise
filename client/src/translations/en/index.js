@@ -14,7 +14,6 @@ import accessibility from './accessibility.js';
 import legal from './legal.js';
 import preferences from './preferences.js';
 import profile from './profile.js';
-import categories from './categories.js';
 import transactions from './transactions.js';
 import admin from './admin.js';
 import toast from './toast.js';
@@ -36,7 +35,6 @@ import modals from './modals.js';
 
 import account from './account.js';
 import activity from './activity.js';
-import analytics from './analytics.js';
 import bulk from './bulk.js';
 import buttons from './buttons.js';
 import completion from './completion.js';
@@ -97,7 +95,6 @@ export default {
   legal,
   preferences,
   profile,
-  categories,
   transactions,
   admin,
   toast,
@@ -118,7 +115,6 @@ export default {
   modals,
   account,
   activity,
-  analytics,
   bulk,
   buttons,
   completion,

@@ -9,10 +9,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ✅ Import Zustand stores
-import {
-  useTranslation,
-  useNotifications
-} from '../../../../stores';
+import { useTranslation } from '../../../../stores';
 
 // ✅ Import our new foundation
 import TransactionForm from '../forms/TransactionForm';
@@ -31,43 +28,25 @@ const AddTransactionModal = ({
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
-  const { addNotification } = useNotifications();
   const { createTransaction, isOperating: isLoading } = useTransactionActions();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ Handle form submission
+  // ✅ Handle form submission — createTransaction (useTransactions) already
+  // shows the success/error toast, so we don't duplicate it here.
   const handleSubmit = useCallback(async (formData) => {
     setIsSubmitting(true);
-    
+
     try {
       const newTransaction = await createTransaction(formData);
-      
-      // Notify success
-      addNotification({
-        type: 'success',
-        message: t('success.transactionAdded'),
-        duration: 3000
-      });
-      
-      // Call success callback
       onSuccess?.(newTransaction);
-      
-      // Close modal immediately after success toast
       onClose?.();
-      
     } catch (error) {
       console.error('Failed to create transaction:', error);
-      
-      addNotification({
-        type: 'error',
-        message: error.message || t('errors.addingFailed'),
-        duration: 4000
-      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [createTransaction, addNotification, t, onSuccess, onClose]);
+  }, [createTransaction, onSuccess, onClose]);
 
   // ✅ Handle modal close
   const handleClose = useCallback(() => {

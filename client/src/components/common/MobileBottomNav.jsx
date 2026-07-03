@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
-import { useTranslation, useIsAdmin, useTheme, useNotifications, useTranslationStore, useAuth } from '../../stores';
+import { useTranslation, useIsAdmin, useTheme, useTranslationStore, useAuth } from '../../stores';
+import { useNotifications } from '../../hooks/useNotifications';
 import { useToast } from '../../hooks/useToast';
 import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';

@@ -11,7 +11,7 @@ import {
   ChevronDown, AlertTriangle, Trash2, Landmark, CreditCard,
 } from 'lucide-react';
 
-import { useTranslation, useCurrency, useNotifications } from '../stores';
+import { useTranslation, useCurrency } from '../stores';
 import { useTransactions } from '../hooks/useTransactions';
 import { useDebounce } from '../hooks/useDebounce';
 import { useTransactionActions } from '../hooks/useTransactionActions';
@@ -535,7 +535,6 @@ const DesktopTransactions = ({
 const ModernTransactions = () => {
   const { t } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
-  const { addNotification } = useNotifications();
   const isMobile = useIsMobile();
 
   // ── UI state (declared before hooks that depend on them) ──
@@ -635,20 +634,20 @@ const ModernTransactions = () => {
   }, [transactions]);
 
   // ── Handlers ──
+  // Create/update/delete mutations (useTransactions) show their own toasts,
+  // so these just refetch the list.
   const handleTransactionSuccess = useCallback(() => {
     refetchTransactions();
-    addNotification({ type: 'success', message: t('notifications.transactionUpdated', 'Transaction updated'), duration: 3000 });
-  }, [refetchTransactions, addNotification, t]);
+  }, [refetchTransactions]);
 
   const handleDeleteSuccess = useCallback(async (transactionId, options) => {
     try {
       await deleteTransaction(transactionId, options);
       refetchTransactions();
-      addNotification({ type: 'success', message: t('notifications.transactionDeleted', 'Transaction deleted'), duration: 3000 });
     } catch (err) {
-      addNotification({ type: 'error', message: err.message || 'Failed to delete', duration: 4000 });
+      // mutation error toast is handled by the mutation itself
     }
-  }, [deleteTransaction, refetchTransactions, addNotification, t]);
+  }, [deleteTransaction, refetchTransactions]);
 
   const onEdit = useCallback((transaction, mode = 'edit') => {
     setSelectedTransaction(transaction);
@@ -767,12 +766,11 @@ const ModernTransactions = () => {
         onConfirm={async () => {
             const idsToDelete = Array.from(selectedIds);
             try {
-              await freshBulkDelete(idsToDelete);
+              await freshBulkDelete(idsToDelete); // toasts its own result
               setSelectedIds(new Set());
               setShowBulkDeleteModal(false);
-              addNotification({ type: 'success', message: `Deleted ${idsToDelete.length} transactions`, duration: 4000 });
             } catch (err) {
-              addNotification({ type: 'error', message: err.message || 'Failed to delete', duration: 5000 });
+              // mutation error toast is handled by freshBulkDelete
             }
           }}
         />
