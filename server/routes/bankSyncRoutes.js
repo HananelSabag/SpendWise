@@ -175,7 +175,13 @@ router.get('/stats', auth, async (req, res) => {
        ORDER BY last_sync DESC`,
       [userId],
     );
-    res.json({ ok: true, sources: result.rows });
+    const { institutionKind, INSTITUTIONS } = require('../config/institutions');
+    const sources = result.rows.map((r) => ({
+      ...r,
+      kind: institutionKind(r.source),
+      label: INSTITUTIONS[r.source]?.label || r.source,
+    }));
+    res.json({ ok: true, sources });
   } catch (err) {
     logger.error('bank-sync stats failed', { error: err.message, userId });
     res.status(500).json({ error: 'Failed to fetch bank sync stats' });

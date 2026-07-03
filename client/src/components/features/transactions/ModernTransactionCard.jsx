@@ -12,13 +12,12 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Repeat, Landmark } from 'lucide-react';
+import { Landmark } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../../../stores';
 import { getIconComponent } from '../../../config/categoryIcons';
 import { cn, dateHelpers } from '../../../utils/helpers';
-import { Tooltip } from '../../ui';
-import RecurringTransactionActions from './actions/RecurringTransactionActions';
+import { institutionLabel } from '../bankSync/bankSyncMeta';
 import OneTimeTransactionActions from './actions/OneTimeTransactionActions';
 
 const ModernTransactionCard = ({
@@ -35,7 +34,6 @@ const ModernTransactionCard = ({
   const { formatCurrency } = useCurrency();
 
   const isIncome     = transaction?.type === 'income';
-  const isRecurring  = Boolean(transaction?.template_id || transaction?.is_recurring);
   const isBankSynced = Boolean(transaction?.bank_source);
   const amount       = Math.abs(transaction?.amount || 0);
 
@@ -57,8 +55,9 @@ const ModernTransactionCard = ({
     catch { return null; }
   }, [transaction]);
 
-  const category = transaction?.category_name || transaction?.category?.name
-    || t('categories.uncategorized', 'Uncategorized');
+  const sourceLabel = isBankSynced
+    ? institutionLabel(transaction.bank_source)
+    : t('transactions.manualEntry', 'Manual entry');
 
   return (
     <motion.div
@@ -88,11 +87,6 @@ const ModernTransactionCard = ({
           )}>
             {Icon && <Icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />}
           </div>
-          {isRecurring && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-500/90 text-white flex items-center justify-center border border-white dark:border-gray-800">
-              <Repeat className="w-2.5 h-2.5" />
-            </div>
-          )}
         </div>
 
         {/* Description + meta */}
@@ -101,12 +95,8 @@ const ModernTransactionCard = ({
             {transaction?.description || t('transactions.noDescription', 'No description')}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 flex items-center gap-1">
-            {isBankSynced && (
-              <Tooltip content={t('transactions.fromBank', 'Imported from your bank')}>
-                <Landmark className="w-3 h-3 shrink-0" />
-              </Tooltip>
-            )}
-            <span className="truncate">{category}</span>
+            {isBankSynced && <Landmark className="w-3 h-3 shrink-0" />}
+            <span className="truncate">{sourceLabel}</span>
             <span>·</span>
             <span className="shrink-0">{dateLabel}</span>
           </p>
@@ -123,25 +113,15 @@ const ModernTransactionCard = ({
 
           {/* Actions: bank rows are read-only facts — delete only.
               Manual rows get the full set. */}
-          {isRecurring ? (
-            <RecurringTransactionActions
-              transaction={transaction}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onSuccess={() => {}}
-              variant="compact"
-            />
-          ) : (
-            <OneTimeTransactionActions
-              transaction={transaction}
-              onEdit={isBankSynced ? undefined : onEdit}
-              onDelete={onDelete}
-              onDuplicate={isBankSynced ? undefined : onDuplicate}
-              onSuccess={() => {}}
-              variant="compact"
-              readOnly={isBankSynced}
-            />
-          )}
+          <OneTimeTransactionActions
+            transaction={transaction}
+            onEdit={isBankSynced ? undefined : onEdit}
+            onDelete={onDelete}
+            onDuplicate={isBankSynced ? undefined : onDuplicate}
+            onSuccess={() => {}}
+            variant="compact"
+            readOnly={isBankSynced}
+          />
 
           {/* Select checkbox (bulk mode) */}
           {onSelect && (

@@ -288,11 +288,7 @@ try {
   logger.debug('Loading transaction routes...');
   app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
   logger.debug('✅ Transaction routes loaded');
-  
-  logger.debug('Loading category routes...');
-  app.use(`${API_VERSION}/categories`, require('./routes/categoryRoutes'));
-  logger.debug('✅ Category routes loaded');
-  
+
   logger.debug('Loading export routes...');
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');
@@ -302,15 +298,6 @@ try {
   logger.debug('✅ Shopping routes loaded');
 
   app.use(`${API_VERSION}/notifications`, require('./routes/notificationRoutes'));
-
-  // ✅ FIXED: Re-enable analytics routes 
-  try {
-    logger.debug('Loading analytics routes...');
-    app.use(`${API_VERSION}/analytics`, require('./routes/analyticsRoutes'));
-    logger.debug('✅ Analytics routes loaded');
-  } catch (error) {
-    logger.error(`❌ Analytics routes failed: ${error.message}`);
-  }
 
   // ✅ ADMIN ROUTES - Add missing admin routes
   try {

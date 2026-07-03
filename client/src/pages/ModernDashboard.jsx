@@ -1,27 +1,25 @@
 /**
- * ModernDashboard — main dashboard page.
+ * ModernDashboard — main dashboard page. This is the user's financial home:
+ * synced bank/card data drives everything, manual one-time entry is a small
+ * side feature (not the hero it used to be).
  *
- * Aggressively pruned: greeting, balance, quick add, recent transactions.
- * The old half-empty stat cards (avg '—', top category '—', duplicate
- * income/expense counters) are gone — the balance panel already tells
- * that story with real data.
- *
- * Mobile-first: pull-to-refresh, liquid-glass surfaces, thumb-sized
- * add-income/add-expense actions.
+ * Mobile-first: pull-to-refresh, liquid-glass surfaces.
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import {
+  RefreshCw, Plus, Percent, Landmark, Banknote, PieChart as PieIcon, Info,
+} from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
-import { Button, Avatar, PageSkeleton } from '../components/ui';
+import { Avatar, PageSkeleton } from '../components/ui';
+import { institutionLabel } from '../components/features/bankSync/bankSyncMeta';
 
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
-import ModernQuickActionsBar from '../components/features/dashboard/ModernQuickActionsBar';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
 import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
@@ -45,8 +43,6 @@ const useGreeting = (user, t) => useMemo(() => {
 }, [user, t]);
 
 // ─── Pull-to-refresh (mobile) ─────────────────────────────────────────────────
-// Native-feeling: drag down from the top of the page → spinner → refresh.
-// Threshold 70px, resistance 0.5 so the pull feels weighted.
 
 const usePullToRefresh = (onRefresh, enabled) => {
   const [pull, setPull] = useState(0);
@@ -96,32 +92,176 @@ const usePullToRefresh = (onRefresh, enabled) => {
   return { pull, refreshing };
 };
 
-// ─── Quick add (income / expense) ─────────────────────────────────────────────
+// ─── Period summary ────────────────────────────────────────────────────────────
 
-const QuickAdd = ({ t }) => {
+function formatPeriodLabel(period) {
+  if (!period?.start || !period?.end) return '';
+  const start = new Date(period.start);
+  // period.end is exclusive (the next cycle's start) — show the day before
+  const end = new Date(new Date(period.end).getTime() - 86400000);
+  const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
+  const { summary, period } = dashboardData;
+  const net = summary.net_balance;
+
+  return (
+    <div className="glass-card rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+          {t('period.title', { fallback: 'This financial period' })}
+        </h3>
+        {period && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">{formatPeriodLabel(period)}</span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('period.income', { fallback: 'Income' })}</p>
+          <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {formatCurrency(summary.total_income)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('period.expenses', { fallback: 'Expenses' })}</p>
+          <p className="text-base font-bold text-red-500 dark:text-red-400 tabular-nums">
+            {formatCurrency(summary.total_expenses)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('period.net', { fallback: 'Net' })}</p>
+          <p className={cn(
+            'text-base font-bold tabular-nums',
+            net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400',
+          )}>
+            {formatCurrency(Math.abs(net))}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Bank costs ────────────────────────────────────────────────────────────────
+
+const BankCosts = ({ bankCosts, formatCurrency, t }) => {
+  const hasAny = bankCosts && (bankCosts.feesInterest > 0 || bankCosts.loanPayments > 0 || bankCosts.cashWithdrawn > 0);
+  if (!hasAny) return null;
+
+  const items = [
+    { label: t('bankCosts.feesInterest', { fallback: 'Fees & Interest' }), value: bankCosts.feesInterest, icon: Percent, tint: 'text-amber-500 dark:text-amber-400' },
+    { label: t('bankCosts.loanPayments', { fallback: 'Loan Payments' }), value: bankCosts.loanPayments, icon: Landmark, tint: 'text-indigo-500 dark:text-indigo-400' },
+    { label: t('bankCosts.cashWithdrawn', { fallback: 'Cash Withdrawn' }), value: bankCosts.cashWithdrawn, icon: Banknote, tint: 'text-teal-500 dark:text-teal-400',
+      sub: bankCosts.cashWithdrawalCount ? `${bankCosts.cashWithdrawalCount}x` : null },
+  ].filter((i) => i.value > 0);
+
+  return (
+    <div className="glass-card rounded-2xl p-4">
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+        {t('bankCosts.title', { fallback: 'Bank Costs This Period' })}
+      </h3>
+      <div className="space-y-2.5">
+        {items.map(({ label, value, icon: Icon, tint, sub }) => (
+          <div key={label} className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-gray-700/60 shrink-0">
+              <Icon className={cn('w-4 h-4', tint)} />
+            </div>
+            <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{label}</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+              {formatCurrency(value)} {sub && <span className="text-xs font-normal text-gray-400">· {sub}</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Spending breakdown ─────────────────────────────────────────────────────────
+
+const COLORS = ['#6366f1', '#0ea5e9', '#14b8a6', '#f59e0b', '#f43f5e', '#8b5cf6', '#64748b'];
+
+const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
+  const data = useMemo(() => {
+    const total = (categoryBreakdown || []).reduce((s, c) => s + Math.abs(Number(c.amount) || 0), 0);
+    return (categoryBreakdown || []).slice(0, 5).map((c, i) => ({
+      name: c.name || 'Other',
+      source: c.source || 'auto',
+      amount: Math.abs(Number(c.amount) || 0),
+      pct: total > 0 ? Math.round((Math.abs(Number(c.amount) || 0) / total) * 100) : 0,
+      color: COLORS[i % COLORS.length],
+    }));
+  }, [categoryBreakdown]);
+
+  if (!data.length) return null;
+  const hasAuto = data.some((d) => d.source === 'auto');
+
+  return (
+    <div className="glass-card rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <PieIcon className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+          {t('breakdown.title', { fallback: 'Where your money went' })}
+        </h3>
+      </div>
+      <div className="space-y-2.5">
+        {data.map(({ name, source, amount, pct, color }) => (
+          <div key={name}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{name}</span>
+                {source === 'auto' && (
+                  <span className="text-[9px] font-medium px-1 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 shrink-0">
+                    {t('breakdown.auto', { fallback: 'auto' })}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white tabular-nums shrink-0">
+                {formatCurrency(amount)}
+              </span>
+            </div>
+            <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {hasAuto && (
+        <div className="flex items-start gap-1 pt-2.5 mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+          <Info className="w-3 h-3 shrink-0 mt-0.5" />
+          <span>{t('breakdown.autoHint', { fallback: '"auto" groups are guessed from bank transaction descriptions' })}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Demoted manual entry ────────────────────────────────────────────────────
+
+const ManualEntryLink = ({ t }) => {
   const handleAdd = useCallback((type) => {
     try { window.dispatchEvent(new CustomEvent('transaction:add', { detail: { type } })); } catch (_) {}
   }, []);
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="flex items-center justify-center gap-4 py-1">
       <button
         onClick={() => handleAdd('expense')}
-        className="glass-card flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-semibold text-sm text-red-600 dark:text-red-400 active:scale-95 transition-transform"
+        className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
-        <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-          <ArrowDownRight className="w-4 h-4 text-white" />
-        </span>
-        {t('addExpense', 'Add Expense')}
+        <Plus className="w-3.5 h-3.5" />
+        {t('manualEntryActions.addExpense', { fallback: 'One-time expense' })}
       </button>
+      <span className="text-gray-300 dark:text-gray-600">·</span>
       <button
         onClick={() => handleAdd('income')}
-        className="glass-card flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-semibold text-sm text-emerald-600 dark:text-emerald-400 active:scale-95 transition-transform"
+        className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
-        <span className="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-          <ArrowUpRight className="w-4 h-4 text-white" />
-        </span>
-        {t('addIncome', 'Add Income')}
+        <Plus className="w-3.5 h-3.5" />
+        {t('manualEntryActions.addIncome', { fallback: 'One-time income' })}
       </button>
     </div>
   );
@@ -176,9 +316,12 @@ const DashboardError = ({ onRetry, t }) => {
             {t('autoRetriesExhausted', 'Auto-retries exhausted — try again manually.')}
           </p>
         )}
-        <Button onClick={handleManualRetry} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+        <button
+          onClick={handleManualRetry}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+        >
           {t('reloadPage')}
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -217,7 +360,7 @@ const GreetingHeader = ({ greeting, user, navigate, compact = false }) => (
 
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
-const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh }) => {
+const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh, formatCurrency }) => {
   const { pull, refreshing } = usePullToRefresh(onRefresh, true);
 
   return (
@@ -241,13 +384,16 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
 
       <div className="px-4 py-4 space-y-4 pb-28">
         <ModernBalancePanel />
-        <QuickAdd t={t} />
+        <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
+        <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
+        <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
         <ModernRecentTransactionsWidget
           onViewAll={() => navigate('/transactions')}
           maxItems={6}
           preloadedTransactions={dashboardData?.recentTransactions}
           preloadedLoading={!dashboardData}
         />
+        <ManualEntryLink t={t} />
       </div>
     </div>
   );
@@ -255,7 +401,7 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
 
 // ─── Desktop layout ───────────────────────────────────────────────────────────
 
-const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate }) => (
+const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate, formatCurrency }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
     <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6">
       <GreetingHeader greeting={greeting} user={user} navigate={navigate} />
@@ -265,29 +411,20 @@ const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate }) => (
       <ModernBalancePanel />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 space-y-6">
+          <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
             maxItems={8}
             preloadedTransactions={dashboardData?.recentTransactions}
             preloadedLoading={!dashboardData}
           />
+          <ManualEntryLink t={t} />
         </div>
 
-        <div className="xl:col-span-1">
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100/60 dark:border-gray-700/60">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {t('quickActions.title')}
-              </h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {t('quickActions.subtitle')}
-              </p>
-            </div>
-            <div className="p-4">
-              <ModernQuickActionsBar />
-            </div>
-          </div>
+        <div className="xl:col-span-1 space-y-6">
+          <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
+          <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
         </div>
       </div>
     </div>

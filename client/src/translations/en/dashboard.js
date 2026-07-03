@@ -279,6 +279,28 @@ export default {
   },
   addExpense: "Add Expense",
   addIncome: "Add Income",
+  period: {
+    title: "This financial period",
+    income: "Income",
+    expenses: "Expenses",
+    net: "Net"
+  },
+  bankCosts: {
+    title: "Bank Costs This Period",
+    feesInterest: "Fees & Interest",
+    loanPayments: "Loan Payments",
+    cashWithdrawn: "Cash Withdrawn"
+  },
+  breakdown: {
+    title: "Where your money went",
+    auto: "auto",
+    autoHint: "\"auto\" groups are guessed from bank transaction descriptions"
+  },
+  manualEntry: "Manual entry",
+  manualEntryActions: {
+    addExpense: "One-time expense",
+    addIncome: "One-time income"
+  },
   dashboardError: "Dashboard Error",
   dashboardErrorMessage: "Unable to load dashboard data",
   retryingIn: "Retrying in {{countdown}}s…",

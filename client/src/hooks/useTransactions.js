@@ -24,7 +24,6 @@ function buildApiFilters({ filters = {}, search = '', activeTab = 'all' }) {
   const apiFilters = {};
 
   if (filters.type && filters.type !== 'all') apiFilters.type = filters.type;
-  if (filters.category && filters.category !== 'all') apiFilters.category = filters.category;
   if (search || filters.search) apiFilters.search = search || filters.search;
 
   if (activeTab === 'upcoming') {
@@ -128,13 +127,6 @@ export const useTransactions = (options = {}) => {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createTransactionMutation = useMutation({
     mutationFn: async (transactionData) => {
-      // Recurring templates go to their own endpoint.
-      if (transactionData._isRecurring) {
-        const clean = { ...transactionData };
-        delete clean._isRecurring;
-        const response = await api.transactions.createRecurringTemplate(clean);
-        return response.data;
-      }
       const response = await api.transactions.create(transactionData.type || 'expense', transactionData);
       return response.data;
     },

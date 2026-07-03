@@ -5,11 +5,12 @@
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { ArrowRight, Plus, RefreshCw } from 'lucide-react';
+import { ArrowRight, Plus, RefreshCw, Landmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useTransactions } from '../../../hooks/useTransactions';
 import { cn } from '../../../utils/helpers';
+import { institutionLabel } from '../bankSync/bankSyncMeta';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -25,26 +26,27 @@ const formatRelativeDate = (dateStr, t) => {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const CategoryBadge = ({ category, type }) => {
-  const initial = (category || (type === 'income' ? 'I' : 'E')).charAt(0).toUpperCase();
-  return (
-    <div className={cn(
-      'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
-      type === 'income'
-        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-        : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-    )}>
-      {initial}
-    </div>
-  );
-};
+const SourceBadge = ({ type, isBankSynced }) => (
+  <div className={cn(
+    'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+    type === 'income'
+      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+  )}>
+    {isBankSynced ? <Landmark className="w-4 h-4" /> : (type === 'income' ? 'I' : 'E')}
+  </div>
+);
 
 // ─── Transaction row ─────────────────────────────────────────────────────────
 
 const TxRow = ({ transaction, formatCurrency, t }) => {
   const isIncome = transaction.type === 'income';
+  const isBankSynced = Boolean(transaction.bank_source);
   const amount = parseFloat(transaction.amount) || 0;
   const dateStr = transaction.transaction_datetime || transaction.created_at || transaction.date;
+  const sourceLabel = isBankSynced
+    ? institutionLabel(transaction.bank_source)
+    : t('manualEntry', { fallback: 'Manual entry' });
 
   return (
     <motion.div
@@ -52,16 +54,14 @@ const TxRow = ({ transaction, formatCurrency, t }) => {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0"
     >
-      <CategoryBadge category={transaction.category_name} type={transaction.type} />
+      <SourceBadge type={transaction.type} isBankSynced={isBankSynced} />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-          {transaction.description || transaction.category_name || (isIncome ? 'Income' : 'Expense')}
+          {transaction.description || (isIncome ? 'Income' : 'Expense')}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          {transaction.category_name && (
-            <span className="mr-1">{transaction.category_name} · </span>
-          )}
+          <span className="mr-1">{sourceLabel} · </span>
           {formatRelativeDate(dateStr, t)}
         </p>
       </div>

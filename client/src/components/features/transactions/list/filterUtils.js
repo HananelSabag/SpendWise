@@ -4,9 +4,7 @@
  */
 
 export const DEFAULT_FILTERS = {
-  category: 'all',
   type: 'all',
-  recurring: 'all',
   amountMin: '',
   amountMax: '',
   sortBy: 'date',
@@ -17,8 +15,6 @@ export const DEFAULT_FILTERS = {
 export const countActiveFilters = (filters) =>
   [
     filters.type !== 'all',
-    filters.category !== 'all',
-    filters.recurring !== 'all',
     filters.amountMin !== '',
     filters.amountMax !== '',
   ].filter(Boolean).length;

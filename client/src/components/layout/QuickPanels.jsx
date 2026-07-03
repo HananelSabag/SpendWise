@@ -8,8 +8,6 @@ import React, { useState, useCallback } from 'react';
 import {
   Layers,
   ChevronDown,
-  Tag,
-  Clock,
   Calculator
 } from 'lucide-react';
 
@@ -29,26 +27,6 @@ const QuickPanels = ({
 
   // ✅ Quick panel items
   const quickPanels = [
-    {
-      name: t('common.categoryManager', { fallback: t('common.categories') }),
-      description: t('common.manageCategoriesDesc'),
-      icon: Tag,
-      color: 'blue',
-      onClick: () => {
-        onOpenModal?.('categories');
-        setShowDropdown(false);
-      }
-    },
-    {
-      name: t('common.recurringManager', { fallback: t('common.recurring') }),
-      description: t('common.recurringTransactionsDesc'),
-      icon: Clock,
-      color: 'green',
-      onClick: () => {
-        onOpenModal?.('recurring');
-        setShowDropdown(false);
-      }
-    },
     {
       name: t('common.calculator'),
       description: t('common.quickCalculatorDesc'),
@@ -109,7 +87,7 @@ const QuickPanels = ({
               </div>
 
               {/* Simple panels grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {quickPanels.map((panel) => {
                   const Icon = panel.icon;
                   return (
@@ -120,8 +98,6 @@ const QuickPanels = ({
                     >
                       <div className={cn(
                         "w-8 h-8 rounded-md flex items-center justify-center mb-2",
-                        panel.color === 'blue' && "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-                        panel.color === 'green' && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
                         panel.color === 'orange' && "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
                       )}>
                         <Icon className="w-4 h-4" />

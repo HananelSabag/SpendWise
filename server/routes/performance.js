@@ -9,7 +9,6 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const db = require('../config/db');
 const { Transaction, TransactionCache } = require('../models/Transaction');
-const RecurringEngine = require('../utils/RecurringEngine');
 const logger = require('../utils/logger');
 
 /**
@@ -110,9 +109,7 @@ router.get('/dashboard', auth, async (req, res) => {
         ],
         performance_gain: '30-70% faster queries',
         storage_optimized: '96KB freed from unused indexes'
-      },
-      
-              recurringEngine: RecurringEngine.getEngineStats()
+      }
     };
     
     logger.info('📊 Performance dashboard accessed', {

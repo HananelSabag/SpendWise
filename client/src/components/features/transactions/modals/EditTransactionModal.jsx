@@ -215,7 +215,6 @@ const EditTransactionModal = ({
                   onSubmit={handleSubmit}
                   onCancel={handleClose}
                   isLoading={isSubmitting || isLoading}
-                  showRecurring={false}
                   showAdvanced={mode !== 'view'}
                   className="w-full"
                 />

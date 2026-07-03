@@ -500,7 +500,8 @@ export default {
   source: {
     all: "All",
     bank: "Bank",
-    manual: "Manual"
+    manual: "Manual",
+    bankSynced: "Bank-synced"
   },
 
   fromBank: "Imported from your bank",
@@ -675,6 +676,7 @@ export default {
   selected: "selected",
   bulkActions: "Choose an action to apply to selected transactions",
   noDescription: "No description",
+  manualEntry: "Manual entry",
   autoGenerating: "Auto-generating...",
   empty: {
     title: "No Transactions Found",

@@ -138,8 +138,9 @@ class User {
           website, birthday, preferences,
           language_preference, theme_preference, currency_preference,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
-          onboarding_completed, login_attempts, locked_until, verification_token
-        FROM users 
+          onboarding_completed, login_attempts, locked_until, verification_token,
+          billing_cycle_day
+        FROM users
         WHERE id = $1 AND is_active = true
       `;
 
@@ -382,9 +383,10 @@ class User {
         'email', 'username', 'password_hash', 'email_verified', 'role',
         'first_name', 'last_name', 'avatar', 'phone', 'bio', 'location',
         'website', 'birthday', 'preferences', 'is_active', 'last_login_at',
-        'login_attempts', 'locked_until', 'google_id', 'oauth_provider', 
+        'login_attempts', 'locked_until', 'google_id', 'oauth_provider',
         'oauth_provider_id', 'profile_picture_url', 'onboarding_completed',
-        'language_preference', 'theme_preference', 'currency_preference'
+        'language_preference', 'theme_preference', 'currency_preference',
+        'billing_cycle_day'
       ];
 
       const updates = {};

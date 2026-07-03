@@ -21,7 +21,6 @@ const logger = require('../utils/logger');
  * - description (text, nullable)
  * - notes (text, nullable)
  * - date (date, required)
- * - template_id (integer, foreign key, nullable)
  * - created_at (timestamp)
  * - updated_at (timestamp)
  * - deleted_at (timestamp, nullable)
@@ -38,15 +37,6 @@ class Transaction {
     try {
       // ✅ FIXED: Insert into appropriate table based on transaction type
       let query;
-      const values = [
-        userId,
-        transactionData.categoryId || null,
-        parseFloat(transactionData.amount),
-        transactionData.description || '',
-        transactionData.notes || '',
-        transactionData.date || new Date().toISOString().split('T')[0],
-        transactionData.templateId || null
-      ];
 
       // ✅ TIMEZONE FIX: Use client's timezone-aware datetime or current time
       const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
@@ -72,11 +62,11 @@ class Transaction {
       
       query = `
         INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
+          user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
       `;
-      
+
       // ✅ CRITICAL: Add type AND transaction_datetime to values array
       const finalValues = [
         userId,
@@ -87,7 +77,6 @@ class Transaction {
         transactionData.notes || '',
         transactionDate, // Date field
         transactionDateTime, // DateTime field for constraint
-        transactionData.templateId || null
       ];
 
       const result = await db.query(query, finalValues);
@@ -347,7 +336,6 @@ class Transaction {
         t.notes,
         t.date,
         t.transaction_datetime,
-        t.template_id,
         t.created_at,
         t.updated_at,
         t.bank_source,
@@ -553,13 +541,15 @@ class Transaction {
     try {
       // ✅ FIXED: Use unified transactions table
       const query = `
-        SELECT 
+        SELECT
           t.id,
           t.amount,
           t.type,
           t.description,
           t.date,
           t.created_at,
+          t.bank_source,
+          t.bank_account_number,
           c.name as category_name,
           c.icon as category_icon,
           c.color as category_color
@@ -597,7 +587,6 @@ class Transaction {
           t.description,
           t.notes,
           t.date,
-          t.template_id,
           t.created_at,
           t.updated_at,
           c.name as category_name,
@@ -665,7 +654,7 @@ class Transaction {
         UPDATE transactions
         SET ${setClause}
         WHERE id = $${paramCount} AND user_id = $${paramCount + 1} AND deleted_at IS NULL
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, template_id, created_at, updated_at
+        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
       `;
 
       values.push(transactionId, userId);
@@ -736,24 +725,31 @@ class Transaction {
    * @param {number} days - Number of days to look back
    * @returns {Promise<Object>} Summary data
    */
-  static async getSummary(userId, days = 30) {
+  /**
+   * @param {number} userId
+   * @param {{startDate: string, endDate: string}} range - half-open date
+   *   range [startDate, endDate) in 'YYYY-MM-DD' form. Callers compute the
+   *   range explicitly (financial-period or calendar-month) rather than
+   *   this method assuming a rolling day-count window.
+   */
+  static async getSummary(userId, { startDate, endDate }) {
     try {
       // ✅ FIXED: Use unified transactions table with GROUP BY
       const query = `
-        SELECT 
+        SELECT
           type,
           COUNT(*) as transaction_count,
           COALESCE(SUM(amount), 0) as total_amount,
           COALESCE(AVG(amount), 0) as avg_amount,
           COUNT(DISTINCT category_id) as categories_used
         FROM transactions
-        WHERE user_id = $1 
-          AND date >= CURRENT_DATE - INTERVAL '${days} days'
+        WHERE user_id = $1
+          AND date >= $2 AND date < $3
           AND deleted_at IS NULL
         GROUP BY type
       `;
 
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query, [userId, startDate, endDate]);
       
       // Process results into summary object
       const incomeData = result.rows.find(row => row.type === 'income') || {};
@@ -817,9 +813,9 @@ class Transaction {
         
         const query = `
           INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, template_id, created_at, updated_at
+            user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
         `;
 
         const values = [
@@ -831,7 +827,6 @@ class Transaction {
           transactionData.notes || '',
           transactionDate, // Date field
           transactionDateTime, // DateTime field for constraint
-          transactionData.templateId || transactionData.template_id || null
         ];
 
         const result = await client.query(query, values);

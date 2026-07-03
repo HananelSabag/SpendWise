@@ -23,7 +23,6 @@ const TransactionForm = ({
   onSubmit,
   onCancel,
   isLoading    = false,
-  showRecurring = false,
   showAdvanced  = true,
   className    = '',
 }) => {
@@ -62,7 +61,11 @@ const TransactionForm = ({
     setIsSubmitting(true);
     try {
       await onSubmit?.(formatTransactionForAPI(formData, mode));
-      addNotification({ type: 'success', message: t('form.updateSuccess'), duration: 3000 });
+      addNotification({
+        type: 'success',
+        message: mode === 'create' ? t('form.createSuccess', 'Transaction created') : t('form.updateSuccess'),
+        duration: 3000,
+      });
     } catch {
       addNotification({ type: 'error', message: t('form.submitFailed'), duration: 4000 });
     } finally {
@@ -89,10 +92,16 @@ const TransactionForm = ({
           </div>
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-white">
-              {t('form.editTransaction', 'Edit Transaction')}
+              {mode === 'create'
+                ? t('form.addTransaction', 'Add Transaction')
+                : mode === 'duplicate'
+                  ? t('form.duplicateTransaction', 'Duplicate Transaction')
+                  : t('form.editTransaction', 'Edit Transaction')}
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {initialData?.description || t('form.oneTimeSubtitle', 'One-time transaction')}
+              {mode === 'edit' && initialData?.description
+                ? initialData.description
+                : t('form.oneTimeSubtitle', 'One-time transaction')}
             </p>
           </div>
         </div>
@@ -103,9 +112,7 @@ const TransactionForm = ({
         formData={formData}
         validationErrors={validationErrors}
         onFieldChange={handleFieldChange}
-        showRecurring={showRecurring}
         showAdvanced={showAdvanced}
-        mode={mode}
       />
 
       {/* Actions */}
@@ -134,7 +141,11 @@ const TransactionForm = ({
           {isSubmitting || isLoading
             ? <LoadingSpinner size="sm" className="mr-1.5" />
             : <Save className="w-3.5 h-3.5 mr-1.5" />}
-          {isSubmitting ? t('form.saving', 'Saving...') : t('form.update', 'Update')}
+          {isSubmitting
+            ? t('form.saving', 'Saving...')
+            : mode === 'create'
+              ? t('form.create', 'Create')
+              : t('form.update', 'Update')}
         </Button>
       </div>
     </form>

@@ -36,6 +36,9 @@ export default {
   connectBank: 'Connect a Bank',
   connectBankSubtitle: 'Automatic transaction sync, twice a day',
   myConnections: 'My Bank Connections',
+  bankAccounts: 'Bank Accounts',
+  creditCards: 'Credit Cards',
+  cardActivity: 'Card Activity',
   noConnections: 'No banks connected yet',
   noConnectionsHint: 'Connect your bank and your transactions will appear here automatically',
 

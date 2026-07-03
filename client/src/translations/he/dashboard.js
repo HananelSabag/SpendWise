@@ -268,6 +268,28 @@ export default {
   reloadPage: "נסה שוב",
   addExpense: "הוסף הוצאה",
   addIncome: "הוסף הכנסה",
+  period: {
+    title: "התקופה הפיננסית הנוכחית",
+    income: "הכנסות",
+    expenses: "הוצאות",
+    net: "נטו"
+  },
+  bankCosts: {
+    title: "עלויות בנקאיות בתקופה זו",
+    feesInterest: "עמלות וריבית",
+    loanPayments: "תשלומי הלוואה",
+    cashWithdrawn: "משיכות מזומן"
+  },
+  breakdown: {
+    title: "לאן הכסף הלך",
+    auto: "אוטומטי",
+    autoHint: "קבוצות \"אוטומטי\" מוערכות מתיאורי העסקאות הבנקאיות"
+  },
+  manualEntry: "רשומה ידנית",
+  manualEntryActions: {
+    addExpense: "הוצאה חד פעמית",
+    addIncome: "הכנסה חד פעמית"
+  },
   dashboardError: "שגיאה בלוח הבקרה",
   dashboardErrorMessage: "לא ניתן לטעון את נתוני לוח הבקרה",
   retryingIn: "ניסיון חוזר בעוד {{countdown}} שניות…",

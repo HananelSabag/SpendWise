@@ -18,6 +18,26 @@ export function bankBrand(source) {
   return BANK_BRAND[source] || { gradient: 'from-gray-400 to-gray-600', tint: 'bg-gray-50 dark:bg-gray-800/40' };
 }
 
+// Institution registry — mirrors server/config/institutions.js. A bank
+// account (real balance, direct debits) is not the same kind of thing as a
+// credit card company (billing-cycle charges, no real balance); this is the
+// single client-side source of truth for that distinction and display name.
+export const INSTITUTIONS = {
+  yahav:    { kind: 'bank',        label: 'Bank Yahav' },
+  leumi:    { kind: 'bank',        label: 'Bank Leumi' },
+  discount: { kind: 'bank',        label: 'Discount Bank' },
+  isracard: { kind: 'credit_card', label: 'Isracard' },
+  max:      { kind: 'credit_card', label: 'Max' },
+};
+
+export function institutionKind(source) {
+  return INSTITUTIONS[source]?.kind || null;
+}
+
+export function institutionLabel(source) {
+  return INSTITUTIONS[source]?.label || source;
+}
+
 // Connection status → badge styling + translation key.
 export const STATUS_STYLE = {
   active: {

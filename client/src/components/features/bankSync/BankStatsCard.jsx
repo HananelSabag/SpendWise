@@ -7,7 +7,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
-import { bankBrand, formatDateTime, formatILS } from './bankSyncMeta';
+import { bankBrand, institutionKind, formatDateTime, formatILS } from './bankSyncMeta';
 import { BankIcon } from './BankBits';
 import BankAccountRow from './BankAccountRow';
 
@@ -15,6 +15,7 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
   const { tint } = bankBrand(stat.source);
   const accounts = stat.accounts || [];
   const multi = accounts.length > 1;
+  const isCreditCard = (stat.kind || institutionKind(stat.source)) === 'credit_card';
 
   return (
     <motion.div
@@ -57,7 +58,9 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
       {/* Accounts + per-account toggle */}
       <div className="mt-3 rounded-lg bg-white/70 dark:bg-gray-900/40 px-3 py-1.5">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide pt-1">
-          {multi ? t('accounts') : t('accountBalance')}
+          {isCreditCard
+            ? t('cardActivity', { fallback: 'Card Activity' })
+            : (multi ? t('accounts') : t('accountBalance'))}
         </p>
         {accounts.length > 0 ? (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">

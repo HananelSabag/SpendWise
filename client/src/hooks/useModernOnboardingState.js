@@ -16,7 +16,7 @@ import { useTranslation, useAuth } from '../stores';
 // Import NEW modern step components
 import ModernProfileStep from '../components/features/onboarding/steps/ModernProfileStep';
 import ModernEducationStep from '../components/features/onboarding/steps/ModernEducationStep';
-import FinalTemplatesStep from '../components/features/onboarding/steps/FinalTemplatesStep';
+import BillingCycleStep from '../components/features/onboarding/steps/BillingCycleStep';
 
 /**
  * 🎯 Modern 3-Step Onboarding State Hook
@@ -75,11 +75,9 @@ export const useModernOnboardingState = (options = {}) => {
       understoodBalancePanel: false,
       selectedExamples: []
     },
-    // Step 3: Templates (quick setup)
-    templates: {
-      selectedTemplates: [],
-      customAmounts: {},
-      summary: null
+    // Step 3: Financial cycle (billing/salary day)
+    billingCycle: {
+      billingCycleDay: 1
     }
   });
 
@@ -106,14 +104,14 @@ export const useModernOnboardingState = (options = {}) => {
       estimatedTime: 2
     },
     {
-      id: 'templates',
-      component: FinalTemplatesStep,
-      title: t('steps.templates.title') || 'Quick Setup',
-      subtitle: t('steps.templates.subtitle') || 'Add recurring transactions in seconds',
+      id: 'billingCycle',
+      component: BillingCycleStep,
+      title: t('steps.billingCycle.title') || 'Financial Cycle',
+      subtitle: t('steps.billingCycle.subtitle') || 'Tell us when your financial month starts',
       icon: Zap,
       canSkip: false,
-      required: false,
-      estimatedTime: 3
+      required: true,
+      estimatedTime: 1
     }
   ], [t]);
 
@@ -181,9 +179,10 @@ export const useModernOnboardingState = (options = {}) => {
         // Education step is optional - no validation required
         break;
 
-      case 'templates':
-        // Templates are optional - no validation required
-        // But we could add minimum template validation if needed
+      case 'billingCycle':
+        if (!data.billingCycleDay || data.billingCycleDay < 1 || data.billingCycleDay > 31) {
+          errors.push('A valid financial cycle day (1-31) is required');
+        }
         break;
 
       default:
@@ -269,10 +268,8 @@ export const useModernOnboardingState = (options = {}) => {
         understoodBalancePanel: false,
         selectedExamples: []
       },
-      templates: {
-        selectedTemplates: [],
-        customAmounts: {},
-        summary: null
+      billingCycle: {
+        billingCycleDay: 1
       }
     });
     clearPersistedData();
@@ -310,8 +307,8 @@ export const useModernOnboardingState = (options = {}) => {
         return Boolean(data.firstName?.trim() || data.lastName?.trim() || data.language || data.currency);
       case 'education':
         return Boolean(data.understoodTransactionTypes || data.understoodBalancePanel);
-      case 'templates':
-        return Boolean(data.selectedTemplates?.length > 0);
+      case 'billingCycle':
+        return Boolean(data.billingCycleDay);
       default:
         return Object.keys(data).length > 0;
     }

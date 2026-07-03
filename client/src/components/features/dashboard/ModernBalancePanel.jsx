@@ -15,14 +15,13 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, TrendingUp, TrendingDown, RefreshCw, Wifi, Plus } from 'lucide-react';
+import { Building2, TrendingUp, TrendingDown, RefreshCw, Landmark, CreditCard, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import apiClient from '../../../api/client';
-
-const SOURCE_LABEL = { yahav: 'Yahav', isracard: 'Isracard', max: 'Max', discount: 'Discount' };
+import { institutionLabel } from '../bankSync/bankSyncMeta';
 
 // ── Relative time (uses translation keys) ────────────────────────────────────
 function relativeTime(dateStr, t) {
@@ -203,7 +202,7 @@ const ModernBalancePanel = ({ className = '' }) => {
           <div>
             <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
             <p className="text-[11px] opacity-50 mt-0.5">
-              {t('unavailableNote', { bank: SOURCE_LABEL[sources[0]?.source] || sources[0]?.source })}
+              {t('unavailableNote', { bank: institutionLabel(sources[0]?.source) })}
             </p>
           </div>
         )}
@@ -213,7 +212,7 @@ const ModernBalancePanel = ({ className = '' }) => {
           <div className="mt-2 space-y-0.5">
             {accountsWithBalance.map((a, i) => (
               <p key={i} className="text-[11px] opacity-60">
-                {SOURCE_LABEL[a.source] || a.source}
+                {institutionLabel(a.source)}
                 {a.account_number ? ` · ${a.account_number}` : ''}
                 {' · '}{formatCurrency(Number(a.balance))}
               </p>
@@ -221,20 +220,24 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         )}
 
-        {/* Source chips */}
+        {/* Source chips — small icon distinguishes a real bank account from a
+            credit card company (which never has a real balance here) */}
         <div className="flex flex-wrap gap-1.5 mt-4">
-          {sources.map(src => (
-            <span
-              key={src.source}
-              className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium"
-            >
-              <Wifi className="w-2.5 h-2.5" />
-              {SOURCE_LABEL[src.source] || src.source}
-              <span className="opacity-60">
-                · {t('transactions', { count: src.total })}
+          {sources.map(src => {
+            const ChipIcon = src.kind === 'credit_card' ? CreditCard : Landmark;
+            return (
+              <span
+                key={src.source}
+                className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium"
+              >
+                <ChipIcon className="w-2.5 h-2.5" />
+                {institutionLabel(src.source)}
+                <span className="opacity-60">
+                  · {t('transactions', { count: src.total })}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </div>
       </div>
 

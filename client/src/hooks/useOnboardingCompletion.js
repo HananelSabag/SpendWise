@@ -7,7 +7,6 @@
 import { useCallback } from 'react';
 import { useAuth, useNotifications, useTranslation } from '../stores';
 import { api } from '../api';
-import transactionsAPI from '../api/transactions';
 import { useBalanceRefresh } from '../contexts/BalanceContext';
 
 /**
@@ -25,59 +24,24 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { refreshAll } = useBalanceRefresh();
 
   /**
-   * Complete onboarding process with template setup
-   * Uses bulk API to avoid rate limits when creating multiple templates
+   * Complete onboarding process: save the financial-cycle day, then mark
+   * onboarding complete.
    */
   const completeOnboarding = useCallback(async () => {
     try {
-      // Save templates and complete onboarding
-      const templates = stepData?.templates?.selectedTemplates || [];
-      
-      // Bulk save templates to avoid rate limits
-      if (templates.length > 0) {
-        
-        try {
-          // Format templates for bulk API
-          const formattedTemplates = templates.map(template => ({
-            name: template.name,
-            description: template.name,
-            amount: template.amount,
-            type: template.type,
-            category_name: template.categoryName || 'General',
-            interval_type: 'monthly',
-            is_active: true
-          }));
+      const billingCycleDay = stepData?.billingCycle?.billingCycleDay;
 
-          // Use bulk API method directly
-          const result = await transactionsAPI.createBulkRecurringTemplates(formattedTemplates);
-          
-          if (result.success) {
-            // Show success toast with details
-            const summary = result.data.summary;
-            addNotification(
-              t('completion.templates_created', { 
-                count: summary.successful,
-                total: summary.totalRequested 
-              }) || `Successfully created ${summary.successful} out of ${summary.totalRequested} templates`,
-              'success'
-            );
-          } else {
-            // Show warning toast for partial failure
-            addNotification(
-              t('completion.templates_partial_failure') || 'Some templates could not be created. Please try again.',
-              'warning'
-            );
-          }
+      if (billingCycleDay) {
+        try {
+          await api.users.updateProfile({ billing_cycle_day: billingCycleDay });
         } catch (error) {
-          console.error('❌ Bulk template creation failed:', error);
-          
-          // ⚠️ Show error toast but don't fail onboarding
+          console.error('❌ Saving financial cycle day failed:', error);
           addNotification(
-            t('completion.templates_failed') || 'Templates could not be created, but onboarding will continue.',
+            t('completion.billingCycleFailed') || 'Could not save your financial cycle day, but onboarding will continue.',
             'warning'
           );
-          
-          // Don't fail the whole onboarding if templates fail
+          // Don't fail the whole onboarding if this fails — the user can
+          // still set it later from profile settings.
         }
       }
 
@@ -85,8 +49,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
       const response = await api.onboarding.complete({
         steps_completed: Object.keys(stepData || {}).length,
         completion_time: new Date().toISOString(),
-        user_id: user?.id,
-        templates_count: templates.length
+        user_id: user?.id
       });
 
       if (!response.success) {

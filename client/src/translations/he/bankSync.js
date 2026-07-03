@@ -36,6 +36,9 @@ export default {
   connectBank: 'חבר בנק',
   connectBankSubtitle: 'סנכרון עסקאות אוטומטי, פעמיים ביום',
   myConnections: 'חיבורי הבנק שלי',
+  bankAccounts: 'חשבונות בנק',
+  creditCards: 'כרטיסי אשראי',
+  cardActivity: 'פעילות כרטיס',
   noConnections: 'לא חובר אף בנק עדיין',
   noConnectionsHint: 'חבר את הבנק שלך והעסקאות יופיעו כאן אוטומטית',
 

@@ -27,7 +27,6 @@ import empty from './empty.js';
 import filters from './filters.js';
 import exchange from './exchange.js';
 import date from './date.js';
-import recurringManager from './recurringManager.js';
 import types from './types.js';
 import status from './status.js';
 import roles from './roles.js';
@@ -70,7 +69,6 @@ import progress from './progress.js';
 import prompt from './prompt.js';
 import quickActions from './quickActions.js';
 import recentTransactions from './recentTransactions.js';
-import recurring from './recurring.js';
 import sections from './sections.js';
 import selection from './selection.js';
 import sort from './sort.js';
@@ -112,7 +110,6 @@ export default {
   filters,
   exchange,
   date,
-  recurringManager,
   types,
   status,
   roles,
@@ -154,7 +151,6 @@ export default {
   prompt,
   quickActions,
   recentTransactions,
-  recurring,
   sections,
   selection,
   sort,

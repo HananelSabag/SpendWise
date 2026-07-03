@@ -500,7 +500,8 @@ export default {
   source: {
     all: "הכל",
     bank: "בנק",
-    manual: "ידני"
+    manual: "ידני",
+    bankSynced: "מסונכרן מהבנק"
   },
 
   fromBank: "יובא מחשבון הבנק שלך",
@@ -675,6 +676,7 @@ export default {
   selected: "נבחרו",
   bulkActions: "בחרו פעולה להחיל על העסקאות הנבחרות",
   noDescription: "ללא תיאור",
+  manualEntry: "רשומה ידנית",
   autoGenerating: "יוצר אוטומטית...",
   empty: {
     title: "לא נמצאו עסקאות",

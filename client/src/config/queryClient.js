@@ -81,14 +81,6 @@ export const queryConfigs = {
     refetchOnWindowFocus: false
   },
   
-  // Recurring transactions
-  recurring: {
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  },
-  
   // Transaction lists
   transactions: {
     staleTime: 2 * 60 * 1000, // 2 minutes

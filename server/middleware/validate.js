@@ -312,22 +312,6 @@ const validate = {
   },
 
   /**
-   * Validate category ID parameter
-   */
-  categoryId: (req, res, next) => {
-    const { id } = req.params;
-    
-    if (!validators.categoryId(id)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_CATEGORY_ID',
-        'Invalid category ID'
-      ));
-    }
-
-    next();
-  },
-
-  /**
    * Validate template ID parameter
    */
   templateId: (req, res, next) => {
@@ -344,98 +328,11 @@ const validate = {
   },
 
   /**
-   * Validate category creation
-   */
-  categoryCreate: (req, res, next) => {
-    const { name, type, description } = req.body;
-    
-    // Name validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json(createValidationError(
-        'MISSING_CATEGORY_NAME',
-        'Category name is required'
-      ));
-    }
-    
-    if (name.length > 100) {
-      return res.status(400).json(createValidationError(
-        'CATEGORY_NAME_TOO_LONG',
-        'Category name must be less than 100 characters'
-      ));
-    }
-
-    // Type validation
-    if (!type || !['income', 'expense'].includes(type)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_CATEGORY_TYPE',
-        'Category type must be income or expense'
-      ));
-    }
-
-    // Description validation (optional)
-    if (description !== undefined && description !== null) {
-      if (typeof description !== 'string' || description.length > 500) {
-        return res.status(400).json(createValidationError(
-          'INVALID_CATEGORY_DESCRIPTION',
-          'Category description must be less than 500 characters'
-        ));
-      }
-    }
-
-    next();
-  },
-
-  /**
-   * Validate category update
-   */
-  categoryUpdate: (req, res, next) => {
-    const { name, type, description } = req.body;
-    
-    // At least one field must be provided
-    if (name === undefined && type === undefined && description === undefined) {
-      return res.status(400).json(createValidationError(
-        'NO_UPDATE_DATA',
-        'At least one field must be provided for update'
-      ));
-    }
-
-    // Name validation (if provided)
-    if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length === 0 || name.length > 100) {
-        return res.status(400).json(createValidationError(
-          'INVALID_CATEGORY_NAME',
-          'Category name must be 1-100 characters'
-        ));
-      }
-    }
-
-    // Type validation (if provided)
-    if (type !== undefined && !['income', 'expense'].includes(type)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_CATEGORY_TYPE',
-        'Category type must be income or expense'
-      ));
-    }
-
-    // Description validation (if provided)
-    if (description !== undefined && description !== null) {
-      if (typeof description !== 'string' || description.length > 500) {
-        return res.status(400).json(createValidationError(
-          'INVALID_CATEGORY_DESCRIPTION',
-          'Category description must be less than 500 characters'
-        ));
-      }
-    }
-
-    next();
-  },
-
-  /**
    * Validate date range query parameters
    */
   dateRange: (req, res, next) => {
     const { startDate, endDate } = req.query;
-    
+
     if (startDate && !validators.date(startDate)) {
       return res.status(400).json(createValidationError(
         'INVALID_START_DATE',
@@ -618,22 +515,6 @@ const validate = {
   },
 
   /**
-   * Validate category filters
-   */
-  categoryFilters: (req, res, next) => {
-    const { type } = req.query;
-    
-    if (type && !['income', 'expense'].includes(type)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_CATEGORY_TYPE_FILTER',
-        'Category type filter must be income or expense'
-      ));
-    }
-
-    next();
-  },
-
-  /**
    * Validate Google OAuth authentication
    */
   googleAuth: (req, res, next) => {
@@ -725,9 +606,9 @@ const validate = {
    * Validate profile update request
    */
   profileUpdate: (req, res, next) => {
-    const { 
-      username, email, first_name, last_name, firstName, lastName, phone, bio, 
-      location, website, birthday, preferences 
+    const {
+      username, email, first_name, last_name, firstName, lastName, phone, bio,
+      location, website, birthday, preferences, billing_cycle_day
     } = req.body;
 
     // ✅ NORMALIZE: Handle both camelCase and snake_case field names
@@ -812,6 +693,20 @@ const validate = {
         'INVALID_BIRTHDAY',
         'Birthday must be a valid date'
       ));
+    }
+
+    // Validate billing_cycle_day if provided — the day of the month that
+    // starts the user's financial period (e.g. salary day), used instead of
+    // a rolling calendar-day window for dashboard calculations.
+    if (billing_cycle_day !== undefined) {
+      const day = Number(billing_cycle_day);
+      if (!Number.isInteger(day) || day < 1 || day > 31) {
+        return res.status(400).json(createValidationError(
+          'INVALID_BILLING_CYCLE_DAY',
+          'billing_cycle_day must be an integer between 1 and 31'
+        ));
+      }
+      req.body.billing_cycle_day = day;
     }
 
     // Validate preferences if provided

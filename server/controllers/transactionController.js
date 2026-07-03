@@ -5,26 +5,20 @@
  */
 
 const { Transaction } = require('../models/Transaction');
-const { RecurringTemplate } = require('../models/RecurringTemplate');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const db = require('../config/db');
-const { findOrCreateCategory } = require('../utils/categoryHelper');
-const {
-  generateTransactionsFromTemplate,
-  generateCurrentMonthTransactions,
-  generateUpcomingTransactions
-} = require('../services/recurringService');
+const { INSTITUTIONS, institutionKind } = require('../config/institutions');
+const { getCurrentPeriod, toSqlDate } = require('../utils/financialPeriod');
 
-// Auto-classification for uncategorized bank transactions, used by
-// getUserAnalytics(). Israeli banks report checking-account cash-flow
-// EVENTS, not itemized purchases — a "לאומי ויזה" line is one month's
-// entire credit-card bill settling, not a single purchase. Real
-// "categories" (Food, Transport, ...) don't map onto that; these patterns
-// group by what the event actually IS instead. Matched against live
-// Leumi/Yahav sync data. Static, not user input — safe to interpolate
-// directly into the query string (no SQL injection surface).
+// Auto-classification for uncategorized bank transactions. Israeli banks
+// report checking-account cash-flow EVENTS, not itemized purchases — a
+// "לאומי ויזה" line is one month's entire credit-card bill settling, not a
+// single purchase. Real "categories" (Food, Transport, ...) don't map onto
+// that; these patterns group by what the event actually IS instead.
+// Matched against live Leumi/Yahav sync data. Static, not user input — safe
+// to interpolate directly into the query string (no SQL injection surface).
 const BANK_PATTERN_CASE = `
   WHEN t.description ~* '(דביט|ויזה|מקס|ישראכרט|אשראי)' THEN 'Card Spending'
   WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'Cash Withdrawals'
@@ -36,262 +30,131 @@ const BANK_PATTERN_CASE = `
 
 const transactionController = {
   /**
-   * Get dashboard data with transactions summary
+   * Get dashboard data: financial-period summary, category/pattern
+   * breakdown, bank costs, per-institution activity, recent transactions.
    * @route GET /api/v1/transactions/dashboard
+   *
+   * Rebuilt (2026-07) to use the user's fixed billing_cycle_day instead of
+   * a rolling `days` lookback — a rolling window has no relationship to
+   * when the user actually gets paid or when major charges land, and drifts
+   * a little further every time it's queried. Also folds in the bank
+   * description-pattern classifier and bank-costs aggregate that used to
+   * live behind the (now-removed) dedicated Analytics page, recomputed
+   * against the billing period instead of calendar months.
    */
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const days = parseInt(req.query.days) || 30;
+    const cycleDay = req.user.billing_cycle_day || 1;
+    const { start, end } = getCurrentPeriod(cycleDay);
+    const periodStart = toSqlDate(start);
+    const periodEnd = toSqlDate(end);
 
     try {
-      // ✅ PERFORMANCE FIX: Get all dashboard data in parallel
-      const [summary, recentTransactions] = await Promise.all([
-        Transaction.getSummary(userId, days),
-        Transaction.getRecent(userId, 10)
+      const [summary, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
+        Transaction.getSummary(userId, { startDate: periodStart, endDate: periodEnd }),
+        Transaction.getRecent(userId, 10),
+        db.query(`
+          SELECT bucket AS name, source, SUM(amount) AS amount, COUNT(*) AS count
+          FROM (
+            SELECT
+              t.amount,
+              CASE
+                WHEN c.name IS NOT NULL THEN c.name
+                ${BANK_PATTERN_CASE}
+                ELSE 'Other'
+              END AS bucket,
+              CASE WHEN c.name IS NOT NULL THEN 'category' ELSE 'auto' END AS source
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
+              AND t.date >= $2 AND t.date < $3
+          ) classified
+          GROUP BY bucket, source
+          ORDER BY amount DESC
+          LIMIT 12
+        `, [userId, periodStart, periodEnd]),
+        db.query(`
+          SELECT
+            COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
+            COALESCE(SUM(amount) FILTER (WHERE bucket = 'loan'),  0) AS loan_payments,
+            COALESCE(SUM(amount) FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawn,
+            COALESCE(COUNT(*)    FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawal_count
+          FROM (
+            SELECT
+              t.amount,
+              CASE
+                WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'fees'
+                WHEN t.description ~* '(פרעון הלוואה|הלוואה)' AND t.type = 'expense' THEN 'loan'
+                WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'cash'
+                ELSE 'other'
+              END AS bucket
+            FROM transactions t
+            WHERE t.user_id = $1 AND t.deleted_at IS NULL
+              AND t.type = 'expense' AND t.bank_source IS NOT NULL
+              AND t.date >= $2 AND t.date < $3
+          ) classified
+        `, [userId, periodStart, periodEnd]),
+        db.query(`
+          SELECT
+            bank_source,
+            COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS income,
+            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses,
+            COUNT(*) AS count
+          FROM transactions
+          WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
+            AND date >= $2 AND date < $3
+          GROUP BY bank_source
+        `, [userId, periodStart, periodEnd]),
+        db.query(`
+          SELECT bank_source, SUM(balance) AS balance
+          FROM bank_accounts
+          WHERE user_id = $1 AND enabled = true AND balance IS NOT NULL
+          GROUP BY bank_source
+        `, [userId]),
       ]);
 
-      res.json({
-        success: true,
-        data: {
-          summary,
-          recent_transactions: recentTransactions,
-          metadata: {
-            period_days: days,
-            generated_at: new Date().toISOString()
-          }
-        }
-      });
-    } catch (error) {
-      logger.error('Dashboard data fetch failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-
-  /**
-   * Get user's recurring templates list
-   * @route GET /api/v1/transactions/templates
-   */
-  getRecurringTemplates: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    try {
-      const query = `
-        SELECT rt.*, c.name AS category_name
-        FROM recurring_templates rt
-        LEFT JOIN categories c ON rt.category_id = c.id
-        WHERE rt.user_id = $1
-        ORDER BY rt.created_at DESC
-      `;
-      const result = await db.query(query, [userId]);
-
-      // Compute simple derived fields expected by client
-      const now = new Date();
-      const threeMonthsFromNow = new Date();
-      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-
-      const templates = (result.rows || []).map((row) => {
-        // Compute next_run_date using existing helper
-        let nextRun = null;
-        try {
-          const dates = calculateUpcomingDates(row, now, threeMonthsFromNow);
-          nextRun = dates && dates.length > 0 ? dates[0].toISOString().split('T')[0] : null;
-        } catch (e) {
-          nextRun = null;
-        }
-
-        return {
-          ...row,
-          status: row.is_active ? 'active' : 'paused',
-          frequency: row.interval_type,
-          next_run_date: nextRun
-        };
-      });
-
-      res.json({ success: true, data: templates, count: templates.length });
-    } catch (error) {
-      logger.error('Get recurring templates failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Get analytics summary for analytics page
-   * @route GET /api/v1/analytics/dashboard/summary
-   */
-  getAnalyticsSummary: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const period = parseInt(req.query.period) || 30;
-
-    try {
-      const summary = await Transaction.getSummary(userId, period);
-      const recentTransactions = await Transaction.getRecent(userId, 10);
-
-      res.json({
-        success: true,
-        data: {
-          balance: {
-            current: summary.net_balance || 0,
-            currency: 'USD'
-          },
-          monthlyStats: {
-            income: summary.total_income || 0,
-            expenses: summary.total_expenses || 0,
-            net: summary.net_balance || 0,
-            transactionCount: summary.total_transactions || 0
-          },
-          recentTransactions: recentTransactions,
-          summary: {
-            totalTransactions: summary.total_transactions || 0,
-            categoriesUsed: summary.categories_used || 0,
-            avgTransactionAmount: summary.avg_expense || 0,
-            savingsRate: summary.total_income > 0 
-              ? Math.round(((summary.total_income - summary.total_expenses) / summary.total_income) * 100)
-              : 0
-          },
-          period: period,
-          generatedAt: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      logger.error('Analytics summary failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Get user analytics data
-   * @route GET /api/v1/analytics/user
-   *
-   * Rebuilt for real bank data (2026-07). The old category breakdown did
-   * `LEFT JOIN categories ... COALESCE(c.name, 'General')` — for an account
-   * where every transaction comes from a bank sync (0 user-set categories),
-   * that collapsed 100% of spend into one useless "General" bucket. Bank
-   * checking-account data isn't itemized purchases anyway (a single "Visa
-   * Leumi" line is the WHOLE month's card bill, not one purchase) — real
-   * categories genuinely don't apply to it the way they do to manual entries.
-   *
-   * Fix: transactions WITH a category (manual entries, or bank rows a user
-   * categorized) get real category names. Bank rows WITHOUT a category get
-   * classified by matching their bank description against known Israeli
-   * banking patterns (card settlement, loan, cash withdrawal, fees/interest,
-   * transfer) — each row tagged source:'category' or source:'auto' so the
-   * client can be honest about which numbers are real vs inferred.
-   *
-   * Also dropped: the `insights` array (broken GROUP BY producing a
-   * meaningless "average monthly spending" — grouped by month+type+AMOUNT,
-   * which only sums when two transactions in a month happen to share an
-   * exact amount) and the 50-row `transactions` dump — neither was read by
-   * any client code.
-   */
-  getUserAnalytics: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const months = parseInt(req.query.months) || 12;
-
-    try {
-      // Monthly income vs expenses trends (unchanged — this SQL was correct)
-      const trendsResult = await db.query(`
-        SELECT
-          TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month,
-          COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS income,
-          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses
-        FROM transactions
-        WHERE user_id = $1 AND deleted_at IS NULL
-          AND date >= DATE_TRUNC('month', NOW() - ($2 - 1) * INTERVAL '1 month')
-        GROUP BY DATE_TRUNC('month', date)
-        ORDER BY DATE_TRUNC('month', date)
-      `, [userId, months]);
-
-      const trends = trendsResult.rows.map(r => ({
-        month: r.month,
-        income: parseFloat(r.income),
-        expenses: parseFloat(r.expenses),
-        savings: parseFloat(r.income) - parseFloat(r.expenses),
-        savingsRate: parseFloat(r.income) > 0
-          ? ((parseFloat(r.income) - parseFloat(r.expenses)) / parseFloat(r.income)) * 100
-          : 0
-      }));
-
-      // Spending breakdown: real category where set, auto-classified bank
-      // pattern where not. Hebrew regexes match the actual description
-      // vocabulary Israeli banks use (verified against live Leumi/Yahav
-      // sync data) — see BANK_PATTERN_CASE below.
-      const categoriesResult = await db.query(`
-        SELECT
-          bucket AS name,
-          source,
-          SUM(amount) AS amount,
-          COUNT(*) AS count
-        FROM (
-          SELECT
-            t.amount,
-            CASE
-              WHEN c.name IS NOT NULL THEN c.name
-              ${BANK_PATTERN_CASE}
-              ELSE 'Other'
-            END AS bucket,
-            CASE WHEN c.name IS NOT NULL THEN 'category' ELSE 'auto' END AS source
-          FROM transactions t
-          LEFT JOIN categories c ON t.category_id = c.id
-          WHERE t.user_id = $1 AND t.deleted_at IS NULL
-            AND t.type = 'expense'
-            AND t.date >= NOW() - $2 * INTERVAL '1 month'
-        ) classified
-        GROUP BY bucket, source
-        ORDER BY amount DESC
-        LIMIT 12
-      `, [userId, months]);
-
-      const categories = categoriesResult.rows.map(r => ({
+      const categoryBreakdown = categoriesResult.rows.map(r => ({
         name: r.name,
         source: r.source,
         amount: parseFloat(r.amount),
-        count: parseInt(r.count)
+        count: parseInt(r.count),
       }));
 
-      // Bank-specific costs: interest, fees, and loan payments are real
-      // money leaving the account that a manual-entry app would never
-      // surface on its own — genuinely useful because this IS bank data.
-      const bankCostsResult = await db.query(`
-        SELECT
-          COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
-          COALESCE(SUM(amount) FILTER (WHERE bucket = 'loan'),  0) AS loan_payments,
-          COALESCE(SUM(amount) FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawn,
-          COALESCE(COUNT(*)    FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawal_count
-        FROM (
-          SELECT
-            t.amount,
-            CASE
-              WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'fees'
-              WHEN t.description ~* '(פרעון הלוואה|הלוואה)' AND t.type = 'expense' THEN 'loan'
-              WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'cash'
-              ELSE 'other'
-            END AS bucket
-          FROM transactions t
-          WHERE t.user_id = $1 AND t.deleted_at IS NULL
-            AND t.type = 'expense' AND t.bank_source IS NOT NULL
-            AND t.date >= NOW() - $2 * INTERVAL '1 month'
-        ) classified
-      `, [userId, months]);
+      const bc = bankCostsResult.rows[0] || {};
+      const bankCosts = {
+        feesInterest: parseFloat(bc.fees_interest || 0),
+        loanPayments: parseFloat(bc.loan_payments || 0),
+        cashWithdrawn: parseFloat(bc.cash_withdrawn || 0),
+        cashWithdrawalCount: parseInt(bc.cash_withdrawal_count || 0),
+      };
 
-      const bankCosts = bankCostsResult.rows[0] || {};
+      const balanceBySource = Object.fromEntries(
+        balancesResult.rows.map(r => [r.bank_source, parseFloat(r.balance)])
+      );
+      const sources = sourcesResult.rows.map(r => ({
+        bankSource: r.bank_source,
+        kind: institutionKind(r.bank_source),
+        label: INSTITUTIONS[r.bank_source]?.label || r.bank_source,
+        income: parseFloat(r.income),
+        expenses: parseFloat(r.expenses),
+        count: parseInt(r.count),
+        balance: r.bank_source in balanceBySource ? balanceBySource[r.bank_source] : null,
+      }));
 
       res.json({
         success: true,
         data: {
-          trends,
-          categories,
-          bankCosts: {
-            feesInterest: parseFloat(bankCosts.fees_interest || 0),
-            loanPayments: parseFloat(bankCosts.loan_payments || 0),
-            cashWithdrawn: parseFloat(bankCosts.cash_withdrawn || 0),
-            cashWithdrawalCount: parseInt(bankCosts.cash_withdrawal_count || 0),
-          },
-          period: `${months} months`,
-          generatedAt: new Date().toISOString()
-        }
+          period: { start: periodStart, end: periodEnd, cycleDay },
+          summary,
+          categoryBreakdown,
+          bankCosts,
+          sources,
+          recent_transactions: recentTransactions,
+          metadata: { generated_at: new Date().toISOString() },
+        },
       });
     } catch (error) {
-      logger.error('User analytics failed', { userId, error: error.message });
+      logger.error('Dashboard data fetch failed', { userId, error: error.message });
       throw error;
     }
   }),
@@ -405,7 +268,7 @@ const transactionController = {
   }),
 
   /**
-   * Create new transaction
+   * Create a one-time manual transaction (income or expense).
    * @route POST /api/v1/transactions/:type
    */
   create: asyncHandler(async (req, res) => {
@@ -419,7 +282,7 @@ const transactionController = {
       });
     }
 
-    const { amount, description, categoryId, category_name, notes, date } = req.body;
+    const { amount, description, notes, date } = req.body;
 
     // Validate required fields
     if (!amount || isNaN(parseFloat(amount))) {
@@ -437,29 +300,15 @@ const transactionController = {
     }
 
     try {
-      const finalCategoryId = await findOrCreateCategory(userId, categoryId, category_name);
-
       const transactionData = {
         type,
         amount: parseFloat(amount),
         description: description.trim(),
-        categoryId: finalCategoryId,
         notes: notes ? notes.trim() : '',
         date: date || new Date().toISOString().split('T')[0] // Default to current date if not provided
       };
 
       const transaction = await Transaction.create(transactionData, userId);
-
-      // Get category info if category_id exists
-      if (transaction.category_id) {
-        const categoryQuery = `
-          SELECT name, icon, color FROM categories WHERE id = $1
-        `;
-        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
-        if (categoryResult.rows.length > 0) {
-          transaction.category = categoryResult.rows[0];
-        }
-      }
 
       res.status(201).json({
         success: true,
@@ -473,7 +322,7 @@ const transactionController = {
   }),
 
   /**
-   * Update existing transaction
+   * Update an existing one-time manual transaction.
    * @route PUT /api/v1/transactions/:type/:id
    */
   update: asyncHandler(async (req, res) => {
@@ -487,47 +336,32 @@ const transactionController = {
       });
     }
 
-    const { amount, description, categoryId, notes, date } = req.body;
+    const { amount, description, notes, date } = req.body;
 
     try {
       const updateData = {};
-      
+
       if (amount !== undefined && !isNaN(parseFloat(amount))) {
         updateData.amount = parseFloat(amount);
       }
-      
+
       if (description !== undefined) {
         updateData.description = description.trim();
       }
-      
-      if (categoryId !== undefined) {
-        updateData.category_id = categoryId || null;
-      }
-      
+
       if (notes !== undefined) {
         updateData.notes = notes ? notes.trim() : '';
       }
-      
+
       if (date !== undefined) {
         updateData.date = date;
       }
-      
+
       if (type) {
         updateData.type = type;
       }
 
       const transaction = await Transaction.update(id, updateData, userId);
-
-      // Get category info if category_id exists
-      if (transaction.category_id) {
-        const categoryQuery = `
-          SELECT name, icon, color FROM categories WHERE id = $1
-        `;
-        const categoryResult = await db.query(categoryQuery, [transaction.category_id]);
-        if (categoryResult.rows.length > 0) {
-          transaction.category = categoryResult.rows[0];
-        }
-      }
 
       res.json({
         success: true,
@@ -541,7 +375,7 @@ const transactionController = {
           error: 'Transaction not found'
         });
       }
-      
+
       logger.error('Transaction update failed', { transactionId: id, userId, error: error.message });
       throw error;
     }
@@ -550,118 +384,12 @@ const transactionController = {
   /**
    * Delete transaction (soft delete)
    * @route DELETE /api/v1/transactions/:type/:id
-   * @route DELETE /api/v1/transactions/templates/:id
    */
   delete: asyncHandler(async (req, res) => {
-    const { type, id } = req.params;
+    const { id } = req.params;
     const userId = req.user.id;
 
     try {
-      // Check if this is a template deletion (from /templates/:id route)
-      if (req.path.includes('/templates/')) {
-        logger.info('Template deletion request', { templateId: id, userId });
-        
-        // First verify the template exists and belongs to the user
-        const templateCheck = await db.query(
-          'SELECT id, name FROM recurring_templates WHERE id = $1 AND user_id = $2',
-          [id, userId]
-        );
-
-        if (templateCheck.rows.length === 0) {
-          logger.warn('Template not found for deletion', { templateId: id, userId });
-          return res.status(404).json({
-            success: false,
-            error: 'Recurring template not found'
-          });
-        }
-
-        // ✅ ENHANCED: Smart delete based on query parameter
-        const deleteScope = req.query.scope || 'template_only'; // Default to template only
-        
-        let deletedTransactions = 0;
-        const today = new Date().toISOString().split('T')[0];
-        
-        switch (deleteScope) {
-          case 'all':
-            // Delete template and ALL transactions (past, current, future)
-            const allResult = await db.query(`
-              UPDATE transactions 
-              SET deleted_at = NOW(), 
-                  notes = COALESCE(notes, '') || ' [Template deleted: all occurrences]'
-              WHERE template_id = $1 AND user_id = $2 AND deleted_at IS NULL
-              RETURNING id
-            `, [id, userId]);
-            deletedTransactions = allResult.rows.length;
-            break;
-            
-          case 'future':
-            // Delete template and only FUTURE transactions
-            const futureResult = await db.query(`
-              UPDATE transactions 
-              SET deleted_at = NOW(), 
-                  notes = COALESCE(notes, '') || ' [Template deleted: future only]'
-              WHERE template_id = $1 AND user_id = $2 AND date > $3 AND deleted_at IS NULL
-              RETURNING id
-            `, [id, userId, today]);
-            deletedTransactions = futureResult.rows.length;
-            break;
-            
-          case 'current_and_future':
-            // Delete template and CURRENT MONTH + FUTURE transactions
-            const currentMonthStart = new Date();
-            currentMonthStart.setDate(1);
-            const currentMonthStartStr = currentMonthStart.toISOString().split('T')[0];
-            
-            const currentFutureResult = await db.query(`
-              UPDATE transactions 
-              SET deleted_at = NOW(), 
-                  notes = COALESCE(notes, '') || ' [Template deleted: current month and future]'
-              WHERE template_id = $1 AND user_id = $2 AND date >= $3 AND deleted_at IS NULL
-              RETURNING id
-            `, [id, userId, currentMonthStartStr]);
-            deletedTransactions = currentFutureResult.rows.length;
-            break;
-            
-          case 'template_only':
-          default:
-            // Only deactivate template, keep all transactions
-            deletedTransactions = 0;
-            break;
-        }
-
-        // Always deactivate the template
-        const updateResult = await db.query(
-          'UPDATE recurring_templates SET is_active = false, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id, name',
-          [id, userId]
-        );
-
-        logger.info('Template deletion completed', { 
-          templateId: id, 
-          templateName: updateResult.rows[0].name, 
-          userId,
-          deleteScope,
-          deletedTransactions
-        });
-
-        const message = deletedTransactions > 0 
-          ? `Template deleted with ${deletedTransactions} transactions (${deleteScope})`
-          : 'Template deactivated successfully';
-
-        return res.json({
-          success: true,
-          data: { 
-            deleted: true,
-            deactivated: true,
-            id: id,
-            name: updateResult.rows[0].name,
-            deleteScope,
-            deletedTransactions
-          },
-          message
-        });
-      }
-
-      // Regular transaction deletion
       const success = await Transaction.delete(id, userId);
 
       if (!success) {
@@ -673,7 +401,7 @@ const transactionController = {
 
       res.json({
         success: true,
-        data: { 
+        data: {
           deleted: true,
           id: id
         },
@@ -686,154 +414,26 @@ const transactionController = {
           error: 'Transaction not found'
         });
       }
-      
-      logger.error('Deletion failed', { 
-        type: req.path.includes('/templates/') ? 'template' : 'transaction',
-        id, 
-        userId, 
-        error: error.message 
-      });
+
+      logger.error('Deletion failed', { id, userId, error: error.message });
       throw error;
     }
   }),
 
   /**
-   * Advanced delete for recurring transactions
-   * @route DELETE /api/v1/transactions/recurring/:id
-   */
-  deleteRecurring: asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { deleteType, templateId } = req.body; // current, future, all
-    const userId = req.user.id;
-
-    try {
-      let result;
-      let message;
-
-      switch (deleteType) {
-        case 'current':
-          // Delete only this transaction instance
-          const currentDeleted = await Transaction.delete(id, userId);
-          if (!currentDeleted) {
-            return res.status(404).json({
-              success: false,
-              error: 'Transaction not found'
-            });
-          }
-          result = { deletedCurrent: true };
-          message = 'Current transaction deleted successfully';
-          break;
-
-        case 'future':
-          // Delete current transaction and stop future ones
-          const currentDeleted2 = await Transaction.delete(id, userId);
-          if (!currentDeleted2) {
-            return res.status(404).json({
-              success: false,
-              error: 'Transaction not found'
-            });
-          }
-          
-          if (templateId) {
-            // Deactivate the template to stop future generations
-            const templateResult = await db.query(
-              'UPDATE recurring_templates SET is_active = false, updated_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id',
-              [templateId, userId]
-            );
-            result = { 
-              deletedCurrent: true, 
-              templateDeactivated: templateResult.rows.length > 0 
-            };
-          } else {
-            result = { deletedCurrent: true, templateDeactivated: false };
-          }
-          message = 'Current transaction deleted and future recurring stopped';
-          break;
-
-        case 'all':
-          // Delete all transactions for this template and the template itself
-          if (templateId) {
-            // Delete all transactions created from this template - FIXED for current schema
-            let deletedTransactionsCount = 0;
-            
-            // Delete from unified transactions table
-            const transactionsResult = await db.query(
-              'DELETE FROM transactions WHERE template_id = $1 AND user_id = $2 RETURNING id',
-              [templateId, userId]
-            );
-            deletedTransactionsCount += transactionsResult.rows.length;
-            
-            // Delete the template
-            const templateResult = await db.query(
-              'DELETE FROM recurring_templates WHERE id = $1 AND user_id = $2 RETURNING id',
-              [templateId, userId]
-            );
-            
-            result = { 
-              templateDeleted: templateResult.rows.length > 0,
-              transactionsDeleted: deletedTransactionsCount
-            };
-            message = `Recurring template and ${deletedTransactionsCount} related transactions deleted`;
-          } else {
-            // Just delete the single transaction if no template
-            const singleDeleted = await Transaction.delete(id, userId);
-            if (!singleDeleted) {
-              return res.status(404).json({
-                success: false,
-                error: 'Transaction not found'
-              });
-            }
-            result = { deletedSingle: true };
-            message = 'Transaction deleted successfully';
-          }
-          break;
-
-        default:
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid delete type. Must be one of: current, future, all'
-          });
-      }
-
-      logger.info('Recurring transaction deletion completed', {
-        userId,
-        transactionId: id,
-        templateId,
-        deleteType,
-        result
-      });
-
-      res.json({
-        success: true,
-        data: result,
-        message
-      });
-    } catch (error) {
-      logger.error('Recurring transaction deletion failed', { 
-        userId, 
-        transactionId: id, 
-        templateId, 
-        deleteType, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * Get monthly summary
-   * @route GET /api/v1/transactions/summary/monthly
+   * Get summary for an explicit calendar year/month.
+   * @route GET /api/v1/transactions/summary
    */
   getMonthlySummary: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
-    
-    // Calculate days in the specified month
-    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = toSqlDate(new Date(year, month, 1)); // first day of next month, exclusive
 
     try {
-      const summary = await Transaction.getSummary(userId, daysInMonth);
+      const summary = await Transaction.getSummary(userId, { startDate, endDate });
 
       res.json({
         success: true,
@@ -851,448 +451,12 @@ const transactionController = {
   }),
 
   /**
-   * Update recurring template - ENHANCED WITH PAUSE/RESUME LOGIC
-   * @route PUT /api/v1/transactions/templates/:id
-   */
-  updateRecurringTemplate: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const updateData = req.body;
-
-    try {
-      // Verify the template belongs to the user
-      const templateCheck = await db.query(
-        'SELECT id, user_id, is_active FROM recurring_templates WHERE id = $1 AND user_id = $2',
-        [id, userId]
-      );
-
-      if (templateCheck.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Recurring template not found'
-        });
-      }
-
-      const currentTemplate = templateCheck.rows[0];
-
-      // ✅ ENHANCED: Handle pause/resume logic
-      if ('is_active' in updateData) {
-        const newActiveStatus = updateData.is_active;
-        const wasActive = currentTemplate.is_active;
-
-        if (wasActive && !newActiveStatus) {
-          // PAUSING: Remove future generated transactions
-          logger.info('Pausing template - removing future transactions', {
-            templateId: id,
-            userId
-          });
-
-          const today = new Date().toISOString().split('T')[0];
-          const deletedCount = await db.query(`
-            UPDATE transactions 
-            SET deleted_at = NOW(), 
-                notes = COALESCE(notes, '') || ' [Paused at ${new Date().toISOString()}]'
-            WHERE template_id = $1 
-              AND user_id = $2 
-              AND date > $3
-              AND deleted_at IS NULL
-            RETURNING id
-          `, [id, userId, today]);
-
-          logger.info('Future transactions removed due to pause', {
-            templateId: id,
-            userId,
-            deletedCount: deletedCount.rows.length
-          });
-        } else if (!wasActive && newActiveStatus) {
-          // RESUMING: Regenerate future transactions for next 3 months
-          logger.info('Resuming template - regenerating future transactions', {
-            templateId: id,
-            userId
-          });
-
-          // Get the updated template data
-          const templateResult = await db.query(
-            'SELECT * FROM recurring_templates WHERE id = $1',
-            [id]
-          );
-          
-          if (templateResult.rows.length > 0) {
-            // Generate new transactions using RecurringEngine
-            const RecurringEngine = require('../utils/RecurringEngine');
-            const template = templateResult.rows[0];
-            
-            const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + 3);
-            
-            await RecurringEngine.generateTransactionsForTemplate(template, endDate);
-          }
-        }
-      }
-
-      // Use the RecurringTemplate model's update method
-      const updatedTemplate = await RecurringTemplate.update(id, updateData);
-
-      logger.info('Template updated successfully', {
-        templateId: id,
-        userId,
-        updatedFields: Object.keys(updateData)
-      });
-
-      res.json({
-        success: true,
-        data: updatedTemplate,
-        message: 'Recurring template updated successfully'
-      });
-
-    } catch (error) {
-      logger.error('Template update failed', {
-        templateId: id,
-        userId,
-        error: error.message
-      });
-      
-      if (error.details === 'Template not found') {
-        return res.status(404).json({
-          success: false,
-          error: 'Template not found'
-        });
-      }
-      
-      throw error;
-    }
-  }),
-
-  /**
-   * Create recurring template - WITH AUTOMATIC 3-MONTH GENERATION
-   * @route POST /api/v1/transactions/templates
-   */
-  createRecurringTemplate: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const {
-      name,
-      description,
-      amount,
-      type,
-      category_name,
-      categoryId,
-      interval_type,
-      day_of_month,
-      day_of_week,
-      is_active
-    } = req.body;
-
-    try {
-      // Validate required fields
-      if (!name || !amount || !type || !interval_type) {
-        return res.status(400).json({
-          success: false,
-          error: 'Name, amount, type, and interval_type are required'
-        });
-      }
-
-      // ✅ IMPROVED: Get or create category with better logic
-      let finalCategoryId = null;
-      
-      // If categoryId is provided, use it directly
-      if (categoryId) {
-        finalCategoryId = categoryId;
-      } else if (category_name) {
-        // Try to find existing category by name
-        const categoryQuery = `
-          SELECT id FROM categories 
-          WHERE name ILIKE $1 AND (user_id = $2 OR user_id IS NULL)
-          ORDER BY user_id DESC NULLS LAST
-          LIMIT 1
-        `;
-        const categoryResult = await db.query(categoryQuery, [category_name, userId]);
-        
-        if (categoryResult.rows.length > 0) {
-          finalCategoryId = categoryResult.rows[0].id;
-        } else {
-          // Create new category if not found
-          const createCategoryQuery = `
-            INSERT INTO categories (name, user_id, created_at, updated_at)
-            VALUES ($1, $2, NOW(), NOW())
-            RETURNING id
-          `;
-          const createResult = await db.query(createCategoryQuery, [category_name, userId]);
-          finalCategoryId = createResult.rows[0].id;
-
-          logger.info('Created new category for recurring template', {
-            userId,
-            categoryName: category_name,
-            categoryId: finalCategoryId
-          });
-        }
-      }
-
-      // Fallback to General category if none provided
-      if (!finalCategoryId) {
-        const generalResult = await db.query(
-          `SELECT id FROM categories WHERE name = 'General' AND user_id IS NULL LIMIT 1`
-        );
-        if (generalResult.rows.length > 0) {
-          finalCategoryId = generalResult.rows[0].id;
-        }
-      }
-
-      // Create recurring template
-      const insertQuery = `
-        INSERT INTO recurring_templates (
-          user_id, name, description, amount, type, category_id,
-          interval_type, day_of_month, day_of_week, is_active,
-          start_date, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_DATE, NOW(), NOW())
-        RETURNING *
-      `;
-
-      const values = [
-        userId,
-        name,
-        description || null,
-        amount,
-        type,
-        finalCategoryId,
-        interval_type,
-        day_of_month || null,
-        day_of_week || null,
-        is_active !== false // Default to true
-      ];
-
-      const result = await db.query(insertQuery, values);
-      const template = result.rows[0];
-
-      // ✅ GENERATE BOTH CURRENT AND UPCOMING TRANSACTIONS
-      const today = new Date();
-      const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      
-      // Generate current month transactions (actual transactions)
-      const currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
-      
-      // Generate upcoming transactions (status: 'upcoming')
-      const upcomingTransactions = await generateUpcomingTransactions(template);
-
-      logger.info('Recurring template created with current and upcoming transactions', {
-        userId,
-        templateId: template.id,
-        name: template.name,
-        currentCount: currentTransactions.length,
-        upcomingCount: upcomingTransactions.length
-      });
-
-      res.status(201).json({
-        success: true,
-        data: {
-          template,
-          currentTransactions,
-          upcomingTransactions
-        },
-        message: `Recurring template created with ${currentTransactions.length} current and ${upcomingTransactions.length} upcoming transactions`
-      });
-    } catch (error) {
-      logger.error('Failed to create recurring template', {
-        userId,
-        error: error.message
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * ✅ BULK CREATE RECURRING TEMPLATES - FOR ONBOARDING
-   * Creates multiple templates efficiently without triggering individual refreshes
-   * @route POST /api/v1/transactions/templates/bulk
-   */
-  createBulkRecurringTemplates: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { templates } = req.body;
-
-    try {
-      // Validate input
-      if (!templates || !Array.isArray(templates) || templates.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Templates array is required'
-        });
-      }
-
-      // Validate each template
-      for (const template of templates) {
-        if (!template.name || !template.amount || !template.type || !template.interval_type) {
-          return res.status(400).json({
-            success: false,
-            error: 'Each template must have name, amount, type, and interval_type'
-          });
-        }
-      }
-
-      const createdTemplates = [];
-      const results = {
-        totalRequested: templates.length,
-        successful: 0,
-        failed: 0,
-        errors: []
-      };
-
-      // 🟢 PERF: resolve all category IDs in parallel BEFORE the insert loop.
-      // The previous code did `await findOrCreateCategory(...)` inside the
-      // loop — N templates = N sequential DB round-trips just to find/create
-      // categories. With Render us-east → Supabase eu-north (~150ms RTT each),
-      // 8 onboarding templates spent ~1.2s in this step alone. Promise.all
-      // pipelines them to a single round-trip-equivalent of latency.
-      const resolvedCategoryIds = await Promise.all(
-        templates.map(t =>
-          findOrCreateCategory(userId, t.categoryId, t.category_name)
-            .catch(() => null) // failures handled per-template below
-        )
-      );
-
-      // Process each template — inserts must remain sequential because the
-      // recurring transaction generation downstream depends on template.id.
-      for (let idx = 0; idx < templates.length; idx++) {
-        const templateData = templates[idx];
-        try {
-          const {
-            name,
-            description,
-            amount,
-            type,
-            interval_type,
-            day_of_month,
-            day_of_week,
-            is_active
-          } = templateData;
-
-          const finalCategoryId = resolvedCategoryIds[idx];
-
-          // Create template
-          const insertQuery = `
-            INSERT INTO recurring_templates (
-              user_id, name, description, amount, type, category_id,
-              interval_type, day_of_month, day_of_week, is_active,
-              start_date, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_DATE, NOW(), NOW())
-            RETURNING *
-          `;
-
-          const values = [
-            userId,
-            name,
-            description || null,
-            amount,
-            type,
-            finalCategoryId,
-            interval_type,
-            day_of_month || null,
-            day_of_week || null,
-            is_active !== false
-          ];
-
-          const result = await db.query(insertQuery, values);
-          const template = result.rows[0];
-
-          // ✅ ONBOARDING FIX: Generate transactions for this template
-          const today = new Date();
-          const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          
-          // 🔧 ONBOARDING FIX: For monthly templates, always generate current month transaction
-          let currentTransactions = await generateCurrentMonthTransactions(template, startOfCurrentMonth, today);
-          
-          // 🔧 If no current month transactions generated and it's a monthly template, force create one
-          if (currentTransactions.length === 0 && template.interval_type === 'monthly') {
-            try {
-              const transactionData = {
-                categoryId: template.category_id,
-                amount: template.amount,
-                type: template.type,
-                description: template.description || template.name,
-                notes: `Current month transaction for onboarding template: ${template.name}`,
-                date: today.toISOString().split('T')[0], // Today's date
-                templateId: template.id
-              };
-              
-              const created = await Transaction.create(transactionData, userId);
-              currentTransactions = [created];
-              
-              logger.info('🔧 ONBOARDING FIX: Generated missing current month transaction', {
-                userId,
-                templateId: template.id,
-                templateName: template.name,
-                transactionId: created.id
-              });
-            } catch (currentError) {
-              logger.error('Failed to generate onboarding current month transaction', {
-                userId,
-                templateId: template.id,
-                error: currentError.message
-              });
-            }
-          }
-          
-          const upcomingTransactions = await generateUpcomingTransactions(template);
-
-          createdTemplates.push({
-            template,
-            currentTransactions,
-            upcomingTransactions
-          });
-
-          results.successful++;
-
-          logger.info('Bulk template created successfully', {
-            userId,
-            templateId: template.id,
-            name: template.name,
-            currentCount: currentTransactions.length,
-            upcomingCount: upcomingTransactions.length
-          });
-
-        } catch (error) {
-          results.failed++;
-          results.errors.push({
-            templateName: templateData.name,
-            error: error.message
-          });
-          
-          logger.error('Failed to create template in bulk', {
-            userId,
-            templateName: templateData.name,
-            error: error.message
-          });
-        }
-      }
-
-      // Return comprehensive results
-      res.status(results.successful > 0 ? 201 : 400).json({
-        success: results.successful > 0,
-        data: {
-          templates: createdTemplates,
-          summary: results
-        },
-        message: `Bulk operation completed: ${results.successful} successful, ${results.failed} failed`
-      });
-
-    } catch (error) {
-      logger.error('Bulk template creation failed', {
-        userId,
-        error: error.message
-      });
-      throw error;
-    }
-  }),
-
-  /**
-   * 🔥 FRESH BULK DELETE - Simple and clean implementation matching client expectations
+   * Bulk delete transactions
    * @route POST /api/v1/transactions/bulk-delete
    */
   bulkDelete: asyncHandler(async (req, res) => {
-
-
     const userId = req.user.id;
     const { transactionIds } = req.body;
-
-
 
     // Simple validation
     if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
@@ -1306,14 +470,14 @@ const transactionController = {
     try {
       // Delete transactions in a single query for better performance
       const deleteQuery = `
-        DELETE FROM transactions 
+        DELETE FROM transactions
         WHERE id = ANY($1) AND user_id = $2
         RETURNING id, type, description
       `;
-      
+
       const result = await db.query(deleteQuery, [transactionIds, userId]);
       const deletedCount = result.rows.length;
-      
+
       // ✅ Handle case where some/all transactions don't exist or were already deleted
       if (deletedCount === 0) {
         return res.status(404).json({
@@ -1326,8 +490,6 @@ const transactionController = {
           }
         });
       }
-
-
 
       // Response format that matches client expectations
       res.json({
@@ -1349,283 +511,14 @@ const transactionController = {
         transactionIds,
         error: error.message
       });
-      
+
       res.status(500).json({
         success: false,
         message: 'Failed to delete transactions',
         error: error.message
       });
     }
-  }),
-
-  /**
-   * Generate 3 months of upcoming transactions for a template
-   */
-  
-  /**
-   * Generate recurring transactions - REAL IMPLEMENTATION
-   * @route POST /api/v1/transactions/generate-recurring
-   */
-  generateRecurring: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-
-    try {
-      // Get active recurring templates for user
-      const templatesQuery = `
-        SELECT * FROM recurring_templates 
-        WHERE user_id = $1 AND is_active = true
-          AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-        ORDER BY created_at DESC
-      `;
-      
-      const templatesResult = await db.query(templatesQuery, [userId]);
-      const templates = templatesResult.rows;
-
-      let totalGenerated = 0;
-      const generatedTransactions = [];
-
-      for (const template of templates) {
-        const newTransactions = await generateTransactionsFromTemplate(template);
-        generatedTransactions.push(...newTransactions);
-        totalGenerated += newTransactions.length;
-      }
-
-      logger.info(`Generated ${totalGenerated} recurring transactions for user ${userId}`);
-
-      res.json({
-        success: true,
-        data: {
-          templates_processed: templates.length,
-          transactions_generated: totalGenerated,
-          generated_transactions: generatedTransactions,
-          templates: templates
-        },
-        message: `Successfully generated ${totalGenerated} recurring transactions`
-      });
-    } catch (error) {
-      logger.error('Recurring generation failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-
-
-  /**
-   * Get upcoming transactions for user
-   * @route GET /api/v1/transactions/upcoming
-   */
-  getUpcomingTransactions: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-
-    try {
-      const query = `
-        SELECT t.*, c.name as category_name, rt.name as template_name
-        FROM transactions t 
-        LEFT JOIN categories c ON t.category_id = c.id
-        LEFT JOIN recurring_templates rt ON t.template_id = rt.id
-        WHERE t.user_id = $1 AND t.status = 'upcoming' AND t.deleted_at IS NULL
-        ORDER BY t.date ASC, t.created_at ASC
-      `;
-      
-      const result = await db.query(query, [userId]);
-      
-      res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length
-      });
-    } catch (error) {
-      logger.error('Get upcoming transactions failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Delete specific upcoming transaction
-   * @route DELETE /api/v1/transactions/upcoming/:id
-   */
-  deleteUpcomingTransaction: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { id } = req.params;
-
-    try {
-      // Verify the upcoming transaction belongs to the user
-      const checkQuery = `
-        SELECT id FROM transactions 
-        WHERE id = $1 AND user_id = $2 AND status = 'upcoming' AND deleted_at IS NULL
-      `;
-      const checkResult = await db.query(checkQuery, [id, userId]);
-
-      if (checkResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Upcoming transaction not found'
-        });
-      }
-
-      // Delete the upcoming transaction - FIXED for current schema
-      let deleted = false;
-      
-      // Delete from unified transactions table
-      const deleteQuery = `
-        DELETE FROM transactions 
-        WHERE id = $1 AND user_id = $2
-        RETURNING id
-      `;
-      const result = await db.query(deleteQuery, [id, userId]);
-      deleted = result.rows.length > 0;
-
-      if (!deleted) {
-        return res.status(404).json({
-          success: false,
-          message: 'Upcoming transaction not found'
-        });
-      }
-
-      logger.info('Upcoming transaction deleted', { userId, transactionId: id });
-
-      res.json({
-        success: true,
-        message: 'Upcoming transaction deleted successfully'
-      });
-    } catch (error) {
-      logger.error('Delete upcoming transaction failed', { userId, transactionId: id, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Stop generating upcoming transactions for a template
-   * @route POST /api/v1/transactions/templates/:id/stop
-   */
-  stopTemplateGeneration: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { id } = req.params;
-
-    try {
-      // Verify the template belongs to the user
-      const checkQuery = `
-        SELECT id, name FROM recurring_templates 
-        WHERE id = $1 AND user_id = $2
-      `;
-      const checkResult = await db.query(checkQuery, [id, userId]);
-
-      if (checkResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Recurring template not found'
-        });
-      }
-
-      const template = checkResult.rows[0];
-
-      // Deactivate the template
-      const updateQuery = `
-        UPDATE recurring_templates 
-        SET is_active = false, updated_at = NOW() 
-        WHERE id = $1 AND user_id = $2
-        RETURNING id, name, is_active
-      `;
-      const updateResult = await db.query(updateQuery, [id, userId]);
-
-      // Delete all future upcoming transactions for this template - FIXED for unified table
-      let deletedCount = 0;
-      
-      // Delete from unified transactions table
-      const deleteQuery = `
-        DELETE FROM transactions 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
-        RETURNING id
-      `;
-      const result = await db.query(deleteQuery, [id, userId]);
-      deletedCount += result.rows.length;
-
-      logger.info('Template generation stopped', { 
-        userId, 
-        templateId: id, 
-        templateName: template.name,
-        deletedUpcomingCount: deletedCount 
-      });
-
-      res.json({
-        success: true,
-        data: updateResult.rows[0],
-        deletedUpcomingCount: deletedCount,
-        message: `Template generation stopped. ${deletedCount} upcoming transactions removed.`
-      });
-    } catch (error) {
-      logger.error('Stop template generation failed', { userId, templateId: id, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Regenerate upcoming transactions for a specific template
-   * @route POST /api/v1/transactions/templates/:id/regenerate
-   */
-  regenerateTemplateUpcoming: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { id } = req.params;
-
-    try {
-      // Verify the template belongs to the user and is active
-      const templateQuery = `
-        SELECT * FROM recurring_templates 
-        WHERE id = $1 AND user_id = $2 AND is_active = true
-      `;
-      const templateResult = await db.query(templateQuery, [id, userId]);
-
-      if (templateResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: 'Active recurring template not found'
-        });
-      }
-
-      const template = templateResult.rows[0];
-
-      // Remove existing upcoming transactions for this template - FIXED for unified table
-      let deletedCount = 0;
-      
-      // Delete from unified transactions table
-      const deleteQuery = `
-        DELETE FROM transactions 
-        WHERE template_id = $1 AND user_id = $2 AND date > CURRENT_DATE
-        RETURNING id
-      `;
-      const result = await db.query(deleteQuery, [id, userId]);
-      deletedCount += result.rows.length;
-
-      // Generate new 3-month upcoming transactions
-      const upcomingTransactions = await generateUpcomingTransactions(template);
-
-      logger.info('Template upcoming transactions regenerated', { 
-        userId, 
-        templateId: id, 
-        templateName: template.name,
-        deletedCount: deletedCount,
-        generatedCount: upcomingTransactions.length
-      });
-
-      res.json({
-        success: true,
-        data: {
-          template: {
-            id: template.id,
-            name: template.name
-          },
-          deletedCount: deletedCount,
-          generatedCount: upcomingTransactions.length,
-          upcomingTransactions
-        },
-        message: `Regenerated ${upcomingTransactions.length} upcoming transactions for "${template.name}"`
-      });
-    } catch (error) {
-      logger.error('Regenerate template upcoming failed', { userId, templateId: id, error: error.message });
-      throw error;
-    }
   })
 };
-
 
 module.exports = transactionController;

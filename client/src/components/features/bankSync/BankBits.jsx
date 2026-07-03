@@ -4,21 +4,25 @@
  */
 
 import React from 'react';
-import { Landmark } from 'lucide-react';
+import { Landmark, CreditCard } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
-import { bankBrand, STATUS_STYLE } from './bankSyncMeta';
+import { bankBrand, institutionKind, STATUS_STYLE } from './bankSyncMeta';
 
 // Gradient icon square in the app's house style (see ModernTransactionCard).
+// A credit card company gets the card glyph — it's a categorically different
+// kind of source (billing-cycle charges, no real bank balance) from a bank
+// account, and the icon should say so at a glance.
 export function BankIcon({ source, size = 'md' }) {
   const { gradient } = bankBrand(source);
   const dims = size === 'lg' ? 'w-12 h-12' : size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   const icon = size === 'lg' ? 'w-6 h-6' : size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const Icon = institutionKind(source) === 'credit_card' ? CreditCard : Landmark;
   return (
     <div className={cn(
       'shrink-0 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br',
       dims, gradient,
     )}>
-      <Landmark className={cn('text-white', icon)} />
+      <Icon className={cn('text-white', icon)} />
     </div>
   );
 }

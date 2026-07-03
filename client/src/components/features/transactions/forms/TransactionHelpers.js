@@ -5,8 +5,6 @@
  * @version 3.0.0 - NEW CLEAN ARCHITECTURE
  */
 
-import { dateHelpers } from '../../../../utils/helpers';
-
 /**
  * 📊 Transaction Types Configuration
  */
@@ -31,43 +29,21 @@ export const TRANSACTION_TYPE_OPTIONS = [
 ];
 
 /**
- * 🔄 Recurring Frequency Options
- */
-export const RECURRING_FREQUENCIES = [
-  { value: 'daily', label: 'daily', interval: 1 },
-  { value: 'weekly', label: 'weekly', interval: 7 },
-  { value: 'monthly', label: 'monthly', interval: 30 },
-  { value: 'yearly', label: 'yearly', interval: 365 }
-];
-
-/**
  * 📝 Get Default Form Data
  */
 export const getDefaultFormData = (initialData = null, mode = 'create') => {
   const now = new Date();
-  
+
   const userTimezone = getUserTimezone();
-  
+
   const defaults = {
     type: TRANSACTION_TYPES.EXPENSE,
     amount: '',
     description: '',
-    categoryId: '',
     date: now.toISOString().split('T')[0],
     time: now.toTimeString().slice(0, 5),
     timezone: userTimezone, // ✅ NEW: Include user's timezone by default
     notes: '',
-    // ⚠️ DISABLED: tags not supported by current server API 
-    // tags: [],
-    
-    // Recurring fields (simplified - only what server supports)
-    isRecurring: false,
-    recurringFrequency: 'monthly'
-    // ⚠️ DISABLED: Not supported by current server implementation
-    // recurringInterval: 1,
-    // recurringEndType: 'never', 
-    // recurringEndDate: '',
-    // recurringMaxOccurrences: 12
   };
 
   // If no initial data, return defaults
@@ -81,18 +57,9 @@ export const getDefaultFormData = (initialData = null, mode = 'create') => {
     type: initialData.type || (initialData.amount > 0 ? TRANSACTION_TYPES.INCOME : TRANSACTION_TYPES.EXPENSE),
     amount: initialData.amount ? Math.abs(initialData.amount).toString() : '',
     description: initialData.description || '',
-    categoryId: initialData.category_id || initialData.categoryId || '',
     date: initialData.date ? initialData.date.split('T')[0] : defaults.date,
     time: initialData.date ? new Date(initialData.date).toTimeString().slice(0, 5) : defaults.time,
     notes: initialData.notes || '',
-    
-    // Recurring data (for future use)
-    isRecurring: false, // Simplified for now
-    recurringFrequency: 'monthly',
-    recurringInterval: 1,
-    recurringEndType: 'never',
-    recurringEndDate: '',
-    recurringMaxOccurrences: 12
   };
 
   // For duplicate mode, clear ID and update description
@@ -170,38 +137,6 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
   const amount = parseFloat(formData.amount);
   // ✅ FIX: Server expects positive amounts for both income and expense
   const finalAmount = Math.abs(amount);
-  
-  // ✅ CRITICAL: Check if this is a recurring transaction
-  if (formData.isRecurring) {
-    // ✅ Format for recurring template API - FIXED TO MATCH SERVER EXPECTATIONS
-    const recurringData = {
-      name: formData.description?.trim() || 'Recurring Transaction', // Use description as name
-      description: formData.description?.trim() || null,
-      amount: finalAmount,
-      type: formData.type,
-      // ✅ FIXED: Include category information for recurring templates
-      category_name: formData.categoryName || null,
-      categoryId: formData.categoryId || null,
-      interval_type: formData.recurringFrequency || 'monthly',
-      // Only set day_of_month for monthly
-      // Default to full-month cadence: first day of month unless user chose otherwise
-      day_of_month: formData.recurringFrequency === 'monthly' ? (formData.dayOfMonth || 1) : null,
-      // Only set day_of_week for weekly  
-      day_of_week: formData.recurringFrequency === 'weekly' ? (formData.dayOfWeek || new Date().getDay()) : null,
-      is_active: true,
-      // Add marker to indicate this is recurring
-      _isRecurring: true
-    };
-
-    // Remove null/undefined values
-    Object.keys(recurringData).forEach(key => {
-      if (key !== 'name' && key !== '_isRecurring' && (recurringData[key] === null || recurringData[key] === undefined || recurringData[key] === '')) {
-        delete recurringData[key];
-      }
-    });
-
-    return recurringData;
-  }
 
   // ✅ ENHANCED: Timezone-aware transaction formatting with explicit time handling
   const userTimezone = getUserTimezone();
@@ -223,7 +158,6 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
     type: formData.type,
     amount: finalAmount,
     description: formData.description?.trim() || 'Transaction', // ✅ FIX: Ensure description is never empty
-    categoryId: formData.categoryId || null,
     date: formData.date, // Keep for backward compatibility
     time: formData.time, // ✅ NEW: User's selected time
     transaction_datetime: transactionDateTime, // ✅ ENHANCED: User's exact intended datetime with timezone
@@ -248,68 +182,6 @@ export const formatTransactionForAPI = (formData, mode = 'create') => {
  */
 export const getTransactionTypeInfo = (type) => {
   return TRANSACTION_TYPE_OPTIONS.find(option => option.value === type) || TRANSACTION_TYPE_OPTIONS[0];
-};
-
-/**
- * 🔄 Get Recurring Frequency Info
- */
-export const getRecurringFrequencyInfo = (frequency) => {
-  return RECURRING_FREQUENCIES.find(freq => freq.value === frequency) || RECURRING_FREQUENCIES[2]; // Default to monthly
-};
-
-/**
- * 📅 Calculate Next Recurring Date
- */
-export const calculateNextRecurringDate = (startDate, frequency, interval = 1) => {
-  const date = new Date(startDate);
-  const frequencyInfo = getRecurringFrequencyInfo(frequency);
-  
-  switch (frequency) {
-    case 'daily':
-      date.setDate(date.getDate() + interval);
-      break;
-    case 'weekly':
-      date.setDate(date.getDate() + (interval * 7));
-      break;
-    case 'monthly':
-      date.setMonth(date.getMonth() + interval);
-      break;
-    case 'yearly':
-      date.setFullYear(date.getFullYear() + interval);
-      break;
-    default:
-      date.setMonth(date.getMonth() + 1); // Default to monthly
-  }
-  
-  return date;
-};
-
-/**
- * 📊 Generate Recurring Preview
- */
-export const generateRecurringPreview = (formData, maxPreview = 5) => {
-  if (!formData.isRecurring) return [];
-  
-  const preview = [];
-  let currentDate = new Date(formData.date);
-  const endDate = formData.recurringEndDate ? new Date(formData.recurringEndDate) : null;
-  const maxOccurrences = formData.recurringEndType === 'occurrences' 
-    ? parseInt(formData.recurringMaxOccurrences) 
-    : maxPreview;
-  
-  for (let i = 0; i < Math.min(maxPreview, maxOccurrences); i++) {
-    if (endDate && currentDate > endDate) break;
-    
-    preview.push({
-      date: new Date(currentDate),
-      formattedDate: dateHelpers.format(currentDate, 'MMM dd, yyyy'),
-      occurrence: i + 1
-    });
-    
-    currentDate = calculateNextRecurringDate(currentDate, formData.recurringFrequency, parseInt(formData.recurringInterval));
-  }
-  
-  return preview;
 };
 
 /**

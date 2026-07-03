@@ -25,7 +25,7 @@ import { cn } from '../../../utils/helpers';
  * 🚀 Quick Actions Bar Component
  */
 const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
-  const { t, currentLanguage } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const { addNotification } = useNotifications();
   const { currency } = useCurrency();
   
@@ -56,29 +56,19 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      // Use specific quick action category IDs based on user's language preference
-      const isHebrew = currentLanguage === 'he';
-      
-      const quickCategoryIds = {
-        expense: isHebrew ? 59 : 68, // Quick Expense - Hebrew: 59, English: 68
-        income: isHebrew ? 55 : 64   // Quick Income - Hebrew: 55, English: 64
-      };
-
       // ✅ FIX: Use proper timezone-aware datetime
       const now = new Date();
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const transactionData = {
         type: activeType,
         amount: Math.abs(numericAmount),
         description: `Quick ${activeType}`,
-        categoryId: quickCategoryIds[activeType],
         date: now.toLocaleDateString('en-CA'), // Keep for backward compatibility
         time: now.toTimeString().slice(0, 5), // HH:MM format
         timezone: userTimezone,
         transaction_datetime: now.toISOString(), // Exact moment in ISO format
         notes: '',
-        isRecurring: false
       };
 
       const result = await createTransaction(transactionData);
@@ -112,7 +102,7 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, activeType, createTransaction, addNotification, t, currentLanguage]);
+  }, [amount, activeType, createTransaction, addNotification, t]);
 
   // ✅ Handle keyboard shortcuts
   const handleKeyPress = useCallback((e) => {

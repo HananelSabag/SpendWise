@@ -8,8 +8,6 @@ import apiClient from './client.js';
 import { authAPI } from './auth.js';
 import { authStatusAPI } from './authStatus.js'; // 🔐 NEW: Bulletproof auth detection
 import adminAPI from './admin.js';
-import analyticsAPI from './analytics.js';
-import categoriesAPI from './categories.js'; // ✅ ADD: Import categories API
 import performanceAPI from './performance.js';
 import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
 import transactionAPI from './transactions.js'; // ✅ ADD: Import transaction API
@@ -62,14 +60,9 @@ export const api = {
     }
   },
   
-  // Data Management  
+  // Data Management
   transactions: transactionAPI, // ✅ FIXED: Use proper transaction API
-  categories: categoriesAPI, // ✅ FIXED: Use proper categories API
-  
-  // Analytics & Reports
-  analytics: analyticsAPI,
-  reports: analyticsAPI, // Alias
-  
+
   // Admin Operations
   admin: adminAPI,
   
@@ -169,7 +162,6 @@ export default spendWiseAPI;
 export { authAPI };
 export { authStatusAPI }; // 🔐 NEW: Bulletproof auth detection
 export { adminAPI };
-export { analyticsAPI };
 export { performanceAPI };
 export { transactionAPI }; // ✅ ADD: Export transaction API
 export { apiClient };
@@ -177,6 +169,5 @@ export { apiClient };
 // Additional backward compatibility exports
 export const auth = authAPI;
 export const admin = adminAPI;
-export const analytics = analyticsAPI;
 export const performance = performanceAPI;
 export const transactions = transactionAPI; // ✅ ADD: Transaction alias 

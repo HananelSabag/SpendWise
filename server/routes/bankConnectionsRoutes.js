@@ -20,8 +20,8 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
+const { INSTITUTIONS, VALID_SOURCES, institutionKind } = require('../config/institutions');
 
-const VALID_SOURCES = ['yahav', 'leumi', 'isracard', 'max', 'discount'];
 const MAX_CIPHERTEXT_LEN = 4096;      // sealed box of a creds JSON is well under this
 const MANUAL_SYNCS_PER_DAY = 2;
 const MANUAL_SYNC_GAP_HOURS = 3;
@@ -72,7 +72,12 @@ router.get('/', async (req, res) => {
        ORDER BY c.created_at ASC`,
       [req.user.id],
     );
-    res.json({ ok: true, connections: result.rows });
+    const connections = result.rows.map((c) => ({
+      ...c,
+      kind: institutionKind(c.bank_source),
+      institution_label: INSTITUTIONS[c.bank_source]?.label || c.bank_source,
+    }));
+    res.json({ ok: true, connections });
   } catch (err) {
     logger.error('bank-connections: list failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to fetch connections' });
@@ -288,7 +293,8 @@ router.get('/jobs', async (req, res) => {
        LIMIT 20`,
       [req.user.id],
     );
-    res.json({ ok: true, jobs: result.rows });
+    const jobs = result.rows.map((j) => ({ ...j, kind: institutionKind(j.bank_source) }));
+    res.json({ ok: true, jobs });
   } catch (err) {
     logger.error('bank-connections: jobs list failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to fetch jobs' });

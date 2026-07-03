@@ -26,24 +26,6 @@ const VALIDATION_RULES = {
     maxFuture: 365,
     // Date should not be more than 5 years in the past
     maxPast: 1825
-  },
-  category: {
-    required: true
-  },
-  recurring: {
-    frequency: {
-      required: true,
-      options: ['daily', 'weekly', 'monthly', 'yearly']
-    },
-    interval: {
-      required: true,
-      min: 1,
-      max: 365
-    },
-    endDate: {
-      required: false,
-      mustBeAfterStart: true
-    }
   }
 };
 
@@ -160,69 +142,6 @@ export const validateDate = (date, t) => {
 };
 
 /**
- * 🏷️ Validate Category Field
- */
-export const validateCategory = (categoryId, t) => {
-  const errors = [];
-  
-  // Category is optional in our database schema
-  // Users can create transactions without categories and categorize later
-  // No validation needed for category field
-  
-  return errors;
-};
-
-/**
- * 🔄 Validate Recurring Fields
- */
-export const validateRecurring = (formData, t) => {
-  const errors = {};
-  
-  if (!formData.isRecurring) {
-    return errors; // Skip validation if not recurring
-  }
-
-  // Validate frequency
-  if (!formData.recurringFrequency) {
-    errors.recurringFrequency = [t('validation.recurring.frequency.required', { 
-      fallback: 'Frequency is required for recurring transactions' 
-    })];
-  } else if (!VALIDATION_RULES.recurring.frequency.options.includes(formData.recurringFrequency)) {
-    errors.recurringFrequency = [t('validation.recurring.frequency.invalid', { 
-      fallback: 'Invalid frequency selected' 
-    })];
-  }
-
-  // Validate interval
-  const interval = parseInt(formData.recurringInterval);
-  if (!interval || interval < VALIDATION_RULES.recurring.interval.min) {
-    errors.recurringInterval = [t('validation.recurring.interval.min', { 
-      fallback: 'Interval must be at least 1',
-      min: VALIDATION_RULES.recurring.interval.min 
-    })];
-  } else if (interval > VALIDATION_RULES.recurring.interval.max) {
-    errors.recurringInterval = [t('validation.recurring.interval.max', { 
-      fallback: `Interval cannot exceed ${VALIDATION_RULES.recurring.interval.max}`,
-      max: VALIDATION_RULES.recurring.interval.max 
-    })];
-  }
-
-  // Validate end date if provided
-  if (formData.recurringEndDate) {
-    const startDate = new Date(formData.date);
-    const endDate = new Date(formData.recurringEndDate);
-    
-    if (endDate <= startDate) {
-      errors.recurringEndDate = [t('validation.recurring.endDate.afterStart', { 
-        fallback: 'End date must be after start date' 
-      })];
-    }
-  }
-
-  return errors;
-};
-
-/**
  * 🔍 Main Validation Function
  */
 export const validateTransaction = (formData, t = (key, options) => options?.fallback || key) => {
@@ -249,20 +168,6 @@ export const validateTransaction = (formData, t = (key, options) => options?.fal
     errors.date = dateErrors;
     isValid = false;
   }
-
-  // Validate category
-  const categoryErrors = validateCategory(formData.categoryId, t);
-  if (categoryErrors.length > 0) {
-    errors.categoryId = categoryErrors;
-    isValid = false;
-  }
-
-  // Recurring validation temporarily disabled for simplified system
-  // const recurringErrors = validateRecurring(formData, t);
-  // if (Object.keys(recurringErrors).length > 0) {
-  //   Object.assign(errors, recurringErrors);
-  //   isValid = false;
-  // }
 
   return {
     isValid,

@@ -78,21 +78,6 @@ const getTransactionsLimiter = rateLimit({
   }
 });
 
-// Manual recurring generation limiter (strict)
-const generateRecurringLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 3, // Only 3 manual generations per 5 minutes
-  message: {
-    error: {
-      code: 'GENERATION_LIMIT',
-      message: 'Too many manual generations. Please wait before trying again.',
-      retryAfter: 300
-    }
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
 // NEW: Email verification limiter (prevent spam)
 const emailVerificationLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -112,7 +97,6 @@ module.exports = {
   createTransactionLimiter,
   getSummaryLimiter,
   getTransactionsLimiter,
-  generateRecurringLimiter,
   emailVerificationLimiter // NEW: Add email verification limiter
 };
 

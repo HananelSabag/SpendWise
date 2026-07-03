@@ -601,7 +601,6 @@ class AdminController {
 
             // Remove transactional data
             await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
-            await client.query('DELETE FROM recurring_templates WHERE user_id = $1', [userId]);
 
             // Remove categories owned by the user (user-specific)
             await client.query('DELETE FROM categories WHERE user_id = $1', [userId]);

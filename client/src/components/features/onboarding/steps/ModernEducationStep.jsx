@@ -1,16 +1,16 @@
 /**
  * 📚 MODERN EDUCATION STEP - Enhanced Step 2
  * Visual education about transactions and balance panel with interactive examples
- * Features: Transaction types, Balance panel explanation, Interactive demos
- * @version 4.0.0 - MODERN REDESIGN
+ * Features: Manual vs bank-synced transactions, Balance panel explanation, Interactive demos
+ * @version 5.0.0 - BANK-SYNC MODEL
  */
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Repeat, Calendar, DollarSign, Coffee, Car, Home,
+  Landmark, Calendar, DollarSign, Coffee, Car, Home,
   Briefcase, TrendingUp, CheckCircle, AlertCircle,
-  Clock, BarChart3, Eye, EyeOff, RefreshCw,
+  Clock, BarChart3, Eye, EyeOff,
   ArrowUpRight, ArrowDownRight, Lightbulb, Target
 } from 'lucide-react';
 
@@ -22,7 +22,7 @@ import { cn } from '../../../../utils/helpers';
 
 // ── Module-level sub-components (stable references) ──────────────────────────
 
-const DemoTransactionCard = ({ transaction, isRecurring = false, className = '', isSelected = false, onClick }) => {
+const DemoTransactionCard = ({ transaction, isBankSynced = false, className = '', isSelected = false, onClick }) => {
   const { formatCurrency } = useCurrency();
   const { t } = useTranslation('onboarding');
   const isIncome = transaction.type === 'income';
@@ -36,39 +36,27 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
       <Card className={cn(
         "p-3 transition-all duration-300 rounded-xl relative overflow-hidden",
         isSelected ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20" : "",
-        isRecurring ? [
-          "bg-gradient-to-r from-purple-50 via-purple-25 to-indigo-50 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-indigo-900/30",
-          "border-l-[3px] border-l-purple-500 dark:border-l-purple-400",
-          "border-2 border-purple-200 dark:border-purple-600",
-          "shadow-md shadow-purple-100/50 dark:shadow-purple-900/30"
+        isBankSynced ? [
+          "bg-gradient-to-r from-blue-50 via-blue-25 to-indigo-50 dark:from-blue-900/30 dark:via-blue-800/20 dark:to-indigo-900/30",
+          "border-l-[3px] border-l-blue-500 dark:border-l-blue-400",
+          "border-2 border-blue-200 dark:border-blue-600",
         ] : [
           "border-2 border-gray-200 dark:border-gray-700",
           "bg-white dark:bg-gray-800",
           "hover:shadow-md"
         ]
       )}>
-        {isRecurring && (
-          <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
-            <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-600 transform rotate-45 translate-x-8 -translate-y-8" />
-          </div>
-        )}
-        {isRecurring && (
-          <div className="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
-            <Repeat className="w-4 h-4 text-white" />
+        {isBankSynced && (
+          <div className="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
+            <Landmark className="w-4 h-4 text-white" />
           </div>
         )}
         <div className="flex items-start gap-3 w-full relative z-10">
           <div className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center shadow border-2 flex-shrink-0",
-            isRecurring ? [
-              isIncome
-                ? "bg-gradient-to-br from-green-400 via-green-500 to-purple-500 text-white border-purple-300"
-                : "bg-gradient-to-br from-red-400 via-red-500 to-purple-500 text-white border-purple-300"
-            ] : [
-              isIncome
-                ? "bg-gradient-to-br from-green-50 to-green-100 text-green-600 border-green-200"
-                : "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border-red-200"
-            ]
+            isIncome
+              ? "bg-gradient-to-br from-green-50 to-green-100 text-green-600 border-green-200"
+              : "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border-red-200"
           )}>
             <IconComponent className="w-5 h-5" />
           </div>
@@ -78,31 +66,21 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
                 <div className="flex items-center gap-2 mb-2">
                   <h4 className={cn(
                     "font-semibold text-sm leading-tight",
-                    isRecurring ? "text-purple-900 dark:text-purple-100" : "text-gray-900 dark:text-white"
+                    isBankSynced ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"
                   )}>
                     {transaction.description}
                   </h4>
-                  {isRecurring && (
-                    <Badge variant="secondary" size="sm" className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300 font-medium shadow-sm">
-                      <Repeat className="w-3 h-3 mr-1" />{t('education.demo.autoLabel') || 'Auto'}
+                  {isBankSynced && (
+                    <Badge variant="secondary" size="sm" className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300 font-medium shadow-sm">
+                      <Landmark className="w-3 h-3 mr-1" />{t('education.demo.bankLabel') || 'Bank'}
                     </Badge>
                   )}
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">{transaction.category}</span>
-                    {isRecurring ? (
-                      <span className="text-purple-600 dark:text-purple-400">• {transaction.frequency}</span>
-                    ) : (
-                      <span>• {transaction.date}</span>
-                    )}
+                    <span>• {transaction.date}</span>
                   </div>
-                  {isRecurring && (
-                    <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                      {t('education.demo.next') || 'Next:'} {transaction.nextDate}
-                    </div>
-                  )}
-                  {!isRecurring && transaction.location && (
+                  {!isBankSynced && transaction.location && (
                     <div className="text-xs text-gray-500">📍 {transaction.location}</div>
                   )}
                 </div>
@@ -110,13 +88,10 @@ const DemoTransactionCard = ({ transaction, isRecurring = false, className = '',
               <div className="text-right ml-2">
                 <div className={cn(
                   "font-bold text-sm mb-0.5",
-                  isIncome
-                    ? isRecurring ? "text-green-700" : "text-green-600"
-                    : isRecurring ? "text-red-700" : "text-red-600"
+                  isIncome ? "text-green-600" : "text-red-600"
                 )}>
                   {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </div>
-                {isRecurring && <div className="text-xs text-purple-600 font-medium">{t('education.demo.monthly') || 'Monthly'}</div>}
                 {isSelected && <div className="text-xs text-blue-600 font-medium mt-1">{t('education.demo.selected') || '✓ Selected'}</div>}
               </div>
             </div>
@@ -193,10 +168,10 @@ const BalancePanelDemo = ({ balanceVisible, onToggleVisible, currentBalance, bal
  * 📚 Modern Education Step Component
  */
 const ModernEducationStep = ({
-  data = {}, 
-  onDataUpdate, 
-  onNext, 
-  onBack 
+  data = {},
+  onDataUpdate,
+  onNext,
+  onBack
 }) => {
   // ✅ Zustand stores
   const { t, isRTL } = useTranslation('onboarding');
@@ -220,64 +195,52 @@ const ModernEducationStep = ({
         amount: 4.75,
         type: 'expense',
         icon: Coffee,
-        category: 'Food & Dining',
         date: 'Today, 8:15 AM',
         location: 'Downtown'
       },
       {
         id: 'gas',
-        description: 'Shell Gas Station',
-        amount: 52.30,
+        description: 'Cash tip at the barber',
+        amount: 20.00,
         type: 'expense',
         icon: Car,
-        category: 'Transportation',
         date: 'Yesterday, 6:45 PM',
-        location: 'Highway 101'
+        location: 'Downtown'
       },
       {
         id: 'freelance',
-        description: 'Web Design Project Payment',
-        amount: 850.00,
+        description: 'Gift from a friend',
+        amount: 100.00,
         type: 'income',
         icon: Briefcase,
-        category: 'Freelance Work',
         date: '3 days ago',
-        location: 'Remote'
+        location: null
       }
     ],
-    recurring: [
+    bankSynced: [
       {
         id: 'salary',
-        description: 'Monthly Salary - TechCorp',
+        description: 'Salary Deposit',
         amount: 4500.00,
         type: 'income',
         icon: Briefcase,
-        category: 'Primary Income',
-        frequency: 'Monthly (1st)',
-        nextDate: 'Dec 1, 2024',
-        template_id: 'sal_001'
+        date: 'Automatically imported'
       },
       {
         id: 'rent',
-        description: 'Apartment Rent Payment',
+        description: 'Visa Card Charge',
         amount: 1350.00,
         type: 'expense',
         icon: Home,
-        category: 'Housing',
-        frequency: 'Monthly (5th)',
-        nextDate: 'Dec 5, 2024',
-        template_id: 'rent_001'
+        date: 'Automatically imported'
       },
       {
         id: 'subscription',
-        description: 'Netflix Premium',
+        description: 'Bank Fees & Interest',
         amount: 17.99,
         type: 'expense',
         icon: TrendingUp,
-        category: 'Entertainment',
-        frequency: 'Monthly (15th)',
-        nextDate: 'Dec 15, 2024',
-        template_id: 'sub_001'
+        date: 'Automatically imported'
       }
     ]
   };
@@ -287,10 +250,10 @@ const ModernEducationStep = ({
     const newSelected = selectedExamples.includes(exampleId)
       ? selectedExamples.filter(id => id !== exampleId)
       : [...selectedExamples, exampleId];
-    
+
     setSelectedExamples(newSelected);
-    onDataUpdate({ 
-      ...data, 
+    onDataUpdate({
+      ...data,
       selectedExamples: newSelected,
       understoodTransactionTypes: true,
       understoodBalancePanel: interactiveDemo === 'balance'
@@ -299,11 +262,11 @@ const ModernEducationStep = ({
 
   // ✅ Handle next step
   const handleNext = () => {
-    onDataUpdate({ 
-      ...data, 
+    onDataUpdate({
+      ...data,
       selectedExamples,
-      understoodTransactionTypes: true, 
-      understoodBalancePanel: true 
+      understoodTransactionTypes: true,
+      understoodBalancePanel: true
     });
     onNext();
   };
@@ -362,45 +325,35 @@ const ModernEducationStep = ({
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {t('education.overview.twoTypesTitle') || 'Two Types of Transactions'}
+                      {t('education.overview.twoTypesTitle') || 'Two Sources of Transactions'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      {t('education.overview.twoTypesSubtitle') || 'Understanding the difference is key'}
+                      {t('education.overview.twoTypesSubtitle') || 'Most of your data comes from your bank'}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
+                  {/* Bank-synced transactions */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <div className="flex items-center mb-2">
+                      <Landmark className="w-5 h-5 text-blue-600 mr-2" />
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100">{t('education.overview.bankSyncedTitle') || 'Bank-Synced'}</h4>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                      {t('education.overview.bankSyncedDesc') || 'Automatically imported from your connected banks and credit cards'}
+                    </p>
+                  </div>
+
                   {/* One-time transactions */}
                   <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center mb-2">
                       <Calendar className="w-5 h-5 text-gray-600 mr-2" />
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{t('education.overview.oneTimeTitle') || 'One-Time'}</h4>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">{t('education.overview.oneTimeTitle') || 'One-Time Manual Entry'}</h4>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {t('education.overview.oneTimeDesc') || 'Individual purchases you enter manually'}
+                      {t('education.overview.oneTimeDesc') || 'For cash, gifts, or anything that never touches your bank'}
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" size="sm">{tc('transactions.coffee')}</Badge>
-                      <Badge variant="outline" size="sm">{tc('transactions.gas')}</Badge>
-                      <Badge variant="outline" size="sm">{tc('transactions.shopping')}</Badge>
-                    </div>
-                  </div>
-
-                  {/* Recurring transactions */}
-                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                    <div className="flex items-center mb-2">
-                      <Repeat className="w-5 h-5 text-purple-600 mr-2" />
-                      <h4 className="font-semibold text-purple-900 dark:text-purple-100">{t('education.overview.recurringTitle') || 'Recurring'}</h4>
-                    </div>
-                    <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
-                      {t('education.overview.recurringDesc') || 'Automatic transactions that repeat on schedule'}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.salary')}</Badge>
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.rent')}</Badge>
-                      <Badge variant="secondary" size="sm" className="bg-purple-100 text-purple-800">{tc('transactions.subscriptions')}</Badge>
-                    </div>
                   </div>
                 </div>
               </Card>
@@ -464,15 +417,15 @@ const ModernEducationStep = ({
                 {/* One-Time Transactions */}
                 <div>
                   <div className="flex items-center mb-4">
-                    <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-                    <h3 className="text-xl font-semibold">{t('education.transactions.oneTimeTitle') || 'One-Time Transactions'}</h3>
+                    <Calendar className="w-6 h-6 text-gray-600 mr-2" />
+                    <h3 className="text-xl font-semibold">{t('education.transactions.oneTimeTitle') || 'One-Time Manual Entry'}</h3>
                   </div>
                   <div className="space-y-3">
                     {exampleTransactions.oneTime.map((transaction) => (
                       <DemoTransactionCard
                         key={transaction.id}
                         transaction={transaction}
-                        isRecurring={false}
+                        isBankSynced={false}
                         isSelected={selectedExamples.includes(transaction.id)}
                         onClick={() => handleExampleSelect(transaction.id)}
                       />
@@ -480,18 +433,18 @@ const ModernEducationStep = ({
                   </div>
                 </div>
 
-                {/* Recurring Transactions */}
+                {/* Bank-Synced Transactions */}
                 <div>
                   <div className="flex items-center mb-4">
-                    <Repeat className="w-6 h-6 text-purple-600 mr-2" />
-                    <h3 className="text-xl font-semibold">{t('education.transactions.recurringTitle') || 'Recurring Transactions'}</h3>
+                    <Landmark className="w-6 h-6 text-blue-600 mr-2" />
+                    <h3 className="text-xl font-semibold">{t('education.transactions.bankSyncedTitle') || 'Bank-Synced Transactions'}</h3>
                   </div>
                   <div className="space-y-3">
-                    {exampleTransactions.recurring.map((transaction) => (
+                    {exampleTransactions.bankSynced.map((transaction) => (
                       <DemoTransactionCard
                         key={transaction.id}
                         transaction={transaction}
-                        isRecurring={true}
+                        isBankSynced={true}
                         isSelected={selectedExamples.includes(transaction.id)}
                         onClick={() => handleExampleSelect(transaction.id)}
                       />
@@ -509,7 +462,7 @@ const ModernEducationStep = ({
                     </h4>
                   </div>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    {t('education.transactions.selectedFeedbackDesc') || 'Notice how recurring transactions have purple styling, special badges, and show their next occurrence. This makes it easy to spot automated transactions in your list!'}
+                    {t('education.transactions.selectedFeedbackDesc') || 'Notice how bank-synced transactions have a bank badge — those come in automatically once you connect an account, no manual entry needed.'}
                   </p>
                 </div>
               )}
@@ -612,7 +565,7 @@ const ModernEducationStep = ({
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                     {t('education.benefitsSection.financialTitle') || 'Financial Benefits'}
                   </h3>
-                  
+
                   <div className="flex items-start space-x-3">
                     <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                       <BarChart3 className="w-4 h-4 text-green-600" />
@@ -620,7 +573,7 @@ const ModernEducationStep = ({
                     <div>
                       <h4 className="font-semibold mb-1">{t('education.benefitsSection.budgetingTitle') || 'Better Budgeting'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('education.benefitsSection.budgetingDesc') || 'Recurring transactions help you predict future cash flow and plan ahead'}
+                        {t('education.benefitsSection.budgetingDesc') || 'Bank-synced data shows your real cash flow, not just what you remember to log'}
                       </p>
                     </div>
                   </div>
@@ -632,7 +585,7 @@ const ModernEducationStep = ({
                     <div>
                       <h4 className="font-semibold mb-1">{t('education.benefitsSection.patternsTitle') || 'Spot Patterns'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('education.benefitsSection.patternsDesc') || 'Easily identify spending patterns and subscription costs'}
+                        {t('education.benefitsSection.patternsDesc') || 'Easily identify spending patterns and bank fees'}
                       </p>
                     </div>
                   </div>
@@ -655,7 +608,7 @@ const ModernEducationStep = ({
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                     {t('education.benefitsSection.practicalTitle') || 'Practical Benefits'}
                   </h3>
-                  
+
                   <div className="flex items-start space-x-3">
                     <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Clock className="w-4 h-4 text-orange-600" />
@@ -663,7 +616,7 @@ const ModernEducationStep = ({
                     <div>
                       <h4 className="font-semibold mb-1">{t('education.benefitsSection.saveTimeTitle') || 'Save Time'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('education.benefitsSection.saveTimeDesc') || 'No need to manually enter salary, rent, or subscriptions every month'}
+                        {t('education.benefitsSection.saveTimeDesc') || 'No need to manually enter salary, bills, or card charges — your bank does it for you'}
                       </p>
                     </div>
                   </div>
@@ -675,7 +628,7 @@ const ModernEducationStep = ({
                     <div>
                       <h4 className="font-semibold mb-1">{t('education.benefitsSection.neverMissTitle') || 'Never Miss'}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('education.benefitsSection.neverMissDesc') || 'Get notified about upcoming recurring transactions before they happen'}
+                        {t('education.benefitsSection.neverMissDesc') || 'Every bank charge and deposit shows up automatically, nothing to forget'}
                       </p>
                     </div>
                   </div>
@@ -714,4 +667,3 @@ const ModernEducationStep = ({
 };
 
 export default ModernEducationStep;
-

@@ -15,7 +15,7 @@ import {
 } from '../../../../stores';
 
 // ✅ Import our new foundation
-import TransactionFormTabs from '../forms/TransactionFormTabs';
+import TransactionForm from '../forms/TransactionForm';
 import { Modal, Button } from '../../../ui';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 import { cn } from '../../../../utils/helpers';
@@ -28,8 +28,6 @@ const AddTransactionModal = ({
   onClose,
   onSuccess,
   defaultType = 'expense',
-  defaultCategory = '',
-  initialTab = null, // 'one-time' or 'recurring' to open specific tab
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
@@ -78,10 +76,7 @@ const AddTransactionModal = ({
   }, [isSubmitting, onClose]);
 
   // ✅ Default form data
-  const defaultFormData = {
-    type: defaultType,
-    categoryId: defaultCategory
-  };
+  const defaultFormData = { type: defaultType };
 
   return (
     <Modal
@@ -102,13 +97,13 @@ const AddTransactionModal = ({
             transition={{ duration: 0.2 }}
           >
             <div className="p-4 sm:p-5">
-              <TransactionFormTabs
+              <TransactionForm
                 mode="create"
                 initialData={defaultFormData}
-                initialTab={initialTab}
                 onSubmit={handleSubmit}
                 onCancel={handleClose}
                 isLoading={isSubmitting || isLoading}
+                showAdvanced
                 className="w-full"
               />
             </div>

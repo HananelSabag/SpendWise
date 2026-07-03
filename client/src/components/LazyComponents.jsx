@@ -87,18 +87,6 @@ export const BankSyncPage = createLazyComponent(
   'BankSyncPage'
 );
 
-// ✅ Analytics Pages - Data-Heavy Components
-export const Analytics = createLazyComponent(
-  () => import('../pages/Analytics.jsx'),
-  'Analytics'
-);
-
-// ✅ Recurring Manager Panel
-export const RecurringManagerPanel = createLazyComponent(
-  () => import('../components/features/transactions/recurring/ModernRecurringManagerPanel.jsx'),
-  'ModernRecurringManagerPanel'
-);
-
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
   () => import('../pages/NotFound.jsx'),
@@ -123,12 +111,6 @@ export const ServerWaking = createLazyComponent(
 export const QuickExpensePage = createLazyComponent(
   () => import('../pages/QuickExpensePage.jsx'),
   'QuickExpensePage'
-);
-
-// ✅ Feature Components - Conditional Loading
-export const CategoryManager = createLazyComponent(
-  () => import('../components/features/categories/CategoryManager'),
-  'CategoryManager'
 );
 
 

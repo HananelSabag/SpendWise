@@ -18,11 +18,8 @@ import {
   LogOut,
   Settings,
   ChevronRight,
-  Tag,
-  Clock,
   HelpCircle,
   Shield,
-  BarChart3,
   Users,
   Activity
 } from 'lucide-react';
@@ -71,12 +68,6 @@ const MobileNavigation = ({
       current: location.pathname === '/transactions'
     },
     {
-      name: t('nav.analytics') || 'Analytics',
-      href: '/analytics',
-      icon: BarChart3,
-      current: location.pathname === '/analytics'
-    },
-    {
       name: t('nav.profile') || 'Profile',
       href: '/profile',
       icon: User,
@@ -96,26 +87,6 @@ const MobileNavigation = ({
 
   // ✅ Quick actions (mobile panels)
   const quickActions = [
-    {
-      name: t('common.categoryManager', { fallback: t('common.categories') }),
-      description: t('common.manageCategoriesDesc'),
-      icon: Tag,
-      color: 'blue',
-      onClick: () => {
-        onOpenModal?.('categories');
-        setIsOpen(false);
-      }
-    },
-    {
-      name: t('common.recurringManager', { fallback: t('common.recurring') }),
-      description: t('common.recurringTransactionsDesc'),
-      icon: Clock,
-      color: 'green',
-      onClick: () => {
-        onOpenModal?.('recurring');
-        setIsOpen(false);
-      }
-    },
     {
       name: t('nav.help') || 'Help / Onboarding',
       description: t('onboarding.restart', { fallback: 'Reopen setup guide (no changes to your data)' }),

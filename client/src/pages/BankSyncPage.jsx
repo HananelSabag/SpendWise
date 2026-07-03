@@ -8,18 +8,34 @@
  * never handles plaintext. Full i18n via the bankSync module.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, RefreshCw, AlertCircle, Plus } from 'lucide-react';
+import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '../stores';
 import { cn } from '../utils/helpers';
 import apiClient from '../api/client';
 import bankConnectionsApi from '../api/bankConnections';
+import { institutionKind } from '../components/features/bankSync/bankSyncMeta';
 import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
 import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
 import BankStatsCard from '../components/features/bankSync/BankStatsCard';
 import HowItWorksPanel from '../components/features/bankSync/HowItWorksPanel';
+
+// Split a list of bank-source-tagged items into bank-account vs credit-card
+// groups. Banks and credit card companies are not the same kind of
+// financial entity — a bank has a real balance and direct debits, a credit
+// card company has billing-cycle charges and (here) no real balance — so
+// they're shown as clearly separate sections, not one undifferentiated list.
+function splitByKind(items, getSource) {
+  const banks = [];
+  const cards = [];
+  for (const item of items) {
+    const kind = item.kind || institutionKind(getSource(item));
+    (kind === 'credit_card' ? cards : banks).push(item);
+  }
+  return { banks, cards };
+}
 
 const fetchBankStats = () => apiClient.get('/bank-sync/stats').then(r => r.data.sources || []);
 
@@ -50,6 +66,15 @@ export default function BankSyncPage() {
   useEffect(() => {
     if (latestSyncStamp) queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
   }, [latestSyncStamp, queryClient]);
+
+  const { banks: bankConnections, cards: cardConnections } = useMemo(
+    () => splitByKind(connections, (c) => c.bank_source),
+    [connections],
+  );
+  const { banks: bankStats, cards: cardStats } = useMemo(
+    () => splitByKind(sources, (s) => s.source),
+    [sources],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24 lg:pb-8">
@@ -107,9 +132,27 @@ export default function BankSyncPage() {
             </motion.button>
           )}
 
-          {connections.map(conn => (
-            <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
-          ))}
+          {bankConnections.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                <Landmark className="w-3 h-3" /> {t('bankAccounts', { fallback: 'Bank Accounts' })}
+              </h3>
+              {bankConnections.map(conn => (
+                <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
+              ))}
+            </div>
+          )}
+
+          {cardConnections.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                <CreditCard className="w-3 h-3" /> {t('creditCards', { fallback: 'Credit Cards' })}
+              </h3>
+              {cardConnections.map(conn => (
+                <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Synced data */}
@@ -124,15 +167,40 @@ export default function BankSyncPage() {
             <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {t('recentSyncs')}
             </h2>
-            {sources.map(stat => (
-              <BankStatsCard
-                key={stat.source}
-                stat={stat}
-                connectionId={connections.find(c => c.bank_source === stat.source)?.id}
-                t={t}
-                lang={currentLanguage}
-              />
-            ))}
+
+            {bankStats.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                  <Landmark className="w-3 h-3" /> {t('bankAccounts', { fallback: 'Bank Accounts' })}
+                </h3>
+                {bankStats.map(stat => (
+                  <BankStatsCard
+                    key={stat.source}
+                    stat={stat}
+                    connectionId={connections.find(c => c.bank_source === stat.source)?.id}
+                    t={t}
+                    lang={currentLanguage}
+                  />
+                ))}
+              </div>
+            )}
+
+            {cardStats.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                  <CreditCard className="w-3 h-3" /> {t('creditCards', { fallback: 'Credit Cards' })}
+                </h3>
+                {cardStats.map(stat => (
+                  <BankStatsCard
+                    key={stat.source}
+                    stat={stat}
+                    connectionId={connections.find(c => c.bank_source === stat.source)?.id}
+                    t={t}
+                    lang={currentLanguage}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         )}
 

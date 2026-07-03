@@ -17,8 +17,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, CreditCard, BarChart3, User,
-  PlusCircle, MinusCircle, Tag, RepeatIcon, Calculator,
+  Home, CreditCard, User,
+  PlusCircle, MinusCircle, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, Menu, X, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -139,8 +139,8 @@ const FullNav = () => {
     { key: 'dashboard',    label: t('nav.dashboard')    || 'Home',         icon: Home,       href: '/',             exact: true },
     { key: 'transactions', label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
     null, // center FAB slot
-    { key: 'analytics',   label: t('nav.analytics')    || 'Analytics',    icon: BarChart3,  href: '/analytics' },
-    { key: 'profile',     label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile' },
+    { key: 'bank-sync',    label: t('bankSync.title')   || 'Bank Sync',    icon: Building2,  href: '/bank-sync' },
+    { key: 'profile',      label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile' },
   ], [t, loadedModulesCount]); // eslint-disable-line
 
   const isActive = useCallback((tab) => {
@@ -178,20 +178,6 @@ const FullNav = () => {
 
   const toolActions = useMemo(() => [
     {
-      key: 'categories',
-      label: t('nav.categories') || 'Categories',
-      icon: Tag,
-      iconTint: 'text-indigo-500 dark:text-indigo-400',
-      action: () => { handleClose(); dispatch('open-categories'); },
-    },
-    {
-      key: 'recurring',
-      label: t('nav.recurring') || 'Recurring',
-      icon: RepeatIcon,
-      iconTint: 'text-purple-500 dark:text-purple-400',
-      action: () => { handleClose(); dispatch('open-recurring'); },
-    },
-    {
       key: 'exchange',
       label: t('nav.exchange') || 'Exchange',
       icon: Calculator,
@@ -204,13 +190,6 @@ const FullNav = () => {
       icon: HelpCircle,
       iconTint: 'text-teal-500 dark:text-teal-400',
       action: () => { handleClose(); dispatch('open-onboarding'); },
-    },
-    {
-      key: 'bank-sync',
-      label: t('bankSync.title') || 'Bank Sync',
-      icon: Building2,
-      iconTint: 'text-emerald-500 dark:text-emerald-400',
-      action: () => closeAndGo('/bank-sync'),
     },
     ...(isAdmin ? [{
       key: 'admin',

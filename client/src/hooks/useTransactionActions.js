@@ -13,7 +13,7 @@
  * - All original functionality preserved
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from './useTransactions';
 import { useToast } from './useToast';
@@ -77,9 +77,6 @@ export const useTransactionActions = (context = 'transactions') => {
     deleting: isDeleting,
     refetch: refetchTransactions
   } = useTransactions({ strategy: contextConfig.strategy });
-
-  // ✅ FIXED: Remove non-existent hook import - implement deleteTemplate directly
-  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
 
   // ✅ FIXED: Add proper logging utility
   const logAction = useCallback((message, data = null) => {
@@ -181,52 +178,33 @@ export const useTransactionActions = (context = 'transactions') => {
   }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, refetchTransactions, logAction]);
 
   /**
-   * Delete Transaction - Fixed parameter handling
-   * 
+   * Delete Transaction (soft delete, one-time transactions only)
+   *
    * @param {number} id - Transaction ID to delete
-   * @param {object} options - Delete options
    * @returns {Promise} - Deletion result
    */
-  const deleteTransaction = useCallback(async (id, options = {}) => {
-    const { deleteAll = false, deleteFuture = false, deleteSingle = false } = options;
-    
+  const deleteTransaction = useCallback(async (id) => {
     try {
-      logAction(`Deleting transaction ${id}`, { deleteAll, deleteFuture, deleteSingle });
-      
-      // ✅ FIX: Determine the correct delete strategy
-      let result;
-      if (deleteAll) {
-        // Delete entire recurring series or template
-        result = await baseDeleteTransaction(id, { deleteAll: true });
-      } else if (deleteFuture) {
-        // Stop future occurrences  
-        result = await baseDeleteTransaction(id, { deleteFuture: true });
-      } else {
-        // Delete single occurrence (default)
-        result = await baseDeleteTransaction(id, { deleteSingle: true });
-      }
-      
+      logAction(`Deleting transaction ${id}`);
+
+      const result = await baseDeleteTransaction(id);
+
       await invalidateRelevantQueries('critical');
-      
-      if (deleteAll) {
-        await queryClient.invalidateQueries({ queryKey: ['templates'] });
-        await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
-      }
-      
+
       setTimeout(() => {
         refetchTransactions();
       }, 200);
-      
+
       // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
       refreshAll();
-      
+
       logAction(`Transaction ${id} deleted successfully`);
       return result;
     } catch (error) {
       logAction(`Failed to delete transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, queryClient, refreshAll, refetchTransactions, logAction]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, refreshAll, refetchTransactions, logAction]);
 
   /**
    * 🔥 FRESH BULK DELETE - Simple and reliable implementation
@@ -388,121 +366,25 @@ export const useTransactionActions = (context = 'transactions') => {
     }
   }, [queryClient]);
 
-  // ✅ NEW: Recurring template operations
-  const createRecurringTemplate = useCallback(async (data) => {
-    try {
-      logAction('Creating recurring template', { amount: data.amount });
-      
-      // Use the createTransaction method with _isRecurring flag
-      const recurringData = {
-        ...data,
-        _isRecurring: true
-      };
-      
-      const result = await baseCreateTransaction(recurringData);
-      
-      // Enhanced invalidation for recurring templates
-      await invalidateRelevantQueries('high');
-      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
-      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
-      
-      refreshAll();
-      
-      logAction('Recurring template created successfully');
-      return result;
-    } catch (error) {
-      logAction('Failed to create recurring template', { error: error.message });
-      throw error;
-    }
-  }, [baseCreateTransaction, invalidateRelevantQueries, refreshAll, logAction, queryClient]);
-
-  const updateRecurringTemplate = useCallback(async (id, data) => {
-    try {
-      logAction('Updating recurring template', { id, amount: data.amount });
-      
-      // For now, use the regular update transaction - this might need server-side improvement
-      const result = await baseUpdateTransaction('expense', id, data);
-      
-      // Enhanced invalidation for recurring templates
-      await invalidateRelevantQueries('high');
-      queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
-      queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
-      
-      refreshAll();
-      
-      logAction('Recurring template updated successfully');
-      return result;
-    } catch (error) {
-      logAction('Failed to update recurring template', { error: error.message });
-      throw error;
-    }
-  }, [baseUpdateTransaction, invalidateRelevantQueries, refreshAll, logAction, queryClient]);
-
-  /**
-   * ✅ DELETE TEMPLATE: Dedicated template deletion
-   */
-  const deleteTemplate = useCallback(async (templateId) => {
-    if (isDeletingTemplate) return;
-    
-    setIsDeletingTemplate(true);
-    try {
-      logAction('Deleting recurring template', { templateId });
-      
-      const result = await transactionAPI.deleteRecurringTemplate(templateId);
-      
-      if (result.success) {
-        // Enhanced invalidation for template deletion
-        await invalidateRelevantQueries('critical');
-        queryClient.invalidateQueries({ queryKey: ['recurringTransactions'] });
-        queryClient.invalidateQueries({ queryKey: ['upcomingTransactions'] });
-        queryClient.invalidateQueries({ queryKey: ['templates'] });
-        
-        setTimeout(() => {
-          refetchTransactions();
-        }, 200);
-        
-        refreshAll();
-        logAction('Template deleted successfully');
-        
-        toastService.success('Template deleted successfully');
-        
-        return result.data;
-      } else {
-        throw new Error(result.error?.message || 'Failed to delete template');
-      }
-    } catch (error) {
-      logAction('Failed to delete template', { error: error.message });
-      throw error;
-    } finally {
-      setIsDeletingTemplate(false);
-    }
-  }, [isDeletingTemplate, invalidateRelevantQueries, queryClient, refetchTransactions, refreshAll, logAction]);
-
   return {
     // ✅ PRESERVED: CRUD Operations (enhanced with infinite loading support)
     createTransaction,
-    updateTransaction, 
+    updateTransaction,
     deleteTransaction,
-    deleteTemplate, // ✅ FIXED: Now properly implemented
-    
-    // ✅ NEW: Recurring template operations
-    createRecurringTemplate,
-    updateRecurringTemplate,
-    
+
     // ✅ PRESERVED: Loading States
     isCreating,
     isUpdating,
     isDeleting,
-    
+
     // ✅ ENHANCED: Operations with infinite loading support
     bulkOperations,
     freshBulkDelete,
     forceRefreshAll,
-    
-    // ✅ PRESERVED: State Helper  
-    isDeletingTemplate,
-    isOperating: isCreating || isUpdating || isDeleting || isDeletingTemplate,
-    
+
+    // ✅ PRESERVED: State Helper
+    isOperating: isCreating || isUpdating || isDeleting,
+
     // ✅ NEW: Context information for debugging
     context,
     contextConfig: process.env.NODE_ENV === 'development' ? contextConfig : undefined

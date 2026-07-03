@@ -31,8 +31,6 @@ import { LoadingSpinner } from '../ui';
 import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 
 // ✅ Lazy-loaded modals for performance
-const CategoryManager = React.lazy(() => import('../features/categories/CategoryManager'));
-const RecurringManagerPanel = React.lazy(() => import('../features/transactions/recurring/ModernRecurringManagerPanel.jsx'));
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
 
 const Header = () => {
@@ -64,21 +62,15 @@ const Header = () => {
   useEffect(() => {
     const openOnboarding  = () => setActiveModal('onboarding');
     const closeOnboarding = () => setActiveModal(null);
-    const openCategories  = () => setActiveModal('categories');
-    const openRecurring   = () => setActiveModal('recurring');
     const openExchange    = () => setActiveModal('exchange');
 
     window.addEventListener('open-onboarding',  openOnboarding);
     window.addEventListener('close-onboarding', closeOnboarding);
-    window.addEventListener('open-categories',  openCategories);
-    window.addEventListener('open-recurring',   openRecurring);
     window.addEventListener('open-exchange',    openExchange);
 
     return () => {
       window.removeEventListener('open-onboarding',  openOnboarding);
       window.removeEventListener('close-onboarding', closeOnboarding);
-      window.removeEventListener('open-categories',  openCategories);
-      window.removeEventListener('open-recurring',   openRecurring);
       window.removeEventListener('open-exchange',    openExchange);
     };
   }, []);
@@ -134,8 +126,7 @@ const Header = () => {
             <nav className="hidden lg:flex items-center space-x-8">
               {[
                 { name: t('nav.dashboard'), href: '/', current: location.pathname === '/' },
-                { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' },
-                { name: t('nav.analytics'), href: '/analytics', current: location.pathname === '/analytics' }
+                { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' }
                 // ✅ REMOVED: Profile (moved to user dropdown only)
                 // ✅ REMOVED: Admin Dashboard (moved to user dropdown only)
               ].map((item) => (
@@ -199,17 +190,6 @@ const Header = () => {
           <LoadingSpinner size="lg" />
         </div>
       }>
-        {activeModal === 'categories' && (
-          <CategoryManager
-            isOpen={true}
-            onClose={closeModal}
-          />
-        )}
-        
-        {activeModal === 'recurring' && (
-          <RecurringManagerPanel isOpen={true} onClose={closeModal} />
-        )}
-        
         {activeModal === 'exchange' && (
           <ExchangeCalculator
             isOpen={true}

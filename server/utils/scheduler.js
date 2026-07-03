@@ -1,12 +1,11 @@
 /**
  * 🕒 OPTIMIZED SCHEDULER SERVICE
- * Manages recurring transactions and database maintenance
- * Integrates with the new RecurringEngine for enhanced performance
+ * Manages background maintenance jobs (token cleanup, bank sync enqueue,
+ * database maintenance).
  * @module utils/scheduler
  */
 
 const cron = require('node-cron');
-const RecurringEngine = require('./RecurringEngine');
 const db = require('../config/db');
 const logger = require('./logger');
 
@@ -14,7 +13,6 @@ class Scheduler {
   constructor() {
     this.jobs = new Map();
     this.isInitialized = false;
-    this.startupTimer = null;
     this.stats = {
       totalJobs: 0,
       successfulRuns: 0,
@@ -34,9 +32,6 @@ class Scheduler {
     }
 
     try {
-      // ✅ FIXED: Single daily recurring job (runs at 6 AM) - no overlapping jobs
-      this.scheduleJob('daily-recurring', '0 6 * * *', this.runRecurringGeneration.bind(this));
-      
       // Daily token cleanup (runs at 2 AM)
       this.scheduleJob('token-cleanup', '0 2 * * *', this.runTokenCleanup.bind(this));
 
@@ -51,25 +46,6 @@ class Scheduler {
       // against bank anti-fraud lockouts (frequent logins = account block).
       this.scheduleJob('bank-sync-enqueue-am', '0 9 * * *', this.runBankSyncEnqueue.bind(this));
       this.scheduleJob('bank-sync-enqueue-pm', '0 19 * * *', this.runBankSyncEnqueue.bind(this));
-      
-      // ✅ FIXED: Startup generation with better duplicate protection
-      this.startupTimer = setTimeout(async () => {
-        try {
-          // Only run if no recurring generation has happened in the last 6 hours
-          const lastRun = this.stats.lastRun ? new Date(this.stats.lastRun) : null;
-          const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
-          
-          if (!lastRun || lastRun < sixHoursAgo) {
-            await this.runRecurringGeneration('startup');
-          } else {
-            logger.info('⏭️ Skipping startup recurring generation - recent run detected', {
-              lastRun: lastRun.toISOString()
-            });
-          }
-        } catch (error) {
-          logger.error('❌ Startup recurring generation failed', { error: error.message });
-        }
-      }, 5000); // 5 second delay to ensure database is ready
 
       this.isInitialized = true;
       logger.info('✅ Scheduler initialized with optimized jobs', {
@@ -138,43 +114,6 @@ class Scheduler {
       cronPattern,
       totalJobs: this.stats.totalJobs
     });
-  }
-
-  /**
-   * 🔄 Run recurring transaction generation with overlap protection
-   */
-  async runRecurringGeneration(trigger = 'scheduled') {
-    // ✅ PROTECTION: Prevent overlapping executions
-    if (this._recurringRunning) {
-      logger.warn('⚠️ Recurring generation already running, skipping', { trigger });
-      return { generated: 0, processed: 0, skipped: true };
-    }
-    
-    this._recurringRunning = true;
-    
-    try {
-      logger.info('🔄 Starting optimized recurring transaction generation', { trigger });
-      
-      const result = await RecurringEngine.generateAllRecurringTransactions();
-      
-      logger.info('✅ Recurring transaction generation completed', {
-        ...result,
-        trigger,
-        timestamp: new Date().toISOString()
-      });
-
-      return result;
-
-    } catch (error) {
-      logger.error('❌ Recurring transaction generation failed', {
-        error: error.message,
-        trigger,
-        timestamp: new Date().toISOString()
-      });
-      throw error;
-    } finally {
-      this._recurringRunning = false;
-    }
   }
 
   /**
@@ -293,7 +232,7 @@ class Scheduler {
       logger.info('🔧 Starting database maintenance');
 
       // VACUUM ANALYZE key tables for performance
-      const tables = ['transactions', 'users', 'categories', 'recurring_templates'];
+      const tables = ['transactions', 'users', 'categories'];
       const results = [];
 
       for (const table of tables) {
@@ -334,12 +273,6 @@ class Scheduler {
    */
   stop() {
     try {
-      // Cancel the startup delay timer if it hasn't fired yet
-      if (this.startupTimer) {
-        clearTimeout(this.startupTimer);
-        this.startupTimer = null;
-      }
-
       for (const [name, job] of this.jobs) {
         job.stop();
         logger.info(`⏹️ Stopped job: ${name}`);
@@ -377,8 +310,6 @@ class Scheduler {
   async manualTrigger(jobName) {
     try {
       switch (jobName) {
-        case 'recurring':
-          return await this.runRecurringGeneration('manual');
         case 'cleanup':
           return await this.runTokenCleanup();
         case 'unverified-cleanup':
