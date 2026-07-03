@@ -127,7 +127,7 @@ export default defineConfig(({ command, mode }) => {
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
             'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react'],
             'data-vendor': ['@tanstack/react-query', 'axios', 'date-fns', 'zustand'],
-            'chart-vendor': ['recharts', 'react-chartjs-2', 'chart.js'],
+            'chart-vendor': ['recharts'],
             'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
             'style-vendor': ['clsx', 'classnames', 'tailwind-merge']
           }

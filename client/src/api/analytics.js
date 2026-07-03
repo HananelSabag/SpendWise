@@ -5,6 +5,7 @@
  */
 
 import { api } from './client.js';
+import { getAccessToken } from '../auth/tokenStorage.js';
 
 // ✅ Analytics API Module - ALIGNED WITH SERVER ROUTES
 export const analyticsAPI = {
@@ -31,8 +32,7 @@ export const analyticsAPI = {
   // User analytics (matches: GET /analytics/user)
   async getUserAnalytics(params = {}) {
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
-      if (!token) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
+      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
       const response = await api.cachedRequest('/analytics/user', {
         method: 'GET',
         params

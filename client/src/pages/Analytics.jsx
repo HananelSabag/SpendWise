@@ -1,13 +1,20 @@
 /**
- * Analytics Page — v3 (full rebuild)
+ * Analytics Page — v4 (rebuilt for real bank data)
  *
- * Fixes:
- *  1. Data was 0 — double-wrapped API response (r.data?.data)
- *  2. Desktop layout follows ModernDashboard: no extra header block,
- *     global <Header> from App already handles desktop nav.
- *  3. Translations use useTranslation() (no module) + { fallback } objects.
- *  4. Month-over-month change badges on summary cards.
- *  5. Better period labels + richer category chart.
+ * The account behind this app now runs mostly on bank-synced transactions:
+ * checking-account cash-flow EVENTS (a "Visa Leumi" line is a whole month's
+ * card bill settling, not one purchase), almost never user-categorized.
+ * Previous versions treated this like manually-entered, fully-categorized
+ * data and it showed accordingly: a fake "Health Score" ring with no real
+ * basis, and a category chart that was 100% "General" — worthless.
+ *
+ * Server now classifies uncategorized bank rows by real Israeli banking
+ * description patterns (card settlement / loan / cash withdrawal / fees /
+ * transfer) instead of dumping them in one bucket, and every entry is
+ * tagged 'category' (user-set, exact) or 'auto' (inferred) so the UI can
+ * be honest about which numbers are real vs guessed. A new "Bank costs"
+ * card surfaces fees/interest/loan payments — real money leaving the
+ * account that a manual-entry app would never think to show.
  */
 
 import { useState, useMemo } from 'react';
@@ -19,9 +26,9 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Wallet, Target, PieChart as PieIcon,
+  Wallet, Target, PieChart as PieIcon, Landmark, Banknote, Percent,
   Activity, RefreshCw, AlertCircle, BarChart3, DollarSign,
-  Minus,
+  Minus, Info,
 } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../stores';
@@ -38,15 +45,16 @@ import AddTransactionModal from '../components/features/transactions/modals/AddT
 const COLOR = {
   income:   '#10b981',
   expenses: '#ef4444',
-  cats: ['#8b5cf6','#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'],
+  // Muted, low-saturation ramp — the loud rainbow palette was the thing
+  // that "screamed" in dark mode. One consistent family, varied by shade.
+  cats: ['#6366f1', '#0ea5e9', '#14b8a6', '#f59e0b', '#f43f5e', '#8b5cf6', '#64748b'],
 };
 
-// Period has a short label (for tabs) and a full label (for display)
 const PERIODS = [
-  { key: '1M',  label: '1M',  full: 'Month',    days: 31,  months: 1  },
-  { key: '3M',  label: '3M',  full: 'Quarter',  days: 90,  months: 3  },
-  { key: '6M',  label: '6M',  full: '6 Months', days: 180, months: 6  },
-  { key: '1Y',  label: '1Y',  full: 'Year',     days: 365, months: 12 },
+  { key: '1M', label: '1M', full: 'Month',    days: 31,  months: 1  },
+  { key: '3M', label: '3M', full: 'Quarter',  days: 90,  months: 3  },
+  { key: '6M', label: '6M', full: '6 Months', days: 180, months: 6  },
+  { key: '1Y', label: '1Y', full: 'Year',     days: 365, months: 12 },
 ];
 
 // ─── Data hook ────────────────────────────────────────────────────────────────
@@ -57,7 +65,6 @@ function useAnalyticsData(period) {
     queryFn: async () => {
       const r = await analyticsAPI.getDashboardSummary({ period: period.days });
       if (!r.success) throw new Error(r.error?.message || 'Failed');
-      // Unwrap double-wrapped response: r.data = server JSON = { success, data: {...} }
       return r.data?.data ?? r.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -92,24 +99,15 @@ function useDerivedMetrics(summary, trends) {
     const net         = summary?.monthlyStats?.net      ?? (income - Math.abs(expenses));
     const savingsRate = summary?.summary?.savingsRate   || 0;
 
-    // Month-over-month from trends array
     const trendArr = trends?.trends || [];
     const cur  = trendArr[trendArr.length - 1];
     const prev = trendArr[trendArr.length - 2];
 
-    const pctChange = (a, b) => {
-      if (!b || b === 0) return null;
-      return Math.round(((a - b) / Math.abs(b)) * 100);
-    };
+    const pctChange = (a, b) => (!b ? null : Math.round(((a - b) / Math.abs(b)) * 100));
+    const incomeChange  = cur && prev ? pctChange(cur.income,   prev.income)   : null;
+    const expenseChange = cur && prev ? pctChange(cur.expenses, prev.expenses) : null;
 
-    const incomeChange   = cur && prev ? pctChange(cur.income,   prev.income)   : null;
-    const expenseChange  = cur && prev ? pctChange(cur.expenses, prev.expenses) : null;
-
-    // Average daily spending
-    const totalDays = (trends?.period || '').replace(' months', '') * 30 || 30;
-    const dailyAvg  = expenses > 0 ? Math.abs(expenses) / totalDays : 0;
-
-    return { income, expenses, net, savingsRate, incomeChange, expenseChange, dailyAvg };
+    return { income, expenses, net, savingsRate, incomeChange, expenseChange };
   }, [summary, trends]);
 }
 
@@ -140,7 +138,6 @@ function PeriodTabs({ period, onChange }) {
 
 function ChangeBadge({ pct, invert = false }) {
   if (pct === null || pct === undefined) return null;
-  // invert=true: for expenses, a decrease is good (green)
   const isGood = invert ? pct <= 0 : pct >= 0;
   const Icon = pct > 0 ? TrendingUp : pct < 0 ? TrendingDown : Minus;
   return (
@@ -162,58 +159,27 @@ function SummaryCards({ metrics, formatCurrency, t }) {
   const { income, expenses, net, savingsRate, incomeChange, expenseChange } = metrics;
 
   const cards = [
-    {
-      label:  t('stats.income',      { fallback: 'Income' }),
-      value:  formatCurrency(income),
-      icon:   ArrowUpRight,
-      color:  'green',
-      badge:  <ChangeBadge pct={incomeChange} />,
-    },
-    {
-      label:  t('stats.expenses',    { fallback: 'Expenses' }),
-      value:  formatCurrency(Math.abs(expenses)),
-      icon:   ArrowDownRight,
-      color:  'red',
-      badge:  <ChangeBadge pct={expenseChange} invert />,
-    },
-    {
-      label:  t('stats.net',         { fallback: 'Net Balance' }),
-      value:  formatCurrency(Math.abs(net)),
-      icon:   Wallet,
-      color:  net >= 0 ? 'green' : 'red',
-      badge:  null,
-    },
-    {
-      label:  t('stats.savingsRate', { fallback: 'Savings Rate' }),
-      value:  `${Math.round(savingsRate)}%`,
-      icon:   Target,
-      color:  savingsRate >= 20 ? 'green' : savingsRate >= 10 ? 'yellow' : 'red',
-      badge:  null,
-    },
+    { label: t('stats.income',      { fallback: 'Income' }),   value: formatCurrency(income),
+      icon: ArrowUpRight,  tint: 'text-emerald-500 dark:text-emerald-400', badge: <ChangeBadge pct={incomeChange} /> },
+    { label: t('stats.expenses',    { fallback: 'Expenses' }), value: formatCurrency(Math.abs(expenses)),
+      icon: ArrowDownRight, tint: 'text-red-500 dark:text-red-400', badge: <ChangeBadge pct={expenseChange} invert /> },
+    { label: t('stats.net',         { fallback: 'Net Balance' }), value: formatCurrency(Math.abs(net)),
+      icon: Wallet, tint: net >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400', badge: null },
+    { label: t('stats.savingsRate', { fallback: 'Savings Rate' }), value: `${Math.round(savingsRate)}%`,
+      icon: Target, tint: savingsRate >= 20 ? 'text-emerald-500 dark:text-emerald-400' : savingsRate >= 10 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400', badge: null },
   ];
-
-  const palette = {
-    green:  'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-    red:    'bg-red-100    dark:bg-red-900/30    text-red-700    dark:text-red-400',
-    yellow: 'bg-amber-100  dark:bg-amber-900/30  text-amber-700  dark:text-amber-400',
-  };
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {cards.map(({ label, value, icon: Icon, color, badge }) => (
-        <div
-          key={label}
-          className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/60 shadow-sm"
-        >
+      {cards.map(({ label, value, icon: Icon, tint, badge }) => (
+        <div key={label} className="glass-card rounded-2xl p-4">
           <div className="flex items-start justify-between mb-3">
-            <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', palette[color])}>
-              <Icon className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700/60">
+              <Icon className={cn('w-4 h-4', tint)} />
             </div>
             {badge}
           </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight tabular-nums">
-            {value}
-          </p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight tabular-nums">{value}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
         </div>
       ))}
@@ -226,7 +192,7 @@ function SummaryCards({ metrics, formatCurrency, t }) {
 function ChartTooltip({ active, payload, label, formatCurrency }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl p-3 text-sm min-w-[150px]">
+    <div className="glass-menu rounded-xl p-3 text-sm min-w-[150px]">
       <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{label}</p>
       {payload.map(entry => (
         <div key={entry.dataKey} className="flex items-center gap-2 mb-1 last:mb-0">
@@ -250,7 +216,6 @@ function TrendsChart({ trends, formatCurrency, t }) {
       month:    d.month,
       income:   Math.abs(Number(d.income)   || 0),
       expenses: Math.abs(Number(d.expenses) || 0),
-      savings:  Math.max(0, Number(d.savings) || 0),
     }));
   }, [trends]);
 
@@ -304,8 +269,6 @@ function TrendsChart({ trends, formatCurrency, t }) {
             stroke={COLOR.expenses} fill="url(#gExp)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
         </AreaChart>
       </ResponsiveContainer>
-
-      {/* Legend */}
       <div className="flex items-center gap-5 pt-2">
         {[
           { color: COLOR.income,   key: 'stats.income',   fb: 'Income' },
@@ -321,37 +284,45 @@ function TrendsChart({ trends, formatCurrency, t }) {
   );
 }
 
-// ─── Category breakdown (list + mini bars) ────────────────────────────────────
+// ─── Spending breakdown — real categories + auto-detected bank patterns ───────
 
-function CategoryBreakdown({ trends, formatCurrency, t }) {
+function SpendingBreakdown({ trends, formatCurrency, t }) {
   const data = useMemo(() => {
     const cats = trends?.categories || [];
     const total = cats.reduce((s, c) => s + Math.abs(Number(c.amount) || 0), 0);
-    return cats.slice(0, 7).map((c, i) => ({
-      name:    c.name || 'Other',
-      amount:  Math.abs(Number(c.amount) || 0),
-      count:   c.count || 0,
-      pct:     total > 0 ? Math.round((Math.abs(Number(c.amount) || 0) / total) * 100) : 0,
-      color:   COLOR.cats[i % COLOR.cats.length],
+    return cats.slice(0, 8).map((c, i) => ({
+      name:   c.name || 'Other',
+      source: c.source || 'auto',
+      amount: Math.abs(Number(c.amount) || 0),
+      count:  c.count || 0,
+      pct:    total > 0 ? Math.round((Math.abs(Number(c.amount) || 0) / total) * 100) : 0,
+      color:  COLOR.cats[i % COLOR.cats.length],
     }));
   }, [trends]);
+
+  const hasAuto = data.some(d => d.source === 'auto');
 
   if (!data.length) {
     return (
       <div className="flex items-center justify-center h-32 text-gray-400 dark:text-gray-500 text-sm">
-        {t('analytics.noCategoryData', { fallback: 'No category data' })}
+        {t('analytics.noCategoryData', { fallback: 'No spending data yet' })}
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {data.map(({ name, amount, count, pct, color }) => (
+      {data.map(({ name, source, amount, count, pct, color }) => (
         <div key={name}>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
               <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{name}</span>
+              {source === 'auto' && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 shrink-0">
+                  {t('analytics.autoDetected', { fallback: 'auto' })}
+                </span>
+              )}
               <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{count}x</span>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -362,67 +333,51 @@ function CategoryBreakdown({ trends, formatCurrency, t }) {
             </div>
           </div>
           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct}%`, background: color }}
-            />
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
           </div>
         </div>
       ))}
+      {hasAuto && (
+        <div className="flex items-start gap-1.5 pt-1 text-[11px] text-gray-400 dark:text-gray-500">
+          <Info className="w-3 h-3 shrink-0 mt-0.5" />
+          <span>{t('analytics.autoDetectedHint', {
+            fallback: '"auto" groups are guessed from your bank transaction descriptions, not categories you set',
+          })}</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Health score ─────────────────────────────────────────────────────────────
+// ─── Bank costs — fees, interest, loans, cash (real bank-specific insight) ────
 
-function HealthRing({ score }) {
-  const color = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
-  const circ  = 2 * Math.PI * 28;
-  const dash  = (score / 100) * circ;
-  return (
-    <div className="relative w-20 h-20 shrink-0">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor"
-          className="text-gray-100 dark:text-gray-700" strokeWidth="5" />
-        <circle cx="32" cy="32" r="28" fill="none" stroke={color}
-          strokeWidth="5" strokeLinecap="round"
-          strokeDasharray={`${dash} ${circ - dash}`} />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-base font-bold text-gray-900 dark:text-white">{score}</span>
-      </div>
-    </div>
-  );
-}
+function BankCosts({ trends, formatCurrency, t }) {
+  const costs = trends?.bankCosts;
+  const hasAny = costs && (costs.feesInterest > 0 || costs.loanPayments > 0 || costs.cashWithdrawn > 0);
+  if (!hasAny) return null;
 
-function HealthScore({ metrics, t }) {
-  const { savingsRate } = metrics;
-  const score = Math.min(100, Math.max(0, Math.round(savingsRate * 1.2)));
-
-  const { levelKey, color } = score >= 80
-    ? { levelKey: 'health.excellent', color: 'text-emerald-600 dark:text-emerald-400' }
-    : score >= 60
-    ? { levelKey: 'health.good',      color: 'text-blue-600 dark:text-blue-400' }
-    : score >= 40
-    ? { levelKey: 'health.fair',      color: 'text-amber-600 dark:text-amber-400' }
-    : { levelKey: 'health.poor',      color: 'text-red-600 dark:text-red-400' };
-
-  const fallbacks = { 'health.excellent': 'Excellent', 'health.good': 'Good', 'health.fair': 'Fair', 'health.poor': 'Needs Work' };
+  const items = [
+    { label: t('analytics.feesInterest', { fallback: 'Fees & Interest' }), value: costs.feesInterest, icon: Percent, tint: 'text-amber-500 dark:text-amber-400' },
+    { label: t('analytics.loanPayments', { fallback: 'Loan Payments' }),   value: costs.loanPayments, icon: Landmark, tint: 'text-indigo-500 dark:text-indigo-400' },
+    { label: t('analytics.cashWithdrawn', { fallback: 'Cash Withdrawn' }), value: costs.cashWithdrawn, icon: Banknote, tint: 'text-teal-500 dark:text-teal-400',
+      sub: costs.cashWithdrawalCount ? `${costs.cashWithdrawalCount}x` : null },
+  ].filter(i => i.value > 0);
 
   return (
-    <div className="flex items-center gap-4">
-      <HealthRing score={score} />
-      <div>
-        <p className={cn('text-xl font-bold', color)}>
-          {t(levelKey, { fallback: fallbacks[levelKey] })}
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          {t('health.financialHealth', { fallback: 'Financial Health' })}
-        </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          {t('health.savingsRate', { fallback: 'Savings Rate' })}: {Math.round(savingsRate)}%
-        </p>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {items.map(({ label, value, icon: Icon, tint, sub }) => (
+        <div key={label} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 shrink-0">
+            <Icon className={cn('w-4 h-4', tint)} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+              {formatCurrency(value)} {sub && <span className="text-xs font-normal text-gray-400">· {sub}</span>}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -444,18 +399,17 @@ function RecentList({ summary, formatCurrency, t }) {
         let Icon = DollarSign;
         try { Icon = getIconComponent(tx.category_icon || 'Receipt') || DollarSign; } catch {}
         return (
-          <div key={tx.id || i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+          <div key={tx.id || i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
             <div className={cn(
-              'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-              isIncome
-                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
-                : 'bg-red-100    dark:bg-red-900/40    text-red-700    dark:text-red-400',
+              'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-white dark:bg-gray-800',
+              isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400',
             )}>
               <Icon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {tx.description || t('transactions.noDescription', { fallback: 'No description' })}
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-1">
+                {tx.bank_source && <Landmark className="w-3 h-3 text-gray-400 shrink-0" />}
+                <span className="truncate">{tx.description || t('transactions.noDescription', { fallback: 'No description' })}</span>
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500">
                 {tx.category_name || t('categories.uncategorized', { fallback: 'Uncategorized' })}
@@ -476,19 +430,19 @@ function RecentList({ summary, formatCurrency, t }) {
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
-function Card({ icon: Icon, iconBg, title, subtitle, action, children, className }) {
+function Card({ icon: Icon, iconTint, title, subtitle, action, children, className }) {
   return (
-    <div className={cn('bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700/60 shadow-sm', className)}>
+    <div className={cn('glass-card rounded-2xl p-5', className)}>
       {(Icon || title) && (
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {Icon && (
-              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm', iconBg)}>
-                <Icon className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gray-100 dark:bg-gray-700/60">
+                <Icon className={cn('w-4 h-4', iconTint)} />
               </div>
             )}
             <div>
-              {title   && <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>}
+              {title    && <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>}
               {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>}
             </div>
           </div>
@@ -500,17 +454,15 @@ function Card({ icon: Icon, iconBg, title, subtitle, action, children, className
   );
 }
 
-// ─── Mobile layout — has its own title/period sticky bar ──────────────────────
+// ─── Mobile layout ─────────────────────────────────────────────────────────────
 
 function MobileAnalytics({ period, setPeriod, summary, trends, metrics, formatCurrency, t, navigate, refetch, refreshing, setRefreshing }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-24">
-
-      {/* Sticky mobile title bar (no global nav on mobile, only bottom nav) */}
-      <div className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 px-4 pt-3 pb-2">
+      <div className="glass-card sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-4 pt-3 pb-2">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -533,50 +485,40 @@ function MobileAnalytics({ period, setPeriod, summary, trends, metrics, formatCu
       </div>
 
       <div className="px-4 py-4 space-y-4">
-
-        {/* Summary cards */}
         <SummaryCards metrics={metrics} formatCurrency={formatCurrency} t={t} />
 
-        {/* Financial Health */}
         <Card
-          icon={Target}
-          iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
-          title={t('health.financialHealth', { fallback: 'Financial Health' })}
-          subtitle={t('health.yourScore', { fallback: 'Your Score' })}
-        >
-          <HealthScore metrics={metrics} t={t} />
-        </Card>
-
-        {/* Monthly Trends */}
-        <Card
-          icon={TrendingUp}
-          iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
+          icon={TrendingUp} iconTint="text-indigo-500 dark:text-indigo-400"
           title={t('analytics.monthlyTrends', { fallback: 'Monthly Trends' })}
           subtitle={t('analytics.incomeVsExpenses', { fallback: 'Income vs Expenses' })}
         >
           <TrendsChart trends={trends} formatCurrency={formatCurrency} t={t} />
         </Card>
 
-        {/* Top Categories */}
         <Card
-          icon={PieIcon}
-          iconBg="bg-gradient-to-br from-purple-500 to-violet-600"
-          title={t('analytics.topCategories', { fallback: 'Top Categories' })}
-          subtitle={t('analytics.topCategoriesDesc', { fallback: 'Where your money goes' })}
+          icon={PieIcon} iconTint="text-violet-500 dark:text-violet-400"
+          title={t('analytics.whereMoneyWent', { fallback: 'Where your money went' })}
+          subtitle={t('analytics.topCategoriesDesc', { fallback: 'Spending breakdown' })}
         >
-          <CategoryBreakdown trends={trends} formatCurrency={formatCurrency} t={t} />
+          <SpendingBreakdown trends={trends} formatCurrency={formatCurrency} t={t} />
         </Card>
 
-        {/* Recent Transactions */}
+        <Card
+          icon={Landmark} iconTint="text-amber-500 dark:text-amber-400"
+          title={t('analytics.bankCosts', { fallback: 'Bank Costs' })}
+          subtitle={t('analytics.bankCostsDesc', { fallback: 'Fees, interest & loans this period' })}
+        >
+          <BankCosts trends={trends} formatCurrency={formatCurrency} t={t} />
+        </Card>
+
         {summary?.recentTransactions?.length > 0 && (
           <Card
-            icon={Activity}
-            iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
+            icon={Activity} iconTint="text-emerald-500 dark:text-emerald-400"
             title={t('analytics.recentTransactions', { fallback: 'Recent Transactions' })}
             subtitle={t('analytics.lastActivity', { fallback: 'Latest activity' })}
             action={
               <button onClick={() => navigate('/transactions')}
-                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">
                 {t('actions.viewAll', { fallback: 'View all' })}
               </button>
             }
@@ -589,14 +531,13 @@ function MobileAnalytics({ period, setPeriod, summary, trends, metrics, formatCu
   );
 }
 
-// ─── Desktop layout — no extra header (global Header already shown by App) ────
+// ─── Desktop layout ────────────────────────────────────────────────────────────
 
 function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatCurrency, t, navigate, refetch, refreshing, setRefreshing }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-10 space-y-6">
 
-        {/* Page title row — inline, NOT a sticky card (global Header handles nav) */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -618,20 +559,14 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
           </div>
         </div>
 
-        {/* Summary cards */}
         <SummaryCards metrics={metrics} formatCurrency={formatCurrency} t={t} />
 
-        {/* Main 2-col grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-          {/* Left 2/3 */}
           <div className="xl:col-span-2 space-y-6">
-
-            {/* Trends chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/60 shadow-sm">
+            <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-                  <TrendingUp className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700/60">
+                  <TrendingUp className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-white">
@@ -645,12 +580,28 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
               <TrendsChart trends={trends} formatCurrency={formatCurrency} t={t} />
             </div>
 
-            {/* Recent transactions */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/60 shadow-sm">
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700/60">
+                  <Landmark className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                    {t('analytics.bankCosts', { fallback: 'Bank Costs' })}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('analytics.bankCostsDesc', { fallback: 'Fees, interest & loans this period' })}
+                  </p>
+                </div>
+              </div>
+              <BankCosts trends={trends} formatCurrency={formatCurrency} t={t} />
+            </div>
+
+            <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
-                    <Activity className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700/60">
+                    <Activity className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">
@@ -662,7 +613,7 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
                   </div>
                 </div>
                 <button onClick={() => navigate('/transactions')}
-                  className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                  className="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">
                   {t('actions.viewAll', { fallback: 'View all' })} →
                 </button>
               </div>
@@ -670,26 +621,24 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
             </div>
           </div>
 
-          {/* Right 1/3 */}
           <div className="space-y-6">
-
-            {/* Health score */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/60 shadow-sm">
+            <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Target className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-700/60">
+                  <PieIcon className="w-5 h-5 text-violet-500 dark:text-violet-400" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                    {t('health.financialHealth', { fallback: 'Financial Health' })}
+                    {t('analytics.whereMoneyWent', { fallback: 'Where your money went' })}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('health.yourScore', { fallback: 'Your Score' })}
+                    {t('analytics.topCategoriesDesc', { fallback: 'Spending breakdown' })}
                   </p>
                 </div>
               </div>
-              <HealthScore metrics={metrics} t={t} />
-              <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <SpendingBreakdown trends={trends} formatCurrency={formatCurrency} t={t} />
+
+              <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/60">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {summary?.summary?.totalTransactions || 0}
@@ -703,28 +652,10 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
                     {summary?.summary?.categoriesUsed || 0}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {t('stats.categories', { fallback: 'Categories' })}
+                    {t('stats.categories', { fallback: 'Categorized' })}
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Category breakdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/60 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
-                  <PieIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                    {t('analytics.topCategories', { fallback: 'Top Categories' })}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('analytics.topCategoriesDesc', { fallback: 'Where your money goes' })}
-                  </p>
-                </div>
-              </div>
-              <CategoryBreakdown trends={trends} formatCurrency={formatCurrency} t={t} />
             </div>
           </div>
         </div>
@@ -736,13 +667,12 @@ function DesktopAnalytics({ period, setPeriod, summary, trends, metrics, formatC
 // ─── Root component ────────────────────────────────────────────────────────────
 
 export default function Analytics() {
-  // No module arg — full 'module.key' keys with { fallback } objects
   const { t }              = useTranslation();
   const { formatCurrency } = useCurrency();
   const navigate           = useNavigate();
   const isMobile           = useIsMobile();
 
-  const [period,     setPeriod]     = useState(PERIODS[0]); // 1M default
+  const [period,     setPeriod]     = useState(PERIODS[0]);
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd,    setShowAdd]    = useState(false);
 
@@ -767,7 +697,7 @@ export default function Analytics() {
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error?.message}</p>
           <button onClick={refetch}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors">
             {t('common.retry', { fallback: 'Retry' })}
           </button>
         </div>

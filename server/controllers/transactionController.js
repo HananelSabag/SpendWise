@@ -17,6 +17,23 @@ const {
   generateUpcomingTransactions
 } = require('../services/recurringService');
 
+// Auto-classification for uncategorized bank transactions, used by
+// getUserAnalytics(). Israeli banks report checking-account cash-flow
+// EVENTS, not itemized purchases — a "לאומי ויזה" line is one month's
+// entire credit-card bill settling, not a single purchase. Real
+// "categories" (Food, Transport, ...) don't map onto that; these patterns
+// group by what the event actually IS instead. Matched against live
+// Leumi/Yahav sync data. Static, not user input — safe to interpolate
+// directly into the query string (no SQL injection surface).
+const BANK_PATTERN_CASE = `
+  WHEN t.description ~* '(דביט|ויזה|מקס|ישראכרט|אשראי)' THEN 'Card Spending'
+  WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'Cash Withdrawals'
+  WHEN t.description ~* '(פרעון הלוואה|הלוואה)' THEN 'Loan Payments'
+  WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'Bank Fees & Interest'
+  WHEN t.description ~* 'מס הכנסה' THEN 'Tax'
+  WHEN t.description ~* '(ביט|פייבוקס|העברה)' THEN 'Transfers'
+`.trim();
+
 const transactionController = {
   /**
    * Get dashboard data with transactions summary
@@ -144,21 +161,41 @@ const transactionController = {
   /**
    * Get user analytics data
    * @route GET /api/v1/analytics/user
-   * ✅ FIXED: Now calls SQL analytics function instead of returning empty arrays
+   *
+   * Rebuilt for real bank data (2026-07). The old category breakdown did
+   * `LEFT JOIN categories ... COALESCE(c.name, 'General')` — for an account
+   * where every transaction comes from a bank sync (0 user-set categories),
+   * that collapsed 100% of spend into one useless "General" bucket. Bank
+   * checking-account data isn't itemized purchases anyway (a single "Visa
+   * Leumi" line is the WHOLE month's card bill, not one purchase) — real
+   * categories genuinely don't apply to it the way they do to manual entries.
+   *
+   * Fix: transactions WITH a category (manual entries, or bank rows a user
+   * categorized) get real category names. Bank rows WITHOUT a category get
+   * classified by matching their bank description against known Israeli
+   * banking patterns (card settlement, loan, cash withdrawal, fees/interest,
+   * transfer) — each row tagged source:'category' or source:'auto' so the
+   * client can be honest about which numbers are real vs inferred.
+   *
+   * Also dropped: the `insights` array (broken GROUP BY producing a
+   * meaningless "average monthly spending" — grouped by month+type+AMOUNT,
+   * which only sums when two transactions in a month happen to share an
+   * exact amount) and the 50-row `transactions` dump — neither was read by
+   * any client code.
    */
   getUserAnalytics: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const months = parseInt(req.query.months) || 12;
 
     try {
-      // Monthly income vs expenses trends
+      // Monthly income vs expenses trends (unchanged — this SQL was correct)
       const trendsResult = await db.query(`
         SELECT
           TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month,
           COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS income,
           COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses
         FROM transactions
-        WHERE user_id = $1
+        WHERE user_id = $1 AND deleted_at IS NULL
           AND date >= DATE_TRUNC('month', NOW() - ($2 - 1) * INTERVAL '1 month')
         GROUP BY DATE_TRUNC('month', date)
         ORDER BY DATE_TRUNC('month', date)
@@ -174,83 +211,81 @@ const transactionController = {
           : 0
       }));
 
-      // Spending by category
+      // Spending breakdown: real category where set, auto-classified bank
+      // pattern where not. Hebrew regexes match the actual description
+      // vocabulary Israeli banks use (verified against live Leumi/Yahav
+      // sync data) — see BANK_PATTERN_CASE below.
       const categoriesResult = await db.query(`
         SELECT
-          COALESCE(c.name, 'General') AS name,
-          SUM(t.amount) AS amount,
+          bucket AS name,
+          source,
+          SUM(amount) AS amount,
           COUNT(*) AS count
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = $1
-          AND t.type = 'expense'
-          AND t.date >= NOW() - $2 * INTERVAL '1 month'
-        GROUP BY c.name
+        FROM (
+          SELECT
+            t.amount,
+            CASE
+              WHEN c.name IS NOT NULL THEN c.name
+              ${BANK_PATTERN_CASE}
+              ELSE 'Other'
+            END AS bucket,
+            CASE WHEN c.name IS NOT NULL THEN 'category' ELSE 'auto' END AS source
+          FROM transactions t
+          LEFT JOIN categories c ON t.category_id = c.id
+          WHERE t.user_id = $1 AND t.deleted_at IS NULL
+            AND t.type = 'expense'
+            AND t.date >= NOW() - $2 * INTERVAL '1 month'
+        ) classified
+        GROUP BY bucket, source
         ORDER BY amount DESC
-        LIMIT 10
+        LIMIT 12
       `, [userId, months]);
 
       const categories = categoriesResult.rows.map(r => ({
         name: r.name,
+        source: r.source,
         amount: parseFloat(r.amount),
         count: parseInt(r.count)
       }));
 
-      // Summary insights
-      const summaryResult = await db.query(`
+      // Bank-specific costs: interest, fees, and loan payments are real
+      // money leaving the account that a manual-entry app would never
+      // surface on its own — genuinely useful because this IS bank data.
+      const bankCostsResult = await db.query(`
         SELECT
-          COALESCE(AVG(monthly_expense), 0) AS avg_monthly_spending,
-          COALESCE(AVG(monthly_expense) / 30.0, 0) AS avg_daily_spending,
-          COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS total_income,
-          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS total_expenses
+          COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
+          COALESCE(SUM(amount) FILTER (WHERE bucket = 'loan'),  0) AS loan_payments,
+          COALESCE(SUM(amount) FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawn,
+          COALESCE(COUNT(*)    FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawal_count
         FROM (
           SELECT
-            DATE_TRUNC('month', date) AS month,
-            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS monthly_expense,
-            type,
-            amount
-          FROM transactions
-          WHERE user_id = $1
-            AND date >= NOW() - $2 * INTERVAL '1 month'
-          GROUP BY DATE_TRUNC('month', date), type, amount
-        ) sub
+            t.amount,
+            CASE
+              WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'fees'
+              WHEN t.description ~* '(פרעון הלוואה|הלוואה)' AND t.type = 'expense' THEN 'loan'
+              WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'cash'
+              ELSE 'other'
+            END AS bucket
+          FROM transactions t
+          WHERE t.user_id = $1 AND t.deleted_at IS NULL
+            AND t.type = 'expense' AND t.bank_source IS NOT NULL
+            AND t.date >= NOW() - $2 * INTERVAL '1 month'
+        ) classified
       `, [userId, months]);
 
-      const summary = summaryResult.rows[0] || {};
-
-      const insights = [
-        {
-          type: 'spending',
-          title: 'Average Monthly Spending',
-          value: parseFloat(summary.avg_monthly_spending || 0)
-        },
-        {
-          type: 'spending',
-          title: 'Average Daily Spending',
-          value: parseFloat(summary.avg_daily_spending || 0)
-        },
-        {
-          type: 'info',
-          title: 'Total Income',
-          value: parseFloat(summary.total_income || 0)
-        },
-        {
-          type: 'info',
-          title: 'Total Expenses',
-          value: parseFloat(summary.total_expenses || 0)
-        }
-      ];
-
-      // Recent transactions for context
-      const transactions = await Transaction.findByUser(userId, { limit: 50 });
+      const bankCosts = bankCostsResult.rows[0] || {};
 
       res.json({
         success: true,
         data: {
-          insights,
           trends,
           categories,
-          transactions,
+          bankCosts: {
+            feesInterest: parseFloat(bankCosts.fees_interest || 0),
+            loanPayments: parseFloat(bankCosts.loan_payments || 0),
+            cashWithdrawn: parseFloat(bankCosts.cash_withdrawn || 0),
+            cashWithdrawalCount: parseInt(bankCosts.cash_withdrawal_count || 0),
+          },
           period: `${months} months`,
           generatedAt: new Date().toISOString()
         }
