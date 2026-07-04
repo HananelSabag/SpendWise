@@ -51,7 +51,7 @@ export const onboardingAPI = {
   async getStatus() {
     try {
       const response = await api.client.get('/onboarding/status');
-      
+
       return {
         success: true,
         data: response.data
@@ -60,26 +60,6 @@ export const onboardingAPI = {
       return {
         success: false,
         error: api.normalizeError ? api.normalizeError(error) : { message: error.message }
-      };
-    }
-  },
-
-  /**
-   * Skip onboarding for now
-   */
-  async skip() {
-    try {
-      const response = await api.client.post('/onboarding/skip');
-
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      // If skip endpoint doesn't exist, just return success
-      return {
-        success: true,
-        data: { message: 'Onboarding skipped' }
       };
     }
   }

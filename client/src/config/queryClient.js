@@ -9,8 +9,6 @@
 
 import { QueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-// ✅ NEW: Import unified API instead of old utils/api
-import { api } from '../api';
 
 // Environment config
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -61,14 +59,6 @@ export const queryConfigs = {
   dashboard: {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  },
-  
-  // Categories - rarely change
-  categories: {
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    gcTime: 48 * 60 * 60 * 1000, // 48 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false
   },
@@ -279,23 +269,6 @@ export const cacheUtils = {
     }
     
     return stats;
-  },
-  
-  // ✅ FIXED: Prefetch common queries using unified API
-  prefetchCommonQueries: async () => {
-    try {
-      // Prefetch categories (rarely change)
-      await queryClient.prefetchQuery({
-        queryKey: ['categories'],
-        queryFn: async () => {
-          const result = await api.categories.getAll();
-          return result.success ? result.data : [];
-        },
-        ...queryConfigs.categories
-      });
-    } catch (error) {
-      console.warn('Failed to prefetch common queries:', error);
-    }
   },
   
   // Monitor performance

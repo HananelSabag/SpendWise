@@ -4,21 +4,6 @@
  * ✅ FIXED: Only exports that actually exist
  */
 
-// Core hooks - useApi only has named exports, no default
-export { 
-  useApiQuery, 
-  useApiMutation, 
-  usePaginatedQuery, 
-  useInfiniteApiQuery,
-  useRealtimeQuery,
-  useDependentQuery,
-  usePrefetch,
-  useCacheManager,
-  queryKeys,
-  mutationKeys,
-  useQueryPerformance
-} from './useApi';
-
 // Authentication - useAuth only has named export
 export { useAuth } from './useAuth';
 
