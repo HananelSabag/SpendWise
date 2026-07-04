@@ -36,17 +36,6 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
-// Get recent transactions
-router.get('/recent',
-  getTransactionsLimiter,
-  transactionController.getRecentTransactions
-);
-
-// Get summary data for an explicit calendar year/month
-router.get('/summary',
-  getSummaryLimiter,
-  transactionController.getMonthlySummary
-);
 
 /**
  * Transaction Query Routes

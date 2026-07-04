@@ -50,49 +50,7 @@ const transactionAPI = {
    */
   async getAll(params = {}) {
     try {
-      console.log('🌐 Transactions API Call:', {
-        url: '/transactions',
-        params,
-        fullUrl: `/transactions?${new URLSearchParams(params).toString()}`,
-        timestamp: new Date().toISOString()
-      });
-
       const response = await apiClient.client.get('/transactions', { params });
-      
-      console.log('🌐 Transactions API Response:', {
-        url: '/transactions',
-        params,
-        responseSuccess: response?.data?.success,
-        transactionCount: response?.data?.data?.transactions?.length || 0,
-        firstTransactionDate: response?.data?.data?.transactions?.[0]?.date,
-        lastTransactionDate: response?.data?.data?.transactions?.[response?.data?.data?.transactions?.length - 1]?.date,
-        allDates: response?.data?.data?.transactions?.map(t => t.date).slice(0, 5), // First 5 dates
-        timestamp: new Date().toISOString()
-      });
-
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('🌐 Transactions API Error:', {
-        url: '/transactions',
-        params,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-      console.error('TransactionAPI.getAll error:', error);
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /**
-   * Get recent transactions (dashboard/quick view)
-   * @param {number} limit - Number of transactions to fetch
-   * @returns {Promise<Object>} Recent transactions
-   */
-  async getRecent(limit = 10) {
-    try {
-      const response = await apiClient.client.get('/transactions/recent', { 
-        params: { limit } 
-      });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
@@ -108,21 +66,12 @@ const transactionAPI = {
    */
   async update(type, id, data) {
     try {
-      console.log('📝 Updating transaction:', { 
-        type, 
-        id,
-        timezone: data.timezone || 'not provided',
-        transaction_datetime: data.transaction_datetime || 'not provided'
-      });
-      
       const response = await apiClient.client.put(`/transactions/${type}/${id}`, data);
-      console.log('✅ Transaction updated successfully:', {
-        id: response.data.data?.id,
+      logger.debug('Transaction updated', {
         transaction_datetime: response.data.data?.transaction_datetime
       });
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('❌ Transaction update failed:', error);
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
     }
   },
@@ -153,30 +102,9 @@ const transactionAPI = {
     }
 
     try {
-      console.log('🔥 FRESH BULK DELETE: Starting...', {
-        transactionIds,
-        count: transactionIds.length,
-        token: localStorage.getItem('accessToken') ? 'TOKEN_PRESENT' : 'NO_TOKEN',
-        apiUrl: apiClient.client.defaults.baseURL,
-        headers: apiClient.client.defaults.headers
-      });
-
-      const response = await apiClient.client.post('/transactions/bulk-delete', {
-        transactionIds
-      });
-
-      console.log('✅ FRESH BULK DELETE: Success!', response.data);
+      const response = await apiClient.client.post('/transactions/bulk-delete', { transactionIds });
       return response.data;
-
     } catch (error) {
-      console.error('❌ FRESH BULK DELETE: Failed!', error);
-      console.error('❌ FRESH BULK DELETE: Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        headers: error.response?.headers,
-        request: error.request,
-        message: error.message
-      });
       throw error;
     }
   },

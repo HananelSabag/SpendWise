@@ -352,66 +352,6 @@ const exportAsPDF = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get export options and metadata
- * @route GET /api/v1/export/options
- */
-const getExportOptions = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  
-  // Get user's transaction count for better UX
-  const userData = await User.findById(userId);
-  
-  res.json({
-    success: true,
-    data: {
-      availableFormats: [
-        {
-          format: 'csv',
-          name: 'CSV (Comma Separated Values)',
-          description: 'Compatible with Excel, Google Sheets, and most spreadsheet applications',
-          endpoint: '/api/v1/export/csv',
-          available: true,
-          mimeType: 'text/csv'
-        },
-        {
-          format: 'json',
-          name: 'JSON (JavaScript Object Notation)',
-          description: 'Machine-readable format with complete data structure',
-          endpoint: '/api/v1/export/json',
-          available: true,
-          mimeType: 'application/json'
-        },
-        {
-          format: 'pdf',
-          name: 'PDF (Portable Document Format)',
-          description: 'Professional report with charts and financial analysis',
-          endpoint: '/api/v1/export/pdf',
-          available: true,
-          mimeType: 'application/pdf'
-        }
-      ],
-      dataIncluded: [
-        'All transactions (income and expenses)',
-        'Transaction categories and descriptions',
-        'User preferences and settings',
-        'Account summary and statistics',
-        'Export metadata and timestamps'
-      ],
-      userInfo: {
-        currency: userData?.currency_preference || 'USD',
-        language: userData?.language_preference || 'en'
-      },
-      limits: {
-        maxRecords: 10000,
-        retentionDays: 0
-      },
-      privacyNote: 'Your exported data is generated on-demand and not stored on our servers.'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-/**
  * 🎨 Generate beautiful PDF financial report
  * @param {Object} exportData - Complete export data from database
  * @param {Boolean} includeAnalytics - Whether to include analytics section
@@ -694,5 +634,4 @@ module.exports = {
   exportAsCSV,
   exportAsJSON,
   exportAsPDF,
-  getExportOptions
 };

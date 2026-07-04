@@ -172,26 +172,6 @@ class Transaction {
   }
 
   /**
-   * Recent transactions for the dashboard.
-   */
-  static async getRecent(userId, limit = 10) {
-    try {
-      const query = `
-        SELECT ${SELECT_COLUMNS}
-        FROM transactions t
-        WHERE t.user_id = $1 AND t.deleted_at IS NULL
-        ORDER BY t.created_at DESC
-        LIMIT $2
-      `;
-      const result = await db.query(query, [userId, limit]);
-      return result.rows;
-    } catch (error) {
-      logger.error('Recent transactions retrieval failed', { userId, error: error.message });
-      throw error;
-    }
-  }
-
-  /**
    * Single transaction by id (owner-scoped).
    */
   static async findById(transactionId, userId) {
@@ -302,44 +282,6 @@ class Transaction {
 
   /**
    * Income/expense summary for a half-open date range [startDate, endDate).
-   * Callers compute the range (financial-period or calendar month) — this
-   * method never assumes a rolling day-count window.
-   */
-  static async getSummary(userId, { startDate, endDate }) {
-    try {
-      const query = `
-        SELECT
-          type,
-          COUNT(*) as transaction_count,
-          COALESCE(SUM(amount), 0) as total_amount,
-          COALESCE(AVG(amount), 0) as avg_amount
-        FROM transactions
-        WHERE user_id = $1
-          AND date >= $2 AND date < $3
-          AND deleted_at IS NULL
-        GROUP BY type
-      `;
-
-      const result = await db.query(query, [userId, startDate, endDate]);
-
-      const incomeData = result.rows.find(row => row.type === 'income') || {};
-      const expenseData = result.rows.find(row => row.type === 'expense') || {};
-
-      const summary = {
-        total_transactions: (parseInt(incomeData.transaction_count) || 0) + (parseInt(expenseData.transaction_count) || 0),
-        total_income: parseFloat(incomeData.total_amount) || 0,
-        total_expenses: parseFloat(expenseData.total_amount) || 0,
-        avg_expense: parseFloat(expenseData.avg_amount) || 0,
-        avg_income: parseFloat(incomeData.avg_amount) || 0,
-      };
-      summary.net_balance = summary.total_income - summary.total_expenses;
-
-      return summary;
-    } catch (error) {
-      logger.error('Transaction summary failed', { userId, error: error.message });
-      throw error;
-    }
-  }
 }
 
 module.exports = {

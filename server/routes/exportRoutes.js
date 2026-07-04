@@ -8,23 +8,13 @@ const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const exportController = require('../controllers/exportController');
-const { securityMiddleware } = require('../middleware/security'); // 🛡️ Export protection
-const { apiLimiter } = require('../middleware/rateLimiter');
-const { asyncHandler } = require('../middleware/errorHandler');
+const { securityMiddleware } = require('../middleware/security');
 
 // Apply authentication to all export routes
 router.use(auth);
 
 // Apply export-specific rate limiting (3 exports per 24h per user — heavier than general API limit)
 router.use(securityMiddleware.export);
-
-/**
- * @route   GET /api/v1/export/options
- * @desc    Get available export options and metadata
- * @access  Private
- * @limit   Standard API rate limit
- */
-router.get('/options', exportController.getExportOptions);
 
 /**
  * @route   GET /api/v1/export/csv

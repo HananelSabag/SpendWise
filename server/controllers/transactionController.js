@@ -196,30 +196,6 @@ const transactionController = {
   }),
 
   /**
-   * Get recent transactions
-   * @route GET /api/v1/transactions/recent
-   */
-  getRecentTransactions: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const limit = parseInt(req.query.limit) || 10;
-
-    try {
-      const transactions = await Transaction.getRecent(userId, limit);
-
-      res.json({
-        success: true,
-        data: {
-          transactions: transactions,
-          total: transactions.length
-        }
-      });
-    } catch (error) {
-      logger.error('Recent transactions failed', { userId, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
    * Get filtered transactions with pagination
    * @route GET /api/v1/transactions
    */
@@ -450,36 +426,6 @@ const transactionController = {
       }
 
       logger.error('Deletion failed', { id, userId, error: error.message });
-      throw error;
-    }
-  }),
-
-  /**
-   * Get summary for an explicit calendar year/month.
-   * @route GET /api/v1/transactions/summary
-   */
-  getMonthlySummary: asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const year = parseInt(req.query.year) || new Date().getFullYear();
-    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
-
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = toSqlDate(new Date(year, month, 1)); // first day of next month, exclusive
-
-    try {
-      const summary = await Transaction.getSummary(userId, { startDate, endDate });
-
-      res.json({
-        success: true,
-        data: {
-          ...summary,
-          year,
-          month,
-          period: `${year}-${month.toString().padStart(2, '0')}`
-        }
-      });
-    } catch (error) {
-      logger.error('Monthly summary failed', { userId, year, month, error: error.message });
       throw error;
     }
   }),

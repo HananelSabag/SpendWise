@@ -251,19 +251,4 @@ router.post('/set-password',
   userController.setPassword
 );
 
-/**
- * 🚀 NEW: Performance Monitoring Routes
- */
-
-/**
- * @route   GET /api/v1/users/performance
- * @desc    Get user controller performance statistics
- * @access  Private (Admin only in production)
- */
-router.get('/performance',
-  auth,
-  requireAdmin,
-  userController.getPerformanceStats
-);
-
 module.exports = router;

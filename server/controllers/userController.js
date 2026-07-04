@@ -827,33 +827,6 @@ const userController = {
   }),
 
   /**
-   * 📊 Get performance statistics
-   * @route GET /api/v1/users/performance
-   */
-  getPerformanceStats: asyncHandler(async (req, res) => {
-    try {
-      const stats = {
-        user_model: User.getPerformanceStats(),
-        cache_stats: {
-          user_cache: User.getPerformanceStats().cache
-        }
-      };
-
-      res.json({
-        success: true,
-        data: stats,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      logger.error('❌ Performance stats fetch failed', {
-        error: error.message
-      });
-      throw error;
-    }
-  }),
-
-  /**
    * 🔐 Change user password with current password verification
    * @route POST /api/v1/users/change-password
    */
