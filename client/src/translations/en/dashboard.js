@@ -285,7 +285,8 @@ export default {
     expenses: "Expenses",
     net: "Net",
     cycleDay: "Cycle day {{day}}",
-    cycleHint: "Your billing cycle starts on day {{day}} of each month"
+    cycleHint: "Your billing cycle starts on day {{day}} of each month",
+    notSet: "Set your financial cycle day so these totals match your real month, not the 1st"
   },
   sourcesOverview: {
     banksTitle: "Bank accounts",

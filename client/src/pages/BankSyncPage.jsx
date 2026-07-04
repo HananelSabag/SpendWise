@@ -58,13 +58,15 @@ export default function BankSyncPage() {
     try {
       const res = await updateProfile({ billing_cycle_day: day });
       if (res?.success) {
-        toast.success('bankSync.financialCycleSaved');
+        // Pass the resolved string — the toast's t() is scoped to the 'toast'
+        // namespace and can't resolve a 'bankSync.*' key (would show it raw).
+        toast.success(t('financialCycleSaved'));
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       } else {
-        toast.error('bankSync.loadError');
+        toast.error(t('loadError'));
       }
     } catch {
-      toast.error('bankSync.loadError');
+      toast.error(t('loadError'));
     } finally {
       setSavingCycle(false);
     }
