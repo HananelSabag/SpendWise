@@ -9,10 +9,11 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard, CalendarClock } from 'lucide-react';
+import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard, CalendarClock, ChevronRight } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from '../stores';
+import { useTranslation, useAuth } from '../stores';
 import { cn } from '../utils/helpers';
 import apiClient from '../api/client';
 import bankConnectionsApi from '../api/bankConnections';
@@ -41,6 +42,8 @@ const fetchBankStats = () => apiClient.get('/bank-sync/stats').then(r => r.data.
 
 export default function BankSyncPage() {
   const { t, currentLanguage } = useTranslation('bankSync');
+  const { user } = useAuth();
+  const cycleDay = Number(user?.billing_cycle_day) || 1;
   const queryClient = useQueryClient();
   const [showConnect, setShowConnect] = useState(false);
 
@@ -135,6 +138,26 @@ export default function BankSyncPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-5 space-y-6">
+
+        {/* Financial cycle — the period that drives every dashboard summary.
+            Editable in Profile → Preferences; surfaced here so it's reachable
+            from the money-management hub, not only the dashboard. */}
+        <Link
+          to="/profile"
+          className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-700/70 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+            <CalendarClock className="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-300" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('financialCycleTitle')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t('financialCycleValue', { day: cycleDay })}</p>
+          </div>
+          <span className="flex items-center gap-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
+            {t('financialCycleChange')}
+            <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
+          </span>
+        </Link>
 
         {/* My connections */}
         <section className="space-y-3">

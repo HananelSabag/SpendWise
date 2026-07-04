@@ -242,7 +242,7 @@ const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
     <div className="glass-card rounded-2xl p-4 space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-          {t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} &amp; {t('sourcesOverview.cardsTitle', { fallback: 'Credit cards' })}
+          {t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} &amp; {t('sourcesOverview.cardsTitle', { fallback: 'Credit companies' })}
         </h3>
         <button
           onClick={() => navigate('/bank-sync')}
@@ -323,7 +323,7 @@ const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
       <div className="flex items-center gap-2 mb-3">
         <PieIcon className="w-4 h-4 text-violet-500 dark:text-violet-400" />
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-          {t('breakdown.title', { fallback: 'Where your money went' })}
+          {t('breakdown.title', { fallback: 'Spending by type' })}
         </h3>
       </div>
       <div className="space-y-2.5">

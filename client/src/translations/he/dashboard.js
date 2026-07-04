@@ -278,7 +278,7 @@ export default {
   },
   sourcesOverview: {
     banksTitle: "חשבונות בנק",
-    cardsTitle: "כרטיסי אשראי",
+    cardsTitle: "חברות אשראי",
     manage: "ניהול",
     connectMore: "חיבור מקור",
     balance: "יתרה זמינה",
@@ -298,7 +298,7 @@ export default {
     cashWithdrawn: "משיכות מזומן"
   },
   breakdown: {
-    title: "לאן הכסף הלך",
+    title: "הוצאות לפי סוג",
     auto: "אוטומטי",
     autoHint: "קבוצות \"אוטומטי\" מוערכות מתיאורי העסקאות הבנקאיות"
   },

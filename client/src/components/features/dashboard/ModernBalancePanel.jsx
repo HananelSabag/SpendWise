@@ -1,27 +1,30 @@
 /**
- * ModernBalancePanel — Bank Sync Edition
+ * ModernBalancePanel — Balance summary (dashboard hero)
  *
- * Shows ONLY data from /bank-sync/stats (bank_accounts + synced transactions).
- * No period tabs, no useBalance hook, no manual-entry logic.
- *
- * Hero:
+ * Shows the user's consolidated bank balance from /bank-sync/stats:
  *   - Real account balance (bank_accounts.balance) when the bank exposes it
- *   - "Not available" when the bank doesn't (e.g. Yahav via israeli-bank-scrapers)
+ *   - "Not available" when it doesn't (e.g. Yahav via israeli-bank-scrapers)
  *
- * Income / expense totals come from ALL synced transactions in the DB,
- * NOT a period-filtered calculation. Net activity is shown separately,
- * clearly labeled — it is NOT the account balance.
+ * Slimmed intentionally: balance + freshness + source chips only. Per-source
+ * income/expense detail lives in the dashboard's SourcesOverview, and
+ * period-based income/expense in the PeriodSummary — this hero no longer
+ * duplicates them. (Its old all-time income/expense/net block was ~half the
+ * screen and its all-time totals visually conflicted with the period card
+ * directly below it.)
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, TrendingUp, TrendingDown, RefreshCw, Landmark, CreditCard, Plus } from 'lucide-react';
+import { Building2, RefreshCw, Landmark, CreditCard, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import apiClient from '../../../api/client';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
+
+// Brand gradient — feels like the SpendWise financial home, not a status panel.
+const HERO_GRADIENT = 'bg-gradient-to-br from-indigo-600 to-purple-700';
 
 // ── Relative time (uses translation keys) ────────────────────────────────────
 function relativeTime(dateStr, t) {
@@ -78,14 +81,9 @@ const ModernBalancePanel = ({ className = '' }) => {
     retry: false,
   });
 
-  // ── Aggregates across all synced sources ────────────────────────────────────
-  const hasSynced    = sources && sources.length > 0;
-  const totalIncome  = (sources || []).reduce((s, src) => s + Number(src.total_income  || 0), 0);
-  const totalExpense = (sources || []).reduce((s, src) => s + Number(src.total_expense || 0), 0);
-  const netActivity  = totalIncome - totalExpense;       // can be negative — labeled correctly
-  const totalTxns    = (sources || []).reduce((s, src) => s + (src.total || 0), 0);
+  const hasSynced = sources && sources.length > 0;
 
-  // Latest sync timestamp
+  // Latest sync timestamp across all sources
   const lastSync = (sources || []).reduce((latest, src) => {
     const d = src.last_sync ? new Date(src.last_sync) : null;
     return !latest || (d && d > latest) ? d : latest;
@@ -100,28 +98,15 @@ const ModernBalancePanel = ({ className = '' }) => {
   const hasRealBalance   = accountsWithBalance.length > 0;
   const totalRealBalance = accountsWithBalance.reduce((s, a) => s + Number(a.balance || 0), 0);
 
-  // Header gradient: green if net positive, red if net negative, gray if no sync
-  const gradientClass = !hasSynced
-    ? 'bg-gradient-to-br from-gray-600 to-gray-700'
-    : netActivity >= 0
-      ? 'bg-gradient-to-br from-emerald-600 to-teal-700'
-      : 'bg-gradient-to-br from-rose-600 to-red-700';
-
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-5">
-          <SkeletonBox className="h-3 w-24 mb-4" />
-          <SkeletonBox className="h-5 w-40 mb-2" />
-          <SkeletonBox className="h-3 w-48 mb-5" />
-          <div className="flex gap-2">
-            <SkeletonBox className="h-6 w-16 rounded-full" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 bg-white dark:bg-gray-800">
-          <div className="p-4"><SkeletonBox className="!bg-gray-100 dark:!bg-gray-700 h-14 rounded-xl" /></div>
-          <div className="p-4"><SkeletonBox className="!bg-gray-100 dark:!bg-gray-700 h-14 rounded-xl" /></div>
+      <div className={cn('rounded-2xl overflow-hidden shadow-lg p-5', HERO_GRADIENT, className)}>
+        <SkeletonBox className="h-3 w-24 mb-4" />
+        <SkeletonBox className="h-9 w-40 mb-4" />
+        <div className="flex gap-2">
+          <SkeletonBox className="h-6 w-20 rounded-full" />
+          <SkeletonBox className="h-6 w-20 rounded-full" />
         </div>
       </div>
     );
@@ -152,23 +137,20 @@ const ModernBalancePanel = ({ className = '' }) => {
 
   const timeLabel = relativeTime(lastSync, t);
 
+  // ── Synced — compact balance-only hero ──────────────────────────────────────
   return (
-    <div className={cn('rounded-2xl overflow-hidden shadow-lg', className)}>
+    <div className={cn('rounded-2xl overflow-hidden shadow-lg text-white', HERO_GRADIENT, className)}>
+      <div className="p-5">
 
-      {/* ── Gradient header ─────────────────────────────────────────── */}
-      <div className={cn('p-5 text-white transition-colors duration-500', gradientClass)}>
-
-        {/* Top row */}
+        {/* Top row — title + freshness + refresh */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 opacity-90">
             <Building2 className="w-4 h-4" />
-            <span className="text-sm font-semibold">{t('title')}</span>
+            <span className="text-sm font-semibold">{t('balanceHeroTitle')}</span>
           </div>
           <div className="flex items-center gap-2">
             {timeLabel && (
-              <span className="text-[11px] opacity-60">
-                {t('updatedAt', { time: timeLabel })}
-              </span>
+              <span className="text-[11px] opacity-60">{t('updatedAt', { time: timeLabel })}</span>
             )}
             <button
               onClick={() => refetch()}
@@ -181,13 +163,12 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         </div>
 
-        {/* Account balance row */}
+        {/* Balance */}
         <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
           {t('accountBalance')}
         </p>
 
         {hasRealBalance ? (
-          /* Bank exposes real balance — show it */
           <motion.div
             key={totalRealBalance}
             initial={{ opacity: 0, y: 4 }}
@@ -198,7 +179,6 @@ const ModernBalancePanel = ({ className = '' }) => {
             <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
           </motion.div>
         ) : (
-          /* Bank doesn't expose balance (e.g. Yahav) */
           <div>
             <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
             <p className="text-[11px] opacity-50 mt-0.5">
@@ -207,7 +187,7 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         )}
 
-        {/* Per-account rows for multiple accounts with balance */}
+        {/* Per-account rows when more than one account has a balance */}
         {hasRealBalance && accountsWithBalance.length > 1 && (
           <div className="mt-2 space-y-0.5">
             {accountsWithBalance.map((a, i) => (
@@ -220,8 +200,8 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         )}
 
-        {/* Source chips — small icon distinguishes a real bank account from a
-            credit card company (which never has a real balance here) */}
+        {/* Source chips — icon distinguishes a real bank account from a credit
+            company (which never has a real balance here) */}
         <div className="flex flex-wrap gap-1.5 mt-4">
           {sources.map(src => {
             const ChipIcon = src.kind === 'credit_card' ? CreditCard : Landmark;
@@ -232,82 +212,11 @@ const ModernBalancePanel = ({ className = '' }) => {
               >
                 <ChipIcon className="w-2.5 h-2.5" />
                 {institutionLabel(src.source)}
-                <span className="opacity-60">
-                  · {t('transactions', { count: src.total })}
-                </span>
+                <span className="opacity-60">· {t('transactions', { count: src.total })}</span>
               </span>
             );
           })}
         </div>
-      </div>
-
-      {/* ── Income / Expense from synced transactions ────────────────── */}
-      <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 rtl:divide-x-reverse">
-
-        <div className="p-4 space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {t('income')}
-            </span>
-          </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
-            <AnimatedNumber value={totalIncome} format={v => formatCurrency(v)} />
-          </p>
-          <div className="h-1 w-full bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
-            <div className="h-full bg-emerald-500 rounded-full w-full" />
-          </div>
-        </div>
-
-        <div className="p-4 space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
-              <TrendingDown className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-            </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {t('expenses')}
-            </span>
-          </div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
-            <AnimatedNumber value={totalExpense} format={v => formatCurrency(v)} />
-          </p>
-          <div className="h-1 w-full bg-red-100 dark:bg-red-900/30 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-red-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{
-                width: totalIncome > 0
-                  ? `${Math.min((totalExpense / totalIncome) * 100, 100)}%`
-                  : '0%',
-              }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Net activity row ─────────────────────────────────────────── */}
-      <div className="bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-700 px-4 py-2.5 flex items-center justify-between">
-        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-          {t('netActivity')}
-        </span>
-        <span className={cn(
-          'text-sm font-bold',
-          netActivity >= 0
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-red-600 dark:text-red-400',
-        )}>
-          {netActivity >= 0 ? '+' : '−'}{formatCurrency(Math.abs(netActivity))}
-        </span>
-      </div>
-
-      {/* ── Footer ───────────────────────────────────────────────────── */}
-      <div className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-100 dark:border-gray-700 px-4 py-2 text-center">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">
-          {t('syncedDaily')}
-        </span>
       </div>
     </div>
   );

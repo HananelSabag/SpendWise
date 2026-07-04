@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Building2, ShieldCheck, ChevronRight, ChevronLeft, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ShieldCheck, ChevronRight, ChevronLeft, Check, Eye, EyeOff, Loader2, Landmark, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -20,7 +20,7 @@ import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
 import { sealCredentials } from '../../../utils/sealedBox';
 import bankConnectionsApi from '../../../api/bankConnections';
-import { bankBrand } from './bankSyncMeta';
+import { bankBrand, institutionKind } from './bankSyncMeta';
 
 // Per-bank credential field definitions. `key` must match what
 // israeli-bank-scrapers expects (see spendwise-agent src/core/banks.js BANKS).
@@ -155,23 +155,46 @@ const ConnectBankModal = ({ isOpen, onClose, onSuccess }) => {
             </motion.div>
           )}
 
-          {/* ── Step 1: pick bank ───────────────────────────────────── */}
+          {/* ── Step 1: pick source ─────────────────────────────────── */}
+          {/* Banks and credit companies are separated — they are different
+              kinds of thing (a bank has a real balance and direct debits; a
+              credit company has itemized charges that later post as one
+              summarized debit in the bank). */}
           {!succeeded && step === 0 && (
-            <motion.div key="pick" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="grid grid-cols-2 gap-3">
-              {Object.keys(BANK_FORMS).map((source) => (
-                <button
-                  key={source}
-                  onClick={() => { setBank(source); setCreds({}); setStep(1); }}
-                  className={cn(
-                    'rounded-xl p-4 text-white text-start bg-gradient-to-br shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]',
-                    bankBrand(source).gradient,
-                    bank === source && 'ring-2 ring-offset-2 ring-indigo-500',
-                  )}
-                >
-                  <Building2 className="w-6 h-6 mb-2 opacity-90" />
-                  <p className="font-bold text-sm">{t(`bankNames.${source}`)}</p>
-                </button>
-              ))}
+            <motion.div key="pick" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="space-y-4">
+              {[
+                { kind: 'bank',        title: t('bankAccounts'), icon: Landmark,   provides: t('banksProvide') },
+                { kind: 'credit_card', title: t('creditCards'),  icon: CreditCard, provides: t('cardsProvide') },
+              ].map(({ kind, title, icon: SecIcon, provides }) => {
+                const list = Object.keys(BANK_FORMS).filter((s) => institutionKind(s) === kind);
+                if (!list.length) return null;
+                return (
+                  <div key={kind} className="space-y-2">
+                    <div>
+                      <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        <SecIcon className="w-3.5 h-3.5" /> {title}
+                      </h4>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">{provides}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {list.map((source) => (
+                        <button
+                          key={source}
+                          onClick={() => { setBank(source); setCreds({}); setStep(1); }}
+                          className={cn(
+                            'rounded-xl p-4 text-white text-start bg-gradient-to-br shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]',
+                            bankBrand(source).gradient,
+                            bank === source && 'ring-2 ring-offset-2 ring-indigo-500',
+                          )}
+                        >
+                          <SecIcon className="w-6 h-6 mb-2 opacity-90" />
+                          <p className="font-bold text-sm">{t(`bankNames.${source}`)}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </motion.div>
           )}
 

@@ -289,7 +289,7 @@ export default {
   },
   sourcesOverview: {
     banksTitle: "Bank accounts",
-    cardsTitle: "Credit cards",
+    cardsTitle: "Credit companies",
     manage: "Manage",
     connectMore: "Connect a source",
     balance: "Available balance",
@@ -309,7 +309,7 @@ export default {
     cashWithdrawn: "Cash Withdrawn"
   },
   breakdown: {
-    title: "Where your money went",
+    title: "Spending by type",
     auto: "auto",
     autoHint: "\"auto\" groups are guessed from bank transaction descriptions"
   },

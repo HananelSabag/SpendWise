@@ -5,6 +5,9 @@
 export default {
   // Page / panel title
   title: 'Bank Sync',
+  // Dashboard balance hero — deliberately NOT "Bank Sync"; the dashboard is
+  // the user's financial home, not a technical sync screen.
+  balanceHeroTitle: 'Balance summary',
   refresh: 'Refresh data',
 
   // Account balance
@@ -37,7 +40,7 @@ export default {
   connectBankSubtitle: 'Automatic transaction sync, twice a day',
   myConnections: 'My Bank Connections',
   bankAccounts: 'Bank Accounts',
-  creditCards: 'Credit Cards',
+  creditCards: 'Credit companies',
   creditCardShort: 'card',
   cardActivity: 'Card Activity',
   noConnections: 'No banks connected yet',
@@ -49,9 +52,14 @@ export default {
   nextAutoSync: 'Next automatic sync ~{{time}}',
   nextAutoSyncTomorrow: 'Next automatic sync ~{{time}} tomorrow',
   bankSectionEmpty: 'No bank account connected yet',
-  cardSectionEmpty: 'No credit card connected yet',
+  cardSectionEmpty: 'No credit company connected yet',
   addBank: 'Add bank',
-  addCard: 'Add card',
+  addCard: 'Add credit company',
+
+  // Financial cycle — the setting that drives every dashboard period summary
+  financialCycleTitle: 'Financial cycle',
+  financialCycleValue: 'Your financial month starts on day {{day}}',
+  financialCycleChange: 'Change',
 
   // Wizard steps
   stepPickBank: 'Choose your bank',

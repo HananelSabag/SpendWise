@@ -5,6 +5,9 @@
 export default {
   // Page / panel title
   title: 'סנכרון בנק',
+  // כותרת כרטיס ריכוז היתרות בדשבורד — לא "סנכרון בנק"; הדשבורד הוא הבית
+  // הפיננסי של המשתמש, לא מסך טכני של סנכרון.
+  balanceHeroTitle: 'ריכוז יתרות',
   refresh: 'רענן נתונים',
 
   // Account balance
@@ -37,7 +40,7 @@ export default {
   connectBankSubtitle: 'סנכרון עסקאות אוטומטי, פעמיים ביום',
   myConnections: 'חיבורי הבנק שלי',
   bankAccounts: 'חשבונות בנק',
-  creditCards: 'כרטיסי אשראי',
+  creditCards: 'חברות אשראי',
   creditCardShort: 'אשראי',
   cardActivity: 'פעילות כרטיס',
   noConnections: 'לא חובר אף בנק עדיין',
@@ -49,9 +52,14 @@ export default {
   nextAutoSync: 'הסנכרון האוטומטי הבא בסביבות {{time}}',
   nextAutoSyncTomorrow: 'הסנכרון האוטומטי הבא בסביבות {{time}} מחר',
   bankSectionEmpty: 'לא חובר חשבון בנק עדיין',
-  cardSectionEmpty: 'לא חובר כרטיס אשראי עדיין',
+  cardSectionEmpty: 'לא חוברה חברת אשראי עדיין',
   addBank: 'הוספת בנק',
-  addCard: 'הוספת כרטיס',
+  addCard: 'הוספת חברת אשראי',
+
+  // מחזור פיננסי — ההגדרה שמניעה כל סיכום תקופתי בדשבורד
+  financialCycleTitle: 'מחזור פיננסי',
+  financialCycleValue: 'החודש הפיננסי שלך מתחיל ביום {{day}}',
+  financialCycleChange: 'שינוי',
 
   // שלבי אשף
   stepPickBank: 'בחר את הבנק שלך',
