@@ -85,13 +85,22 @@ function lastTargetInstant(now = new Date()) {
  */
 async function enqueueDueJobs(now = new Date()) {
   try {
-    // Pending jobs the agent never picked up (machine off for hours) —
-    // fail them so they don't block new syncs forever.
+    // Fail stale jobs so they don't block new syncs forever. Two cases:
+    //  • pending >6h  — the agent never picked it up (machine off for hours).
+    //  • running  >2h — a worker claimed it but died before posting a result.
+    //    A real sync finishes in minutes, and the enqueue below skips any
+    //    connection with a pending/running job — so a zombie 'running' job
+    //    would otherwise permanently block that connection's scheduled syncs.
     const expired = await db.query(`
       UPDATE bank_sync_jobs
       SET status='failed', finished_at=NOW(),
-          result='{"error":"expired — sync agent did not pick this up in time"}'::jsonb
-      WHERE status='pending' AND requested_at < NOW() - INTERVAL '6 hours'
+          result = CASE
+            WHEN status='pending'
+              THEN '{"error":"expired — sync agent did not pick this up in time","transient":true}'::jsonb
+            ELSE '{"error":"expired — worker claimed the job but never reported a result","transient":true}'::jsonb
+          END
+      WHERE (status='pending' AND requested_at < NOW() - INTERVAL '6 hours')
+         OR (status='running' AND COALESCE(started_at, requested_at) < NOW() - INTERVAL '2 hours')
       RETURNING id
     `, [], 'bank_sync_expire_stale');
 
