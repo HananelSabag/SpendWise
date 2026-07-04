@@ -43,7 +43,10 @@ const validators = {
     return !isNaN(dateObj.getTime()) && dateObj.getFullYear() >= 1900 && dateObj.getFullYear() <= 2100;
   },
   
-  categoryId: (id) => {
+  // Generic positive-integer ID validator (Postgres int4 range). Used for
+  // transaction IDs and any other numeric route param — not category-specific
+  // despite the name history (categories were dropped in the bank-sync refactor).
+  positiveInt: (id) => {
     const num = parseInt(id);
     return !isNaN(num) && num > 0 && num <= 2147483647;
   }
@@ -243,7 +246,7 @@ const validate = {
   transactionId: (req, res, next) => {
     const { id } = req.params;
     
-    if (!validators.categoryId(id)) {
+    if (!validators.positiveInt(id)) {
       return res.status(400).json(createValidationError(
         'INVALID_TRANSACTION_ID',
         'Invalid transaction ID'
@@ -311,77 +314,6 @@ const validate = {
           'Limit must be between 1 and 100'
         ));
       }
-    }
-
-    next();
-  },
-
-  /**
-   * Validate period parameter
-   */
-  periodParam: (req, res, next) => {
-    const { period } = req.params;
-    
-    if (!['day', 'week', 'month', 'year', '3months'].includes(period)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_PERIOD',
-        'Period must be day, week, month, year, or 3months'
-      ));
-    }
-
-    next();
-  },
-
-  /**
-   * Validate skip dates
-   */
-  skipDates: (req, res, next) => {
-    const { dates } = req.body;
-    
-    if (!Array.isArray(dates) || dates.length === 0) {
-      return res.status(400).json(createValidationError(
-        'INVALID_SKIP_DATES',
-        'Dates must be a non-empty array'
-      ));
-    }
-
-    if (dates.length > 100) {
-      return res.status(400).json(createValidationError(
-        'TOO_MANY_SKIP_DATES',
-        'Cannot skip more than 100 dates at once'
-      ));
-    }
-
-    for (const date of dates) {
-      if (!validators.date(date)) {
-        return res.status(400).json(createValidationError(
-          'INVALID_SKIP_DATE',
-          'All dates must be valid date strings'
-        ));
-      }
-    }
-
-    next();
-  },
-
-  /**
-   * Validate skip date (single)
-   */
-  skipDate: (req, res, next) => {
-    const { skipDate } = req.body;
-    
-    if (!skipDate) {
-      return res.status(400).json(createValidationError(
-        'MISSING_SKIP_DATE',
-        'Skip date is required'
-      ));
-    }
-
-    if (!validators.date(skipDate)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_SKIP_DATE',
-        'Invalid skip date format'
-      ));
     }
 
     next();

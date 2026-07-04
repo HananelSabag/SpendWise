@@ -14,31 +14,6 @@ const logger = require('../utils/logger');
  * POST /api/onboarding/complete
  * Mark user onboarding as complete
  */
-// ✅ DEBUG: Add GET route to test
-router.get('/complete', auth, async (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'Onboarding routes are working! This should be a POST request, not GET!',
-    user: req.user.id,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ✅ DEBUG: Test route to verify onboarding routes are accessible
-router.get('/test', async (req, res) => {
-  res.json({ 
-    success: true,
-    message: '🚀 Onboarding routes are properly registered and accessible!',
-    routes: [
-      'GET /api/v1/onboarding/test',
-      'GET /api/v1/onboarding/status',
-      'POST /api/v1/onboarding/complete',
-      'POST /api/v1/onboarding/preferences'
-    ],
-    timestamp: new Date().toISOString()
-  });
-});
-
 router.post('/complete', auth, async (req, res) => {
   try {
     const userId = req.user.id;

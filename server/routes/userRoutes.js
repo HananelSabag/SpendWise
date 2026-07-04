@@ -266,39 +266,4 @@ router.get('/performance',
   userController.getPerformanceStats
 );
 
-/**
- * 🚀 Enhanced Middleware for Google OAuth validation
- */
-const validateGoogleAuth = (req, res, next) => {
-  const { idToken, email } = req.body;
-  
-  if (!idToken || !email) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Google ID token and email are required',
-        details: 'Missing required Google OAuth data'
-      }
-    });
-  }
-
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid email format',
-        details: 'Please provide a valid email address'
-      }
-    });
-  }
-
-  next();
-};
-
-// Removed duplicate validation layer to avoid conflicting requirements
-
-module.exports = router; 
+module.exports = router;

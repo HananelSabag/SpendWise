@@ -515,9 +515,8 @@ const userController = {
           first_name: name?.split(' ')[0] || '',
           last_name: name?.split(' ').slice(1).join(' ') || ''
         });
-
-        // Refresh user data
-        user = await User.findById(user.id);
+        // createGoogleOnlyUser already returns the full row (RETURNING *) plus
+        // computed fields — no need to re-fetch it.
 
         logger.info('✅ New Google user created', {
           userId: user.id,
@@ -582,10 +581,9 @@ const userController = {
         }
         
         if (Object.keys(updateData).length > 0) {
-          await User.update(user.id, updateData);
-          
-          // Refresh user data
-          user = await User.findById(user.id);
+          // User.update() already returns the fully-updated, normalized row —
+          // capture it directly instead of a redundant findById round-trip.
+          user = await User.update(user.id, updateData);
         }
         
         logger.info('✅ Existing user authenticated via Google', {

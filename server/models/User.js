@@ -411,7 +411,7 @@ class User {
                   first_name, last_name, avatar, phone, bio, location,
                   website, birthday, preferences, created_at, updated_at,
                   onboarding_completed, language_preference, theme_preference, currency_preference,
-                  billing_cycle_day
+                  billing_cycle_day, google_id, oauth_provider, oauth_provider_id, profile_picture_url
            FROM users WHERE id = $1`,
           [userId]
         );
@@ -440,7 +440,7 @@ class User {
                  first_name, last_name, avatar, phone, bio, location,
                  website, birthday, preferences, created_at, updated_at,
                  onboarding_completed, language_preference, theme_preference, currency_preference,
-                 billing_cycle_day
+                 billing_cycle_day, google_id, oauth_provider, oauth_provider_id, profile_picture_url
       `;
 
       values.push(userId);
