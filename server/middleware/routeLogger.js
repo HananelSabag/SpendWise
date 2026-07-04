@@ -117,7 +117,6 @@ const transactionLogger = (operation) => {
       userId: req.user?.id,
       amount: req.body?.amount,
       type: req.body?.type,
-      categoryId: req.body?.category_id,
       description: req.body?.description?.substring(0, 50) // First 50 chars only
     };
 

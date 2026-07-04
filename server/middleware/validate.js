@@ -186,7 +186,7 @@ const validate = {
    * Validate transaction creation/update
    */
   transaction: (req, res, next) => {
-    const { amount, description, date, category_id } = req.body;
+    const { amount, description, date } = req.body;
 
     // Amount validation (required for creation, optional for update)
     if (amount !== undefined) {
@@ -214,16 +214,6 @@ const validate = {
         return res.status(400).json(createValidationError(
           'INVALID_DATE',
           'Invalid date format or date out of range (1900-2100)'
-        ));
-      }
-    }
-
-    // Category ID validation
-    if (category_id !== undefined && category_id !== null) {
-      if (!validators.categoryId(category_id)) {
-        return res.status(400).json(createValidationError(
-          'INVALID_CATEGORY',
-          'Invalid category ID'
         ));
       }
     }

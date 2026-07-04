@@ -144,12 +144,10 @@ router.get('/test-query', auth, async (req, res) => {
     // Test dashboard query with EXPLAIN ANALYZE
     const testResult = await db.query(`
       EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-            SELECT 
+      SELECT
         t.id, t.type, t.amount, t.description, t.date,
-        COALESCE(c.name, 'General') as category_name,
-        COALESCE(c.icon, 'tag') as category_icon
+        t.raw_category, t.bank_source
       FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
       WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
       ORDER BY t.date DESC, t.created_at DESC
       LIMIT 10

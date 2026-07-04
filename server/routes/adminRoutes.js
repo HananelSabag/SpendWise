@@ -88,6 +88,13 @@ router.get('/activity', adminController.getActivityLog);
 router.get('/statistics', adminController.getStatistics);
 
 /**
+ * @route   GET /api/v1/admin/bank-sync
+ * @desc    Bank-sync visibility: connection health + recent worker jobs
+ * @access  Admin/Super Admin
+ */
+router.get('/bank-sync', adminController.getBankSync);
+
+/**
  * @route   GET /api/v1/admin/health
  * @desc    Admin-specific health check with enhanced details
  * @access  Admin/Super Admin

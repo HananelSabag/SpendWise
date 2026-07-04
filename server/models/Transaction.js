@@ -1,116 +1,145 @@
 /**
- * 💰 TRANSACTION MODEL - CLEAN & ALIGNED WITH DATABASE
- * Simplified model that matches actual database schema
- * Features: Basic CRUD operations, Database schema alignment, Clean code
- * @version 4.0.0 - SIMPLIFIED & FIXED
+ * 💰 TRANSACTION MODEL — bank-sync era
+ *
+ * Rows come from two sources:
+ *   - bank/credit-card sync (bank_source, bank_account_number, bank_sync_id,
+ *     raw_category set by the scraper pipeline — read-only facts)
+ *   - one-time manual entries (no bank_source)
+ *
+ * Schema (actual):
+ *   id, user_id, amount, type ('income'|'expense'), description, notes,
+ *   date, transaction_datetime, raw_category, bank_sync_id, bank_source,
+ *   bank_account_number, created_at, updated_at, deleted_at
+ *
+ * The category system and recurring templates were removed — see the
+ * financial-model refactor. raw_category is the SOURCE-provided label
+ * (e.g. Max supplies one per charge), not a user-managed taxonomy.
  */
 
 const db = require('../config/db');
-const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 
-/**
- * 💰 Transaction Model - Simple & Aligned with Database Schema
- * 
- * Database Schema (ACTUAL):
- * - id (integer, primary key)
- * - user_id (integer, foreign key)
- * - category_id (integer, foreign key, nullable)
- * - amount (numeric, required)
- * - type (varchar: 'income' or 'expense', required)
- * - description (text, nullable)
- * - notes (text, nullable)
- * - date (date, required)
- * - created_at (timestamp)
- * - updated_at (timestamp)
- * - deleted_at (timestamp, nullable)
- */
+const SELECT_COLUMNS = `
+  t.id,
+  t.user_id,
+  t.amount,
+  t.type,
+  t.description,
+  t.notes,
+  t.date,
+  t.transaction_datetime,
+  t.raw_category,
+  t.created_at,
+  t.updated_at,
+  t.bank_source,
+  t.bank_account_number,
+  t.bank_sync_id
+`;
+
+// Resolve the timezone-aware datetime for a manual entry.
+function resolveDateTime(transactionData, transactionDate) {
+  if (transactionData.transaction_datetime) {
+    return new Date(transactionData.transaction_datetime).toISOString();
+  }
+  if (transactionData.time && transactionData.timezone) {
+    try {
+      return new Date(`${transactionDate}T${transactionData.time}:00`).toISOString();
+    } catch (error) {
+      logger.warn('Failed to parse timezone data, using current time:', error.message);
+    }
+  }
+  return new Date().toISOString();
+}
+
 class Transaction {
 
   /**
-   * Create a new transaction - BACKWARD COMPATIBLE VERSION
-   * @param {Object} transactionData - Transaction data
-   * @param {number} userId - User ID
-   * @returns {Promise<Object>} Created transaction
+   * Create a one-time manual transaction.
    */
   static async create(transactionData, userId) {
     try {
-      // ✅ FIXED: Insert into appropriate table based on transaction type
-      let query;
-
-      // ✅ TIMEZONE FIX: Use client's timezone-aware datetime or current time
       const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
-      let transactionDateTime;
-      
-      if (transactionData.transaction_datetime) {
-        // Client provided timezone-aware datetime - use it directly
-        transactionDateTime = new Date(transactionData.transaction_datetime).toISOString();
-      } else if (transactionData.time && transactionData.timezone) {
-        // Combine date + time in user's timezone
-        try {
-          const dateTimeString = `${transactionDate}T${transactionData.time}:00`;
-          const localDateTime = new Date(dateTimeString);
-          transactionDateTime = localDateTime.toISOString();
-        } catch (error) {
-          logger.warn('Failed to parse timezone data, using current time:', error.message);
-          transactionDateTime = new Date().toISOString();
-        }
-      } else {
-        // Fallback: use current time instead of forcing noon UTC
-        transactionDateTime = new Date().toISOString();
-      }
-      
-      query = `
+      const transactionDateTime = resolveDateTime(transactionData, transactionDate);
+
+      const query = `
         INSERT INTO transactions (
-          user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
+          user_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, user_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
       `;
 
-      // ✅ CRITICAL: Add type AND transaction_datetime to values array
-      const finalValues = [
+      const result = await db.query(query, [
         userId,
-        transactionData.categoryId || null,
         parseFloat(transactionData.amount),
-        transactionData.type || 'expense', // ✅ MUST provide type!
+        transactionData.type || 'expense',
         transactionData.description || '',
         transactionData.notes || '',
-        transactionDate, // Date field
-        transactionDateTime, // DateTime field for constraint
-      ];
-
-      const result = await db.query(query, finalValues);
+        transactionDate,
+        transactionDateTime,
+      ]);
       const transaction = result.rows[0];
-      
-      // Type is already included in the result from the unified table
 
-      logger.info('Transaction created successfully', { 
-        transactionId: transaction.id, 
-        userId, 
+      logger.info('Transaction created successfully', {
+        transactionId: transaction.id,
+        userId,
         amount: transaction.amount,
         type: transaction.type,
-        table: transactionData.type === 'income' ? 'income' : 'expenses'
       });
 
       return transaction;
     } catch (error) {
-      logger.error('Transaction creation failed', { error: error.message, transactionData, userId });
+      logger.error('Transaction creation failed', { error: error.message, userId });
       throw error;
     }
   }
 
+  // Shared WHERE builder for list + count so their filters can never drift.
+  static buildFilters(userId, options = {}) {
+    const { type = null, dateFrom = null, dateTo = null, search = null } = options;
+
+    const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
+    const values = [userId];
+    let paramCount = 2;
+
+    if (type) {
+      conditions.push(`t.type = $${paramCount}`);
+      values.push(type);
+      paramCount++;
+    }
+    if (dateFrom) {
+      conditions.push(`t.date >= $${paramCount}`);
+      values.push(dateFrom);
+      paramCount++;
+    }
+    if (dateTo) {
+      conditions.push(`t.date <= $${paramCount}`);
+      values.push(dateTo);
+      paramCount++;
+    }
+    if (search) {
+      conditions.push(`(
+        LOWER(t.description) LIKE LOWER($${paramCount}) OR
+        LOWER(t.notes) LIKE LOWER($${paramCount}) OR
+        LOWER(t.raw_category) LIKE LOWER($${paramCount})
+      )`);
+      values.push(`%${search}%`);
+      paramCount++;
+    }
+
+    return { conditions, values, paramCount };
+  }
+
   /**
-   * Get total count of transactions for pagination
-   * @param {number} userId - User ID
-   * @param {Object} options - Query options (same as findByUser but without limit/offset)
-   * @returns {Promise<number>} Total count
+   * Total row count for the given filters (pagination).
    */
   static async getTotalCount(userId, options = {}) {
-    // SIMPLIFIED: was running an extra COUNT query on every call to decide
-    // whether to use legacy tables. Migration 07 + the live data check show
-    // every user is now in the unified table. Always use unified.
     try {
-      return await this.getTotalCountUnified(userId, options);
+      const { conditions, values } = this.buildFilters(userId, options);
+      const result = await db.query(
+        `SELECT COUNT(*) as total FROM transactions t WHERE ${conditions.join(' AND ')}`,
+        values,
+      );
+      return parseInt(result.rows[0].total) || 0;
     } catch (error) {
       logger.error('Transaction count failed', { userId, error: error.message });
       throw error;
@@ -118,151 +147,24 @@ class Transaction {
   }
 
   /**
-   * Get total count from unified transactions table
-   */
-  static async getTotalCountUnified(userId, options = {}) {
-    const {
-      categoryId = null,
-      type = null,
-      dateFrom = null,
-      dateTo = null,
-      search = null
-    } = options;
-
-    const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
-    const values = [userId];
-    let paramCount = 2;
-
-    if (categoryId) {
-      conditions.push(`t.category_id = $${paramCount}`);
-      values.push(categoryId);
-      paramCount++;
-    }
-
-    if (type) {
-      conditions.push(`t.type = $${paramCount}`);
-      values.push(type);
-      paramCount++;
-    }
-
-    if (dateFrom) {
-      conditions.push(`t.date >= $${paramCount}`);
-      values.push(dateFrom);
-      paramCount++;
-    }
-
-    if (dateTo) {
-      conditions.push(`t.date <= $${paramCount}`);
-      values.push(dateTo);
-      paramCount++;
-    }
-
-    if (search) {
-      conditions.push(`(
-        LOWER(t.description) LIKE LOWER($${paramCount}) OR 
-        LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
-        LOWER(c.name) LIKE LOWER($${paramCount})
-      )`);
-      values.push(`%${search}%`);
-      paramCount++;
-    }
-
-    const query = `
-      SELECT COUNT(*) as total
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE ${conditions.join(' AND ')}
-    `;
-
-    const result = await db.query(query, values);
-    return parseInt(result.rows[0].total) || 0;
-  }
-
-  /**
-   * Get total count from legacy income/expenses tables
-   */
-  static async getTotalCountLegacy(userId, options = {}) {
-    const {
-      categoryId = null,
-      type = null,
-      dateFrom = null,
-      dateTo = null,
-      search = null
-    } = options;
-
-    // Build WHERE conditions for both tables
-    const conditions = ['t.user_id = $1'];
-    const values = [userId];
-    let paramCount = 2;
-
-    if (categoryId) {
-      conditions.push(`t.category_id = $${paramCount}`);
-      values.push(categoryId);
-      paramCount++;
-    }
-
-    if (dateFrom) {
-      conditions.push(`t.date >= $${paramCount}`);
-      values.push(dateFrom);
-      paramCount++;
-    }
-
-    if (dateTo) {
-      conditions.push(`t.date <= $${paramCount}`);
-      values.push(dateTo);
-      paramCount++;
-    }
-
-    let searchCondition = '';
-    if (search) {
-      searchCondition = `AND (
-        LOWER(t.description) LIKE LOWER($${paramCount}) OR
-        LOWER(t.notes) LIKE LOWER($${paramCount}) OR
-        LOWER(c.name) LIKE LOWER($${paramCount})
-      )`;
-      values.push(`%${search}%`);
-      paramCount++;
-    }
-
-    let query;
-
-    // ✅ FIXED: Use unified transactions table
-    query = `
-      SELECT COUNT(*) as total
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE ${conditions.join(' AND ')} ${searchCondition}
-    `;
-
-    const result = await db.query(query, values);
-    
-    return parseInt(result.rows[0].total) || 0;
-  }
-
-  /**
-   * Get transactions for a user with filters
-   * @param {number} userId - User ID
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Transactions
+   * Filtered, paginated transaction list.
    */
   static async findByUser(userId, options = {}) {
     try {
-      const {
-        limit = 50,
-        offset = 0,
-        categoryId = null,
-        type = null,
-        dateFrom = null,
-        dateTo = null,
-        search = null,
-        sortBy = 'created_at',
-        sortOrder = 'DESC'
-      } = options;
+      const { limit = 50, offset = 0, sortBy = 'created_at', sortOrder = 'DESC' } = options;
+      const { conditions, values, paramCount } = this.buildFilters(userId, options);
+      values.push(limit, offset);
 
-      // SIMPLIFIED: was running an extra COUNT query on every list request to
-      // decide whether to use legacy tables. Migration 07 + live data check
-      // confirm every user is in unified. Saves one round-trip per page load.
-      return await this.findByUserUnified(userId, options);
+      const query = `
+        SELECT ${SELECT_COLUMNS}
+        FROM transactions t
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY ${sortBy === 'amount' ? 't.amount' : 't.transaction_datetime'} ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}
+        LIMIT $${paramCount} OFFSET $${paramCount + 1}
+      `;
+
+      const result = await db.query(query, values);
+      return result.rows;
     } catch (error) {
       logger.error('Transaction retrieval failed', { userId, error: error.message });
       throw error;
@@ -270,119 +172,17 @@ class Transaction {
   }
 
   /**
-   * Get transactions from unified transactions table
-   */
-  static async findByUserUnified(userId, options = {}) {
-    const {
-      limit = 50,
-      offset = 0,
-      categoryId = null,
-      type = null,
-      dateFrom = null,
-      dateTo = null,
-      search = null,
-      sortBy = 'created_at',
-      sortOrder = 'DESC'
-    } = options;
-
-    const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
-    const values = [userId];
-    let paramCount = 2;
-
-    if (categoryId) {
-      conditions.push(`t.category_id = $${paramCount}`);
-      values.push(categoryId);
-      paramCount++;
-    }
-
-    if (type) {
-      conditions.push(`t.type = $${paramCount}`);
-      values.push(type);
-      paramCount++;
-    }
-
-    if (dateFrom) {
-      conditions.push(`t.date >= $${paramCount}`);
-      values.push(dateFrom);
-      paramCount++;
-    }
-
-    if (dateTo) {
-      conditions.push(`t.date <= $${paramCount}`);
-      values.push(dateTo);
-      paramCount++;
-    }
-
-    if (search) {
-      conditions.push(`(
-        LOWER(t.description) LIKE LOWER($${paramCount}) OR 
-        LOWER(t.notes) LIKE LOWER($${paramCount}) OR 
-        LOWER(c.name) LIKE LOWER($${paramCount})
-      )`);
-      values.push(`%${search}%`);
-      paramCount++;
-    }
-
-    values.push(limit, offset);
-
-    const query = `
-      SELECT 
-        t.id,
-        t.user_id,
-        t.category_id,
-        t.amount,
-        t.type,
-        t.description,
-        t.notes,
-        t.date,
-        t.transaction_datetime,
-        t.created_at,
-        t.updated_at,
-        t.bank_source,
-        t.bank_sync_id,
-        c.name as category_name,
-        c.icon as category_icon,
-        c.color as category_color
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY ${sortBy === 'amount' ? 't.amount' : 't.transaction_datetime'} ${sortOrder}
-      LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `;
-
-    const result = await db.query(query, values);
-    return result.rows;
-  }
-
-  /**
-   * Get recent transactions for dashboard
-   * @param {number} userId - User ID
-   * @param {number} limit - Number of transactions
-   * @returns {Promise<Array>} Recent transactions
+   * Recent transactions for the dashboard.
    */
   static async getRecent(userId, limit = 10) {
     try {
-      // ✅ FIXED: Use unified transactions table
       const query = `
-        SELECT
-          t.id,
-          t.amount,
-          t.type,
-          t.description,
-          t.date,
-          t.created_at,
-          t.bank_source,
-          t.bank_account_number,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
+        SELECT ${SELECT_COLUMNS}
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
         ORDER BY t.created_at DESC
         LIMIT $2
       `;
-
       const result = await db.query(query, [userId, limit]);
       return result.rows;
     } catch (error) {
@@ -392,34 +192,15 @@ class Transaction {
   }
 
   /**
-   * Find transaction by ID - BACKWARD COMPATIBLE VERSION
-   * @param {number} transactionId - Transaction ID
-   * @param {number} userId - User ID
-   * @returns {Promise<Object|null>} Transaction or null
+   * Single transaction by id (owner-scoped).
    */
   static async findById(transactionId, userId) {
     try {
-      // ✅ FIXED: Use unified transactions table
       const query = `
-        SELECT 
-          t.id,
-          t.user_id,
-          t.category_id,
-          t.amount,
-          t.type,
-          t.description,
-          t.notes,
-          t.date,
-          t.created_at,
-          t.updated_at,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
+        SELECT ${SELECT_COLUMNS}
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.id = $1 AND t.user_id = $2 AND t.deleted_at IS NULL
       `;
-      
       const result = await db.query(query, [transactionId, userId]);
       return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
@@ -429,22 +210,16 @@ class Transaction {
   }
 
   /**
-   * Update transaction
-   * @param {number} transactionId - Transaction ID
-   * @param {Object} updateData - Data to update
-   * @param {number} userId - User ID
-   * @returns {Promise<Object>} Updated transaction
+   * Update a manual transaction's editable fields.
    */
   static async update(transactionId, updateData, userId) {
     try {
-      // First check if transaction exists and belongs to user
       const existing = await this.findById(transactionId, userId);
       if (!existing) {
         throw new Error('Transaction not found');
       }
 
-      // ✅ FIXED: Don't allow type changes in current schema, remove type from allowed fields
-      const allowedFields = ['category_id', 'amount', 'description', 'notes', 'date'];
+      const allowedFields = ['amount', 'description', 'notes', 'date'];
       const updates = {};
       const values = [];
       let paramCount = 1;
@@ -452,7 +227,7 @@ class Transaction {
       for (const [key, value] of Object.entries(updateData)) {
         if (allowedFields.includes(key) && value !== undefined) {
           updates[key] = `$${paramCount}`;
-            values.push(value);
+          values.push(value);
           paramCount++;
         }
       }
@@ -467,17 +242,11 @@ class Transaction {
         .map(([key, placeholder]) => `${key} = ${placeholder}`)
         .join(', ');
 
-      // 🔥 BUG FIX: Was updating LEGACY income/expenses tables based on
-      // existing.type — but findById reads from the UNIFIED `transactions`
-      // table. Result: edits to migrated rows updated stale legacy copies
-      // (so reads still showed old values), and edits to NEW rows (created
-      // after migration 07) silently 404'd because their IDs only exist in
-      // `transactions`. Now updates the unified table consistently.
       const query = `
         UPDATE transactions
         SET ${setClause}
         WHERE id = $${paramCount} AND user_id = $${paramCount + 1} AND deleted_at IS NULL
-        RETURNING id, user_id, category_id, amount, type, description, notes, date, created_at, updated_at
+        RETURNING id, user_id, amount, type, description, notes, date, created_at, updated_at
       `;
 
       values.push(transactionId, userId);
@@ -487,15 +256,13 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      const updated = result.rows[0];
-
-      logger.info('Transaction updated successfully', { 
-        transactionId, 
+      logger.info('Transaction updated successfully', {
+        transactionId,
         userId,
-        updatedFields: Object.keys(updates)
+        updatedFields: Object.keys(updates),
       });
 
-      return updated;
+      return result.rows[0];
     } catch (error) {
       logger.error('Transaction update failed', { transactionId, userId, error: error.message });
       throw error;
@@ -503,38 +270,29 @@ class Transaction {
   }
 
   /**
-   * Soft delete transaction - BACKWARD COMPATIBLE VERSION
-   * @param {number} transactionId - Transaction ID
-   * @param {number} userId - User ID
-   * @returns {Promise<boolean>} Success status
+   * Delete a transaction (bank rows: dedup via bank_sync_id prevents
+   * re-import of the same row on the next sync).
    */
   static async delete(transactionId, userId) {
     try {
-      // First check if transaction exists and belongs to user
       const existing = await this.findById(transactionId, userId);
       if (!existing) {
         throw new Error('Transaction not found');
       }
 
-      // ✅ FIXED: Use unified transactions table (same as bulk delete)
-      const query = `
-        DELETE FROM transactions 
-        WHERE id = $1 AND user_id = $2
-        RETURNING id, type
-      `;
-
-      const result = await db.query(query, [transactionId, userId]);
+      const result = await db.query(
+        `DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id, type`,
+        [transactionId, userId],
+      );
       const success = result.rows.length > 0;
 
       if (success) {
-        const deletedTransaction = result.rows[0];
-        logger.info(`Transaction deleted successfully`, { 
-          transactionId, 
-          userId, 
-          type: deletedTransaction.type 
+        logger.info('Transaction deleted successfully', {
+          transactionId,
+          userId,
+          type: result.rows[0].type,
         });
       }
-
       return success;
     } catch (error) {
       logger.error('Transaction deletion failed', { transactionId, userId, error: error.message });
@@ -543,28 +301,18 @@ class Transaction {
   }
 
   /**
-   * Get transaction counts and totals for dashboard - BACKWARD COMPATIBLE VERSION
-   * @param {number} userId - User ID
-   * @param {number} days - Number of days to look back
-   * @returns {Promise<Object>} Summary data
-   */
-  /**
-   * @param {number} userId
-   * @param {{startDate: string, endDate: string}} range - half-open date
-   *   range [startDate, endDate) in 'YYYY-MM-DD' form. Callers compute the
-   *   range explicitly (financial-period or calendar-month) rather than
-   *   this method assuming a rolling day-count window.
+   * Income/expense summary for a half-open date range [startDate, endDate).
+   * Callers compute the range (financial-period or calendar month) — this
+   * method never assumes a rolling day-count window.
    */
   static async getSummary(userId, { startDate, endDate }) {
     try {
-      // ✅ FIXED: Use unified transactions table with GROUP BY
       const query = `
         SELECT
           type,
           COUNT(*) as transaction_count,
           COALESCE(SUM(amount), 0) as total_amount,
-          COALESCE(AVG(amount), 0) as avg_amount,
-          COUNT(DISTINCT category_id) as categories_used
+          COALESCE(AVG(amount), 0) as avg_amount
         FROM transactions
         WHERE user_id = $1
           AND date >= $2 AND date < $3
@@ -573,8 +321,7 @@ class Transaction {
       `;
 
       const result = await db.query(query, [userId, startDate, endDate]);
-      
-      // Process results into summary object
+
       const incomeData = result.rows.find(row => row.type === 'income') || {};
       const expenseData = result.rows.find(row => row.type === 'expense') || {};
 
@@ -584,97 +331,13 @@ class Transaction {
         total_expenses: parseFloat(expenseData.total_amount) || 0,
         avg_expense: parseFloat(expenseData.avg_amount) || 0,
         avg_income: parseFloat(incomeData.avg_amount) || 0,
-        categories_used: Math.max((parseInt(incomeData.categories_used) || 0), (parseInt(expenseData.categories_used) || 0))
       };
-
-      // Calculate net balance
       summary.net_balance = summary.total_income - summary.total_expenses;
 
       return summary;
     } catch (error) {
       logger.error('Transaction summary failed', { userId, error: error.message });
       throw error;
-    }
-  }
-
-  /**
-   * Create batch transactions (for recurring, imports, etc.) - BACKWARD COMPATIBLE VERSION
-   * @param {Array} transactionsData - Array of transaction data
-   * @param {number} userId - User ID
-   * @returns {Promise<Array>} Created transactions
-   */
-  static async createBatch(transactionsData, userId) {
-    const client = await db.getClient();
-    
-    try {
-      await client.query('BEGIN');
-      
-      const createdTransactions = [];
-
-      for (const transactionData of transactionsData) {
-        // ✅ TIMEZONE FIX: Use proper datetime for batch creation too
-        const transactionDate = transactionData.date || new Date().toISOString().split('T')[0];
-        let transactionDateTime;
-        
-        if (transactionData.transaction_datetime) {
-          // Client provided timezone-aware datetime - use it directly
-          transactionDateTime = new Date(transactionData.transaction_datetime).toISOString();
-        } else if (transactionData.time && transactionData.timezone) {
-          // Combine date + time in user's timezone
-          try {
-            const dateTimeString = `${transactionDate}T${transactionData.time}:00`;
-            const localDateTime = new Date(dateTimeString);
-            transactionDateTime = localDateTime.toISOString();
-          } catch (error) {
-            logger.warn('Failed to parse timezone data in batch, using current time:', error.message);
-            transactionDateTime = new Date().toISOString();
-          }
-        } else {
-          // Fallback: use current time for batch operations (recurring usually)
-          transactionDateTime = new Date().toISOString();
-        }
-        
-        const query = `
-          INSERT INTO transactions (
-            user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING id, user_id, category_id, amount, type, description, notes, date, transaction_datetime, created_at, updated_at
-        `;
-
-        const values = [
-          userId,
-          transactionData.categoryId || transactionData.category_id || null,
-          parseFloat(transactionData.amount),
-          transactionData.type || 'expense', // ✅ CRITICAL: Must provide type!
-          transactionData.description || '',
-          transactionData.notes || '',
-          transactionDate, // Date field
-          transactionDateTime, // DateTime field for constraint
-        ];
-
-        const result = await client.query(query, values);
-        const created = result.rows[0];
-        createdTransactions.push(created);
-      }
-
-      await client.query('COMMIT');
-
-      logger.info('Batch transactions created successfully', { 
-        count: createdTransactions.length,
-        userId
-      });
-
-      return createdTransactions;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error('Batch transaction creation failed', { 
-        error: error.message, 
-        count: transactionsData.length, 
-        userId 
-      });
-      throw error;
-    } finally {
-      client.release();
     }
   }
 }

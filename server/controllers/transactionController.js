@@ -12,13 +12,13 @@ const db = require('../config/db');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCurrentPeriod, toSqlDate } = require('../utils/financialPeriod');
 
-// Auto-classification for uncategorized bank transactions. Israeli banks
-// report checking-account cash-flow EVENTS, not itemized purchases — a
-// "לאומי ויזה" line is one month's entire credit-card bill settling, not a
-// single purchase. Real "categories" (Food, Transport, ...) don't map onto
-// that; these patterns group by what the event actually IS instead.
-// Matched against live Leumi/Yahav sync data. Static, not user input — safe
-// to interpolate directly into the query string (no SQL injection surface).
+// Auto-classification for bank transactions with no source-provided
+// raw_category. Israeli banks report checking-account cash-flow EVENTS, not
+// itemized purchases — a "לאומי ויזה" line is one month's entire credit-card
+// bill settling, not a single purchase. Real "categories" (Food, Transport,
+// ...) don't map onto that; these patterns group by what the event actually
+// IS instead. Matched against live Leumi/Yahav sync data. Static, not user
+// input — safe to interpolate directly (no SQL injection surface).
 const BANK_PATTERN_CASE = `
   WHEN t.description ~* '(דביט|ויזה|מקס|ישראכרט|אשראי)' THEN 'Card Spending'
   WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'Cash Withdrawals'
@@ -59,13 +59,15 @@ const transactionController = {
             SELECT
               t.amount,
               CASE
-                WHEN c.name IS NOT NULL THEN c.name
+                WHEN t.raw_category IS NOT NULL AND t.raw_category <> '' THEN t.raw_category
                 ${BANK_PATTERN_CASE}
                 ELSE 'Other'
               END AS bucket,
-              CASE WHEN c.name IS NOT NULL THEN 'category' ELSE 'auto' END AS source
+              -- 'source' tells the client how honest each bucket is:
+              -- 'source' = the merchant/source labelled it; 'auto' = we guessed
+              -- from the bank description via BANK_PATTERN_CASE.
+              CASE WHEN t.raw_category IS NOT NULL AND t.raw_category <> '' THEN 'source' ELSE 'auto' END AS source
             FROM transactions t
-            LEFT JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
               AND t.date >= $2 AND t.date < $3
           ) classified
@@ -106,9 +108,13 @@ const transactionController = {
           GROUP BY bank_source
         `, [userId, periodStart, periodEnd]),
         db.query(`
-          SELECT bank_source, SUM(balance) AS balance
+          SELECT
+            bank_source,
+            SUM(balance) FILTER (WHERE balance IS NOT NULL) AS balance,
+            bool_or(balance IS NOT NULL)                    AS has_balance,
+            MAX(last_synced_at)                             AS last_synced_at
           FROM bank_accounts
-          WHERE user_id = $1 AND enabled = true AND balance IS NOT NULL
+          WHERE user_id = $1 AND enabled = true
           GROUP BY bank_source
         `, [userId]),
       ]);
@@ -128,18 +134,40 @@ const transactionController = {
         cashWithdrawalCount: parseInt(bc.cash_withdrawal_count || 0),
       };
 
-      const balanceBySource = Object.fromEntries(
-        balancesResult.rows.map(r => [r.bank_source, parseFloat(r.balance)])
+      // Per-source account facts (balance + freshness) keyed by bank_source.
+      const acctBySource = Object.fromEntries(
+        balancesResult.rows.map(r => [r.bank_source, {
+          balance: r.has_balance ? parseFloat(r.balance) : null,
+          hasBalance: r.has_balance === true,
+          lastSyncedAt: r.last_synced_at || null,
+        }])
       );
-      const sources = sourcesResult.rows.map(r => ({
-        bankSource: r.bank_source,
-        kind: institutionKind(r.bank_source),
-        label: INSTITUTIONS[r.bank_source]?.label || r.bank_source,
-        income: parseFloat(r.income),
-        expenses: parseFloat(r.expenses),
-        count: parseInt(r.count),
-        balance: r.bank_source in balanceBySource ? balanceBySource[r.bank_source] : null,
-      }));
+
+      // Union of sources that have activity this period AND sources with a
+      // connected account but no transactions yet — the dashboard should list
+      // every connected source, not only ones with rows in the window.
+      const sourceKeys = new Set([
+        ...sourcesResult.rows.map(r => r.bank_source),
+        ...Object.keys(acctBySource),
+      ]);
+      const activityBySource = Object.fromEntries(
+        sourcesResult.rows.map(r => [r.bank_source, r])
+      );
+      const sources = [...sourceKeys].map(key => {
+        const act = activityBySource[key] || {};
+        const acct = acctBySource[key] || {};
+        return {
+          bankSource: key,
+          kind: institutionKind(key),
+          label: INSTITUTIONS[key]?.label || key,
+          income: parseFloat(act.income || 0),
+          expenses: parseFloat(act.expenses || 0),
+          count: parseInt(act.count || 0),
+          balance: acct.hasBalance ? acct.balance : null,
+          hasBalance: acct.hasBalance || false,
+          lastSyncedAt: acct.lastSyncedAt || null,
+        };
+      }).sort((a, b) => b.expenses - a.expenses);
 
       res.json({
         success: true,
@@ -195,7 +223,6 @@ const transactionController = {
 
     const filters = {
       type: req.query.type || null,
-      categoryId: req.query.category || null,
       dateFrom: req.query.dateFrom || null,
       dateTo: req.query.dateTo || null,
       search: req.query.search || null
@@ -205,7 +232,6 @@ const transactionController = {
       const options = {
         limit,
         offset,
-        categoryId: filters.categoryId,
         type: filters.type,
         dateFrom: filters.dateFrom,
         dateTo: filters.dateTo,

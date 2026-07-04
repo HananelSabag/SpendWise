@@ -43,21 +43,28 @@ class AdminController {
         LIMIT 10
       `, [], 'admin_dashboard_recent_users');
       
-      // Get transactions summary  
+      // Get transactions summary
       const transactionsResult = await db.query(`
-        SELECT 
+        SELECT
           COUNT(*) as total_transactions,
           COALESCE(SUM(amount), 0) as total_amount,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as transactions_month
         FROM transactions
       `, [], 'admin_dashboard_transactions_summary');
-      
-      // Get categories summary
-      const categoriesResult = await db.query(`
-        SELECT COUNT(*) as total_categories
-        FROM categories
-      `, [], 'admin_dashboard_categories_summary');
-      
+
+      // Bank-sync health — the new model's core signal (replaces the dead
+      // categories count).
+      const syncResult = await db.query(`
+        SELECT
+          (SELECT COUNT(*) FROM bank_connections) AS total_connections,
+          (SELECT COUNT(*) FROM bank_connections WHERE status = 'active') AS active_connections,
+          (SELECT COUNT(*) FROM bank_connections WHERE status = 'error')  AS error_connections,
+          (SELECT COUNT(*) FROM bank_sync_jobs
+             WHERE status = 'failed' AND finished_at >= NOW() - INTERVAL '24 hours') AS failed_jobs_24h,
+          (SELECT COUNT(*) FROM bank_sync_jobs
+             WHERE status IN ('pending','running')) AS in_flight_jobs
+      `, [], 'admin_dashboard_sync_summary');
+
       // Get recent admin activity
       const activityResult = await db.query(`
         SELECT 
@@ -80,7 +87,11 @@ class AdminController {
           total_transactions: parseInt(transactionsResult.rows[0]?.total_transactions || 0),
           total_amount: parseFloat(transactionsResult.rows[0]?.total_amount || 0),
           transactions_month: parseInt(transactionsResult.rows[0]?.transactions_month || 0),
-          total_categories: parseInt(categoriesResult.rows[0]?.total_categories || 0)
+          total_connections: parseInt(syncResult.rows[0]?.total_connections || 0),
+          active_connections: parseInt(syncResult.rows[0]?.active_connections || 0),
+          error_connections: parseInt(syncResult.rows[0]?.error_connections || 0),
+          failed_jobs_24h: parseInt(syncResult.rows[0]?.failed_jobs_24h || 0),
+          in_flight_jobs: parseInt(syncResult.rows[0]?.in_flight_jobs || 0)
         },
         recent_users: recentUsersResult.rows || [],
         recent_activity: activityResult.rows || []
@@ -179,26 +190,33 @@ class AdminController {
           u.last_login_at,
           u.language_preference,
           u.currency_preference,
+          u.billing_cycle_day,
           u.avatar,
           COALESCE(t_stats.transaction_count, 0) as total_transactions,
           COALESCE(t_stats.total_amount, 0) as total_amount,
+          COALESCE(c_stats.connection_count, 0) as connections_count,
           COALESCE(r_stats.restriction_count, 0) as active_restrictions,
-          CASE 
+          CASE
             WHEN r_stats.restriction_count > 0 THEN 'blocked'
             WHEN NOT u.email_verified THEN 'pending'
             ELSE 'active'
           END as status
         FROM users u
         LEFT JOIN (
-          SELECT 
+          SELECT
             user_id,
             COUNT(*) as transaction_count,
             SUM(amount) as total_amount
-          FROM transactions 
+          FROM transactions
           GROUP BY user_id
         ) t_stats ON u.id = t_stats.user_id
         LEFT JOIN (
-          SELECT 
+          SELECT user_id, COUNT(*) as connection_count
+          FROM bank_connections
+          GROUP BY user_id
+        ) c_stats ON u.id = c_stats.user_id
+        LEFT JOIN (
+          SELECT
             user_id,
             COUNT(*) as restriction_count
           FROM user_restrictions
@@ -599,11 +617,11 @@ class AdminController {
             await client.query('DELETE FROM user_restrictions WHERE user_id = $1', [userId]);
             await client.query('DELETE FROM user_restrictions WHERE applied_by = $1', [userId]);
 
-            // Remove transactional data
+            // Remove transactional + bank-sync data (bank_sync_jobs cascade
+            // from bank_connections; bank_accounts keyed by user_id).
             await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
-
-            // Remove categories owned by the user (user-specific)
-            await client.query('DELETE FROM categories WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM bank_connections WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM bank_accounts WHERE user_id = $1', [userId]);
 
             // Null out references in settings to avoid FK violations
             await client.query('UPDATE system_settings SET updated_by = NULL WHERE updated_by = $1', [userId]);
@@ -998,6 +1016,91 @@ class AdminController {
       });
       throw error;
     }
+  });
+
+  /**
+   * 🔌 GET /api/v1/admin/bank-sync
+   * Bank-sync visibility: every connection with its live health, plus the
+   * most recent sync jobs across all users (for debugging the worker flow).
+   */
+  static getBankSync = asyncHandler(async (req, res) => {
+    const adminId = req.user.id;
+
+    const [connectionsResult, jobsResult] = await Promise.all([
+      db.query(`
+        SELECT
+          bc.id,
+          bc.user_id,
+          u.email               AS user_email,
+          u.first_name          AS user_first_name,
+          u.last_name           AS user_last_name,
+          u.billing_cycle_day,
+          bc.bank_source,
+          bc.display_name,
+          bc.status,
+          bc.consecutive_failures,
+          bc.last_sync_at,
+          bc.last_error,
+          bc.created_at,
+          acc.accounts_count,
+          acc.balance,
+          acc.has_balance,
+          acc.last_synced_at
+        FROM bank_connections bc
+        JOIN users u ON u.id = bc.user_id
+        LEFT JOIN (
+          SELECT
+            user_id,
+            bank_source,
+            COUNT(*)                                             AS accounts_count,
+            SUM(balance) FILTER (WHERE balance IS NOT NULL)      AS balance,
+            bool_or(balance IS NOT NULL)                         AS has_balance,
+            MAX(last_synced_at)                                  AS last_synced_at
+          FROM bank_accounts
+          GROUP BY user_id, bank_source
+        ) acc ON acc.user_id = bc.user_id AND acc.bank_source = bc.bank_source
+        ORDER BY bc.consecutive_failures DESC, bc.last_sync_at DESC NULLS LAST
+      `, [], 'admin_bank_sync_connections'),
+      db.query(`
+        SELECT
+          j.id,
+          j.user_id,
+          u.email      AS user_email,
+          j.connection_id,
+          bc.bank_source,
+          j.status,
+          j.trigger,
+          j.requested_at,
+          j.started_at,
+          j.finished_at,
+          CASE
+            WHEN j.started_at IS NOT NULL AND j.finished_at IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (j.finished_at - j.started_at))
+            ELSE NULL
+          END          AS duration_seconds,
+          j.result
+        FROM bank_sync_jobs j
+        LEFT JOIN users u ON u.id = j.user_id
+        LEFT JOIN bank_connections bc ON bc.id = j.connection_id
+        ORDER BY j.requested_at DESC
+        LIMIT 50
+      `, [], 'admin_bank_sync_jobs')
+    ]);
+
+    logger.info('🔌 Admin bank-sync visibility accessed', {
+      adminId,
+      connections: connectionsResult.rows.length,
+      jobs: jobsResult.rows.length
+    });
+
+    res.json({
+      success: true,
+      data: {
+        connections: connectionsResult.rows,
+        jobs: jobsResult.rows
+      },
+      timestamp: new Date().toISOString()
+    });
   });
 }
 

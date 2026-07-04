@@ -530,14 +530,16 @@ class User {
         throw new Error('User not found');
       }
 
-      // ✅ FIXED: Get transactions from single transactions table (actual production schema)
+      // Transactions for export. Category system is gone — the meaningful
+      // grouping is now the SOURCE-provided raw_category (e.g. Max), falling
+      // back to the institution, then "Manual" for one-time entries.
       const transactionsQuery = `
-        SELECT 
-          t.id, t.type, t.amount, t.description, 
-          t.category_id, t.date, t.created_at, t.updated_at, t.notes,
-          c.name as category
+        SELECT
+          t.id, t.type, t.amount, t.description,
+          t.date, t.created_at, t.updated_at, t.notes,
+          t.raw_category, t.bank_source, t.bank_account_number,
+          COALESCE(NULLIF(t.raw_category, ''), t.bank_source, 'Manual') AS category
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
         ORDER BY t.created_at DESC
       `;
@@ -561,21 +563,20 @@ class User {
 
       const monthlySummaryResult = await db.query(monthlySummaryQuery, [userId]);
 
-      // ✅ FIXED: Get category analysis from single transactions table
+      // Breakdown by source-provided category / institution (replaces the
+      // removed category taxonomy). Same output columns as before so the
+      // export formatters (CSV/JSON/PDF) need no changes.
       const categoryAnalysisQuery = `
-        SELECT 
-          c.name as category_name,
-          c.type,
+        SELECT
+          COALESCE(NULLIF(t.raw_category, ''), t.bank_source, 'Manual') AS category_name,
+          t.type,
           COUNT(*) as usage_count,
           SUM(t.amount) as total_amount,
           AVG(t.amount) as avg_amount,
           MAX(t.amount) as max_amount
-        FROM categories c
-        INNER JOIN transactions t ON c.id = t.category_id
-        WHERE t.user_id = $1 
-          AND t.deleted_at IS NULL
-          AND (c.user_id = $1 OR c.is_default = true)
-        GROUP BY c.id, c.name, c.type
+        FROM transactions t
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+        GROUP BY COALESCE(NULLIF(t.raw_category, ''), t.bank_source, 'Manual'), t.type
         ORDER BY total_amount DESC
       `;
 

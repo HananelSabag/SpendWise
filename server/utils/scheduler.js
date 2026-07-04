@@ -192,7 +192,7 @@ class Scheduler {
       logger.info('🔧 Starting database maintenance');
 
       // VACUUM ANALYZE key tables for performance
-      const tables = ['transactions', 'users', 'categories'];
+      const tables = ['transactions', 'users', 'bank_accounts', 'bank_sync_jobs'];
       const results = [];
 
       for (const table of tables) {
