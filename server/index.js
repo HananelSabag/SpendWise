@@ -317,7 +317,7 @@ try {
     logger.error(`❌ Auth status routes failed: ${error.message}`);
   }
 
-  // Health and performance monitoring routes
+  // Health monitoring routes
   try {
     app.use(`${API_VERSION}/health`, require('./routes/healthRoutes'));
     logger.debug('✅ Health routes loaded');
@@ -346,12 +346,6 @@ try {
     logger.error('❌ Bank agent routes failed:', error.message);
   }
 
-  try {
-    app.use(`${API_VERSION}/performance`, require('./routes/performance'));
-    logger.debug('✅ Performance routes loaded');
-  } catch (error) {
-    logger.error(`❌ Performance routes failed: ${error.message}`);
-  }
 } catch (error) {
   logger.error(`❌ API routes loading failed: ${error.message}`, { stack: error.stack });
   // Don't exit - server can still respond to health checks
